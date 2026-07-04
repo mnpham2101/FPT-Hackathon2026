@@ -27,6 +27,11 @@ this procedure in order — don't skip to a solution before feasibility and enum
      (what blocks other work / what the milestone needs first) or **ease of implementation**
      (what unblocks fast wins) — and state explicitly which ordering was used and why.
 
+   In both cases, every enumerated requirement must meet
+   [requirement-quality-criteria.md](../../rules/requirement-quality-criteria.md): its own
+   feasibility verdict, a concrete measurable output (numeric measurement / KPI), and vague
+   wording translated to precise, testable statements.
+
 3. **Propose several available solutions** for each requirement (or requirement group) that needs
    a technical decision — toolchain, framework, language, or 3rd-party library. Always generate
    more than one real candidate; a single-option "proposal" is not a comparison. Every candidate
@@ -43,10 +48,16 @@ this procedure in order — don't skip to a solution before feasibility and enum
 ## Output
 
 - A feasibility verdict (with reasoning) for the input feature/requirement set.
-- An enumerated, unambiguous requirements list — reordered by urgency or ease of implementation
-  when the input was already requirements, with the ordering rationale stated.
+- An enumerated, unambiguous requirements list — each requirement carrying the checks in
+  [requirement-quality-criteria.md](../../rules/requirement-quality-criteria.md) (feasibility
+  verdict, measurable output/KPI, vague → precise translations) — reordered by urgency or ease of
+  implementation when the input was already requirements, with the ordering rationale stated.
 - For each requirement needing a technical decision: the candidate solutions considered, a
   comparison against the four ranked criteria, and the selected solution with rationale.
+
+All of the above is delivered as a report file under `requirements/` per
+[research-report-format.md](../../rules/research-report-format.md) — the run is not complete
+until that report is written.
 
 ## How to apply
 

@@ -62,6 +62,9 @@ follows:
 ```
 
 - `<taskID>` is the **most specific ID known at commit time**:
+  - **Omitted entirely** (`<type>: <subject>`, no bracket) for research-report commits — the
+    report is what defines the requirement numbers, so no `X` exists yet (see
+    [research-report-format.md](research-report-format.md#commit-format)).
   - `X` alone (requirement only) for pre-decomposition commits — e.g. an HLD/design commit made
     before phase/task/subtask breakdown exists for that requirement.
   - Full `X.Y.Z.W` for implementation commits made against a decomposed subtask.
@@ -70,6 +73,8 @@ follows:
 - `<subject>` is a short, imperative description of the change.
 
 Examples:
+- `docs: add requirement analysis & solution report for the comms track` — research-report
+  commit, made before any requirement numbers exist.
 - `[2] design: define perception-track MVC module boundaries` — requirement-2 HLD, committed
   before task/subtask IDs exist for that requirement.
 - `[2.3.1.2] feat: implement gate hysteresis in track manager` — post-decomposition implementation
@@ -88,6 +93,8 @@ Examples:
 - [[project-planner]] owns and enforces this document when building and updating the plan.
   Subagents spawned to implement a subtask inherit the subtask-discipline rules above as their
   definition of done — the planner's brief to a subagent must make that explicit, not assume it.
-- Commit tagging: [[project-architecture]] uses the `X`-only form for HLD commits (see
+- Commit tagging: [[project-researcher]] omits the taskID for report commits (see
+  [research-report-format.md](research-report-format.md#commit-format));
+  [[project-architecture]] uses the `X`-only form for HLD commits (see
   [hld-content-and-commit-format.md](hld-content-and-commit-format.md)); [[project-planner]] and
   the subagents it spawns use the full `X.Y.Z.W` form once tasks/subtasks are decomposed.

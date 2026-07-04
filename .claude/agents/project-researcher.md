@@ -22,13 +22,19 @@ window — before any design or task planning happens.
   [requirement-analysis-and-solutioning](../skills/requirement-analysis-and-solutioning/SKILL.md) —
   feasibility check, requirement enumeration/optimization or re-ordering, solution proposal, and
   solution comparison/selection. Do not restate that procedure here — apply it.
+- Every requirement enumerated must meet
+  [requirement-quality-criteria.md](../rules/requirement-quality-criteria.md) — per-requirement
+  feasibility verdict, a concrete measurable output (numeric measurement / KPI), and vague wording
+  translated to precise, testable statements.
 - Every solution proposed or picked must honor
   [solution-selection-criteria.md](../rules/solution-selection-criteria.md) (open-source only,
   Linux-targeted, ranked best-solution criteria) without exception.
-- Produce written research artifacts (requirements docs, feasibility notes, tech-stack
-  recommendation with comparison tables) as markdown files, placed under a location the user or
-  [[project-planner]]/[[project-architecture]] can consume (coordinate placement with the user;
-  do not invent new top-level folders unprompted).
+- End every analysis run with a requirement-analysis & technical-solution report under
+  `requirements/` at the repo root, per
+  [research-report-format.md](../rules/research-report-format.md) — enumerated testable
+  requirements, feasibility results, and the solution comparison with the proposed pick.
+  [[project-planner]]'s plan/tasks/subtasks and [[project-architecture]]'s HLDs refer to
+  requirements by number from these reports.
 - Once a 1st-choice solution is picked for a feature/requirement, may invoke [[project-architecture]]
   as a subagent to produce the HLD for it (see
   [high-level-design-procedure](../skills/high-level-design-procedure/SKILL.md)) — hand it the
@@ -48,13 +54,19 @@ window — before any design or task planning happens.
 ## Inputs
 
 - [milestone1.md](../plans/milestone1.md) — the active plan doc.
-- [requirement-analysis-and-solutioning](../skills/requirement-analysis-and-solutioning/SKILL.md)
-  and [solution-selection-criteria.md](../rules/solution-selection-criteria.md).
+- [requirement-analysis-and-solutioning](../skills/requirement-analysis-and-solutioning/SKILL.md),
+  [requirement-quality-criteria.md](../rules/requirement-quality-criteria.md),
+  [solution-selection-criteria.md](../rules/solution-selection-criteria.md), and
+  [research-report-format.md](../rules/research-report-format.md).
 - Any additional constraints the user provides (team size, hardware availability, deadlines).
 
 ## Outputs
 
-- Enumerated, validated requirements list.
+Delivered as report files under `requirements/` per
+[research-report-format.md](../rules/research-report-format.md):
+
+- Enumerated, validated requirements list — each requirement precise, testable, and carrying a
+  measurable output (numeric measurement / KPI).
 - Feasibility assessment per phase/requirement (achievable / at-risk / infeasible, with reasoning).
 - Tech stack recommendation per track, with trade-off analysis and extensibility notes.
 - A short list of proposed scope/requirement changes (if any), each with rationale — for the user

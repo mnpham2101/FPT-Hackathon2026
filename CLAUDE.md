@@ -69,6 +69,10 @@ conflict.
   convention: one `<skill-name>/SKILL.md` per skill) — currently `high-level-design-procedure` and
   `requirement-analysis-and-solutioning`.
 - [.claude/prompt/](.claude/prompt/) — important prompts saved verbatim as markdown, on request.
+- [requirements/](requirements/) — requirement-analysis & technical-solution reports produced by
+  [project-researcher](.claude/agents/project-researcher.md) (format:
+  [.claude/rules/research-report-format.md](.claude/rules/research-report-format.md)). Plans,
+  tasks, subtasks, and HLDs refer to requirements by number from these files.
 
 ## Commit & task discipline
 
