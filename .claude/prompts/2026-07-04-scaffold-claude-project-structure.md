@@ -1,7 +1,6 @@
 # Prompt — Scaffold `.claude` project structure
 
-**Date:** 2026-07-04
-**Requested by:** mnpham1986@gmail.com
+**Date:** 2026-07-04 **Requested by:** mnpham1986@gmail.com
 
 ## Prompt text
 
@@ -17,10 +16,7 @@
 
 ## Outcome
 
-Established `.claude/{prompt,agent,skill,rules}/` structure, migrated `milestone1.md` content
-(plus its diagrams) into `.claude/rules/`, authored three non-overlapping agent specs
-(`project-researcher`, `project-planner`, `project-architecture`) under `.claude/agent/`, and
-wrote the project constitution to `.CLAUDE` at the repo root.
+Established `.claude/{prompt,agent,skill,rules}/` structure, migrated `milestone1.md` content (plus its diagrams) into `.claude/rules/`, authored three non-overlapping agent specs (`project-researcher`, `project-planner`, `project-architecture`) under `.claude/agent/`, and wrote the project constitution to `.CLAUDE` at the repo root.
 
 ## Grading: 
 * 3/10
