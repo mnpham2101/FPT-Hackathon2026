@@ -21,6 +21,14 @@ In both cases, every enumerated requirement must meet [requirement-quality-crite
 
 4. **Compare the solutions and pick the best one**, scored against the four ranked criteria in [solution-selection-criteria.md](../../rules/solution-selection-criteria.md): possibility of accomplishing the implementation, speed/ease for the current milestone, extensibility to future features, and preference for the smaller open-source dependency when a heavier one isn't functionally needed. Document the comparison itself, not just the winning pick.
 
+## Cache
+
+Trigger: after reading any external resource (a URL, or a file outside this repo) during the procedure above.
+
+- Write a cache file under `.claude/references/<topic-slug>.md` — one file per resource, named for its subject, not its source.
+- Cache file must contain: source (URL/path), keywords for future lookup, and a summary of the content relevant to the current task — not a full copy of the source.
+- Before fetching a resource, check `.claude/references/` for an existing cache file on the same topic and reuse it instead of re-fetching.
+
 ## Output
 
 - A feasibility verdict (with reasoning) for the input feature/requirement set.
