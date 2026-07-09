@@ -29,6 +29,15 @@ Trigger: after reading any external resource (a URL, or a file outside this repo
 - Cache file must contain: source (URL/path), keywords for future lookup, and a summary of the content relevant to the current task — not a full copy of the source.
 - Before fetching a resource, check `.claude/references/` for an existing cache file on the same topic and reuse it instead of re-fetching.
 
+## Adversarial review record (multi-researcher runs)
+
+Trigger: the run is executed as an adversarial debate between researcher personas (e.g. Alpha the pragmatist vs. Beta the standards/extensibility reviewer), in numbered rounds.
+
+- All debate artifacts for round `N` live under `.claude/prompts/scratchpad-requirement-analysis-round<N>/` — position papers, rebuttals, and the round's record file.
+- Close every round by writing **`adversarial-review-record.md` in that same directory**: the round's contested points, each with the positions taken and how it resolved, plus the round's key external sources. Contested-point numbering continues across rounds (round 2 continues where round 1 stopped) so cross-references stay stable.
+- The report under `requirements/` carries only a **pointer appendix** — a section titled `Appendix — adversarial requirement analysis & solution proposal record` (currently [m1-cooperative-awareness.md §6](../../../requirements/m1-cooperative-awareness.md)) with one bullet per round linking to that round's record file. Never inline the full record in the report; never let the record drift from the report's converged text.
+- Converged outcomes (requirement changes, picks, flags) still land in the report body per [research-report-format.md](../../rules/research-report-format.md) — the record is the *why* behind them, not a second home for them.
+
 ## Output
 
 - A feasibility verdict (with reasoning) for the input feature/requirement set.
