@@ -1,0 +1,69 @@
+@startuml m1_phase1_v2x_call_flow_sequence
+' Research artifact (project-researcher) — Phase 1 V2X call flow: control-plane
+' bring-up, data-plane RX (relay path) and TX (ego CAM heartbeat).
+' Not an HLD. Module names match m1-phase1-working-env-component.puml and
+' m1-phase1-working-env-activity.puml. The "group" frames mark the V2X_Comm
+' Phase 1 deliverable boundary: raw datagram in / send API called -> decoded
+' PDU handed to ADA / encoded bytes handed to transport.
+title Phase 1 V2X Call Flow — bring-up, RX, TX heartbeat (V2X_Comm boundary boxed)
+
+actor "systemd (boot)" as SYSD
+box "Bench Node" #DDEBF7
+  participant "Scenario Player" as SP
+end box
+box "Ego vECU (Linux, CabinSky)" #E2EFDA
+  participant "V2X_Comm" as V2X
+  participant "GnssProvider" as GNSS
+  participant "ADA" as ADA
+  participant "IVI" as IVI
+end box
+
+== Control plane — service bring-up (Phase 1 work STARTS here) ==
+SYSD -> V2X : start V2X service on boot (R3)
+V2X -> V2X : load externalized config (StationID, endpoint, PC5 service-ID placeholders)
+V2X -> GNSS : init provider (sim)
+GNSS --> V2X : fix ready (scenario position feed)
+V2X -> V2X : open transport adapter (bind/join UDP endpoint)
+V2X -> V2X : emit startup log (active provider, fix, transport ready)
+note right of V2X
+  On hardware this block becomes QMI/AT identify
+  + telux cv2x start + Rx/Tx flow setup (R6)
+end note
+
+== Data plane RX — B relays C to ego ==
+SP -> SP : tick trajectories, build CAM(B) + CPM(B perceives C)
+SP -> SP : UPER encode (+ BTP-B envelope, port 2001 / 2009; GN deferred)
+SP -> SP : apply impairment (drop / delay / jitter)
+SP -> V2X : UDP datagram (UPER facilities payload)
+group V2X_Comm Phase 1 deliverable boundary (RX)
+  V2X -> V2X : strip UDP encapsulation (transport adapter)
+  V2X -> V2X : strip envelope (BTP-B header if used; GN/BTP decode = adapter upgrade path)
+  V2X -> V2X : UPER-decode CAM / CPM payload
+  alt decode + field validation OK
+    V2X -> ADA : decoded V2X PDU (sender ref position, perceived object C, timestamps)
+  else decode fails
+    V2X -> V2X : log and discard (R4 delivery accounting)
+  end
+end
+ADA -> ADA : log full message parsed into fields (Phase 1 acceptance, R4)
+ADA -> IVI : mocked warning event (real data via Phases 2-5)
+IVI -> IVI : render placeholder BEV (real display is Phase 6)
+note right of ADA
+  Phase 1 work TERMINATES at the decoded PDU
+  handed to ADA + the parsed-field log.
+  ADA internals and IVI are mocks/stubs here.
+end note
+
+== Data plane TX — ego CAM heartbeat ==
+loop every 100 ms (10 Hz, R3)
+  V2X -> GNSS : read ego position + time
+  GNSS --> V2X : position fix (logged at 1 Hz, R6 cloud substitute)
+  group V2X_Comm Phase 1 deliverable boundary (TX)
+    V2X -> V2X : build full R1 schema with mock object contents
+    V2X -> V2X : UPER encode (+ BTP-B envelope)
+    V2X -> SP : send encoded packet via transport adapter (UDP datagram)
+  end
+end
+SP -> SP : log ego message parsed into fields (peer-side R4 mirror)
+
+@enduml

@@ -1,0 +1,49 @@
+@startuml m1_phase1_working_env_component
+' Research artifact (project-researcher) — Phase 1 working-environment requirements.
+' Not an HLD: components below are environment roles derived from the mentor's
+' bench-node model and requirements R3/R4 (comms), R8/R12/R14/R15 (ADA), R16 (IVI).
+title Phase 1 Working Environment — bench-node scenario injection into the ego vECU
+
+skinparam componentStyle rectangle
+skinparam wrapWidth 220
+skinparam defaultTextAlignment center
+
+node "Bench Node\n(world simulator / test-equipment role)" as bench {
+  component "Scenario Player (team-written, Python)" as SP {
+    [Trajectory Generator\nsimulated vehicles B, C + ego ground truth] as TG
+    [V2X Message Builder\nCAM (B state) + CPM (B's perceived object C)\nStationID, generationDeltaTime, ref position] as MB
+    [ASN.1 UPER Encoder\nasn1tools (Python), official ETSI modules] as ENC
+    [Impairment Engine\ndrop / delay / jitter — config-driven,\nreproducible (BTC-recommended option b)] as IMP
+    [Ego GNSS Feed\nNMEA to pty/TCP (gpsd) or direct position feed;\nAAOS GNSS HAL via virtio/vsock unconfirmed] as GF
+  }
+}
+
+node "Ego Vehicle — Virtual ECU (Linux vECU on CabinSky)" as ego {
+  component "V2X_Comm  (R3, R4)" as V2X {
+    [Transport Adapter\nthin send/recv interface —\nUDP now, swappable after BTC advises] as TA
+    [UPER Decoder\nasn1tools, same official ETSI modules\n(GN/BTP = adapter upgrade path)] as DEC
+  }
+  component "ADA — Awareness & Driving Assistance\n(R8, R12, R14, R15)" as ADA {
+    [Location Access\nGnssProvider abstraction] as LOC
+    [Environment Model\nTrackedObject store + admission state machine] as EM
+    [Situation / Risk Assessment\ntwo vehicles ahead, one occluded (NLOS)\nPhase 1: mocked output — real data via Phases 2-5] as RISK
+  }
+  component "IVI Display  (R16)\nPhase 1: simple 2D BEV warning app\nPhase 6 target: AAOS HMI (3D optional)" as IVI
+}
+
+database "Externalized Config\nego StationID, gate constants,\nimpairment profile, scenario script" as CFG
+
+TG --> MB
+MB --> ENC
+ENC --> IMP
+IMP --> TA : bench-to-ego channel\nplain UDP (optional BTP-B envelope);\nconcrete transport confirmed by BTC after blueprint
+GF ..> LOC : ego position feed\n(NMEA/gpsd or direct)
+TA --> DEC : raw datagram
+DEC --> EM : decoded V2X PDU\n(sender GNSS ref position,\nperceived object C, timestamps)
+LOC --> EM
+EM --> RISK
+RISK --> IVI : warning event\n(the ADA-to-IVI contract Phase 6 consumes;\nmock in Phase 1, real from Phase 5)
+CFG ..> SP
+CFG ..> ADA
+
+@enduml

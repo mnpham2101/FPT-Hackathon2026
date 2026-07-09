@@ -1,0 +1,43 @@
+@startuml m1-v2x-simulator-tool-slots
+' Researcher artifact — tool slots in the bench->ego pipeline (companion to m1-v2x-simulator-tools.md)
+skinparam componentStyle rectangle
+skinparam shadowing false
+skinparam defaultTextAlignment center
+
+package "Bench node (test equipment)" {
+  component "Trajectory source\n(team scenario script — primary)" as TRAJ
+  component "SUMO (EPL-2.0)\noptional background-traffic feed" as SUMO #lightyellow
+  component "Message builder + UPER codec\n(asn1tools, ETSI TS 103 324 CPM / CAM)" as BUILD
+  component "Impairment profile\n(drop/delay/jitter, seeded — option b)" as IMP
+  component "GNSS feed\n(direct position feed — primary)" as GNSS
+  component "gpsfake + gpsd (BSD)\noptional standard-interface variant" as GPSD #lightyellow
+}
+
+package "Conformance cross-check (CI / R1 freeze)" {
+  component "pycrate (LGPL-2.1)\nindependent UPER decode — should use" as PYC #palegreen
+  component "ika etsi_its_cpm_ts_coding (MIT)\nfallback decoder" as IKA #lightyellow
+}
+
+package "Ego node(s)" {
+  component "Transport adapter\n(thin send/recv, UDP)" as ADPT
+  component "V2X_Comm decoder\n(asn1tools)" as DEC
+}
+
+SUMO ..> TRAJ : trajectories (optional)
+TRAJ --> BUILD : simulated B/C states
+BUILD --> IMP : encoded CPM/CAM
+IMP --> ADPT : UPER payload over UDP
+ADPT --> DEC
+GNSS --> ADPT : ego position feed
+GPSD ..> GNSS : NMEA variant (optional)
+BUILD ..> PYC : emitted bytes
+PYC ..> IKA : on compiler failure
+
+note bottom
+  Rejected layers (see note, Findings table):
+  device emulation — no QMI/AT emulator fits (dbusmock = hardware milestone);
+  RF/baseband — gps-sdr-sim, srsRAN/OAI sidelink (radio out of scope);
+  frameworks — Artery (OMNeT++ license), ms-van3t (future interop rig only),
+  V2X-Hub (J2735), CARLA+OpenCDA (license/GPU), Eclipse MOSAIC (C2).
+end note
+@enduml

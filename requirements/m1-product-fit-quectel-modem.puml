@@ -1,0 +1,47 @@
+@startuml m1_product_fit_quectel_modem
+' Research artifact (project-researcher) - not an HLD.
+' Bench vs hardware data path for V2X_Comm (R3/R4): identical bytes above the
+' transport adapter; only the adapter implementation and what sits below it swap.
+title V2X_Comm data path - bench (Phase 1 env) vs Quectel hardware (product design)
+
+skinparam componentStyle rectangle
+skinparam wrapWidth 210
+skinparam defaultTextAlignment center
+
+node "Bench (Phase 1 working environment)" as bench {
+  [Scenario Player\nCAM/CPM built + UPER-encoded (asn1tools)\nGN/BTP framing, impairment] as SP
+  [UDP multicast socket\n239.118.122.97:8947 (socktap UDP mode)] as UDPSOCK
+}
+
+node "Hardware (product design PNG)" as hw {
+  [Peer vehicle ITS stack\nCAM/CPM UPER + GN/BTP over PC5 air] as PEER
+  [Quectel modem (AG15 / AG55xQ)\nPC5 access layer only (PHY/MAC)\nintegrated GNSS required for PC5 timing] as MODEM
+  [telux cv2x Rx-subscription / Tx-flow\nsocket fd on non-IP rmnet\nUSB3/PCIe data + QMI control] as TELUX
+}
+
+node "Ego Cortex-A MPU (Linux) - unchanged software" as ego {
+  component "V2X_Comm (R3, R4)" as V2X {
+    [Transport Adapter (swap boundary)\nbench: UDP recv | hw: cv2x socket recv\ncontract: recv() -> GN-packet bytes] as TA
+    [Vanetza GN/BTP + CAM/CPM decode\n(or asn1c/asn1tools codec)\nidentical on bench and hardware] as DEC
+  }
+  [ADA (R8, R12, R14, R15)\nGnssProvider: ModemGnssProvider (QMI LOC)\nrecommended over SOME/IP-from-M-core] as ADA
+  [IVI (R16)] as IVI
+}
+
+SP --> UDPSOCK
+UDPSOCK --> TA : GN packet in UDP datagram
+PEER --> MODEM : PC5 sidelink 5.9 GHz
+MODEM --> TELUX : above-MAC PDU\n(GN + BTP + UPER facilities)
+TELUX --> TA : GN packet from cv2x socket
+TA --> DEC : identical bytes either way
+DEC --> ADA : decoded V2X PDU
+ADA --> IVI : warning event
+
+note bottom of MODEM
+  Product-design gaps flagged:
+  (1) modem GNSS antenna feed missing in PNG;
+  (2) dedicated GPS -> Cortex-M is deferred scope
+  (plan section 6), not the M1 GNSS source.
+end note
+
+@enduml

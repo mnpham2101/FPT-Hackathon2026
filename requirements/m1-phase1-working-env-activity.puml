@@ -1,0 +1,43 @@
+@startuml m1_phase1_working_env_activity
+' Research artifact (project-researcher) — Phase 1 activity-flow requirements.
+' Shows one scenario tick end-to-end: bench emission -> V2X_Comm decode ->
+' ADA situation assessment -> IVI warning. ADA output is mocked in Phase 1;
+' Phases 2-5 replace it with real perceived data; Phase 6 consumes it.
+title Phase 1 Activity Flow — scenario injection, decode, awareness, warning
+
+|#DDEBF7|Bench Scenario Player|
+start
+:Load scenario script + impairment config (externalized);
+repeat
+  :Advance simulated trajectories of B and C by one tick;
+  :Update ego trajectory and publish ego GNSS feed;
+  :Build B's V2X messages — CAM (B state) + CPM (B's perceived object C) with StationID, generationDeltaTime, sender reference position;
+  :Encode ASN.1 UPER (asn1tools, official ETSI modules);
+  if (Impairment: drop this message?) then (yes)
+    :Log drop (reproducible seed);
+  else (no)
+    :Apply configured delay / jitter;
+    :Send UDP datagram into ego network (bench-to-ego channel);
+    |#E2EFDA|Ego V2X_Comm|
+    :Receive datagram (thin transport adapter);
+    :Strip envelope and UPER-decode payload (asn1tools; GN/BTP deferred to adapter upgrade path);
+    if (Decode and field validation OK?) then (no)
+      :Log and discard;
+    else (yes)
+      :Publish decoded V2X PDU to ADA (sender GNSS position, perceived object C, timestamps);
+      |#FFF2CC|Ego ADA|
+      :Read ego position (GnssProvider);
+      :Update environment model — B as direct neighbour (CAM), C as relayed perceived object (CPM);
+      :Compute relative geometry d_AB and d_BC, then compose d_AC;
+      :Assess situation — two vehicles ahead, C occluded by B (NLOS);
+      :Emit warning event (Phase 1: mocked risk label — real data arrives via Phases 2-5);
+      |#FCE4D6|Ego IVI Display|
+      :Render BEV + occluded-vehicle warning (2D in M1, 3D optional);
+    endif
+  endif
+  |#DDEBF7|Bench Scenario Player|
+repeat while (Scenario still running?) is (yes)
+->no;
+stop
+
+@enduml
