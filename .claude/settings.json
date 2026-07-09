@@ -1,4 +1,5 @@
 {
+    "alwaysThinkingEnabled": true,
     "showThinkingSummaries": true,
-    "alwaysThinkingEnabled": true
+    "verbose": true
 }
