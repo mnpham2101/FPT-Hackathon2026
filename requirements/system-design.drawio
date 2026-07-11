@@ -1,0 +1,95 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="Page-1" id="QGM4BEdtbVfYsyawokaW">
+    <mxGraphModel dx="1368" dy="788" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="6REFQP0DvP9LXxxeQYgw-3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="IVI ECU&lt;div&gt;(Cortex_A)&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="120" x="210" y="330" as="geometry" />
+        </mxCell>
+        <mxCell id="6REFQP0DvP9LXxxeQYgw-4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" value="V2X ECU&lt;div&gt;(Cortex_A)&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="120" x="460" y="180" as="geometry" />
+        </mxCell>
+        <mxCell id="6REFQP0DvP9LXxxeQYgw-5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" value="Quectel Modern" vertex="1">
+          <mxGeometry height="60" width="120" x="460" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="6REFQP0DvP9LXxxeQYgw-7" edge="1" parent="1" style="shape=flexArrow;endArrow=classic;startArrow=classic;html=1;rounded=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;startWidth=23;startSize=7;width=18;endSize=7;fillColor=#f5f5f5;strokeColor=#666666;" target="6REFQP0DvP9LXxxeQYgw-5" value="">
+          <mxGeometry height="100" relative="1" width="100" as="geometry">
+            <mxPoint x="520" y="180" as="sourcePoint" />
+            <mxPoint x="680" y="180" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="6REFQP0DvP9LXxxeQYgw-16" connectable="0" parent="6REFQP0DvP9LXxxeQYgw-7" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="USB3 / PCIe QMI ctrl" vertex="1">
+          <mxGeometry relative="1" x="-0.2021" y="2" as="geometry">
+            <mxPoint x="72" y="-10" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="6REFQP0DvP9LXxxeQYgw-8" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" value="&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Cortex-M MCU&lt;/div&gt;&lt;div&gt;Classic AUTOSAR&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="120" x="710" y="330" as="geometry" />
+        </mxCell>
+        <mxCell id="6REFQP0DvP9LXxxeQYgw-10" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" value="Sensor&lt;div&gt;( radar/lidar )&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="120" x="710" y="480" as="geometry" />
+        </mxCell>
+        <mxCell id="6REFQP0DvP9LXxxeQYgw-12" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" value="ADA ECU&lt;div&gt;(Cortex_A)&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="120" x="460" y="330" as="geometry" />
+        </mxCell>
+        <mxCell id="6REFQP0DvP9LXxxeQYgw-14" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" value="Camera&lt;div&gt;(live feed video)&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="120" x="460" y="480" as="geometry" />
+        </mxCell>
+        <mxCell id="6REFQP0DvP9LXxxeQYgw-20" parent="1" style="shape=note;strokeWidth=2;fontSize=12;size=20;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#666600;align=left;verticalAlign=top;" value="Note:&lt;br&gt;* V2X ECU configures the modern via QMI (control path) and receives V2X messages (warning obstruction).&lt;div&gt;* V2X feed simple json information to ADA ECU.&lt;/div&gt;&lt;div&gt;* ADA ECU performs crux work ( sensor + video processing, detect obstruction in LOS + obstruction information from V2X)&lt;/div&gt;&lt;div&gt;* ADA ECU feeds warning summary messages to IVI ECU.&lt;/div&gt;" vertex="1">
+          <mxGeometry height="110" width="420" x="20" y="155" as="geometry" />
+        </mxCell>
+        <mxCell id="6REFQP0DvP9LXxxeQYgw-21" edge="1" parent="1" style="shape=flexArrow;endArrow=classic;startArrow=classic;html=1;rounded=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;width=16;endSize=7;fillColor=#f5f5f5;strokeColor=#666666;" value="">
+          <mxGeometry height="100" relative="1" width="100" as="geometry">
+            <mxPoint x="519.6600000000001" y="330" as="sourcePoint" />
+            <mxPoint x="519.6600000000001" y="240" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="6REFQP0DvP9LXxxeQYgw-22" edge="1" parent="1" style="shape=flexArrow;endArrow=classic;startArrow=classic;html=1;rounded=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;width=16;endSize=7;fillColor=#f5f5f5;strokeColor=#666666;" value="">
+          <mxGeometry height="100" relative="1" width="100" as="geometry">
+            <mxPoint x="580" y="359.4100000000001" as="sourcePoint" />
+            <mxPoint x="710" y="359.4100000000001" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Q3b6fbfY7lAymmslSDHc-6" connectable="0" parent="6REFQP0DvP9LXxxeQYgw-22" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="Ethernet" vertex="1">
+          <mxGeometry relative="1" x="-0.0154" as="geometry">
+            <mxPoint y="-29" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Q3b6fbfY7lAymmslSDHc-1" edge="1" parent="1" style="shape=flexArrow;endArrow=classic;html=1;rounded=0;width=22;endSize=5;" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="450" y="360" as="sourcePoint" />
+            <mxPoint x="340" y="360" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Q3b6fbfY7lAymmslSDHc-7" connectable="0" parent="Q3b6fbfY7lAymmslSDHc-1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="Ethernet" vertex="1">
+          <mxGeometry relative="1" x="-0.4182" y="2" as="geometry">
+            <mxPoint x="-18" y="-32" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Q3b6fbfY7lAymmslSDHc-2" edge="1" parent="1" style="shape=flexArrow;endArrow=classic;html=1;rounded=0;width=22;endSize=5;" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="520" y="470" as="sourcePoint" />
+            <mxPoint x="520" y="400" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Q3b6fbfY7lAymmslSDHc-5" connectable="0" parent="Q3b6fbfY7lAymmslSDHc-2" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="CAN_FD" vertex="1">
+          <mxGeometry relative="1" x="-0.1143" y="-1" as="geometry">
+            <mxPoint x="-41" as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Q3b6fbfY7lAymmslSDHc-3" edge="1" parent="1" style="shape=flexArrow;endArrow=classic;html=1;rounded=0;width=22;endSize=5;" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="760" y="470" as="sourcePoint" />
+            <mxPoint x="760" y="400" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="Q3b6fbfY7lAymmslSDHc-4" connectable="0" parent="Q3b6fbfY7lAymmslSDHc-3" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" value="CAN_FD" vertex="1">
+          <mxGeometry relative="1" x="-0.4" y="-2" as="geometry">
+            <mxPoint x="-42" y="-9" as="offset" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

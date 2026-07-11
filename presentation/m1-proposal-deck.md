@@ -9,6 +9,8 @@ description: Proposal deck — cooperative NLOS hazard awareness over V2X, virtu
 <!-- _class: lead -->
 <!-- _paginate: false -->
 
+![bg](assets/bg-title-city.jpg)
+
 # Cooperative Vehicle Awareness
 
 ## See the hazard before it can be seen
@@ -19,9 +21,48 @@ Source: [m1-cooperative-awareness.md §1](../requirements/m1-cooperative-awarene
 
 ---
 
-<!-- Slide 1 — Project goals -->
+<!-- Table of contents -->
 
-# 1 · Project goals — safer travel, beyond line of sight
+# Table of contents
+
+1. **Team information**
+2. **Project description** — the hazard nobody sees coming, and how we make it visible
+3. **Technical approach** — virtual ECUs, cloud environment, responsibilities, extensibility
+4. **Development process approach** — ASPICE-style discipline, agentic AI, parallel tracks
+5. **Development planning** — six phases, five developers, demo on August 19
+6. **Our perspective** — why this proposal
+
+---
+
+<!-- ================= SECTION 1 · TEAM INFORMATION ================= -->
+<!-- _class: lead -->
+
+![bg](assets/bg-navy-motif.png)
+
+# 01 · Team information
+
+---
+
+<!-- Team information — intentionally empty for now, to be completed -->
+
+# Team information
+
+*(to be completed)*
+
+---
+
+<!-- ================= SECTION 2 · PROJECT DESCRIPTION ================= -->
+<!-- _class: lead -->
+
+![bg](assets/bg-navy-motif.png)
+
+# 02 · Project description
+
+---
+
+<!-- Project goals -->
+
+# Project goals — safer travel, beyond line of sight
 
 **The accident nobody sees coming:** a vehicle braking two cars ahead is invisible to the following driver *and* to every onboard sensor — until it is too late.
 
@@ -29,19 +70,28 @@ Source: [m1-cooperative-awareness.md §1](../requirements/m1-cooperative-awarene
 - **Safer travel.** Awareness is no longer limited by one vehicle's line of sight — every connected vehicle extends every other's perception.
 - **Effortless user experience.** The hazard appears on the in-vehicle display as an intuitive bird's-eye scene of the road ahead — glance, understand, react. No cryptic alarms, no interpretation.
 
-![h:280 Convoy geometry — A cannot see C; B sees C and relays it over V2X](../requirements/m1_convoy_nlos_relay_geometry.png)
+![h:260 Convoy geometry — A cannot see C; B sees C and relays it over V2X](../requirements/m1_convoy_nlos_relay_geometry.png)
 
 **Milestone 1 proves it end-to-end:** convoy A → B → C. Vehicle A can never see C (blocked by B). B detects C and relays its perception over V2X — **C appears on A's display anyway.**
 
 ---
 
-<!-- Slide 2 — Technical approach: system design on virtual ECUs -->
+<!-- ================= SECTION 3 · TECHNICAL APPROACH ================= -->
+<!-- _class: lead -->
 
-# 2 · System design — a full vehicle, fully virtual
+![bg](assets/bg-navy-motif.png)
+
+# 03 · Technical approach
+
+---
+
+<!-- Technical approach: system design on virtual ECUs -->
+
+# System design — a full vehicle, fully virtual
 
 The complete E/E architecture runs as **virtual ECUs on a cloud platform** — no hardware, yet a full-system demonstration.
 
-![h:330 4-ECU system design](../requirements/coorperative-awareness.png)
+![h:330 4-ECU system design](../requirements/system-design.svg)
 
 - **Blueprint/node model:** 1 blueprint = 1 car; 1 node = 1 ECU, packaged as a container — deploying the blueprint brings up the whole virtual vehicle.
 - **Four cooperating nodes:** V2X ECU (communication), ADA ECU (perception + risk), IVI ECU (display), plus a team-built **Scenario Player** bench node emulating the modem and the world.
@@ -49,26 +99,53 @@ The complete E/E architecture runs as **virtual ECUs on a cloud platform** — n
 
 ---
 
-<!-- Slide 3 — Technical approach: ECU responsibilities -->
+<!-- Technical approach: cloud development environment & starter pack -->
 
-# 3 · ECU responsibilities — one clear job each
+# Cloud development environment and starter pack
 
-| Node | Milestone-1 responsibility |
-|---|---|
-| **V2X ECU** | Modem interfacing (simulated); receives V2X payloads, applies business logic, forwards to ADA; builds and broadcasts payloads from ADA data |
-| **ADA ECU** | Detects objects from video, estimates distance, admits tracks; fuses V2X + own perception in a **Collision Risk Assessment** abstraction; emits warnings to IVI |
-| **IVI ECU** | GUI shell with buttons + central view; renders the 3-vehicle god-view scene, including the occluded "ghost" vehicle, on warning |
-| **Scenario Player** | Bench node: emulates the modem connection point, plays back V2X messages at configurable rates, drives every test scenario |
+Development runs entirely on the cloud virtual platform under its blueprint/node model — per node: the virtualization level, the development scope inside it, and the goals to achieve.
 
-Track admission is an explicit, testable state machine — no hidden heuristics:
-
-![h:230 Vehicle C track admission state machine](../requirements/vehicleC_track_admission_state_machine.png)
+| Node                             | Virtualization level                                                     | Focus goals                                                                                                                                       |
+| -------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **IVI ECU**                      | Full vECU — developed fully; the container ships in the **starter pack** | 3D display: god view of the 3 vehicles; 2D ⇄ 3D view switching; switching to another app                                                          |
+| **V2X ECU**                      | App-level (Linux container) — developed in part: only certain layers     | Portability to different hardware — the developed layers move across hardware unchanged                                                           |
+| **ADA ECU**                      | App-level (Linux container) — developed fully                            | Structured, high-performance architecture: condensed messages, low bandwidth, low latency; object detection / AI deep learning is not an M1 focus |
+| **Bench node — Scenario Player** | Container — team-built, developed fully                                  | V2X message playback across different scenarios                                                                                                   |
 
 ---
 
-<!-- Slide 4 — Technical approach: extensibility by design -->
+<!-- Technical approach: ECU responsibilities -->
 
-# 4 · Designed for what comes next
+# ECU responsibilities — one clear job each
+
+| Node                | Milestone-1 responsibility                                                                                                                                      |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **V2X ECU**         | Modem interfacing (simulated); receives V2X payloads, applies business logic, forwards to ADA; builds and broadcasts payloads from ADA data                     |
+| **ADA ECU**         | Detects objects from video, estimates distance, admits tracks; fuses V2X + own perception in a **Collision Risk Assessment** abstraction; emits warnings to IVI |
+| **IVI ECU**         | GUI shell with buttons + central view; renders the 3-vehicle god-view scene, including the occluded "ghost" vehicle, on warning                                 |
+| **Scenario Player** | Bench node: emulates the modem connection point, plays back V2X messages at configurable rates, drives every test scenario                                      |
+
+Track admission is an explicit, testable state machine — no hidden heuristics:
+
+![h:220 Vehicle C track admission state machine](../requirements/vehicleC_track_admission_state_machine.png)
+
+---
+
+# V2X ECU development - Ensure portability on hardware
+
+---
+
+# ADA ECU development - Laying foundation for future work
+
+---
+
+# IVI ECU development - Seamless user experience, instance warning
+
+---
+
+<!-- Technical approach: extensibility by design -->
+
+# Designed for what comes next
 
 Every ECU boundary is a **deliberate extension seam** — Milestone 1 ships the scenario, the architecture ships the roadmap:
 
@@ -80,43 +157,84 @@ Future features are not wishful thinking — they are **registered, analysed, an
 
 ---
 
-<!-- Slide 5 — Development process: ASPICE-inspired discipline -->
+<!-- ================= SECTION 4 · DEVELOPMENT PROCESS APPROACH ================= -->
+<!-- _class: lead -->
 
-# 5 · Development process — ASPICE-style discipline, hackathon speed
+![bg](assets/bg-navy-motif.png)
 
-We simulate the ASPICE traceability chain end-to-end: **requirement ↔ architecture ↔ task ↔ commit ↔ test** — every artifact answers "why does this exist?"
-
-- **Requirements are engineered, not collected:** numbered and frozen project-globally (R1–R20), each with a feasibility verdict and a **measurable KPI**; every vague wording is translated `original → precise` and recorded for veto.
-- **Phases carry contracts:** each phase declares its input, its output, and binary acceptance criteria — a phase is done when the check passes, not when it feels done.
-- **Total traceability by construction:** every task ID `X.Y.Z.W` encodes requirement · phase · task · subtask; every commit carries its ID — from any line of code back to the requirement it serves in one hop.
-- **Atomic units of work:** one subtask = one single objective = **one atomic commit**, gated by build + unit tests before it may be called done.
+# 04 · Development process approach
 
 ---
 
-<!-- Slide 6 — Development process: agentic AI, human in the loop -->
+<!-- Development process: ASPICE-inspired discipline -->
 
-# 6 · Agentic AI with a human in the loop
+# Development process — ASPICE-style discipline, hackathon speed
+
+We simulate the ASPICE traceability chain end-to-end: **requirement ↔ architecture ↔ task ↔ commit ↔ test** — every artifact answers "why does this exist?"
+
+- **Requirements are engineered:** every requirement passes a feasibility study and carries a **measurable KPI**.
+- **Phases carry contracts:** each phase declares its input, its output, and binary acceptance criteria — a phase is done when the check passes, not when it feels done.
+- **Total traceability by construction:** every task ID `X.Y.Z.W` encodes requirement · phase · task · subtask; every commit carries its ID — from any line of code back to the requirement it serves in one hop.
+- **Atomic units of work:** one subtask = one single objective = **one atomic commit** — reviewable code, manageable change history.
+
+---
+
+<!-- Development process: agentic AI, human in the loop -->
+
+# Agentic AI with a human in the loop
 
 AI does the volume; the process keeps it **manageable, auditable, and steerable**.
 
 - **Three specialized agents, non-overlapping mandates:** *researcher* (requirements, feasibility, tech selection) → *architect* (high-level design, module boundaries) → *planner* (task decomposition, spawning implementation subagents). Each owns its stage — and explicitly may not do the others'.
 - **Procedure as code:** every working procedure — analysis, design, planning, writing style, commit format — is a versioned rule or skill in the repository, reviewed and evolved like source code.
-- **Human decision points are built in:** every proposed number is marked *(A) assumption to confirm*; user decisions are logged (D1–D7); contracts are ratified by a human at freeze; scope changes are **flagged, never silently absorbed**.
+- **Human decision points are built in:** every proposed number is marked *(A) assumption to confirm*; user decisions are logged in a decision register; contracts are ratified by a human at freeze; scope changes are **flagged, never silently absorbed**.
 - **Result:** AI velocity with audit-grade accountability — every decision has an author, a reason, and a record.
 
 ---
 
-<!-- Slide 7 — Development process: parallel by construction -->
+<!-- Development process: parallel by construction -->
 
-# 7 · Parallel by construction — contracts first, convergence by design
+# Parallel by construction — contracts first, convergence by design
 
-Two contracts are frozen before any implementation: the **V2X message schema** and the **TrackedObject struct**. Everything downstream builds against them — with mocks — so three tracks run **in parallel**:
+Two contracts are frozen before any implementation: the **V2X message schema** and the **TrackedObject struct**. E
 
-![h:300 Three parallel tracks converge at Phase 5 over frozen contracts](../.claude/plans/dev_phases_parallelism.png)
+- Define the **V2X message schema** and the **TrackedObject struct**, messages format between the ECUs. verything downstream builds against them — with mocks — so following tracks run **in parallel**
+- **Comms track** Implement *V2X ECU*, *Player Scenario*, interface with *ADA ECU*, 
+- **Perception track** Implement *ADA ECU*, detect obstruction, analyse collision risk, interface with *IVI ECU*
+- **Display track** Bring up 2#, 2D drawing of 3 vehicles and collision warning, against a mock message from *ADA ECU*
+- 3 tracks converges where real data replace mocked data, and all ECUs are connected.
+- **Payoff:** the 1-month timeline holds with slack; teams (and AI subagents) never block on each other's internals 
+  
+---
 
-- **Comms track** broadcasts the full schema with mock payloads · **perception track** produces real detections · **display track** renders against a mock message.
-- **Phase 5 converges them:** swap mock contents for real perceived data — integration is a **data swap inside a shape that already works**, not a rewrite.
-- **Payoff:** the 2-month timeline holds with slack; teams (and AI subagents) never block on each other's internals — only on frozen, versioned contracts.
+<!-- ================= SECTION 5 · DEVELOPMENT PLANNING ================= -->
+<!-- _class: lead -->
+
+![bg](assets/bg-navy-motif.png)
+
+# 05 · Development planning
+
+---
+
+<!-- Development planning: six phases to August 19, five developers -->
+
+# Six phases to August 19 — five developers in parallel
+
+**Phase 0 defines the shared contracts, then three tracks launch simultaneously.** Phases 1, 2, and 6 start in parallel; the moment phase 2 delivers, phases 3 and 4 develop side by side; every track converges at phase 5 for the end-to-end demo on **August 19**.
+
+![Phase timeline: phases 1, 2, 6 in parallel; 3 and 4 after 2; all converge at phase 5 by Aug 19](assets/m1-phase-timeline.svg)
+
+- **Staffing — five developers in parallel:** one on comms (phase 1) · two on perception (phase 2, then 3 ∥ 4) · two on display (phase 6) · all hands on the contracts (phase 0) and phase-5 convergence.
+- **Convergence window Aug 10–19:** mock→real swap, end-to-end rehearsal, recorded demo run.
+
+---
+
+<!-- ================= SECTION 6 · OUR PERSPECTIVE ================= -->
+<!-- _class: lead -->
+
+![bg](assets/bg-navy-motif.png)
+
+# 06 · Our perspective
 
 ---
 
@@ -128,3 +246,14 @@ Two contracts are frozen before any implementation: the **V2X message schema** a
 **A safety feature you can watch work** — the invisible vehicle appears on the display.
 **An architecture that is already the roadmap** — every future feature has its seam.
 **A development process you can audit** — every commit traces to a requirement, every decision to a human.
+
+---
+
+<!-- _class: lead -->
+<!-- _paginate: false -->
+
+![bg](assets/bg-fpt-tower.jpg)
+
+# Thank you!
+
+**Cooperative Vehicle Awareness — Milestone 1** · FPT Hackathon 2026

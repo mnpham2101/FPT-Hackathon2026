@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1360 515" font-family="Segoe UI, Arial, sans-serif">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8a8d99"/>
+    </marker>
+    <marker id="arrG" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#50B848"/>
+    </marker>
+  </defs>
+
+  <!-- week grid -->
+  <g stroke="#d3d5dd" stroke-width="1">
+    <line x1="260" y1="62" x2="260" y2="448"/>
+    <line x1="452.5" y1="62" x2="452.5" y2="448"/>
+    <line x1="645" y1="62" x2="645" y2="448"/>
+    <line x1="837.5" y1="62" x2="837.5" y2="448"/>
+    <line x1="1030" y1="62" x2="1030" y2="448"/>
+    <line x1="1222.5" y1="62" x2="1222.5" y2="448"/>
+  </g>
+  <g fill="#6b6e7b" font-size="15">
+    <text x="264" y="54">Jul 13</text>
+    <text x="456.5" y="54">Jul 20</text>
+    <text x="649" y="54">Jul 27</text>
+    <text x="841.5" y="54">Aug 3</text>
+    <text x="1034" y="54">Aug 10</text>
+    <text x="1226.5" y="54">Aug 17</text>
+  </g>
+
+  <!-- demo milestone: Aug 19 -->
+  <line x1="1277.5" y1="34" x2="1277.5" y2="448" stroke="#F37021" stroke-width="2.5" stroke-dasharray="7 5"/>
+  <path d="M1277.5,22 l9,12 -9,12 -9,-12 z" fill="#F37021"/>
+  <text x="1268" y="32" text-anchor="end" font-size="16" font-weight="700" fill="#F37021">Aug 19 · end-to-end demo</text>
+
+  <!-- row labels -->
+  <g fill="#19226D" font-size="16" font-weight="600" text-anchor="end">
+    <text x="248" y="93">Phase 0</text>
+    <text x="248" y="147">Phase 1</text>
+    <text x="248" y="201">Phase 2</text>
+    <text x="248" y="255">Phase 6</text>
+    <text x="248" y="309">Phase 3</text>
+    <text x="248" y="363">Phase 4</text>
+    <text x="248" y="417">Phase 5</text>
+  </g>
+
+  <!-- bars: work description on each phase -->
+  <rect x="260" y="70" width="55" height="36" rx="6" fill="#19226D"/>
+  <text x="323" y="93" font-size="14" fill="#6b6e7b">Define V2X message + TrackedObject contracts</text>
+
+  <rect x="315" y="124" width="275" height="36" rx="6" fill="#F37021"/>
+  <text x="452" y="147" text-anchor="middle" font-size="14.5" font-weight="700" fill="#fff">Impl V2X-ECU</text>
+
+  <rect x="315" y="178" width="275" height="36" rx="6" fill="#034EA2"/>
+  <text x="452" y="201" text-anchor="middle" font-size="14.5" font-weight="700" fill="#fff">Define ADA ↔ IVI msg</text>
+
+  <rect x="315" y="232" width="646" height="36" rx="6" fill="#33B2C1"/>
+  <text x="638" y="255" text-anchor="middle" font-size="14.5" font-weight="700" fill="#fff">Impl IVI GUI + logic</text>
+
+  <rect x="645" y="286" width="316" height="36" rx="6" fill="#2F6FBF"/>
+  <text x="803" y="309" text-anchor="middle" font-size="14.5" font-weight="700" fill="#fff">Impl ADA object detection</text>
+
+  <rect x="645" y="340" width="316" height="36" rx="6" fill="#5E93D6"/>
+  <text x="803" y="363" text-anchor="middle" font-size="14.5" font-weight="700" fill="#fff">Impl ADA obscured-object detection</text>
+
+  <rect x="1030" y="394" width="247.5" height="36" rx="6" fill="#50B848"/>
+  <text x="1153" y="417" text-anchor="middle" font-size="13.5" font-weight="700" fill="#fff">Provide real data in ADA → IVI msg</text>
+
+  <!-- dependencies: phase 2 done -> phases 3, 4 in parallel -->
+  <path d="M590,196 L617,196 L617,304 L638,304" fill="none" stroke="#8a8d99" stroke-width="2" marker-end="url(#arr)"/>
+  <path d="M617,304 L617,358 L638,358" fill="none" stroke="#8a8d99" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- convergence into Phase 5 -->
+  <line x1="1030" y1="124" x2="1030" y2="388" stroke="#50B848" stroke-width="2" stroke-dasharray="5 4"/>
+  <path d="M1030,388 L1030,392" fill="none" stroke="#50B848" stroke-width="2" marker-end="url(#arrG)"/>
+  <text x="1024" y="120" text-anchor="end" font-size="14" font-weight="600" fill="#50B848">all tracks converge</text>
+
+  <!-- legend -->
+  <g font-size="14" fill="#3d3d46">
+    <rect x="260" y="474" width="16" height="16" rx="4" fill="#19226D"/><text x="282" y="487">contracts</text>
+    <rect x="370" y="474" width="16" height="16" rx="4" fill="#F37021"/><text x="392" y="487">comms track</text>
+    <rect x="510" y="474" width="16" height="16" rx="4" fill="#034EA2"/><text x="532" y="487">perception track</text>
+    <rect x="680" y="474" width="16" height="16" rx="4" fill="#33B2C1"/><text x="702" y="487">display track</text>
+    <rect x="820" y="474" width="16" height="16" rx="4" fill="#50B848"/><text x="842" y="487">convergence</text>
+    <text x="1277.5" y="487" text-anchor="end" font-weight="600" fill="#19226D">5 developers working in parallel</text>
+  </g>
+</svg>
