@@ -26,9 +26,9 @@ node "Ego Vehicle — Virtual ECU (Linux vECU on CabinSky)" as ego {
   component "ADA — Awareness & Driving Assistance\n(R8, R12, R14, R15)" as ADA {
     [Location Access\nGnssProvider abstraction] as LOC
     [Environment Model\nTrackedObject store + admission state machine] as EM
-    [Situation / Risk Assessment\ntwo vehicles ahead, one occluded (NLOS)\nPhase 1: mocked output — real data via Phases 2-5] as RISK
+    [Situation / Risk Assessment\ntwo vehicles ahead, one occluded (NLOS)\nPhase 1: mocked output — real data via Phases 2-4 + 6] as RISK
   }
-  component "IVI Display  (R16)\nPhase 1: simple 2D BEV warning app\nPhase 6 target: AAOS HMI (3D optional)" as IVI
+  component "IVI Display  (R16)\nPhase 1: simple 2D BEV warning app\nPhase 5 target: AAOS HMI (3D optional)" as IVI
 }
 
 database "Externalized Config\nego StationID, gate constants,\nimpairment profile, scenario script" as CFG
@@ -42,7 +42,7 @@ TA --> DEC : raw datagram
 DEC --> EM : decoded V2X PDU\n(sender GNSS ref position,\nperceived object C, timestamps)
 LOC --> EM
 EM --> RISK
-RISK --> IVI : warning event\n(the ADA-to-IVI contract Phase 6 consumes;\nmock in Phase 1, real from Phase 5)
+RISK --> IVI : warning event\n(the ADA-to-IVI contract Phase 5 consumes;\nmock in Phase 1, real from Phase 6)
 CFG ..> SP
 CFG ..> ADA
 

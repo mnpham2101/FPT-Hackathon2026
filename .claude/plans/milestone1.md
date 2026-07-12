@@ -23,7 +23,7 @@ This is the V2X "see-through" pattern: B answers *"what is ahead that A can't se
 - GNSS (time + position) comes from the **modem's integrated receiver**. The separate Cortex-M GPS path is deferred.
 - Composition assumes a near-collinear, same-heading convoy.
 - Transport may run on a **stub** (UDP/ZeroMQ) and/or real **PC5**, depending on hardware.
-- "Risk" is a **static label** on C in M1 — no TTC / trajectory analysis.
+- "Risk" is a **static label** on C in the relay/display path; ADA additionally computes a **simple TTC-based risk level** for logging (collision-risk event list + annotated-video TTC overlay — [requirements § System demo requirements](../../requirements/m1-cooperative-awareness.md#system-demo-requirements)). Full multi-object / curved-trajectory risk analysis is deferred (§6).
 
 ---
 
@@ -34,11 +34,11 @@ The plan is **contract-first**. Two interfaces are frozen up front, and every ph
 1. **V2X message schema** — the contract between the two vehicles (base it on the CPM / SDSM perceived-object container so no needed field is missing later).
 2. **TrackedObject struct** — the contract between the perception sub-phases.
 
-With those frozen, three tracks develop **in parallel** and converge at Phase 5:
+With those frozen, three tracks develop **in parallel** and converge at Phase 6:
 
-![Development-phase parallelism: schema frozen at Phase 1; three parallel tracks converge at Phase 5](dev_phases_parallelism.png)
+![Development-phase parallelism: schema frozen at Phase 1; three parallel tracks converge at Phase 6](dev_phases_parallelism.png)
 
-*Comms (Phase 1), perception (Phases 2→3→4) and display (Phase 6) all build against the frozen schema. Phase 1 broadcasts the full message with mock contents; the perception track produces real data; Phase 6 is built on a mock message. They meet at Phase 5, which swaps mock for real.*
+*Comms (Phase 1), perception (Phases 2→3→4) and display (Phase 5) all build against the frozen schema. Phase 1 broadcasts the full message with mock contents; the perception track produces real data; Phase 5 is built on a mock message. They meet at Phase 6, which swaps mock for real.*
 
 ### Order of implementation
 
@@ -47,11 +47,11 @@ With those frozen, three tracks develop **in parallel** and converge at Phase 5:
 > **Step 1 — Run three tracks in parallel:**
 > - **Comms track:** Phase 1 (broadcast the full schema with mock payload).
 > - **Perception track:** Phase 2 first (it defines the store + state machine), then Phases 3 and 4 — which themselves develop independently against the struct (see below).
-> - **Display track:** Phase 6, built against a mock message.
+> - **Display track:** Phase 5, built against a mock message.
 >
-> **Step 2 — Converge:** Phase 5 — replace mock contents with real perceived data from Phase 4, flowing over Phase 1's transport.
+> **Step 2 — Converge:** Phase 6 — replace mock contents with real perceived data from Phase 4, flowing over Phase 1's transport.
 >
-> **Step 3 — Finalize:** wire Phase 5's real data into the already-built Phase 6 and run the end-to-end demo.
+> **Step 3 — Finalize:** wire Phase 6's real data into the already-built Phase 5 and run the end-to-end demo.
 >
 > **Single-developer fallback:** if working alone, run the phases sequentially in number order **1 → 2 → 3 → 4 → 5 → 6**. The parallel plan above is the optimization for multiple people.
 
@@ -70,12 +70,12 @@ M1 can be developed and demoed end-to-end on FPT's CARSKY virtual engineering pl
 | Platform capability | Role in M1 |
 |---|---|
 | **CabinSky** (vECU runtime: Linux/AUTOSAR containers in the cloud) | Vehicles A and B run as two Linux vECUs hosting the comms, perception, and display processes |
-| **Nydus** (topology orchestration: CAN/LIN/Ethernet/SOME-IP; per-node fidelity swap mock → vECU → HIL) | The A↔B link is a simulated Ethernet segment; the mock-then-real convergence at Phase 5 is Nydus's native fidelity-swap workflow |
+| **Nydus** (topology orchestration: CAN/LIN/Ethernet/SOME-IP; per-node fidelity swap mock → vECU → HIL) | The A↔B link is a simulated Ethernet segment; the mock-then-real convergence at Phase 6 is Nydus's native fidelity-swap workflow |
 | **MCP interface** (AI-agent deploy / send / interact / verify) | Phase acceptance criteria can be executed as agent-driven test scripts (deploy topology → inject → screenshot/verify) |
 
 Two hardware capabilities do not exist in the cloud and are substituted **behind the frozen contracts** — the message schema and all downstream phases are untouched:
 
-- **V2X radio → stub transport (sanctioned in section 2).** A `broadcast(msg)` / `on_receive(callback)` transport interface with a UDP-broadcast or ZeroMQ pub/sub implementation over the Nydus Ethernet link. The cloud link is impaired with `tc netem` (loss, latency jitter) and the broadcast loop is capped at a realistic ~10 Hz cadence, so the Phase 5 latency criterion and the gate hysteresis are tested against real jitter, not a perfect LAN. Real PC5 remains deferred scope; when hardware arrives, only this adapter is reimplemented.
+- **V2X radio → stub transport (sanctioned in section 2).** A `broadcast(msg)` / `on_receive(callback)` transport interface with a UDP-broadcast or ZeroMQ pub/sub implementation over the Nydus Ethernet link. The cloud link is impaired with `tc netem` (loss, latency jitter) and the broadcast loop is capped at a realistic ~10 Hz cadence, so the Phase 6 latency criterion and the gate hysteresis are tested against real jitter, not a perfect LAN. Real PC5 remains deferred scope; when hardware arrives, only this adapter is reimplemented.
 - **GNSS → `GnssProvider` interface** with a `SimGnssProvider` for M1-on-cloud (a `ModemGnssProvider` over QMI/AT is reserved for the hardware milestone):
   - *Timebase*: both vECUs disciplined by chrony/NTP against a common source; the common-timebase criterion is verified identically, only the discipline mechanism changes.
   - *Reference position*: NMEA replay via `gpsd`/`gpsfake`, generated from the dataset's ground-truth trajectory (KITTI raw ships per-frame OXTS GPS/IMU), so the message's reference position stays consistent with the video the perception track processes.
@@ -96,7 +96,7 @@ Two hardware capabilities do not exist in the cloud and are substituted **behind
 
 ### V2X message schema (the contract)
 
-A perceived-object message (CPM-/SDSM-shaped) carrying: sender `stationId`, `generationDeltaTime`, sender reference position/time, and a perceived-object entry for C (`objectId`, relative position / distance, `classification`, `confidence`). Frozen at Phase 1; broadcast with mock contents in Phase 1, real contents from Phase 5.
+A perceived-object message (CPM-/SDSM-shaped) carrying: sender `stationId`, `generationDeltaTime`, sender reference position/time, and a perceived-object entry for C (`objectId`, relative position / distance, `classification`, `confidence`). Frozen at Phase 1; broadcast with mock contents in Phase 1, real contents from Phase 6.
 
 ### TrackedObject struct
 
@@ -208,25 +208,7 @@ Implemented in the Phase 2 track manager. A hard 30 m edge would flicker on nois
 - [ ] C is not dropped until beyond `gate_exit` (no add/remove flicker at the boundary).
 - [ ] Gate constants are externalized configuration, not hardcoded literals.
 
-### Phase 5 — Perceived object → V2X (real data)
-
-**Objective.** Replace the mock contents with **real** perceived data; B relays C, A receives it. This is a swap-and-verify step, not a new build.
-
-**Tasks.**
-- Populate the message's perceived-object entry from Phase 4's real track (type, relative position/distance, confidence, timestamp).
-- B includes C in the broadcast **only while C is in the `tracked` state** (relay window = gate).
-- A receives, decodes, and admits a relayed C track (`source = v2x_relayed`) on receipt.
-
-**Tech stack.** Same transport as Phase 1; the frozen schema; per-source admission logic in the store.
-
-**Acceptance Criteria.**
-- [ ] The transmitted message carries **real** C data from Phase 4 — **no mocks** anywhere in the path.
-- [ ] B starts relaying C when it enters `tracked`, and stops when it leaves the set.
-- [ ] A receives and decodes the message and creates a `v2x_relayed` track for C.
-- [ ] The relayed track carries B's reference position/time needed by Phase 6.
-- [ ] End-to-end latency from B's detection to A's receipt is within the agreed bound.
-
-### Phase 6 — Compose + display
+### Phase 5 — Compose + display
 
 **Objective.** A reconstructs C's position and both vehicles display C with its relative position.
 
@@ -243,14 +225,32 @@ Implemented in the Phase 2 track manager. A hard 30 m edge would flicker on nois
 - [ ] B's display shows C (directly detected) with its relative position.
 - [ ] A's display shows C as an occluded marker on the BEV, despite A never detecting C directly.
 - [ ] The composed `d_AC` matches ground truth within the agreed tolerance.
-- [ ] **(Integration)** With real Phase 5 data, C appears on A's display end-to-end.
+- [ ] **(Integration)** With real Phase 6 data, C appears on A's display end-to-end.
+
+### Phase 6 — Perceived object → V2X (real data)
+
+**Objective.** Replace the mock contents with **real** perceived data; B relays C, A receives it. This is a swap-and-verify step, not a new build.
+
+**Tasks.**
+- Populate the message's perceived-object entry from Phase 4's real track (type, relative position/distance, confidence, timestamp).
+- B includes C in the broadcast **only while C is in the `tracked` state** (relay window = gate).
+- A receives, decodes, and admits a relayed C track (`source = v2x_relayed`) on receipt.
+
+**Tech stack.** Same transport as Phase 1; the frozen schema; per-source admission logic in the store.
+
+**Acceptance Criteria.**
+- [ ] The transmitted message carries **real** C data from Phase 4 — **no mocks** anywhere in the path.
+- [ ] B starts relaying C when it enters `tracked`, and stops when it leaves the set.
+- [ ] A receives and decodes the message and creates a `v2x_relayed` track for C.
+- [ ] The relayed track carries B's reference position/time needed by Phase 5.
+- [ ] End-to-end latency from B's detection to A's receipt is within the agreed bound.
 
 ---
 
 ## 6. Deferred to Later Milestones
 
 - Real PC5 over-the-air (if M1 used the stub), message **signing / PKI** (IEEE 1609.2), full **ASN.1** encoding.
-- TTC / trajectory **risk analysis** (M1 uses a static risk label only).
+- Full multi-object / curved-trajectory **risk analysis** — M1 includes only a simple TTC-based risk level for ADA demo logging (§2).
 - Multi-object tracking, **absolute/GPS** composition, curve/heading-robust geometry.
 - Cortex-M GNSS + telemetry path, V2N2V network relay, earlier-relay lead-time tuning.
 

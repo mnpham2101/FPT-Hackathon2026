@@ -34,7 +34,7 @@ Verdict basis: [solution-selection-criteria.md](../.claude/rules/solution-select
 
 ### Why no generator replaces the team-written scenario player
 
-- **R13/R17 content rule:** Phase 5's relayed CPM must carry real Phase-4 perception output from the TrackedObject store — no off-the-shelf generator ingests our store; every framework generates CPM content from its own simulated sensors/traffic.
+- **R13/R17 content rule:** Phase 6's relayed CPM must carry real Phase-4 perception output from the TrackedObject store — no off-the-shelf generator ingests our store; every framework generates CPM content from its own simulated sensors/traffic.
 - **R18 ground-truth consistency:** scenario trajectories and CPM content must match the provided clips' ground truth — SUMO/random-traffic-driven generators cannot reproduce externally-recorded trajectories.
 - **Impairment placement:** BTC-recommended option (b) puts config-driven drop/delay/jitter inside the scenario player with a reproducible seed — native to our player, foreign to the frameworks.
 - **Effort asymmetry (C2):** two scripted vehicles + asn1tools encode ≈ days; ns-3/OMNeT++ framework bring-up ≈ 1–2+ weeks, and the custom content plumbing above would still have to be written.

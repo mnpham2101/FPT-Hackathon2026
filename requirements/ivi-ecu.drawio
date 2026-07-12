@@ -1,0 +1,19 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="Page-1" id="GsPEq2pcAozZFayqef5p">
+    <mxGraphModel dx="1342" dy="788" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="EkrVdu84rjp8D1yZTWRk-1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;" value="" vertex="1">
+          <mxGeometry height="280" width="440" x="160" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="EkrVdu84rjp8D1yZTWRk-2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" value="Areas for functional buttons/ apps" vertex="1">
+          <mxGeometry height="40" width="420" x="170" y="350" as="geometry" />
+        </mxCell>
+        <mxCell id="EkrVdu84rjp8D1yZTWRk-3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=8;fillColor=#f9f7ed;strokeColor=#36393d;" value="Display area for&amp;nbsp;&lt;div&gt;video feeds,&amp;nbsp;&lt;/div&gt;&lt;div&gt;application windows,&amp;nbsp;&lt;/div&gt;&lt;div&gt;God view 2D or 3D drawing of vehicle&amp;nbsp;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="210" width="420" x="170" y="130" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -2,7 +2,7 @@
 ' Research artifact (project-researcher) — Phase 1 activity-flow requirements.
 ' Shows one scenario tick end-to-end: bench emission -> V2X_Comm decode ->
 ' ADA situation assessment -> IVI warning. ADA output is mocked in Phase 1;
-' Phases 2-5 replace it with real perceived data; Phase 6 consumes it.
+' Phases 2-4 + 6 replace it with real perceived data; Phase 5 consumes it.
 title Phase 1 Activity Flow — scenario injection, decode, awareness, warning
 
 |#DDEBF7|Bench Scenario Player|
@@ -30,7 +30,7 @@ repeat
       :Update environment model — B as direct neighbour (CAM), C as relayed perceived object (CPM);
       :Compute relative geometry d_AB and d_BC, then compose d_AC;
       :Assess situation — two vehicles ahead, C occluded by B (NLOS);
-      :Emit warning event (Phase 1: mocked risk label — real data arrives via Phases 2-5);
+      :Emit warning event (Phase 1: mocked risk label — real data arrives via Phases 2-4 + 6);
       |#FCE4D6|Ego IVI Display|
       :Render BEV + occluded-vehicle warning (2D in M1, 3D optional);
     endif

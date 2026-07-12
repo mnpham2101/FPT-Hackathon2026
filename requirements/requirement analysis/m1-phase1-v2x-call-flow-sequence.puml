@@ -46,8 +46,8 @@ group V2X_Comm Phase 1 deliverable boundary (RX)
   end
 end
 ADA -> ADA : log full message parsed into fields (Phase 1 acceptance, R4)
-ADA -> IVI : mocked warning event (real data via Phases 2-5)
-IVI -> IVI : render placeholder BEV (real display is Phase 6)
+ADA -> IVI : mocked warning event (real data via Phases 2-4 + 6)
+IVI -> IVI : render placeholder BEV (real display is Phase 5)
 note right of ADA
   Phase 1 work TERMINATES at the decoded PDU
   handed to ADA + the parsed-field log.

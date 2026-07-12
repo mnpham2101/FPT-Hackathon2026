@@ -36,10 +36,10 @@
     <text x="248" y="93">Phase 0</text>
     <text x="248" y="147">Phase 1</text>
     <text x="248" y="201">Phase 2</text>
-    <text x="248" y="255">Phase 6</text>
+    <text x="248" y="255">Phase 5</text>
     <text x="248" y="309">Phase 3</text>
     <text x="248" y="363">Phase 4</text>
-    <text x="248" y="417">Phase 5</text>
+    <text x="248" y="417">Phase 6</text>
   </g>
 
   <!-- bars: work description on each phase -->
@@ -68,7 +68,7 @@
   <path d="M590,196 L617,196 L617,304 L638,304" fill="none" stroke="#8a8d99" stroke-width="2" marker-end="url(#arr)"/>
   <path d="M617,304 L617,358 L638,358" fill="none" stroke="#8a8d99" stroke-width="2" marker-end="url(#arr)"/>
 
-  <!-- convergence into Phase 5 -->
+  <!-- convergence into Phase 6 -->
   <line x1="1030" y1="124" x2="1030" y2="388" stroke="#50B848" stroke-width="2" stroke-dasharray="5 4"/>
   <path d="M1030,388 L1030,392" fill="none" stroke="#50B848" stroke-width="2" marker-end="url(#arrG)"/>
   <text x="1024" y="120" text-anchor="end" font-size="14" font-weight="600" fill="#50B848">all tracks converge</text>

@@ -1,0 +1,38 @@
+@startuml m1_node_toolset_support_activity
+' Research artifact (project-researcher) — toolset-support verification, not an HLD.
+' One warning cycle across the four nodes, each step annotated with the tool that carries it.
+title One warning cycle — each step on its picked toolset (R10 tick to R19 render)
+
+skinparam defaultTextAlignment center
+skinparam wrapWidth 320
+
+|#eef7ee|Bench — Python (+C++ encode)|
+start
+:R10 tick: advance A/B/C ground truth (Python engine);
+:R13 LOS filter: own-sensor list excludes occluded C (Python geometry);
+:R11 build B's CPM while C in B's gate (Python builder);
+:R2 encode CPM — Vanetza ITS2 UPER (C++ component) or P1 JSON (Python);
+:R12 apply seeded drop/delay/jitter pre-emission (Python);
+:emit UDP datagram toward the V2X ECU adapter socket (Python stdlib socket);
+
+|#eef2f7|V2X ECU — C++17|
+:R5 adapter Rx: datagram from seam socket (POSIX/Asio UDP);
+:R2/R7 decode CPM — Vanetza ITS2 asn1 codec (C++);
+:R7 validate mandatory fields and ranges, dedupe (C++17);
+:R7 map to R3 relayed object + B pose, forward JSON to ADA (C++ + JSON lib);
+
+|#fdf6ec|ADA ECU — Python 3.11+|
+:R15 admit v2x_relayed C into the track store (Python);
+:R16 CRA plugin dispatch to the NLOS realization (Python);
+:R17 compose d_AC, evaluate gate/TTC, set risk state (Python);
+:R23 append risk event to JSONL evidence log (Python);
+:R4 emit warning event + 10 Hz state over UDP JSON (Python stdlib socket);
+
+|#f3eef7|IVI ECU — Kotlin on AAOS|
+:R4 receive datagram in the foreground service (Kotlin DatagramSocket);
+:parse versioned JSON, look up warningType registry (Kotlin);
+:R18 shell state machine: idle to warning-view; heads-up if backgrounded (Compose + IMPORTANCE_HIGH CATEGORY_NAVIGATION);
+:R19 render ghost C in 3D god view (SceneView/Filament) or 2D floor (Compose Canvas) behind the view seam;
+stop
+
+@enduml

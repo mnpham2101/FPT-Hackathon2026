@@ -2,13 +2,13 @@
 
 ## 1. Project description
 
-### Project Goals
+### Project goals
 
-The system makes a vehicle aware of a hazard it cannot see, by relaying another vehicle's perception.
+The system makes a vehicle aware of a hazard it cannot see by relaying another vehicle's perception.
 
 ### Milestone 1 development goals
 
-Milestone 1 scopes implementation to one scenario, built on a cloud virtual environment:
+Milestone 1, developed for the FPT Hackathon, scopes implementation to a single scenario running entirely on a cloud virtual environment:
 
 Three vehicles drive in a collinear convoy — **A** follows **B** follows **C**. Vehicle A's view of C is **blocked by B**, so A's own camera can never detect C. Vehicle B *can* see C, detects it, and **broadcasts that perception to A over V2X**. The result: both A and B display vehicle C and its relative position, even though A never sees C directly.
 
@@ -16,426 +16,395 @@ Three vehicles drive in a collinear convoy — **A** follows **B** follows **C**
 
 *Objective — B's perception of C reaches A over a V2X relay. A reconstructs C's position by composing its own measurement of B with B's reported measurement of C:* `d_AC ≈ d_AB + d_BC` *(valid for the near-collinear convoy; absolute/GPS composition is a later milestone).*
 
+Distance to C is the admission criterion for tracking and for assessing collision risk. M1 uses a fixed distance threshold; a future milestone should scale it with traffic speed (§ Future developments).
+
+![Vehicle Tracking State](vehicleC_track_admission_state_machine.png)
+
 ### System design
 
 The 4-ECU design below realizes the goals above; per-ECU M1 scope is in the responsibility list right after it.
 
 ![System Design](coorperative-awareness.png)
 
-### ECU responsibility
+### ECU and Scenario Player responsibility
+
+Responsibility of each ECU and the Scenario Player in Milestone 1; the Cortex-M ECU is listed only to record its exclusion.
 
 - **V2X ECU**
-  - Configures the modem and interfaces with it — simulated only in M1.
-  - Connects to the V2X network — simulated, or a 3rd-party library entirely, in M1.
-  - Receives V2X message payloads, applies business logic, forwards results to the ADA ECU (M1).
-  - Receives information from the ADA ECU, constructs V2X message payloads, forwards to V2X (M1).
-  - M1 scope is strictly limited to business logic and V2X message construction.
+  - Configures the modem and interfaces with it — simulated only.
+  - Connects to the V2X network — either simulated or handled entirely by a 3rd-party library.
+  - Receives V2X message payloads, applies business logic, forwards results to the ADA ECU.
+  - Receives information from the ADA ECU, constructs V2X message payloads, broadcasts them over the V2X network.
 - **ADA ECU**
-  - Configures the camera — not done in M1.
-  - Receives live video feeds — not done in M1.
-  - Detects objects in video — in M1, only from saved video files, not a live feed.
+  - Incorporates information from the V2X ECU and detected objects from the video feed to construct a warning message for the IVI ECU, via a **Collision Risk Assessment abstraction** that analyzes and categorizes risk — built so future warning scenarios can be added as extensions without reworking this code (§ Future developments: modular warning scenarios).
+  - M1 need not classify every risk type or filter by criticality; the warning message is designed so new hazard types and criticality levels can be added later without reworking this design (§ Future developments: criticality filtering, other hazard-warning types).
+  - Configures the camera and receives live video feeds — neither is implemented (no live camera bring-up is a frozen scope boundary; § Future developments: camera live feed in the IVI central view).
+  - Detects objects only from provided saved video files — not a live feed (§ Future developments: live object detection at speed).
+  - Does not receive GNSS or other sensor data from the Cortex-M ECU.
 - **IVI ECU**
-  - Displays GUI and applications, including a 3D view.
-  - Receives information from ADA and renders it.
+  - Displays GUI and applications, and renders information received from the ADA ECU.
+  - View goals (2D or 3D god view of all vehicles). 
+  - Multi-process applications **should** be developed but could be deferred to a future milestone (§ Future developments: multi-process front end with wake-on-warning).
+- **Scenario Player**
+  - Emulates the Quectel modem's connection point toward the V2X ECU.
+  - Simulates decoded V2X messages arriving at different rates, in place of the Quectel modem.
+  - Optionally simulates Quectel modem configuration responses.
+  - Live camera feed simulation is out of scope (§ ADA ECU above); the ADA ECU consumes provided video files directly.
+- **Cortex-M ECU**
+  - Not developed — sensor data is omitted.
+
+### Cloud development constraints
+
+Development runs entirely on the cloud virtual platform, under its blueprint/node model:
+
+- **Blueprint:** 1 blueprint = 1 car — this project builds **one blueprint**, the ego vehicle; deploying it brings up the whole virtual car on the cloud.
+- **Node:** 1 node = 1 ECU, packaged as a container. Nodes cover both the ego ECUs to be developed (§ ECU and Scenario Player responsibility) and the **bench node** — the Scenario Player to be developed, standing outside the ego blueprint ([working-env note, deliverable 1](m1-phase1-working-environment.md)).
+
+The table below covers the ECUs and the Scenario Player — node roles are described in § ECU and Scenario Player responsibility and the working-env note, not restated here. Per node it states the virtualization level, the scope of development within it, and the goals to achieve.
+
+| Node name                    | Virtualization level                                                        | Focus goals                                                                                                                                                                    |
+| ---------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| IVI ECU                      | Full vECU — developed fully; the container itself ships in the starter pack | 3D display: god view of the 3 vehicles with every instance displayed; 2D ⇄ 3D view switching; switching to another app                                                         |
+| V2X ECU                      | App-level (Linux container) — developed in part: only certain layers        | Portability to different hardware — the developed layers move across hardware unchanged                                                                                        |
+| ADA ECU                      | App-level (Linux container) — developed fully                               | Structured, high-performance architecture receiving and sending inputs: condensed messages, low bandwidth, low latency; object detection / AI deep learning is not an M1 focus |
+| Bench node — Scenario Player | Container — team-built, developed fully                                     | V2X message playback across different scenarios (§ ECU and Scenario Player responsibility)                                                                                     |
 
 ### Input constraints
 
 - V2X control messages and V2X data (broadcast messages) are inputs to the V2X ECU and carry inter-vehicle communication. Development focuses on both extracting **and** constructing application-layer data — e.g. "there is an obstruction ahead of me, broadcast it" and "a broadcast was received, check what it is."
-- The V2X protocol stack itself ships in the modem and is out of scope for this project.
+- The V2X protocol stack ships in the modem and stays out of scope for the whole project, not just M1 — a project-wide goal: the V2X application layer must port to any hardware without code changes (§ Cloud development constraints).
 - Modem↔Cortex-A interfacing (boot-up, configuration) *could* be implemented at the interface layer; control-plane messages *could* be constructed by the V2X ECU and sent to the modem to satisfy the required 3GPP call flow.
 - Live video is the ADA ECU's eventual input; in M1, video files are provided instead.
 - Video format, frame rate, data rate, and capture conditions are not yet known — these *should be studied and proposed* to FPT-Mentor so a supported input spec can be provided.
 - A pre-trained model *should be used* to detect the obstruction (vehicle C) — no training in M1.
-- The ADA ECU → IVI ECU data path *must be* developed — enumerated as **R20** (round 2, 2026-07-08).
+- The ADA ECU → IVI ECU data path *must be* developed.
 
-### System Demo requirements
+### System demo requirements
 
-Referral methods of demonstration, scored 1 (low) – 10 (high) on preference:
+Candidate demonstration methods, scored 1 (low) – 10 (high) by preference. The score reflects how convincing the method is to the jury — invest effort in each method roughly in proportion to its score.
 
-| Method            | Demonstrates                            | Prefer score |
-| ----------------- | --------------------------------------- | ------------ |
-| Scenario player   | V2X messages across different scenarios | 10           |
-| 3D drawing        | Video feed and obstruction              | 10           |
-| 2D drawing        | Video feed and obstruction              | 8            |
-| Wireshark capture | V2X messages on the wire                | 7            |
-| Logging           | Events, incoming messages, data         | 1            |
+| Method                                         | Demonstrates                                                                                                            | Prefer score |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ------------ |
+| 3D drawing on A's IVI HMI                      | Bird's-eye (god) view of the 3-vehicle convoy, showing occluded vehicle C                                               | 10           |
+| 2D drawing on A's IVI HMI                      | 2D top-down view of the convoy, showing occluded vehicle C                                                              | 8            |
+| Video feed on A's IVI HMI                      | A's video feed, showing B — the vehicle occluding C                                                                     | 8            |
+| Wireshark capture                              | V2X messages on the wire — confirms V2X data PDUs are correctly sent/received at the V2X ECU's interface                | 7            |
+| Logging in ADA ECU — collision-risk event list | Shows the ADA ECU correctly incorporates both V2X information and its own object detection                              | 7            |
+| Logging in ADA ECU — annotated video export    | TTC overlay + risk-level label per dangerous event; corroborates that ADA correctly detects in-range objects from video | 6            |
+
+### Future developments
+
+Milestone 1's design is deliberately extensible toward the following features, all out of M1 scope:
+
+- **Modular warning scenarios.** ADA's warning-scenario logic is a self-contained module; future warning scenarios (intersection hazards, curve blind spots) plug in as new realizations of a shared Collision Risk Assessment abstraction.
+- **Priority-vehicle preemption warning.** Drawn as a future realization in [ada-ecu.svg](ada-ecu.svg) (user decision 2026-07-12): warn when an emergency/priority vehicle approaches so the driver can yield — plugs in as a new realization of the Collision Risk Assessment abstraction (§ Modular warning scenarios).
+- **Speed-scaled collision risk assessment.** Collision Risk Assessment extends from M1's fixed distance threshold (§ Milestone 1 development goals) to one that scales with traffic speed.
+- **Camera live feed in the IVI central view.** The central view renders live camera frames. Live video also feeds ADA's obstruction algorithm.
+- **Live object detection at speed.** B travels up to 120 km/h (33.3 m/s) and must detect obstructions within stopping + broadcast distance: detect a car at ≥ 130–150 m dry / ≥ 190 m wet (braking + reaction + broadcast margin; ≥ 100/160 m with automated braking). Detection range, not frame rate, is the binding constraint — reliable detection at that range needs ≥ 1280–1920 px inference at ≥ 10 Hz, beyond CPU capacity, so this requires GPU-class acceleration (flag F11).
+- **Multi-process front end with wake-on-warning.** A home app defines the outer frame/buttons and orchestrates other apps; on an obstruction event, a separate sleeping app wakes and displays the 3-vehicle scene. Per-app engine RAM and cold-start latency (100s of ms) are known costs of this pattern on Flutter; AGL/Toyota production use suggests it's workable. **Mandatory future feature** (user decision 2026-07-12, F15) — M1 lays its foundation via R18's foundation obligation.
+- **2D ⇄ 3D view switching.** User can opt to show 2D God View instead of 3D.
+- **Custom appearance / themes.** Vehicle's avatar could be customized.
+- **Fast-UI + C2X benchmark criteria.** Extremely fast UI behavior alongside C2X services — e.g. a foreground media app plus 2D/3D display or notification of vehicle C / V2X message arrival; benchmark thresholds are negotiable against technical feasibility.
+- **Multiple hidden obstructions detection.** ADA detects and tracks multiple objects outside line of sight simultaneously (M1 is single-object only).
+- **Single-message aggregation.** Multiple detected obstructions collapse into one V2X message — no broadcast storm.
+- **User-opt message reduction.** The user can opt for fewer V2X messages.
+- **Criticality filtering.** The user can opt to receive only warnings at or above a chosen criticality level; criticality is looked up from the ADA→IVI message's `warningType` field (§ ECU and Scenario Player responsibilities), not carried as its own value — see [m1-warning-message-extensibility.md](m1-warning-message-extensibility.md) R22.
+- **Other hazard-warning types.** Slippery roads, falling rocks, road holes, road condition, presence of children, police, speed limits, no-horn/other road rules, traffic conditions.
+- **Commands to other ECUs.** The [ada-ecu.svg](ada-ecu.svg) output stage sends Current TrackedObject/Risk/**Commands** to other ECUs/hardware (user decision 2026-07-12); M1 implements only the R8 store snapshot to the V2X ECU — command/actuation output to further ECUs is a future path.
 
 ### Numbering
 
-**Requirement numbers 1–20 are project-global and frozen permanently** as the `X` segment of task IDs `X.Y.Z.W` per [research-report-format.md](../.claude/rules/research-report-format.md) — never reused or renumbered. R1–R18 were published at round-1 convergence; **R19–R20 were appended at round-2 convergence (2026-07-08)** — the display re-scope (§ user decisions below).
-
-- **Notation:** every proposed numeric value is marked **(A) = assumption to confirm** — none exists verbatim in the plan doc; the user may veto any of them (see §4, flag F7). **Dependency** lines state what each requirement depends on — another requirement's output (Rx), external data, or environment facts — instead of an assessment code; *none* = self-contained. (ACH/RISK verdict codes removed 2026-07-08 by user decision; feasibility reasoning stays in the text and the §2 table.)
-
-## 3. Feedback from FPT Mentors:
-
-- **FPT-Mentor Q&A response, 2026-07-08 — read [m1-phase1-working-environment.md](m1-phase1-working-environment.md) before analysing or updating R1–R20.** That file is the authoritative, ingested record of FPT-Mentor's feedback; this entry is a pointer, not a substitute — [[project-researcher]] must read it to understand development environment and development tool for this project. 
-
-- **Environment re-check:** 2026-07-08 — the bench-node model (team builds only the ego vehicle A; B and C exist as scenario-player message streams; no radio, no modem, no platform camera; nodes share the host clock) cross-checked against R1–R18. Adjustments appear inline as *Env 2026-07-08* notes throughout §2.
-
-- **User decisions 2026-07-08 (round 2, binding inputs):** (D1) B-side display dropped — only ghost C on A's view needed; (D2) the GUI runs as a real application on the virtual IVI ECU; (D3) no JavaScript and no WebSocket in the ego software path; (D4) GUI framework candidates fixed to {Slint+Rust, React, Flutter}; (D5) GUI evaluation focus 3D → 2D → aesthetics, applied within criteria C1–C4; (D6) M1 GUI = buttons + central view window switching to a 2D **or** 3D 3-car view on an ADA warning; (D7) camera live feed in the central view = future requirement. Applied as the R16 revision, new R19/R20, §3(i)/(j), and flags F10–F13/SC-1.
-
-## 4. Others
-
-- **Authorship:** converged output of a two-researcher adversarial review — Researcher Alpha (implementability / M1-speed emphasis) vs. Researcher Beta (standards-conformance / extensibility emphasis). Round-1 contested points and resolutions: [round-1 record](../.claude/prompts/scratchpad-requirement-analysis-round1/adversarial-review-record.md). **Round 2 (2026-07-08, display re-scope + CUDA verdict):** same personas; Alpha's Flutter-first display pick prevailed after Beta's evidence-based concession — [round-2 record](../.claude/prompts/scratchpad-requirement-analysis-round2/adversarial-review-record.md) (§6 Appendix holds the pointers).
+**Numbering.** Requirements were re-enumerated from scratch as **R1–R25** at round-3 convergence (2026-07-10) under a **user-granted exception** to the frozen-numbering rule in [research-report-format.md](../.claude/rules/research-report-format.md) — the CarSky re-platforming (BTC letter 09/07/2026) invalidated the round-1/2 set's structure, so continuation numbering would have preserved staleness, not stability. Old numbers (round-1/2 R1–R20) are **void outside this report's supersession notes**; any pre-2026-07-10 task ID minted against an old number is re-mapped via those notes. From this report onward R1–R25 are project-global and **frozen again** as the `X` segment of task IDs `X.Y.Z.W`. **Notation:** every proposed numeric value is marked **(A) = assumption to confirm** — none exists verbatim in §1 or the BTC letter; the user may veto any of them (§4, F10). **Dependency** lines state what each requirement consumes — another requirement (Rx), external input, or a platform fact from the starter pack; *none* = self-contained.
 
 ---
 
-## 2. Enumerated requirements (1–20)
+## 2. Enumerated requirements & feasibility study
 
-**Ordering rationale: urgency.** Contracts (1–2) block all three tracks — the plan is contract-first by design. Then per-track requirements in the plan's own dependency/phase order (comms 3–6, perception 7–12, convergence 13–14, display/composition 15–16), capstone 17, and the cross-cutting dataset precondition 18. **R19–R20 (round-2 display additions) are appended after R18**; their internal order is contract-first — R20 (data-path contract) unblocks R19 (shell) unblocks R16-integration.
+**Ordering rationale: urgency.** Contracts (R1–R4) block every track — contract-first is the retained planning shape from [milestone1.md](../.claude/plans/milestone1.md). Then the BTC-P1 demo chain in data-flow order: V2X ECU (R5–R9), bench/scenario layer (R10–R14), ADA (R15–R17), IVI (R18–R19). Then the P2 bonus layers (R20–R21), evidence infrastructure (R22–R24), and the end-to-end capstone (R25).
 
-### Contracts (Step 0)
+### Contracts
 
-**R1 — Frozen V2X message schema, normative target = ETSI TS 103 324 CPM.** A versioned (v1.0) schema document + reference implementation of the perceived-object message, carrying `stationId`, `generationDeltaTime`, sender reference position/time, and a perceived-object entry (`objectId`, relative position/distance, `classification`, `confidence`) — per plan §4. The **single normative target is ETSI TS 103 324 CPM** (v2.1.1 ASN.1, freely auditable at the [ETSI forge](https://forge.etsi.org/rep/ITS/asn1/cpm_ts103324)); SAE J3224 SDSM is referenced informatively only, because it is paywalled and therefore unauditable under the open-source-only constraint. The schema **must carry object reference-point semantics** (CPM defines them; R15's composition math requires them). Field names/nesting mirror the CPM containers (management / station data / perceived-object) with the standard's units, ranges, and resolutions, so a later ASN.1 codec swap changes no field semantics. Enforcement: a pydantic model is the single source of truth (JSON Schema generated *from* it), validating every message at runtime; an encode→decode round-trip test and a mapping-coverage check run in CI.
-- **Dependency: none** — pure specification work, days; ETSI spec and ASN.1 are public.
-- **KPI:** mapping table traces 100% of schema fields to a TS 103 324 field path with standard units/resolution; round-trip unit test reproduces 100% of fields bit-exact; 0 range violations at runtime across all demo runs.
-- Vague→precise: "standard-conformant schema" → *every field traceable 1:1 to a TS 103 324 CPM field, verified by a committed mapping table + CI round-trip test; reference-point semantics explicit.*
-- **Env 2026-07-08:** requirement unchanged — TS 103 324 stays the normative target. The JSON *enforcement mechanism* above is under supersession review: the bench-node model makes standard UPER encoding near-free, moving the recommended route to codec-only UPER via asn1tools (ASN.1 modules + round-trip test replace pydantic/JSON-Schema as the conformance check); **user ratifies at the R1 freeze** — supersession chain in [control/data-plane §2–3](m1-phase1-control-data-plane.md).
+**R1 — V2X message contract: ETSI TS 103 324 CPM profile v1.0.** A versioned profile document of the Collective Perception Message: management info (`stationId`, reference time), originating-station container carrying B's WGS84 reference position + heading/speed, perceived-object container with ≥ 1 object (objectId, measurement-time offset, position **relative to B's reference position** with per-axis confidence, velocity, object classification with confidence, explicit reference-point semantics). The profile fixes optional-field usage, units, resolutions, and BTP destination ports (CPM port confirmed in the spike (A)). CPM carries B's pose *and* the perceived C in one message — no CAM required for geometry. DENM is the **named M2+ hazard-type family** entering through R7's extensible dispatch, not through this contract. *(Supersedes the round-1 JSON+pydantic contract shape; reaffirms CPM as family — the round-1 "Vanetza CPM outdated" objection is stale, see §3(a). Reasoned deviation from the BTC letter's DENM suggestion — F2.)*
+- **Dependency:** none — [ETSI forge ASN.1](https://forge.etsi.org/rep/ITS/asn1/cpm_ts103324) is public.
+- **Feasibility: achievable** (spec work, days).
+- **KPI:** frozen by end of week 1 (A); mapping table traces 100% of profile fields to TS 103 324 field paths; golden-vector encode→decode round trip bit-exact **across both codec endpoints** (bench encoder vs V2X ECU decoder); 0 schema/range violations at runtime across all demo runs.
+- Vague→precise: §1 "V2X data … carry inter-vehicle communication" → *the CPM profile above, the only V2X payload type in M1 besides R8's ego CPM (same profile)*.
 
-**R2 — Frozen TrackedObject struct.** The 9-field struct of plan §4 (`id, class, source, first_seen, last_seen, bbox, distance, confidence, state`) implemented as one typed model shared by detection, distance, gate, relay, and display code — never redefined.
-- **Dependency: none** — specification work from plan §4 alone.
-- **KPI:** unit test constructs the struct with all 9 fields (timestamps in ms since epoch, distance in m), exercises all `state` and `source` enum values; one-definition check passes (single import source, zero duplicate definitions).
+**R2 — Wire encoding: staged JSON (P1) → ASN.1 UPER (P2) behind one codec seam.** Bench and V2X ECU share one codec interface. P1 ships versioned JSON whose keys are the R1 field paths (the JSON *is* the living mapping table). P2 upgrades to UPER using the **Vanetza ITS2 asn1 library as the single codec source** (§3(a)); a ≤ 3-day cross-decode spike in weeks 1–2 proves the path early (encode → decode bit-exact with the independent stack). Fallback, pre-ratified (F9): if the spike or the **week-5 (A) P2 upgrade gate** fails, M1 ships CPM-shaped JSON on the wire (BTC-sanctioned realism-for-time trade); the family never migrates mid-milestone.
+- **Dependency:** R1.
+- **Feasibility:** JSON **achievable**; UPER **achievable-at-risk** (new-to-team codec integration) — bounded by the spike + gate + fallback.
+- **KPI:** JSON path operational end of week 2 (A); ≥ 3 golden messages cross-decoded bit-exact (A); codec swap = config change only, 0 code diffs outside the codec modules (binary).
+- Vague→precise: BTC "realism of encoding" → *standard UPER decodable by an independent ETSI stack by the week-5 gate, else versioned JSON with the trade recorded (F9)*.
 
-### Comms track (Phase 1)
+**R3 — Ego object/track contract (TrackedObject).** One language-neutral schema (JSON Schema + per-language bindings) shared by the ADA store, bench LOS sensor view, camera perception, and V2X-relayed entries: `id, class, source ∈ {own_sensor, v2x_relayed}, position (ego frame), distance, speed, confidence, state ∈ {not_tracked, tentative, tracked}, timestamps` (retains [milestone1.md §4](../.claude/plans/milestone1.md)'s shape). Standalone by design: the letter's mock↔perception swap guarantee hangs on this schema.
+- **Dependency:** R1 (relayed entries map losslessly from the CPM profile).
+- **Feasibility: achievable.**
+- **KPI:** single schema file; CI round-trip in each consumer language; **swap test** — ADA runs unmodified against bench objects (R13) and camera objects (R21) (binary).
 
-**R3 — V2X broadcast service, auto-start on boot.** A Linux service auto-starts on boot, initializes the transport, and broadcasts the full R1 schema with mock object contents at 10 Hz (A).
-- **Dependency: R1** (schema for the broadcast payload); transport mechanism = thin send/recv adapter, final bench→ego carrier confirmed by FPT-Mentor after blueprint submission ([working-env note](m1-phase1-working-environment.md)).
-- **KPI:** after a cold reboot, service is active within 30 s (A); observed message rate 10 Hz ± 10% over a 60 s window (A).
-- Vague→precise: "runs the broadcast loop" → *10 Hz sustained, rate error ≤ 10% over 60 s (A)* — 10 Hz matches the CAM/BSM upper rate so the stub is rate-realistic.
-- **Env 2026-07-08:** the auto-start service is the **ego vECU's** TX heartbeat; B's broadcasts are emitted by the bench scenario player, not a second team-built vehicle. "Cold reboot" = ego node restart. Dependency/KPI unchanged.
+**R4 — ADA→IVI warning contract + data path (§1: *must be* developed).** Versioned JSON message set: (a) warning events `{schemaVersion, warningType (string registry), riskState, object snapshot (R3), composed geometry}`; (b) awareness state at 10 Hz (A) `{ego, B, C poses}`. Transport: UDP datagrams into the IVI app behind thin adapters both ends (D3 honored in the ego path — F4). Extensibility per §1 futures (criticality looked up from `warningType`). *(Retains the round-2 UDP+JSON shape — the one round-2 display pick that survives re-derivation; receiver re-derived for AAOS in §3(f).)*
+- **Dependency:** R3; producer R17; consumer R18/R19.
+- **Feasibility: achievable** (sockets + JSON both ends, days).
+- **KPI:** ADA-emit → IVI-receive ≤ 50 ms p95 same-host / ≤ 100 ms p95 cross-node (A); delivery ≥ 99.9% (A) over a 10-min soak; state message ≤ 1 KB at 10 Hz ≈ ≤ 80 kbit/s (A); CI round trip; **extension tests:** a new warningType touches ≤ 1 registry file on the IVI (diff check) and an old app parses a newer message with unknown `warningType` gracefully (additive-version test).
+- Vague→precise: §1 ADA "high-performance … condensed messages, low bandwidth, low latency" → *the payload/latency/rate figures above (all (A))*.
 
-**R4 — Peer reception + full-field parse.** The receiving vehicle logs every received message parsed into 100% of schema fields, both directions (A↔B).
-- **Dependency: R1** (schema to parse against), **R3** (traffic on the channel); bench scenario player as the peer sender.
-- **KPI:** delivery ratio ≥ 99% over a 10-minute bench-LAN soak (A) — on a wired bench, lower indicates a bug, and a 10-min run exposes buffer/leak issues a 60 s check misses; every received message logs all schema fields with 0 unit/range assertion violations.
-- **Env 2026-07-08:** "both directions (A↔B)" = **ego↔bench** — the ego logs bench-injected CAM/CPM, the bench logs the ego heartbeat (peer mirror, [working-env note, deliverable 1](m1-phase1-working-environment.md)). The soak runs on the bench→ego channel with the impairment profile disabled. KPI numbers unchanged.
+### V2X ECU (app-level Linux container)
 
-**R5 — Common timebase across A and B.** Both hosts' timestamps are comparable within a bound; the offset is *measured*, not assumed.
-- **Dependency: none** — shared host clock by construction (FPT-Mentor-confirmed); chrony only measures it.
-- **KPI:** measured clock offset |Δt| ≤ 50 ms via chrony/NTP peering on the stub path, ≤ 10 ms when GNSS-disciplined (A), sustained over 10 min; offset logged at 0.1 Hz via chrony tracking report cross-checked by a round-trip-halved UDP echo probe.
-- Vague→precise: "offset within an agreed bound" → *≤ 50 ms (stub/NTP), ≤ 10 ms (GNSS) (A)*.
-- **Ordering note:** R5 must land before R14's latency KPI is measurable — a cross-host latency number is meaningless between unsynchronized clocks.
-- **Env 2026-07-08:** platform nodes share the host clock (FPT-Mentor-confirmed), so the offset is ~0 by construction — still measured via chrony per the KPI, never assumed; the ≤ 10 ms GNSS-disciplined branch is out of scope with hardware removed from the project (see R6).
+**R5 — Adapter seam mirroring `IV2xRadio`/telux semantics.** The V2X application touches the radio only via `init · configure · subscribeRx · send` + `subscribeLocation` (R9); Rx subscription yields a readable socket delivering datagrams (telux parity — the letter: production Rx is already "read from socket"). Hackathon impl below the seam: UDP over the Ethernet pin. **Fidelity checklist (≤ 3 days total (A)):** documented lifecycle/readiness + error-model parity against telux `Cv2xRadioManager`/`Cv2xRadio` — capped to the **M1-used API subset** (cv2x + location surfaces actually called); CI import-isolation check; written telux port plan enumerating exactly which functions change on real hardware.
+- **Dependency:** R1; starter pack (pin mechanics).
+- **Feasibility: achievable** (≤ 1 week).
+- **KPI:** app layer has 0 direct transport imports above the seam (CI check); impl swap (loopback-replay ⇄ bench) with 0 app-code diffs; parity doc + port plan committed; Rx callback delivers ≤ 5 ms (A) after socket arrival.
+- Vague→precise: §1 "portability to different hardware — the developed layers move across hardware unchanged" → *the checklist above plus a language that can link telux (§3(d)) — anything less makes the node's focus goal claim-only*.
 
-**R6 — GNSS/modem provider bring-up (cloud-only, simulated).** **No hardware is used in any part of this project — development is entirely cloud/virtual (user decision 2026-07-08).** A provider service sources GNSS position+time from the scenario-player feed (or a 3rd-party simulator) at 1 Hz (A) and writes a startup log naming the active provider (`sim`), format-identical to what a hardware path would produce (plan §3's substitution table).
-- **Dependency:** scenario-player position feed ([working-env note, deliverable 1](m1-phase1-working-environment.md)); optionally a 3rd-party modem/baseband simulator or — preferred — a V2X message simulator/generator: candidate research spawned 2026-07-08, findings in [m1-v2x-simulator-tools.md](m1-v2x-simulator-tools.md).
-- **KPI:** startup log names the active provider and reports a fix within 120 s (A) of service start; position logged at 1 Hz ± 0.1 Hz; log format verified by a parser kept provider-agnostic.
-- **Supersession note:** the original R6 was hardware-conditional (QMI/AT modem bring-up if a C-V2X modem is available, mock provider otherwise; RISK-gated on hardware availability with a week-2 go/no-go, flag F1). Env 2026-07-08 first deferred the hardware branch (no modem/baseband on the platform); the user decision of 2026-07-08 removes hardware from the **entire project**, not just M1 — [product-fit note](m1-product-fit-quectel-modem.md) stays as reference for a hypothetical future hardware milestone only.
+**R6 — Modem stub: config call flow + fail-inject.** In-node stub with FSM `idle → initialized → configured → rx-subscribed`; acks the app's init/configure/subscribe sequence (3GPP-flavored, simplified call flow to confirm with FPT-Mentor (A)); config-driven fail injection (init timeout, configure reject, subscription drop, mid-run radio loss) exercising the app's error handling.
+- **Dependency:** R5.
+- **Feasibility: achievable** (2–3 days).
+- **KPI:** 100% of the scripted call flow acked, each step ≤ 100 ms (A); ≥ 3 (A) fail-inject cases each with a defined, logged recovery (retry/backoff/degraded state), demoable live via config flip / signal inspector.
+- Vague→precise: §1 "configures the modem … simulated only" / control-plane messages "*could* be constructed" → *committed as the stub + call flow above (the letter names the modem stub as the config answer)*.
 
-### Perception track (Phases 2–4)
+**R7 — Rx pipeline: decode → validate → dedupe → forward.** Adapter datagram → R2 decode → semantic validation (mandatory fields, ranges) → dedupe (stationId + objectId + measurement time) → map to R3 relayed object + B pose → JSON to ADA. Malformed/unknown input rejected + counted, never crashes. **Message-type dispatch is extensible** (messageId/BTP port): CAM/DENM arrive later as new codec modules — the entry door for §1's future hazard-type messages.
+- **Dependency:** R1, R2, R3, R5.
+- **Feasibility: achievable.**
+- **KPI:** decode+forward ≤ 20 ms p95 (A) at 10 Hz; 100% golden vectors decoded; malformed corpus ≥ 20 cases (A) → 0 crashes, 100% rejected+logged over a 10-min impaired soak; adding a 2nd message type touches only a new codec module + 1 dispatch entry (diff check).
 
-> **Env 2026-07-08 (R7–R12):** the perception track is video-file-driven and environment-neutral — it runs wherever the provided clips are processed (dev machine or bench side); the platform has no camera and none is needed (plan §2: no live camera bring-up). Its Phase-4 output feeds the scenario player's CPM content at Phase 5 (see R13). R7–R12 otherwise unchanged.
+**R8 — Ego Tx: ego CPM of own-sensor B.** Ego constructs its own CPM (R1 profile) carrying its own-sensor perceived object (B, from ADA's R15 store) and broadcasts via `send` at 10 Hz (A) while B is tracked — implements §1's "receives information from the ADA ECU, constructs V2X message payloads, broadcasts them" literally, and completes the "extracting **and** constructing" input constraint. Ego CAM = stretch, never gating. *(Restored at round-3 rebuttal — contested point 15; a §1 responsibility neither position paper had covered as committed scope.)*
+- **Dependency:** R1, R2, R5, R15.
+- **Feasibility: achievable** (days — reuses the R2 codec).
+- **KPI:** 10 Hz ± 10% (A) cadence measured at the bench while B is tracked; payload populated from the live store (no constants — spot check); frames appear in the R24 Wireshark evidence.
 
-**R7 — Video harness with per-frame timestamps.** The provided video opens; container/codec/fps/resolution detected and logged; frames stream with per-frame timestamps.
-- **Dependency:** a video clip (any clip suffices for the harness itself; the demo-grade package is R18).
-- **KPI:** 100% of frames delivered exactly once; timestamps strictly monotonic (jitter ≤ 1 frame period); metadata log matches `ffprobe` output for the same file.
+**R9 — Ego GNSS routing: bench → V2X ECU → ADA (user decision 2026-07-10).** Bench emits ego GNSS to the **V2X ECU**; the R5 adapter exposes it as a `subscribeLocation` subscription (mirrors production: the telux location subsystem lives with the modem — the letter itself notes production V2X apps take GNSS via telux); the V2X ECU forwards fixes to ADA. Wire + API shape: **telux-LocationInfo-shaped JSON fixes** (lat, lon, alt, speed, bearing, accuracy, timestamp) at 10 Hz (A) on a dedicated port (NMEA recorded as a conforming below-seam alternative — architecture's choice). **No IVI-side GNSS injection in M1** — the awareness view renders relative geometry (letter: no map needed); IVI injection becomes needed only if the real-coordinate map stretch (§3(i)) is taken. *(Diverges deliberately from the BTC reference sketch's "GNSS → IVI location stack" arrow — F13.)*
+- **Dependency:** R5, R10; binding user decision.
+- **Feasibility: achievable** — and more production-faithful than the letter's own blueprint sketch.
+- **KPI:** 10 Hz ± 10% (A) fixes at ADA; bench-emit → ADA-receive ≤ 30 ms p95 (A); GNSS-stream loss ⇒ logged degraded-mode transition ≤ 1 s (A); binary — no location API used on the IVI node in the M1 build.
 
-**R8 — TrackedObject store + admission state machine (mock-driven).** Store exposes all R2 fields; the `not_tracked → tentative → tracked → expired` manager runs off an injected synthetic C.
-- **Dependency: R2** (the frozen struct the store exposes).
-- **KPI:** with mock on, log shows a full lifecycle cycle with timestamps; with mock off, zero tracks over the whole clip (binary); transitions obey `confirm_hits`/`miss_limit` exactly in a scripted-input unit test (0 deviations).
+### Bench node — scenario player (single source of truth)
 
-**R9 — Detection of C + in-lane lead selection.** Pretrained detector finds C as `car`/`truck`; the in-lane lead (largest central bbox) is selected when multiple vehicles are present; bboxes are written to the store.
-- **Dependency: R7** (frame stream), **R8** (store to write bboxes into); pretrained COCO weights, no training (plan §2).
-- **KPI:** recall ≥ 90% (A) of frames where C is visible and within 50 m (A); lead selection correct in ≥ 95% (A) of multi-vehicle frames on a hand-labeled 200-frame sample; mock path disabled (binary).
+**R10 — Scenario player core: deterministic trajectory engine.** Team-built Python engine computes A/B/C ground truth per tick from declarative scenario config (speeds, gaps, C-approach profile, event times, admission distance); every bench output (R11 messages, R9 GNSS, R13 sensor view, R14 god view, R20 video timing) derives from the same trajectory table per tick. **C is V2X-silent** (a non-equipped vehicle — the use-case premise). Scenario coordinates **anchored at a real WGS84 road segment** (segment user-selectable in config (A)) — cost ≈ 0 now, keeps the future map option open, and ETSI absolute-position ranges validate cleanly.
+- **Dependency:** starter pack (pin mechanics) for emission; engine itself self-contained.
+- **Feasibility: achievable** (straight-line kinematics; letter: hand-computed trajectories suffice).
+- **KPI:** same seed+config ⇒ byte-identical ground-truth log (hash compare); scenario switch = config only, 0 code changes; ≥ 3 (A) variants (baseline, C-braking, impaired); tick ≥ 20 Hz (A); 0 tunables hardcoded (config lint — constitution rule 5).
+- Vague→precise: §1 "V2X message playback across different scenarios" → *config-driven scenario set + the determinism KPI above*.
 
-**R10 — Perception throughput.**
-- **Dependency: R9** (the detector whose throughput is measured); nano detector on CPU meets it — GPU is margin, not a dependency.
-- **KPI:** detection update rate ≥ 10 Hz (A) with mean per-frame latency ≤ 100 ms (A) on the demo machine; a documented frame-skip policy is allowed as long as the update rate holds.
-- Vague→precise: "keeps pace with the video frame rate (or agreed latency target)" → *≥ 10 Hz effective update rate, ≤ 100 ms mean latency, frame-skip permitted and documented (A)* — 10 Hz matches R3's message rate so perception never bottlenecks the relay.
-- **CUDA verdict 2026-07-08 (round 2, converged):** **CUDA/GPU is NOT required for M1 — Python on CPU meets this KPI.** Official Ultralytics CPU-ONNX figures (COCO, 640 px): YOLO11n = 56.1 ± 0.8 ms ≈ 17.8 FPS (~1.8× margin), YOLOv8n ≈ 80.4 ms ≈ 12.4 FPS (caches: [yolo11](../.claude/references/yolo11-cpu-inference-benchmarks.md), [nano models](../.claude/references/yolo-nano-cpu-inference-benchmarks.md)). GPU availability on the platform is **not assured** (hosting unconfirmed; F2's CARLA contingency already budgets a *separate* GPU machine) — **no M1 KPI may depend on GPU**. Derated-vCPU risk (~85–110 ms on 1.5–2×-slower vCPUs) is covered by this KPI's own levers (documented frame-skip, input 640→416 ≈ 2× faster, ONNX-Runtime/OpenVINO backend); action: measure on the actual node at the week-4 spike. The future 120 km/h live-feed feature *does* require GPU-class acceleration — spec in §5 (future-features register), stack-openness decision deferred as flag F11.
+**R11 — Bench V2X emission (B's CPM).** From ground truth the bench emits B's CPM (R1/R2) at 10 Hz (A) **only while C is inside B's simulated perception gate** (R15 constants); B CAM = stretch, never gating.
+- **Dependency:** R1, R2, R10.
+- **Feasibility: achievable.**
+- **KPI:** cadence 10 Hz ± 10% (A); relay starts/stops with C entering/leaving B's gate per ground truth (event-log cross-check); 0 emissions outside the scripted window (binary).
+- Vague→precise: §1 "simulates decoded V2X messages arriving at different rates" → *encoded wire-format messages at configurable rates (rate multipliers in scenario config); "decoded" superseded by the R2 seam — bench emits wire format, ego decodes, closer to production than pre-decoded injection*.
 
-**R11 — Monocular distance per leg.** Per-frame range to the lead from bbox-bottom ground-plane projection (camera intrinsics + height), written back to the track.
-- **Dependency: R18** (camera intrinsics + ground truth — the ±15% tolerance is untestable without calibration), **R9** (bboxes to project) — ±15% is realistic for ground-plane projection on a flat road with correct intrinsics/camera height, but degrades with pitch bounce and bbox-bottom noise. Mitigations: validate on KITTI first (real noise); 5-frame median filter (A); height-prior cross-check.
-- **KPI:** ≥ 90% (A) of frames within ±15% of ground truth for true range 10–50 m (A) on a calibrated clip; distance present on the track every frame C is detected.
-- Vague→precise: "agreed tolerance (e.g. ±15%)" → *±15%, scoped to 10–50 m, ≥ 90% of frames (A)*.
+**R12 — Impairment engine (in the scenario player).** Drop/delay/jitter applied to emitted V2X messages per config (loss %, delay, jitter distribution, seed) **before** emission — BTC's recommended placement; reproducible, no `tc netem`/NET_ADMIN dependency. *(Supersedes round-1's tc-netem plan.)*
+- **Dependency:** R11.
+- **Feasibility: achievable** (days).
+- **KPI:** configured 30% loss measures 30% ± 3 pts over 10 min (A); identical drop pattern per seed (binary); P3 degradation demo: R17's warning KPIs hold at ≤ 30% loss + 200 ms jitter (A).
 
-**R12 — Active proximity gate, constants externalized.** Admission only when ≤ `gate_enter` (30 m) for `confirm_hits` (3) consecutive frames; drop only beyond `gate_exit` (35 m) or after `miss_limit` (5) misses. All four constants in a config file (constitution rule 5 — no hardcoded tunables).
-- **Dependency: R11** (per-frame distance the gate thresholds on), **R8** (state machine it drives).
-- **KPI:** on a synthetic approach/retreat sweep with injected Gaussian noise σ = 2 m (A), exactly one admit and one drop event (0 flicker oscillations); changing a constant in config alters behavior without rebuild (binary); static check finds no gate literals in code.
-- Vague→precise: "no add/remove flicker at the boundary" → *0 state oscillations under a σ = 2 m noise sweep across the 30–35 m band (A)*.
+**R13 — LOS-filtered ego sensor view (premise keeper).** Bench synthesizes ego's own-sensor object list from ground truth filtered by line-of-sight: contains B, **never C while occluded**. Delivered to ADA as R3 objects `source = own_sensor` (direct injection; the optional Cortex-M mock node is omitted — F12, architecture may restore the topology).
+- **Dependency:** R3, R10.
+- **Feasibility: achievable.**
+- **KPI:** **binary — 0 frames across all demo runs with C in the ego sensor list while ground-truth-occluded** (automated check vs truth log); B present ≥ 99% of ticks (A); LOS filter unit-tested on ≥ 5 (A) geometry cases; schema-identical to R21 output (shared schema test).
+- Vague→precise: §1 "A's own camera can never detect C" → *enforced at the sensor-view source by the binary check above, re-verified on the R25 demo run* (the letter calls a naive mock here use-case-destroying).
 
-### Convergence (Phase 5)
+**R14 — God view + jury dashboard (bench-served).** Browser page served from the bench container: live 2D top-down god view of A/B/C from ground truth (occlusion shading) + risk-state panel fed by ADA pushes; placed split-screen beside the IVI for the jury. Observer tooling, rank-2 output by design (letter §7) — never the product.
+- **Dependency:** R10; R17 (risk push); F4 (D3 scope).
+- **Feasibility: achievable** (≤ 1 week).
+- **KPI:** view updates ≥ 5 Hz (A) in-browser; risk overlay matches the ADA event log 100% in replay comparison; fully offline assets (no external tiles/keys); one-command start with the bench node; zero WebSocket usage (SSE/polling — §3(h)).
 
-**R13 — Real-data relay gated on track state.** B's broadcast carries real Phase-4 data for C and includes C **only while C is `tracked`**.
-- **Dependency: R9–R12** (real Phase-4 track output as message content), **R3/R4** (transport path carrying it).
-- **KPI:** zero mock code on the transmit path (binary — mock modules not imported, assertable in the startup log); relay starts ≤ 1 message period (100 ms @ 10 Hz) after C enters `tracked` and stops ≤ 1 period after C leaves; transmitted perceived-object fields match store values for the same timestamp (log diff = 0).
-- **Env 2026-07-08:** "B's broadcast" is emitted by the bench scenario player — Phase 5 swaps its CPM perceived-object content from scripted mock to the **real Phase-4 track output for C** (perception pipeline → store → scenario player's message builder). The zero-mock KPI applies to that content source plus the ego path; the scenario player itself is test equipment, not a mock (see R17). Dependency/KPI otherwise unchanged.
+### ADA ECU (app-level Linux container)
 
-**R14 — Relayed-track admission on A + end-to-end latency.** A decodes and creates a `source = v2x_relayed` track carrying B's reference position/time; latency within bound; relayed track expires after `miss_limit` missed periods (mirror of R12).
-- **Dependency: R5** (timebase must land first — the latency KPI is meaningless without it), **R13** (relayed message stream to admit).
-- **KPI:** latency from B's frame-capture timestamp to A's relayed-track creation ≤ **300 ms p95** (A), with 200 ms as the engineering target; B's reference position/time present (field-presence check); mirror-expiry honored.
-- Vague→precise: "agreed latency bound" → *≤ 300 ms p95 (200 ms target) (A)*. Budget: ≤ 100 ms detection (mean; p95 higher) + up to one 100 ms message period + ~5 ms stub network/codec + ±50 ms clock-offset measurement uncertainty — a 200 ms p95 *acceptance* bound fails its own worst-case arithmetic, hence 300 ms as the smallest honest bound.
-- **Env 2026-07-08:** the shared host clock removes the ±50 ms offset-measurement term from the budget, making the 200 ms target comfortably reachable; **300 ms p95 stays the acceptance bound** (conservative, hardware-portable). Configured scenario-player delay/jitter (impairment option (b)) is excluded from the KPI's measured path or set to 0 for the acceptance run. Dependency unchanged. *Round-2 note:* R14's consumer chain is now ADA → R20 → R19/R16; KPI unchanged.
+**R15 — Track store + admission state machine.** R3-shaped store; per-source admission: `own_sensor` (B) via `not_tracked → tentative → tracked` with confirm hits; `v2x_relayed` (C) admitted on relayed receipt, expired on message-stop (miss window); distance gate with hysteresis — `gate_enter` 30 m, `gate_exit` 35 m, N = 3, M = 5 (all (A), externalized config).
+- **Dependency:** R3; inputs R7, R13.
+- **Feasibility: achievable.**
+- **KPI:** full lifecycle observable in logs per §1's state diagram; 0 admit/drop oscillations under a σ = 2 m (A) noise sweep across 30–35 m; C's track carries `source = v2x_relayed` only (binary — feeds R25); gate constants absent from code (config lint).
 
-### Display track (Phase 6) + capstone
+**R16 — Collision Risk Assessment abstraction (extensible — §1 demand).** Risk logic behind a scenario-plugin interface consuming the store + ego state and emitting typed warnings (R4 registry). M1 ships one realization (R17); §1's future scenarios (intersection hazards, curve blind spots, speed-scaled thresholds) plug in as new realizations.
+- **Dependency:** R3, R4.
+- **Feasibility: achievable.**
+- **KPI:** **0-diff plug-in test** — a stub second scenario realization registers and emits a distinct warningType with 0 diff lines outside its own module + registry entries (binary); M1 realization selected by config; interface doc committed.
+- Vague→precise: §1 "future warning scenarios can be added as extensions without reworking this code" → *the 0-diff test above*.
 
-**R15 — Distance composition on A, with reference-point correction.** A measures `d_AB` locally, composes `d_AC = d_AB + d_BC` (lateral offsets component-wise), **after applying a configured `ref_point_offset_B` correction** (externalized per constitution rule 5; semantics carried in R1's schema; ground-truth reference convention declared per R18).
-- **Error-budget derivation (why the KPI has this shape):** d̂_AC = d_AB(1+ε₁) + d_BC(1+ε₂) ⇒ relative error = (ε₁·d_AB + ε₂·d_BC)/(d_AB+d_BC), a convex combination of ε₁, ε₂ — bounded by max(|ε₁|,|ε₂|) ≤ 15% for *any* sign combination (same-sign worst case exactly 15%; opposite signs partially cancel). **The naive "two ±15% legs compound to ±30%" claim is false** — proportional error through a sum of positive lengths cannot exceed the worse leg. The tolerance widening is needed for the **additive** terms instead: (a) *reference-point bias* — A measures camera→B-rear, B measures its camera→C-rear, so true A→C = d_AB + (B-rear→B-camera ≈ 3–4 m) + d_BC; uncorrected this is a systematic ~7–8% underestimate at 50 m that alone would break a plain ±20% bound (0.15·d_AC + 3.5 m ≈ 22% at 50 m) — the correction constant is what makes the KPI passable; (b) *temporal skew* — v_rel × (latency + |Δt|) ≈ 5 m/s × 0.35 s ≈ 1.75 m; (c) heading/collinearity cosine error < 0.5% below 5° misalignment — negligible for the scripted convoy (plan §2 assumption holds).
-- **Dependency: R11** (twice — both distance legs), **R18** (composed ground truth), the `ref_point_offset_B` correction being configured and applied.
-- **KPI:** |d̂_AC − d_AC| ≤ **0.15·d_AC + 2.0 m** for ≥ 90% of composed samples over the demo range (A) (≈ ±19–20% at 50 m); `ref_point_offset_B` present in config, not code; composition arithmetic verified exactly by a mock-input unit test.
-- Vague→precise: "composed d_AC matches ground truth within the agreed tolerance" → *≤ 0.15·d_AC + 2.0 m, ≥ 90% of samples, after reference-point correction (A)*. *Round-2 note:* the composed d_AC is now also the payload positioning R16's ghost marker, delivered over R20.
+**R17 — NLOS obstruction warning + TTC risk engine (the M1 realization).** Fuses `v2x_relayed` C, `own_sensor` B, ego GNSS. Geometry: `d_AC = d_AB ⊕ d_BC` in the ego frame — **d_BC from the CPM relative perceived object; d_AB from ego own-sensor distance to B while B is tracked, else GNSS-differenced against B's CPM reference position (precedence explicit — (A))**. Policy: warn when d_AC ≤ gate (R15) **or TTC ≤ 3.5 s (A)** — the OR-trigger is **held for user ratification (F18)**: §1 states a fixed distance threshold, the TTC branch is a policy addition; strike to distance-only if vetoed. Risk states from a config registry (proposed `none/caution/warning`, count (A)) with hysteresis; TTC is an internal engine (letter) — risk state reaches IVI/dashboard, raw TTC goes to R23 logs; every transition appends to the collision-risk event list.
+- **Dependency:** R9, R15, R16.
+- **Feasibility: achievable.**
+- **KPI:** warning ≤ 200 ms (A) after the qualifying message reaches ADA; **0 false warnings** on a C-absent run; composed d_AC within ±(0.15·d_AC + 2.0 m) (A) of ground truth for ≥ 90% of samples (round-1 bound carried — now a pipeline-consistency check); TTC error ≤ 10% (A) at closing speed ≥ 1 m/s; 0 risk-state oscillations under the R12 demo impairment profile; thresholds in config, not code.
+- Vague→precise: §1 "fixed distance threshold; a future milestone should scale it with traffic speed" → *threshold(+TTC (A)) as an externalized policy object; speed-scaled policy = a new R16 realization*.
 
-**R16 (rev. 2026-07-08) — Ghost C on A's BEV in the IVI central view.** A's IVI GUI (the R19 shell's central view window) renders a bird's-eye view of the 3-car convoy — ego A, lead B, and **C as an occluded "ghost" marker**, sourced `source = v2x_relayed`, positioned from R15's composed d_AC with an on-screen numeric range. Built against a mock R20 message first (per plan's mock-then-real); integrated with real relayed data at Phase 5/6.
-- **Supersession note (round 2):** the original R16 was a *dual* display — "direct C on B" + "ghost C on A's BEV" — with the Env 2026-07-08 note re-wording the B side to a bench perception visualization and flagging the render target as F9. **User decision D1 strikes the B-side half entirely** (no requirement, no KPI); D2 makes the render surface a real GUI app on the IVI vECU (R19), closing F9. The bench-side OpenCV perception overlay survives only as an optional, unscored dev diagnostic. The §3(f) OpenCV pick is superseded by §3(i).
-- **Dependency: R1** (mock message shape), **R14** (relayed track at integration), **R15** (composed position for the marker), **R19** (GUI shell hosting the central view), **R20** (ADA→IVI path), flag **F13** (surface delivery).
-- **KPI (requirement-level, judge-visible):** ghost C appears ≤ **2 s (A)** after B's first `not_tracked→…→tracked` transition (measured via the R5-synced timebase — a prerequisite); ghost marker updates ≤ **500 ms (A)** after message receipt at the ego; C's marker renders **only** with `source = v2x_relayed` (binary — no direct-detection path can draw it; operationalizes R17's DoD at the GUI). Frame-rate KPI lives in R19 (one fact, one place). Budget consistency: R14 300 ms p95 + ADA ≈ 50 ms + R20 50 ms + R19 switch 300 ms + marker 500 ms ≈ 1.2 s < 2 s.
-- **Diagnostic measurement (not the requirement KPI):** time from A's first admitted relayed message to ghost render ≤ 1 s (A) — isolates the display slice when the 2 s budget is missed.
-- Vague→precise: "ghost C on A's bird's-eye view" → *ghost marker in the R19 central-view 3-car scene, `v2x_relayed`-sourced, within the KPIs above*; "display C and its relative position" → *marker at composed d_AC (R15) with numeric range on screen*.
+### IVI ECU (provided AAOS full vECU)
 
-**R17 — End-to-end demo (Definition of Done).** With no mocks anywhere in the path, C appears on A's display purely via B's V2X relay while A's own perception never detects C.
-- **Dependency: R11, R18** flags resolving, plus every phase's output — mechanical integration once those hold (R6's hardware condition is gone: cloud-only).
-- **KPI:** one continuous recorded demo run in which (a) A's detector log contains **zero** direct detections of C, (b) **A's IVI GUI central view (R19) shows ghost C sourced `v2x_relayed`** *(reworded round 2 — "A's BEV" = the R16 scene inside the R19 shell)*, (c) all six phases' acceptance checklists are ticked. Binary pass/fail.
-- **Env 2026-07-08:** "no mocks anywhere in the path" re-worded for the bench-node model — the scenario player is the environment's world simulation (test-equipment role, sanctioned by FPT-Mentor), not a mock; the check applies to (a) the ego software path and (b) the relayed CPM carrying **real Phase-4 perception output**, not scripted objects. A's zero-detection check = the detector running on the A-view clip. Conditionality: the R6 hardware condition drops (hardware removed from project scope); R11 and R18 remain.
+**R18 — IVI HMI shell app on the AAOS node.** Kotlin/Compose app (§3(e)): ≥ 2 buttons (A — proposed 2D/3D toggle + demo reset, set to confirm) + central view; warning-driven `idle ⇄ warning-view` state machine on R4 events; **app switching** (§1 cloud-table goal): user switches to another head-unit app, an incoming warning surfaces as a heads-up notification, tap returns to the awareness view. Multi-process wake-on-warning deferred per §1's own wording (F15). **Foundation obligation (user decision 2026-07-12 — multi-process wake-on-warning is a mandatory future feature):** the warning/awareness view sits behind an **exported intent entry point** carrying the R4 event as serialized extras, the R4 ingest lives in a UI-free module, and no in-process singletons are shared between shell and view; the M1 internal `idle ⇄ warning-view` transition routes through the same entry point.
+- **Dependency:** R4; starter pack (AAOS image API level, install path — (A): sideload permitted).
+- **Feasibility: achievable** (2.5–3 weeks incl. Kotlin ramp — schedule-riskiest committed item; starts week 1).
+- **KPI:** warning-receipt → view switch ≤ 300 ms (A); button response ≤ 100 ms (A); auto-start with the node ≤ 30 s (A); app-switch demoed (background → heads-up → return ≤ 2 s (A)); binary — runs on the AAOS node viewed in-browser, not a dev desktop; **foundation checks:** view module has 0 compile-time imports from the shell module (CI dependency check), and the warning view launches standalone via `adb shell am start` with an R4-event extra (binary).
+- Vague→precise: §1 "multi-process applications *should* … *could* be deferred" → *M1 = single app + heads-up pattern; multi-app wake = registered deferral (F15)*.
 
-### Cross-cutting precondition
+**R19 — Awareness view: 3D god view committed-with-gate, 2D floor, 2D⇄3D switching.** The central view renders the 3-vehicle relative-geometry scene from R4 state only (no map, no bench feed): ego + B + **ghost C** (`v2x_relayed` styling, occlusion cue, numeric range). Per §1's IVI focus goals + demo table (3D = 10, 2D = 8): 3D committed behind a **two-stage gate** — stage 1 feasibility spike (1–2 day SceneView probe APK) by **end of week 3 or AAOS access + 2 weeks, whichever is later (A)**; stage 2 week-6 (A) polish/ship checkpoint; gate failure ships the committed 2D floor (the 2D side of the required toggle). Renderer behind a **view-interface seam** (binding design obligation — carries the toggle, any fallback swap, and §1's future camera-feed central view). *(Supersedes round-2's "2D committed / 3D stretch" posture — §1's cloud table promotes the 3D god view to a focus goal — F5.)*
+- **Dependency:** R4, R18; the gate.
+- **Feasibility:** 2D **achievable**; 3D **achievable-at-risk** (virtual-AAOS GPU path unknown — SwiftShader possible; the gate bounds it).
+- **KPI:** ghost C appears ≤ 2 s (A) after the scenario's first qualifying relay (judge-visible); marker update ≤ 500 ms (A); **C rendered only from `v2x_relayed` source** (binary); 2D⇄3D toggle ≤ 300 ms (A); FPS ≥ 15 target / ≥ 10 floor (A) at node resolution; scene state sourced solely from R4 (binary).
+- Vague→precise: §1 "3D display: god view … every instance displayed" → *3 vehicle entities + ghost styling at composed positions, KPIs above*; "2D ⇄ 3D view switching" → *in-seam toggle ≤ 300 ms (A)*.
 
-**R18 — Demo dataset package.** A validated demo dataset exists, containing: **(i)** two synchronized clips from one convoy (A-view and B-view), **(ii)** C occluded from A's view for the demo duration, **(iii)** per-frame ground-truth d_AB, d_BC, d_AC with a declared reference-point convention, **(iv)** camera intrinsics for both cameras. Provided by end of week 3 (A); if any item is missing, the CARLA scenario-recording task (~1 week, GPU machine) is scheduled (flag F2).
-- **Dependency:** external video provider, or the CARLA contingency task (~1 week, GPU machine) if the checklist fails. Without this package, R11's tolerance and R15's composed tolerance are **untestable** (no existing dataset, KITTI included, offers a synchronized occluded-convoy pair with d_AC truth), and A's clip may not even have C occluded.
-- **KPI:** 4-item checklist above complete; ground truth sanity-checked against the scenario script (or measurement notes); intrinsics load successfully in the distance module.
-- **Env 2026-07-08:** unchanged — and now doubly load-bearing: the scenario player's trajectories and CPM content must stay consistent with the clips' ground truth (item iii), which becomes the single source for both perception validation and scenario scripting ([working-env note, deliverable 1](m1-phase1-working-environment.md)).
+### P2 bonuses (fusion story — timeboxed, never gating P1/P3)
 
-### Display track additions (round 2, 2026-07-08)
+**R20 — Ego video display (provided clip, display-only).** The provided ego-POV clip (B occluding ahead) plays on the demo surface (IVI secondary view vs dashboard panel — architecture's choice (A)), timeline-aligned to the scenario — §1 demo-table "video feed on A's IVI HMI" (score 8; the provided file, not live camera — D7's deferral untouched). Includes §1's input-constraint action: a written video-spec proposal (container/codec/fps/resolution/capture conditions) to FPT-Mentor by end of week 2 (A).
+- **Dependency:** video source (external — F11); R10 (timeline).
+- **Feasibility: achievable**, timeboxed ≤ 1 week (A).
+- **KPI:** playback ≥ 24 FPS (A); scenario alignment ± 200 ms (A); spec proposal delivered (binary).
+- Vague→precise: §1 "video format … *should be studied and proposed*" → *the week-2 proposal deliverable*.
 
-> Added at round-2 convergence from user decisions D1–D7; scope pull-forward recorded as **SC-1** (§4). Contract-first order within the track: R20 → R19 → R16-integration.
+**R21 — Camera perception SKU (pretrained, CPU-only).** YOLO11n ONNX-CPU (§3(g)) runs on the ego clip, detects **B** (the visible occluder; C is by definition not in ego's frame), and emits an object list **interface-identical to R13** — powering the fusion story ("camera sees B, V2X knows C behind B") as overlay/cross-check, never the gating ADA source. Timeboxed ≤ 2 weeks (A); **no GPU requested** (F16).
+- **Dependency:** R3 (interface), R20 (clip), R15 (store).
+- **Feasibility: achievable as a bonus; explicitly non-critical-path** (letter: timebox it).
+- **KPI:** B detected in ≥ 90% (A) of in-range frames; mean inference ≤ 100 ms/frame CPU (A) (cached YOLO11n benchmark: 56 ms); **0 detections labeled C** (premise binary); swap test — ADA consumes R21 output through the R3 interface with 0 ADA code change.
+- Vague→precise: §1 "a pre-trained model *should be used* to detect the obstruction (vehicle C)" → *detector detects the occluder B in ego video; B-side "detection of C" is scenario-synthesized (R13) — §1's wording predates the single-ego blueprint; interpretation recorded for user veto*.
 
-**R19 — IVI GUI shell app on the IVI vECU.** A GUI application (framework per the §3(i) pick — requirement text stays framework-neutral) running as a real process on the IVI vECU: **≥ 2 enumerated buttons (A)** (proposed: 2D/3D view toggle, demo reset — set to confirm) + a **central view window**; idle state shows a placeholder/status; on a warning message from the ADA ECU (R20) the central view switches to the R16 3-car scene — **2D committed for acceptance, 3D best-effort stretch (F12)**; on warning clear/expiry it switches back. The central view's renderer sits behind a **view-interface seam — a binding design obligation** (renderer swappable 2D canvas ↔ future 3D without touching the shell; the seam is what carries the future 2D/3D-switching feature and the §3(i) fallback swap).
-- **Dependency: R2** (displayed fields), **R20** (input path), flag **F13** (surface delivery + the week-4 render-spike gate).
-- **Feasibility:** achievable on the 2D path; 3D stretch **at-risk** (software-GL on a virtual ECU — measure at the week-4 spike).
-- **KPI:** warning-receipt → central-view switch ≤ **300 ms (A)**; button press → visible response ≤ **100 ms (A)**; scene view sustains ≥ **15 FPS (A)** at ≥ **800×480 (A)** on the vECU (software rendering allowed); app auto-starts with the IVI node ≤ **30 s (A)** (R3-style); runs on the IVI vECU (binary — process list + rendered surface on the node, not a developer desktop).
-- Vague→precise: "some buttons" → *≥ 2 enumerated buttons (A)*; "the central view window switch to … 2D or 3D view" → *2D committed + 3D stretch, warning-driven state machine `idle ⇄ warning-view`, switch ≤ 300 ms (A)*.
+### Evidence & capstone
 
-**R20 — ADA→IVI warning/track data path.** A **versioned JSON message** (schema version + warning type + R2-derived track snapshot: `id, class, source, distance`/composed d_AC, `confidence, state`, timestamp) carried over a **UDP datagram behind a thin adapter** (same adapter+config discipline as R3/R4); works same-host and cross-node, so the ECU-placement decision stays with [[project-architecture]]; encoding swappable behind the adapter (a later milestone may unify on UPER); **SOME/IP is the named M2+ upgrade path inside the same seam**. Satisfies the plan input constraint "the ADA ECU → IVI ECU data path *must be* developed" — previously unenumerated.
-- **Dependency: R2** (fields), **R15** (composed d_AC as payload).
-- **Feasibility:** achievable — stdlib sockets and JSON codecs on both ends, 1–2 days.
-- **KPI:** ADA-emit → IVI-receive latency ≤ **50 ms p95 same-host / ≤ 100 ms p95 cross-node (A)**; delivery ≥ **99.9% (A)** over a 10-min soak on the node network (mirrors R4's soak discipline); 100% field encode→decode round-trip test in CI; **binary check: no WebSocket library and no JS runtime importable anywhere in the ego software path** (operationalizes user decision D3).
-- Vague→precise: "the ADA→IVI data path must be developed" → *the versioned UDP JSON message + adapter above, with the KPIs above*; "no JS and no WebSocket" → *the importability binary check above*.
+**R22 — Cross-node timebase & latency measurement.** Bench stamps generation time in-message (single time source of truth); node clock offsets measured per run via UDP echo (median of N). Assumption (A): CarSky containers share the host clock (offset ≈ 0) — verify with BTC. Contingency if |offset| > 50 ms (A) or nodes span hosts: **escalate to BTC for platform/host-level sync, or apply the measured per-run offset as an analysis-time correction** (containers likely lack `CAP_SYS_TIME` — no per-node chrony daemon). *(Supersedes round-1's chrony/gpsd KPI set.)*
+- **Dependency:** platform facts (A).
+- **Feasibility: achievable.**
+- **KPI:** measured |offset| logged every demo run, expected ≤ 20 ms (A); every latency KPI in this report computable from R23 logs alone (binary), quoted with the run's offset uncertainty.
 
-## 3. Vague → precise translation table (consolidated)
+**R23 — Evidence logging.** Structured JSONL event logs on V2X ECU + ADA (message rx/tx, decode results, track transitions, TTC values, risk events) → the collision-risk event list (§1 demo score 7); annotated video export (TTC overlay + risk label — score 6) as the designated drop-first item at P2+.
+- **Dependency:** R7, R17, R22; R20/R21 (annotated export only).
+- **Feasibility: achievable.**
+- **KPI:** event list reconstructs the full demo timeline offline with 100% event correspondence vs bench truth (replay-compare tool); E2E bench-emit → IVI-warning-render ≤ 1 s p95 unimpaired (A); annotated export produced for ≥ 1 run (A).
 
-| Plan wording (original)                                                           | Precise, testable translation                                                                                                                                    | Where  |
-| --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
-| "agreed latency bound" (Phase 5)                                                  | E2E B-frame-capture → A-track-creation ≤ 300 ms p95, 200 ms target (A)                                                                                           | R14    |
-| "agreed tolerance (e.g. ±15%)" (Phase 4)                                          | per-leg: ≥ 90% of frames within ±15%, true range 10–50 m (A)                                                                                                     | R11    |
-| "composed d_AC … within the agreed tolerance" (Phase 6)                           | ≤ 0.15·d_AC + 2.0 m for ≥ 90% of samples, after `ref_point_offset_B` correction (A) — derivation in R15; naive "15%+15%→30%" compounding is mathematically false | R15    |
-| "keeps pace with the video frame rate (or … latency target)" (Phase 3)            | ≥ 10 Hz effective update rate, ≤ 100 ms mean latency, documented frame-skip allowed (A)                                                                          | R10    |
-| "offset within an agreed bound" (Phase 1)                                         | \|Δt\| ≤ 50 ms (stub/NTP), ≤ 10 ms (GNSS-disciplined) (A), measured and logged                                                                                   | R5     |
-| "starts automatically on boot"                                                    | active ≤ 30 s after cold reboot (A)                                                                                                                              | R3     |
-| "broadcast … receive on the peer vehicle"                                         | 10 Hz ± 10% rate (A); ≥ 99% delivery over 10-min bench soak (A); 100% field parse                                                                                | R3, R4 |
-| "reads GNSS … periodically"                                                       | 1 Hz ± 0.1 Hz (A); first 3D fix ≤ 120 s of service start (A)                                                                                                     | R6     |
-| "standard-conformant schema"                                                      | 100% field mapping to ETSI TS 103 324 CPM + CI round-trip + runtime validation                                                                                   | R1     |
-| "no add/remove flicker at the boundary"                                           | 0 oscillations under σ = 2 m noise sweep across 30–35 m (A)                                                                                                      | R12    |
-| "C is detected"                                                                   | recall ≥ 90% (visible, ≤ 50 m); lead selection ≥ 95% on 200-frame labeled sample (A)                                                                             | R9     |
-| "ghost C on A's bird's-eye view" *(was "both … display C" — B-side struck by D1)* | ghost ≤ 2 s of B's first `tracked` (A); marker update ≤ 500 ms (A); `v2x_relayed`-only render (binary)                                                           | R16    |
-| "some buttons + a central view window" (D6)                                       | ≥ 2 enumerated buttons (A) + central view with warning-driven `idle ⇄ warning-view` state machine                                                                | R19    |
-| "switch to … 2D or 3D view of the 3 cars" (D6)                                    | 2D committed acceptance + 3D best-effort stretch (F12); switch ≤ 300 ms (A); ≥ 15 FPS @ ≥ 800×480 (A)                                                            | R19    |
-| "the ADA→IVI data path must be developed" (plan input constraint)                 | versioned UDP JSON message + thin adapter; ≤ 50/100 ms p95 (A); ≥ 99.9% delivery (A); CI round-trip                                                              | R20    |
-| "no JS and no WebSocket" (D3)                                                     | binary: no WebSocket library, no JS runtime importable in the ego software path                                                                                  | R20    |
+**R24 — Demo packaging.** The jury experience per §1's demo table + the letter's "điểm nhấn": **split screen — god view (R14) beside the IVI** — capturing the moment the IVI warns of C before anything is visible. Wireshark evidence (score 7): **offline scapy re-encapsulation** of the actual transmitted UPER bytes into Ethernet/GN/BTP frames → stock Wireshark dissects natively — with integrity amendments: original pcap + re-encapsulated pcap + per-frame UPER-byte hash manifest, original timestamps preserved, one disclosure line in the demo script; dissection verified in the spike week (CPM dissector bug [#19886](https://gitlab.com/wireshark/wireshark/-/work_items/19886)); JSON-fallback mode shows the UDP/JSON pcap (honestly lower realism). Live on-wire GN/BTP framing = stretch note only. Scripted, rehearsed run + recorded backup.
+- **Dependency:** R14, R19, R23; R2 (encoding mode).
+- **Feasibility: achievable.**
+- **KPI:** rehearsed script executes e2e ≤ 10 min (A) with 0 operator improvisation; pcap CPM fields match the R1 contract in Wireshark's dissection tree (binary); recorded backup exists (binary).
 
----
+**R25 — End-to-end definition of done.** One continuous recorded run on the demo impairment profile (A), full chain live (bench → V2X ECU → ADA → IVI), no scripted shortcuts inside ego software: (a) ego sensor view (R13) and detector log (R21, if present) contain **zero** C entries for the entire run; (b) the IVI shows the obstruction warning + ghost C sourced `v2x_relayed` ≤ 2 s (A) after the warning-condition onset; (c) the god-view split screen visibly shows C occluded while the IVI warns; (d) the P1 chain demoable in isolation and each later layer independently demoable (the letter's non-collapsing phase structure, adopted as the DoD shape).
+- **Dependency:** all committed requirements above.
+- **Feasibility: achievable** — mechanical integration once the R2/R19 gates resolve.
+- **KPI:** binary pass/fail on the recorded run + all committed per-requirement KPIs ticked.
 
-## 2. Feasibility study result
+### Feasibility study result
 
-### Whole-input verdict
+**Whole-input verdict: ACHIEVABLE** for §1's full M1 scope on CarSky within the ~2-month window (letter 09/07 → assumed deadline ~2026-09-10 (A), ≈ 9 weeks), **conditioned on**: (1) platform access + starter pack landing in weeks 1–2 (external — everything CarSky-touching integrates only after it; contracts and ego logic build against loopback stubs meanwhile); (2) the two gates passing or their pre-ratified fallbacks firing cleanly — R2 codec spike/week-5 UPER gate and R19's two-stage 3D gate; (3) the week-0 language skill gates (F6, F19) resolving. The BTC P1 chain is a complete demo by itself; P2/P3 are additive and independently demoable — later-phase slippage degrades the proposal, never collapses it. **Critical path:** platform access → pin integration → P1 chain e2e (weeks 3–4) → IVI HMI/3D → packaging + rehearsal. **Slack ≈ 1.5–2.5 weeks, of which the F19 hybrid election prices in ≈ 1–2** (its week-5 revert-to-Python fallback restores the slack if fired); slack items (timeboxed, never gating): R20, R21, ego CAM, live GN/BTP framing, annotated export, dashboard polish.
 
-**ACHIEVABLE within 2 months for 2–3 developers** (tight-but-possible for one developer on the plan's sequential fallback), **conditional on three early decisions**:
-
-1. **Week-2 hardware go/no-go (F1):** the UDP-multicast stub is the *committed M1 acceptance path*; real modem/PC5 work proceeds only if an OBU is in hand by end of week 2 — otherwise R6 runs its mock-provider KPI and PC5 stays deferred (plan §6 already allows this).
-2. **Week-3 demo-dataset checklist (R18/F2):** the 4-item package (two synced clips, occlusion, ground truth + reference convention, intrinsics) must be confirmed by week 3, else the CARLA task is scheduled. Without it, R11/R15 acceptance criteria are untestable.
-3. **Mechanically enforced schema conformance at contract freeze (R1):** conformance to TS 103 324 is checked (mapping table + round-trip test + runtime validation), not asserted — asserted-but-unverified conformance is fake conformance and would make the M2 ASN.1 swap a rewrite.
-
-**Env 2026-07-08:** decision 1 (F1) is resolved — the platform has no modem/baseband (FPT-Mentor: radio out of scope), and by user decision of the same date **no hardware is used in any part of this project**: the stub/bench path *is* the acceptance path, and [m1-product-fit-quectel-modem.md](m1-product-fit-quectel-modem.md) becomes reference-only. Decisions 2 and 3 stand. The bench-node model adds no net scope: the scenario player absorbs the peer-side comms work already counted in the comms track ([working-env note, Phase 1 work targets](m1-phase1-working-environment.md)).
-
-**Round 2 (2026-07-08, display re-scope):** verdict stays **ACHIEVABLE**. The judge-visible surface moves from a dev-machine OpenCV window to a real GUI app on the IVI vECU (SC-1, user-directed) plus an ADA→IVI IPC link — display-track effort grows from ~1 week to **2 weeks nominal (Flutter path) / 2–3 weeks (Slint fallback path)**, consuming roughly half of the ~2-week slack below. New display-track risk carriers: **F13** (GUI surface delivery on the cloud vECU — week-4 render-spike gate) and **F12** (3D would be at-risk if made acceptance-gating; it is not — 2D committed). Dropping the B-side display (D1) refunds a small amount of work but does not offset the vECU-GUI growth.
-
-Reasoning: the plan is already de-risked — contract-first, mock-then-real, three parallel tracks, stub escape hatch. Every phase is individually a known-technology build. Critical path is the perception track (Phases 2→3→4 ≈ 3–4 weeks), parallelizing against comms (~1 week on stub) and display (~2 weeks — round 2); Phase 5 integration ≈ 1 week; ~1 week of slack remains for gate tuning against real monocular jitter and demo rehearsal. Nothing in the input requires deferred-scope items (§6) — the round-2 GUI pull-forward is a *user-directed* scope change, recorded as SC-1, not silently absorbed. Everything requested is implementable with open-source, Linux-native tooling, with the license flags argued in §3(d)/(e)/(i) and listed in §4.
-
-### Per-requirement verdicts
-
-| R#         | Dependency                                                                                          | Reasoning (abridged; full reasoning in §1)                                                                                                           |
-| ---------- | --------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1, 2       | None — pure specification work                                                                      | Days of work; ETSI references public. (R1 enforcement mechanism pending UPER ratification — Env 2026-07-08.)                                         |
-| 3, 4, 5    | R1 schema (R3, R4); bench scenario player as peer sender; R5 none (shared host clock)               | UDP/JSON/chrony on a bench LAN — days, low risk.                                                                                                     |
-| **6**      | Scenario-player position feed; optional 3rd-party simulator ([research](m1-v2x-simulator-tools.md)) | **Cloud-only by user decision 2026-07-08 — no hardware in any part of the project.** Simulated provider + startup log is the acceptance path.        |
-| 7, 8       | Any video clip (R7); R2 struct (R8)                                                                 | OpenCV harness + state machine, commodity work.                                                                                                      |
-| 9, 10      | R7 + R8 (R9); R9 (R10)                                                                              | Pretrained COCO car detection at ≥ 10 Hz on CPU (nano model) is commodity — CUDA not required (round-2 verdict, R10 note).                           |
-| **11**     | **R18** (intrinsics + ground truth); R9 (bboxes)                                                    | ±15% needs correct intrinsics/camera height; untestable if calibration is missing. Mitigations: KITTI validation, median filter, height cross-check. |
-| 12, 13, 14 | R11 + R8 (R12); R9–R12 + R3/R4 (R13); **R5 first** + R13 (R14)                                      | Gate/relay logic + stub latency budget met ~10× over; R14 strictly after R5.                                                                         |
-| **15**     | **R11 (twice) + R18** + configured `ref_point_offset_B`                                             | Highest-fan-in requirement; error budget explicit in §1.                                                                                             |
-| 16 (rev.)  | R1 + R14 + R15 + **R19 + R20**; flag F13                                                            | 2D marker scene in the R19 shell — achievable; KPIs unchanged from round 1; B-side half struck (D1).                                                 |
-| 17         | R11 + R18 flags + all phase outputs                                                                 | Mechanical integration once those hold (R6 hardware condition gone — cloud-only); DoD clause (b) reworded to the R19 surface.                        |
-| **18**     | **External video provider**; CARLA contingency if checklist fails                                   | Provider-dependent; CARLA task ~1 week on a GPU machine.                                                                                             |
-| **19**     | R2 + R20; **F13** (surface delivery + week-4 render gate)                                           | Achievable on the 2D path (mature framework, two runners); 3D stretch at-risk (software-GL on a vECU — week-4 spike measures it).                    |
-| 20         | R2 + R15                                                                                            | Achievable — stdlib UDP + JSON both ends, 1–2 days; placement-agnostic.                                                                              |
-
----
+| R# | Depends on | Verdict | Note |
+|---|---|---|---|
+| 1 | none | achievable | spec work; forge ASN.1 public |
+| 2 | R1 | JSON achievable / UPER at-risk | spike + week-5 gate + pre-ratified JSON fallback (F9) |
+| 3 | R1 | achievable | schema + CI round-trips |
+| 4 | R3, R17, R18/19 | achievable | stdlib sockets + JSON both ends |
+| 5 | R1, starter pack | achievable | checklist capped ≤ 3 days (A) |
+| 6 | R5 | achievable | 2–3 days |
+| 7 | R1–R3, R5 | achievable | dispatch = the DENM-at-M2 entry door |
+| 8 | R1, R2, R5, R15 | achievable | days; reuses the codec |
+| 9 | R5, R10 | achievable | user decision; production-faithful routing |
+| 10 | starter pack (emission only) | achievable | hand-computable kinematics |
+| 11 | R1, R2, R10 | achievable | gate-windowed relay |
+| 12 | R11 | achievable | player-side, reproducible |
+| 13 | R3, R10 | achievable | premise keeper — binary zero-C KPI |
+| 14 | R10, R17 | achievable | rank-2 output by design |
+| 15 | R3, R7, R13 | achievable | hysteresis unit-tested |
+| 16 | R3, R4 | achievable | 0-diff plug-in test |
+| 17 | R9, R15, R16 | achievable | TTC OR-trigger held (F18) |
+| 18 | R4, starter pack | achievable | schedule-riskiest committed item — starts week 1 |
+| 19 | R4, R18 | 2D achievable / 3D at-risk | two-stage gate; 2D floor in-seam |
+| 20 | video source, R10 | achievable (bonus) | timeboxed ≤ 1 week (A); F11 |
+| 21 | R3, R15, R20 | achievable (bonus) | timeboxed ≤ 2 weeks (A); CPU-only |
+| 22 | platform facts (A) | achievable | contingency = escalation/correction, not chrony |
+| 23 | R7, R17, R22 | achievable | annotated export drop-first |
+| 24 | R2, R14, R19, R23 | achievable | scapy re-encap + integrity manifest |
+| 25 | all committed | achievable | binary DoD |
 
 ## 3. Technical solution analysis
 
-All candidates pass the hard constraints (open-source, Linux) unless explicitly disqualified. C1–C4 = the ranked criteria in [solution-selection-criteria.md](../.claude/rules/solution-selection-criteria.md): C1 implementability, C2 M1 speed/ease, C3 future features, C4 smaller-dependency tie-break.
+Hard-constraint screening precedes every comparison (open-source only, Linux-targeted per [solution-selection-criteria.md](../.claude/rules/solution-selection-criteria.md)). Environment notes: the provided AAOS node is Linux-kernel and platform-provided; CarSky is sanctioned competition infrastructure, not a team dependency choice.
 
-### (a) Transport — serves R3, R4, R13, R14
+### (a) V2X message family + encoding — serves R1, R2, R7, R8, R11
 
-| Candidate                                    | License     | Assessment                                                                                                                                                                                                                                                                                                  |
-| -------------------------------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Plain UDP multicast (OS sockets, stdlib)** | stdlib      | C1: cannot fail on a bench LAN; debuggable with tcpdump/Wireshark. C2: hours. C3: connectionless best-effort broadcast is semantically the same model as PC5 — gate/expiry logic tuned on the stub stays valid on real radio. C4: zero deps.                                                                |
-| ZeroMQ pub/sub (pyzmq)                       | MPL-2.0/BSD | Works, but adds a dependency for one small periodic datagram, and its TCP session semantics *hide* the loss behavior R12/R14 must tolerate — a worse PC5 analogue.                                                                                                                                          |
-| Vanetza (ETSI GeoNetworking/BTP stack)       | LGPLv3      | Real ITS stack, but C++ with weeks of integration and link-layer plumbing, and **its CPM is the outdated TR 103 562 shape, not TS 103 324** ([riebl/vanetza#194](https://github.com/riebl/vanetza/issues/194)) — it does not deliver current-spec conformance. Rejected for M1 on C1/C2; see M2 note below. |
-| Vendor PC5 SDK                               | proprietary | **Disqualified** — not open-source (hard constraint). If an OBU arrives, SDK use is a user-authorized hardware exception, never a shortlisted solution.                                                                                                                                                     |
+- **Family candidates:** SAE J2735 BSM — **disqualified** (paywalled spec = unauditable; Part I carries no perceived objects; the SAE analogue SDSM is equally paywalled — round-1 precedent). Survivors: ETSI CAM+DENM vs ETSI CPM TS 103 324.
+- **Comparison (C1–C4):** C1 — parity: Vanetza master ships **release-2 codecs incl. CPM TS 103 324 v2.1.1** ([cache](../.claude/references/vanetza-its2-release2-cpm-ts103324.md); issue #194 closed) — the round-1 "Vanetza CPM outdated" objection is stale. C2 — CPM wins message-count economics: one message carries B's reference position + relative perceived C (one codec/profile/golden-vector set); CAM+DENM needs two. Semantics — §1's "broadcasts *that perception*", relative composition (DENM's absolute `eventPosition` would smuggle in the deferred absolute method), classification/confidence fields native. C3 — split honestly: multi-object + single-message aggregation futures are CPM-native; §1's hazard-type list is DENM's causeCode territory and enters at M2+ through R7's dispatch **regardless of the M1 pick**.
+- **Pick: CPM TS 103 324 v2.1.1** (drivers: C1 parity + C2 single-message + §1 semantics); **DENM = named M2+ hazard family**; ego Tx uses the same profile (R8). Reasoned deviation from the BTC letter's DENM suggestion — F2. *(Reaffirms round-1's CPM target; supersedes Alpha's round-3 CAM+DENM opening position — conceded on verified evidence, record point 12.)*
+- **Encoding candidates:** asn1tools — **disqualified for CPM** (no X.681 CLASS / X.683 parameterization, verified — [cache](../.claude/references/asn1tools-ioc-parameterization-limits.md)); raw asn1c — redundant (Vanetza embeds maintained asn1c output); pycrate — IOC-capable but no precompiled CPM (compile spike; [cache](../.claude/references/pycrate-etsi-its-asn1-modules.md)); Vanetza ITS2 asn1 targets (LGPLv3, standalone without the GN/BTP stack); JSON (letter-sanctioned).
+- **Pick: staged JSON (P1) → UPER (P2) behind one codec seam; Vanetza ITS2 as the single codec source** (bench encode shape — resident emitter daemon vs pre-encoded UPER replay CLI — both conforming, **delegated to [[project-architecture]]**); pycrate only on the F6 veto chain; fallback CPM-shaped JSON for M1. Drivers: C1 (one proven codec, golden vectors can't drift), C2 (P1 off the codec critical path), C4 (asn1-only targets).
 
-**Pick: plain UDP multicast behind a ~5-function transport interface** (`send(bytes)`, `recv()→bytes`, lifecycle). **Drivers: C1 + C2**, with C4 over ZeroMQ; C3 is bought for ~an hour of interface code, not a heavier stack.
+### (b) Transport, adapter seam, modem stub — serves R5, R6
 
-**Env 2026-07-08:** pick unchanged in shape — the thin send/recv interface is exactly what FPT-Mentor's "transport confirmed after blueprint submission" model requires; multicast vs unicast (and any infra-level impairment, option (a)) is a FPT-Mentor-confirmed adapter-config change only. Channel impairment moves from infrastructure (`tc netem` in plan §3) to the scenario player's config-driven drop/delay/jitter (FPT-Mentor-recommended option (b), [working-env note](m1-phase1-working-environment.md)).
+- **Candidates:** thin team adapter over UDP (BTC default) vs telux porting into the container (real SKU; letter warns infra eats demo budget) vs generic middleware (ZeroMQ/MQTT) under the seam.
+- Middleware screened out on fidelity (inserts semantics production doesn't have; the letter's point is production Rx is already "read from socket"); telux port declined for M1 (F17).
+- **Pick: thin adapter + fidelity checklist** (socket-fd Rx, M1-subset telux parity doc, CI import isolation, written port plan — capped ≤ 3 days (A)) + in-node modem stub with FSM + fail-inject. Drivers: C2 dominant (letter: least work, enough for demo), C1, C3 preserved (the checklist keeps the telux swap mechanical).
 
-**M2 transport wording (binding for downstream docs):** *M2 transport TBD; Vanetza is the leading open-source candidate, adoption conditional on TS 103 324 CPM support (tracked: [riebl/vanetza#194](https://github.com/riebl/vanetza/issues/194)), re-evaluated at M2 kickoff.* A name-commitment now would bind M2 to a stack that does not yet encode the normative target.
+### (c) Scenario player build — serves R10–R14
 
-### (b) Message encoding + normative target — serves R1, R4, R13
+- **Candidates:** self-written Python trajectory engine; MetaDrive as engine (Apache-2.0, [cache](../.claude/references/metadrive-license-topdown.md)); CARLA (GPU-heavy vs the shared GPU budget — rejected C1/C2); SUMO (no LOS/POV concept — rejected C2).
+- **Pick: self-written engine; the MetaDrive starter sample mined for pin-integration code only** (the letter's own guidance). Ground-truth consistency is architectural: one trajectory table per tick feeds every output. Drivers: C1 (deterministic, no engine unknowns), C2 (days), C4 (zero engine dependency); C3 — the letter calls the scenario layer a reusable SKU for every future V2X use case, which a config-driven engine is.
 
-| Candidate                                                                                  | Assessment                                                                                                                                                                                 |
-| ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **JSON (stdlib) mirroring TS 103 324 CPM structure, enforced by pydantic + mapping table** | C1: certain. C2: hours; human-readable logs satisfy R4's "parsed into fields" for free. C3: 1:1 field mapping makes the M2 ASN.1 swap codec-only. C4: stdlib + pydantic.                   |
-| Full ASN.1 UPER now (asn1tools MIT + ETSI CPM modules)                                     | True wire conformance, but plan §6 explicitly defers full ASN.1; ETSI module wrangling costs days–weeks and opaque payloads slow every debug cycle — C2 loses for zero M1 acceptance gain. |
-| Vanetza-provided encoding                                                                  | Encodes the outdated TR 103 562 CPM — fails the conformance goal it exists to serve.                                                                                                       |
-| Protobuf / CBOR                                                                            | Neither the standard encoding nor human-readable — a middle option that buys nothing. Rejected.                                                                                            |
+### (d) Languages per track — serves all
 
-**Pick: JSON mirroring TS 103 324 CPM field-for-field**, with the pydantic model as the single source of truth (JSON Schema generated *from* the model), the R1 mapping table, runtime validation of every message, and a CI round-trip test. **Normative target: ETSI TS 103 324 CPM only** — its [spec](https://www.etsi.org/deliver/etsi_ts/103300_103399/103324/02.01.01_60/ts_103324v020101p.pdf) and [ASN.1](https://forge.etsi.org/rep/ITS/asn1/cpm_ts103324) are free, so conformance is auditable at zero cost; SAE J3224 is paywalled → unauditable under open-source-only (informative reference only). **Drivers: C1 + C2** pick JSON (plan §2 blesses it); the mapping discipline is the plan's own hard requirement ("the schema must be standard-conformant") made falsifiable, and the cheap C3 insurance.
+- **V2X ECU: C++17, skill-gated (F6).** Drivers: §1 makes portability the node's focus goal and telux is a C++ API — only C++ keeps "developed layers move across hardware unchanged" code-true (the letter: "same code, same logic — the evaluated part"; SKU (a) "carries straight to the real product"); Vanetza codec locality (a Python ECU would need an FFI/sidecar, erasing Python's C2 edge). Conditions: week-0 gate (named owner + 1-day socket+decode hello-world on the actual toolchain), scope cap (adapter/stub/decode/validate/ego-Tx (R8)/forward/GNSS only), veto chain explicit — **Python ⇒ CPM-UPER rests on an unverified pycrate compile ⇒ JSON wire near-certain**. *(Supersedes rounds 1–2 mono-Python — the portability goal was re-premised by §1's cloud table.)*
+- **ADA: C++17 core + Python detector-as-callable-binary (user-elected hybrid, 2026-07-12 — [study](m1-ada-dual-language-study.md)).** C++17 implements the [ada-ecu.svg](ada-ecu.svg) DataObserver (all listeners), Data Parser (thin R3 validator — CPM decode stays in R7), R15 store, R16 CRA «interface» + R17 Chained Collision realization, R23 logging, R4/R8 emission; Python implements **R21 only**, as a long-running subprocess (venv or PyInstaller-onedir) streaming R3 TrackedObject JSONL over stdout. **Boundary clarification: no FFI (no pybind11/ctypes/embedded interpreter) and no cross-language API call (no RPC) is needed** — the only cross-language surface is the process-level contract (argv + exit codes + R3 JSONL), language-neutral by R3's design. Skill-gated per F19. *(Supersedes the round-3 mono-Python pick — §1's KPIs are met by either language; the election trades ≈ 1–2 weeks of slack for the C++ core, priced honestly in F19 with a pre-ratified revert.)*
+- **Bench: Python** (+ the (a) C++ encode component per architecture's shape choice). **IVI: Kotlin** (§3(e)). Cross-language drift contained by versioned contracts (R1/R3/R4) with CI round-trips.
 
-**Env 2026-07-08 — pick under supersession review:** this pick was premised on the pre-mentor model (hand-rolled stub between two team-run vECUs; plan §2's "if hand-rolling, JSON is acceptable"). The bench-node model makes standard UPER encoding near-free — asn1tools + official ETSI modules on both sides, no stack bring-up — and plan §2 says to use the standard encoding when it is free. Recommended route: **UPER codec-only over UDP**, JSON retained as the documented fallback; **user ratifies at the R1 freeze**. Full comparison and supersession chain: [control/data-plane §2–3](m1-phase1-control-data-plane.md). Original pick text above preserved — flagged, not silently absorbed. *(Scope note, round 2: this ratification governs the peer-visible V2X wire only — the internal ADA→IVI path is JSON regardless, see §3(j).)*
+### (e) IVI HMI framework on AAOS — serves R18, R19
 
-### (c) Language(s) per track — serves all
+- **Candidates:** Kotlin + Jetpack Compose (+ SceneView/Filament 3D — Apache-2.0, Compose-native, maintained; [cache](../.claude/references/sceneview-filament-android-3d.md)); Flutter-on-Android; web-in-browser (fails D3 + weak app-switching — screened); Qt-for-Android (JNI/cross-compile friction, no AAOS idiom gain — rejected C2).
+- **Pick: Kotlin + Compose; 3D via SceneView; 2D Compose-canvas floor behind the view seam; Flutter-on-Android pre-named framework fallback** (fires only if the Kotlin ramp fails early — then 2D-only). Drivers: C1 on the now-committed 3D axis (Flutter 3D remains paused — round-2 caches unchanged), C2 (native toolchain of the provided node; no engine layer; app switching/notifications first-class), C3 (the seam carries §1's future toggle/themes/camera-feed view). Both round-3 papers converged on this independently. *(Supersedes the round-2 Flutter pick and its Slint fallback + week-4 gate — the IVI target was re-premised by the BTC letter (provided AAOS node, not a team-built Linux vECU); reverses user decisions D4-set candidates — F3.)*
 
-| Candidate                                                                                | Assessment                                                                                                                                                                                                                                                              |
-| ---------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Python 3.10+ everywhere (all three tracks; modem control via qmicli subprocess)**      | C1: highest — perception is Python-locked anyway (PyTorch/YOLO); one language = no cross-language schema drift. C2: fastest; shared pydantic schema classes across tracks. C3: sufficient — future Vanetza/C++ hides behind the transport interface. C4: one toolchain. |
-| Python perception + C++ (standalone asio, per the small-lib principle — not Boost) comms | Two build systems + a serialization seam for zero M1 benefit: the 300 ms budget is beaten ~100× by Python UDP+JSON (single-digit ms). Better only if Vanetza lands — which is an M2 decision.                                                                           |
-| C++ everywhere                                                                           | Perception in C++ (libtorch/ONNX) is the riskiest possible M1 path. Rejected on C1.                                                                                                                                                                                     |
+### (f) ADA→IVI data path — serves R4, R18
 
-**Pick: single-language Python 3.10+ mono-stack.** **Drivers: C1 + C2.** The durable asset is the frozen R1 schema, not the transport code; an M2 C++ rewrite lives behind the same interface.
+- **Candidates:** UDP + versioned JSON into an Android foreground service (`DatagramSocket`); TCP stream (trivial swap if soak KPIs demand); gRPC (codegen + streaming surface unneeded — rejected C2/C4); MQTT (broker infra — rejected C4); WebSocket (banned by D3 — kept); AAOS VHAL property injection (starter-pack-unknown — exploration note only, C1 risk).
+- **Pick: UDP + versioned JSON**, state (10 Hz, last-value-wins, sequence numbers) + edge-triggered warning events. Drivers: C1 + C2 + C4; the round-2 rationale survives the receive-end swap intact.
 
-**Round 2 (2026-07-08) — mono-stack broken for the display track, flagged, not silently absorbed:** the GUI on the IVI vECU (D2) is written in **Dart** per the §3(i) pick (Rust if the fallback fires); comms, perception, and the scenario player stay Python. The mono-stack rationale (no cross-language schema drift) is preserved by the contract-first R20 seam: the only Python↔Dart surface is the versioned R20 JSON message, round-trip-tested in CI.
+### (g) Perception stack — serves R20, R21
 
-### (d) Detector — serves R9, R10 (license position included)
+- **Candidates:** YOLO11n ONNX-CPU (AGPL-3.0; 56 ms/frame CPU — [cache](../.claude/references/yolo11-cpu-inference-benchmarks.md)); YOLOX-s (Apache-2.0) pre-named license fallback (F7); SSD-MobileNet (weaker accuracy — rejected C1).
+- **Pick: YOLO11n CPU-only, timeboxed;** detections-from-scenario (R13) remains the ADA acceptance-path source in every phase; camera detections complement via the identical R3 interface (the letter's GPU-free fusion pattern). No GPU requested (F16). *(Supersedes rounds 1–2's vision-critical-path role — B's perception is bench-synthesized in the single-ego blueprint.)*
 
-| Candidate                                           | License                                                                                                           | Assessment                                                                                                                            |
-| --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| **Ultralytics YOLO11n / YOLOv8n (pretrained COCO)** | **AGPL-3.0** ([license](https://www.ultralytics.com/license), [repo](https://github.com/ultralytics/ultralytics)) | C1: highest — plan names it; car/truck classes pretrained; huge install base. C2: 3-line API, best docs; nano model ≥ 10 Hz on CPU.   |
-| YOLOX-s                                             | Apache-2.0                                                                                                        | Proven and permissive; repo maintenance stale since ~2022, clunkier inference API — modestly behind on C1/C2. **Pre-named fallback.** |
-| RT-DETR / RF-DETR                                   | Apache-2.0                                                                                                        | Good accuracy; transformer inference heavier on CPU — risks R10 without a GPU.                                                        |
-| torchvision SSDlite / Faster R-CNN                  | BSD-3                                                                                                             | Works; weaker realtime ergonomics on CPU.                                                                                             |
+### (h) Dashboard / god-view delivery — serves R14
 
-**License position (explicit):** AGPL-3.0 is OSI-approved open source; the project's hard constraint bans *commercial/paid* tools, not copyleft (Vanetza's LGPLv3 sits in the same family uncontroversially). **Ultralytics therefore passes the hard constraints.** The real consequence is IP-shaped and belongs to the user: AGPL is viral — if this project is later productized proprietarily, the only exits are Ultralytics' *paid* enterprise license (disqualified: paid) or a detector swap. **Pick: Ultralytics YOLO11n (fallback v8n), drivers C1 + C2**, with two conditions: (i) flag F4 puts the AGPL accept/reject in the user's hands; (ii) the detector sits behind a one-function interface (`frame → [bbox, class, conf]`) so the **YOLOX-s (Apache-2.0) swap is a contained ~2-day change** if AGPL is rejected. R9/R10 KPIs are detector-agnostic by design. *Round-2 note: the CPU-vs-CUDA verdict for this detector is recorded at R10 — CPU committed for M1, GPU only for the future live-feed milestone (§6, F11).*
+- **Candidates:** bench-served page + SSE/polling (BTC's suggested shape); WebSocket push (keeps a banned tech alive for no gain — rejected); MapLibre map page (meaningless without the real-coordinate demo — deferred, kept open by the WGS84 anchor); native window streamed (clunky in a browser-operated cloud — rejected C2).
+- **Pick: bench-served page, SSE/polling, own 2D canvas, offline assets, no map.** Drivers: C1 + C2 + C4. D3 scope: the page's browser JS is bench-side jury tooling — F4.
 
-### (e) Monocular distance method + validation data — serves R11, R15, R18
+### (i) GNSS feed mechanics — serves R9
 
-Method:
+- **Candidates:** telux-LocationInfo-shaped JSON fixes (pick); NMEA sentences (conforming below-seam alternative — architecture may choose; production parses no sentences, so parity lives at the `subscribeLocation` surface); gpsd chain (extra daemon for zero consumer benefit — rejected C4, stale round-1 machinery).
+- **Pick: telux-shaped JSON fixes end-to-end, 10 Hz (A)**, routing bench → V2X ECU → ADA per the 2026-07-10 user decision (jointly endorsed — the letter itself notes production V2X apps take GNSS via telux); **no IVI location in M1**; scenario WGS84-anchored (F13). Drivers: C1 + C2, production-faithful.
 
-| Candidate                                                                           | Assessment                                                                                                                                                      |
-| ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **bbox-bottom ground-plane projection (pinhole; intrinsics + camera height/pitch)** | C1: strong on the flat near-collinear convoy §2 assumes — ±10–15% typical at 10–50 m. C2: closed-form, NumPy only. C3: extends to the lateral offset R15 needs. |
-| Known-height similar triangles (car prior ≈ 1.5 m)                                  | ±15–25% due to vehicle-size variance; kept as a cheap per-frame **sanity cross-check** (~30 lines).                                                             |
-| Monocular depth nets (Depth Anything / MiDaS)                                       | Scale-ambiguous → *adds* a calibration problem; heavy. Rejected on C1/C2/C4.                                                                                    |
+### (j) Timebase & latency measurement — serves R22
 
-**Pick: ground-plane projection primary + similar-triangles cross-check. Drivers: C1 + C2.**
-
-Validation data — **two distinct needs, deliberately split**:
-
-| Need                                       | Source                                             | Rationale                                                                                                                                                                                                                                                                                                                                               |
-| ------------------------------------------ | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Per-leg validation (R9, R11)               | **KITTI** (raw clips + calib + LiDAR ground truth) | Download-and-go: real imagery/noise, intrinsics and ground-truth range included — hours, not days (C2). **License position:** KITTI is CC BY-NC-SA; acceptable because it is an *evaluation instrument*, never a shipped or linked component — nothing KITTI-derived ships. Flagged (F5) for the user; CARLA becomes the validation source if rejected. |
-| Composed-d_AC + demo clips (R15, R17, R18) | **CARLA** (MIT) — via the R18 checklist trigger    | No existing dataset (KITTI included) provides two synchronized clips of one occluded convoy with d_AC ground truth; CARLA scripts exactly that and exports truth + intrinsics. Required *unless* the provided video package passes R18's 4-item checklist (C1: without it, Phase 6's tolerance criterion is untestable).                                |
-
-### (f) Display / BEV — serves R16 — **SUPERSEDED (round 2, 2026-07-08) by §3(i)/(j)**
-
-> **Supersession note:** this pick assumed the judge-visible surface was a dev-machine OpenCV window. User decisions D1/D2 strike the B-side display and move the surface to a real GUI app on the IVI vECU — see §3(i) (framework) and §3(j) (data path). OpenCV survives only as an optional, unscored bench-side perception diagnostic. Original text preserved below, per the report's supersession convention.
-
-| Candidate                                                 | License        | Assessment                                                                                                                       |
-| --------------------------------------------------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| **OpenCV drawing for both camera overlay and BEV canvas** | Apache-2.0     | Already a project dependency (R7); rectangles/circles/text at 30+ FPS; a BEV is a blank canvas with two markers and range rings. |
-| matplotlib animation                                      | BSD-compat     | Interactive redraw is a few FPS — **risks R16's 15 FPS floor**. Rejected on C1.                                                  |
-| Rerun viewer                                              | MIT/Apache-2.0 | Capable but a new heavyweight tool for two markers — C4 loses.                                                                   |
-| Foxglove                                                  | not fully open | **Disqualified** — no longer fully open-source.                                                                                  |
-
-**Pick (superseded): OpenCV for both surfaces. Drivers: C2 + C4** — zero new dependencies; the plan itself defers a production GUI.
-
-**Env 2026-07-08 (superseded with the pick):** OpenCV assumes a Linux render surface. If the ego blueprint puts the IVI on an AAOS node, the A-side surface becomes an Android BEV app instead (flag F9); the bench-side perception visualization (R16's re-worded "B display") stays OpenCV regardless. *(F9 closed at round 2 — see §4.)*
-
-### (g) Service management — serves R3
-
-| Candidate                             | Assessment                                                                                                                                                                                                                                                                  |
-| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **systemd unit**                      | Present on every target Linux (real OBU images included); the plan's acceptance criterion is phrased in systemd terms; one 10-line unit file; zero install.                                                                                                                 |
-| supervisord                           | Itself needs a boot-start mechanism (…systemd) — circular; strictly worse.                                                                                                                                                                                                  |
-| Docker + restart policy               | Container adds GPU/device passthrough friction for perception; packaging is a later nice-to-have.                                                                                                                                                                           |
-| Adaptive AUTOSAR Execution Management | **Effectively disqualified** — no viable open-source Adaptive EM exists; commercial offerings are paid. The plan's "or Adaptive AUTOSAR EM" branch is unreachable under the hard constraints → **propose striking it** (flag F6); plan-text cleanup, not a capability loss. |
-
-**Pick: systemd. Drivers: C1 + C2 + C4 unanimously.** *(Round-2 note: R19's GUI auto-start KPI reuses the same mechanism on the IVI node.)*
-
-### (h) Timebase tooling — serves R5, R14, R16
-
-| Candidate                                                                                 | Assessment                                                                                               |
-| ----------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| **chrony (+ gpsd SHM on the hardware path; NTP peer mode host-to-host on the stub path)** | One tool covers both paths; good step/jitter behavior; tracking report gives the R5 offset KPI directly. |
-| ntpd                                                                                      | Older, slower convergence, no advantage.                                                                 |
-| systemd-timesyncd                                                                         | SNTP client only — cannot peer two hosts or ingest gpsd. Rejected on C1.                                 |
-| linuxptp (PTP)                                                                            | Sub-µs precision is overkill for a 50 ms bound; NIC hardware-timestamp dependency. Rejected on C4.       |
-
-**Pick: chrony. Drivers: C1 + C2** (C4 over PTP). The gpsd-SHM branch assumed hardware GNSS — moot since hardware left project scope (2026-07-08).
-
-### (i) IVI GUI framework — serves R16, R19 (round 2, 2026-07-08; supersedes §3(f) for the judge-visible surface)
-
-Evaluation lens per user decision D5 — **3D capability first, then 2D, then aesthetics — applied within C1–C4**. Candidates fixed by D4. Constraint screening first: **React is disqualified before scoring by D3 (no JS), argued, not silently dropped** — React is definitionally a JavaScript library (browser/webview DOM, React Native's Hermes engine, and react-three-fiber all execute JS); no JS-free React runtime exists; its embedded delivery needs a browser/webview stack on the vECU and its natural data path is WebSocket (also banned). Its MIT license and best-in-class three.js 3D are therefore moot; if D3 is ever relaxed, this comparison must be re-run.
-
-| Axis                   | **Flutter (Dart; prebuilt C++ engine)**                                                                                                                                                                                                                                                                                                                                                                                                       | Slint + Rust                                                                                                                                                                                                   | React (ref. only — disqualified)          |
-| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
-| 3D (D5 rank 1)         | Official route (flutter_gpu + flutter_scene) is **preview, master-channel-only, Impeller-gated, paused Nov 2025** — unavailable on stable-channel flutter-elinux; stable-channel 2.5D via perspective `Transform` ships today ([cache](../.claude/references/flutter-3d-flutter-scene-gpu-status.md), [cache](../.claude/references/flutter-3d-impeller-flutter-gpu-status.md))                                                               | No built-in 3D; **stable GL-underlay API** + WGPU/Bevy route since 1.12, but both are DIY Rust+GL glue ("integration needs work" — [cache](../.claude/references/slint-3d-wgpu-bevy-integration.md))           | three.js — best raw 3D, unusable under D3 |
-| 2D (D5 rank 2)         | Best-in-class canvas (`CustomPaint`), animation, layout — the R16 scene + R19 shell is a textbook app                                                                                                                                                                                                                                                                                                                                         | Fully capable declarative 2D; **pure-CPU SoftwareRenderer + LinuxKMS** = strongest render-fallback guarantee ([cache](../.claude/references/slint-software-renderer-linuxkms.md))                              | good                                      |
-| Aesthetics (D5 rank 3) | Material/theming out of the box; largest ecosystem                                                                                                                                                                                                                                                                                                                                                                                            | Adequate (fluent/material/cosmic styles)                                                                                                                                                                       | good                                      |
-| Embedded-Linux/IVI fit | **Two runners:** flutter-elinux (Sony, BSD-3, Wayland/DRM-GBM/X11, x64+arm64) or stock Flutter desktop Linux (GTK/X11 + llvmpipe); **AGL ships Toyota's production embedded Flutter** ([caches](../.claude/references/flutter-elinux-embedded-linux-embedder.md): [AGL/Toyota](../.claude/references/agl-flutter-automotive-adoption.md))                                                                                                     | First-class embedded (LinuxKMS/software renderer)                                                                                                                                                              | needs browser/Electron — worst            |
-| License                | **BSD-3 end-to-end — clean, no flag**                                                                                                                                                                                                                                                                                                                                                                                                         | **GPLv3 only** on an IVI/embedded target (royalty-free tier excludes embedded; commercial tier paid ⇒ disqualified — [cache](../.claude/references/slint-licensing-triple-license.md)) ⇒ flag **F10**          | MIT (moot)                                |
-| C1 / C2                | C1 high (mature, two runners, production precedent; team ramps Python→Dart fast); C2 highest                                                                                                                                                                                                                                                                                                                                                  | C1 medium (Rust ramp on the judge-visible track is the dominant schedule risk; beta Python bindings are not a safe emergency path — [cache](../.claude/references/slint-python-bindings-status.md)); C2 lowest | —                                         |
-| C3 / C4                | C3 split: wins ecosystem/themes/AAOS portability; **liability recorded verbatim:** flutter_gpu is paused — "matures on Flutter's roadmap" is not currently true; the future 2D/3D switch may need the Texture-widget + native-GL escape hatch, which is why **R19's view-interface seam is a binding design obligation**. Multi-process liabilities (per-app engine RAM, 100s-of-ms engine cold start) recorded in §5. C4 loses (engine size) | C3 split: wins 3D-route stability + footprint/wake-on-warning; C4 wins outright                                                                                                                                | —                                         |
-
-**Pick: Flutter (Dart) — first choice; Slint + Rust pre-named fallback. Drivers: C1 + C2.** Reasoning under the rules: C1 attaches to the *committed* milestone scope, and D6 commits 2D (3D is stretch, F12) — so the 3D axis, where neither survivor has production-grade low-effort 3D today, lands at C3 and cannot outvote the C1/C2 gap; the dominant C1 risk is the team writing the judge-visible GUI in a never-used language, where Dart's ramp, hot reload, two Linux runners, and the AGL/Toyota production precedent beat Slint's renderer guarantee + Rust ramp; C2 is conceded to Flutter by both reviewers; C4 is conceded to Slint (tie-breaker only, not tied).
-
-**Fallback gate (falsifiable, week 4 — ties to F13):** the render-surface spike on the *actual* IVI vECU tests **both** Flutter runners (flutter-elinux; else stock GTK/X11 + llvmpipe) and must demonstrate **≥ 15 FPS @ ≥ 800×480 plus input events** (the R19 KPI). If neither runner passes, the Slint fallback fires and F10 activates — that is the whole gate, no later re-litigation. **F10 (Slint GPLv3) must be pre-decided by the user now** so the fallback is executable without a licensing stall. R20's framework-agnostic data path + R19's view-interface seam make the swap UI-layer-only.
-
-### (j) ADA→IVI data path (the WebSocket replacement) — serves R20 (round 2, 2026-07-08)
-
-| Candidate                                                                        | Assessment                                                                                                                                                                                                                                                                                                                    |
-| -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **UDP datagram (localhost or inter-node), versioned JSON payload, thin adapter** | **Pick.** C1: stdlib on both ends (Python `socket`/`json`; Dart `RawDatagramSocket`/`dart:convert`; Rust `std::net`/serde_json on the fallback) — the framework swap never touches the data path; survives both ECU placements (single node or TCU/IVI split); tcpdump-debuggable like the V2X path. C2: hours. C4: zero deps |
-| Unix domain socket                                                               | Same-host only — dies if ADA and IVI land on different vECU nodes (placement is architecture's open decision); no compensating advantage. Rejected                                                                                                                                                                            |
-| zenoh                                                                            | Capable pub/sub, but +1 dependency for one point-to-point link (C4) and no mature Dart binding (C1 risk on the GUI side). Rejected                                                                                                                                                                                            |
-| D-Bus                                                                            | Daemon/policy plumbing on a vECU, weak Dart support, wrong shape for 10 Hz streaming. Rejected                                                                                                                                                                                                                                |
-| SOME/IP (vsomeip)                                                                | SDV-canonical but C++/Boost-heavy, no Dart binding — C1/C2 cost for zero M1 gain. **Named M2+ upgrade path inside the same adapter seam**                                                                                                                                                                                     |
-
-**Payload encoding: versioned JSON — deliberately decoupled from the R1 UPER ratification.** R1's UPER rationale is peer-visible wire fidelity; ADA→IVI is host-internal — no standard governs it, no hardware ever delivers it. UPER here would force a second ASN.1 toolchain on the GUI end (asn1tools is Python-only; **no mature Dart UPER codec exists**) — real C1/C4 cost buying zero conformance value. JSON costs nothing on either end and keeps GUI debugging human-readable (C2); the adapter keeps the encoding swappable if a later milestone unifies on UPER. **Drivers: C1 + C2 + C4.** (Resolution record: [round-2 record](../.claude/prompts/scratchpad-requirement-analysis-round2/adversarial-review-record.md), point 8.)
+- **Candidates:** bench-authoritative in-message timestamps + per-run measured offset (pick); chrony mesh (containers likely lack `CAP_SYS_TIME`; solves a problem the design doesn't have — rejected C2/C4, supersedes round-1); PTP (sub-µs for a ≤ 20 ms need — rejected C4).
+- **Pick: bench timestamps + UDP-echo offset per run; contingency = BTC platform-level escalation or analysis-time offset correction.** Drivers: C1 + C2; every KPI computable from logs alone.
 
 ### Stack summary (per track)
 
-| Track                | Stack                                                                                                                                                                                                                                                                                                                   |
-| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Contracts            | JSON schema normatively mapped to ETSI TS 103 324 CPM; pydantic models (single source of truth, JSON Schema generated from them); versioned schema doc + mapping table with reference-point semantics — *encoding mechanism pending UPER ratification at the R1 freeze (Env 2026-07-08, §3(b))*                         |
-| Comms                | Python 3.10+, stdlib UDP multicast behind a swappable transport interface, chrony (+gpsd) timebase, systemd service; GNSS/modem = simulated provider only (hardware removed from project scope — 2026-07-08; simulator candidates in [m1-v2x-simulator-tools.md](m1-v2x-simulator-tools.md))                            |
-| Perception           | Python, OpenCV `VideoCapture` (PyAV only if timestamp precision forces it), Ultralytics YOLO11n/v8n (AGPL — flag F4; YOLOX-s pre-named fallback), NumPy ground-plane distance + height-prior cross-check, YAML-config gate constants — **CPU committed, no GPU dependency (R10 round-2 note)**                          |
-| Display (round 2)    | **Flutter (Dart) GUI shell on the IVI vECU** — runner order flutter-elinux, else stock GTK/X11 + llvmpipe; **Slint + Rust pre-named fallback** behind the week-4 render gate (F10/F13); R20 versioned-JSON UDP from ADA; 2D committed, 3D stretch (F12); OpenCV demoted to dev-only bench diagnostic (§3(f) superseded) |
-| Validation/demo data | KITTI (per-leg, flag F5) + CARLA (composed + demo clips, via R18 checklist trigger)                                                                                                                                                                                                                                     |
+| Track / node | Language | Key components | Notes |
+|---|---|---|---|
+| V2X ECU (app-level container) | C++17 (skill-gated, F6; Python veto path defined) | adapter seam (`IV2xRadio`-mirror) + modem stub + R2 codec seam (CPM decode/encode — JSON P1 → Vanetza ITS2 UPER P2, F9 fallback) + JSON forward; ego CPM Tx (R8); `subscribeLocation` GNSS forward | portability = §1 focus goal; scope-capped |
+| ADA ECU (app-level container) | C++17 core (skill-gated, F19) + Python 3.11 detector subprocess | track store + CRA plugin abstraction + NLOS/TTC realization + evidence logging + R4/R8 emission (C++); YOLO11n ONNX-CPU JSONL detector (Python, R21 timeboxed bonus, off P1 path; YOLOX-s fallback F7) | detector boundary = R3 JSONL over stdout — no FFI, no cross-language API |
+| IVI (provided AAOS full vECU) | Kotlin | Jetpack Compose shell + SceneView/Filament 3D + Canvas 2D floor + UDP foreground service | Flutter-on-Android pre-named fallback; candidate R20 clip surface (vs dashboard — architecture's choice) |
+| Bench (team-built container) | Python (+ C++ encode component per architecture) | scenario engine + CPM emission + impairment + LOS filter + GNSS feed + god-view/dashboard (SSE) + R22 timebase (in-message timestamps + UDP-echo offset) | single source of truth; MetaDrive sample = pin reference |
+| Contracts / CI | JSON Schema + ETSI ASN.1 | R1 CPM profile, R3 TrackedObject, R4 warning message; golden vectors; round-trip + diff-check tests | golden vectors are the conformance oracle |
+| Demo evidence | — | scapy GN/BTP re-encapsulation + hash manifest; Wireshark; recorded runs | disclosure line mandatory (R24) |
 
----
+## 4. Flags for user ratification
 
-## 4. Proposed scope/requirement changes & flags (user accept/reject)
+**Ratification pass (user, 2026-07-12): all flags F1–F19 below are approved as recorded.** Staleness review: no flag is irrelevant to the current design — each remains referenced by live requirements — so none is removed; F15 alone no longer fit as worded (plain deferral) and is replaced per [the verification note](m1-node-toolset-support-verification.md); F18's OR-trigger is approved, not struck. The flags stay listed as the decision record the report cites throughout.
 
-Flags F1–F13 and scope-change record SC-1 moved out of this file 2026-07-08 — they are a record for human review only, kept at [deprecated/m1-scope-change-flags.md](deprecated/m1-scope-change-flags.md). In-text references like "§4, flag Fx" resolve there; agents consume flag *outcomes* from the requirement text above, not the flag record.
+1. **F1 — Numbering re-enumeration executed** (R1–R25); ratify the replacement Numbering text in §1 (§ Numbering).
+2. **F2 — Message family = CPM TS 103 324**, a reasoned deviation from the BTC letter's DENM suggestion; DENM recorded as the M2+ hazard family via R7's dispatch. Joint position after Alpha's evidence-based concession (record point 12).
+3. **F3 — IVI framework reversal: Flutter → Kotlin/Compose + SceneView** (reverses the round-2 ratified pick and its D4 candidate set; Flutter-on-Android = pre-named fallback). No Dart code exists, so the write-off is zero.
+4. **F4 — D3 ("no JS, no WebSocket") re-scoped:** binary ban kept for the **ego software path** (V2X ECU, ADA, IVI app); the bench jury dashboard is a browser page (JS) using SSE/polling — no WebSocket anywhere. Extending the ban to the bench forces a clunkier streamed-window dashboard (C2 cost).
+5. **F5 — 3D raised from stretch to committed-with-gate** (amends round-2 F12 posture): two-stage gate — spike by end of week 3 or AAOS access + 2 weeks (whichever later, (A)); week-6 (A) ship checkpoint; FPS ≥ 15 target / ≥ 10 floor (A). Ratify dates + bars.
+6. **F6 — V2X ECU language = C++17, skill-gated:** week-0 gate (named owner + 1-day toolchain hello-world), scope cap (adapter/stub/decode/validate/ego-Tx (R8)/forward/GNSS only). **Veto chain stated honestly: choosing Python ⇒ Python-side CPM UPER rests on an unverified pycrate compile ⇒ the JSON wire fallback becomes near-certain** — vetoing C++ likely costs UPER realism too.
+7. **F7 — YOLO11n is AGPL-3.0** (fine under open-source-only; copyleft caveat for productization); **YOLOX-s (Apache-2.0) pre-named fallback**. Decide before R21 starts.
+8. **F8 — Vanetza is LGPLv3** — now on the primary codec path (not just a fallback); dynamic linking keeps the repo clean. Pre-approve so neither the codec nor the fallback stalls.
+9. **F9 — Encoding staged JSON→UPER:** ≤ 3-day cross-decode spike (weeks 1–2), P2 upgrade gate week 5 (A); failure ⇒ M1 ships CPM-shaped JSON (BTC-sanctioned) and the Wireshark evidence weakens to UDP/JSON. Ratify the trade in advance.
+10. **F10 — Every numeric KPI is (A)** — an assumption to confirm; none exists verbatim in §1 or the letter; veto any individually.
+11. **F11 — Video source dependency:** R20/R21 need a clip; the team owes FPT-Mentor a format spec (end of week 2 (A)); if none is provided, the team produces its own matching clip (small scope add). Ratify the self-production fallback.
+12. **F12 — Cortex-M mock node omitted** (BTC offers mock-or-omit; §1 already excludes Cortex-M development): LOS object list injects directly to ADA; architecture may restore the mock-node topology without contract change.
+13. **F13 — GNSS routing per the 2026-07-10 user decision adopted** (bench → V2X ECU → ADA, telux-mirroring — jointly endorsed as more production-faithful than the letter's IVI-injection sketch); **no IVI location injection in M1**; scenario anchored at real WGS84 coordinates (segment user-selectable (A)) so a future map never forces scenario re-authoring. Any future real-coordinate map reopens IVI GNSS injection as a scope add.
+14. **F14 — Single-ego blueprint confirmed;** the multi-real-car variant declined per BTC's own cost/value warning (forecloses a two-IVI demo).
+15. **F15 — Multi-process IVI front end: implementation deferred; end-state MANDATORY** (upgraded from a nice-to-have deferral by user decision 2026-07-12). M1 ships the R18 foundation obligation so the split is a refactor, not a rewrite; the M1-visible slice remains app switching + heads-up warning. Wake mechanism recorded: foreground-orchestrator `startActivity` (unprivileged, primary); home-as-launcher exemption or privileged `START_ACTIVITIES_FROM_BACKGROUND` as fallbacks; HUN tap as the user-in-loop path.
+16. **F16 — No GPU requested from BTC** — locks CPU-only perception and display-only video; reopening later competes for a shared budget and needs early BTC notice.
+17. **F17 — telux-porting SKU declined for M1** (BTC option (b)); the R5 seam + port plan keep it open as an optional future SKU.
+18. **F18 — TTC OR-trigger HELD:** §1 fixes *distance* as the M1 criterion; R17's "or TTC ≤ 3.5 s (A)" is a policy addition that makes the TTC engine visibly useful. **Approved 2026-07-12 — the OR-trigger stands.**
+19. **F19 — ADA core language = C++17 (user-elected hybrid, 2026-07-12):** week-0 skill gate mirroring F6 — named ADA C++ owner **distinct from the F6 V2X owner** (or explicit user acceptance of shared-owner risk), 1-day toolchain hello-world (UDP rx + JSON parse + one gtest); scope cap = R15/R16/R17/R23/R4-emission; the R21 detector stays Python behind the subprocess JSONL boundary in long-running streaming mode — **no FFI, no cross-language API call needed** (process-level contract only). Fallback pre-ratified: gate failure or R15–R17 not KPI-green by end of week 5 (A) ⇒ ADA reverts to mono-Python — R3/R4 make the reversal contract-loss-free.
 
----
+**Prior user decisions — disposition record:** D1 (B-side display dropped) — upheld, now moot (B is bench-simulated). D2 (GUI = real app on the IVI vECU) — upheld, retargeted to the provided AAOS node. D3 (no JS/WebSocket) — kept, re-scoped (F4). D4 (GUI candidate set {Slint+Rust, React, Flutter}) — superseded; candidates re-derived for AAOS (F3). D5 (3D→2D→aesthetics focus) — upheld, now aligned with F5. D6 (buttons + central view + warning-triggered 3-car view) — carried into R18/R19. D7 (live camera feed = future) — upheld; R20 renders the provided file only.
 
-## 5. Future-features register (recorded, not M1 scope)
+## 5. Appendix — adversarial requirement analysis & solution proposal record
 
-The register moved out of this file 2026-07-08 to [future/m1-future-features-register.md](future/m1-future-features-register.md) — the single authoritative future-features source (it fully absorbs the original goals prompt's future-features list; `.claude/prompts/project_goals.md` is retired as a source). [[project-researcher]] looks future features up there per the [future-features-analysis skill](../.claude/skills/future-features-analysis/SKILL.md); in-text references to "§5" resolve there.
-
----
-
-## 6. Appendix — adversarial requirement analysis & solution proposal record
-
-Per-round contested points, resolutions, and key external sources live with each round's debate scratchpad, per [requirement-analysis-and-solutioning](../.claude/skills/requirement-analysis-and-solutioning/SKILL.md) (moved out of this file 2026-07-08):
-
-- **Round 1** (five contested points: schema conformance, validation data, composed error budget, Vanetza M2, KPI numbers): [.claude/prompts/scratchpad-requirement-analysis-round1/adversarial-review-record.md](../.claude/prompts/scratchpad-requirement-analysis-round1/adversarial-review-record.md)
-- **Round 2** (2026-07-08, display re-scope + CUDA; six contested points 6–11: GUI framework pick, gate direction, R20 encoding, 120 km/h derivation, effort & KPI numbers, flag numbering): [.claude/prompts/scratchpad-requirement-analysis-round2/adversarial-review-record.md](../.claude/prompts/scratchpad-requirement-analysis-round2/adversarial-review-record.md) — position papers and rebuttals are siblings of that file.
+- Round 1 — [scratchpad-requirement-analysis-round1/adversarial-review-record.md](../.claude/prompts/scratchpad-requirement-analysis-round1/adversarial-review-record.md) (contested points 1–5).
+- Round 2 (2026-07-08, display re-scope + CUDA) — [scratchpad-requirement-analysis-round2/adversarial-review-record.md](../.claude/prompts/scratchpad-requirement-analysis-round2/adversarial-review-record.md) (points 6–11).
+- Round 3 (2026-07-10, BTC-letter full rework) — [scratchpad-requirement-analysis-round3/adversarial-review-record.md](../.claude/prompts/scratchpad-requirement-analysis-round3/adversarial-review-record.md) (points 12–24).

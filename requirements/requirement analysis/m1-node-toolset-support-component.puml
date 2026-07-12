@@ -1,0 +1,64 @@
+@startuml m1_node_toolset_support_component
+' Research artifact (project-researcher) — toolset-support verification, not an HLD.
+' Maps each node's §1 responsibilities to the §3(d) language/toolset picks;
+' requirement numbers from requirements/m1-cooperative-awareness.md (R1-R25).
+title Per-node toolset support — §1 responsibilities on the §3 stack picks (verification view)
+
+skinparam componentStyle rectangle
+skinparam wrapWidth 230
+skinparam defaultTextAlignment center
+
+node "Bench node — Scenario Player\n<b>Python</b> + C++ encode component\n(team-built container)" as bench {
+  [Scenario engine\nR10 trajectories, config-driven] as B_ENG
+  [CPM emission at varying rates\nR11 — Vanetza ITS2 encode (C++) / JSON P1] as B_EMIT
+  [Impairment engine\nR12 — pre-emission drop/delay/jitter] as B_IMP
+  [LOS-filtered ego sensor view\nR13 — geometry from ground truth] as B_LOS
+  [Ego GNSS feed\nR9 source — telux-shaped JSON fixes] as B_GNSS
+  [God view + jury dashboard\nR14 — SSE/polling, no WebSocket] as B_DASH
+  [Optional modem config responses\n§1 optional — scripted acks] as B_CFG
+}
+
+node "V2X ECU\n<b>C++17</b> (skill-gated F6)\n(app-level Linux container)" as v2x {
+  [Adapter seam IV2xRadio-mirror\nR5 — POSIX/Asio UDP below seam] as V_ADP
+  [Modem stub FSM + fail-inject\nR6 — simulated config call flow] as V_STUB
+  [Rx pipeline decode-validate-dedupe\nR7 — Vanetza ITS2 CPM decode] as V_RX
+  [Ego Tx CPM construct + broadcast\nR8 — same Vanetza codec, encode side] as V_TX
+  [GNSS forward subscribeLocation\nR9 — JSON fixes to ADA] as V_GNSS
+}
+
+node "ADA ECU\n<b>Python 3.11+</b>\n(app-level Linux container)" as ada {
+  [Track store + admission\nR15 — 10 Hz x 3 objects] as A_STORE
+  [CRA plugin abstraction\nR16 — extensible warning scenarios] as A_CRA
+  [NLOS/TTC realization\nR17 — d_AC composition + risk states] as A_RISK
+  [Evidence logging\nR23 — JSONL event list] as A_LOG
+  [Camera detection bonus\nR21 — YOLO11n ONNX CPU, timeboxed] as A_DET
+}
+
+node "IVI ECU — provided AAOS full vECU\n<b>Kotlin</b> + Jetpack Compose" as ivi {
+  [UDP foreground service\nR4 consumer — DatagramSocket, UI-free module] as I_UDP
+  [HMI shell + app switching\nR18 — Compose, heads-up CATEGORY_NAVIGATION] as I_SHELL
+  [Warning-view intent entry (exported)\nR18/F15 foundation — future wake-on-warning door] as I_ENTRY
+  [3D god view\nR19 — SceneView/Filament, gated (GPU risk)] as I_3D
+  [2D floor + 2D-3D toggle\nR19 — Compose Canvas, in-seam fallback] as I_2D
+}
+
+B_ENG --> B_EMIT
+B_EMIT --> B_IMP
+B_IMP --> V_ADP : R1/R2 CPM wire (UDP, Ethernet pin)\nemulates the modem connection point
+B_GNSS --> V_ADP : R9 GNSS fixes (UDP JSON)
+B_CFG ..> V_STUB : optional control channel\n(committed config answer = in-node R6 stub)
+B_LOS --> A_STORE : R3 objects, source=own_sensor
+V_ADP --> V_RX
+V_RX --> A_STORE : R3 relayed object + B pose (JSON)
+A_STORE --> V_TX : R8 store snapshot
+V_GNSS --> A_RISK : R9 ego fixes
+A_STORE --> A_CRA
+A_CRA --> A_RISK
+A_RISK --> I_UDP : R4 warning events + 10 Hz state (UDP JSON)
+A_RISK --> B_DASH : R14 risk push
+I_UDP --> I_SHELL
+I_SHELL --> I_ENTRY : M1 idle-to-warning transition\n(same door a future orchestrator uses)
+I_ENTRY --> I_3D
+I_ENTRY --> I_2D
+
+@enduml

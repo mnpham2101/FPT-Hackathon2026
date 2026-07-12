@@ -64,7 +64,7 @@ Sequence diagram: [m1-phase1-v2x-call-flow-sequence.puml](m1-phase1-v2x-call-flo
 2. **Data-plane RX.** Scenario player ticks trajectories → builds CAM(B) + CPM(B perceives C) → UPER-encodes → applies impairment → sends the UDP datagram. Ego `V2X_Comm`: receive datagram → strip envelope → UPER-decode payload → validate fields/units (fail ⇒ log + discard) → **publish decoded PDU to `ADA`**. `ADA` logs the full message parsed into fields (the Phase 1 acceptance check, R4), emits a *mocked* warning event; `IVI` renders a placeholder.
 3. **Data-plane TX.** 10 Hz heartbeat loop (R3): read ego position/time from `GnssProvider` → build the full R1 schema with mock object contents → UPER-encode (+ envelope) → **hand encoded bytes to the transport adapter** → bench logs the received ego message parsed into fields (peer-side R4 mirror).
 
-**Where Phase 1 STARTS:** at service bring-up — systemd start, config load, GnssProvider init, transport open, startup log. **Where Phase 1 TERMINATES:** on RX, at the decoded + validated PDU handed to `ADA` (plus `ADA` logging it parsed into fields); on TX, at the encoded packet handed to the transport channel. Everything deeper — `ADA`'s real environment model, geometry, gating, risk — is Phases 2–5; the real `IVI` display is Phase 6. In Phase 1 those exist only as a mock consumer/stub, per the mock-then-real principle. The `V2X_Comm` deliverable boundary is narrower still: *raw datagram in / send API called* ⇄ *decoded PDU out / encoded bytes out* — the boxed region in the sequence diagram.
+**Where Phase 1 STARTS:** at service bring-up — systemd start, config load, GnssProvider init, transport open, startup log. **Where Phase 1 TERMINATES:** on RX, at the decoded + validated PDU handed to `ADA` (plus `ADA` logging it parsed into fields); on TX, at the encoded packet handed to the transport channel. Everything deeper — `ADA`'s real environment model, geometry, gating, risk — is Phases 2–4 + 6; the real `IVI` display is Phase 5. In Phase 1 those exist only as a mock consumer/stub, per the mock-then-real principle. The `V2X_Comm` deliverable boundary is narrower still: *raw datagram in / send API called* ⇄ *decoded PDU out / encoded bytes out* — the boxed region in the sequence diagram.
 
 ## 5. Q3 — GNSS mocking/deferral and the GnssProvider role
 
@@ -94,7 +94,7 @@ Interface shape: `GnssProvider` returns a fix (lat/lon/alt, timestamp, fix statu
 | R5 | GnssProvider is the ego time/position source — never derived from received messages (Q3a); chrony/NTP in Phase 1, GNSS-disciplined on hardware. |
 | R6 | Cloud substitute = startup log naming provider + fix (per plan §3 table); hardware = QMI/AT + telux control plane + `ModemGnssProvider` via QMI LOC. RISK verdict and F1 gate unchanged. |
 | R14 | Unaffected — both planes' Phase 1 choices keep the latency budget (UPER codec cost is single-digit ms). |
-| R16 | IVI sits beyond the Phase 1 boundary — placeholder render only; real display is Phase 6. |
+| R16 | IVI sits beyond the Phase 1 boundary — placeholder render only; real display is Phase 5. |
 
 ## 7. Open items
 

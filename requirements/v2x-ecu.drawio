@@ -1,0 +1,70 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="Page-1" id="zrHMmB1YJnXsYnrvJUzt">
+    <mxGraphModel dx="1609" dy="927" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="g5K1ph9xj7RXgUF6LBt0-16" edge="1" parent="1" source="g5K1ph9xj7RXgUF6LBt0-17" style="endArrow=none;dashed=1;html=1;dashPattern=1 3;strokeWidth=2;rounded=0;" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="30" y="580" as="sourcePoint" />
+            <mxPoint x="700" y="580" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="g5K1ph9xj7RXgUF6LBt0-2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" value="V2X Application&lt;div&gt;encode/decode DENN / BSM msg parsing&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="260" x="80" y="220" as="geometry" />
+        </mxCell>
+        <mxCell id="g5K1ph9xj7RXgUF6LBt0-3" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" value="V2X Application&lt;div&gt;DENM / BSM msg parsing (no encode/decode)&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="260" x="400" y="220" as="geometry" />
+        </mxCell>
+        <mxCell id="g5K1ph9xj7RXgUF6LBt0-4" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" value="Adapter Interface - IV2xRadio&lt;div&gt;init + configure + subcribe Rx/Tx&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="260" x="80" y="300" as="geometry" />
+        </mxCell>
+        <mxCell id="g5K1ph9xj7RXgUF6LBt0-5" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" value="Adapter Interface - IV2xRadio&lt;div&gt;(init + configure) + subcribe Rx/Tx&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="260" x="400" y="300" as="geometry" />
+        </mxCell>
+        <mxCell id="g5K1ph9xj7RXgUF6LBt0-6" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" value="telux SDK&lt;div&gt;call Qualcomn API&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="260" x="80" y="410" as="geometry" />
+        </mxCell>
+        <mxCell id="g5K1ph9xj7RXgUF6LBt0-7" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" value="QMI - V2X service" vertex="1">
+          <mxGeometry height="60" width="260" x="80" y="490" as="geometry" />
+        </mxCell>
+        <mxCell id="g5K1ph9xj7RXgUF6LBt0-8" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="Quectec Firmware&lt;div&gt;Radio + PHY + MAC + RLC&amp;nbsp;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="60" width="260" x="80" y="610" as="geometry" />
+        </mxCell>
+        <mxCell id="g5K1ph9xj7RXgUF6LBt0-13" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=5;fillColor=#f8cecc;strokeColor=#b85450;" value="Bench node&lt;div&gt;presenting RX UDP datastream&amp;nbsp;&lt;/div&gt;" vertex="1">
+          <mxGeometry height="260" width="260" x="400" y="410" as="geometry" />
+        </mxCell>
+        <mxCell id="g5K1ph9xj7RXgUF6LBt0-15" edge="1" parent="1" source="g5K1ph9xj7RXgUF6LBt0-14" style="endArrow=none;dashed=1;html=1;dashPattern=1 3;strokeWidth=2;rounded=0;" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="30" y="385" as="sourcePoint" />
+            <mxPoint x="700" y="385" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="g5K1ph9xj7RXgUF6LBt0-18" edge="1" parent="1" style="endArrow=none;dashed=1;html=1;dashPattern=1 3;strokeWidth=2;rounded=0;" target="g5K1ph9xj7RXgUF6LBt0-17" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="30" y="580" as="sourcePoint" />
+            <mxPoint x="700" y="580" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="g5K1ph9xj7RXgUF6LBt0-17" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#e1d5e7;strokeColor=#9673a6;" value="Quectel Modern - V2X ECU border" vertex="1">
+          <mxGeometry height="30" width="209" x="110" y="564" as="geometry" />
+        </mxCell>
+        <mxCell id="g5K1ph9xj7RXgUF6LBt0-19" edge="1" parent="1" style="endArrow=none;dashed=1;html=1;dashPattern=1 3;strokeWidth=2;rounded=0;" target="g5K1ph9xj7RXgUF6LBt0-14" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="30" y="385" as="sourcePoint" />
+            <mxPoint x="700" y="385" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="g5K1ph9xj7RXgUF6LBt0-14" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#e1d5e7;strokeColor=#9673a6;" value="portable application code border line" vertex="1">
+          <mxGeometry height="30" width="210" x="270" y="370" as="geometry" />
+        </mxCell>
+        <mxCell id="g5K1ph9xj7RXgUF6LBt0-20" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#b1ddf0;strokeColor=#10739e;" value="Developement on Hardware" vertex="1">
+          <mxGeometry height="30" width="210" x="105" y="170" as="geometry" />
+        </mxCell>
+        <mxCell id="g5K1ph9xj7RXgUF6LBt0-21" parent="1" style="rounded=1;whiteSpace=wrap;html=1;arcSize=50;fillColor=#b1ddf0;strokeColor=#10739e;" value="Virtual Development&amp;nbsp;" vertex="1">
+          <mxGeometry height="30" width="210" x="430" y="170" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
