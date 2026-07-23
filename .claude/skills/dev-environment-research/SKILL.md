@@ -14,7 +14,7 @@ it clarifies *how existing requirements will be met in a concrete environment*, 
 ## Procedure
 
 1. **Ingest the given sources first** — platform docs (PDF/slides), mentor/organizer Q&A,
-   the active plan ([milestone1.md](../../plans/milestone1.md)), and existing reports under
+   the active plan ([milestone1.md](../../../plans/milestone1.md)), and existing reports under
    `requirements/`. Extract the environment model as explicit facts (what the platform provides,
    what the team must build, what is out of scope).
 2. **Research tool/library support** (WebSearch/WebFetch) for each open question. Candidates

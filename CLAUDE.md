@@ -36,9 +36,10 @@ Working order: **project-researcher → project-architecture → project-planner
 ## Repository layout
 
 - [requirements/](requirements/) — researcher reports ([format](.claude/rules/research-report-format.md)); `m1-cooperative-awareness.md` is the live one; [future/m1-future-features-register.md](requirements/future/m1-future-features-register.md) mirrors its § Future developments ([Vietnamese translation](requirements/future/m1-future-features-register.vi.md) — non-authoritative; the English register wins on conflict, and changes land there first).
+- [plans/](plans/) — implementation plans; [milestone1.md](plans/milestone1.md) is the active plan: project-planner decomposes all tasks/subtasks from its phases (the `Y` segment of task IDs) and phase acceptance criteria.
 - [.claude/rules/](.claude/rules/) — standing process rules (task planning, report format, requirement quality, solution selection, HLD format).
 - [.claude/skills/](.claude/skills/) — reusable procedures (requirement analysis, HLD, environment research, markdown style).
-- [.claude/agents/](.claude/agents/) — the three agent specs. [.claude/plans/](.claude/plans/) — planning notes. [.claude/prompts/](.claude/prompts/) — saved prompts + debate scratchpads. [.claude/references/](.claude/references/) — cached external evidence.
+- [.claude/agents/](.claude/agents/) — the three agent specs. [.claude/prompts/](.claude/prompts/) — saved prompts + debate scratchpads. [.claude/references/](.claude/references/) — cached external evidence.
 
 ## Commit & task discipline
 

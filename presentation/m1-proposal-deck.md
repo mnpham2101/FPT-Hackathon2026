@@ -17,7 +17,7 @@ description: Proposal deck — cooperative NLOS hazard awareness over V2X, virtu
 
 **Milestone 1 proposal — FPT Hackathon 2026**
 
-Source: [m1-cooperative-awareness.md §1](../requirements/m1-cooperative-awareness.md) · [milestone1.md](../.claude/plans/milestone1.md)
+Source: [m1-cooperative-awareness.md §1](../requirements/m1-cooperative-awareness.md) · [milestone1.md](../plans/milestone1.md)
 
 ---
 

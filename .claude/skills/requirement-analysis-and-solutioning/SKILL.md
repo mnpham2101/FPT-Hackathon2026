@@ -9,7 +9,7 @@ Trigger: [[project-researcher]] receives a feature or a set of requirements to a
 
 ## Procedure
 
-1. **Analyse feasibility.** Before decomposing anything, sanity-check whether the input is realistically achievable at all — against the milestone timeline, the active plan's scope/assumptions ([milestone1.md](../../plans/milestone1.md) sections 2 and 6), and the hard constraints in [solution-selection-criteria.md](../../rules/solution-selection-criteria.md) (open-source only, Linux-targeted). Flag — don't silently drop — anything that looks infeasible as stated, with reasoning.
+1. **Analyse feasibility.** Before decomposing anything, sanity-check whether the input is realistically achievable at all — against the milestone timeline, the active plan's scope/assumptions ([milestone1.md](../../../plans/milestone1.md) sections 2 and 6), and the hard constraints in [solution-selection-criteria.md](../../rules/solution-selection-criteria.md) (open-source only, Linux-targeted). Flag — don't silently drop — anything that looks infeasible as stated, with reasoning.
 
 2. **Determine input type, then enumerate.**
    - **Given a feature:** break it down into **enumerated requirements**. Each requirement must be optimized for a **clear, unambiguous goal** — one requirement, one testable outcome. Split compound "and" requirements; eliminate vague language.

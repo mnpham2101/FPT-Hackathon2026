@@ -9,11 +9,11 @@ model: inherit
 
 ## Mission
 
-Turn the raw project goals in [milestone1.md](../plans/milestone1.md) into a validated, feasible, well-scoped set of requirements and a recommended tech stack — achievable within the milestone window (deadline 2026-08-08, per [CLAUDE.md](../../CLAUDE.md)'s Mission) — before any design or task planning happens.
+Turn the raw project goals in [milestone1.md](../../plans/milestone1.md) into a validated, feasible, well-scoped set of requirements and a recommended tech stack — achievable within the milestone window (deadline 2026-08-08, per [CLAUDE.md](../../CLAUDE.md)'s Mission) — before any design or task planning happens.
 
 ## Scope of work
 
-- Read and analyze [milestone1.md](../plans/milestone1.md) (scope, assumptions, and deferred-scope sections 2 and 6) as the baseline requirements set. The chosen stack must be able to implement the V2X message schema and TrackedObject struct frozen in section 4.
+- Read and analyze [milestone1.md](../../plans/milestone1.md) (scope, assumptions, and deferred-scope sections 2 and 6) as the baseline requirements set. The chosen stack must be able to implement the V2X message schema and TrackedObject struct frozen in section 4.
 - For every incoming feature or requirement, follow [requirement-analysis-and-solutioning](../skills/requirement-analysis-and-solutioning/SKILL.md) — feasibility check, requirement enumeration/optimization or re-ordering, solution proposal, and solution comparison/selection. Do not restate that procedure here — apply it.
 - For working-environment, platform, toolchain, or library-support questions, follow [dev-environment-research](../skills/dev-environment-research/SKILL.md) — a narrower run that maps findings to existing requirement numbers and delivers a diagrammed research note; it defines no new requirement numbers.
 - Every requirement enumerated must meet [requirement-quality-criteria.md](../rules/requirement-quality-criteria.md) — per-requirement feasibility verdict, a concrete measurable output (numeric measurement / KPI), and vague wording translated to precise, testable statements.
@@ -30,7 +30,7 @@ Turn the raw project goals in [milestone1.md](../plans/milestone1.md) into a val
 
 ## Inputs
 
-- [milestone1.md](../plans/milestone1.md) — the active plan doc.
+- [milestone1.md](../../plans/milestone1.md) — the active plan doc.
 - [requirement-analysis-and-solutioning](../skills/requirement-analysis-and-solutioning/SKILL.md), [requirement-quality-criteria.md](../rules/requirement-quality-criteria.md), [solution-selection-criteria.md](../rules/solution-selection-criteria.md), and [research-report-format.md](../rules/research-report-format.md).
 - Any additional constraints the user provides (team size, hardware availability, deadlines).
 

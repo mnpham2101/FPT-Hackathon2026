@@ -1,6 +1,6 @@
 # Milestone 1 — Cooperative Vehicle Awareness (A ← B ← C)
 
-> Requirements, scope, and tech stacks live in the authoritative report [m1-cooperative-awareness.md](../../requirements/m1-cooperative-awareness.md) (R1–R19); this plan references R-numbers instead of restating them, and on any conflict the report wins. Phase structure follows the [proposal-deck timeline](../../presentation/assets/m1-phase-timeline.svg) (second authority).
+> Requirements, scope, and tech stacks live in the authoritative report [m1-cooperative-awareness.md](../requirements/m1-cooperative-awareness.md) (R1–R19); this plan references R-numbers instead of restating them, and on any conflict the report wins. Phase structure follows the [proposal-deck timeline](../presentation/assets/m1-phase-timeline.svg) (second authority).
 
 ## 1. Introduction
 
@@ -8,7 +8,7 @@ Milestone 1 demonstrates **cooperative (non-line-of-sight) awareness** over V2X:
 
 Three vehicles drive in a collinear convoy — **A** follows **B** follows **C**. Vehicle A's view of C is **blocked by B**, so A's own camera can never detect C. Vehicle B sees C and **broadcasts that perception to A over V2X**, and A displays C and its relative position without ever seeing it. **M1 builds only A's vehicle (ego)** — B and C exist as bench-generated V2X messages (R11) and as content of the provided video; the bench Scenario Player is sanctioned test equipment, not a mock to eliminate.
 
-![Convoy geometry: A cannot see C; B sees C and relays it to A over V2X](../../requirements/m1_convoy_nlos_relay_geometry.png)
+![Convoy geometry: A cannot see C; B sees C and relays it to A over V2X](../requirements/m1_convoy_nlos_relay_geometry.png)
 
 *Objective — B's perception of C reaches A over a V2X relay. A reconstructs C's position by composing its own measurement of B with B's reported measurement of C:* `d_AC ≈ d_AB + d_BC` *(valid for the near-collinear convoy; absolute/GPS composition is a later milestone).*
 
@@ -36,7 +36,7 @@ The plan is **contract-first**: the contracts are the report's R1–R6, frozen i
 
 > Deviation from the deck, flagged: the deck timeline places the ADA↔IVI message definition inside Phase 2, but the display track (Phase 5) starts in parallel with Phase 2 and must build against a frozen R4 mock — so this plan freezes R4 in Phase 0 with the other contracts (contract-first principle; report authority over deck).
 
-With the contracts frozen, three tracks run in parallel and converge at Phase 6 ([timeline](../../presentation/assets/m1-phase-timeline.svg)):
+With the contracts frozen, three tracks run in parallel and converge at Phase 6 ([timeline](../presentation/assets/m1-phase-timeline.svg)):
 
 - **Comms track — Phase 1:** V2X ECU + bench Scenario Player exchanging real R1 CPMs (mock perception contents until Phase 6).
 - **ADA track — Phase 2 first** (skeleton + store + state machine), **then Phases 3 ∥ 4** side by side. They never call each other — they share only the R3 store: detection (R12) writes `own_sensor` entries through the JSONL subprocess boundary; fusion (R13/R14/R15) consumes the store and the live R2 feed.
@@ -74,7 +74,7 @@ Gate constants are **externalized configuration, never literals**. R13 fixes the
 | `confirm_hits` (N) | proposed 3 | consecutive in-range updates before admission |
 | `miss_limit` (M) | proposed 5 | consecutive missed updates before expiry |
 
-![Track admission state machine with proximity gate and hysteresis](../../requirements/vehicleC_track_admission_state_machine.png)
+![Track admission state machine with proximity gate and hysteresis](../requirements/vehicleC_track_admission_state_machine.png)
 
 *Own-sensor objects traverse `not_tracked → tentative → tracked`; relayed C is admitted on R2 distance within the gate, dropped on leaving it or when messages stop, and carries `source = v2x_relayed` only. Ego's own Tx (R10) snapshots `own_sensor` tracks — the B-side relay trigger is simulated by the bench scenarios (R11).*
 
@@ -125,7 +125,7 @@ Per-phase demo methods follow the deck's "defined output for each phase" table. 
 **Objective.** Stand up the ADA skeleton, the R3 track store, and the R13 admission state machine on **mock input**, so the pipeline works before any ML.
 
 **Tasks.**
-- ADA C++17 module skeleton per the [ADA HLD](../../requirements/ada-ecu.svg); CRA database schema defined (consumed by R14 in Phase 4).
+- ADA C++17 module skeleton per the [ADA HLD](../requirements/ada-ecu.svg); CRA database schema defined (consumed by R14 in Phase 4).
 - R3-shaped store; R13 state machine driven by mock R2 messages and mock own-sensor entries.
 - Video-input study: identify and propose format / frame rate / data rate to FPT-Mentor (report § Input constraints); stand up the video harness for Phase 3.
 
@@ -203,7 +203,7 @@ Per-phase demo methods follow the deck's "defined output for each phase" table. 
 
 ## 6. Deferred to Later Milestones
 
-The single source is the report's § Future developments, mirrored in the [future-features register](../../requirements/future/m1-future-features-register.md). Standing M1 exclusions live in the report's §4 decision record (Cortex-M omitted, telux port declined, 3D and multi-process optional, ego video clip deferred, no GPU, no map/GNSS on the IVI).
+The single source is the report's § Future developments, mirrored in the [future-features register](../requirements/future/m1-future-features-register.md). Standing M1 exclusions live in the report's §4 decision record (Cortex-M omitted, telux port declined, 3D and multi-process optional, ego video clip deferred, no GPU, no map/GNSS on the IVI).
 
 ## 7. Definition of Done
 

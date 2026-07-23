@@ -6,14 +6,14 @@ This project implements **V2X (Vehicle-to-Everything)** features that let vehicl
 
 **Milestone 1** demonstrates cooperative, non-line-of-sight (NLOS) awareness: three vehicles drive in a collinear convoy — **A** follows **B** follows **C**. Vehicle A's camera can never see C because B blocks the line of sight. Vehicle B *can* see C, and broadcasts that perception to A over V2X — so both A and B end up displaying C and its relative position, even though A never detects C directly.
 
-Full mission, scope, contracts, and phase plan live in [CLAUDE.md](CLAUDE.md) and [.claude/plans/milestone1.md](.claude/plans/milestone1.md). Original goals and the deferred future-feature list are in [.claude/prompt/project_goals.md](.claude/prompt/project_goals.md).
+Full mission, scope, contracts, and phase plan live in [CLAUDE.md](CLAUDE.md) and [plans/milestone1.md](plans/milestone1.md). Original goals and the deferred future-feature list are in [.claude/prompt/project_goals.md](.claude/prompt/project_goals.md).
 
 ## Repository layout
 
 | Path | Purpose |
 |---|---|
 | [CLAUDE.md](CLAUDE.md) | Project constitution — read this first |
-| [.claude/plans/](.claude/plans/) | Source of truth for scope, contracts, phase acceptance criteria |
+| [plans/](plans/) | Active implementation plan — phases, acceptance criteria, task decomposition source |
 | [.claude/rules/](.claude/rules/) | Standing process rules (task/commit conventions, solution selection, HLD format) |
 | [.claude/agents/](.claude/agents/) | Subagent specs: project-researcher, project-planner, project-architecture |
 | [.claude/skills/](.claude/skills/) | Reusable procedures the agents follow |
