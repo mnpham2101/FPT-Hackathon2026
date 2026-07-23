@@ -1,259 +1,210 @@
 # Milestone 1 — Cooperative Vehicle Awareness (A ← B ← C)
 
+> Requirements, scope, and tech stacks live in the authoritative report [m1-cooperative-awareness.md](../../requirements/m1-cooperative-awareness.md) (R1–R19); this plan references R-numbers instead of restating them, and on any conflict the report wins. Phase structure follows the [proposal-deck timeline](../../presentation/assets/m1-phase-timeline.svg) (second authority).
+
 ## 1. Introduction
 
-Milestone 1 demonstrates **cooperative (non-line-of-sight) awareness** over V2X: making a vehicle aware of a hazard it cannot see, by relaying another vehicle's perception.
+Milestone 1 demonstrates **cooperative (non-line-of-sight) awareness** over V2X: making a vehicle aware of a hazard it cannot see, by relaying another vehicle's perception (report §1).
 
-Three vehicles drive in a collinear convoy — **A** follows **B** follows **C**. Vehicle A's view of C is **blocked by B**, so A's own camera can never detect C. Vehicle B *can* see C, detects it, and **broadcasts that perception to A over V2X**. The result: both A and B display vehicle C and its relative position, even though A never sees C directly.
+Three vehicles drive in a collinear convoy — **A** follows **B** follows **C**. Vehicle A's view of C is **blocked by B**, so A's own camera can never detect C. Vehicle B sees C and **broadcasts that perception to A over V2X**, and A displays C and its relative position without ever seeing it. **M1 builds only A's vehicle (ego)** — B and C exist as bench-generated V2X messages (R11) and as content of the provided video; the bench Scenario Player is sanctioned test equipment, not a mock to eliminate.
 
-![Convoy geometry: A cannot see C; B sees C and relays it to A over V2X](m1_convoy_nlos_relay_geometry.png)
+![Convoy geometry: A cannot see C; B sees C and relays it to A over V2X](../../requirements/m1_convoy_nlos_relay_geometry.png)
 
 *Objective — B's perception of C reaches A over a V2X relay. A reconstructs C's position by composing its own measurement of B with B's reported measurement of C:* `d_AC ≈ d_AB + d_BC` *(valid for the near-collinear convoy; absolute/GPS composition is a later milestone).*
-
-This is the V2X "see-through" pattern: B answers *"what is ahead that A can't see?"*, the V2X link carries it, and A answers *"where does that put it relative to me?"*
 
 ---
 
 ## 2. Scope & Assumptions
 
-- Video is **provided** (recorded / simulator). No live camera bring-up in M1.
-- Vehicle C is a **generic car** → pretrained detector, **no model training**.
-- **Security is skipped** (messages sent unsigned). Signing / PKI is deferred.
-- **Encoding**: if a real V2X stack / OBU is used, the standard ASN.1 encoding is free — use it; if hand-rolling, JSON is acceptable for M1. Either way the message **schema** must be standard-conformant.
-- GNSS (time + position) comes from the **modem's integrated receiver**. The separate Cortex-M GPS path is deferred.
-- Composition assumes a near-collinear, same-heading convoy.
-- Transport may run on a **stub** (UDP/ZeroMQ) and/or real **PC5**, depending on hardware.
-- "Risk" is a **static label** on C in the relay/display path; ADA additionally computes a **simple TTC-based risk level** for logging (collision-risk event list + annotated-video TTC overlay — [requirements § System demo requirements](../../requirements/m1-cooperative-awareness.md#system-demo-requirements)). Full multi-object / curved-trajectory risk analysis is deferred (§6).
+Report §1 plus its §4 decision record are the hard scope boundary; each assumption below traces there.
+
+- **Ego-only build on CarSky.** One blueprint with four nodes — V2X ECU, ADA ECU, IVI ECU (provided AAOS), bench Scenario Player — over one Ethernet Bridge (R5, R6); the Cortex-M ECU is omitted.
+- **Video is provided** (saved files) — no live camera bring-up. The detector sees **B, the visible occluder** — C is by definition never in ego's frame (R12).
+- **Pretrained detector, no training**; CPU-only — no GPU requested from BTC (§4 decisions).
+- **Video input spec is unconfirmed** — format / frame rate / data rate are to be studied and proposed to FPT-Mentor (report § Input constraints); Phase 2 carries that study.
+- **Wire encoding is standard ASN.1 UPER** via the Vanetza ITS2 codec (R1); JSON is used only on the intra-ego links (R2, R4).
+- **Messages are unsigned** — no signing/PKI stack in M1 (the R1 profile carries no security envelope).
+- **No GNSS path** — sender pose values originate in bench-generated CPM contents (R11); the IVI renders relative geometry only, no map and no GNSS injection (§4 decisions).
+- **Composition assumes a near-collinear, same-heading convoy** (§1 objective note).
+- **Risk** is the R14 Collision Risk Assessment (CRA) abstraction with the M1 NLOS plugin on the fixed distance criterion (R13); speed-scaled risk and further hazard types are future plugins (report § Future developments).
 
 ---
 
 ## 3. Development Plan & Order of Implementation
 
-The plan is **contract-first**. Two interfaces are frozen up front, and every phase then becomes "swap mock data for real data" inside a shape that already works:
+The plan is **contract-first**: the contracts are the report's R1–R6, frozen in Phase 0 before dependent work, so every later phase is "swap mock data for real data" inside a shape that already works.
 
-1. **V2X message schema** — the contract between the two vehicles (base it on the CPM / SDSM perceived-object container so no needed field is missing later).
-2. **TrackedObject struct** — the contract between the perception sub-phases.
+> Deviation from the deck, flagged: the deck timeline places the ADA↔IVI message definition inside Phase 2, but the display track (Phase 5) starts in parallel with Phase 2 and must build against a frozen R4 mock — so this plan freezes R4 in Phase 0 with the other contracts (contract-first principle; report authority over deck).
 
-With those frozen, three tracks develop **in parallel** and converge at Phase 6:
+With the contracts frozen, three tracks run in parallel and converge at Phase 6 ([timeline](../../presentation/assets/m1-phase-timeline.svg)):
 
-![Development-phase parallelism: schema frozen at Phase 1; three parallel tracks converge at Phase 6](dev_phases_parallelism.png)
-
-*Comms (Phase 1), perception (Phases 2→3→4) and display (Phase 5) all build against the frozen schema. Phase 1 broadcasts the full message with mock contents; the perception track produces real data; Phase 5 is built on a mock message. They meet at Phase 6, which swaps mock for real.*
+- **Comms track — Phase 1:** V2X ECU + bench Scenario Player exchanging real R1 CPMs (mock perception contents until Phase 6).
+- **ADA track — Phase 2 first** (skeleton + store + state machine), **then Phases 3 ∥ 4** side by side. They never call each other — they share only the R3 store: detection (R12) writes `own_sensor` entries through the JSONL subprocess boundary; fusion (R13/R14/R15) consumes the store and the live R2 feed.
+- **Display track — Phase 5:** IVI HMI built against mock R4 warnings from the start.
 
 ### Order of implementation
 
-> **Step 0 — Freeze the contracts.** Agree the V2X message schema and the TrackedObject struct before any other work. Everything downstream depends on them; a missing field here ripples to all tracks.
+> **Step 0 — Phase 0:** freeze R1–R6.
 >
-> **Step 1 — Run three tracks in parallel:**
-> - **Comms track:** Phase 1 (broadcast the full schema with mock payload).
-> - **Perception track:** Phase 2 first (it defines the store + state machine), then Phases 3 and 4 — which themselves develop independently against the struct (see below).
-> - **Display track:** Phase 5, built against a mock message.
+> **Step 1 — run three tracks in parallel:** Phase 1 (comms) · Phase 2 → 3 ∥ 4 (ADA) · Phase 5 (display).
 >
-> **Step 2 — Converge:** Phase 6 — replace mock contents with real perceived data from Phase 4, flowing over Phase 1's transport.
+> **Step 2 — converge:** Phase 6 replaces every mock with real data and records the R19 run.
 >
-> **Step 3 — Finalize:** wire Phase 6's real data into the already-built Phase 5 and run the end-to-end demo.
->
-> **Single-developer fallback:** if working alone, run the phases sequentially in number order **1 → 2 → 3 → 4 → 5 → 6**. The parallel plan above is the optimization for multiple people.
+> **Single-developer fallback:** run the phases sequentially 0 → 1 → 2 → 3 → 4 → 5 → 6. The parallel plan is the optimization for multiple people.
 
-### Inside the perception track
+### Platform & portability
 
-Phases 3 and 4 do **not** call each other. They share only the video and the **TrackedObject struct**, so they develop independently and connect **at run-time through the store** — detection writes the bounding box, distance reads it and writes back the range:
-
-![Perception seam: detection and distance develop independently, connect at run-time via the store](perception_pipeline_seam.png)
-
-*Detection and distance can be validated in isolation (ideally against a clip with ground-truth distance, e.g. CARLA/KITTI). The `untracked → tentative → tracked` state machine lives in the Phase 2 track manager and consumes both sides — detection supplies "present", distance supplies "within gate".*
-
-### Development on the cloud platform (CARSKY)
-
-M1 can be developed and demoed end-to-end on FPT's CARSKY virtual engineering platform (the hackathon's Round-2 "Virtual Development Platform") with **no vehicle hardware**. The platform's pieces map onto the tracks as follows:
-
-| Platform capability | Role in M1 |
-|---|---|
-| **CabinSky** (vECU runtime: Linux/AUTOSAR containers in the cloud) | Vehicles A and B run as two Linux vECUs hosting the comms, perception, and display processes |
-| **Nydus** (topology orchestration: CAN/LIN/Ethernet/SOME-IP; per-node fidelity swap mock → vECU → HIL) | The A↔B link is a simulated Ethernet segment; the mock-then-real convergence at Phase 6 is Nydus's native fidelity-swap workflow |
-| **MCP interface** (AI-agent deploy / send / interact / verify) | Phase acceptance criteria can be executed as agent-driven test scripts (deploy topology → inject → screenshot/verify) |
-
-Two hardware capabilities do not exist in the cloud and are substituted **behind the frozen contracts** — the message schema and all downstream phases are untouched:
-
-- **V2X radio → stub transport (sanctioned in section 2).** A `broadcast(msg)` / `on_receive(callback)` transport interface with a UDP-broadcast or ZeroMQ pub/sub implementation over the Nydus Ethernet link. The cloud link is impaired with `tc netem` (loss, latency jitter) and the broadcast loop is capped at a realistic ~10 Hz cadence, so the Phase 6 latency criterion and the gate hysteresis are tested against real jitter, not a perfect LAN. Real PC5 remains deferred scope; when hardware arrives, only this adapter is reimplemented.
-- **GNSS → `GnssProvider` interface** with a `SimGnssProvider` for M1-on-cloud (a `ModemGnssProvider` over QMI/AT is reserved for the hardware milestone):
-  - *Timebase*: both vECUs disciplined by chrony/NTP against a common source; the common-timebase criterion is verified identically, only the discipline mechanism changes.
-  - *Reference position*: NMEA replay via `gpsd`/`gpsfake`, generated from the dataset's ground-truth trajectory (KITTI raw ships per-frame OXTS GPS/IMU), so the message's reference position stays consistent with the video the perception track processes.
-
-**Re-scoped Phase 1 acceptance criteria on cloud** (a documented substitution, not a silent drop — the remaining Phase 1 criteria apply unchanged):
-
-| Hardware criterion | Cloud substitute |
-|---|---|
-| Modem identified, V2X mode confirmed, GNSS fix acquired | GNSS provider initialized; startup log names the active provider (`sim`) and reports a fix from replayed NMEA |
-| Timestamps GNSS-disciplined to a common timebase | Timestamps chrony/NTP-disciplined; measured offset within the agreed bound |
-| (implicit) real radio link | Stub transport with a documented netem impairment profile and ~10 Hz cadence |
-
-**Portability constraint.** CARSKY is proprietary, competition-provided infrastructure. All M1 code must stay platform-agnostic — plain Linux processes talking over the transport interface — so nothing in the deliverable depends on CARSKY itself and the same code runs on any Linux host or future hardware bench.
+- Node/blueprint/Room mechanics, deployment steps, and the per-node table: report § Cloud development constraints and R5/R6 — not restated here.
+- All team code is plain Linux processes; the V2X ECU touches the radio only through the R7 adapter seam, so the layers above it move to real modem hardware unchanged — that node's focus goal.
 
 ---
 
 ## 4. Global Definitions
 
-### V2X message schema (the contract)
+The contracts are defined once, in the report: **R1** CPM profile · **R2** V2X→ADA object message · **R3** TrackedObject schema · **R4** ADA→IVI warning/state messages · **R5** node deployment · **R6** Ethernet-bridge network.
 
-A perceived-object message (CPM-/SDSM-shaped) carrying: sender `stationId`, `generationDeltaTime`, sender reference position/time, and a perceived-object entry for C (`objectId`, relative position / distance, `classification`, `confidence`). Frozen at Phase 1; broadcast with mock contents in Phase 1, real contents from Phase 6.
+### Track admission gate (R13)
 
-### TrackedObject struct
+Gate constants are **externalized configuration, never literals**. R13 fixes the 30 m admission threshold; the exit hysteresis and the N/M counters come from its attached state-machine diagram — N and M are proposals to confirm.
 
-| Field | Meaning |
-|---|---|
-| `id` | Stable track identifier |
-| `class` | Object class (e.g. `car`) |
-| `source` | `own_sensor` or `v2x_relayed` |
-| `first_seen`, `last_seen` | Timestamps |
-| `bbox` | Bounding box (own-sensor tracks) |
-| `distance` | Range to object (m) |
-| `confidence` | Detection / relay confidence |
-| `state` | `not_tracked` → `tentative` → `tracked` |
-
-### Proximity gate constants (externalized, tuned against real jitter)
-
-| Constant | Suggested | Meaning |
+| Constant | Value | Meaning |
 |---|---|---|
-| `gate_enter` | 30 m | Admit C when within this range |
-| `gate_exit` | 35 m | Drop C only beyond this range (hysteresis) |
-| `confirm_hits` (N) | e.g. 3 | Consecutive in-range frames before admission |
-| `miss_limit` (M) | e.g. 5 | Consecutive missed frames before expiry |
+| `gate_enter` | 30 m | admit C when its reported distance (R2 `object.distance`) is within this |
+| `gate_exit` | 35 m | drop C only beyond this (hysteresis — no flicker at the boundary) |
+| `confirm_hits` (N) | proposed 3 | consecutive in-range updates before admission |
+| `miss_limit` (M) | proposed 5 | consecutive missed updates before expiry |
 
-### Track admission state machine
+![Track admission state machine with proximity gate and hysteresis](../../requirements/vehicleC_track_admission_state_machine.png)
 
-Implemented in the Phase 2 track manager. A hard 30 m edge would flicker on noisy monocular distance, so admission uses **confirmation + hysteresis**:
-
-![Track admission state machine with proximity gate and hysteresis](vehicleC_track_admission_state_machine.png)
-
-*B gates on its own measured distance to C. A is the mirror case — it admits the relayed C on message receipt (`source = v2x_relayed`) and drops it when the messages stop. "C enters Tracked" in B is also the trigger to start relaying C; "C leaves the set" stops the relay.*
+*Own-sensor objects traverse `not_tracked → tentative → tracked`; relayed C is admitted on R2 distance within the gate, dropped on leaving it or when messages stop, and carries `source = v2x_relayed` only. Ego's own Tx (R10) snapshots `own_sensor` tracks — the B-side relay trigger is simulated by the bench scenarios (R11).*
 
 ---
 
 ## 5. Phases
 
-### Phase 1 — Bring up V2X heartbeat / message transport
+Per-phase demo methods follow the deck's "defined output for each phase" table. Contradiction fixed, not absorbed: that table labels the HMI row "6" and the integration row "5", contradicting the deck's own timeline and narrative (phases 1, 2, **5** start in parallel; all converge at **6**) — this plan follows the timeline: **Phase 5 = HMI, Phase 6 = convergence**, matching the previous plan's numbering.
 
-**Objective.** Two vehicles broadcast and receive the **full agreed message** (with mock object contents) on a common GNSS-disciplined timebase.
+### Phase 0 — Freeze the contracts (R1–R6)
 
-**Working-environment reference (cloud).** The Phase 1 runtime flow on CARSKY — bench-node scenario player → ego `V2X_Comm` decode → `ADA` situation assessment → `IVI` warning — is illustrated by the swimlane ("lane") activity diagram [m1-phase1-working-env-activity.puml](../../requirements/m1-phase1-working-env-activity.puml) (researcher artifact; its companion component diagram and research note sit alongside it in [requirements/](../../requirements/m1-phase1-working-environment.md)).
-
-**Tasks.**
-- Host (Cortex-A) establishes the modem link over its control path (QMI/AT); query identity, firmware, V2X mode, GNSS fix; emit a startup log.
-- Define a **V2X service** that auto-starts on boot (`systemd` unit, or an Adaptive Application started by Execution Management), initializes the stack, applies PC5 config, runs the broadcast loop.
-- Read GNSS time + position periodically and log it.
-- Broadcast the **full schema** with mock object fields; receive on the peer vehicle.
-- Discipline local time to GNSS so both vehicles' timestamps are comparable.
-
-**Tech stack.** C-V2X modem (integrated GNSS); V2X stack (vendor SDK / Vanetza) or UDP/ZeroMQ stub; `systemd` or Adaptive AUTOSAR EM; JSON or standard CPM/SDSM encoder.
-
-**Acceptance Criteria.**
-- [ ] Startup log shows the modem identified, V2X mode confirmed, and a GNSS fix acquired.
-- [ ] The V2X service starts automatically on boot (verifiable via service status / log).
-- [ ] Each vehicle logs GNSS position + timestamp at the configured period.
-- [ ] A transmitted message contains **all** schema fields (mock object included) with correct units/ranges.
-- [ ] Vehicle A logs the **full message** received from B (and vice versa), parsed into fields.
-- [ ] Timestamps from both vehicles share a common timebase (offset within an agreed bound).
-- [ ] Messages are sent unsigned (no security stack required to pass).
-
-### Phase 2 — Perception scaffolding (no detector)
-
-**Objective.** Stand up the video harness, the TrackedObject store, and the gate state machine, driven by a **mocked C** so the pipeline works before any ML.
+**Objective.** Every cross-track contract versioned and committed before dependent work starts.
 
 **Tasks.**
-- Identify the video container/codec/fps/resolution; choose a frame reader.
-- Implement the TrackedObject store and the `not_tracked → tentative → tracked` manager (driven by mock distance for now).
-- Inject a synthetic C track each frame; log lifecycle transitions.
-
-**Tech stack.** Python, OpenCV `VideoCapture` (or PyAV / GStreamer for precise timestamps), NumPy.
+- R1 profile document: fields, units, encoding, and the V2X exchange call flow.
+- R2 / R3 / R4 schema files with per-language bindings; golden vectors for the R1 codec seam.
+- Blueprint topology decided: node set (R5) and pin/edge wiring matching the communication topology (R6).
 
 **Acceptance Criteria.**
-- [ ] The provided video opens; format, codec, fps, and resolution are detected and logged.
-- [ ] Frames stream with a per-frame timestamp.
-- [ ] The TrackedObject store exposes all required fields.
-- [ ] With the mock enabled, the log shows C added/tracked with a timestamp, and a full `not_tracked → tentative → tracked → expired` cycle.
-- [ ] No detector is invoked (confirmed by toggling the mock off → no tracks).
+- [ ] R1 profile document committed; golden-vector CPMs encode/decode through the Vanetza codec seam.
+- [ ] R2, R3, R4 schemas committed; round-trip tests pass in each consumer language (C++ / Python / Kotlin).
+- [ ] The R4 additive-version test is defined (a consumer parsing an unknown `warningType` degrades gracefully).
+- [ ] Blueprint topology documented (nodes, `ethernet` pins, edges to the bridge).
 
-### Phase 3 — Object detection
+### Phase 1 — Comms bring-up: V2X ECU + Scenario Player (R5–R11)
 
-**Objective.** Replace the mock with real detection of C (a generic car) using a pretrained model.
+**Objective.** Bench and ego exchange the full R1 message over the deployed Room: bench CPMs decode into R2 messages at the ADA ECU, and ego broadcasts CPMs from (mock) store snapshots.
 
 **Tasks.**
-- Run a pretrained detector; keep vehicle classes; select the in-lane lead (largest central box).
-- Write detections (bounding boxes) into the TrackedObject store.
-
-**Tech stack.** Ultralytics YOLO (v8/v11, pretrained COCO) on PyTorch (GPU/NPU if available; CPU acceptable for recorded video).
+- Build & push the OCI images, author the blueprint, deploy, verify all nodes Running (R5); prove pair-wise UDP reachability (R6).
+- Radio adapter seam `init · configure · subscribeRx · send` (R7); modem stub FSM with fault injection (R8).
+- Rx pipeline decode → validate → dedupe → forward (R9); ego Tx via the adapter `send` (R10 — mock store contents until Phase 6).
+- Bench scenario-configurable CPM generation (R11).
+- V2X-side JSONL event logs (message rx/tx, decode results) — the R18 evidence stream starts here.
 
 **Acceptance Criteria.**
-- [ ] The detector runs on the provided video and logs detections per frame.
-- [ ] C is detected and classified as a vehicle (`car`/`truck`).
-- [ ] The in-lane lead is correctly selected when multiple vehicles are present.
-- [ ] Bounding boxes are written into the store (mock no longer required).
-- [ ] Detection throughput keeps pace with the video frame rate (or meets the agreed latency target).
+- [ ] The blueprint deploys to a Room; the Deployment Viewer shows every node Running; the team APK launches on the AAOS node (R5).
+- [ ] UDP reachability between every communicating pair; traffic captured on the bridge network (R6).
+- [ ] CI import check passes — no direct transport imports above the seam; telux parity notes + port plan committed (R7).
+- [ ] The full scripted call flow is acked and logged; each injected fault produces a defined, logged recovery (R8).
+- [ ] Golden-vector CPMs decode correctly; the malformed-input corpus is fully rejected with zero crashes (R9).
+- [ ] Different bench scenario configurations produce observably different message streams (R11).
+- [ ] R2 messages observed at the ADA ECU carrying decoded bench-scenario values, not constants (R2).
+- [ ] **Demo:** Wireshark capture of V2X PDUs correctly sent/received at the V2X ECU interface.
 
-### Phase 4 — Distance estimation + proximity gate
+### Phase 2 — ADA scaffolding: store + state machine, no detector (R3, R13)
 
-**Objective.** Estimate range to C per frame, write it into the track, and make the proximity gate fully active.
+**Objective.** Stand up the ADA skeleton, the R3 track store, and the R13 admission state machine on **mock input**, so the pipeline works before any ML.
 
 **Tasks.**
-- Compute monocular distance (bbox-bottom ground-plane projection, or height/similar-triangles) using camera intrinsics; read the bbox from the store, write the range back.
-- Activate the gate: admit C only when ≤ `gate_enter` for `confirm_hits` frames; drop only beyond `gate_exit` or after `miss_limit` misses.
-
-**Tech stack.** NumPy; camera calibration from the dataset (CARLA/KITTI provide intrinsics + ground truth).
+- ADA C++17 module skeleton per the [ADA HLD](../../requirements/ada-ecu.svg); CRA database schema defined (consumed by R14 in Phase 4).
+- R3-shaped store; R13 state machine driven by mock R2 messages and mock own-sensor entries.
+- Video-input study: identify and propose format / frame rate / data rate to FPT-Mentor (report § Input constraints); stand up the video harness for Phase 3.
 
 **Acceptance Criteria.**
-- [ ] A distance is computed each frame for the lead and stored on the track.
-- [ ] Estimated distance matches ground truth within the agreed tolerance (e.g. ±15%).
-- [ ] C is admitted to the store only when within `gate_enter`.
-- [ ] C is not dropped until beyond `gate_exit` (no add/remove flicker at the boundary).
-- [ ] Gate constants are externalized configuration, not hardcoded literals.
+- [ ] The store exposes all R3 fields; detector-shaped and relayed-shaped entries enter through the identical interface (R3).
+- [ ] Mock-driven state transitions are observable in logs and match the R13 diagram; toggling the mock off yields no tracks.
+- [ ] Mock C is admitted only within `gate_enter` and dropped only beyond `gate_exit` or after `miss_limit` — no add/remove flicker.
+- [ ] Gate constants are read from configuration — no literals.
+- [ ] CRA database schema committed; video-input proposal sent to FPT-Mentor.
+- [ ] **Demo:** build + CI round-trip tests green on the frozen contracts (golden vectors).
 
-### Phase 5 — Compose + display
+### Phase 3 — Object detection from video (R12) — runs ∥ with Phase 4
 
-**Objective.** A reconstructs C's position and both vehicles display C with its relative position.
+**Objective.** Replace the mock own-sensor input with real detection: a pretrained detector finds **B, the visible occluder**, in the provided video and estimates its distance.
 
 **Tasks.**
-- A measures `d_AB` locally (B is its in-lane lead) and composes `d_AC = d_AB + d_BC` (lateral offsets added component-wise).
-- B displays C from direct detection; A displays C as an occluded "ghost" marker on a bird's-eye-view (BEV).
-- *Developed against a mock message (mock `d_AB` + `d_BC`); integrated against real data at the end.*
-
-**Tech stack.** OpenCV overlay (camera view); OpenCV/matplotlib BEV; production GUI later.
+- YOLO11n exported to ONNX on ONNX Runtime CPU; OpenCV video decode.
+- Per-frame detection + distance estimation; stream R3 JSONL over stdout into the store (subprocess contract — no FFI, no RPC).
 
 **Acceptance Criteria.**
-- [ ] **(Dev)** With a mock message, A renders C on the BEV at the composed position.
-- [ ] A computes `d_AC` from its own `d_AB` plus B's relayed `d_BC`.
-- [ ] B's display shows C (directly detected) with its relative position.
-- [ ] A's display shows C as an occluded marker on the BEV, despite A never detecting C directly.
-- [ ] The composed `d_AC` matches ground truth within the agreed tolerance.
-- [ ] **(Integration)** With real Phase 6 data, C appears on A's display end-to-end.
+- [ ] Detection log over the provided clip with per-frame objects and distance estimates (R12).
+- [ ] Entries enter the store via the same R3 interface as relayed entries, `source = own_sensor` — mock no longer required.
+- [ ] **Zero detections labeled C** — checked on the detection log (feeds the R19 zero-C check).
+- [ ] Runs CPU-only on the provided clip; offline pace acceptable (live detection at speed is future scope).
 
-### Phase 6 — Perceived object → V2X (real data)
+### Phase 4 — Obscured-object fusion: relayed C + risk + warning (R13–R15) — runs ∥ with Phase 3
 
-**Objective.** Replace the mock contents with **real** perceived data; B relays C, A receives it. This is a swap-and-verify step, not a new build.
+**Objective.** ADA turns live R2 traffic into a tracked ghost C, assesses NLOS collision risk through the CRA abstraction, and emits R4 warnings carrying the composed scene.
 
 **Tasks.**
-- Populate the message's perceived-object entry from Phase 4's real track (type, relative position/distance, confidence, timestamp).
-- B includes C in the broadcast **only while C is in the `tracked` state** (relay window = gate).
-- A receives, decodes, and admits a relayed C track (`source = v2x_relayed`) on receipt.
-
-**Tech stack.** Same transport as Phase 1; the frozen schema; per-source admission logic in the store.
+- Relayed-C admission per R13 from R2 `object.distance` (`source = v2x_relayed`).
+- CRA abstraction + the M1 NLOS plugin registered through it, reading/writing the Phase 2 database schema (R14).
+- Scene composition (ego, B, ghost C — `d_AC = d_AB + d_BC`, lateral offsets component-wise) and edge-triggered R4 warning emission on risk transitions (R15); the periodic awareness state only if time permits (optional).
+- ADA-side JSONL event logs (track transitions, risk events) completing the R18 collision-risk event list.
 
 **Acceptance Criteria.**
-- [ ] The transmitted message carries **real** C data from Phase 4 — **no mocks** anywhere in the path.
-- [ ] B starts relaying C when it enters `tracked`, and stops when it leaves the set.
-- [ ] A receives and decodes the message and creates a `v2x_relayed` track for C.
-- [ ] The relayed track carries B's reference position/time needed by Phase 5.
-- [ ] End-to-end latency from B's detection to A's receipt is within the agreed bound.
+- [ ] With bench scenarios live, C's track appears with `source = v2x_relayed` only and follows the full R13 lifecycle.
+- [ ] The NLOS plugin registers through the CRA interface; the abstraction + database schema are the committed artifacts (R14).
+- [ ] At least one R4 warning event per scenario run, carrying the risk state and the composed geometry (R15).
+- [ ] The event list reconstructs a full run offline (R18).
+- [ ] **Demo:** ADA logs — collision-risk event list; optional annotated video export with per-event risk labels (§1 demo table).
+
+### Phase 5 — IVI HMI, mock-driven (R16, R17) — display track, parallel from the start
+
+**Objective.** The IVI renders the warning view — the God view of ego, B, and ghost C — from R4 messages alone, developed against mock warnings and integrated against real data at Phase 6.
+
+**Tasks.**
+- Compose HMI with the R16 layout (central Display area + button/app areas) on the provided AAOS node; UDP ingest service for R4.
+- 2D Canvas warning view behind the view seam (R17); optional, only if time permits: SceneView 3D through the same seam, multi-process wake-on-warning.
+
+**Acceptance Criteria.**
+- [ ] The HMI runs on the AAOS node with the R16 layout; button/app areas switch what the Display area shows.
+- [ ] **(Dev)** A mock R4 warning brings the warning view up showing ego, B, and ghost C at the composed positions.
+- [ ] Ghost C renders from `v2x_relayed` data only; the 2D drawing is delivered (R17 — 3D stays optional).
+- [ ] A newer message with an unknown `warningType` degrades gracefully (R4 additive-version test).
+- [ ] Optional paths, only if built: an ADA message wakes the separate warning app; 3D renders through the view seam.
+
+### Phase 6 — Convergence: real data end-to-end (R10, R18, R19)
+
+**Objective.** Replace every mock with **real** data and record the definition-of-done run — a swap-and-verify step, not a new build.
+
+**Tasks.**
+- Point the IVI at live ADA output; feed ego Tx (R10) from the real R12 store snapshot instead of mock contents.
+- Full-chain rehearsal bench → V2X ECU → ADA → IVI across bench scenarios (e.g. C approaching vs C out of range).
+- Record the R19 run with its captures.
+
+**Acceptance Criteria.**
+- [ ] No mocks anywhere in the ego path (the bench is sanctioned test equipment, not a mock).
+- [ ] Ego Tx frames captured on the bridge carry live store data, not constants (R10).
+- [ ] One continuous recorded run: the IVI warns and renders ghost C from `v2x_relayed` only, while the R12 detection log shows zero C for the whole run (R19).
+- [ ] Wireshark/pcap of the V2X exchange and of the ADA→IVI traffic corroborates the chain (R15, R19).
+- [ ] Every §1 demo-evidence method that cites logs is producible from the R18 logs.
 
 ---
 
 ## 6. Deferred to Later Milestones
 
-- Real PC5 over-the-air (if M1 used the stub), message **signing / PKI** (IEEE 1609.2), full **ASN.1** encoding.
-- Full multi-object / curved-trajectory **risk analysis** — M1 includes only a simple TTC-based risk level for ADA demo logging (§2).
-- Multi-object tracking, **absolute/GPS** composition, curve/heading-robust geometry.
-- Cortex-M GNSS + telemetry path, V2N2V network relay, earlier-relay lead-time tuning.
+The single source is the report's § Future developments, mirrored in the [future-features register](../../requirements/future/m1-future-features-register.md). Standing M1 exclusions live in the report's §4 decision record (Cortex-M omitted, telux port declined, 3D and multi-process optional, ego video clip deferred, no GPU, no map/GNSS on the IVI).
 
 ## 7. Definition of Done
 
-All six phases pass their acceptance criteria, and the end-to-end demo shows **vehicle C appearing on vehicle A's display purely via B's V2X relay**, while A's own perception cannot see C.
+R19: all phases pass their acceptance criteria, and one continuous recorded run shows **vehicle C appearing on ego's IVI purely via the V2X relay** — ghost C rendered from `v2x_relayed` data only, zero direct C detections in ego's own perception — corroborated by the R19 captures.
