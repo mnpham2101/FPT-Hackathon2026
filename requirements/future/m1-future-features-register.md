@@ -19,7 +19,7 @@
 - **Multiple hidden obstructions detection.** ADA detects and tracks multiple objects outside line of sight simultaneously (M1 is single-object only).
 - **Single-message aggregation.** Multiple detected obstructions collapse into one V2X message — no broadcast storm.
 - **User-opt message reduction.** The user can opt for fewer V2X messages.
-- **Criticality filtering.** The user can opt to receive only warnings at or above a chosen criticality level; criticality is looked up from the ADA→IVI message's `warningType` field (R4) — see [m1-warning-message-extensibility.md](../requirement-analysis/m1-warning-message-extensibility.md).
+- **Criticality filtering.** The user can opt to receive only warnings at or above a chosen criticality level; criticality is looked up from the ADA→IVI message's `warningType` field (R4).
 - **Other hazard-warning types.** Slippery roads, falling rocks, road holes, road condition, presence of children, police, speed limits, no-horn/other road rules, traffic conditions — carried by DENM (event position + cause code), the named message family for these types (R1 note).
 - **Extensible V2X message-type dispatch.** The Rx pipeline (R9) dispatches on message type, so further families enter as a new codec module plus one dispatch entry — M1 decodes CPM only (R1).
 - **Commands to other ECUs.** ADA's output stage extends to command/actuation output to further ECUs/hardware; M1 implements only the R10 store snapshot to the V2X ECU.

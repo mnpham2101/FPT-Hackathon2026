@@ -111,7 +111,7 @@ Milestone 1's design is deliberately extensible toward the following features, a
 - **Multiple hidden obstructions detection.** ADA detects and tracks multiple objects outside line of sight simultaneously (M1 is single-object only).
 - **Single-message aggregation.** Multiple detected obstructions collapse into one V2X message — no broadcast storm.
 - **User-opt message reduction.** The user can opt for fewer V2X messages.
-- **Criticality filtering.** The user can opt to receive only warnings at or above a chosen criticality level; criticality is looked up from the ADA→IVI message's `warningType` field (R4), not carried as its own value — see [m1-warning-message-extensibility.md](requirement-analysis/m1-warning-message-extensibility.md).
+- **Criticality filtering.** The user can opt to receive only warnings at or above a chosen criticality level; criticality is looked up from the ADA→IVI message's `warningType` field (R4), not carried as its own value.
 - **Other hazard-warning types.** Slippery roads, falling rocks, road holes, road condition, presence of children, police, speed limits, no-horn/other road rules, traffic conditions. Carried by DENM (event position + cause code), the named message family for these types.
 - **Extensible V2X message-type dispatch.** The Rx pipeline (R9) dispatches on message type, so further families enter as a new codec module plus one dispatch entry. Deferred from M1 for time — M1 decodes CPM only (R1).
 - **Commands to other ECUs.** The [ada-ecu.svg](ada-ecu.svg) output stage sends Current TrackedObject/Risk/**Commands** to other ECUs/hardware (user decision 2026-07-12); M1 implements only the R10 store snapshot to the V2X ECU — command/actuation output to further ECUs is a future path.
@@ -400,7 +400,7 @@ Hard-constraint screening precedes every comparison (open-source only, Linux-tar
 ### (d) Languages per track — serves all
 
 - **V2X ECU: C++17.** Portability is the node's focus goal and telux is a C++ API — C++ keeps "developed layers move across hardware unchanged" code-true; Vanetza is C++, so the codec stays in-process.
-- **ADA ECU: C++17 core + Python detector subprocess.** The core (store, CRA, emission, logging) is C++17; the R12 detector is Python, joined only by the process-level contract (argv + exit codes + R3 JSONL over stdout) — no FFI, no cross-language API ([study](requirement-analysis/m1-ada-dual-language-study.md)).
+- **ADA ECU: C++17 core + Python detector subprocess.** The core (store, CRA, emission, logging) is C++17; the R12 detector is Python, joined only by the process-level contract (argv + exit codes + R3 JSONL over stdout) — no FFI, no cross-language API.
 - **Bench: Python.** Fastest to iterate scenario content; reuses the R1 codec for encoding.
 - **IVI: Kotlin** (§3(e)).
 - Cross-language drift is contained by the versioned contracts (R1–R4) with round-trip tests.

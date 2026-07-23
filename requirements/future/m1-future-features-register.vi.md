@@ -21,7 +21,7 @@
 - **Phát hiện nhiều vật cản khuất.** ADA phát hiện và theo dõi đồng thời nhiều đối tượng ngoài tầm nhìn thẳng (M1 chỉ xử lý một đối tượng).
 - **Gộp thành một tin nhắn duy nhất.** Nhiều vật cản phát hiện được gộp vào một tin nhắn V2X — không gây bão quảng bá (broadcast storm).
 - **Giảm tin nhắn theo lựa chọn người dùng.** Người dùng có thể chọn nhận ít tin nhắn V2X hơn.
-- **Lọc theo mức nghiêm trọng.** Người dùng có thể chọn chỉ nhận cảnh báo từ một mức nghiêm trọng (criticality) trở lên; mức nghiêm trọng được tra từ trường `warningType` của tin nhắn ADA→IVI (R4) — xem [m1-warning-message-extensibility.md](../requirement-analysis/m1-warning-message-extensibility.md).
+- **Lọc theo mức nghiêm trọng.** Người dùng có thể chọn chỉ nhận cảnh báo từ một mức nghiêm trọng (criticality) trở lên; mức nghiêm trọng được tra từ trường `warningType` của tin nhắn ADA→IVI (R4).
 - **Các loại cảnh báo nguy cơ khác.** Đường trơn, đá rơi, ổ gà, tình trạng mặt đường, có trẻ em, cảnh sát, giới hạn tốc độ, cấm bấm còi/luật đường bộ khác, tình hình giao thông — được mang bởi DENM (vị trí sự kiện + mã nguyên nhân), họ tin nhắn được chỉ định cho các loại này (ghi chú R1).
 - **Phân phối theo loại tin nhắn V2X mở rộng được.** Pipeline Rx (R9) phân phối (dispatch) theo loại tin nhắn, nên họ tin nhắn mới chỉ cần thêm một module codec cộng một mục dispatch — M1 chỉ giải mã CPM (R1).
 - **Lệnh tới các ECU khác.** Tầng đầu ra của ADA mở rộng thành đầu ra lệnh/chấp hành tới các ECU/phần cứng khác; M1 chỉ hiện thực snapshot lưu trữ R10 gửi tới V2X ECU.
