@@ -124,7 +124,7 @@ Ordering: contracts first (R1–R6), then data-flow order — V2X ECU (R7–R10)
 
 ### Contracts
 
-**R1 — V2X message contract: ETSI CPM (TS 103 324), single message type.**
+**R1 — V2X message contract: ETSI CPM (TS 103 324), single message type.** *(analysed)*
 
 - **Definition:** the Collective Perception Message (CPM) informs other vehicles of vehicle C — one message carries B's own pose together with its perceived objects. **CPM is the only V2X message type in M1** (selection rationale: §3(a)).
 - **Note:** DENM carries an event position + cause code; it is the named message family for future hazard types (§ Future developments).
@@ -147,7 +147,7 @@ Ordering: contracts first (R1–R6), then data-flow order — V2X ECU (R7–R10)
 - **Acceptance:** message structure defined in a versioned profile document (fields, units, encoding); the V2X exchange call flow between vehicles defined; a CPM sent and received between connected nodes in the working CarSky environment (bench ↔ V2X ECU).
 - **Tech stack:** [Vanetza](https://github.com/riebl/vanetza) ITS2 ASN.1 codecs (ETSI release-2 CPM, ASN.1 UPER wire encoding; LGPLv3) behind one codec seam shared by every encoder/decoder.
 
-**R2 — V2X ECU → ADA ECU message (JSON over UDP).**
+**R2 — V2X ECU → ADA ECU message (JSON over UDP).** *(analysed)*
 
 - **Definition:** after decoding and validating a received CPM, the V2X ECU constructs one JSON message per perceived-object update and sends it to the ADA ECU:
 
@@ -188,7 +188,7 @@ Ordering: contracts first (R1–R6), then data-flow order — V2X ECU (R7–R10)
 - **Acceptance:** schema committed; sample messages validate against it; live V2X ECU → ADA traffic observed on connected nodes carrying decoded bench-scenario values.
 - **Tech stack:** nlohmann/json (C++, MIT).
 
-**R3 — Ego object/track contract (TrackedObject).**
+**R3 — Ego object/track contract (TrackedObject).** *(analysed)*
 
 - **Definition:** one language-neutral schema for every object the ego system handles — shared by the ADA store, the video detector output, and V2X-relayed entries — so perception sources are interchangeable behind one interface.
 
@@ -208,7 +208,7 @@ Ordering: contracts first (R1–R6), then data-flow order — V2X ECU (R7–R10)
 - **Acceptance:** single schema file committed (JSON Schema + per-language bindings); round-trip tests in each consumer language; ADA consumes detector objects (R12) and relayed objects (R9) through the identical schema.
 - **Tech stack:** JSON Schema; nlohmann/json (C++), Python stdlib `json`, kotlinx.serialization (Kotlin).
 
-**R4 — ADA → IVI warning message.**
+**R4 — ADA → IVI warning message.** *(analysed)*
 
 - **Definition:** versioned JSON message set the ADA ECU sends to the IVI ECU over UDP: edge-triggered warning events (committed) plus a periodic awareness state of the three vehicle poses (optional in M1 — R15); extensible by the `warningType` registry (criticality lookup per § Future developments). The warning event carries the full scene geometry, so the IVI renders the view without the state stream.
 
@@ -236,7 +236,7 @@ Awareness state (optional — R15):
 - **Acceptance:** schema committed; round-trip tests both ends; a consumer parsing a newer message with an unknown `warningType` degrades gracefully (additive-version test).
 - **Tech stack:** nlohmann/json (ADA side); kotlinx.serialization (IVI side).
 
-**R5 — ECU deployment onto CarSky nodes.**
+**R5 — ECU deployment onto CarSky nodes.** *(analysed)*
 
 - **Definition:** every ECU runs as one node of one CarSky blueprint; deploying the blueprint creates the Room that is the working environment. Deployability was verified against the platform doc — all four ECUs map onto existing node types:
 
@@ -252,7 +252,7 @@ Awareness state (optional — R15):
 - **Acceptance:** the blueprint containing the four nodes (+ the R6 bridge) deploys to a Room; the Deployment Viewer reports every node Running; the team APK launches on the AAOS node.
 - **Tech stack:** Docker/OCI image builds; CarSky registry (Zot); Nydus blueprint editor.
 
-**R6 — Inter-ECU network: Ethernet Bridge + `ethernet` pins.**
+**R6 — Inter-ECU network: Ethernet Bridge + `ethernet` pins.** *(analysed)*
 
 - **Definition:** one Ethernet Bridge node forms the Room's virtual L2 network; every ECU node declares an `ethernet` pin wired to the bridge (pins connect like-to-like only); the bridge subnet auto-assigns container IPs and pins the Skycraft guest to its declared address. All inter-ECU traffic — V2X wire messages (R1), V2X→ADA (R2), ADA→IVI (R4) — is UDP over this network; no additional middleware.
 - **Dependency:** R5.
@@ -261,28 +261,28 @@ Awareness state (optional — R15):
 
 ### V2X ECU (app-level Linux container)
 
-**R7 — Radio adapter seam (hardware portability).**
+**R7 — Radio adapter seam (hardware portability).** *(analysed)*
 
 - **Definition:** the V2X application touches the radio only via a thin adapter — `init · configure · subscribeRx · send` — mirroring the production telux API surface; below the seam, the hackathon implementation is UDP over the R6 network toward the bench. The application layer above the seam ports to real modem hardware unchanged — the node's focus goal.
 - **Dependency:** R1, R6.
 - **Acceptance:** the application layer has no direct transport imports above the seam (CI import check); telux parity notes and a written port plan committed, enumerating exactly which functions change on real hardware.
 - **Tech stack:** — (telux is the mirrored reference API, not a linked dependency).
 
-**R8 — Modem stub: configuration call flow.**
+**R8 — Modem stub: configuration call flow.** *(analysed)*
 
 - **Definition:** in-node stub with the state machine `idle → initialized → configured → rx-subscribed`, acking the application's init/configure/subscribe sequence (simplified 3GPP-flavored call flow); config-driven fault injection (init failure, configure reject, subscription drop) exercises the application's error handling.
 - **Dependency:** R7.
 - **Acceptance:** the full scripted call flow acked and logged; each injected fault produces a defined, logged recovery.
 - **Tech stack:** —.
 
-**R9 — Rx pipeline: decode → validate → dedupe → forward.**
+**R9 — Rx pipeline: decode → validate → dedupe → forward.** *(analysed)*
 
 - **Definition:** adapter datagram → CPM decode (R1) → semantic validation (mandatory fields, ranges) → dedupe (stationId + objectId + measurement time) → construct the R2 message → send to the ADA ECU. Malformed or unknown input is rejected and counted, never crashes the node.
 - **Dependency:** R1, R2, R7.
 - **Acceptance:** golden-vector CPMs decode correctly; a malformed-input corpus is fully rejected and logged with zero crashes; R2 messages observed at the ADA ECU.
 - **Tech stack:** Vanetza ITS2 codec; nlohmann/json.
 
-**R10 — Ego Tx: broadcast own perception.**
+**R10 — Ego Tx: broadcast own perception.** *(analysed)*
 
 - **Definition:** the V2X ECU constructs CPMs (R1 profile) from ADA store data (R3 snapshot of ego's own-sensor objects) and broadcasts them via the adapter `send` — the "construct and broadcast" half of §1's V2X responsibilities.
 - **Dependency:** R1, R7, R13.
@@ -291,7 +291,7 @@ Awareness state (optional — R15):
 
 ### Bench node — Scenario Player
 
-**R11 — V2X message generation (vehicle C awareness).**
+**R11 — V2X message generation (vehicle C awareness).** *(analysed)*
 
 - **Definition:** the bench node generates multiple V2X messages (R1 profile) that inform the V2X ECU of vehicle C — its distance and other relevant info (relative position, speed, classification, sender B's pose) — across configurable scenarios and message rates.
 - **Dependency:** R1, R6.
@@ -300,14 +300,14 @@ Awareness state (optional — R15):
 
 ### ADA ECU (app-level Linux container)
 
-**R12 — Object detection from video files.**
+**R12 — Object detection from video files.** *(analysed)*
 
 - **Definition:** ADA detects objects from the provided video files (no live camera), estimates their distance, and emits R3 TrackedObject entries with `source = own_sensor` into the R13 store — ego's own perception source (it detects B, the visible occluder; C is by definition not in ego's frame).
 - **Dependency:** R3; provided video clip.
 - **Acceptance:** detection log over the provided clip with per-frame objects and distance estimates; detector entries enter the store through the same R3 interface as relayed entries; zero detections labeled C.
 - **Tech stack:** YOLO11n (Ultralytics, AGPL-3.0) exported to ONNX on ONNX Runtime CPU; OpenCV video decode; Python detector subprocess streaming R3 JSONL over stdout (no FFI, no RPC).
 
-**R13 — Track store + admission state machine.**
+**R13 — Track store + admission state machine.** *(analysed)*
 
 - **Definition:** R3-shaped track store with per-source admission. **Vehicle C is tracked based on a set hardcoded distance:** C is admitted to tracking when its reported distance (R2 `object.distance`) is within the set threshold (30 m) and dropped when it leaves the threshold or its messages stop; own-sensor objects follow `not_tracked → tentative → tracked`. Full lifecycle per the state machine:
 
@@ -317,7 +317,7 @@ Awareness state (optional — R15):
 - **Acceptance:** state transitions observable in logs and matching the diagram; C's track carries `source = v2x_relayed` only.
 - **Tech stack:** — (C++17 core, standard library).
 
-**R14 — Collision Risk Assessment abstraction.**
+**R14 — Collision Risk Assessment abstraction.** *(analysed)*
 
 - **Definition:** a coding architecture that allows plugging in future risk assessments: risk logic sits behind a common interface consuming the track store and emitting typed warnings (R4 registry). M1's occluded-vehicle (NLOS) risk is the first plugin; §1's future scenarios (intersection hazards, curve blind spots, speed-scaled risk, priority-vehicle preemption) register as new plugins without reworking existing code. Design:
 
@@ -327,7 +327,7 @@ Awareness state (optional — R15):
 - **Acceptance:** the code — the abstraction interface plus the M1 NLOS plugin registered through it — and the database schema the assessment reads and writes.
 - **Tech stack:** C++17.
 
-**R15 — Warning output to the IVI ECU.**
+**R15 — Warning output to the IVI ECU.** *(analysed)*
 
 - **Definition:** the ADA ECU produces output messages to the IVI ECU (structure per R4, over UDP on the R6 network):
   - **Warning event (committed):** on each R14 risk transition, ADA sends a warning event carrying the risk state and the composed scene (ego, B, ghost C). One warning event carries enough geometry for the IVI to draw the scene.
@@ -338,7 +338,7 @@ Awareness state (optional — R15):
 
 ### IVI ECU (provided AAOS full vECU)
 
-**R16 — HMI on the AAOS node.**
+**R16 — HMI on the AAOS node.** *(analysed)*
 
 - **Definition:**
   - The HMI display design resembles the image below: areas for functional buttons/apps around one central **Display area**.
@@ -351,7 +351,7 @@ Awareness state (optional — R15):
 - **Acceptance:** the HMI runs on the AAOS node with the layout above; an R4 warning brings the warning view up in the Display area; the button/app areas switch what the Display area shows. Optional paths, if built: an ADA message wakes the separate warning app; the 3D drawing renders through R17's view seam.
 - **Tech stack:** Kotlin, Jetpack Compose, AndroidX.
 
-**R17 — Warning view: God view of the 3 vehicles.**
+**R17 — Warning view: God view of the 3 vehicles.** *(analysed)*
 
 - **Definition:** implement the warning view — a God view of the 3 vehicles (ego, B, and ghost C rendered from `v2x_relayed` data), drawn from R4 messages only. **The 2D drawing is the M1 deliverable; the 3D drawing is optional**, both behind one view seam.
 - **Dependency:** R4, R16.
@@ -360,14 +360,14 @@ Awareness state (optional — R15):
 
 ### Evidence & end-to-end demo
 
-**R18 — Evidence logging.**
+**R18 — Evidence logging.** *(analysed)*
 
 - **Definition:** structured JSONL event logs on the V2X ECU and ADA (message rx/tx, decode results, track transitions, risk events) forming the collision-risk event list of §1's demo table.
 - **Dependency:** R9, R13, R14.
 - **Acceptance:** the event list reconstructs a full demo run offline; every §1 demo-evidence method that cites logs is producible from them.
 - **Tech stack:** — (JSONL, standard logging).
 
-**R19 — End-to-end demo run (definition of done).**
+**R19 — End-to-end demo run (definition of done).** *(analysed)*
 
 - **Definition:** one continuous recorded run of the full live chain — bench → V2X ECU → ADA → IVI — with no scripted shortcuts inside ego software: ego's own detections contain zero C entries for the whole run while the IVI warns and renders ghost C from `v2x_relayed` data only.
 - **Dependency:** all committed requirements above.
