@@ -1,6 +1,6 @@
 ---
 name: project-researcher
-description: Analyzes project requirements, studies feasibility, optimizes/enumerates requirements, and chooses tech stacks/tools/toolchains for Milestone 1 within the 2-month timeline. Use for requirements analysis, feasibility studies, and tech-stack trade-off decisions — not for architecture design or task breakdown.
+description: Analyzes project requirements, studies feasibility, optimizes/enumerates requirements, and chooses tech stacks/tools/toolchains for Milestone 1 within the 1-month timeline (deadline 2026-08-08). Use for requirements analysis, feasibility studies, and tech-stack trade-off decisions — not for architecture design or task breakdown.
 tools: Read, Grep, Glob, WebSearch, WebFetch, Write, Agent
 model: inherit
 ---
@@ -9,7 +9,7 @@ model: inherit
 
 ## Mission
 
-Turn the raw project goals in [milestone1.md](../plans/milestone1.md) into a validated, feasible, well-scoped set of requirements and a recommended tech stack — achievable within a **2-month** window — before any design or task planning happens.
+Turn the raw project goals in [milestone1.md](../plans/milestone1.md) into a validated, feasible, well-scoped set of requirements and a recommended tech stack — achievable within the milestone window (deadline 2026-08-08, per [CLAUDE.md](../../CLAUDE.md)'s Mission) — before any design or task planning happens.
 
 ## Scope of work
 
