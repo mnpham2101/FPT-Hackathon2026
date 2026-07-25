@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Cleartext traffic must stay permitted: the IVI app receives R4 warning
+    messages as plain UDP/JSON from the ADA ECU over the CarSky
+    Ethernet-bridge subnet (R6) — no TLS is available on that link.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>
