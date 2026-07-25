@@ -1,5 +1,10 @@
 package com.hackathon.v2x.ivi.ui.screen
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -25,6 +30,8 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,6 +42,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.hackathon.v2x.ivi.ui.DisplayMode
+import com.hackathon.v2x.ivi.ui.MainViewModel
 
 // ---------------------------------------------------------------------------
 // R16 design tokens — dark automotive scheme. All dimensions are Dp tokens;
@@ -76,31 +86,60 @@ private const val SIDE_BAR_WIDTH_FRACTION = (1f - DISPLAY_AREA_WIDTH_FRACTION) /
 /** Below this width the side bars drop text labels and show icons only. */
 private val WideLayoutMinWidth = 1024.dp
 
-private data class SideBarItem(val icon: ImageVector, val label: String)
+/** Fade duration for the Display Area mode transition. */
+private const val MODE_TRANSITION_DURATION_MS = 200
+
+private data class SideBarItem(val icon: ImageVector, val label: String, val mode: DisplayMode)
 
 private val LeftBarItems = listOf(
-    SideBarItem(Icons.Filled.Home, "Home"),
-    SideBarItem(Icons.Filled.Menu, "Apps"),
+    SideBarItem(Icons.Filled.Home, "Home", DisplayMode.HomeView),
+    SideBarItem(Icons.Filled.Menu, "Apps", DisplayMode.AppsView),
 )
 
 private val RightBarItems = listOf(
-    SideBarItem(Icons.Filled.Settings, "Settings"),
+    SideBarItem(Icons.Filled.Settings, "Settings", DisplayMode.SettingsView),
 )
+
+private val DisplayMode.statusLabel: String
+    get() = when (this) {
+        DisplayMode.WarningView -> "WARNING"
+        DisplayMode.HomeView -> "HOME"
+        DisplayMode.AppsView -> "APPS"
+        DisplayMode.SettingsView -> "SETTINGS"
+    }
 
 // ---------------------------------------------------------------------------
 // Screen scaffold
 // ---------------------------------------------------------------------------
 
 /**
- * R16 main HMI screen: central Display Area slot (~70% width) flanked by
- * side button bars, with a status bottom bar. The Display Area content is a
- * slot so the view switcher (16.5.2.3) can swap views without touching this
- * scaffold.
+ * R16 main HMI screen — stateful entry point. Collects [MainViewModel]'s
+ * `currentMode` and delegates rendering to the stateless [MainScreenContent]
+ * (which is what previews and tests exercise directly).
  */
 @Composable
 fun MainScreen(
     modifier: Modifier = Modifier,
-    displayContent: @Composable () -> Unit = { DisplayAreaPlaceholder() },
+    viewModel: MainViewModel = viewModel(),
+) {
+    val currentMode by viewModel.currentMode.collectAsState()
+    MainScreenContent(
+        currentMode = currentMode,
+        onModeSelected = viewModel::setMode,
+        modifier = modifier,
+    )
+}
+
+/**
+ * Stateless scaffold: central Display Area (~70% width) flanked by side
+ * button bars, with a status bottom bar. The Display Area content is driven
+ * by [currentMode] through an [AnimatedContent] fade switcher.
+ */
+@Composable
+fun MainScreenContent(
+    currentMode: DisplayMode,
+    onModeSelected: (DisplayMode) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     BoxWithConstraints(
         modifier = modifier
@@ -118,6 +157,7 @@ fun MainScreen(
                 SideButtonBar(
                     items = LeftBarItems,
                     showLabels = showButtonLabels,
+                    onModeSelected = onModeSelected,
                     modifier = Modifier
                         .fillMaxHeight()
                         .weight(SIDE_BAR_WIDTH_FRACTION)
@@ -126,17 +166,19 @@ fun MainScreen(
                     modifier = Modifier
                         .fillMaxHeight()
                         .weight(DISPLAY_AREA_WIDTH_FRACTION),
-                    content = displayContent,
-                )
+                ) {
+                    DisplayModeSwitcher(currentMode = currentMode)
+                }
                 SideButtonBar(
                     items = RightBarItems,
                     showLabels = showButtonLabels,
+                    onModeSelected = onModeSelected,
                     modifier = Modifier
                         .fillMaxHeight()
                         .weight(SIDE_BAR_WIDTH_FRACTION)
                 )
             }
-            BottomNavBar(modifier = Modifier.fillMaxWidth())
+            BottomNavBar(currentMode = currentMode, modifier = Modifier.fillMaxWidth())
         }
     }
 }
@@ -163,12 +205,50 @@ private fun DisplayArea(
     }
 }
 
+/**
+ * Fades between Display Area contents when [currentMode] changes.
+ * Warning View gets a real renderer in Task Group 5.3; the other modes are
+ * placeholders until their features land.
+ */
 @Composable
-private fun DisplayAreaPlaceholder() {
+private fun DisplayModeSwitcher(currentMode: DisplayMode, modifier: Modifier = Modifier) {
+    AnimatedContent(
+        targetState = currentMode,
+        transitionSpec = {
+            fadeIn(tween(MODE_TRANSITION_DURATION_MS)) togetherWith
+                fadeOut(tween(MODE_TRANSITION_DURATION_MS))
+        },
+        label = "displayModeTransition",
+        modifier = modifier,
+    ) { mode ->
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            when (mode) {
+                DisplayMode.WarningView -> WarningViewPlaceholder()
+                DisplayMode.HomeView -> ViewPlaceholder("Home View Placeholder")
+                DisplayMode.AppsView -> ViewPlaceholder("Apps View Placeholder")
+                DisplayMode.SettingsView -> ViewPlaceholder("Settings View Placeholder")
+            }
+        }
+    }
+}
+
+@Composable
+private fun ViewPlaceholder(label: String) {
+    Text(
+        text = label,
+        color = TextColor,
+        fontFamily = UiFont,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 24.sp,
+    )
+}
+
+@Composable
+private fun WarningViewPlaceholder() {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
-            text = "DISPLAY AREA",
-            color = TextColor,
+            text = "WARNING VIEW",
+            color = AccentColor,
             fontFamily = UiFont,
             fontWeight = FontWeight.SemiBold,
             fontSize = 24.sp,
@@ -191,6 +271,7 @@ private fun DisplayAreaPlaceholder() {
 private fun SideButtonBar(
     items: List<SideBarItem>,
     showLabels: Boolean,
+    onModeSelected: (DisplayMode) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -199,7 +280,11 @@ private fun SideButtonBar(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         items.forEach { item ->
-            SideBarButton(item = item, showLabel = showLabels)
+            SideBarButton(
+                item = item,
+                showLabel = showLabels,
+                onClick = { onModeSelected(item.mode) },
+            )
         }
     }
 }
@@ -208,7 +293,7 @@ private fun SideButtonBar(
 private fun SideBarButton(
     item: SideBarItem,
     showLabel: Boolean,
-    onClick: () -> Unit = {},
+    onClick: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -245,7 +330,7 @@ private fun SideBarButton(
 // ---------------------------------------------------------------------------
 
 @Composable
-private fun BottomNavBar(modifier: Modifier = Modifier) {
+private fun BottomNavBar(currentMode: DisplayMode, modifier: Modifier = Modifier) {
     Row(
         modifier = modifier
             .height(BottomBarHeight)
@@ -254,7 +339,7 @@ private fun BottomNavBar(modifier: Modifier = Modifier) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(StatusSpacing),
     ) {
-        StatusIndicator(label = "MODE: HOME", dotColor = AccentColor)
+        StatusIndicator(label = "MODE: ${currentMode.statusLabel}", dotColor = AccentColor)
         StatusIndicator(label = "V2X LINK: STANDBY", dotColor = PanelBorderColor)
         Spacer(modifier = Modifier.weight(1f))
         Text(
@@ -295,5 +380,17 @@ private fun StatusIndicator(label: String, dotColor: Color, modifier: Modifier =
 @Preview(name = "AAOS 1280x720", widthDp = 1280, heightDp = 720, showBackground = true)
 @Composable
 private fun MainScreenPreview() {
-    MainScreen()
+    MainScreenContent(
+        currentMode = DisplayMode.HomeView,
+        onModeSelected = {},
+    )
+}
+
+@Preview(name = "AAOS 1280x720 — Warning", widthDp = 1280, heightDp = 720, showBackground = true)
+@Composable
+private fun MainScreenWarningPreview() {
+    MainScreenContent(
+        currentMode = DisplayMode.WarningView,
+        onModeSelected = {},
+    )
 }

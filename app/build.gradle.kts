@@ -53,6 +53,7 @@ kotlin {
 dependencies {
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.6")
 
     // Compose BOM 2024.09.03 (Compose UI 1.7.x, Material3 1.3.0) — compatible with compileSdk 34.
     val composeBom = platform("androidx.compose:compose-bom:2024.09.03")
