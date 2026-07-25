@@ -22,6 +22,9 @@ android {
         versionName = "0.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // R4 warning auto-dismiss timeout (4.5.1.4 / 17.5.3.5) — externalized, no literals in source.
+        buildConfigField("long", "WARNING_TIMEOUT_MS", "10000L")
     }
 
     buildTypes {
@@ -41,6 +44,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 

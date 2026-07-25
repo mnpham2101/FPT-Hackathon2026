@@ -104,8 +104,11 @@ private val UnknownSourceColor = Color(0xFFFFD700)
 private const val UNKNOWN_SOURCE_LABEL = "[? UNKNOWN SOURCE]"
 private const val LOG_TAG = "IVI_V2X"
 
-/** Unknown risk states render at highest urgency (fail-safe). */
-private fun riskGlowColor(riskState: String): Color = when (riskState.lowercase(Locale.US)) {
+/**
+ * Shared risk → color mapping (glow ring, warning banner).
+ * Unknown risk states render at highest urgency (fail-safe).
+ */
+internal fun riskColor(riskState: String): Color = when (riskState.lowercase(Locale.US)) {
     "low" -> LowRiskGlowColor
     "medium" -> MediumRiskGlowColor
     "high" -> HighRiskGlowColor
@@ -188,7 +191,7 @@ class CanvasWarningView : IviWarningViewSeam {
                 if (cSourceTrusted) {
                     // glowAlpha is read here — inside the draw phase only —
                     // so the pulse invalidates drawing, never composition/layout.
-                    drawGhostGlow(ghostC, riskGlowColor(riskState), glowAlpha)
+                    drawGhostGlow(ghostC, riskColor(riskState), glowAlpha)
                     drawGhostVehicle(ghostC, textMeasurer)
                     drawGhostBadge(
                         text = "[V2X] C · ${formatMeters(sceneC)} m · RISK: ${riskState.uppercase(Locale.US)}",
