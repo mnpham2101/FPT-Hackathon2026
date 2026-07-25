@@ -4,5 +4,6 @@ plugins {
     id("org.jetbrains.kotlin.android") version "2.2.20" apply false
     id("org.jetbrains.kotlin.plugin.serialization") version "2.2.20" apply false
     id("com.google.devtools.ksp") version "2.2.20-2.0.4" apply false
-    id("com.google.dagger.hilt.android") version "2.59.2" apply false
+    // Hilt 2.58 is the last release whose Gradle plugin supports AGP 8.x (2.59+ requires AGP 9).
+    id("com.google.dagger.hilt.android") version "2.58" apply false
 }
