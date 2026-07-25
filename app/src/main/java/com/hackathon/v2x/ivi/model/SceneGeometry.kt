@@ -1,11 +1,14 @@
 package com.hackathon.v2x.ivi.model
 
+import kotlinx.serialization.Serializable
+
 /**
  * Ego-relative position of one vehicle, in meters.
  *
  * @property x longitudinal offset — positive is forward of ego
  * @property y lateral offset — positive is right of ego
  */
+@Serializable
 data class VehiclePosition(
     val x: Float,
     val y: Float,
@@ -28,4 +31,10 @@ data class SceneGeometry(
     val ego: VehiclePosition,
     val vehicleB: VehiclePosition,
     val vehicleC: VehiclePosition?,
+    /**
+     * R3 snapshot backing [vehicleC], used by the renderer's defensive
+     * source guard (17.5.3.4). `null` in dev scenes that carry no snapshot —
+     * treated as trusted.
+     */
+    val vehicleCSnapshot: R3Snapshot? = null,
 )
