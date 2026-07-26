@@ -4,6 +4,7 @@
 #include <string>
 
 #include "ada/r2_mapper.hpp"
+#include "ada/r3_mapper.hpp"
 #include "ada/risk_assessor.hpp"
 #include "ada/track_store.hpp"
 #include "ada/warning_builder.hpp"
@@ -37,10 +38,19 @@ int main() {
     config.gate_exit_m = 35.0;
     config.tentative_hits = 2;
 
+    const auto own_sensor_jsonl = read_file(std::string(ADA_TESTDATA_DIR) + "/r3_own_sensor.jsonl");
+    const auto first_line_end = own_sensor_jsonl.find('\n');
+    const auto first_own = ada::tracked_object_from_r3_json(own_sensor_jsonl.substr(0, first_line_end));
+    const auto second_own = ada::tracked_object_from_r3_json(own_sensor_jsonl.substr(first_line_end + 1));
+    assert(first_own);
+    assert(second_own);
+    assert(first_own->source == ada::Source::OwnSensor);
+    assert(first_own->id == "own:B");
+
     ada::TrackStore store(config);
-    const auto first = store.upsert(own_b(1000));
+    const auto first = store.upsert(*first_own);
     assert(first.current == ada::TrackState::Tentative);
-    const auto second = store.upsert(own_b(1010));
+    const auto second = store.upsert(*second_own);
     assert(second.current == ada::TrackState::Tracked);
 
     const auto r2 = read_file(std::string(ADA_TESTDATA_DIR) + "/r2_v2x_object.sample.json");
