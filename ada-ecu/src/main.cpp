@@ -8,6 +8,7 @@
 #include "ada/config.hpp"
 #include "ada/event_logger.hpp"
 #include "ada/r2_mapper.hpp"
+#include "ada/r3_mapper.hpp"
 #include "ada/risk_assessor.hpp"
 #include "ada/track_store.hpp"
 #include "ada/udp_r2_receiver.hpp"
@@ -31,18 +32,28 @@ std::string read_file(const std::string& path) {
     return buffer.str();
 }
 
-void seed_own_sensor_b(ada::TrackStore& store, ada::EventLogger& logger, std::int64_t ts) {
-    ada::TrackedObject own_b;
-    own_b.id = "own:B";
-    own_b.source = ada::Source::OwnSensor;
-    own_b.position = {12.0, 0.2, 0.9};
-    own_b.distance_m = 12.0;
-    own_b.speed_mps = 15.0;
-    own_b.confidence = 0.92;
-    own_b.timestamps = {ts, ts, ts};
+bool ingest_own_sensor_jsonl(const std::string& path, ada::TrackStore& store, ada::EventLogger& logger) {
+    std::ifstream in(path);
+    if (!in) {
+        throw std::runtime_error("cannot open own-sensor JSONL: " + path);
+    }
 
-    const auto own_result = store.upsert(own_b);
-    logger.write("track_transition", "{\"id\":\"own:B\",\"state\":\"" + std::string(ada::to_string(own_result.current)) + "\"}");
+    bool ingested = false;
+    std::string line;
+    while (std::getline(in, line)) {
+        if (line.empty()) {
+            continue;
+        }
+        logger.write("own_sensor_rx", line);
+        const auto object = ada::tracked_object_from_r3_json(line);
+        if (!object || object->source != ada::Source::OwnSensor) {
+            return false;
+        }
+        const auto result = store.upsert(*object);
+        logger.write("track_transition", "{\"id\":\"" + object->id + "\",\"state\":\"" + std::string(ada::to_string(result.current)) + "\"}");
+        ingested = true;
+    }
+    return ingested;
 }
 
 }  // namespace
@@ -52,6 +63,7 @@ int main(int argc, char** argv) {
     bool mock = false;
     bool listen_once = false;
     std::string r2_sample_path = "ada-ecu/testdata/r2_v2x_object.sample.json";
+    std::string own_sensor_sample_path = "ada-ecu/testdata/r3_own_sensor.jsonl";
 
     for (int i = 1; i < argc; ++i) {
         const std::string arg = argv[i];
@@ -63,6 +75,8 @@ int main(int argc, char** argv) {
             listen_once = true;
         } else if (arg == "--r2-sample" && i + 1 < argc) {
             r2_sample_path = argv[++i];
+        } else if (arg == "--own-sensor-sample" && i + 1 < argc) {
+            own_sensor_sample_path = argv[++i];
         }
     }
 
@@ -76,8 +90,10 @@ int main(int argc, char** argv) {
         return 0;
     }
 
-    const auto ts = now_ms();
-    seed_own_sensor_b(store, logger, ts);
+    if (!ingest_own_sensor_jsonl(own_sensor_sample_path, store, logger)) {
+        std::cerr << "own-sensor JSONL ingest failed\n";
+        return 4;
+    }
 
     ada::UdpR2Receiver receiver(config.ada_listen_host, config.ada_listen_port);
     if (mock) {

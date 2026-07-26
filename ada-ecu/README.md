@@ -50,7 +50,7 @@ docker run --rm ada-ecu:phase2 --config /app/config/ada-ecu.conf --mock
 ada-ecu/build/ada_ecu --config ada-ecu/config/ada-ecu.conf --mock
 ```
 
-`--mock` now exercises the UDP R2 receiver over loopback: the process starts the ADA UDP listener, sends the golden R2 sample to itself, updates the store, and emits one R4 warning.
+`--mock` now exercises both ADA inputs: own-sensor B enters through the R3 JSONL detector seam, then relayed C enters through the UDP R2 receiver over loopback.
 
 To test with an external mock V2X sender:
 
@@ -58,3 +58,5 @@ To test with an external mock V2X sender:
 ada-ecu/build/ada_ecu --config ada-ecu/config/ada-ecu.conf --listen-once
 python3 ada-ecu/tools/mock_v2x_sender.py --host 127.0.0.1 --port 46002
 ```
+
+Use `--own-sensor-sample <jsonl>` to replace the detector seam sample.

@@ -12,6 +12,7 @@ add_library(ada_core
     src/config.cpp
     src/event_logger.cpp
     src/r2_mapper.cpp
+    src/r3_mapper.cpp
     src/risk_assessor.cpp
     src/track_store.cpp
     src/udp_r2_receiver.cpp
