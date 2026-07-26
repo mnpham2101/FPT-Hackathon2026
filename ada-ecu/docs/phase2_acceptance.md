@@ -18,7 +18,7 @@ Phase 2 objective: stand up the ADA skeleton, R3 track store, and R13 admission 
 | CRA / NLOS risk scaffold | Done | `risk_assessor.*` |
 | R4 warning smoke output | Done | `warning_builder.*`, `ada_ecu --mock` |
 | JSONL evidence logs | Done | `EventLogger`, `track_transition`, `own_sensor_rx`, `r2_rx`, `risk_event` |
-| Linux/ARM container build path | Ready | `Dockerfile`, README command |
+| Linux/ARM container build path | Ready, not locally verified | `Dockerfile`, README command; local Docker CLI unavailable during this check |
 
 ## Verification Commands
 
@@ -59,11 +59,12 @@ docker buildx build --platform linux/arm64 -t ada-ecu:phase2 ada-ecu
 | Detector-shaped and relayed-shaped entries enter through identical R3 store interface | Done | `detector_jsonl_ingest.cpp`, `v2x_r2_ingest.cpp`, `TrackStore::upsert` |
 | Mock-driven state transitions observable in logs and match R13 lifecycle | Done | `EventLogger`, `track_transition` events, `ada_ecu --mock` |
 | Toggling mock off yields no tracks | Partial | Default run exits without ingesting; continuous runtime loop is not implemented yet |
-| Mock C admitted only within gate and dropped beyond exit or timeout | Partial | Enter/drop distance covered in unit test; timeout expiry exists in `TrackStore::expire` but needs a dedicated test |
+| Mock C admitted only within gate and dropped beyond exit or timeout | Done | Enter, hysteresis, exit, and timeout expiry covered in `track_store_tests.cpp` |
 | Gate constants read from configuration, no literals in logic | Done | `config/ada-ecu.conf`, `AdaConfig` |
 | CRA database schema committed | Deferred | Current implementation uses in-memory `TrackStore`; no persistent database selected for Phase 2 scaffold |
 | Video-input proposal sent to FPT-Mentor | Not code | Requires team/user action outside code |
 | Build + CI round-trip tests green on frozen contracts | Partial | CMake/CTest local pass; CI not configured yet |
+| Linux/ARM container build pass | Blocked locally | `docker` command unavailable on this machine/session; run the README `docker buildx` command once Docker Desktop/CLI is installed |
 
 ## Not Phase 3 Yet
 
@@ -76,4 +77,3 @@ docker buildx build --platform linux/arm64 -t ada-ecu:phase2 ada-ecu
 - CRA is a scaffold with one NLOS distance-risk assessor.
 - R4 emission is smoke output to stdout/log, not a UDP sender to IVI yet.
 - Periodic awareness state is not implemented.
-

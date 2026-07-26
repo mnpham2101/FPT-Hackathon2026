@@ -17,3 +17,7 @@ secrets/
 # Python
 __pycache__/
 *.pyc
+
+# ADA ECU local build/run artifacts
+ada-ecu/build/
+ada-events.jsonl
