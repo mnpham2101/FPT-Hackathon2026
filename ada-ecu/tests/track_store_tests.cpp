@@ -28,6 +28,7 @@ int main() {
     ada::AdaConfig config;
     config.gate_enter_m = 30.0;
     config.gate_exit_m = 35.0;
+    config.miss_limit_ms = 1500;
     config.tentative_hits = 2;
 
     const auto own_sensor_jsonl = read_file(std::string(ADA_TESTDATA_DIR) + "/r3_own_sensor.jsonl");
@@ -69,10 +70,21 @@ int main() {
     assert(warning.find("\"warningType\":\"nlos_obstruction\"") != std::string::npos);
     assert(warning.find("\"source\":\"v2x_relayed\"") != std::string::npos);
 
-    auto far = *relayed;
-    far.distance_m = 36.0;
-    const auto far_result = store.upsert(far);
-    assert(far_result.current == ada::TrackState::NotTracked);
+    auto hysteresis = *relayed;
+    hysteresis.distance_m = 32.0;
+    hysteresis.timestamps.last_updated_ms = 1200;
+    const auto hysteresis_result = store.upsert(hysteresis);
+    assert(hysteresis_result.current == ada::TrackState::Tracked);
+
+    auto outside_gate = *relayed;
+    outside_gate.distance_m = 36.0;
+    const auto outside_gate_result = store.upsert(outside_gate);
+    assert(outside_gate_result.current == ada::TrackState::NotTracked);
+
+    const auto readmitted = store.upsert(*relayed);
+    assert(readmitted.current == ada::TrackState::Tracked);
+    store.expire(1020 + config.miss_limit_ms + 1);
+    assert(store.get("v2x:1201:7")->state == ada::TrackState::NotTracked);
 
     return 0;
 }

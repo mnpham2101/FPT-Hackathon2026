@@ -16,6 +16,7 @@ The core is C++17 and uses no middleware. JSON parsing in this scaffold is inten
 - `testdata/*.sample.json`: golden contract examples for mapper/store/warning tests.
 
 Phase 2 acceptance tracking lives in `docs/phase2_acceptance.md`.
+Phase 3 detector notes live in `docs/phase3_video_detector.md`.
 
 ## Build
 
@@ -23,6 +24,12 @@ Install local build dependencies:
 
 ```sh
 brew install cmake nlohmann-json
+```
+
+Install Python detector dependencies:
+
+```sh
+python3 -m pip install -r ada-ecu/requirements.txt
 ```
 
 ```sh
@@ -62,3 +69,9 @@ python3 ada-ecu/tools/mock_v2x_sender.py --host 127.0.0.1 --port 46002
 ```
 
 Use `--own-sensor-sample <jsonl>` to replace the detector seam sample.
+
+Generate a Phase 3 detector JSONL sample:
+
+```sh
+python3 ada-ecu/tools/video_detector.py --synthetic 2 > /tmp/r3_own_sensor.jsonl
+```
