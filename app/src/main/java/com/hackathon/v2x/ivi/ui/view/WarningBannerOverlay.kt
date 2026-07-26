@@ -30,9 +30,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.hackathon.v2x.ivi.BuildConfig
-import com.hackathon.v2x.ivi.model.R3Snapshot
-import com.hackathon.v2x.ivi.model.SceneGeometry
-import com.hackathon.v2x.ivi.model.VehiclePosition
 
 // ---------------------------------------------------------------------------
 // Banner styling tokens
@@ -47,9 +44,15 @@ private val BannerTextSize = 16.sp
 private const val PROGRESS_TRACK_ALPHA = 0.25f
 
 /**
- * Alert banner overlaid (via `Box`) on top of [CanvasWarningView]: warning
- * type text, a countdown bar depleting over [warningTimeoutMs], and a
+ * Alert banner designed to overlay (via `Box`) on top of [CanvasWarningView]:
+ * warning type text, a countdown bar depleting over [warningTimeoutMs], and a
  * dismiss button.
+ *
+ * NOT wired into the UI flow by decision (feedback 2026-07-26): the 2D
+ * God-View canvas is the killer feature of the Warning View and must render
+ * unobstructed. Keep this composable available, but the integration subtask
+ * (16.5.4.1) must NOT mount it in the Display Area unless that decision is
+ * explicitly revisited.
  *
  * State contract:
  * - [warningActive] mirrors `WarningViewModel.uiWarningState != Idle` — the
@@ -147,29 +150,4 @@ private fun WarningBannerMediumPreview() {
 @Composable
 private fun WarningBannerHighPreview() {
     WarningBannerOverlay(warningActive = true, riskState = "high")
-}
-
-@Preview(name = "Banner over God View", widthDp = 420, heightDp = 560, showBackground = true)
-@Composable
-private fun WarningBannerOverCanvasPreview() {
-    Box {
-        CanvasWarningView().Render(
-            scene = SceneGeometry(
-                ego = VehiclePosition(0f, 0f),
-                vehicleB = VehiclePosition(20f, 0f),
-                vehicleC = VehiclePosition(35f, 0f),
-                vehicleCSnapshot = R3Snapshot(
-                    id = "C",
-                    source = R3Snapshot.SOURCE_V2X_RELAYED,
-                    position = VehiclePosition(35f, 0f),
-                    distance = 35f,
-                    speed = 8.3f,
-                    confidence = 0.9f,
-                    state = "tracked",
-                ),
-            ),
-            riskState = "high",
-        )
-        WarningBannerOverlay(warningActive = true, riskState = "high")
-    }
 }
