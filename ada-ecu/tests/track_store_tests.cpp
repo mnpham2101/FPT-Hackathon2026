@@ -3,10 +3,13 @@
 #include <sstream>
 #include <string>
 
+#include "ada/detector_jsonl_ingest.hpp"
+#include "ada/event_logger.hpp"
 #include "ada/r2_mapper.hpp"
 #include "ada/r3_mapper.hpp"
 #include "ada/risk_assessor.hpp"
 #include "ada/track_store.hpp"
+#include "ada/v2x_r2_ingest.hpp"
 #include "ada/warning_builder.hpp"
 
 namespace {
@@ -17,17 +20,6 @@ std::string read_file(const std::string& path) {
     std::ostringstream buffer;
     buffer << in.rdbuf();
     return buffer.str();
-}
-
-ada::TrackedObject own_b(std::int64_t ts) {
-    ada::TrackedObject object;
-    object.id = "own:B";
-    object.source = ada::Source::OwnSensor;
-    object.distance_m = 12.0;
-    object.position = {12.0, 0.0, 0.9};
-    object.confidence = 0.9;
-    object.timestamps = {ts, ts, ts};
-    return object;
 }
 
 }  // namespace
@@ -48,10 +40,13 @@ int main() {
     assert(first_own->id == "own:B");
 
     ada::TrackStore store(config);
-    const auto first = store.upsert(*first_own);
-    assert(first.current == ada::TrackState::Tentative);
-    const auto second = store.upsert(*second_own);
-    assert(second.current == ada::TrackState::Tracked);
+    ada::EventLogger logger("/private/tmp/ada_core_tests.jsonl");
+    const auto ingest = ada::ingest_own_sensor_jsonl_file(std::string(ADA_TESTDATA_DIR) + "/r3_own_sensor.jsonl", store, logger);
+    assert(ingest.accepted == 2);
+    assert(ingest.rejected == 0);
+    const auto own_track = store.get("own:B");
+    assert(own_track);
+    assert(own_track->state == ada::TrackState::Tracked);
 
     const auto r2 = read_file(std::string(ADA_TESTDATA_DIR) + "/r2_v2x_object.sample.json");
     const auto relayed = ada::tracked_object_from_r2_json(r2, 1020);
@@ -60,8 +55,11 @@ int main() {
     assert(relayed->id == "v2x:1201:7");
     assert(relayed->speed_mps == 15.2);
     assert(relayed->confidence == 0.95);
-    const auto relayed_result = store.upsert(*relayed);
-    assert(relayed_result.current == ada::TrackState::Tracked);
+    const auto r2_ingest = ada::ingest_r2_payload(r2, 1020, store, logger);
+    assert(r2_ingest.accepted);
+    assert(!r2_ingest.timed_out);
+    assert(r2_ingest.track_id == "v2x:1201:7");
+    assert(store.get("v2x:1201:7")->state == ada::TrackState::Tracked);
 
     ada::NlosRiskAssessor risk(config.gate_enter_m);
     const auto event = risk.assess(store);
