@@ -8,7 +8,20 @@ Phase 2/3/4 scaffold for the ADA ECU track:
 
 The core is C++17 and uses no middleware. JSON parsing in this scaffold is intentionally narrow and contract-shaped; replace it with `nlohmann/json` once dependency packaging is finalized.
 
+## Contracts
+
+- `schemas/r2_v2x_object.schema.json`: V2X ECU to ADA object update.
+- `schemas/r3_tracked_object.schema.json`: shared ADA track object used by own-sensor and relayed sources.
+- `schemas/r4_warning.schema.json`: ADA to IVI warning event.
+- `testdata/*.sample.json`: golden contract examples for mapper/store/warning tests.
+
 ## Build
+
+Install local build dependencies:
+
+```sh
+brew install cmake nlohmann-json
+```
 
 ```sh
 cmake -S ada-ecu -B ada-ecu/build
@@ -16,8 +29,32 @@ cmake --build ada-ecu/build
 ctest --test-dir ada-ecu/build --output-on-failure
 ```
 
+## Linux/ARM Container Build
+
+ADA runs as a Linux OCI Container Node on CarSky. Keep the code portable C++17 and verify the image for the simulator architecture:
+
+```sh
+docker buildx build --platform linux/arm64 -t ada-ecu:phase2 ada-ecu
+```
+
+For local x86_64 smoke checks:
+
+```sh
+docker build -t ada-ecu:phase2 ada-ecu
+docker run --rm ada-ecu:phase2 --config /app/config/ada-ecu.conf --mock
+```
+
 ## Run Mock
 
 ```sh
 ada-ecu/build/ada_ecu --config ada-ecu/config/ada-ecu.conf --mock
+```
+
+`--mock` now exercises the UDP R2 receiver over loopback: the process starts the ADA UDP listener, sends the golden R2 sample to itself, updates the store, and emits one R4 warning.
+
+To test with an external mock V2X sender:
+
+```sh
+ada-ecu/build/ada_ecu --config ada-ecu/config/ada-ecu.conf --listen-once
+python3 ada-ecu/tools/mock_v2x_sender.py --host 127.0.0.1 --port 46002
 ```

@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hackathon.local/schemas/r3_tracked_object.schema.json",
+  "title": "R3 TrackedObject",
+  "type": "object",
+  "required": ["id", "class", "source", "position", "distance", "speed", "confidence", "state", "timestamps"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "class": { "type": "string", "const": "vehicle" },
+    "source": { "type": "string", "enum": ["own_sensor", "v2x_relayed"] },
+    "position": {
+      "type": "object",
+      "required": ["x", "y", "confidence"],
+      "additionalProperties": false,
+      "properties": {
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "distance": { "type": "number", "minimum": 0 },
+    "speed": { "type": "number", "minimum": 0 },
+    "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+    "state": { "type": "string", "enum": ["not_tracked", "tentative", "tracked"] },
+    "timestamps": {
+      "type": "object",
+      "required": ["measured", "received", "lastUpdated"],
+      "additionalProperties": false,
+      "properties": {
+        "measured": { "type": "integer", "minimum": 0 },
+        "received": { "type": "integer", "minimum": 0 },
+        "lastUpdated": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}
+
