@@ -1,0 +1,21 @@
+#pragma once
+
+#include <cstdint>
+#include <string>
+
+namespace ada {
+
+struct AdaConfig {
+    double gate_enter_m = 30.0;
+    double gate_exit_m = 35.0;
+    std::int64_t miss_limit_ms = 1500;
+    int tentative_hits = 2;
+    std::string log_path = "ada-events.jsonl";
+    std::string ivi_host = "127.0.0.1";
+    int ivi_port = 46004;
+};
+
+AdaConfig load_config(const std::string& path);
+
+}  // namespace ada
+
