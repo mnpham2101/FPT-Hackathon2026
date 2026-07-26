@@ -10,12 +10,14 @@ find_package(nlohmann_json REQUIRED)
 
 add_library(ada_core
     src/config.cpp
+    src/detector_jsonl_ingest.cpp
     src/event_logger.cpp
     src/r2_mapper.cpp
     src/r3_mapper.cpp
     src/risk_assessor.cpp
     src/track_store.cpp
     src/udp_r2_receiver.cpp
+    src/v2x_r2_ingest.cpp
     src/warning_builder.cpp
 )
 

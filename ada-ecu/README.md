@@ -15,6 +15,8 @@ The core is C++17 and uses no middleware. JSON parsing in this scaffold is inten
 - `schemas/r4_warning.schema.json`: ADA to IVI warning event.
 - `testdata/*.sample.json`: golden contract examples for mapper/store/warning tests.
 
+Phase 2 acceptance tracking lives in `docs/phase2_acceptance.md`.
+
 ## Build
 
 Install local build dependencies:

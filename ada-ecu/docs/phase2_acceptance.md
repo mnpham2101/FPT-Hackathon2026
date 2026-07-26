@@ -1,0 +1,79 @@
+# Phase 2 Acceptance Checklist — ADA Scaffolding
+
+Phase 2 objective: stand up the ADA skeleton, R3 track store, and R13 admission state machine on mock input, before real video detection.
+
+## Scope Delivered
+
+| Area | Status | Artifact |
+|---|---:|---|
+| C++17 ADA skeleton | Done | `CMakeLists.txt`, `src/main.cpp`, `include/ada/*` |
+| R2 V2X ECU → ADA contract | Done | `schemas/r2_v2x_object.schema.json`, `testdata/r2_v2x_object.sample.json` |
+| R3 TrackedObject contract | Done | `schemas/r3_tracked_object.schema.json`, `testdata/r3_own_sensor.sample.json`, `testdata/r3_v2x_relayed.sample.json`, `testdata/r3_own_sensor.jsonl` |
+| R4 ADA → IVI warning contract | Done | `schemas/r4_warning.schema.json`, `testdata/r4_warning.sample.json` |
+| R3 track store | Done | `include/ada/track_store.hpp`, `src/track_store.cpp` |
+| R13 admission gate | Done | `TrackStore::apply_v2x_relayed`, `config/ada-ecu.conf` |
+| Externalized gate constants | Done | `gate_enter_m`, `gate_exit_m`, `miss_limit_ms`, `tentative_hits` in `config/ada-ecu.conf` |
+| R3 own-sensor JSONL detector seam | Done | `detector_jsonl_ingest.*`, `r3_mapper.*` |
+| R2 UDP receiver seam | Done | `udp_r2_receiver.*`, `v2x_r2_ingest.*` |
+| CRA / NLOS risk scaffold | Done | `risk_assessor.*` |
+| R4 warning smoke output | Done | `warning_builder.*`, `ada_ecu --mock` |
+| JSONL evidence logs | Done | `EventLogger`, `track_transition`, `own_sensor_rx`, `r2_rx`, `risk_event` |
+| Linux/ARM container build path | Ready | `Dockerfile`, README command |
+
+## Verification Commands
+
+Local CMake:
+
+```sh
+cmake -S ada-ecu -B ada-ecu/build
+cmake --build ada-ecu/build
+ctest --test-dir ada-ecu/build --output-on-failure
+```
+
+Phase 2 mock smoke:
+
+```sh
+ada-ecu/build/ada_ecu --config ada-ecu/config/ada-ecu.conf --mock
+```
+
+Expected smoke output: one R4 `warning` JSON with `warningType = "nlos_obstruction"` and triggering object `source = "v2x_relayed"`.
+
+External V2X mock sender smoke:
+
+```sh
+ada-ecu/build/ada_ecu --config ada-ecu/config/ada-ecu.conf --listen-once
+python3 ada-ecu/tools/mock_v2x_sender.py --host 127.0.0.1 --port 46002
+```
+
+Linux/ARM image build:
+
+```sh
+docker buildx build --platform linux/arm64 -t ada-ecu:phase2 ada-ecu
+```
+
+## Phase 2 Acceptance Mapping
+
+| Milestone acceptance item | Status | Evidence |
+|---|---:|---|
+| Store exposes all R3 fields | Done | `types.hpp`, `r3_tracked_object.schema.json`, `track_store_tests.cpp` |
+| Detector-shaped and relayed-shaped entries enter through identical R3 store interface | Done | `detector_jsonl_ingest.cpp`, `v2x_r2_ingest.cpp`, `TrackStore::upsert` |
+| Mock-driven state transitions observable in logs and match R13 lifecycle | Done | `EventLogger`, `track_transition` events, `ada_ecu --mock` |
+| Toggling mock off yields no tracks | Partial | Default run exits without ingesting; continuous runtime loop is not implemented yet |
+| Mock C admitted only within gate and dropped beyond exit or timeout | Partial | Enter/drop distance covered in unit test; timeout expiry exists in `TrackStore::expire` but needs a dedicated test |
+| Gate constants read from configuration, no literals in logic | Done | `config/ada-ecu.conf`, `AdaConfig` |
+| CRA database schema committed | Deferred | Current implementation uses in-memory `TrackStore`; no persistent database selected for Phase 2 scaffold |
+| Video-input proposal sent to FPT-Mentor | Not code | Requires team/user action outside code |
+| Build + CI round-trip tests green on frozen contracts | Partial | CMake/CTest local pass; CI not configured yet |
+
+## Not Phase 3 Yet
+
+- No OpenCV video decode.
+- No YOLO11n ONNX Runtime inference.
+- `tools/mock_detector.py` and `testdata/r3_own_sensor.jsonl` are detector seam fixtures only.
+
+## Not Full Phase 4 Yet
+
+- CRA is a scaffold with one NLOS distance-risk assessor.
+- R4 emission is smoke output to stdout/log, not a UDP sender to IVI yet.
+- Periodic awareness state is not implemented.
+

@@ -6,21 +6,15 @@
 #include <thread>
 
 #include "ada/config.hpp"
+#include "ada/detector_jsonl_ingest.hpp"
 #include "ada/event_logger.hpp"
-#include "ada/r2_mapper.hpp"
-#include "ada/r3_mapper.hpp"
 #include "ada/risk_assessor.hpp"
 #include "ada/track_store.hpp"
 #include "ada/udp_r2_receiver.hpp"
+#include "ada/v2x_r2_ingest.hpp"
 #include "ada/warning_builder.hpp"
 
 namespace {
-
-std::int64_t now_ms() {
-    return std::chrono::duration_cast<std::chrono::milliseconds>(
-               std::chrono::system_clock::now().time_since_epoch())
-        .count();
-}
 
 std::string read_file(const std::string& path) {
     std::ifstream in(path);
@@ -30,30 +24,6 @@ std::string read_file(const std::string& path) {
     std::ostringstream buffer;
     buffer << in.rdbuf();
     return buffer.str();
-}
-
-bool ingest_own_sensor_jsonl(const std::string& path, ada::TrackStore& store, ada::EventLogger& logger) {
-    std::ifstream in(path);
-    if (!in) {
-        throw std::runtime_error("cannot open own-sensor JSONL: " + path);
-    }
-
-    bool ingested = false;
-    std::string line;
-    while (std::getline(in, line)) {
-        if (line.empty()) {
-            continue;
-        }
-        logger.write("own_sensor_rx", line);
-        const auto object = ada::tracked_object_from_r3_json(line);
-        if (!object || object->source != ada::Source::OwnSensor) {
-            return false;
-        }
-        const auto result = store.upsert(*object);
-        logger.write("track_transition", "{\"id\":\"" + object->id + "\",\"state\":\"" + std::string(ada::to_string(result.current)) + "\"}");
-        ingested = true;
-    }
-    return ingested;
 }
 
 }  // namespace
@@ -90,7 +60,8 @@ int main(int argc, char** argv) {
         return 0;
     }
 
-    if (!ingest_own_sensor_jsonl(own_sensor_sample_path, store, logger)) {
+    const auto own_sensor_ingest = ada::ingest_own_sensor_jsonl_file(own_sensor_sample_path, store, logger);
+    if (own_sensor_ingest.accepted == 0 || own_sensor_ingest.rejected > 0) {
         std::cerr << "own-sensor JSONL ingest failed\n";
         return 4;
     }
@@ -105,21 +76,15 @@ int main(int argc, char** argv) {
         sender.detach();
     }
 
-    const auto r2 = receiver.receive_one(std::chrono::milliseconds(2000));
-    if (!r2) {
+    const auto r2_ingest = ada::ingest_one_r2_udp(receiver, std::chrono::milliseconds(2000), store, logger);
+    if (r2_ingest.timed_out) {
         std::cerr << "timed out waiting for R2 UDP datagram on " << config.ada_listen_host << ":" << config.ada_listen_port << "\n";
         return 3;
     }
-
-    logger.write("r2_rx", *r2);
-    const auto relayed_c = ada::tracked_object_from_r2_json(*r2, now_ms());
-    if (!relayed_c) {
-        std::cerr << "R2 parse failed\n";
+    if (!r2_ingest.accepted) {
+        std::cerr << "R2 ingest failed: " << r2_ingest.reason << "\n";
         return 2;
     }
-
-    const auto relayed_result = store.upsert(*relayed_c);
-    logger.write("track_transition", "{\"id\":\"" + relayed_c->id + "\",\"state\":\"" + std::string(ada::to_string(relayed_result.current)) + "\"}");
 
     const auto risk_event = risk.assess(store);
     if (risk_event) {
