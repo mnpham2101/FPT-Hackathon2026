@@ -48,6 +48,10 @@ AdaConfig load_config(const std::string& path) {
             config.tentative_hits = std::stoi(value);
         } else if (key == "log_path") {
             config.log_path = value;
+        } else if (key == "ada_listen_host") {
+            config.ada_listen_host = value;
+        } else if (key == "ada_listen_port") {
+            config.ada_listen_port = std::stoi(value);
         } else if (key == "ivi_host") {
             config.ivi_host = value;
         } else if (key == "ivi_port") {
@@ -59,4 +63,3 @@ AdaConfig load_config(const std::string& path) {
 }
 
 }  // namespace ada
-

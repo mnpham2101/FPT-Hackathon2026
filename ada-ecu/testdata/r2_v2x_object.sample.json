@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "type": "v2x_object",
+  "stationId": 1201,
+  "rxTime": 1789000000123,
+  "sender": {
+    "lat": 21.028511,
+    "lon": 105.804817,
+    "heading": 90.0,
+    "speed": 16.7
+  },
+  "object": {
+    "objectId": 7,
+    "timeOfMeasurement": -50,
+    "distance": 25.4,
+    "position": {
+      "x": 25.0,
+      "y": 1.2,
+      "confidence": 0.9
+    },
+    "speed": 15.2,
+    "classification": "vehicle",
+    "confidence": 0.95
+  }
+}
+
