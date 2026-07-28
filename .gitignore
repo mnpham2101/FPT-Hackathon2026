@@ -20,4 +20,5 @@ __pycache__/
 
 # ADA ECU local build/run artifacts
 ada-ecu/build/
+ada-ecu/local-data/
 ada-events.jsonl

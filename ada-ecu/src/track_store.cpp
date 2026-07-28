@@ -23,6 +23,19 @@ void TrackStore::expire(std::int64_t now_ms) {
     }
 }
 
+void TrackStore::expire_source(Source source, std::int64_t now_ms) {
+    for (auto& item : tracks_) {
+        auto& track = item.second;
+        if (track.source != source) {
+            continue;
+        }
+        if (track.state != TrackState::NotTracked &&
+            now_ms - track.timestamps.last_updated_ms > config_.miss_limit_ms) {
+            track.state = TrackState::NotTracked;
+        }
+    }
+}
+
 std::optional<TrackedObject> TrackStore::get(const std::string& id) const {
     const auto it = tracks_.find(id);
     if (it == tracks_.end()) {

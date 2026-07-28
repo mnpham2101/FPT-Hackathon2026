@@ -95,11 +95,15 @@ int main() {
     const auto readmitted_event = risk.assess(store);
     assert(readmitted_event);
     assert(readmitted_event->state == ada::RiskState::Warning);
-    store.expire(1020 + config.miss_limit_ms + 1);
+    store.expire_source(ada::Source::V2xRelayed, 1020 + config.miss_limit_ms + 1);
     assert(store.get("v2x:1201:7")->state == ada::TrackState::NotTracked);
+    assert(store.get("own:B")->state == ada::TrackState::Tracked);
     const auto timeout_clear_event = risk.assess(store);
     assert(timeout_clear_event);
     assert(timeout_clear_event->state == ada::RiskState::Clear);
+    const auto timeout_clear_warning = ada::build_r4_warning_json(*timeout_clear_event, store);
+    assert(timeout_clear_warning.find("\"id\":\"own:B\"") != std::string::npos);
+    assert(timeout_clear_warning.find("\"b\":{\"x\":12") != std::string::npos);
 
     return 0;
 }
