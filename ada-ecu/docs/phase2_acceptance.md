@@ -86,4 +86,5 @@ docker buildx build --platform linux/arm64 -t ada-ecu:phase2 ada-ecu
 
 - CRA is a scaffold with one NLOS distance-risk assessor.
 - R4 emission sends UDP to IVI and also prints to stdout/log for debugging.
+- Multi-packet risk transition behavior is covered in unit tests and documented in `phase4_fusion_warning.md`.
 - Periodic awareness state is not implemented.

@@ -27,6 +27,7 @@ public:
     std::optional<TrackedObject> get(const std::string& id) const;
     std::vector<TrackedObject> all() const;
     std::optional<TrackedObject> nearest(Source source) const;
+    std::optional<TrackedObject> latest(Source source) const;
 
 private:
     TrackUpdateResult apply_own_sensor(TrackedObject object);
@@ -38,4 +39,3 @@ private:
 };
 
 }  // namespace ada
-

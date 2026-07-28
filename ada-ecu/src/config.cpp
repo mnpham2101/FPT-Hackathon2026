@@ -52,6 +52,8 @@ AdaConfig load_config(const std::string& path) {
             config.ada_listen_host = value;
         } else if (key == "ada_listen_port") {
             config.ada_listen_port = std::stoi(value);
+        } else if (key == "r2_receive_timeout_ms") {
+            config.r2_receive_timeout_ms = std::stoll(value);
         } else if (key == "ivi_host") {
             config.ivi_host = value;
         } else if (key == "ivi_port") {

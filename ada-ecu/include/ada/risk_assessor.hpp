@@ -34,7 +34,7 @@ public:
 private:
     double risk_distance_m_;
     RiskState last_state_ = RiskState::Clear;
+    std::optional<TrackedObject> last_relayed_object_;
 };
 
 }  // namespace ada
-

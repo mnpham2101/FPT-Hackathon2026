@@ -17,6 +17,7 @@ The core is C++17 and uses no middleware. JSON parsing in this scaffold is inten
 
 Phase 2 acceptance tracking lives in `docs/phase2_acceptance.md`.
 Phase 3 detector notes live in `docs/phase3_video_detector.md`.
+Phase 4 fusion/warning notes live in `docs/phase4_fusion_warning.md`.
 
 ## Build
 
