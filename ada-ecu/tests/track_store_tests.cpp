@@ -69,6 +69,9 @@ int main() {
     assert(warning.find("\"type\":\"warning\"") != std::string::npos);
     assert(warning.find("\"warningType\":\"nlos_obstruction\"") != std::string::npos);
     assert(warning.find("\"source\":\"v2x_relayed\"") != std::string::npos);
+    assert(warning.find("\"trackedObjects\"") != std::string::npos);
+    assert(warning.find("\"id\":\"own:B\"") != std::string::npos);
+    assert(warning.find("\"distance\":12") != std::string::npos);
 
     auto hysteresis = *relayed;
     hysteresis.distance_m = 32.0;

@@ -17,6 +17,7 @@ add_library(ada_core
     src/risk_assessor.cpp
     src/track_store.cpp
     src/udp_r2_receiver.cpp
+    src/udp_r4_sender.cpp
     src/v2x_r2_ingest.cpp
     src/warning_builder.cpp
 )

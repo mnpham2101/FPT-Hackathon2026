@@ -6,7 +6,7 @@ Phase 3 replaces the Phase 2 mock own-sensor input with a Python detector subpro
 
 - OpenCV video decode path is scaffolded in `tools/video_detector.py`.
 - YOLO11n ONNX inference is not wired yet.
-- The current detector emits deterministic placeholder `own:B` detections per sampled frame so the subprocess contract is testable before model integration.
+- The current `placeholder` backend emits deterministic `own:B` detections per sampled frame so the subprocess contract is testable before model integration.
 - The output contract is R3 JSONL with `source = "own_sensor"`.
 
 ## Install
@@ -24,10 +24,18 @@ python3 ada-ecu/tools/video_detector.py --synthetic 2
 ## Run On A Video
 
 ```sh
-python3 ada-ecu/tools/video_detector.py --video path/to/ego_video.mp4 --every-n-frames 5 --limit 20 > /tmp/r3_own_sensor.jsonl
+python3 ada-ecu/tools/video_detector.py --video path/to/ego_video.mp4 --backend placeholder --every-n-frames 5 --limit 20 > /tmp/r3_own_sensor.jsonl
 ada-ecu/build/ada_ecu --config ada-ecu/config/ada-ecu.conf --mock --own-sensor-sample /tmp/r3_own_sensor.jsonl
+```
+
+## Smoke Video Path
+
+Generate a tiny synthetic video and validate the detector JSONL contract:
+
+```sh
+python3 ada-ecu/tools/smoke_video_detector.py
 ```
 
 ## Next Step
 
-Replace `make_r3_own_sensor_b` with YOLO11n ONNX Runtime inference and distance estimation while keeping the stdout R3 JSONL shape unchanged.
+Add a YOLO11n ONNX backend behind the `DetectionBackend` seam and keep the stdout R3 JSONL shape unchanged.

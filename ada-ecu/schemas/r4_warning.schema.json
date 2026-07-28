@@ -3,7 +3,7 @@
   "$id": "https://hackathon.local/schemas/r4_warning.schema.json",
   "title": "R4 ADA to IVI warning message",
   "type": "object",
-  "required": ["schemaVersion", "type", "warningType", "riskState", "object", "geometry"],
+  "required": ["schemaVersion", "type", "warningType", "riskState", "object", "trackedObjects", "geometry"],
   "additionalProperties": false,
   "properties": {
     "schemaVersion": { "type": "integer", "const": 1 },
@@ -11,6 +11,11 @@
     "warningType": { "type": "string", "const": "nlos_obstruction" },
     "riskState": { "type": "string", "enum": ["clear", "warning"] },
     "object": { "$ref": "r3_tracked_object.schema.json" },
+    "trackedObjects": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "r3_tracked_object.schema.json" }
+    },
     "geometry": {
       "type": "object",
       "required": ["ego", "b", "c"],
@@ -34,4 +39,3 @@
     }
   }
 }
-

@@ -17,8 +17,9 @@ Phase 2 objective: stand up the ADA skeleton, R3 track store, and R13 admission 
 | R2 UDP receiver seam | Done | `udp_r2_receiver.*`, `v2x_r2_ingest.*` |
 | CRA / NLOS risk scaffold | Done | `risk_assessor.*` |
 | R4 warning smoke output | Done | `warning_builder.*`, `ada_ecu --mock` |
-| JSONL evidence logs | Done | `EventLogger`, `track_transition`, `own_sensor_rx`, `r2_rx`, `risk_event` |
-| Linux/ARM container build path | Ready, not locally verified | `Dockerfile`, README command; local Docker CLI unavailable during this check |
+| R4 ADA → IVI UDP sender | Done | `udp_r4_sender.*`, `tools/mock_ivi_receiver.py` |
+| JSONL evidence logs | Done | `EventLogger`, `track_transition`, `own_sensor_rx`, `r2_rx`, `risk_event`, `r4_tx` |
+| Linux/ARM container build path | Ready, not locally verified | `Dockerfile`, README command; Docker daemon unavailable during this check |
 
 ## Verification Commands
 
@@ -37,6 +38,15 @@ ada-ecu/build/ada_ecu --config ada-ecu/config/ada-ecu.conf --mock
 ```
 
 Expected smoke output: one R4 `warning` JSON with `warningType = "nlos_obstruction"` and triggering object `source = "v2x_relayed"`.
+
+ADA → IVI R4 UDP smoke:
+
+```sh
+python3 ada-ecu/tools/mock_ivi_receiver.py --host 127.0.0.1 --port 46004
+ada-ecu/build/ada_ecu --config ada-ecu/config/ada-ecu.conf --mock
+```
+
+Expected IVI receiver output: one R4 warning with `trackedObjects` containing `own:B` and `v2x:1201:7`.
 
 External V2X mock sender smoke:
 
@@ -58,22 +68,22 @@ docker buildx build --platform linux/arm64 -t ada-ecu:phase2 ada-ecu
 | Store exposes all R3 fields | Done | `types.hpp`, `r3_tracked_object.schema.json`, `track_store_tests.cpp` |
 | Detector-shaped and relayed-shaped entries enter through identical R3 store interface | Done | `detector_jsonl_ingest.cpp`, `v2x_r2_ingest.cpp`, `TrackStore::upsert` |
 | Mock-driven state transitions observable in logs and match R13 lifecycle | Done | `EventLogger`, `track_transition` events, `ada_ecu --mock` |
+| ADA sends R4 warning to IVI over UDP | Done | `UdpR4Sender`, `mock_ivi_receiver.py` |
 | Toggling mock off yields no tracks | Partial | Default run exits without ingesting; continuous runtime loop is not implemented yet |
 | Mock C admitted only within gate and dropped beyond exit or timeout | Done | Enter, hysteresis, exit, and timeout expiry covered in `track_store_tests.cpp` |
 | Gate constants read from configuration, no literals in logic | Done | `config/ada-ecu.conf`, `AdaConfig` |
 | CRA database schema committed | Deferred | Current implementation uses in-memory `TrackStore`; no persistent database selected for Phase 2 scaffold |
 | Video-input proposal sent to FPT-Mentor | Not code | Requires team/user action outside code |
 | Build + CI round-trip tests green on frozen contracts | Partial | CMake/CTest local pass; CI not configured yet |
-| Linux/ARM container build pass | Blocked locally | `docker` command unavailable on this machine/session; run the README `docker buildx` command once Docker Desktop/CLI is installed |
+| Linux/ARM container build pass | Blocked locally | Docker daemon unavailable on this machine/session; run the README `docker buildx` command once Docker Desktop/CLI is stable |
 
 ## Not Phase 3 Yet
 
-- No OpenCV video decode.
 - No YOLO11n ONNX Runtime inference.
-- `tools/mock_detector.py` and `testdata/r3_own_sensor.jsonl` are detector seam fixtures only.
+- `tools/video_detector.py --backend placeholder` and `testdata/r3_own_sensor.jsonl` are detector seam fixtures only.
 
 ## Not Full Phase 4 Yet
 
 - CRA is a scaffold with one NLOS distance-risk assessor.
-- R4 emission is smoke output to stdout/log, not a UDP sender to IVI yet.
+- R4 emission sends UDP to IVI and also prints to stdout/log for debugging.
 - Periodic awareness state is not implemented.
