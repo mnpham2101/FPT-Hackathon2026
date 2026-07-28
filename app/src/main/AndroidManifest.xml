@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- R16: this app targets Android Automotive OS head units only (Skycraft IVI node). -->
+    <uses-feature
+        android:name="android.hardware.type.automotive"
+        android:required="true" />
+
+    <!-- R4 UDP ingest over the CarSky Ethernet-bridge network (R6). -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- R4ListenerService (4.5.1.3) runs as a foreground service. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+
+    <application
+        android:label="V2X IVI"
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:supportsRtl="true">
+    </application>
+
+</manifest>
