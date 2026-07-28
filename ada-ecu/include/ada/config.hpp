@@ -13,6 +13,7 @@ struct AdaConfig {
     std::string log_path = "ada-events.jsonl";
     std::string ada_listen_host = "0.0.0.0";
     int ada_listen_port = 46002;
+    std::int64_t r2_receive_timeout_ms = 200;
     std::string ivi_host = "127.0.0.1";
     int ivi_port = 46004;
 };

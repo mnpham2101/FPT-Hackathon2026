@@ -54,6 +54,20 @@ std::optional<TrackedObject> TrackStore::nearest(Source source) const {
     return best;
 }
 
+std::optional<TrackedObject> TrackStore::latest(Source source) const {
+    std::optional<TrackedObject> best;
+    for (const auto& item : tracks_) {
+        const auto& track = item.second;
+        if (track.source != source) {
+            continue;
+        }
+        if (!best || track.timestamps.last_updated_ms > best->timestamps.last_updated_ms) {
+            best = track;
+        }
+    }
+    return best;
+}
+
 TrackUpdateResult TrackStore::apply_own_sensor(TrackedObject object) {
     const auto previous = get(object.id);
     const auto previous_state = previous ? previous->state : TrackState::NotTracked;
@@ -82,4 +96,3 @@ TrackUpdateResult TrackStore::apply_v2x_relayed(TrackedObject object) {
 }
 
 }  // namespace ada
-

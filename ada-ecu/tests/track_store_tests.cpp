@@ -65,6 +65,7 @@ int main() {
     ada::NlosRiskAssessor risk(config.gate_enter_m);
     const auto event = risk.assess(store);
     assert(event);
+    assert(event->state == ada::RiskState::Warning);
     const auto warning = ada::build_r4_warning_json(*event, store);
     assert(warning.find("\"type\":\"warning\"") != std::string::npos);
     assert(warning.find("\"warningType\":\"nlos_obstruction\"") != std::string::npos);
@@ -73,21 +74,32 @@ int main() {
     assert(warning.find("\"id\":\"own:B\"") != std::string::npos);
     assert(warning.find("\"distance\":12") != std::string::npos);
 
-    auto hysteresis = *relayed;
-    hysteresis.distance_m = 32.0;
-    hysteresis.timestamps.last_updated_ms = 1200;
-    const auto hysteresis_result = store.upsert(hysteresis);
-    assert(hysteresis_result.current == ada::TrackState::Tracked);
+    auto still_in_range = *relayed;
+    still_in_range.distance_m = 24.0;
+    still_in_range.timestamps.last_updated_ms = 1200;
+    const auto still_in_range_result = store.upsert(still_in_range);
+    assert(still_in_range_result.current == ada::TrackState::Tracked);
+    assert(!risk.assess(store));
 
     auto outside_gate = *relayed;
     outside_gate.distance_m = 36.0;
     const auto outside_gate_result = store.upsert(outside_gate);
     assert(outside_gate_result.current == ada::TrackState::NotTracked);
+    const auto clear_event = risk.assess(store);
+    assert(clear_event);
+    assert(clear_event->state == ada::RiskState::Clear);
+    assert(clear_event->object.distance_m == 36.0);
 
     const auto readmitted = store.upsert(*relayed);
     assert(readmitted.current == ada::TrackState::Tracked);
+    const auto readmitted_event = risk.assess(store);
+    assert(readmitted_event);
+    assert(readmitted_event->state == ada::RiskState::Warning);
     store.expire(1020 + config.miss_limit_ms + 1);
     assert(store.get("v2x:1201:7")->state == ada::TrackState::NotTracked);
+    const auto timeout_clear_event = risk.assess(store);
+    assert(timeout_clear_event);
+    assert(timeout_clear_event->state == ada::RiskState::Clear);
 
     return 0;
 }
