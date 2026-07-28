@@ -8,6 +8,7 @@ Phase 4 consumes live R2 traffic, updates the R3 store, runs NLOS risk assessmen
 - A warning R4 is emitted only on risk transitions.
 - Repeated in-range C updates do not spam duplicate warnings.
 - Leaving the gate or timing out emits a `clear` transition.
+- R2 timeout expires only `v2x_relayed` tracks; `own_sensor` B remains in the store so clear events still carry A→B geometry.
 - Receive timeouts call `TrackStore::expire()` on a tick controlled by `r2_receive_timeout_ms`.
 - R4 contains `trackedObjects`, including `own:B` with A→B distance and `v2x:1201:7` for relayed C.
 

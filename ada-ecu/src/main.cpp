@@ -158,7 +158,7 @@ int main(int argc, char** argv) {
                 const auto wall_now = std::chrono::duration_cast<std::chrono::milliseconds>(
                                           std::chrono::system_clock::now().time_since_epoch())
                                           .count();
-                store.expire(wall_now);
+                store.expire_source(ada::Source::V2xRelayed, wall_now);
                 logger.write("track_expire_tick", "{\"now\":" + std::to_string(wall_now) + "}");
                 emit_risk_event_if_needed(risk, store, logger, r4_sender, config);
                 last_expire_check = now;
@@ -182,7 +182,7 @@ int main(int argc, char** argv) {
         const auto wall_now = std::chrono::duration_cast<std::chrono::milliseconds>(
                                   std::chrono::system_clock::now().time_since_epoch())
                                   .count();
-        store.expire(wall_now);
+        store.expire_source(ada::Source::V2xRelayed, wall_now);
         logger.write("track_expire_tick", "{\"now\":" + std::to_string(wall_now) + "}");
         emit_risk_event_if_needed(risk, store, logger, r4_sender, config);
     }

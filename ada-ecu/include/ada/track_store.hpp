@@ -23,6 +23,7 @@ public:
 
     TrackUpdateResult upsert(const TrackedObject& object);
     void expire(std::int64_t now_ms);
+    void expire_source(Source source, std::int64_t now_ms);
 
     std::optional<TrackedObject> get(const std::string& id) const;
     std::vector<TrackedObject> all() const;

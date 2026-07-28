@@ -2,5 +2,6 @@ tmp/
 .claude/references/
 .claude/prompts/scratchpad-*/
 ada-ecu/build/
+ada-ecu/local-data/
 ada-events.jsonl
 __pycache__/
