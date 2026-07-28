@@ -24,7 +24,12 @@ V2xR2IngestResult ingest_r2_payload(const std::string& payload, std::int64_t rec
     }
 
     const auto result = store.upsert(*object);
-    logger.write("track_transition", "{\"id\":\"" + object->id + "\",\"state\":\"" + std::string(to_string(result.current)) + "\"}");
+    logger.write(
+        "track_transition",
+        "{\"id\":\"" + object->id + "\",\"source\":\"" + std::string(to_string(object->source)) +
+            "\",\"state\":\"" + std::string(to_string(result.current)) + "\",\"distance\":" +
+            std::to_string(object->distance_m) + ",\"position\":{\"x\":" + std::to_string(object->position.x_m) +
+            ",\"y\":" + std::to_string(object->position.y_m) + "}}");
     return {true, false, object->id, "accepted"};
 }
 
@@ -37,4 +42,3 @@ V2xR2IngestResult ingest_one_r2_udp(UdpR2Receiver& receiver, std::chrono::millis
 }
 
 }  // namespace ada
-

@@ -70,8 +70,28 @@ python3 ada-ecu/tools/mock_v2x_sender.py --host 127.0.0.1 --port 46002
 
 Use `--own-sensor-sample <jsonl>` to replace the detector seam sample.
 
+To test ADA → IVI R4 UDP, terminal 1:
+
+```sh
+python3 ada-ecu/tools/mock_ivi_receiver.py --host 127.0.0.1 --port 46004
+```
+
+Terminal 2:
+
+```sh
+ada-ecu/build/ada_ecu --config ada-ecu/config/ada-ecu.conf --mock
+```
+
+The IVI receiver should print one R4 warning with `trackedObjects` containing `own:B` and `v2x:1201:7`.
+
 Generate a Phase 3 detector JSONL sample:
 
 ```sh
 python3 ada-ecu/tools/video_detector.py --synthetic 2 > /tmp/r3_own_sensor.jsonl
+```
+
+Smoke-test the OpenCV video path:
+
+```sh
+python3 ada-ecu/tools/smoke_video_detector.py
 ```

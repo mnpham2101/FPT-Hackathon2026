@@ -35,6 +35,11 @@ std::string build_r4_warning_json(const RiskEvent& event, const TrackStore& stor
         << "\"warningType\":\"nlos_obstruction\","
         << "\"riskState\":\"" << to_string(event.state) << "\","
         << "\"object\":" << tracked_object_json(event.object) << ","
+        << "\"trackedObjects\":[";
+    if (own_b) {
+        out << tracked_object_json(*own_b) << ",";
+    }
+    out << tracked_object_json(event.object) << "],"
         << "\"geometry\":{"
         << "\"ego\":{\"x\":0,\"y\":0},"
         << "\"b\":{\"x\":" << d_ab << ",\"y\":" << b_y << "},"
@@ -44,4 +49,3 @@ std::string build_r4_warning_json(const RiskEvent& event, const TrackStore& stor
 }
 
 }  // namespace ada
-

@@ -11,6 +11,7 @@
 #include "ada/risk_assessor.hpp"
 #include "ada/track_store.hpp"
 #include "ada/udp_r2_receiver.hpp"
+#include "ada/udp_r4_sender.hpp"
 #include "ada/v2x_r2_ingest.hpp"
 #include "ada/warning_builder.hpp"
 
@@ -54,6 +55,7 @@ int main(int argc, char** argv) {
     ada::TrackStore store(config);
     ada::EventLogger logger(config.log_path);
     ada::NlosRiskAssessor risk(config.gate_enter_m);
+    ada::UdpR4Sender r4_sender(config.ivi_host, config.ivi_port);
 
     if (!mock && !listen_once) {
         std::cout << "ADA ECU scaffold ready. Use --listen-once to receive one R2 UDP datagram or --mock for loopback smoke.\n";
@@ -90,6 +92,8 @@ int main(int argc, char** argv) {
     if (risk_event) {
         const auto warning = ada::build_r4_warning_json(*risk_event, store);
         logger.write("risk_event", warning);
+        r4_sender.send(warning);
+        logger.write("r4_tx", "{\"host\":\"" + config.ivi_host + "\",\"port\":" + std::to_string(config.ivi_port) + "}");
         std::cout << warning << "\n";
     }
 

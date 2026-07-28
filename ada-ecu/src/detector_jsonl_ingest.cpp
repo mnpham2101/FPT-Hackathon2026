@@ -29,7 +29,12 @@ DetectorIngestResult ingest_own_sensor_jsonl_file(const std::string& path, Track
         }
 
         const auto update = store.upsert(*object);
-        logger.write("track_transition", "{\"id\":\"" + object->id + "\",\"state\":\"" + std::string(to_string(update.current)) + "\"}");
+        logger.write(
+            "track_transition",
+            "{\"id\":\"" + object->id + "\",\"source\":\"" + std::string(to_string(object->source)) +
+                "\",\"state\":\"" + std::string(to_string(update.current)) + "\",\"distance\":" +
+                std::to_string(object->distance_m) + ",\"position\":{\"x\":" + std::to_string(object->position.x_m) +
+                ",\"y\":" + std::to_string(object->position.y_m) + "}}");
         ++result.accepted;
     }
 
@@ -37,4 +42,3 @@ DetectorIngestResult ingest_own_sensor_jsonl_file(const std::string& path, Track
 }
 
 }  // namespace ada
-

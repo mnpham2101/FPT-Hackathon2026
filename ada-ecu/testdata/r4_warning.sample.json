@@ -22,10 +22,49 @@
       "lastUpdated": 1789000000200
     }
   },
+  "trackedObjects": [
+    {
+      "id": "own:B",
+      "class": "vehicle",
+      "source": "own_sensor",
+      "position": {
+        "x": 12.0,
+        "y": 0.2,
+        "confidence": 0.9
+      },
+      "distance": 12.0,
+      "speed": 15.0,
+      "confidence": 0.92,
+      "state": "tracked",
+      "timestamps": {
+        "measured": 1789000000200,
+        "received": 1789000000200,
+        "lastUpdated": 1789000000200
+      }
+    },
+    {
+      "id": "v2x:1201:7",
+      "class": "vehicle",
+      "source": "v2x_relayed",
+      "position": {
+        "x": 25.0,
+        "y": 1.2,
+        "confidence": 0.9
+      },
+      "distance": 25.4,
+      "speed": 15.2,
+      "confidence": 0.95,
+      "state": "tracked",
+      "timestamps": {
+        "measured": 1789000000200,
+        "received": 1789000000200,
+        "lastUpdated": 1789000000200
+      }
+    }
+  ],
   "geometry": {
     "ego": { "x": 0.0, "y": 0.0 },
     "b": { "x": 12.0, "y": 0.2 },
     "c": { "x": 37.4, "y": 1.4 }
   }
 }
-
