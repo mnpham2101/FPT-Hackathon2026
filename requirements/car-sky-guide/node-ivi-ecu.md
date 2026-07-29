@@ -38,13 +38,18 @@ Kotlin, Jetpack Compose, AndroidX; Compose Canvas for 2D (SceneView/Filament for
 
 Skycraft Node available pin kinds: `vhal`, `kuksa`, `ethernet`, `video`, `usb` ([full table](carsky-4-node-blueprint.md#pin-kinds-by-node-type)).
 
-**M1 wires exactly one — `ethernet`, `INPUT`-facing for the R4 UDP ingest service, targeting the Ethernet Bridge node with a static address** (Skycraft guests get DHCP-bound to their declared IP, so this must not be left auto-assigned):
+**M1 wires exactly one — `ethernet`, targeting the Ethernet Bridge node with a static address** (Skycraft guests get DHCP-bound to their declared IP, so this must not be left auto-assigned). The pin serves the R4 UDP ingest service (this node is the *receiving* end of the data flow), but the CarSky pin `direction` field itself is `OUTPUT` regardless of that role — every non-bridge node's `ethernet` pin in the real platform export is `OUTPUT`, wiring into the bridge's single `INPUT` pin (verified against [blueprint-KIS.json](../development-platform-doc/blueprint-KIS.json), where even a pure-consumer node like the TCU-NAD carries an `OUTPUT` ethernet pin). Added manually in the Nydus UI canvas after import — [blueprint-m1-cooperative-awareness.json](blueprint-m1-cooperative-awareness.json) creates this node via Import from File but carries no pins (JSON import silently drops `ethernet` pins, same limitation as the REST `addPin` endpoint — see [carsky-rest-api-blueprint.md](carsky-rest-api-blueprint.md)). Verified pin shape, per the real platform export above — `id` is platform-assigned when the pin is created, and there is no `prefixLen` field; only `address` (the eth-bridge node's own `subnet` config supplies the mask):
 
 ```json
 {
-  "ethernet": {
-    "address": "10.99.0.13",
-    "prefixLen": 24
+  "id": "<platform-assigned>",
+  "name": "eth",
+  "pinType": "ETHERNET",
+  "direction": "OUTPUT",
+  "side": null,
+  "port": null,
+  "properties": {
+    "address": "10.99.0.13"
   }
 }
 ```

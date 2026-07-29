@@ -12,8 +12,9 @@ Companion to [carsky-4-node-blueprint.md](carsky-4-node-blueprint.md). That guid
 | **Add `ETHERNET` pins** | ❌ **rejected** | `pinType` enum is `VHAL, KUKSA, CAN, LIN, VIDEO, GPIO, GENERIC` — **no `ETHERNET`**. 400 `VALIDATION_ERROR`. |
 | **Wire the Ethernet Bridge** | ❌ blocked | edges need the ethernet pins that REST can't create |
 | Validate | ✅ `POST /api/v1/blueprints/{id}/validate` | fails until every node has ≥1 pin |
+| **Import blueprint JSON** (`POST /api/v1/blueprints/import` and Nydus UI **Import from File**) | ⚠️ nodes only | Same `ETHERNET` limitation as `addPin` — `ethernet` pins in the imported file are silently dropped during node creation. **Confirmed live** 2026-07-29 importing [blueprint-m1-cooperative-awareness.json](blueprint-m1-cooperative-awareness.json): a first version with `ethernet` pins + edges failed with `addEdge: source or target pin not found`, because by the time the edges are applied, the referenced ethernet pin IDs were never created. Fix: the importable JSON carries the 5 nodes with full `config` and empty `pins`/`edges`; add + wire ethernet pins manually in the UI after import. |
 
-**Consequence:** the R6 Ethernet Bridge network (every node's `ethernet` pin wired to the bridge) **cannot be built over REST** — those pins and edges must be added in the Nydus UI canvas. The UI creates ETHERNET pins through its Zero-sync path, which the public REST/OpenAPI schema does not expose. So the practical split is:
+**Consequence:** the R6 Ethernet Bridge network (every node's `ethernet` pin wired to the bridge) **cannot be built over REST, nor via JSON import** — those pins and edges must be added in the Nydus UI canvas regardless of how the nodes themselves were created. The UI creates ETHERNET pins through its Zero-sync path, which the public REST/OpenAPI schema (and the import path built on top of it) does not expose. So the practical split is:
 
 - **Scriptable (REST):** create the blueprint + all nodes with their full config (image, env, command). Done once, reproducibly, no clicking.
 - **Manual (UI):** add one `ethernet` pin per node, wire each to the Ethernet Bridge (guide §4 step 5), then deploy.

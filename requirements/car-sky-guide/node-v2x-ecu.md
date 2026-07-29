@@ -46,16 +46,23 @@ docker push registry.carsky.io/m1-v2x-ecu:latest
 
 Container Node available pin kinds: `can`, `lin`, `kuksa`, `gpio`, `ethernet`, `video`, `usb`, `tunnel` ([full table](carsky-4-node-blueprint.md#pin-kinds-by-node-type)).
 
-**M1 wires exactly one — `ethernet`, `OUTPUT`, targeting the Ethernet Bridge node** — carries both the bench-facing (R1) and ADA-facing (R2) UDP traffic on separate ports over the same NIC:
+**M1 wires exactly one — `ethernet`, `OUTPUT`, targeting the Ethernet Bridge node** — carries both the bench-facing (R1) and ADA-facing (R2) UDP traffic on separate ports over the same NIC. Added manually in the Nydus UI canvas after import — [blueprint-m1-cooperative-awareness.json](blueprint-m1-cooperative-awareness.json) creates this node via Import from File but carries no pins (JSON import silently drops `ethernet` pins, same limitation as the REST `addPin` endpoint — see [carsky-rest-api-blueprint.md](carsky-rest-api-blueprint.md)). Verified pin shape, per the real platform export [blueprint-KIS.json](../development-platform-doc/blueprint-KIS.json) — `id` is platform-assigned when the pin is created, and there is no `prefixLen` field; only `address` (the eth-bridge node's own `subnet` config supplies the mask):
 
 ```json
 {
-  "ethernet": {
-    "address": "10.99.0.11",
-    "prefixLen": 24
+  "id": "<platform-assigned>",
+  "name": "eth",
+  "pinType": "ETHERNET",
+  "direction": "OUTPUT",
+  "side": null,
+  "port": null,
+  "properties": {
+    "address": "10.99.0.11"
   }
 }
 ```
+
+This pin's edge targets the Ethernet Bridge node's single `ETHERNET`/`INPUT` pin (star topology).
 
 **Why nothing else:**
 - No `kuksa`/`can`/`lin` — the V2X protocol stack ships in the modem and stays out of scope for the whole project (report § Input constraints); this node exchanges already-decoded CPM objects over ethernet/UDP, not vehicle-bus or VSS signals.

@@ -51,16 +51,23 @@ The provided video clip(s) ship inside the image (`COPY` at build time) — no l
 
 Container Node available pin kinds: `can`, `lin`, `kuksa`, `gpio`, `ethernet`, `video`, `usb`, `tunnel` ([full table](carsky-4-node-blueprint.md#pin-kinds-by-node-type)).
 
-**M1 wires exactly one — `ethernet`, `OUTPUT`, targeting the Ethernet Bridge node:**
+**M1 wires exactly one — `ethernet`, `OUTPUT`, targeting the Ethernet Bridge node.** Added manually in the Nydus UI canvas after import — [blueprint-m1-cooperative-awareness.json](blueprint-m1-cooperative-awareness.json) creates this node via Import from File but carries no pins (JSON import silently drops `ethernet` pins, same limitation as the REST `addPin` endpoint — see [carsky-rest-api-blueprint.md](carsky-rest-api-blueprint.md)). Verified pin shape, per the real platform export [blueprint-KIS.json](../development-platform-doc/blueprint-KIS.json) — `id` is platform-assigned when the pin is created, and there is no `prefixLen` field; only `address` (the eth-bridge node's own `subnet` config supplies the mask):
 
 ```json
 {
-  "ethernet": {
-    "address": "10.99.0.12",
-    "prefixLen": 24
+  "id": "<platform-assigned>",
+  "name": "eth",
+  "pinType": "ETHERNET",
+  "direction": "OUTPUT",
+  "side": null,
+  "port": null,
+  "properties": {
+    "address": "10.99.0.12"
   }
 }
 ```
+
+This pin's edge targets the Ethernet Bridge node's single `ETHERNET`/`INPUT` pin (star topology).
 
 **Why nothing else:**
 - No `kuksa` — "the ADA ECU does not receive GNSS or other sensor data from the Cortex-M ECU" (report §1); KUKSA/VSS is exactly that vehicle-signal path, so it's intentionally absent in M1.

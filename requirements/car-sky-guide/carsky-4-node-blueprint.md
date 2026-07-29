@@ -9,7 +9,7 @@ Per-node detail (image prep, pin config, env vars) lives in its own file — thi
 - [node-ada-ecu.md](node-ada-ecu.md) — ADA ECU
 - [node-ivi-ecu.md](node-ivi-ecu.md) — IVI ECU
 
-> **Scripted alternative:** [carsky-rest-api-blueprint.md](carsky-rest-api-blueprint.md) creates the blueprint + all 5 nodes over the REST API in one call (verified live). Note a hard platform limit found there: **the REST API cannot create `ethernet` pins or wire the bridge** — steps 5's pin-wiring must be done in the UI canvas regardless of how the nodes were created.
+> **Scripted alternative:** [carsky-rest-api-blueprint.md](carsky-rest-api-blueprint.md) creates the blueprint + all 5 nodes over the REST API in one call (verified live); [blueprint-m1-cooperative-awareness.json](blueprint-m1-cooperative-awareness.json) does the same 5 nodes via Nydus **Import from File**. Note a hard platform limit found in both paths: **neither the REST API nor JSON import can create `ethernet` pins or wire the bridge** (import silently drops them, so a hand-authored JSON with `ethernet` pins/edges fails with "source or target pin not found" once the edges reference pins that were never created) — steps 5's pin-wiring must be done in the UI canvas regardless of how the nodes were created.
 
 ## 1. Topology
 
