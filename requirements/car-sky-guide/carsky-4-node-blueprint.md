@@ -9,6 +9,8 @@ Per-node detail (image prep, pin config, env vars) lives in its own file — thi
 - [node-ada-ecu.md](node-ada-ecu.md) — ADA ECU
 - [node-ivi-ecu.md](node-ivi-ecu.md) — IVI ECU
 
+> **Scripted alternative:** [carsky-rest-api-blueprint.md](carsky-rest-api-blueprint.md) creates the blueprint + all 5 nodes over the REST API in one call (verified live). Note a hard platform limit found there: **the REST API cannot create `ethernet` pins or wire the bridge** — steps 5's pin-wiring must be done in the UI canvas regardless of how the nodes were created.
+
 ## 1. Topology
 
 One blueprint = one car (report §1). It contains 4 role nodes plus the bridge that connects them — 5 nodes total in the Room.
