@@ -60,6 +60,12 @@ Examples:
 - `[2] design: define perception-track MVC module boundaries` — requirement-2 HLD, committed before task/subtask IDs exist for that requirement.
 - `[2.3.1.2] feat: implement gate hysteresis in track manager` — post-decomposition implementation subtask.
 
+## Branch suggestion per phase
+
+- Whenever [[project-planner]] performs task planning for a phase (new plan or update), it **suggests** a development branch name for that phase alongside the task/subtask breakdown — it does not create, check out, or push the branch itself; branch creation is the user's call.
+- Naming follows the convention already used in this repo: `feat/phase<Y>-<short-slug>` — `Y` is the phase number, `<short-slug>` a few kebab-case words naming the phase's feature (e.g. `feat/phase2-ada-scaffold`, `feat/phase5-ivi-hmi`). A phase whose primary work isn't a `feat` (e.g. a fix-only or docs-only phase) uses the matching type prefix from the [commit message format](#commit-message-format) instead of `feat`.
+- One branch per phase, not per task/subtask — subtasks within a phase commit onto that phase's branch.
+
 ## Parallel vs. sequential execution
 
 - Tasks and subtasks may run **in parallel** or **sequentially** — the planner must explicitly mark which, based on real dependencies (shared files, data contracts, ordering constraints), not by default assumption.
@@ -68,4 +74,5 @@ Examples:
 ## How to apply
 
 - [[project-planner]] owns and enforces this document when building and updating the plan. Subagents spawned to implement a subtask inherit the subtask-discipline rules above as their definition of done — the planner's brief to a subagent must make that explicit, not assume it.
+- [[project-planner]] applies the branch-suggestion rule above every time it plans a phase, alongside the task ID/commit rules — it's part of the same planning output, not a separate step.
 - Commit tagging: [[project-researcher]] omits the taskID for report commits (see [research-report-format.md](research-report-format.md#commit-format)); [[project-architecture]] uses the `X`-only form for HLD commits (see [hld-content-and-commit-format.md](hld-content-and-commit-format.md)); [[project-planner]] and the subagents it spawns use the full `X.Y.Z.W` form once tasks/subtasks are decomposed.

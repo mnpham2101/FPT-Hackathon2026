@@ -1,0 +1,164 @@
+{
+  "version": 1,
+  "exportedAt": "2026-07-29T00:00:00.000Z",
+  "blueprint": {
+    "name": "m1-cooperative-awareness-kuksa",
+    "description": "TRIAL VARIANT of m1-cooperative-awareness (see blueprint-m1-cooperative-awareness.json) — same 4-node star topology, but the bridge is a KUKSA Databroker instead of an Ethernet Bridge, and every role node wires one `kuksa` pin (REST/import-createable pinType) instead of `ethernet` (REST/import-rejected). Goal: fully scriptable blueprint creation, no manual UI pin-wiring step. This is a studied alternative, not a replacement of the R6-frozen baseline — see carsky-kuksa-blueprint-guide.md for the feasibility verdict and the open items before adopting it. Payloads are unchanged: R1 CPM travels base64-encoded, R2/R4 travel as raw JSON text, each as one opaque VSS string signal — see vss-m1-custom-signals.json.",
+    "zones": [],
+    "nodes": [
+      {
+        "id": "kuksa-broker",
+        "label": "KUKSA Databroker (VSS)",
+        "nodeType": "kuksa-databroker",
+        "config": {
+          "kuksa": {
+            "vss": {
+              "artifactId": "REPLACE_WITH_VSS_ARTIFACT_ID",
+              "versionId": "REPLACE_WITH_VSS_VERSION_ID",
+              "version": "0.0.1"
+            },
+            "insecure": true
+          }
+        },
+        "positionX": 0,
+        "positionY": -40,
+        "pins": [
+          {
+            "id": "pin-broker-kuksa",
+            "name": "kuksa",
+            "pinType": "KUKSA",
+            "direction": "INPUT",
+            "side": null,
+            "port": null,
+            "properties": null
+          }
+        ]
+      },
+      {
+        "id": "bench-scenario-player",
+        "label": "Bench - Scenario Player",
+        "nodeType": "container",
+        "config": {
+          "image": "registry.carsky.io/m1-scenario-player:latest",
+          "command": ["python", "main.py"],
+          "env": {
+            "SCENARIO_CONFIG": "/app/scenarios/default.yaml",
+            "CPM_SIGNAL_PATH": "Vehicle.V2X.M1.BenchToV2xCpmB64"
+          },
+          "kuksaIntercepts": {
+            "kuksa": "127.0.0.10:55555"
+          }
+        },
+        "positionX": -450,
+        "positionY": -260,
+        "pins": [
+          {
+            "id": "pin-bench-kuksa",
+            "name": "kuksa",
+            "pinType": "KUKSA",
+            "direction": "OUTPUT",
+            "side": null,
+            "port": null,
+            "properties": null
+          }
+        ]
+      },
+      {
+        "id": "v2x-ecu",
+        "label": "V2X ECU",
+        "nodeType": "container",
+        "config": {
+          "image": "registry.carsky.io/m1-v2x-ecu:latest",
+          "command": ["./v2x_ecu"],
+          "env": {
+            "CPM_SIGNAL_PATH": "Vehicle.V2X.M1.BenchToV2xCpmB64",
+            "OBJECT_SIGNAL_PATH": "Vehicle.V2X.M1.V2xToAdaObjectJson"
+          },
+          "kuksaIntercepts": {
+            "kuksa": "127.0.0.10:55555"
+          }
+        },
+        "positionX": -450,
+        "positionY": -40,
+        "pins": [
+          {
+            "id": "pin-v2x-kuksa",
+            "name": "kuksa",
+            "pinType": "KUKSA",
+            "direction": "OUTPUT",
+            "side": null,
+            "port": null,
+            "properties": null
+          }
+        ]
+      },
+      {
+        "id": "ada-ecu",
+        "label": "ADA ECU",
+        "nodeType": "container",
+        "config": {
+          "image": "registry.carsky.io/m1-ada-ecu:latest",
+          "command": ["./ada_ecu"],
+          "env": {
+            "OBJECT_SIGNAL_PATH": "Vehicle.V2X.M1.V2xToAdaObjectJson",
+            "WARNING_SIGNAL_PATH": "Vehicle.V2X.M1.AdaToIviWarningJson",
+            "GATE_ENTER_M": "30",
+            "GATE_EXIT_M": "35"
+          },
+          "kuksaIntercepts": {
+            "kuksa": "127.0.0.10:55555"
+          }
+        },
+        "positionX": -450,
+        "positionY": 180,
+        "pins": [
+          {
+            "id": "pin-ada-kuksa",
+            "name": "kuksa",
+            "pinType": "KUKSA",
+            "direction": "OUTPUT",
+            "side": null,
+            "port": null,
+            "properties": null
+          }
+        ]
+      },
+      {
+        "id": "ivi-ecu",
+        "label": "IVI ECU",
+        "nodeType": "skycraft",
+        "config": {
+          "image": {
+            "arch": "aarch64",
+            "version": "0.0.1",
+            "versionId": "xSU_Q7YJZUxxUgDr4Ugcp",
+            "artifactId": "x9oqgIwzTp1m26SWIQqJt"
+          },
+          "prefix": "ivi",
+          "gpuBackend": "virglrenderer",
+          "displayWidth": 1920,
+          "displayHeight": 1080
+        },
+        "positionX": 450,
+        "positionY": -40,
+        "pins": [
+          {
+            "id": "pin-ivi-kuksa",
+            "name": "kuksa",
+            "pinType": "KUKSA",
+            "direction": "OUTPUT",
+            "side": null,
+            "port": null,
+            "properties": null
+          }
+        ]
+      }
+    ],
+    "edges": [
+      { "sourcePinId": "pin-bench-kuksa", "targetPinId": "pin-broker-kuksa" },
+      { "sourcePinId": "pin-v2x-kuksa", "targetPinId": "pin-broker-kuksa" },
+      { "sourcePinId": "pin-ada-kuksa", "targetPinId": "pin-broker-kuksa" },
+      { "sourcePinId": "pin-ivi-kuksa", "targetPinId": "pin-broker-kuksa" }
+    ]
+  }
+}

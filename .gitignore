@@ -1,7 +1,17 @@
 tmp/
 .claude/references/
 .claude/prompts/scratchpad-*/
-ada-ecu/build/
+
+# Android / Gradle
+.gradle/
+build/
+local.properties
+.idea/
+*.iml
+captures/
+.kotlin/
+
+# ADA local runtime/test artifacts
 ada-ecu/local-data/
+ada-ecu/tools/__pycache__/
 ada-events.jsonl
-__pycache__/

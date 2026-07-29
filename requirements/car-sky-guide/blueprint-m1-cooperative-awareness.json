@@ -1,0 +1,97 @@
+{
+  "version": 1,
+  "exportedAt": "2026-07-29T00:00:00.000Z",
+  "blueprint": {
+    "name": "m1-cooperative-awareness",
+    "description": "Milestone 1 — Cooperative (NLOS) Vehicle Awareness over V2X. 4-node star topology: Bench Scenario Player -> V2X ECU -> ADA ECU -> IVI ECU, all wired through one Ethernet Bridge (R5/R6). Importable via Nydus Import-from-File: creates the 5 nodes with full config only. ETHERNET pins/edges are rejected on import (same platform limitation as the REST addPin/addEdge endpoints) — add each node's ethernet pin and wire it to the bridge manually afterward per carsky-4-node-blueprint.md §4 steps 4-5.",
+    "zones": [],
+    "nodes": [
+      {
+        "id": "eth-bridge",
+        "label": "Ethernet Bridge",
+        "nodeType": "eth-bridge",
+        "config": {
+          "bridgeMode": "linux",
+          "subnet": "10.99.0.0/24"
+        },
+        "positionX": 0,
+        "positionY": -40,
+        "pins": []
+      },
+      {
+        "id": "bench-scenario-player",
+        "label": "Bench - Scenario Player",
+        "nodeType": "container",
+        "config": {
+          "image": "registry.carsky.io/m1-scenario-player:latest",
+          "command": ["python", "main.py"],
+          "env": {
+            "SCENARIO_CONFIG": "/app/scenarios/default.yaml",
+            "V2X_ECU_HOST": "10.99.0.11",
+            "V2X_ECU_PORT": "47100"
+          }
+        },
+        "positionX": -450,
+        "positionY": -260,
+        "pins": []
+      },
+      {
+        "id": "v2x-ecu",
+        "label": "V2X ECU",
+        "nodeType": "container",
+        "config": {
+          "image": "registry.carsky.io/m1-v2x-ecu:latest",
+          "command": ["./v2x_ecu"],
+          "env": {
+            "LISTEN_PORT": "47100",
+            "ADA_ECU_HOST": "10.99.0.12",
+            "ADA_ECU_PORT": "47200"
+          }
+        },
+        "positionX": -450,
+        "positionY": -40,
+        "pins": []
+      },
+      {
+        "id": "ada-ecu",
+        "label": "ADA ECU",
+        "nodeType": "container",
+        "config": {
+          "image": "registry.carsky.io/m1-ada-ecu:latest",
+          "command": ["./ada_ecu"],
+          "env": {
+            "V2X_LISTEN_PORT": "47200",
+            "IVI_ECU_HOST": "10.99.0.13",
+            "IVI_ECU_PORT": "47300",
+            "GATE_ENTER_M": "30",
+            "GATE_EXIT_M": "35"
+          }
+        },
+        "positionX": -450,
+        "positionY": 180,
+        "pins": []
+      },
+      {
+        "id": "ivi-ecu",
+        "label": "IVI ECU",
+        "nodeType": "skycraft",
+        "config": {
+          "image": {
+            "arch": "x86_64",
+            "version": "REPLACE_WITH_ARTIFACT_VERSION",
+            "versionId": "REPLACE_WITH_VERSION_ID",
+            "artifactId": "REPLACE_WITH_ARTIFACT_ID"
+          },
+          "prefix": "ivi",
+          "gpuBackend": "virglrenderer",
+          "displayWidth": 1920,
+          "displayHeight": 1080
+        },
+        "positionX": 450,
+        "positionY": -40,
+        "pins": []
+      }
+    ],
+    "edges": []
+  }
+}
