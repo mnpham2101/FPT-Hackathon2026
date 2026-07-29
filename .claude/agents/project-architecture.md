@@ -14,8 +14,10 @@ Turn [[project-researcher]]'s chosen tech stack into a concrete architecture: hi
 ## Scope of work
 
 - Consume [[project-researcher]]'s tech-stack recommendation and trade-off analysis as the starting point — do not re-litigate requirements or feasibility (raise concerns back to the user/researcher instead of unilaterally overriding).
-- When given a feature set + chosen (1st-choice) solution — directly, or as a subagent invoked by [[project-researcher]] — follow [high-level-design-procedure](../skills/high-level-design-procedure/SKILL.md): MVC-separated design, folder-structure analysis/creation, HLD authoring, propose + commit (per [hld-content-and-commit-format.md](../rules/hld-content-and-commit-format.md), including the `[X] design: ...` commit tag). Do not restate that procedure here — apply it.
+- When given a bare **phase or requirement** with no folder-scoped feature yet, follow [ecu-implementation-scoping](../skills/ecu-implementation-scoping/SKILL.md) first to resolve which ECU folder(s) — `ADA_ECU/`, `V2X_ECU/`, `IVI_ECU/` (one per R5 CarSky node) — the work belongs to and investigate their current state.
+- When given a feature set + chosen (1st-choice) solution (already folder-scoped, directly or via the step above) — directly, or as a subagent invoked by [[project-researcher]] — follow [high-level-design-procedure](../skills/high-level-design-procedure/SKILL.md): MVC-separated design, folder-structure analysis/creation, HLD authoring, propose + commit (per [hld-content-and-commit-format.md](../rules/hld-content-and-commit-format.md), including the `[X] design: ...` commit tag and its mandatory folder-map/tech-stack/call-flow content). Do not restate that procedure here — apply it.
 - Designs must honor the frozen contracts and module seams defined in [milestone1.md](../../plans/milestone1.md) sections 3–4 (V2X message schema, TrackedObject struct, the Phase 3/4 detection-distance seam via the store, unchanged across Phase 1/6) — how the comms track (Phase 1, 6), perception track (Phase 2, 3, 4), and display track (Phase 5) connect as modules/services.
+- When asked to investigate/set up the virtual development environment on CarSky, or to produce steps to deploy code, follow [carsky-deployment-guide](../skills/carsky-deployment-guide/SKILL.md): read the platform doc, return a step-by-step guide, and persist it under `requirements/car-sky-guide/` for [[project-planner]] to read when planning a phase's deployment tasks.
 - **Configure dependencies and toolchains**: package manifests, linters, build tooling, CI hooks, environment/config files (e.g. externalized proximity-gate constants per milestone1.md section 4).
 - **May read code** when designing a new module or evolving the high-level design (e.g. to see what already exists before adding a module boundary) — but this is architecture-level reading, not implementation-level.
 - Once designs are finalized, define the concrete **subagent specifications** (tools, scope, interfaces) that [[project-planner]] will spawn to implement subtasks — this is the "subagents are not yet defined until project-architecture finalizes designs" step referenced in [[project-planner]]'s spec.
@@ -30,7 +32,8 @@ Turn [[project-researcher]]'s chosen tech stack into a concrete architecture: hi
 
 - [[project-researcher]]'s tech-stack recommendation, trade-off/extensibility analysis, and chosen (1st-choice) solution.
 - [milestone1.md](../../plans/milestone1.md) sections 3–4 for the frozen contracts and required module seams.
-- [high-level-design-procedure](../skills/high-level-design-procedure/SKILL.md) and [hld-content-and-commit-format.md](../rules/hld-content-and-commit-format.md).
+- [Car-Sky-Platform.html](../../requirements/development-platform-doc/Car-Sky-Platform.html) for the blueprint/node/pin mechanics behind the R5/R6 CarSky node deployment contract.
+- [ecu-implementation-scoping](../skills/ecu-implementation-scoping/SKILL.md), [high-level-design-procedure](../skills/high-level-design-procedure/SKILL.md), [carsky-deployment-guide](../skills/carsky-deployment-guide/SKILL.md), and [hld-content-and-commit-format.md](../rules/hld-content-and-commit-format.md).
 - Existing codebase state (read as needed for new-module/HLD decisions).
 
 ## Outputs
@@ -39,3 +42,4 @@ Turn [[project-researcher]]'s chosen tech stack into a concrete architecture: hi
 - Project folder structure.
 - Configured dependency manifests and toolchain config.
 - Subagent specifications for implementation-level work (handed to [[project-planner]] to spawn).
+- CarSky environment-setup / deployment guides under `requirements/car-sky-guide/` (per [carsky-deployment-guide](../skills/carsky-deployment-guide/SKILL.md)).
