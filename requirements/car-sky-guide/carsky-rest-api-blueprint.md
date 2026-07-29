@@ -1,6 +1,8 @@
 # CarSky Blueprint via REST API (scripted alternative to the UI)
 
-Companion to [carsky-4-node-blueprint.md](carsky-4-node-blueprint.md). That guide builds the blueprint by hand on the Nydus canvas; this one drives the REST API for the parts that can be scripted. **Verified live on 2026-07-29** against `https://hackathon-2.carsky.io` by creating the `trial1_minh` blueprint (id `a071ccc2-c5fe-4d81-ac0e-16bef8d22173`).
+Companion to [carsky-4-node-blueprint.md](carsky-4-node-blueprint.md). That guide builds the blueprint by hand on the Nydus canvas; this one drives the REST API for the parts that can be scripted.
+
+The platform's own general reference is [Car-Sky-Platform.html](../development-platform-doc/Car-Sky-Platform.html)'s "API & MCP Tools" module (§4–§10) and "Get CarSky API Key" module — read those for the full endpoint catalog, the MCP tool set, and the officially documented auth flow. **This doc is the narrower, live-verified ground truth for this specific hackathon-2 deployment** — where the two disagree, trust this doc's live results, and treat the platform doc as the idealized/general design intent. A concrete example: the platform doc's endpoint reference states the granular pin routes as `/api/v1/blueprints/nodes/:nodeId/pins` etc.; the live `GET /api/v1/openapi.json` on this deployment instead declares `/api/v1/nodes/{nodeId}/pins` (no `/blueprints/` prefix); and empirically **neither shape works** — see the API reference table below. Always verify a single-item route live before relying on it, regardless of which doc it came from.
 
 ## Key finding: what REST can and cannot do
 
@@ -12,7 +14,7 @@ Companion to [carsky-4-node-blueprint.md](carsky-4-node-blueprint.md). That guid
 | **Add `ETHERNET` pins** | ❌ **rejected** | `pinType` enum is `VHAL, KUKSA, CAN, LIN, VIDEO, GPIO, GENERIC` — **no `ETHERNET`**. Confirmed live: `addPin` with `pinType: "ETHERNET"`, `nodeId` targeting a node from an earlier (already-existing) blueprint, returns 400 `"Invalid option: expected one of \"VHAL\"\|\"KUKSA\"\|\"CAN\"\|\"LIN\"\|\"VIDEO\"\|\"GPIO\"\|\"GENERIC\""`. |
 | **Wire the Ethernet Bridge** | ❌ blocked | edges need the ethernet pins that REST can't create |
 | Validate | ✅ `POST /api/v1/blueprints/{id}/validate` | fails until every node has ≥1 pin |
-| **Import blueprint JSON** (`POST /api/v1/blueprints/import` and Nydus UI **Import from File**) | ⚠️ nodes only | Same `ETHERNET` limitation as `addPin` — `ethernet` pins in the imported file are silently dropped during node creation. **Confirmed live** 2026-07-29 importing [blueprint-m1-cooperative-awareness.json](blueprint-m1-cooperative-awareness.json): a first version with `ethernet` pins + edges failed with `addEdge: source or target pin not found`, because by the time the edges are applied, the referenced ethernet pin IDs were never created. Fix: the importable JSON carries the 5 nodes with full `config` and empty `pins`/`edges`; add + wire ethernet pins manually in the UI after import. |
+| **Import blueprint JSON** (`POST /api/v1/blueprints/import` and Nydus UI **Import from File**) | ⚠️ nodes only | Same `ETHERNET` limitation as `addPin` — `ethernet` pins in the imported file are silently dropped during node creation. An imported JSON must carry its nodes with full `config` and empty `pins`/`edges`; add and wire `ethernet` pins manually in the UI after import. |
 
 **Consequence:** the R6 Ethernet Bridge network (every node's `ethernet` pin wired to the bridge) **cannot be built over REST, nor via JSON import** — those pins and edges must be added in the Nydus UI canvas regardless of how the nodes themselves were created. The UI creates ETHERNET pins through its Zero-sync path, which the public REST/OpenAPI schema (and the import path built on top of it) does not expose. So the practical split is:
 
@@ -21,9 +23,12 @@ Companion to [carsky-4-node-blueprint.md](carsky-4-node-blueprint.md). That guid
 
 ## Authentication
 
-REST calls use `Authorization: Bearer <API_KEY>` (`X-API-Key: <API_KEY>` also accepted — both declared in `GET /api/v1/openapi.json`'s `components.securitySchemes.ApiKeyAuth`). Mint the key in the UI: **Settings (⚙) → Credentials → New credential** — shown once, store it securely. The real key always starts `a8k_` (`a8k_<prefix>_<secret>`); the Credentials **list view**'s display ID (`m2m-<uuid>-<credential-name>`) looks similar but is **not** the secret and is rejected (`{"error":"UNAUTHORIZED","message":"Unrecognized credential format"}`) — full gotcha writeup in [carsky-credential-verify](../../.claude/skills/carsky-credential-verify/SKILL.md).
-
-It is an OIDC m2m credential, not a Keycloak user password — but a Keycloak login session **can bootstrap one headlessly** when no key exists yet. Confirmed live 2026-07-29: direct password-grant against client `rework` is rejected (`unauthorized_client`, Direct Access Grants disabled) and the `admin-cli` client's direct-grant JWT is rejected by this API as `Invalid JWT`, but a scripted browser-style login (Keycloak form POST → Envoy OAuth2-proxy callback) succeeds and sets session cookies that authorize `/internal/*` and `/api/*` (no `v1`) — notably `POST /internal/credentials`, which mints a fresh `a8k_...` key. Full step-by-step: [carsky-login](../../.claude/skills/carsky-login/SKILL.md). Note `/api/v1/*` (everything in this doc) stays behind the `a8k_...` key only — the login-session cookie never authorizes it directly.
+- The REST API requires an API key credential on every request.
+- Send it as `Authorization: Bearer <API_KEY>` or `X-API-Key: <API_KEY>` — both are accepted.
+- The key format is `a8k_<prefix>_<secret>`. It is a machine-to-machine (m2m) API key, minted in the UI (**Settings → Credentials → New credential**) and displayed only at the moment of creation.
+- The Credentials **list view** shows a display ID styled `m2m-<uuid>-<credential-name>`. This ID is not the secret — using it as a credential is rejected with `{"error":"UNAUTHORIZED","message":"Unrecognized credential format"}`. Full explanation: [carsky-credential-verify](../../.claude/skills/carsky-credential-verify/SKILL.md).
+- A CarSky account's email and password is a separate credential (Keycloak login), not the API key.
+- When no API key exists yet, a Keycloak login session can bootstrap one without using the UI. Step-by-step procedure: [carsky-login](../../.claude/skills/carsky-login/SKILL.md).
 
 ```
 export CS=https://hackathon-2.carsky.io
@@ -47,7 +52,25 @@ Node types seen in real blueprints: `container`, `skycraft`, `eth-bridge`, `scri
 
 ## Finish in the UI
 
-After the batch, open `trial1_minh` in Nydus and complete [carsky-4-node-blueprint.md §4](carsky-4-node-blueprint.md) from step 5 (wire the pins): add each node's `ethernet` pin, wire to the Ethernet Bridge, then `validate` passes and the blueprint can deploy. Until the ethernet pins exist, `validate` returns 422 `Node "…" has no pins`.
+After creating the nodes over REST, open the blueprint in Nydus and complete [carsky-4-node-blueprint.md §4](carsky-4-node-blueprint.md) from step 5 (wire the pins): add each node's `ethernet` pin, wire it to the Ethernet Bridge, then `validate` passes and the blueprint can deploy. Until the ethernet pins exist, `validate` returns 422 `Node "…" has no pins`.
+
+## Deploy & test a Room
+
+Once the blueprint's nodes exist (REST) and its `ethernet` pins are wired (manual UI step above), the rest of the blueprint-to-testing workflow is REST-reachable and documented in [Car-Sky-Platform.html](../development-platform-doc/Car-Sky-Platform.html)'s "API & MCP Tools" module §5.5–§5.7 (not independently re-verified live here — cross-check before depending on exact shapes):
+
+| Step | Endpoint | Notes |
+|---|---|---|
+| Deploy | `POST /api/v1/deployments` `{blueprintId, roomId, name}` | `roomId` is the target device's id (§2 Device vs Node in [carsky-4-node-blueprint.md](carsky-4-node-blueprint.md) — the K8s resource pool, not an ECU) |
+| Poll status | `GET /api/v1/deployments/{roomId}/status` (or `.../nodes/watch` for SSE) | Poll until every node reports `Running` — this is R5's acceptance check |
+| List nodes | `GET /api/v1/deployments/{roomId}/nodes` | Resolves each node's `nodeKey` for the calls below |
+| Screenshot (IVI) | `GET /api/v1/vms/{roomId}/{nodeKey}/screenshot` | PNG; useful to verify the R16/R17 warning view renders, without a manual ADB session |
+| UI tree / find text | `GET /api/v1/vms/{roomId}/{nodeKey}/accessibility` | Structured check for expected UI elements (e.g. ghost-C warning visible) |
+| ADB shell | `POST /api/v1/vms/{roomId}/{nodeKey}/shell` | One-shot `adb shell` command, no tunnel needed for simple checks |
+| Read/write signals | `POST /api/v1/signals/{roomId}/{nodeKey}/values` / `.../actuate` | For nodes with CAN/LIN/GPIO/KUKSA pins — not used by the four M1 ECU/bench nodes (they only carry `ethernet`) |
+| Logs | `GET /api/v1/deployments/{roomId}/logs/{nodeKey}` (`.../search` for historical) | Pulls a container/pod's logs directly, instead of a manual dashboard check |
+| Teardown | `DELETE /api/v1/deployments/{roomId}` | Stops the Room; the blueprint itself is untouched and redeployable |
+
+An MCP server also wraps this same REST API into named tools (`deploy`, `screenshot`, `tap`, `get_signal_values`, `pod_logs`, etc. — see the platform doc's §6–§7 for the full 42-tool catalog). It requires running CarSky's own `mcp/` server package (`node mcp/dist/index.js`) against this API, which is not part of this repo — not used for M1; stick to the REST calls above unless that package becomes available.
 
 ## API reference (blueprint group)
 

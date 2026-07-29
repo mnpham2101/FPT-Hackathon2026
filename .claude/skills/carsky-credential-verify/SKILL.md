@@ -1,69 +1,65 @@
 ---
 name: carsky-credential-verify
-description: Verify a candidate CarSky API credential is actually usable before [[car-sky]] builds/pushes/deploys anything. Confirms the real key format (a8k_<prefix>_<secret>), decodes the platform's two distinct 401 messages, and catches the credential-ID-vs-secret mixup that looks like a working key but isn't. Run whenever a user supplies a credential, or asks to test/verify CarSky API access.
+description: Check whether a CarSky API credential is valid before car-sky uses it to build, push, or deploy. Confirms the key format, explains the two distinct 401 error messages, and prevents the common mistake of using a credential's display ID instead of its secret.
 ---
 
 # CarSky Credential Verify
 
-Trigger: [[carsky-deploy-preflight]] is resolving input #3 ("which credential"), or the user hands over a credential string and asks to confirm it works. Run this **before** any build/push/deploy action that depends on the credential — a wrong or malformed credential should fail here, cheaply, not mid-deploy.
+Trigger: [[carsky-deploy-preflight]] is resolving input #3 ("which credential"), or a user provides a credential string and asks whether it works. Run this check before any build, push, or deploy action that depends on the credential. A wrong or malformed credential should fail here, not partway through a deployment.
 
-## Verified credential format (live, 2026-07-29, `hackathon-2.carsky.io`)
+## 1. Credential format
 
-`GET /api/v1/openapi.json` (unauthenticated) declares the real scheme — this is authoritative over any narrower assumption in other docs:
+CarSky's REST API requires an API key on every request.
 
-```json
-"ApiKeyAuth": {
-  "type": "apiKey", "in": "header", "name": "X-API-Key",
-  "description": "Paste your API key: `a8k_<prefix>_<secret>`. Also accepts `Authorization: Bearer a8k_...` header."
-}
-```
+- The key format is `a8k_<prefix>_<secret>`.
+- Send it as `X-API-Key: <key>` or `Authorization: Bearer <key>`. Both headers work.
+- The key is created once, in the UI: **Settings → Credentials → New credential**. It is displayed only at the moment of creation.
 
-- The real secret always starts with `a8k_`. Either header works: `X-API-Key: a8k_...` or `Authorization: Bearer a8k_...`.
-- It is minted once, in the UI: **Settings (⚙) → Credentials → New credential** — shown **only at creation time**.
+## 2. Common mistake: display ID instead of secret
 
-## The gotcha that will fool you (confirmed live)
-
-The Settings → Credentials **list view** (after creation) shows an identifier styled like:
+After a credential is created, the Credentials list view shows an identifier in this format:
 
 ```
-m2m-62a5d873-6dcb-4e97-a046-f1defb05a9b0-claude-trial1-minh    (id, for a credential named "claude-trial1-minh")
+m2m-<uuid>-<credential-name>
 ```
 
-This `m2m-<uuid>-<credential-name>` string is the credential's **display ID**, not the secret — it is never accepted as a credential. A live test against it returned:
+This identifier is not the secret and cannot be used to authenticate. Sending it as a credential returns:
 
 ```
 {"error":"UNAUTHORIZED","message":"Unrecognized credential format"}
 ```
 
-The same error, for the same reason, comes back if someone pastes a Keycloak session artifact instead of a real key (see next section). **If a user hands you an `m2m-...` string, it is not usable — tell them so and ask for the `a8k_...` secret instead.** If the secret was never copied down at creation time, it cannot be recovered; the only fix is deleting that credential and creating a new one, copying the `a8k_...` value this time.
+If a user provides an `m2m-...` string, explain that it is not usable and ask for the `a8k_...` secret instead. If the secret was not copied at creation time, it cannot be recovered — the only fix is to delete that credential and create a new one.
 
-## A raw Keycloak login session is not a substitute — but it can bootstrap one
+## 3. A Keycloak login is a different kind of credential
 
-Confirmed live (2026-07-29), first pass: a fully successful username/password login against this platform's Keycloak realm (`hackathon02`, client `rework`, Authorization Code + PKCE) does **not by itself** yield a usable API credential — direct password-grant to `rework` is rejected outright (`unauthorized_client`, Direct Access Grants disabled), and the resulting session is stored server-side as opaque, non-JWT, HttpOnly cookies (`BearerToken`, `IdToken`, `RefreshToken` — zero `.` separators). Pasting any of those cookie values directly as `Authorization: Bearer <value>` gives the same `"Unrecognized credential format"` error as the gotcha above.
+A CarSky account login (email and password) uses Keycloak, a separate authentication system from the API key.
 
-**Correction from a later session with more context:** that login session isn't a dead end — it authorizes a *different* route family. `/api/v1/*` (the REST API) needs the real `a8k_...` key, but the same cookies **do** authorize `/internal/*` and `/api/*` (no `v1`), which are behind an Envoy OAuth2 proxy. `POST /internal/credentials` on that cookie session actually **mints** a fresh `a8k_...` key. That's the full, verified bootstrap procedure — see [carsky-login](../carsky-login/SKILL.md) for the exact steps; don't re-derive it here. This skill's job is narrower: once you have a candidate key (user-supplied or freshly minted via carsky-login), verify its shape and diagnose why it's rejected if it is.
+- A Keycloak login session is not, by itself, a valid API credential.
+- Sending a Keycloak session value as `Authorization: Bearer <value>` returns the same `"Unrecognized credential format"` error described above.
+- A Keycloak login session can be used to create a new API key without opening the UI. That procedure is documented in [carsky-login](../carsky-login/SKILL.md) — do not repeat it here. This skill only checks a credential once one already exists.
 
-## Verify procedure
+## 4. Verification steps
 
-1. Get the candidate string from the user (never guess or reuse one from history/memory — a stale or wrong-environment key deploys to the wrong place or fails auth).
-2. Sanity-check the shape first: does it start with `a8k_`? If not (e.g. `m2m-...`, a raw JWT, a cookie value), stop and explain why per the gotcha above — don't spend a network call on an obviously-wrong shape.
-3. Spend exactly one cheap read call to confirm: `GET /api/v1/blueprints` (or `?name=<filter>` if a specific blueprint is already known) with the credential in `Authorization: Bearer <key>`.
-4. Decode the response:
+1. Ask the user for the candidate credential string. Do not guess a value or reuse one from a previous session — a wrong or expired key can authenticate against the wrong environment, or fail outright.
+2. Check the format: does the string start with `a8k_`? If not (for example, it starts with `m2m-`, or looks like a Keycloak token), stop and explain why using section 2 or 3 above. Do not spend a network call testing an obviously wrong format.
+3. Send one request to confirm the credential: `GET /api/v1/blueprints` with the credential in the `Authorization` header.
+4. Read the result using this table:
 
 | Response | Meaning | Next action |
 |---|---|---|
-| `200` + a JSON list | Credential is valid and live | Proceed — pin it as input #3 |
-| `401 {"message":"Missing credentials"}` | No header was actually sent (a client/script bug, not the user's key) | Fix the request, not the key |
-| `401 {"message":"Unrecognized credential format"}` | A header was sent but isn't a real `a8k_...` key (ID pasted instead of secret, Keycloak token, cookie, typo) | Explain the gotcha above; ask for the real secret |
-| `401`/`403` with any other message | Key is shaped right but rejected (revoked, wrong environment/realm, expired) | Ask the user to confirm the environment (`hackathon-2.carsky.io` may rotate between rounds) or mint a fresh credential |
+| `200` with a JSON list | The credential is valid | Proceed — use it as the confirmed credential |
+| `401`, message `"Missing credentials"` | No credential was sent in the request | Fix the request; this is not a problem with the credential itself |
+| `401`, message `"Unrecognized credential format"` | A credential was sent, but it is not a valid `a8k_...` key | Explain the mistake in section 2; ask for the correct secret |
+| `401` or `403` with any other message | The credential has the correct format but was rejected (for example: revoked, expired, or wrong environment) | Ask the user to confirm the environment, or to create a new credential |
 
-5. Never log, echo back in full, commit, or persist the credential string itself — only report the verify **outcome** (valid / invalid + reason).
+5. Do not log, print in full, commit, or store the credential string. Report only the result — valid or invalid, and the reason if invalid.
 
 ## Output
 
-- A go/no-go on the credential, plus the specific reason on no-go (from the table above) so the user knows exactly what to fix.
-- On go: hand the confirmed credential back to [[carsky-deploy-preflight]] as input #3.
+- A clear result: the credential is valid, or it is not, with the specific reason.
+- If valid, hand the credential back to [[carsky-deploy-preflight]] as the confirmed value for input #3.
 
 ## How to apply
 
-Called by [[carsky-deploy-preflight]] when resolving "which credential," and directly by [[car-sky]] whenever a user hands over a credential ad hoc (e.g. mid-conversation, not as part of a full deploy). Produces no task IDs — it's a diagnostic gate, not implementation work.
+Called by [[carsky-deploy-preflight]] when resolving "which credential," and directly by [[car-sky]] whenever a user provides a credential outside of a full deployment request. Produces no task IDs — this is a verification step, not implementation work.
