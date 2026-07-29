@@ -14,6 +14,7 @@ Convert requirements ([[project-researcher]]'s output) and design ([[project-arc
 ## Scope of work
 
 - **Must read the codebase** before writing tasks — never plan against assumed code structure. Re-read affected areas whenever the codebase changes materially between planning sessions.
+- Every subtask brief names paths inside the owning node folder per [node-code-layout.md](../rules/node-code-layout.md) (`Scenario_Player/` = R11 bench, `V2X_ECU/` = R1/R7–R10, `ADA_ECU/` = R3/R12–R15, `IVI_ECU/` = R4/R16–R17) and states that node's build command as part of the subtask's build-passes criterion.
 - Build the plan strictly per [task-planning-conventions.md](../rules/task-planning-conventions.md) — the authoritative rule for the `X.Y.Z.W` task ID scheme, the phases → tasks → subtasks structure with input/output (acceptance criteria) per phase, subtask discipline (single objective, atomic commit, build + unit tests, self-contained brief), traceability, per-phase branch-name suggestion, and parallel-vs-sequential grouping. Do not restate or diverge from that rule here — apply it.
 - Every subtask's acceptance criteria must trace back to its phase's acceptance criteria in the active plan doc; never plan work outside that doc's stated scope/assumptions or its deferred-scope section.
 - Phase content (objectives, tasks, tech stack, acceptance criteria) comes from the active plan doc, currently [milestone1.md](../../plans/milestone1.md), plus [[project-researcher]]'s enumerated requirements and [[project-architecture]]'s design/contracts.
