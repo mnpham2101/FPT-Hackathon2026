@@ -18,7 +18,7 @@ export CS=https://hackathon-2.carsky.io
 curl -H "Authorization: Bearer $CS_API_KEY" $CS/api/v1/blueprints   # 200 == key works
 ```
 
-If the user has no key and wants the agent to mint one, go to Path B. Always prefer having the user paste an existing key over handling their password.
+If the user has no key and wants the agent to mint one, go to Path B. Always prefer having the user paste an existing key over handling their password. Whatever key you end up with (pasted or freshly minted), run [carsky-credential-verify](../carsky-credential-verify/SKILL.md) before trusting it — it catches the easy-to-make mistake of pasting the Settings → Credentials **list's** `m2m-<uuid>-<name>` display ID instead of the actual `a8k_...` secret (they look similar; only one authenticates).
 
 ### Path B — password bootstrap (only when no API key exists)
 

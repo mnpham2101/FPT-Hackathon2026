@@ -21,7 +21,9 @@ Companion to [carsky-4-node-blueprint.md](carsky-4-node-blueprint.md). That guid
 
 ## Authentication
 
-REST calls use `Authorization: Bearer <API_KEY>`. Mint the key in the UI: **Settings (⚙) → Credentials → New credential** — shown once, store it securely. (The key is an OIDC m2m credential; it is **not** a Keycloak user password and cannot be derived from one.)
+REST calls use `Authorization: Bearer <API_KEY>` (`X-API-Key: <API_KEY>` also accepted — both declared in `GET /api/v1/openapi.json`'s `components.securitySchemes.ApiKeyAuth`). Mint the key in the UI: **Settings (⚙) → Credentials → New credential** — shown once, store it securely. The real key always starts `a8k_` (`a8k_<prefix>_<secret>`); the Credentials **list view**'s display ID (`m2m-<uuid>-<credential-name>`) looks similar but is **not** the secret and is rejected (`{"error":"UNAUTHORIZED","message":"Unrecognized credential format"}`) — full gotcha writeup in [carsky-credential-verify](../../.claude/skills/carsky-credential-verify/SKILL.md).
+
+It is an OIDC m2m credential, not a Keycloak user password — but a Keycloak login session **can bootstrap one headlessly** when no key exists yet. Confirmed live 2026-07-29: direct password-grant against client `rework` is rejected (`unauthorized_client`, Direct Access Grants disabled) and the `admin-cli` client's direct-grant JWT is rejected by this API as `Invalid JWT`, but a scripted browser-style login (Keycloak form POST → Envoy OAuth2-proxy callback) succeeds and sets session cookies that authorize `/internal/*` and `/api/*` (no `v1`) — notably `POST /internal/credentials`, which mints a fresh `a8k_...` key. Full step-by-step: [carsky-login](../../.claude/skills/carsky-login/SKILL.md). Note `/api/v1/*` (everything in this doc) stays behind the `a8k_...` key only — the login-session cookie never authorizes it directly.
 
 ```
 export CS=https://hackathon-2.carsky.io
