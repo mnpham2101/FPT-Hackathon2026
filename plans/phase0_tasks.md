@@ -249,6 +249,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 3.0.1.4 + 3.0.4.1. **Commit:** `[3.0.4.2] feat: add ADA R3 TrackedObject binding with round-trip test`
 
+**Status:** implemented 2026-07-31, awaiting CI — `ada::contracts::TrackedObject` binding (`object_class` ↔ `"class"`, enum wire strings via NLOHMANN_JSON_SERIALIZE_ENUM) + round-trip test; copies cmp-identical; `ada-core-build` CI job is the verification authority (no local cmake).
+
 ### `4.0.4.3` — R4 C++ binding + round-trip test *(agent)*
 
 **Objective:** create `ADA_ECU/src/contracts/r4_message.{hpp,cpp}` (producer side: warning event + state message) + `ADA_ECU/tests/contracts/test_r4_roundtrip.cpp`.
