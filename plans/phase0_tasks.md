@@ -237,7 +237,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none — starts immediately. **Commit:** `[3.0.4.1] chore: bring up ADA_ECU C++17 toolchain`
 
-**Status:** implemented 2026-07-31, awaiting CI — toolchain + sanity test committed; `ada-core-build` job (Configure/Build/Test steps) added to `phase0-ci.yml`; no local cmake on this host, CI is the Linux verification authority.
+**Status:** done 2026-07-31 — toolchain + sanity test committed; `ada-core-build` job (Configure/Build/Test steps) added to `phase0-ci.yml`; verified green on CI run 30591588639 (no local cmake on this host — CI is the Linux verification authority).
 
 ### `3.0.4.2` — R3 C++ binding + round-trip test *(agent)*
 
