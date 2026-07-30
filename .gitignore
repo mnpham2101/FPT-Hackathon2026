@@ -10,3 +10,10 @@ local.properties
 *.iml
 captures/
 .kotlin/
+
+# AG-Kit, agent files & skills (local only, do not push to git)
+.agents/
+.temp_ag_kit/
+skills-lock.json
+.DS_Store
+
