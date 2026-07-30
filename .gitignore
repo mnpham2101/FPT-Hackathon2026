@@ -20,3 +20,9 @@ __pycache__/
 
 # Raw downloaded footage - the encoded clip is committed, its source is not
 ADA_ECU/media/source/
+
+# AG-Kit, agent files & skills (local only, do not push to git)
+.agents/
+.temp_ag_kit/
+skills-lock.json
+.DS_Store
