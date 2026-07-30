@@ -35,12 +35,13 @@ Working order: **project-researcher → project-architecture → project-planner
 
 ## Repository layout
 
-- **Code: one top-level folder per R5 node** — [Scenario_Player/](Scenario_Player/) (bench, R11) · [V2X_ECU/](V2X_ECU/) (R1, R7–R10) · [ADA_ECU/](ADA_ECU/) (R3, R12–R15) · [IVI_ECU/](IVI_ECU/) (R4, R16–R17). Languages, build artifacts, and the self-contained-folder rules: [.claude/rules/node-code-layout.md](.claude/rules/node-code-layout.md); per-node deploy steps: [requirements/car-sky-guide/](requirements/car-sky-guide/).
+- **Code: one top-level folder per R5 node** — [Scenario_Player/](Scenario_Player/) (bench, R11) · [V2X_ECU/](V2X_ECU/) (R1, R7–R9; R10 deferred to a future milestone) · [ADA_ECU/](ADA_ECU/) (R3, R12–R15) · [IVI_ECU/](IVI_ECU/) (R4, R16–R17). Languages, build artifacts, and the self-contained-folder rules: [.claude/rules/node-code-layout.md](.claude/rules/node-code-layout.md); per-node deploy steps: [requirements/car-sky-guide/](requirements/car-sky-guide/).
 - [requirements/](requirements/) — researcher reports ([format](.claude/rules/research-report-format.md)); `m1-cooperative-awareness.md` is the live one; [future/m1-future-features-register.md](requirements/future/m1-future-features-register.md) mirrors its § Future developments ([Vietnamese translation](requirements/future/m1-future-features-register.vi.md) — non-authoritative; the English register wins on conflict, and changes land there first).
 - [plans/](plans/) — implementation plans; [milestone1.md](plans/milestone1.md) is the active plan: project-planner decomposes all tasks/subtasks from its phases (the `Y` segment of task IDs) and phase acceptance criteria.
 - [.claude/rules/](.claude/rules/) — standing process rules (task planning, report format, requirement quality, solution selection, HLD format).
 - [.claude/skills/](.claude/skills/) — reusable procedures (requirement analysis, HLD, environment research, markdown style).
 - [.claude/agents/](.claude/agents/) — the three agent specs. [.claude/prompts/](.claude/prompts/) — saved prompts + debate scratchpads. [.claude/references/](.claude/references/) — cached external evidence.
+- **`doc/` inside each work folder** — [plans/doc/](plans/doc/) and the four node folders' `doc/` ([Scenario_Player/doc/](Scenario_Player/doc/), `V2X_ECU/doc/`, `ADA_ECU/doc/`, `IVI_ECU/doc/`) hold report-style documents on that folder's design and rationale (HLDs, design notes, `doc/research_notes/` findings and diagrams). Agents read the target folder's `doc/` as context before working in it, and add their design/rationale write-ups there — rules in [.claude/rules/node-code-layout.md](.claude/rules/node-code-layout.md#per-folder-doc).
 
 ## Commit & task discipline
 

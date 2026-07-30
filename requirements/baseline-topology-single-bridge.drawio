@@ -1,0 +1,30 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="baseline-single-bridge" id="baseline-topology-single-bridge">
+    <mxGraphModel dx="1368" dy="788" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="900" pageHeight="350" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="title" value="Baseline (R6) — four nodes, one Ethernet Bridge, one subnet 10.99.0.0/24" style="text;html=1;align=left;fontSize=13;fontStyle=1;fontColor=#333333;" vertex="1" parent="1"><mxGeometry x="20" y="8" width="620" height="20" as="geometry" /></mxCell>
+
+        <mxCell id="bench" value="Bench&lt;br&gt;&lt;font color=&quot;#444444&quot;&gt;10.99.0.10&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1"><mxGeometry x="40" y="50" width="150" height="60" as="geometry" /></mxCell>
+        <mxCell id="v2x" value="V2X ECU&lt;br&gt;&lt;font color=&quot;#444444&quot;&gt;10.99.0.11&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1"><mxGeometry x="260" y="50" width="150" height="60" as="geometry" /></mxCell>
+        <mxCell id="ada" value="ADA ECU&lt;br&gt;&lt;font color=&quot;#444444&quot;&gt;10.99.0.12&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1"><mxGeometry x="480" y="50" width="150" height="60" as="geometry" /></mxCell>
+        <mxCell id="ivi" value="IVI ECU (AAOS)&lt;br&gt;&lt;font color=&quot;#444444&quot;&gt;10.99.0.13&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;" vertex="1" parent="1"><mxGeometry x="700" y="50" width="150" height="60" as="geometry" /></mxCell>
+
+        <mxCell id="bridge" value="Ethernet Bridge&lt;br&gt;&lt;font color=&quot;#666666&quot; style=&quot;font-size:10px&quot;&gt;one INPUT pin · 4 edges&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=12;" vertex="1" parent="1"><mxGeometry x="375" y="215" width="150" height="60" as="geometry" /></mxCell>
+
+        <mxCell id="f1" value="47100" style="endArrow=classic;html=1;strokeColor=#333333;" edge="1" parent="1" source="bench" target="v2x"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="f2" value="47200" style="endArrow=classic;html=1;strokeColor=#333333;" edge="1" parent="1" source="v2x" target="ada"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="f3" value="47300" style="endArrow=classic;html=1;strokeColor=#333333;" edge="1" parent="1" source="ada" target="ivi"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="m1" value="eth" style="endArrow=none;html=1;strokeColor=#888888;" edge="1" parent="1" source="bench" target="bridge"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="m2" value="eth" style="endArrow=none;html=1;strokeColor=#888888;" edge="1" parent="1" source="v2x" target="bridge"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="m3" value="eth" style="endArrow=none;html=1;strokeColor=#888888;" edge="1" parent="1" source="ada" target="bridge"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="m4" value="eth" style="endArrow=none;html=1;strokeColor=#888888;" edge="1" parent="1" source="ivi" target="bridge"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="note" value="Top row is the data flow and its UDP ports. Diagonals are ethernet pin membership — all four nodes join the same L2 segment.&lt;br&gt;Every hop is same-subnet and same-bridge, so no routing, gateway, or broker is needed." style="text;html=1;align=left;verticalAlign=top;fontSize=11;fontColor=#333333;" vertex="1" parent="1"><mxGeometry x="20" y="305" width="860" height="40" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

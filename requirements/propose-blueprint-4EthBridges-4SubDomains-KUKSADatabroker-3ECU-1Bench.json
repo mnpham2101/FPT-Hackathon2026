@@ -1,0 +1,398 @@
+{
+  "version": 1,
+  "exportedAt": "2026-07-30T07:37:37.021Z",
+  "blueprint": {
+    "name": "trial1_minh",
+    "description": "M1 Cooperative Vehicle Awareness - 4-node topology (V2X ECU, ADA ECU, IVI ECU, Bench Scenario Player) + Ethernet Bridge. Created per requirements/car-sky-guide.",
+    "zones": [],
+    "nodes": [
+      {
+        "id": "00b4a904-10c2-42d5-b082-30d05c7cf401",
+        "label": "V2X ECU",
+        "nodeType": "container",
+        "config": {
+          "env": {
+            "LISTEN_PORT": "47100",
+            "ADA_ECU_HOST": "10.99.1.11",
+            "ADA_ECU_PORT": "47200"
+          },
+          "image": "registry.carsky.io/m1-v2x-ecu:latest",
+          "command": [
+            "./v2x_ecu"
+          ]
+        },
+        "positionX": 1168.848770048934,
+        "positionY": -212.2193992097703,
+        "pins": [
+          {
+            "id": "kmjKjrMe99Fs6y12Ge68S",
+            "name": "eth",
+            "pinType": "ETHERNET",
+            "direction": "OUTPUT",
+            "side": null,
+            "port": null,
+            "properties": {
+              "address": "10.99.1.10"
+            }
+          }
+        ]
+      },
+      {
+        "id": "113ef771-a774-4cb6-b6c5-43d9969afc89",
+        "label": "IVI ECU",
+        "nodeType": "skycraft",
+        "config": {
+          "prefix": "ivi",
+          "gpuBackend": "virglrenderer",
+          "displayWidth": 1920,
+          "displayHeight": 1080
+        },
+        "positionX": -839.9857480299123,
+        "positionY": -206.33486640539851,
+        "pins": [
+          {
+            "id": "lbtg4WAUthqYeg15K3KvB",
+            "name": "eth",
+            "pinType": "ETHERNET",
+            "direction": "OUTPUT",
+            "side": null,
+            "port": null,
+            "properties": {
+              "address": "10.99.3.10"
+            }
+          }
+        ]
+      },
+      {
+        "id": "5ec782d0-df5e-46fa-8564-ae0ee1172385",
+        "label": "ADA ECU",
+        "nodeType": "container",
+        "config": {
+          "env": {
+            "GATE_EXIT_M": "35",
+            "GATE_ENTER_M": "30",
+            "IVI_ECU_HOST": "10.99.2.11",
+            "IVI_ECU_PORT": "47300",
+            "V2X_LISTEN_PORT": "47200"
+          },
+          "image": "registry.carsky.io/m1-ada-ecu:latest",
+          "command": [
+            "./ada_ecu"
+          ]
+        },
+        "positionX": 1163.7677946147562,
+        "positionY": 45.38006129547168,
+        "pins": [
+          {
+            "id": "cOU1BcGm__RJYOjscC0_p",
+            "name": "eth",
+            "pinType": "ETHERNET",
+            "direction": "OUTPUT",
+            "side": null,
+            "port": null,
+            "properties": {
+              "address": "10.99.2.10"
+            }
+          }
+        ]
+      },
+      {
+        "id": "ec237b80-bd3b-4c6d-b315-a8519de10cf5",
+        "label": "Bench - Scenario Player",
+        "nodeType": "container",
+        "config": {
+          "env": {
+            "V2X_ECU_HOST": "10.99.0.11",
+            "V2X_ECU_PORT": "47100",
+            "SCENARIO_CONFIG": "/app/scenarios/default.yaml"
+          },
+          "image": "registry.carsky.io/m1-scenario-player:latest",
+          "command": [
+            "python",
+            "main.py"
+          ]
+        },
+        "positionX": 1172.2542438747967,
+        "positionY": -443.85962261471195,
+        "pins": [
+          {
+            "id": "tLSQLwQCQiz9F7olzqsg_",
+            "name": "eth",
+            "pinType": "ETHERNET",
+            "direction": "OUTPUT",
+            "side": null,
+            "port": null,
+            "properties": {
+              "address": "10.99.0.10"
+            }
+          }
+        ]
+      },
+      {
+        "id": "eth-bridge-1a40040780de4f16a3dee2fe64441fcc",
+        "label": "Bench Bridge",
+        "nodeType": "eth-bridge",
+        "config": null,
+        "positionX": 832.2079243839179,
+        "positionY": -493.26417685502,
+        "pins": [
+          {
+            "id": "YN5o-xh9k7inahXIcMov_",
+            "name": "eth",
+            "pinType": "ETHERNET",
+            "direction": "INPUT",
+            "side": null,
+            "port": null,
+            "properties": null
+          }
+        ]
+      },
+      {
+        "id": "eth-bridge-21bde080f6ce4cfb872fcbe2f85562ec",
+        "label": "V2X Bridge",
+        "nodeType": "eth-bridge",
+        "config": null,
+        "positionX": 834.6284279081636,
+        "positionY": -246.9698511829207,
+        "pins": [
+          {
+            "id": "041ywomFchwV4wXjvKRGp",
+            "name": "eth",
+            "pinType": "ETHERNET",
+            "direction": "INPUT",
+            "side": null,
+            "port": null,
+            "properties": null
+          }
+        ]
+      },
+      {
+        "id": "eth-bridge-67e65c2157a346ea967461a204276588",
+        "label": "ADA Bridge",
+        "nodeType": "eth-bridge",
+        "config": null,
+        "positionX": 836.3540996654356,
+        "positionY": 7.374445235538671,
+        "pins": [
+          {
+            "id": "sTTw7pZVhn222R0X-l0gl",
+            "name": "eth",
+            "pinType": "ETHERNET",
+            "direction": "INPUT",
+            "side": null,
+            "port": null,
+            "properties": null
+          }
+        ]
+      },
+      {
+        "id": "eth-bridge-cb68bbe7d9654fca9a4ea874a4e6cd37",
+        "label": "IVI Bridge",
+        "nodeType": "eth-bridge",
+        "config": null,
+        "positionX": -548.0594520598814,
+        "positionY": -271.65766572692036,
+        "pins": [
+          {
+            "id": "a0eZpJHNdzuqWR2VLXM8v",
+            "name": "eth",
+            "pinType": "ETHERNET",
+            "direction": "INPUT",
+            "side": null,
+            "port": null,
+            "properties": null
+          }
+        ]
+      },
+      {
+        "id": "kuksa-databroker-d12fc086ccfb41408b93d2ee6aecbbfb",
+        "label": "KUKSA Databroker 1",
+        "nodeType": "kuksa-databroker",
+        "config": null,
+        "positionX": 126.28977407051568,
+        "positionY": -171.3262399163815,
+        "pins": [
+          {
+            "id": "Lkq08f1KrnRnouBF5zTiZ",
+            "name": "kuksa",
+            "pinType": "KUKSA",
+            "direction": "INPUT",
+            "side": null,
+            "port": null,
+            "properties": null
+          }
+        ]
+      },
+      {
+        "id": "script-node-857b602012354c29a82eb9176418138f",
+        "label": "ADA Gateway",
+        "nodeType": "script-node",
+        "config": null,
+        "positionX": 530.2501529543001,
+        "positionY": 43.55426245326045,
+        "pins": [
+          {
+            "id": "sFTrD9qSFHZOlpHsq-Scl",
+            "name": "kuk",
+            "pinType": "KUKSA",
+            "direction": "OUTPUT",
+            "side": null,
+            "port": null,
+            "properties": null
+          },
+          {
+            "id": "y6EJCcuufYU40XpBgky73",
+            "name": "eth",
+            "pinType": "ETHERNET",
+            "direction": "OUTPUT",
+            "side": null,
+            "port": null,
+            "properties": {
+              "address": "10.99.2.11"
+            }
+          }
+        ]
+      },
+      {
+        "id": "script-node-91c3c8d9c4a24e4d975dd940da301181",
+        "label": "Bench Gateway",
+        "nodeType": "script-node",
+        "config": null,
+        "positionX": 525.5969551307562,
+        "positionY": -442.7914424259969,
+        "pins": [
+          {
+            "id": "SyiqgqjNVI2mGsEcwMwCX",
+            "name": "eth",
+            "pinType": "ETHERNET",
+            "direction": "OUTPUT",
+            "side": null,
+            "port": null,
+            "properties": {
+              "address": "10.99.0.11"
+            }
+          },
+          {
+            "id": "VctRZmbNPZPnJ7Cf0V_5x",
+            "name": "kuk",
+            "pinType": "KUKSA",
+            "direction": "OUTPUT",
+            "side": null,
+            "port": null,
+            "properties": null
+          }
+        ]
+      },
+      {
+        "id": "script-node-e335a668852f4708afe3862a78d1e67a",
+        "label": "V2X Gateway",
+        "nodeType": "script-node",
+        "config": null,
+        "positionX": 525.4331720804071,
+        "positionY": -207.53938814718364,
+        "pins": [
+          {
+            "id": "GqfJi8GhXsym6AShMCoV1",
+            "name": "kuk",
+            "pinType": "KUKSA",
+            "direction": "OUTPUT",
+            "side": null,
+            "port": null,
+            "properties": null
+          },
+          {
+            "id": "mj6LQ3tr0v6aYwo0Y-FDJ",
+            "name": "eth",
+            "pinType": "ETHERNET",
+            "direction": "OUTPUT",
+            "side": null,
+            "port": null,
+            "properties": {
+              "address": "10.99.1.11"
+            }
+          }
+        ]
+      },
+      {
+        "id": "script-node-ec30e748895f499aad7d3755c97b9dfb",
+        "label": "IVI Gateway",
+        "nodeType": "script-node",
+        "config": null,
+        "positionX": -231.3076774924144,
+        "positionY": -207.9210281615154,
+        "pins": [
+          {
+            "id": "XAPHElFAd6BBBFBG3L4Ir",
+            "name": "eth",
+            "pinType": "ETHERNET",
+            "direction": "OUTPUT",
+            "side": null,
+            "port": null,
+            "properties": {
+              "address": "10.99.3.11"
+            }
+          },
+          {
+            "id": "ccBdehMWBnQ35fBs0PYpX",
+            "name": "kuk",
+            "pinType": "KUKSA",
+            "direction": "OUTPUT",
+            "side": null,
+            "port": null,
+            "properties": null
+          }
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "sourcePinId": "GqfJi8GhXsym6AShMCoV1",
+        "targetPinId": "Lkq08f1KrnRnouBF5zTiZ"
+      },
+      {
+        "sourcePinId": "XAPHElFAd6BBBFBG3L4Ir",
+        "targetPinId": "a0eZpJHNdzuqWR2VLXM8v"
+      },
+      {
+        "sourcePinId": "sFTrD9qSFHZOlpHsq-Scl",
+        "targetPinId": "Lkq08f1KrnRnouBF5zTiZ"
+      },
+      {
+        "sourcePinId": "VctRZmbNPZPnJ7Cf0V_5x",
+        "targetPinId": "Lkq08f1KrnRnouBF5zTiZ"
+      },
+      {
+        "sourcePinId": "tLSQLwQCQiz9F7olzqsg_",
+        "targetPinId": "YN5o-xh9k7inahXIcMov_"
+      },
+      {
+        "sourcePinId": "mj6LQ3tr0v6aYwo0Y-FDJ",
+        "targetPinId": "041ywomFchwV4wXjvKRGp"
+      },
+      {
+        "sourcePinId": "ccBdehMWBnQ35fBs0PYpX",
+        "targetPinId": "Lkq08f1KrnRnouBF5zTiZ"
+      },
+      {
+        "sourcePinId": "y6EJCcuufYU40XpBgky73",
+        "targetPinId": "sTTw7pZVhn222R0X-l0gl"
+      },
+      {
+        "sourcePinId": "cOU1BcGm__RJYOjscC0_p",
+        "targetPinId": "sTTw7pZVhn222R0X-l0gl"
+      },
+      {
+        "sourcePinId": "kmjKjrMe99Fs6y12Ge68S",
+        "targetPinId": "041ywomFchwV4wXjvKRGp"
+      },
+      {
+        "sourcePinId": "lbtg4WAUthqYeg15K3KvB",
+        "targetPinId": "a0eZpJHNdzuqWR2VLXM8v"
+      },
+      {
+        "sourcePinId": "SyiqgqjNVI2mGsEcwMwCX",
+        "targetPinId": "YN5o-xh9k7inahXIcMov_"
+      }
+    ]
+  }
+}

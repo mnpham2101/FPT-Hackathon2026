@@ -14,7 +14,7 @@ Trigger: [[project-architecture]] is asked to design for a **phase or requiremen
    | Node folder | CarSky node type | Requirements it hosts |
    |---|---|---|
    | `Scenario_Player/` | Container Node (bench) | R11 |
-   | `V2X_ECU/` | Container Node | R1, R7–R10 |
+   | `V2X_ECU/` | Container Node | R1, R7–R9 (R10 deferred) |
    | `ADA_ECU/` | Container Node | R3, R12–R15 |
    | `IVI_ECU/` | Skycraft Node (AAOS) | R4, R16–R17 |
 

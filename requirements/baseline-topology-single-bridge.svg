@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="350" viewBox="0 0 900 350" font-family="Helvetica, Arial, sans-serif">
+  <rect width="900" height="350" fill="#ffffff"/>
+
+  <text x="20" y="22" font-size="13" font-weight="bold" fill="#333333">Baseline (R6) — four nodes, one Ethernet Bridge, one subnet 10.99.0.0/24</text>
+
+  <rect x="40"  y="50" width="150" height="60" rx="6" fill="#dae8fc" stroke="#6c8ebf"/>
+  <text x="115" y="74" font-size="12" fill="#1a1a1a" text-anchor="middle">Bench</text>
+  <text x="115" y="92" font-size="11" fill="#444444" text-anchor="middle">10.99.0.10</text>
+
+  <rect x="260" y="50" width="150" height="60" rx="6" fill="#dae8fc" stroke="#6c8ebf"/>
+  <text x="335" y="74" font-size="12" fill="#1a1a1a" text-anchor="middle">V2X ECU</text>
+  <text x="335" y="92" font-size="11" fill="#444444" text-anchor="middle">10.99.0.11</text>
+
+  <rect x="480" y="50" width="150" height="60" rx="6" fill="#dae8fc" stroke="#6c8ebf"/>
+  <text x="555" y="74" font-size="12" fill="#1a1a1a" text-anchor="middle">ADA ECU</text>
+  <text x="555" y="92" font-size="11" fill="#444444" text-anchor="middle">10.99.0.12</text>
+
+  <rect x="700" y="50" width="150" height="60" rx="6" fill="#e1d5e7" stroke="#9673a6"/>
+  <text x="775" y="74" font-size="12" fill="#1a1a1a" text-anchor="middle">IVI ECU (AAOS)</text>
+  <text x="775" y="92" font-size="11" fill="#444444" text-anchor="middle">10.99.0.13</text>
+
+  <line x1="190" y1="80" x2="260" y2="80" stroke="#333333" stroke-width="1.5"/>
+  <text x="225" y="72" font-size="10" fill="#333333" text-anchor="middle">47100</text>
+  <line x1="410" y1="80" x2="480" y2="80" stroke="#333333" stroke-width="1.5"/>
+  <text x="445" y="72" font-size="10" fill="#333333" text-anchor="middle">47200</text>
+  <line x1="630" y1="80" x2="700" y2="80" stroke="#333333" stroke-width="1.5"/>
+  <text x="665" y="72" font-size="10" fill="#333333" text-anchor="middle">47300</text>
+
+  <line x1="115" y1="110" x2="400" y2="215" stroke="#888888" stroke-width="1.2"/>
+  <line x1="335" y1="110" x2="435" y2="215" stroke="#888888" stroke-width="1.2"/>
+  <line x1="555" y1="110" x2="465" y2="215" stroke="#888888" stroke-width="1.2"/>
+  <line x1="775" y1="110" x2="500" y2="215" stroke="#888888" stroke-width="1.2"/>
+  <text x="245" y="170" font-size="10" fill="#888888" text-anchor="middle">eth</text>
+  <text x="655" y="170" font-size="10" fill="#888888" text-anchor="middle">eth</text>
+
+  <rect x="375" y="215" width="150" height="60" rx="6" fill="#f5f5f5" stroke="#999999"/>
+  <text x="450" y="240" font-size="12" fill="#1a1a1a" text-anchor="middle">Ethernet Bridge</text>
+  <text x="450" y="258" font-size="10" fill="#666666" text-anchor="middle">one INPUT pin · 4 edges</text>
+
+  <line x1="20" y1="298" x2="880" y2="298" stroke="#dddddd"/>
+  <text x="20" y="318" font-size="11" fill="#333333">Top row is the data flow and its UDP ports. Diagonals are `ethernet` pin membership — all four nodes join the same L2 segment.</text>
+  <text x="20" y="336" font-size="11" fill="#333333">Every hop is same-subnet and same-bridge, so no routing, gateway, or broker is needed.</text>
+</svg>

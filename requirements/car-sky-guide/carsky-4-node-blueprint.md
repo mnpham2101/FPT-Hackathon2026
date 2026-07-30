@@ -19,7 +19,7 @@ One blueprint = one car (report §1). It contains 4 role nodes plus the bridge t
 |---|---|---|---|
 | Ethernet Bridge | Ethernet Bridge Node | R6 virtual L2 network; every other node's ethernet pin targets this | `10.99.0.1` (bridge itself, subnet `10.99.0.0/24`) |
 | Bench — Scenario Player | Container Node | Emulates the Quectel modem's connection point toward the V2X ECU; generates CPMs (R11) | `10.99.0.10` |
-| V2X ECU | Container Node | Decodes/encodes CPM, Rx pipeline to ADA, ego Tx (R7–R10) | `10.99.0.11` |
+| V2X ECU | Container Node | Decodes CPM, Rx pipeline to ADA — receive-only (R7–R9; R10 ego Tx moved to the future plan) | `10.99.0.11` |
 | ADA ECU | Container Node | Detection, track store, risk assessment, warning emission (R12–R15) | `10.99.0.12` |
 | IVI ECU | Skycraft Node (AAOS guest) | God-view HMI (R16, R17) | `10.99.0.13` |
 

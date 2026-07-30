@@ -1,0 +1,51 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="node-bridge-gateway" id="propose-topology-node-bridge-gateway">
+    <mxGraphModel dx="1368" dy="788" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="920" pageHeight="470" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="h1" value="ECU / Bench node" style="text;html=1;align=center;fontSize=12;fontStyle=1;fontColor=#555555;" vertex="1" parent="1"><mxGeometry x="20" y="8" width="150" height="20" as="geometry" /></mxCell>
+        <mxCell id="h2" value="Ethernet Bridge (L2)" style="text;html=1;align=center;fontSize=12;fontStyle=1;fontColor=#555555;" vertex="1" parent="1"><mxGeometry x="250" y="8" width="140" height="20" as="geometry" /></mxCell>
+        <mxCell id="h3" value="Script-node Gateway" style="text;html=1;align=center;fontSize=12;fontStyle=1;fontColor=#555555;" vertex="1" parent="1"><mxGeometry x="460" y="8" width="150" height="20" as="geometry" /></mxCell>
+        <mxCell id="h4" value="KUKSA Databroker" style="text;html=1;align=center;fontSize=12;fontStyle=1;fontColor=#555555;" vertex="1" parent="1"><mxGeometry x="720" y="8" width="170" height="20" as="geometry" /></mxCell>
+
+        <mxCell id="ecu0" value="Bench – Scenario Player&lt;br&gt;&lt;font color=&quot;#444444&quot;&gt;10.99.0.10&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="20" y="30" width="150" height="60" as="geometry" /></mxCell>
+        <mxCell id="br0" value="Bench Bridge" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;" vertex="1" parent="1"><mxGeometry x="250" y="30" width="140" height="60" as="geometry" /></mxCell>
+        <mxCell id="gw0" value="Bench Gateway&lt;br&gt;&lt;font color=&quot;#444444&quot;&gt;10.99.0.11&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1"><mxGeometry x="460" y="30" width="150" height="60" as="geometry" /></mxCell>
+
+        <mxCell id="ecu1" value="V2X ECU&lt;br&gt;&lt;font color=&quot;#444444&quot;&gt;10.99.1.10&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="20" y="130" width="150" height="60" as="geometry" /></mxCell>
+        <mxCell id="br1" value="V2X Bridge" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;" vertex="1" parent="1"><mxGeometry x="250" y="130" width="140" height="60" as="geometry" /></mxCell>
+        <mxCell id="gw1" value="V2X Gateway&lt;br&gt;&lt;font color=&quot;#444444&quot;&gt;10.99.1.11&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1"><mxGeometry x="460" y="130" width="150" height="60" as="geometry" /></mxCell>
+
+        <mxCell id="ecu2" value="ADA ECU&lt;br&gt;&lt;font color=&quot;#444444&quot;&gt;10.99.2.10&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="20" y="230" width="150" height="60" as="geometry" /></mxCell>
+        <mxCell id="br2" value="ADA Bridge" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;" vertex="1" parent="1"><mxGeometry x="250" y="230" width="140" height="60" as="geometry" /></mxCell>
+        <mxCell id="gw2" value="ADA Gateway&lt;br&gt;&lt;font color=&quot;#444444&quot;&gt;10.99.2.11&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1"><mxGeometry x="460" y="230" width="150" height="60" as="geometry" /></mxCell>
+
+        <mxCell id="ecu3" value="IVI ECU (AAOS)&lt;br&gt;&lt;font color=&quot;#444444&quot;&gt;10.99.3.10&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1"><mxGeometry x="20" y="330" width="150" height="60" as="geometry" /></mxCell>
+        <mxCell id="br3" value="IVI Bridge" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;" vertex="1" parent="1"><mxGeometry x="250" y="330" width="140" height="60" as="geometry" /></mxCell>
+        <mxCell id="gw3" value="IVI Gateway&lt;br&gt;&lt;font color=&quot;#444444&quot;&gt;10.99.3.11&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1"><mxGeometry x="460" y="330" width="150" height="60" as="geometry" /></mxCell>
+
+        <mxCell id="broker" value="KUKSA Databroker&lt;br&gt;&lt;font color=&quot;#444444&quot;&gt;4 × kuksa pin&lt;br&gt;(VSS signal paths)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1"><mxGeometry x="720" y="170" width="170" height="80" as="geometry" /></mxCell>
+
+        <mxCell id="e0a" value="eth" style="endArrow=none;html=1;strokeColor=#555555;" edge="1" parent="1" source="ecu0" target="br0"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e0b" value="eth" style="endArrow=none;html=1;strokeColor=#555555;" edge="1" parent="1" source="br0" target="gw0"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e0c" value="kuksa" style="endArrow=none;html=1;strokeColor=#d79b00;" edge="1" parent="1" source="gw0" target="broker"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="e1a" value="eth" style="endArrow=none;html=1;strokeColor=#555555;" edge="1" parent="1" source="ecu1" target="br1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e1b" value="eth" style="endArrow=none;html=1;strokeColor=#555555;" edge="1" parent="1" source="br1" target="gw1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e1c" value="kuksa" style="endArrow=none;html=1;strokeColor=#d79b00;" edge="1" parent="1" source="gw1" target="broker"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="e2a" value="eth" style="endArrow=none;html=1;strokeColor=#555555;" edge="1" parent="1" source="ecu2" target="br2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e2b" value="eth" style="endArrow=none;html=1;strokeColor=#555555;" edge="1" parent="1" source="br2" target="gw2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e2c" value="kuksa" style="endArrow=none;html=1;strokeColor=#d79b00;" edge="1" parent="1" source="gw2" target="broker"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="e3a" value="eth" style="endArrow=none;html=1;strokeColor=#555555;" edge="1" parent="1" source="ecu3" target="br3"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e3b" value="eth" style="endArrow=none;html=1;strokeColor=#555555;" edge="1" parent="1" source="br3" target="gw3"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e3c" value="kuksa" style="endArrow=none;html=1;strokeColor=#d79b00;" edge="1" parent="1" source="gw3" target="broker"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="note" value="Data flow: Bench —47100→ V2X ECU —47200→ ADA ECU —47300→ IVI ECU. Each ECU sends only to its own gateway.&lt;br&gt;Lines show pin membership, not direction: every edge is pin OUTPUT → hub INPUT. A bridge is an L2 switch and never routes.&lt;br&gt;The KUKSA Databroker is the only path between the four bridges." style="text;html=1;align=left;verticalAlign=top;fontSize=11;fontColor=#333333;" vertex="1" parent="1"><mxGeometry x="20" y="410" width="870" height="55" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -1,0 +1,36 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="subnets" id="propose-topology-subnets">
+    <mxGraphModel dx="1368" dy="788" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="980" pageHeight="430" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="sub0" value="Subnet 10.99.0.0/24 — Bench domain&#10;one L2 broadcast domain" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eef6ff;strokeColor=#6c8ebf;dashed=1;verticalAlign=top;align=left;spacingLeft=14;spacingTop=8;fontSize=13;fontStyle=1;fontColor=#31527a;" vertex="1" parent="1"><mxGeometry x="30" y="40" width="380" height="200" as="geometry" /></mxCell>
+
+        <mxCell id="bench" value="Bench&lt;br&gt;&lt;font color=&quot;#444444&quot;&gt;.10&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1"><mxGeometry x="52" y="100" width="105" height="55" as="geometry" /></mxCell>
+        <mxCell id="benchbr" value="Bench&lt;br&gt;Bridge" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=11;" vertex="1" parent="1"><mxGeometry x="180" y="100" width="100" height="55" as="geometry" /></mxCell>
+        <mxCell id="benchgw" value="Bench GW&lt;br&gt;&lt;font color=&quot;#444444&quot;&gt;.11&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1"><mxGeometry x="300" y="100" width="95" height="55" as="geometry" /></mxCell>
+
+        <mxCell id="l1" style="endArrow=none;html=1;strokeColor=#555555;" edge="1" parent="1" source="bench" target="benchbr"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="l2" style="endArrow=none;html=1;strokeColor=#555555;" edge="1" parent="1" source="benchbr" target="benchgw"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="inner" value="Bench reaches .11 only — same subnet AND same bridge.&#10;Nothing outside this box is reachable directly.&#10;The three subnets at right have the identical internal shape (ECU .10 + bridge + gateway .11)." style="text;html=1;align=left;verticalAlign=top;fontSize=11;fontColor=#31527a;" vertex="1" parent="1"><mxGeometry x="46" y="170" width="350" height="60" as="geometry" /></mxCell>
+
+        <mxCell id="sub1" value="Subnet 10.99.1.0/24 — V2X domain&#10;V2X ECU .10 · V2X Bridge · V2X GW .11" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eef6ff;strokeColor=#6c8ebf;dashed=1;verticalAlign=top;align=left;spacingLeft=14;spacingTop=8;fontSize=12;fontStyle=1;fontColor=#31527a;" vertex="1" parent="1"><mxGeometry x="660" y="55" width="290" height="60" as="geometry" /></mxCell>
+        <mxCell id="sub2" value="Subnet 10.99.2.0/24 — ADA domain&#10;ADA ECU .10 · ADA Bridge · ADA GW .11" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eef6ff;strokeColor=#6c8ebf;dashed=1;verticalAlign=top;align=left;spacingLeft=14;spacingTop=8;fontSize=12;fontStyle=1;fontColor=#31527a;" vertex="1" parent="1"><mxGeometry x="660" y="180" width="290" height="60" as="geometry" /></mxCell>
+        <mxCell id="sub3" value="Subnet 10.99.3.0/24 — IVI domain&#10;IVI ECU .10 · IVI Bridge · IVI GW .11" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f6f0fa;strokeColor=#9673a6;dashed=1;verticalAlign=top;align=left;spacingLeft=14;spacingTop=8;fontSize=12;fontStyle=1;fontColor=#6b4a86;" vertex="1" parent="1"><mxGeometry x="660" y="305" width="290" height="60" as="geometry" /></mxCell>
+
+        <mxCell id="broker" value="KUKSA&lt;br&gt;Databroker&lt;br&gt;&lt;font color=&quot;#996600&quot; style=&quot;font-size:10px&quot;&gt;outside every subnet&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;" vertex="1" parent="1"><mxGeometry x="455" y="180" width="150" height="70" as="geometry" /></mxCell>
+
+        <mxCell id="k0" style="endArrow=none;html=1;strokeColor=#d79b00;" edge="1" parent="1" source="benchgw" target="broker"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="k1" style="endArrow=none;html=1;strokeColor=#d79b00;" edge="1" parent="1" source="sub1" target="broker"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="k2" style="endArrow=none;html=1;strokeColor=#d79b00;" edge="1" parent="1" source="sub2" target="broker"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="k3" style="endArrow=none;html=1;strokeColor=#d79b00;" edge="1" parent="1" source="sub3" target="broker"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="onlypath" value="only cross-subnet path" style="text;html=1;align=center;fontSize=11;fontColor=#996600;" vertex="1" parent="1"><mxGeometry x="455" y="272" width="150" height="20" as="geometry" /></mxCell>
+
+        <mxCell id="note" value="A packet leaves an ECU only if the destination is in the same subnet AND on the same bridge. No ECU-to-ECU pair satisfies both.&lt;br&gt;One subnet per bridge is deliberate: a shared subnet across separate bridges fails silently (ARP timeout) instead of loudly (ENETUNREACH)." style="text;html=1;align=left;verticalAlign=top;fontSize=11;fontColor=#333333;" vertex="1" parent="1"><mxGeometry x="30" y="398" width="920" height="35" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

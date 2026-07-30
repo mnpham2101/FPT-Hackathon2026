@@ -11,6 +11,13 @@ local.properties
 captures/
 .kotlin/
 
+# AG-Kit temporary & runtime files
+.temp_ag_kit/
+.agents/.ag-kit/backups/
+.agents/.ag-kit/conflicts/
+.agents/.ag-kit/runs/
+.temp_backup/
+
 # ADA local runtime/test artifacts
 ada-ecu/local-data/
 ada-ecu/tools/__pycache__/

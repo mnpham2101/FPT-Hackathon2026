@@ -1,0 +1,87 @@
+@startuml scenario-player-v2x-callflow
+' Research artifact (project-researcher) — Scenario Player <-> V2X ECU call flow.
+' Companion to scenario-player-v2x-callflow-messages.md. Not an HLD.
+' Section dividers (==) group the exchange; only section B is on the M1 critical path.
+
+title Scenario Player and V2X ECU — call flow (M1: receive-only)
+
+autonumber
+
+box "Bench Node" #DDEBF7
+  participant "Scenario Player\n10.99.0.10" as SP
+end box
+
+box "V2X ECU — 10.99.0.11" #E2EFDA
+  participant "below seam\nadapter (R7) + modem stub (R8)" as STUB
+  participant "above seam\napplication (R9)" as APP
+end box
+
+participant "ADA ECU\n10.99.0.12:47200" as ADA
+
+== A — Bring-up: control plane, in-node — NO wire traffic, NO authentication ==
+
+APP -> APP : read env (LISTEN_PORT, ADA_ECU_HOST/PORT, STATION_ID)
+APP -> STUB : init()
+STUB --> APP : ack — idle -> initialized
+APP -> STUB : configure(stationId, txProfile)
+STUB --> APP : ack — initialized -> configured
+APP -> STUB : subscribeRx(callback)
+STUB -> STUB : bind UDP 0.0.0.0:47100
+STUB --> APP : ack — configured -> rx-subscribed
+SP -> SP : read env + SCENARIO_CONFIG; resolve V2X_ECU_HOST/PORT
+
+note over SP, STUB
+  No handshake, no session, no credentials on this wire.
+  Connectionless broadcast semantics — production Rx is
+  already "read from socket" (report section 3(b)).
+  ITS security (TS 103 097 signing / PKI) ships in the
+  modem and is out of scope for the whole project.
+end note
+
+== B — Broadcast Rx: bench streams C's perception (R11 -> R9) — COMMITTED PATH ==
+
+loop every 100 ms (10 Hz, from scenario config)
+  SP -> SP : advance A/B/C trajectory one tick
+  SP -> SP : build CPM — header + management + OVC + PerceivedObject(C)
+  SP -> SP : UPER encode (shared R1 codec)
+  SP ->> STUB : UDP datagram -> 10.99.0.11:47100
+  STUB -> APP : onRx(bytes) via subscribed callback
+  group R9 Rx pipeline
+    APP -> APP : UPER decode (Vanetza r2::Cpm)
+    APP -> APP : validate — mandatory fields, ranges, staleness
+    APP -> APP : dedupe on (stationId, objectId, referenceTime + measurementDeltaTime)
+    APP -> APP : derive object.distance = hypot(x, y)
+  end
+  APP ->> ADA : R2 JSON v2x_object -> 10.99.0.12:47200
+end
+
+note over APP, ADA
+  This is the whole M1 V2X data path: inform the ADA ECU
+  of an obstruction outside ego's line of sight.
+end note
+
+== C — Broadcast Tx (R10) — NOT IN M1, moved to the future plan ==
+
+note over SP, ADA #FFD9D9
+  Deferred by user decision 2026-07-30. The M1 V2X ECU is
+  receive-only, so this wire is unidirectional.
+  No ADA -> V2X path, no CPM encoder on the ECU, no Tx port.
+  R7 still declares send(); nothing calls it — the seam is
+  what keeps R10 a later implementation, not a redesign.
+end note
+
+== D — Fault injection: R8 in-node + bench impairment feeding the R9 corpus ==
+
+APP -> STUB : init() / configure() / subscribeRx()
+STUB --> APP : injected fault\n(init failure | configure reject | subscription drop)
+APP -> APP : log defined recovery — node never crashes
+SP ->> STUB : malformed / truncated / out-of-range datagram
+STUB -> APP : onRx(bytes)
+APP -> APP : reject + increment counter, no forward to ADA
+
+== E — Teardown ==
+
+SP -> SP : scenario end — stop stream
+APP -> APP : age out tracks; flush JSONL evidence log (R18)
+
+@enduml

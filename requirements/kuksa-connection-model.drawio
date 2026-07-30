@@ -1,0 +1,36 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="connection-model" id="kuksa-connection-model">
+    <mxGraphModel dx="1368" dy="788" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1160" pageHeight="450" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="title" value="Connection model — endpoints join a hub; only a script-node gateway crosses hubs" style="text;html=1;align=left;fontSize=13;fontStyle=1;fontColor=#333333;" vertex="1" parent="1"><mxGeometry x="20" y="10" width="700" height="20" as="geometry" /></mxCell>
+
+        <mxCell id="bms" value="BMS ECU&lt;br&gt;&lt;font color=&quot;#666666&quot; style=&quot;font-size:10px&quot;&gt;endpoint&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1"><mxGeometry x="20" y="185" width="110" height="60" as="geometry" /></mxCell>
+        <mxCell id="pwtcan" value="PWT CAN&lt;br&gt;&lt;font color=&quot;#666666&quot; style=&quot;font-size:10px&quot;&gt;hub · can-bus&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=11;" vertex="1" parent="1"><mxGeometry x="170" y="185" width="115" height="60" as="geometry" /></mxCell>
+        <mxCell id="pwtgw" value="PWT Gateway&lt;br&gt;&lt;font color=&quot;#666666&quot; style=&quot;font-size:10px&quot;&gt;script-node&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1"><mxGeometry x="325" y="185" width="115" height="60" as="geometry" /></mxCell>
+
+        <mxCell id="broker" value="Central Broker (VSS)&lt;br&gt;&lt;font color=&quot;#996600&quot; style=&quot;font-size:10px&quot;&gt;hub · kuksa-databroker&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="1"><mxGeometry x="520" y="180" width="150" height="70" as="geometry" /></mxCell>
+
+        <mxCell id="tcugw" value="TCU Gateway&lt;br&gt;&lt;font color=&quot;#666666&quot; style=&quot;font-size:10px&quot;&gt;script-node&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1"><mxGeometry x="720" y="60" width="115" height="60" as="geometry" /></mxCell>
+        <mxCell id="tcusw" value="TCU Switch&lt;br&gt;&lt;font color=&quot;#666666&quot; style=&quot;font-size:10px&quot;&gt;hub · eth-bridge&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#999999;fontSize=11;" vertex="1" parent="1"><mxGeometry x="875" y="60" width="115" height="60" as="geometry" /></mxCell>
+        <mxCell id="nad" value="TCU-NAD&lt;br&gt;&lt;font color=&quot;#666666&quot; style=&quot;font-size:10px&quot;&gt;endpoint&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1"><mxGeometry x="1030" y="60" width="110" height="60" as="geometry" /></mxCell>
+
+        <mxCell id="ivigw" value="IVI Gateway&lt;br&gt;&lt;font color=&quot;#666666&quot; style=&quot;font-size:10px&quot;&gt;script-node&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="1"><mxGeometry x="720" y="310" width="115" height="60" as="geometry" /></mxCell>
+        <mxCell id="ivi" value="IVI – Android&lt;br&gt;&lt;font color=&quot;#666666&quot; style=&quot;font-size:10px&quot;&gt;endpoint · skycraft&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="1"><mxGeometry x="875" y="310" width="140" height="60" as="geometry" /></mxCell>
+
+        <mxCell id="c1" value="can" style="endArrow=none;html=1;strokeColor=#555555;" edge="1" parent="1" source="bms" target="pwtcan"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="c2" value="can" style="endArrow=none;html=1;strokeColor=#555555;" edge="1" parent="1" source="pwtcan" target="pwtgw"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="c3" value="kuksa" style="endArrow=none;html=1;strokeColor=#d79b00;" edge="1" parent="1" source="pwtgw" target="broker"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="c4" value="kuksa" style="endArrow=none;html=1;strokeColor=#d79b00;" edge="1" parent="1" source="broker" target="tcugw"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="c5" value="eth" style="endArrow=none;html=1;strokeColor=#555555;" edge="1" parent="1" source="tcugw" target="tcusw"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="c6" value="eth" style="endArrow=none;html=1;strokeColor=#555555;" edge="1" parent="1" source="tcusw" target="nad"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="c7" value="kuksa" style="endArrow=none;html=1;strokeColor=#d79b00;" edge="1" parent="1" source="broker" target="ivigw"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="c8" value="vhal" style="endArrow=none;html=1;strokeColor=#555555;" edge="1" parent="1" source="ivigw" target="ivi"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="legend" value="Every edge runs endpoint pin (OUTPUT) → hub pin (INPUT). Two endpoints never pair. Two hubs never pair.&lt;br&gt;A hub carries one INPUT pin and accepts many edges. Crossing from one hub to another always costs a gateway." style="text;html=1;align=left;verticalAlign=top;fontSize=11;fontColor=#333333;" vertex="1" parent="1"><mxGeometry x="20" y="405" width="1120" height="40" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

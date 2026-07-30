@@ -35,8 +35,8 @@ Responsibility of each ECU and the Scenario Player in Milestone 1; the Cortex-M 
 - **V2X ECU**
   - Configures the modem and interfaces with it — simulated only.
   - Connects to the V2X network — either simulated or handled entirely by a 3rd-party library.
-  - Receives V2X message payloads, applies business logic, forwards results to the ADA ECU.
-  - Receives information from the ADA ECU, constructs V2X message payloads, broadcasts them over the V2X network.
+  - Receives V2X message payloads, applies business logic, forwards results to the ADA ECU — informing it of an obstruction outside ego's line of sight. **This is the whole of the M1 V2X data path: receive-only.**
+  - ~~Receives information from the ADA ECU, constructs V2X message payloads, broadcasts them over the V2X network.~~ — **deferred (R10)**, user decision 2026-07-30.
 - **ADA ECU**
   - Incorporates information from the V2X ECU and detected objects from the video feed to construct a warning message for the IVI ECU, via a **Collision Risk Assessment abstraction** that analyzes and categorizes risk — built so future warning scenarios can be added as extensions without reworking this code (§ Future developments: modular warning scenarios).
   - M1 need not classify every risk type or filter by criticality; the warning message is designed so new hazard types and criticality levels can be added later without reworking this design (§ Future developments: criticality filtering, other hazard-warning types).
@@ -52,6 +52,28 @@ Responsibility of each ECU and the Scenario Player in Milestone 1; the Cortex-M 
   - Generates V2X messages informing the V2X ECU of vehicle C (R11).
 - **Cortex-M ECU**
   - Not developed — sensor data is omitted.
+
+### Baseline Propose Topology
+
+The committed network layout for the nodes above. It realizes R5 and R6 as frozen: four role nodes, one Ethernet Bridge, one subnet.
+
+- Blueprint: [baseline-blueprint-1EthBridge-1SubDomain-3ECU-1Bench.json](baseline-blueprint-1EthBridge-1SubDomain-3ECU-1Bench.json).
+
+![Baseline single-bridge topology](baseline-topology-single-bridge.svg)
+
+*Source: [baseline-topology-single-bridge.drawio](baseline-topology-single-bridge.drawio)*
+
+| Node | Address | Sends to | Port |
+|---|---|---|---|
+| Bench — Scenario Player | `10.99.0.10` | V2X ECU | `47100` |
+| V2X ECU | `10.99.0.11` | ADA ECU | `47200` |
+| ADA ECU | `10.99.0.12` | IVI ECU | `47300` |
+| IVI ECU | `10.99.0.13` | — | terminal |
+
+- Each node declares exactly one `ethernet` pin, wired to the single bridge — a star, not a chain.
+- Every hop is same-subnet and same-bridge, so each ECU addresses the next one directly. No routing, gateway, or broker.
+- Open item: the IVI Skycraft node needs its `image` artifact reference before the Room can reach 5/5 Running.
+- An explored alternative that segments the network per ECU is recorded in §5.
 
 ### Cloud development constraints
 
@@ -73,7 +95,7 @@ The table below covers the ECUs and the Scenario Player — node roles are descr
 
 ### Input constraints
 
-- V2X control messages and V2X data (broadcast messages) are inputs to the V2X ECU and carry inter-vehicle communication. Development focuses on both extracting **and** constructing application-layer data — e.g. "there is an obstruction ahead of me, broadcast it" and "a broadcast was received, check what it is."
+- V2X control messages and V2X data (broadcast messages) are inputs to the V2X ECU and carry inter-vehicle communication. **M1 develops only the extracting half** — "a broadcast was received, check what it is." Constructing application-layer data ("there is an obstruction ahead of me, broadcast it") is deferred with R10.
 - The V2X protocol stack ships in the modem and stays out of scope for the whole project, not just M1 (this enables the portability goal in § Cloud development constraints).
 - The V2X ECU implements modem↔Cortex-A interfacing (boot-up, configuration) at the interface layer (R7) and constructs the control-plane messages sent to the modem stub for the simplified 3GPP call flow (R8).
 - Live video is the ADA ECU's eventual input; in M1, video files are provided instead.
@@ -114,13 +136,14 @@ Milestone 1's design is deliberately extensible toward the following features, a
 - **Criticality filtering.** The user can opt to receive only warnings at or above a chosen criticality level; criticality is looked up from the ADA→IVI message's `warningType` field (R4), not carried as its own value.
 - **Other hazard-warning types.** Slippery roads, falling rocks, road holes, road condition, presence of children, police, speed limits, no-horn/other road rules, traffic conditions. Carried by DENM (event position + cause code), the named message family for these types.
 - **Extensible V2X message-type dispatch.** The Rx pipeline (R9) dispatches on message type, so further families enter as a new codec module plus one dispatch entry. Deferred from M1 for time — M1 decodes CPM only (R1).
-- **Commands to other ECUs.** The [ada-ecu.svg](ada-ecu.svg) output stage sends Current TrackedObject/Risk/**Commands** to other ECUs/hardware (user decision 2026-07-12); M1 implements only the R10 store snapshot to the V2X ECU — command/actuation output to further ECUs is a future path.
+- **Ego Tx: broadcast own perception (R10).** The V2X ECU constructs CPMs from the ADA store snapshot and broadcasts them via the adapter `send`, so ego can relay what *it* perceives onward to a following vehicle. Deferred from M1 (user decision 2026-07-30): M1's V2X data path is **receive-only** — the ego is the warned vehicle A, never the relaying vehicle B, and B is simulated by the bench (R11). The R7 adapter seam already declares `send`, so this returns as an implementation behind an existing seam, not a redesign.
+- **Commands to other ECUs.** The [ada-ecu.svg](ada-ecu.svg) output stage sends Current TrackedObject/Risk/**Commands** to other ECUs/hardware (user decision 2026-07-12); M1 implements no ADA→V2X output at all (the R10 store snapshot is deferred above) — command/actuation output to further ECUs is a future path.
 
 ---
 
 ## 2. Enumerated requirements
 
-Ordering: contracts first (R1–R6), then data-flow order — V2X ECU (R7–R10), bench (R11), ADA (R12–R15), IVI (R16–R17), evidence & end-to-end (R18–R19).
+Ordering: contracts first (R1–R6), then data-flow order — V2X ECU (R7–R10, **R10 deferred**), bench (R11), ADA (R12–R15), IVI (R16–R17), evidence & end-to-end (R18–R19).
 
 ### Contracts
 
@@ -282,11 +305,13 @@ Awareness state (optional — R15):
 - **Acceptance:** golden-vector CPMs decode correctly; a malformed-input corpus is fully rejected and logged with zero crashes; R2 messages observed at the ADA ECU.
 - **Tech stack:** Vanetza ITS2 codec; nlohmann/json.
 
-**R10 — Ego Tx: broadcast own perception.** *(analysed)*
+**R10 — Ego Tx: broadcast own perception.** *(analysed — **DEFERRED to a future milestone**, user decision 2026-07-30)*
 
-- **Definition:** the V2X ECU constructs CPMs (R1 profile) from ADA store data (R3 snapshot of ego's own-sensor objects) and broadcasts them via the adapter `send` — the "construct and broadcast" half of §1's V2X responsibilities.
+> **Not implemented in M1.** In M1 the V2X ECU is **receive-only on the V2X side**: it decodes relayed CPMs and forwards R2 messages to the ADA ECU informing it of an obstruction outside ego's line of sight. It constructs and broadcasts nothing. Requirement number R10 is retained (numbers are never reused) but carries no M1 deliverable, no acceptance check, and no task decomposition — mirrored in [§ Future developments](#future-developments) and the [future-features register](future/m1-future-features-register.md). Ego's Tx path returns when ego must relay its **own** perception onward to a following vehicle — a multi-ego scenario M1 does not build.
+
+- **Definition:** the V2X ECU constructs CPMs (R1 profile) from ADA store data (R3 snapshot of ego's own-sensor objects) and broadcasts them via the adapter `send`.
 - **Dependency:** R1, R7, R13.
-- **Acceptance:** broadcast frames captured on the R6 network with fields populated from live store data, not constants.
+- **Acceptance:** *(void for M1)* broadcast frames captured on the R6 network with fields populated from live store data, not constants.
 - **Tech stack:** Vanetza ITS2 codec.
 
 ### Bench node — Scenario Player
@@ -382,8 +407,8 @@ Hard-constraint screening precedes every comparison (open-source only, Linux-tar
 
 - **Family candidates:** SAE J2735 BSM — disqualified (paywalled spec, and Part I carries no perceived objects); ETSI CAM+DENM; ETSI CPM TS 103 324.
 - **Single-type check:** CAM describes only the sender — cannot carry C; DENM is event notification (position + cause code) without perceived-object kinematics; CPM carries B's reference position **and** the perceived object with position/velocity/classification/confidence in one message. One message type (CPM) covers the full M1 exchange; CAM adds nothing needed, DENM stays the named family for future hazard types (§1 Future developments).
-- **Pick: CPM TS 103 324** — drivers C1 (Vanetza ships release-2 CPM codecs, [cache](../.claude/references/vanetza-its2-release2-cpm-ts103324.md)) and C2 (one message, one codec, one profile).
-- **Encoding candidates:** asn1tools — disqualified (no X.681/X.683 support needed by CPM, [cache](../.claude/references/asn1tools-ioc-parameterization-limits.md)); raw asn1c — redundant (Vanetza embeds maintained asn1c output); pycrate — no precompiled CPM ([cache](../.claude/references/pycrate-etsi-its-asn1-modules.md)); Vanetza ITS2 ASN.1 targets (LGPLv3, usable without the GN/BTP stack).
+- **Pick: CPM TS 103 324** — drivers C1 (Vanetza ships release-2 CPM codecs) and C2 (one message, one codec, one profile).
+- **Encoding candidates:** asn1tools — disqualified (no X.681/X.683 support needed by CPM); raw asn1c — redundant (Vanetza embeds maintained asn1c output); pycrate — no precompiled CPM; Vanetza ITS2 ASN.1 targets (LGPLv3, usable without the GN/BTP stack).
 - **Pick: Vanetza ITS2 as the single codec source behind one codec seam** — drivers C1 (one proven codec, golden vectors cannot drift) and C4 (asn1-only build targets, no full-stack pull-in).
 
 ### (b) Radio transport under the adapter seam — serves R7, R8
@@ -394,7 +419,7 @@ Hard-constraint screening precedes every comparison (open-source only, Linux-tar
 
 ### (c) Bench message generation — serves R11
 
-- **Candidates:** self-written Python generator; MetaDrive ([cache](../.claude/references/metadrive-license-topdown.md)); CARLA (GPU-heavy); SUMO (no perception concept).
+- **Candidates:** self-written Python generator; MetaDrive; CARLA (GPU-heavy); SUMO (no perception concept).
 - **Pick: self-written Python generator** driving the shared R1 codec — drivers C1 (deterministic, no engine unknowns), C2 (smallest build), C4 (zero engine dependency).
 
 ### (d) Languages per track — serves all
@@ -407,7 +432,7 @@ Hard-constraint screening precedes every comparison (open-source only, Linux-tar
 
 ### (e) IVI HMI framework on AAOS — serves R16, R17
 
-- **Candidates:** Kotlin + Jetpack Compose (+ SceneView/Filament 3D, [cache](../.claude/references/sceneview-filament-android-3d.md)); Flutter-on-Android; web-in-browser (fails the no-JS/WebSocket decision for ego software); Qt-for-Android (JNI/cross-compile friction, no AAOS idiom gain).
+- **Candidates:** Kotlin + Jetpack Compose (+ SceneView/Filament 3D); Flutter-on-Android; web-in-browser (fails the no-JS/WebSocket decision for ego software); Qt-for-Android (JNI/cross-compile friction, no AAOS idiom gain).
 - **Pick: Kotlin + Compose; 3D via SceneView; 2D via Compose Canvas behind the view seam** — drivers C1 (native toolchain of the provided node; app switching/notifications first-class), C2 (no extra engine layer), C3 (the seam carries the future camera-feed view and themes).
 
 ### (f) ADA→IVI data path — serves R4, R15, R16
@@ -417,14 +442,14 @@ Hard-constraint screening precedes every comparison (open-source only, Linux-tar
 
 ### (g) Perception stack — serves R12
 
-- **Candidates:** YOLO11n ONNX-CPU (AGPL-3.0, [benchmark cache](../.claude/references/yolo11-cpu-inference-benchmarks.md)); YOLOX-s (Apache-2.0); SSD-MobileNet (weaker accuracy).
+- **Candidates:** YOLO11n ONNX-CPU (AGPL-3.0); YOLOX-s (Apache-2.0); SSD-MobileNet (weaker accuracy).
 - **Pick: YOLO11n on ONNX Runtime, CPU-only** — driver C1 (best accuracy among CPU-feasible options); no GPU requested from BTC.
 
 ### Stack summary (per track)
 
 | Track / node | Language | Key components |
 |---|---|---|
-| V2X ECU (Container Node) | C++17 | radio adapter seam (R7) + modem stub (R8) + Vanetza CPM codec + Rx pipeline (R9) + ego Tx (R10) |
+| V2X ECU (Container Node) | C++17 | radio adapter seam (R7) + modem stub (R8) + Vanetza CPM decoder + Rx pipeline (R9) — receive-only; ~~ego Tx (R10)~~ deferred |
 | ADA ECU (Container Node) | C++17 core + Python 3.11 detector | track store (R13) + CRA abstraction/plugins (R14) + R4 emission (R15) + evidence logs (R18); YOLO11n ONNX-CPU detector (R12) behind the R3 JSONL subprocess boundary |
 | IVI (provided AAOS Skycraft node) | Kotlin | Compose HMI (R16; multi-process optional) + Canvas 2D / SceneView 3D (optional) behind the view seam (R17) + UDP ingest service |
 | Bench (Container Node) | Python | scenario-configurable CPM generation (R11) via the shared R1 codec |
@@ -436,6 +461,7 @@ Hard-constraint screening precedes every comparison (open-source only, Linux-tar
 Standing user decisions governing §2 and §3:
 
 - CPM is the single M1 V2X message family; DENM is the named family for future hazard types.
+- **R10 (ego Tx) is deferred to a future milestone (2026-07-30).** The M1 V2X ECU is receive-only: it decodes relayed CPMs and forwards R2 messages to the ADA ECU about an obstruction outside line of sight, and constructs/broadcasts nothing. R10 keeps its number but has no M1 deliverable, acceptance check, or task breakdown (§ Future developments).
 - Extensible message-type dispatch in the Rx pipeline is deferred from M1 for schedule reasons (§1 Future developments).
 - IVI framework is Kotlin/Compose + SceneView on the provided AAOS node; Flutter-on-Android was evaluated and not selected.
 - No JavaScript and no WebSocket in the ego software path (V2X ECU, ADA ECU, IVI app).
@@ -448,3 +474,65 @@ Standing user decisions governing §2 and §3:
 - telux porting is declined for M1; the R7 parity notes + port plan keep the hardware swap mechanical.
 - The Cortex-M ECU and its mock node are omitted; ego own-sensor objects come from R12.
 - The IVI renders relative geometry only — no map and no GNSS injection on the IVI node.
+- The single-Ethernet-Bridge topology is adopted (§1 Baseline Propose Topology): all four nodes on one bridge in one subnet — no multi-bridge segmentation and no KUKSA databroker (§5 records the rejected alternative).
+
+## 5. Suggested alternative network topology
+
+Alternative to the committed layout in §1 [Baseline Propose Topology](#baseline-propose-topology), which stays the design of record.
+
+Session context only. **Not ratified.** R6 (§2 Contracts) stays frozen: one Ethernet Bridge, every ECU wired to it.
+
+- Blueprint: [propose-blueprint-4EthBridges-4SubDomains-KUKSADatabroker-3ECU-1Bench.json](propose-blueprint-4EthBridges-4SubDomains-KUKSADatabroker-3ECU-1Bench.json) — platform export of `trial1_minh`, 2026-07-30.
+- Shape: 4 `eth-bridge` + 4 `script-node` gateways + 1 `kuksa-databroker`. 13 nodes, 12 edges.
+- For more details on KUKSA, see [kuksa-node-communication.md](kuksa-node-communication.md) — what the broker is, node roles, the gateway pattern, and the KIS reference topology.
+
+### Node, bridge, gateway
+
+![Node / bridge / gateway topology](propose-topology-node-bridge-gateway.svg)
+
+*Source: [propose-topology-node-bridge-gateway.drawio](propose-topology-node-bridge-gateway.drawio)*
+
+- Each ECU owns one `ethernet` pin into its own bridge.
+- Each bridge carries one gateway as its second member.
+- Each gateway owns one `kuksa` pin into the shared databroker.
+- Every edge is pin `OUTPUT` → hub `INPUT`. Two hubs cannot be wired together.
+
+### Subnets
+
+![Subnet layout](propose-topology-subnets.svg)
+
+*Source: [propose-topology-subnets.drawio](propose-topology-subnets.drawio)*
+
+| Bridge | Subnet | ECU | Gateway |
+|---|---|---|---|
+| Bench Bridge | `10.99.0.0/24` | Bench `.10` | Bench GW `.11` |
+| V2X Bridge | `10.99.1.0/24` | V2X ECU `.10` | V2X GW `.11` |
+| ADA Bridge | `10.99.2.0/24` | ADA ECU `.10` | ADA GW `.11` |
+| IVI Bridge | `10.99.3.0/24` | IVI ECU `.10` | IVI GW `.11` |
+
+- A bridge is an L2 switch. It never routes between subnets.
+- A packet leaves an ECU only if the target is in the same subnet **and** on the same bridge.
+- No ECU-to-ECU pair meets both. Only the databroker crosses subnets.
+- So each ECU targets **its own gateway**, never the far ECU: bench→`10.99.0.11:47100`, V2X→`10.99.1.11:47200`, ADA→`10.99.2.11:47300`. Ports unchanged from §1.
+- One subnet per bridge is deliberate. A shared subnet across separate bridges fails silently (ARP timeout) instead of loudly (`ENETUNREACH`).
+
+### Open items
+
+- Four gateways need `scriptContent` (Luau). An ETHERNET pin is a bare NIC (`e-<pinname>`), so each relay terminates UDP itself via `nydus.net.udp()` — [§4.3–4.4](kuksa-node-communication.md).
+- Databroker needs the custom VSS artifact for the three signal paths — [§3](kuksa-node-communication.md).
+- Each bridge needs `{"ethBridge": {"bridgeMode": "linux", "subnet": "10.99.N.0/24", "port": 29400}}`. The Skycraft guest is DHCP-bound to its declared pin address, so a default `10.99.0.0/24` scope cannot serve IVI's `10.99.3.10`.
+- IVI Skycraft node carries no `image` artifact reference.
+
+### Benefits
+
+- **Domain isolation.** Each ECU sits on its own L2 segment. Broadcast traffic and a misbehaving node stay inside one bridge.
+- **Realistic E/E shape.** Domain controllers behind their own switches, joined by a central signal broker — the same architecture as the platform's reference blueprint [blueprint-KIS.json](development-platform-doc/blueprint-KIS.json).
+- **Signal-level observability.** KUKSA pins unlock `POST /api/v1/signals/{roomId}/{nodeKey}/values`, which `ethernet`-only nodes cannot use ([carsky-rest-api-blueprint.md](car-sky-guide/carsky-rest-api-blueprint.md)). Relayed values become readable from the API instead of only from a packet capture — useful for R18 evidence.
+- **Transport seam.** The ECUs keep speaking plain UDP; the gateway absorbs the transport. Changing transport later is a Lua edit, not an ECU code change.
+- **Extensibility.** A new consumer (cluster, telematics, logger) attaches as another gateway on the broker — no change to the existing ECUs or to R1–R4.
+
+### Trade-offs against 1 bridge topology
+
+- 6 hops per flow instead of 1, four Lua relays, one VSS artifact (UI-upload only), plus an requirement R6 re-freeze — for payloads that need no schema translation.
+- Only the KUKSA half is scriptable. `ETHERNET` pins are still absent from the `addPin` enum, so all bridge wiring stays manual in the Nydus UI.
+

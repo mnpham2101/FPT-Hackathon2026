@@ -15,6 +15,7 @@ Full mission, scope, contracts, and phase plan live in [CLAUDE.md](CLAUDE.md) an
 | [CLAUDE.md](CLAUDE.md) | Project constitution — read this first |
 | [Scenario_Player/](Scenario_Player/) · [V2X_ECU/](V2X_ECU/) · [ADA_ECU/](ADA_ECU/) · [IVI_ECU/](IVI_ECU/) | Implementation code — one folder per R5 CarSky node ([layout & build rules](.claude/rules/node-code-layout.md)) |
 | [plans/](plans/) | Active implementation plan — phases, acceptance criteria, task decomposition source |
+| `<folder>/doc/` in each of the five above | Report-style design & rationale documents for that folder (HLDs, decision notes, `doc/research_notes/`) — agents read it as context before working there ([convention](.claude/rules/node-code-layout.md#per-folder-doc)) |
 | [.claude/rules/](.claude/rules/) | Standing process rules (task/commit conventions, solution selection, HLD format) |
 | [.claude/agents/](.claude/agents/) | Subagent specs: project-researcher, project-planner, project-architecture |
 | [.claude/skills/](.claude/skills/) | Reusable procedures the agents follow |
