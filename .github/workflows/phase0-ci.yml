@@ -2,8 +2,9 @@
 # dev host has no Docker/WSL.
 #
 # Later lanes plug in here (do not pre-create empty jobs):
-# - group 0.2 (V2X_ECU) / group 0.4 (ADA_ECU): C++ CMake build+ctest jobs and docker-build jobs,
-#   added by those subtasks when their CMakeLists.txt / Dockerfiles land.
+# - group 0.2 (V2X_ECU): C++ CMake build+ctest jobs, and the docker-build jobs for both C++ nodes,
+#   added by those subtasks when their CMakeLists.txt / Dockerfiles land (ADA core build+ctest
+#   landed with 3.0.4.1).
 # - registry push: NOT included yet - the CarSky Zot API key is not a repo secret. A later
 #   subtask adds the push job once the user stores the credential (never commit it).
 name: phase0-ci
@@ -52,6 +53,17 @@ jobs:
           else
             echo "ADA_ECU detector tests not landed yet - skipping"
           fi
+
+  ada-core-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S ADA_ECU -B ADA_ECU/build
+      - name: Build
+        run: cmake --build ADA_ECU/build -j
+      - name: Test
+        run: ctest --test-dir ADA_ECU/build --output-on-failure
 
   ivi-unit-tests:
     runs-on: ubuntu-latest
