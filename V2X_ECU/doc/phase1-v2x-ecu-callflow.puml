@@ -1,0 +1,74 @@
+@startuml phase1-v2x-ecu-callflow
+title Phase 1 — V2X ECU comms bring-up & Rx path (R7–R9, R18)\nreceive-only: R7 send declared, never called (R10 deferred)
+
+participant "Bench\n(Scenario Player)" as Bench
+box "V2X ECU node (one container)" #F8F8F8
+  participant "capture.sh\n(tcpdump ×2)" as Cap
+  participant "main.cpp\n(controller)" as App
+  participant "StubRadioAdapter\n(R7 seam impl)" as Adapter
+  participant "ModemStub\n(R8 FSM)" as Stub
+  participant "RxPipeline\n(decode·validate·dedupe·build)" as Pipe
+  participant "VanetzaCpmCodec\n(P0 seam)" as Codec
+  participant "AdaForwarder" as Fwd
+  participant "EventLog\n[EVT] JSONL" as Log
+end box
+participant "ADA node\n(P1: netcheck sink)" as Ada
+
+== Boot ==
+App -> Cap : entrypoint.sh starts capture (background)
+note right of Cap : [CAP] live text lines\nrotating pcap → [PCAP-BEGIN/END] base64 export (D5)
+
+== § A Bring-up — in-node, no wire traffic ==
+App -> Adapter : init()
+Adapter -> Stub : init
+alt FAULT_PLAN = init_fail / configure_reject
+  Stub --> Adapter : error
+  Adapter --> App : Failure
+  App -> Log : fault_injected + recovery
+  App -> Adapter : retry ×INIT_RETRY_MAX (backoff RETRY_BACKOFF_MS)\nthen exit non-zero (container restart = last resort)
+else nominal
+  Stub --> Adapter : ack (idle → initialized)
+  App -> Adapter : configure(RadioConfig)
+  Stub --> Adapter : ack (→ configured)
+  App -> Adapter : subscribeRx(callback)
+  Stub --> Adapter : ack (→ rx-subscribed)
+  Stub -> Stub : open UDP LISTEN_PORT (via net::UdpSocket), start Rx thread
+  App -> Log : stub_transition ×3 (scripted call flow acked, R8)
+end
+
+== § B Live loop — the only M1 wire flow ==
+loop cpm_rate_hz (bench-driven)
+  Bench -> Stub : UDP datagram (UPER CPM, R1)
+  note over Cap : datagram visible in [CAP] + pcap
+  Stub -> Pipe : callback(bytes) [Rx thread]
+  Pipe -> Log : rx_datagram
+  Pipe -> Codec : decode(bytes)
+  alt DecodeError (malformed corpus path)
+    Pipe -> Log : decode_reject + counter — never crashes (R9)
+  else CpmContent
+    Pipe -> Pipe : validate (profile ranges, F9)
+    alt invalid
+      Pipe -> Log : validate_reject + reason counter
+    else valid
+      Pipe -> Pipe : dedupe (stationId·objectId·meas-time, DEDUPE_WINDOW_MS)
+      alt duplicate
+        Pipe -> Log : dedupe_drop
+      else fresh
+        Pipe -> Pipe : r2_builder: F7 distance=hypot(x,y) · F6 confidence · F1 speed derivation · rxTime
+        Pipe -> Fwd : R2 JSON
+        Fwd -> Ada : UDP → ADA_ECU_HOST:ADA_ECU_PORT (R2)
+        Pipe -> Log : r2_forwarded
+        note over Ada : [RX] line shows R2 body\n(Phase 1 acceptance: decoded bench values)
+      end
+    end
+  end
+end
+
+alt FAULT_PLAN = subscription_drop (any time after bring-up)
+  Stub -> Adapter : subscription dropped
+  Adapter -> App : notify
+  App -> Log : fault_injected
+  App -> Adapter : subscribeRx (auto, backoff) — defined recovery (R8)
+  App -> Log : recovery
+end
+@enduml

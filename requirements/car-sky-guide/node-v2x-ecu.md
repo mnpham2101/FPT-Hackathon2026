@@ -30,17 +30,21 @@ docker push registry.carsky.io/m1-v2x-ecu:latest
 {
   "container": {
     "image": "registry.carsky.io/m1-v2x-ecu:latest",
-    "command": ["./v2x_ecu"],
+    "command": ["./entrypoint.sh"],
+    "capabilities": ["NET_RAW"],
     "env": {
       "LISTEN_PORT": "47100",
       "ADA_ECU_HOST": "10.99.0.12",
-      "ADA_ECU_PORT": "47200"
+      "ADA_ECU_PORT": "47200",
+      "FAULT_PLAN": "none"
     }
   }
 }
 ```
 
-`LISTEN_PORT` is where the R7 modem-stub UDP channel accepts bench-originated CPMs; `ADA_ECU_HOST`/`ADA_ECU_PORT` target the ADA ECU's static address for R2 forwarding. All read from env, never hardcoded (CLAUDE.md governing principle 5).
+`command` is the entrypoint that starts the tcpdump capture sidecar in the background and the ECU app in the foreground; `capabilities: ["NET_RAW"]` (flat in `config`, verified shape per [blueprint-KIS.json](../development-platform-doc/blueprint-KIS.json)) lets tcpdump open raw sockets — capture procedure and retrieval: [traffic-capture-wireshark.md](traffic-capture-wireshark.md).
+
+`LISTEN_PORT` is where the R7 modem-stub UDP channel accepts bench-originated CPMs; `ADA_ECU_HOST`/`ADA_ECU_PORT` target the ADA ECU's static address for R2 forwarding; `FAULT_PLAN` selects the R8 fault-injection scenario (`none · init_fail · configure_reject · subscription_drop`). Optional overrides (defaults + meanings in the [Phase 1 HLD §6](../../V2X_ECU/doc/phase1-v2x-ecu-comms-hld.md)): `INIT_RETRY_MAX`, `RETRY_BACKOFF_MS`, `DEDUPE_WINDOW_MS`, `EVENT_LOG_PATH`, `CAPTURE_FILTER`, `PCAP_DIR`, `CAPTURE_ROTATE_S`. All read from env, never hardcoded (CLAUDE.md governing principle 5).
 
 ## Pins
 
