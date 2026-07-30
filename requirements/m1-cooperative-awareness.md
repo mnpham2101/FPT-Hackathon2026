@@ -404,8 +404,8 @@ Hard-constraint screening precedes every comparison (open-source only, Linux-tar
 
 - **Family candidates:** SAE J2735 BSM — disqualified (paywalled spec, and Part I carries no perceived objects); ETSI CAM+DENM; ETSI CPM TS 103 324.
 - **Single-type check:** CAM describes only the sender — cannot carry C; DENM is event notification (position + cause code) without perceived-object kinematics; CPM carries B's reference position **and** the perceived object with position/velocity/classification/confidence in one message. One message type (CPM) covers the full M1 exchange; CAM adds nothing needed, DENM stays the named family for future hazard types (§1 Future developments).
-- **Pick: CPM TS 103 324** — drivers C1 (Vanetza ships release-2 CPM codecs, [cache](../.claude/references/vanetza-its2-release2-cpm-ts103324.md)) and C2 (one message, one codec, one profile).
-- **Encoding candidates:** asn1tools — disqualified (no X.681/X.683 support needed by CPM, [cache](../.claude/references/asn1tools-ioc-parameterization-limits.md)); raw asn1c — redundant (Vanetza embeds maintained asn1c output); pycrate — no precompiled CPM ([cache](../.claude/references/pycrate-etsi-its-asn1-modules.md)); Vanetza ITS2 ASN.1 targets (LGPLv3, usable without the GN/BTP stack).
+- **Pick: CPM TS 103 324** — drivers C1 (Vanetza ships release-2 CPM codecs) and C2 (one message, one codec, one profile).
+- **Encoding candidates:** asn1tools — disqualified (no X.681/X.683 support needed by CPM); raw asn1c — redundant (Vanetza embeds maintained asn1c output); pycrate — no precompiled CPM; Vanetza ITS2 ASN.1 targets (LGPLv3, usable without the GN/BTP stack).
 - **Pick: Vanetza ITS2 as the single codec source behind one codec seam** — drivers C1 (one proven codec, golden vectors cannot drift) and C4 (asn1-only build targets, no full-stack pull-in).
 
 ### (b) Radio transport under the adapter seam — serves R7, R8
@@ -416,7 +416,7 @@ Hard-constraint screening precedes every comparison (open-source only, Linux-tar
 
 ### (c) Bench message generation — serves R11
 
-- **Candidates:** self-written Python generator; MetaDrive ([cache](../.claude/references/metadrive-license-topdown.md)); CARLA (GPU-heavy); SUMO (no perception concept).
+- **Candidates:** self-written Python generator; MetaDrive; CARLA (GPU-heavy); SUMO (no perception concept).
 - **Pick: self-written Python generator** driving the shared R1 codec — drivers C1 (deterministic, no engine unknowns), C2 (smallest build), C4 (zero engine dependency).
 
 ### (d) Languages per track — serves all
@@ -429,7 +429,7 @@ Hard-constraint screening precedes every comparison (open-source only, Linux-tar
 
 ### (e) IVI HMI framework on AAOS — serves R16, R17
 
-- **Candidates:** Kotlin + Jetpack Compose (+ SceneView/Filament 3D, [cache](../.claude/references/sceneview-filament-android-3d.md)); Flutter-on-Android; web-in-browser (fails the no-JS/WebSocket decision for ego software); Qt-for-Android (JNI/cross-compile friction, no AAOS idiom gain).
+- **Candidates:** Kotlin + Jetpack Compose (+ SceneView/Filament 3D); Flutter-on-Android; web-in-browser (fails the no-JS/WebSocket decision for ego software); Qt-for-Android (JNI/cross-compile friction, no AAOS idiom gain).
 - **Pick: Kotlin + Compose; 3D via SceneView; 2D via Compose Canvas behind the view seam** — drivers C1 (native toolchain of the provided node; app switching/notifications first-class), C2 (no extra engine layer), C3 (the seam carries the future camera-feed view and themes).
 
 ### (f) ADA→IVI data path — serves R4, R15, R16
@@ -439,7 +439,7 @@ Hard-constraint screening precedes every comparison (open-source only, Linux-tar
 
 ### (g) Perception stack — serves R12
 
-- **Candidates:** YOLO11n ONNX-CPU (AGPL-3.0, [benchmark cache](../.claude/references/yolo11-cpu-inference-benchmarks.md)); YOLOX-s (Apache-2.0); SSD-MobileNet (weaker accuracy).
+- **Candidates:** YOLO11n ONNX-CPU (AGPL-3.0); YOLOX-s (Apache-2.0); SSD-MobileNet (weaker accuracy).
 - **Pick: YOLO11n on ONNX Runtime, CPU-only** — driver C1 (best accuracy among CPU-feasible options); no GPU requested from BTC.
 
 ### Stack summary (per track)
