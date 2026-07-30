@@ -21,6 +21,10 @@ Full mission, scope, contracts, and phase plan live in [CLAUDE.md](CLAUDE.md) an
 | [.claude/skills/](.claude/skills/) | Reusable procedures the agents follow |
 | [.claude/prompt/](.claude/prompt/) | Important prompts saved verbatim, with self-graded outcomes |
 
+## Platform access & credentials
+
+Building and deploying on CarSky needs a **Zot registry API key** (`zak_...`) — the `docker login` password for pushing the ECU/bench images, and the `CARSKY_ZOT_API_KEY` GitHub Actions secret the CI push job uses. How to create, store, and use it: [requirements/car-sky-guide/zot-registry-api-key.md](requirements/car-sky-guide/zot-registry-api-key.md). All other CarSky deployment guides live in [requirements/car-sky-guide/](requirements/car-sky-guide/).
+
 ## Hướng dẫn dành cho contributor
 
 - **Tuân thủ constitution.** Mọi thay đổi phải nhất quán với [CLAUDE.md](CLAUDE.md) — đây là nguồn tham chiếu cao nhất của dự án (mission, governing principles, scope, roles). Rule/skill/agent khác chỉ bổ sung chi tiết, không được mâu thuẫn với file này.
