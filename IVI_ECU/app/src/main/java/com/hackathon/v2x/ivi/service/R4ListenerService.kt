@@ -1,0 +1,140 @@
+package com.hackathon.v2x.ivi.service
+
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.Service
+import android.content.Intent
+import android.os.Binder
+import android.os.IBinder
+import android.util.Log
+import com.hackathon.v2x.ivi.BuildConfig
+import com.hackathon.v2x.ivi.data.R4Deserializer
+import com.hackathon.v2x.ivi.model.R4Message
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import java.net.DatagramPacket
+import java.net.DatagramSocket
+import java.net.SocketException
+
+/**
+ * Android ForegroundService that opens a UDP socket on [BuildConfig.R4_UDP_PORT],
+ * receives R4 JSON packets from ADA ECU, and emits deserialized [R4Message] events
+ * to [r4EventFlow].
+ *
+ * Subtask 4.5.1.3 — Key behaviours:
+ * - Non-blocking receive loop on [Dispatchers.IO] coroutine
+ * - Auto-reconnect on socket error: 1-second back-off, max [MAX_RETRIES] attempts
+ * - After [MAX_RETRIES] consecutive failures, emits [ServiceErrorEvent] on [r4EventFlow]
+ * - Port is driven by [BuildConfig.R4_UDP_PORT] — no hardcoded literals in source
+ */
+class R4ListenerService : Service() {
+
+    private val deserializer = R4Deserializer()
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var receiveJob: Job? = null
+
+    private val _r4EventFlow = MutableSharedFlow<R4Message>(extraBufferCapacity = 64)
+    /** Public API — collect in [R4Repository]. */
+    val r4EventFlow: SharedFlow<R4Message> = _r4EventFlow
+
+    private val binder = LocalBinder()
+
+    inner class LocalBinder : Binder() {
+        fun getService(): R4ListenerService = this@R4ListenerService
+    }
+
+    // ── Lifecycle ─────────────────────────────────────────────────────────────
+
+    override fun onCreate() {
+        super.onCreate()
+        startForegroundWithNotification()
+        startReceiveLoop()
+    }
+
+    override fun onBind(intent: Intent): IBinder = binder
+
+    override fun onDestroy() {
+        receiveJob?.cancel()
+        super.onDestroy()
+    }
+
+    // ── Receive loop ──────────────────────────────────────────────────────────
+
+    private fun startReceiveLoop() {
+        receiveJob = serviceScope.launch {
+            var retries = 0
+            while (isActive) {
+                try {
+                    openSocketAndReceive()
+                    retries = 0
+                } catch (e: SocketException) {
+                    retries++
+                    Log.w(TAG, "UDP socket error (attempt $retries/$MAX_RETRIES): ${e.message}")
+                    if (retries >= MAX_RETRIES) {
+                        Log.e(TAG, "Max retries reached — emitting ServiceErrorEvent")
+                        _r4EventFlow.emit(ServiceErrorEvent)
+                        return@launch
+                    }
+                    delay(RETRY_DELAY_MS)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Unexpected error in receive loop", e)
+                    retries++
+                    if (retries >= MAX_RETRIES) {
+                        _r4EventFlow.emit(ServiceErrorEvent)
+                        return@launch
+                    }
+                    delay(RETRY_DELAY_MS)
+                }
+            }
+        }
+    }
+
+    private suspend fun openSocketAndReceive() {
+        val buffer = ByteArray(BUFFER_SIZE)
+        val packet = DatagramPacket(buffer, buffer.size)
+        DatagramSocket(BuildConfig.R4_UDP_PORT).use { socket ->
+            Log.i(TAG, "UDP socket open on port ${BuildConfig.R4_UDP_PORT}")
+            while (true) {
+                socket.receive(packet)
+                val bytes = packet.data.copyOf(packet.length)
+                deserializer.deserialize(bytes)
+                    .onSuccess { message -> _r4EventFlow.emit(message) }
+                    .onFailure { e -> Log.w(TAG, "Skipping bad packet: ${e.message}") }
+            }
+        }
+    }
+
+    // ── Foreground notification ───────────────────────────────────────────────
+
+    private fun startForegroundWithNotification() {
+        val channelId = "r4_listener"
+        val channel = NotificationChannel(
+            channelId, "R4 Warning Listener", NotificationManager.IMPORTANCE_LOW
+        )
+        getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+        val notification = Notification.Builder(this, channelId)
+            .setContentTitle("V2X IVI — Listening for R4 warnings")
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .build()
+        startForeground(NOTIFICATION_ID, notification)
+    }
+
+    companion object {
+        private const val TAG = "R4ListenerService"
+        private const val BUFFER_SIZE = 4096
+        private const val MAX_RETRIES = 5
+        private const val RETRY_DELAY_MS = 1_000L
+        private const val NOTIFICATION_ID = 1001
+
+        /** Sentinel emitted when max retries are exhausted. */
+        object ServiceErrorEvent : R4Message()
+    }
+}
