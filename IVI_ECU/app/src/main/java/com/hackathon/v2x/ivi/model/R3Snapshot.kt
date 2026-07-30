@@ -14,6 +14,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class R3Snapshot(
     val id: String,
+    val `class`: String = "vehicle",
     val source: String,
     val position: VehiclePosition,
     val distance: Float,
