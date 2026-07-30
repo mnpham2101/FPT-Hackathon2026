@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1160" height="450" viewBox="0 0 1160 450" font-family="Helvetica, Arial, sans-serif">
+  <rect width="1160" height="450" fill="#ffffff"/>
+
+  <text x="20" y="24" font-size="13" font-weight="bold" fill="#333333">Connection model — endpoints join a hub; only a script-node gateway crosses hubs</text>
+
+  <!-- CAN domain (left) -->
+  <rect x="20"  y="185" width="110" height="60" rx="6" fill="#dae8fc" stroke="#6c8ebf"/>
+  <text x="75"  y="211" font-size="11" fill="#1a1a1a" text-anchor="middle">BMS ECU</text>
+  <text x="75"  y="228" font-size="10" fill="#666666" text-anchor="middle">endpoint</text>
+
+  <rect x="170" y="185" width="115" height="60" rx="6" fill="#f5f5f5" stroke="#999999"/>
+  <text x="227" y="211" font-size="11" fill="#1a1a1a" text-anchor="middle">PWT CAN</text>
+  <text x="227" y="228" font-size="10" fill="#666666" text-anchor="middle">hub · can-bus</text>
+
+  <rect x="325" y="185" width="115" height="60" rx="6" fill="#d5e8d4" stroke="#82b366"/>
+  <text x="382" y="211" font-size="11" fill="#1a1a1a" text-anchor="middle">PWT Gateway</text>
+  <text x="382" y="228" font-size="10" fill="#666666" text-anchor="middle">script-node</text>
+
+  <!-- broker (centre) -->
+  <rect x="520" y="180" width="150" height="70" rx="6" fill="#ffe6cc" stroke="#d79b00"/>
+  <text x="595" y="206" font-size="11" fill="#1a1a1a" text-anchor="middle">Central Broker</text>
+  <text x="595" y="223" font-size="11" fill="#1a1a1a" text-anchor="middle">(VSS)</text>
+  <text x="595" y="240" font-size="10" fill="#996600" text-anchor="middle">hub · kuksa-databroker</text>
+
+  <!-- Ethernet domain (top right) -->
+  <rect x="720"  y="60" width="115" height="60" rx="6" fill="#d5e8d4" stroke="#82b366"/>
+  <text x="777"  y="86" font-size="11" fill="#1a1a1a" text-anchor="middle">TCU Gateway</text>
+  <text x="777"  y="103" font-size="10" fill="#666666" text-anchor="middle">script-node</text>
+
+  <rect x="875"  y="60" width="115" height="60" rx="6" fill="#f5f5f5" stroke="#999999"/>
+  <text x="932"  y="86" font-size="11" fill="#1a1a1a" text-anchor="middle">TCU Switch</text>
+  <text x="932"  y="103" font-size="10" fill="#666666" text-anchor="middle">hub · eth-bridge</text>
+
+  <rect x="1030" y="60" width="110" height="60" rx="6" fill="#dae8fc" stroke="#6c8ebf"/>
+  <text x="1085" y="86" font-size="11" fill="#1a1a1a" text-anchor="middle">TCU-NAD</text>
+  <text x="1085" y="103" font-size="10" fill="#666666" text-anchor="middle">endpoint</text>
+
+  <!-- VHAL domain (bottom right) -->
+  <rect x="720"  y="310" width="115" height="60" rx="6" fill="#d5e8d4" stroke="#82b366"/>
+  <text x="777"  y="336" font-size="11" fill="#1a1a1a" text-anchor="middle">IVI Gateway</text>
+  <text x="777"  y="353" font-size="10" fill="#666666" text-anchor="middle">script-node</text>
+
+  <rect x="875"  y="310" width="140" height="60" rx="6" fill="#e1d5e7" stroke="#9673a6"/>
+  <text x="945"  y="336" font-size="11" fill="#1a1a1a" text-anchor="middle">IVI – Android</text>
+  <text x="945"  y="353" font-size="10" fill="#666666" text-anchor="middle">endpoint · skycraft</text>
+
+  <!-- edges -->
+  <line x1="130" y1="215" x2="170" y2="215" stroke="#555555" stroke-width="1.5"/>
+  <text x="150" y="207" font-size="10" fill="#777777" text-anchor="middle">can</text>
+  <line x1="285" y1="215" x2="325" y2="215" stroke="#555555" stroke-width="1.5"/>
+  <text x="305" y="207" font-size="10" fill="#777777" text-anchor="middle">can</text>
+  <line x1="440" y1="215" x2="520" y2="215" stroke="#d79b00" stroke-width="1.5"/>
+  <text x="480" y="207" font-size="10" fill="#996600" text-anchor="middle">kuksa</text>
+
+  <polyline points="670,200 695,200 695,90 720,90" fill="none" stroke="#d79b00" stroke-width="1.5"/>
+  <text x="700" y="140" font-size="10" fill="#996600" text-anchor="start">kuksa</text>
+  <line x1="835" y1="90" x2="875" y2="90" stroke="#555555" stroke-width="1.5"/>
+  <text x="855" y="82" font-size="10" fill="#777777" text-anchor="middle">eth</text>
+  <line x1="990" y1="90" x2="1030" y2="90" stroke="#555555" stroke-width="1.5"/>
+  <text x="1010" y="82" font-size="10" fill="#777777" text-anchor="middle">eth</text>
+
+  <polyline points="670,230 695,230 695,340 720,340" fill="none" stroke="#d79b00" stroke-width="1.5"/>
+  <text x="700" y="295" font-size="10" fill="#996600" text-anchor="start">kuksa</text>
+  <line x1="835" y1="340" x2="875" y2="340" stroke="#555555" stroke-width="1.5"/>
+  <text x="855" y="332" font-size="10" fill="#777777" text-anchor="middle">vhal</text>
+
+  <!-- legend -->
+  <line x1="20" y1="398" x2="1140" y2="398" stroke="#dddddd"/>
+  <text x="20" y="418" font-size="11" fill="#333333">Every edge runs endpoint pin (OUTPUT) → hub pin (INPUT). Two endpoints never pair. Two hubs never pair.</text>
+  <text x="20" y="436" font-size="11" fill="#333333">A hub carries one INPUT pin and accepts many edges. Crossing from one hub to another always costs a gateway.</text>
+</svg>

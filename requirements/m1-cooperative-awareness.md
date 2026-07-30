@@ -448,3 +448,62 @@ Standing user decisions governing §2 and §3:
 - telux porting is declined for M1; the R7 parity notes + port plan keep the hardware swap mechanical.
 - The Cortex-M ECU and its mock node are omitted; ego own-sensor objects come from R12.
 - The IVI renders relative geometry only — no map and no GNSS injection on the IVI node.
+
+## 5. Suggested network topology
+
+Session context only. **Not ratified.** R6 (§2 Contracts) stays frozen: one Ethernet Bridge, every ECU wired to it.
+
+- Blueprint: [propose-blueprint-4EthBridges-4SubDomains-KUKSADatabroker-3ECU-1Bench.json](propose-blueprint-4EthBridges-4SubDomains-KUKSADatabroker-3ECU-1Bench.json) — platform export of `trial1_minh`, 2026-07-30.
+- Shape: 4 `eth-bridge` + 4 `script-node` gateways + 1 `kuksa-databroker`. 13 nodes, 12 edges.
+- For more details on KUKSA, see [kuksa-node-communication.md](kuksa-node-communication.md) — what the broker is, node roles, the gateway pattern, and the KIS reference topology.
+
+### Node, bridge, gateway
+
+![Node / bridge / gateway topology](propose-topology-node-bridge-gateway.svg)
+
+*Source: [propose-topology-node-bridge-gateway.drawio](propose-topology-node-bridge-gateway.drawio)*
+
+- Each ECU owns one `ethernet` pin into its own bridge.
+- Each bridge carries one gateway as its second member.
+- Each gateway owns one `kuksa` pin into the shared databroker.
+- Every edge is pin `OUTPUT` → hub `INPUT`. Two hubs cannot be wired together.
+
+### Subnets
+
+![Subnet layout](propose-topology-subnets.svg)
+
+*Source: [propose-topology-subnets.drawio](propose-topology-subnets.drawio)*
+
+| Bridge | Subnet | ECU | Gateway |
+|---|---|---|---|
+| Bench Bridge | `10.99.0.0/24` | Bench `.10` | Bench GW `.11` |
+| V2X Bridge | `10.99.1.0/24` | V2X ECU `.10` | V2X GW `.11` |
+| ADA Bridge | `10.99.2.0/24` | ADA ECU `.10` | ADA GW `.11` |
+| IVI Bridge | `10.99.3.0/24` | IVI ECU `.10` | IVI GW `.11` |
+
+- A bridge is an L2 switch. It never routes between subnets.
+- A packet leaves an ECU only if the target is in the same subnet **and** on the same bridge.
+- No ECU-to-ECU pair meets both. Only the databroker crosses subnets.
+- So each ECU targets **its own gateway**, never the far ECU: bench→`10.99.0.11:47100`, V2X→`10.99.1.11:47200`, ADA→`10.99.2.11:47300`. Ports unchanged from §1.
+- One subnet per bridge is deliberate. A shared subnet across separate bridges fails silently (ARP timeout) instead of loudly (`ENETUNREACH`).
+
+### Open items
+
+- Four gateways need `scriptContent` (Luau). An ETHERNET pin is a bare NIC (`e-<pinname>`), so each relay terminates UDP itself via `nydus.net.udp()` — [§4.3–4.4](kuksa-node-communication.md).
+- Databroker needs the custom VSS artifact for the three signal paths — [§3](kuksa-node-communication.md).
+- Each bridge needs `{"ethBridge": {"bridgeMode": "linux", "subnet": "10.99.N.0/24", "port": 29400}}`. The Skycraft guest is DHCP-bound to its declared pin address, so a default `10.99.0.0/24` scope cannot serve IVI's `10.99.3.10`.
+- IVI Skycraft node carries no `image` artifact reference.
+
+### Benefits
+
+- **Domain isolation.** Each ECU sits on its own L2 segment. Broadcast traffic and a misbehaving node stay inside one bridge.
+- **Realistic E/E shape.** Domain controllers behind their own switches, joined by a central signal broker — the same architecture as the platform's reference blueprint [blueprint-KIS.json](development-platform-doc/blueprint-KIS.json).
+- **Signal-level observability.** KUKSA pins unlock `POST /api/v1/signals/{roomId}/{nodeKey}/values`, which `ethernet`-only nodes cannot use ([carsky-rest-api-blueprint.md](car-sky-guide/carsky-rest-api-blueprint.md)). Relayed values become readable from the API instead of only from a packet capture — useful for R18 evidence.
+- **Transport seam.** The ECUs keep speaking plain UDP; the gateway absorbs the transport. Changing transport later is a Lua edit, not an ECU code change.
+- **Extensibility.** A new consumer (cluster, telematics, logger) attaches as another gateway on the broker — no change to the existing ECUs or to R1–R4.
+
+### Trade-offs against 1 bridge topology
+
+- 6 hops per flow instead of 1, four Lua relays, one VSS artifact (UI-upload only), plus an requirement R6 re-freeze — for payloads that need no schema translation.
+- Only the KUKSA half is scriptable. `ETHERNET` pins are still absent from the `addPin` enum, so all bridge wiring stays manual in the Nydus UI.
+
