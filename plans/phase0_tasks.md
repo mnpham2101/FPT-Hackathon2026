@@ -79,6 +79,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none — starts immediately. **Commit:** `[1.0.1.1] docs: author R1 CPM profile document with frozen conventions`
 
+**Status:** done 2026-07-31 — committed; 8 conventions (F1/F2/F5/F6/F7/F8/F9/VF) + 6-case corpus with per-case parameters present; markdown style followed (no hard wrap, bullets/tables).
+
 ### `1.0.1.2` — Author the CpmContent logical-content schema *(agent)*
 
 **Objective:** write `contracts/r1-cpm-content.schema.json` — JSON Schema mirroring the codec-seam struct `CpmContent` 1:1, wire-native integer units (the golden vectors' JSON side).
