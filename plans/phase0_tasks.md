@@ -91,6 +91,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 1.0.1.1. **Commit:** `[1.0.1.2] feat: add CpmContent JSON Schema mirroring the R1 codec seam`
 
+**Status:** done 2026-07-31 — parses (python -m json.tool); Draft202012Validator.check_schema passes and the profile §4 nominal instance validates (jsonschema 4.26, Python 3.14); wire-native bounds encoded as constraints.
+
 ### `2.0.1.3` — Freeze the R2 schema + shared sample *(agent)*
 
 **Objective:** write `contracts/r2-v2x-object.schema.json` and `contracts/samples/r2-object.json`.
