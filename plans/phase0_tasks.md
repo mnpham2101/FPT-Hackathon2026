@@ -115,6 +115,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none — parallel with the R1/R2 chain. **Commit:** `[3.0.1.4] feat: freeze R3 TrackedObject schema and shared sample`
 
+**Status:** done 2026-07-31 — schema+sample parse; check_schema passes; sample validates and carries source v2x_relayed (ghost-C shape), distance 55.03 = hypot(55.0, 1.7) coherent with the R2 sample (jsonschema 4.26, Python 3.14).
+
 ### `4.0.1.5` — Freeze the R4 schema + nominal shared samples *(agent)*
 
 **Objective:** write `contracts/r4-ada-ivi.schema.json`, `contracts/samples/r4-warning.json`, `contracts/samples/r4-state.json`.
