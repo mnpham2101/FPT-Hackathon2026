@@ -364,7 +364,7 @@ Flag: this run commits only `plans/phase0_tasks.md`, so the supersede note is re
 
 **Dependencies:** none — lands immediately; later lanes plug into the existing guards (no workflow rewrite). **Commit:** `[1.0.7.2] chore: add Phase 0 Linux-verification CI workflow`
 
-**Status:** implemented 2026-07-31 — YAML parse-validated locally (PyYAML); every job guarded green-by-design on the current tree; flips to done at the first green Actions run after the user pushes (no local Docker/WSL, and local JDK 25 exceeds Gradle 8.13's range — CI is the Linux path).
+**Status:** done 2026-07-31 — first `phase0-ci` Actions run on `feat/phase0-contract-freeze` completed `success` (run 30590952652, branch pushed by the user's session; poll evidence in-session). YAML parse-validated locally (PyYAML); every job guarded green-by-design on the current tree; no local Docker/WSL and local JDK 25 exceeds Gradle 8.13's range — CI is the Linux path.
 
 ---
 
