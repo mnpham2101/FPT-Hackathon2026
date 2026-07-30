@@ -41,7 +41,9 @@ Traceability of every subtask to these boxes: § Acceptance traceability.
 
 ### Subtask discipline (applies to every subtask below)
 
-Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-planning-conventions.md#subtask-discipline-non-negotiable): single objective, no out-of-scope code, exactly one atomic commit with the stated message, build passes, unit tests pass, brief is self-contained. Implementation subagents inherit this as their definition of done. C++ builds run on Linux (WSL2 or a Linux container on this Windows host — Vanetza and the pinned FetchContent toolchain are Linux-targeted per [solution-selection-criteria.md](../.claude/rules/solution-selection-criteria.md)).
+Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-planning-conventions.md#subtask-discipline-non-negotiable): single objective, no out-of-scope code, exactly one atomic commit with the stated message, build passes, unit tests pass, brief is self-contained. Implementation subagents inherit this as their definition of done. C++ builds run on Linux — Vanetza and the pinned FetchContent toolchain are Linux-targeted per [solution-selection-criteria.md](../.claude/rules/solution-selection-criteria.md); the dev host has no Docker/WSL (verified 2026-07-31), so Linux verification runs on GitHub Actions CI (subtask 1.0.7.2), where the C++ lanes (groups 0.2–0.4) verify once their toolchains land.
+
+**Status tracking:** as execution proceeds each subtask gains a `**Status:**` line (appended in that subtask's own atomic commit) recording done/blocked plus the verification evidence; a subtask without a status line is not started.
 
 ### Per-node build commands (cited in acceptance below)
 
@@ -321,7 +323,7 @@ Flag: this run commits only `plans/phase0_tasks.md`, so the supersede note is re
 
 ---
 
-## Task Group 0.7 — Contract integrity gate (serves R1–R4; ID anchored to R1, which also owns the F2 ban)
+## Task Group 0.7 — Contract integrity gate + CI Linux verification (serves R1–R4; IDs anchored to R1, which also owns the F2 ban)
 
 ### `1.0.7.1` — sync-manifest + byte-identity gate *(agent)*
 
@@ -332,6 +334,23 @@ Flag: this run commits only `plans/phase0_tasks.md`, so the supersede note is re
 **Acceptance:** `python contracts/check_sync.py` exits 0 on the repo as committed; deliberately corrupting one copy (unstaged) makes it exit 1; the F2 grep catches a planted `asn1::Cpm` token (unstaged).
 
 **Dependencies:** sequential, after every copy-landing subtask — 1.0.2.2, 1.0.2.5, 2.0.3.1, 2.0.3.2, 3.0.4.2, 4.0.4.3, 4.0.4.4, 1.0.5.1, 4.0.6.1, 4.0.6.2. **Commit:** `[1.0.7.1] feat: add contract sync manifest and byte-identity gate`
+
+### `1.0.7.2` — GitHub Actions CI: Linux verification for Phase 0 *(agent)*
+
+**Objective:** create `.github/workflows/phase0-ci.yml` — Linux (`ubuntu-latest`) verification on every push and on PRs to `main`: contracts sync gate, Python unit tests, IVI Gradle unit tests.
+
+**Scope:**
+
+- Rationale: the dev host has no Docker/WSL (user decision 2026-07-31) — GitHub Actions (`origin` = `mnpham2101/FPT-Hackathon2026`) is the project's Linux verification path until then.
+- Job `contracts-gate`: runs `python contracts/check_sync.py` only if that file exists — the guard keeps CI green until 1.0.7.1 lands (it is sequenced after all copy-landing subtasks).
+- Job `python-tests`: for each of `Scenario_Player/` and `ADA_ECU/detector/`, install `requirements-dev.txt` and run pytest only where that lane's tests exist (green before 1.0.5.1 / 3.0.4.5 land).
+- Job `ivi-unit-tests`: `chmod +x gradlew && ./gradlew :app:testDebugUnitTest` in `IVI_ECU/` (temurin JDK 17, Gradle cache) — the per-node build command above; the runner image carries the Android SDK.
+- YAML comments mark where groups 0.2/0.4 add C++ build / docker-build jobs when their toolchains and Dockerfiles land — no empty placeholder jobs.
+- **No registry-push job** — the CarSky Zot API key is not yet a repo secret; push-to-registry is a later subtask added once the user stores the credential (flag, don't absorb).
+
+**Acceptance:** workflow committed and YAML-valid; on the current tree every job passes (guards skip not-yet-landed lanes); full CI-green evidence is recordable only after the user pushes the branch — local JDK 25 exceeds Gradle 8.13's supported range, so the IVI job is CI-only by design.
+
+**Dependencies:** none — lands immediately; later lanes plug into the existing guards (no workflow rewrite). **Commit:** `[1.0.7.2] chore: add Phase 0 Linux-verification CI workflow`
 
 ---
 
@@ -383,7 +402,7 @@ Flag: this run commits only `plans/phase0_tasks.md`, so the supersede note is re
 
 ## Execution order & parallelism
 
-Dependencies are real (files, contract artifacts, fixtures) — not default assumptions. Four independent start points: `1.0.1.1`, `1.0.2.1`, `3.0.4.1`, `6.0.8.1` (plus `3.0.1.4`).
+Dependencies are real (files, contract artifacts, fixtures) — not default assumptions. Independent start points: `1.0.1.1`, `1.0.2.1`, `3.0.4.1`, `6.0.8.1`, `1.0.7.2` (plus `3.0.1.4`).
 
 ```
 Lane A  contracts/:      1.0.1.1 ──► 1.0.1.2                 3.0.1.4 ──► 4.0.1.5 ──► 4.0.1.6
@@ -402,6 +421,8 @@ Lane E  IVI_ECU:         4.0.1.5 ──► 4.0.6.1 ──► 4.0.6.2 (also needs
 
 Gate    contracts/:      all copy-landing subtasks ──► 1.0.7.1
 
+CI      .github/:        1.0.7.2 (fully parallel — guarded jobs go live as lanes A–E and the gate land)
+
 Lane F  smoke test:      6.0.8.1 ──► 5.0.8.2 (car-sky) ──► 5.0.8.3 (USER) ──► 6.0.8.4 (USER)
                          (fully parallel with lanes A–E and the gate)
 ```
@@ -415,7 +436,7 @@ Lane F  smoke test:      6.0.8.1 ──► 5.0.8.2 (car-sky) ──► 5.0.8.3 (
 | Milestone Phase 0 box | Closed by |
 |---|---|
 | R1 profile committed; golden vectors encode/decode through the Vanetza seam | 1.0.1.1 · 1.0.1.2 · 1.0.2.1–1.0.2.5 |
-| R2/R3/R4 schemas committed; round-trip tests pass in C++ / Python / Kotlin | 2.0.1.3 · 3.0.1.4 · 4.0.1.5 · 2.0.3.1 · 2.0.3.2 · 3.0.4.1 · 3.0.4.2 · 4.0.4.3 · 3.0.4.5 · 1.0.5.1 · 4.0.6.1 · (integrity: 1.0.7.1) |
+| R2/R3/R4 schemas committed; round-trip tests pass in C++ / Python / Kotlin | 2.0.1.3 · 3.0.1.4 · 4.0.1.5 · 2.0.3.1 · 2.0.3.2 · 3.0.4.1 · 3.0.4.2 · 4.0.4.3 · 3.0.4.5 · 1.0.5.1 · 4.0.6.1 · (integrity: 1.0.7.1 · CI: 1.0.7.2) |
 | R4 additive-version test defined | 4.0.1.6 · 4.0.4.4 · 4.0.6.2 |
 | Blueprint topology documented + validated (nodes, `ethernet` pins, edges) | pre-existing guides (HLD §1) + 6.0.8.1 · 5.0.8.2 · 5.0.8.3 · 6.0.8.4 (C1–C5 on `trial2_minh`) |
 
@@ -430,4 +451,4 @@ Lane F  smoke test:      6.0.8.1 ──► 5.0.8.2 (car-sky) ──► 5.0.8.3 (
 
 ---
 
-*Created 2026-07-31 by project-planner from the Phase 0 HLD (`d807c37` + `70796c0`) and [milestone1.md § Phase 0](milestone1.md#phase-0--freeze-the-contracts-r1r6). 8 task groups, 26 subtasks: 23 agent-implemented (incl. the 1.0.7.1 gate), 1 car-sky-executed, 2 user-manual.*
+*Created 2026-07-31 by project-planner from the Phase 0 HLD (`d807c37` + `70796c0`) and [milestone1.md § Phase 0](milestone1.md#phase-0--freeze-the-contracts-r1r6). 8 task groups, 27 subtasks: 24 agent-implemented (incl. the 1.0.7.1 gate and the 1.0.7.2 CI workflow, added 2026-07-31), 1 car-sky-executed, 2 user-manual.*
