@@ -1,6 +1,8 @@
 package com.hackathon.v2x.ivi.ui
 
 import androidx.lifecycle.ViewModel
+import com.hackathon.v2x.ivi.model.R4WarningMessage
+import com.hackathon.v2x.ivi.model.SceneGeometry
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -14,6 +16,12 @@ class MainViewModel : ViewModel() {
     private val _currentMode = MutableStateFlow<DisplayMode>(DisplayMode.HomeView)
     val currentMode: StateFlow<DisplayMode> = _currentMode.asStateFlow()
 
+    private val _warningScene = MutableStateFlow<SceneGeometry?>(null)
+    val warningScene: StateFlow<SceneGeometry?> = _warningScene.asStateFlow()
+
+    private val _riskState = MutableStateFlow("clear")
+    val riskState: StateFlow<String> = _riskState.asStateFlow()
+
     /**
      * Requests a Display Area mode change.
      *
@@ -26,5 +34,11 @@ class MainViewModel : ViewModel() {
             return
         }
         _currentMode.value = mode
+    }
+
+    fun onR4Warning(message: R4WarningMessage) {
+        _warningScene.value = message.toSceneGeometry()
+        _riskState.value = message.riskState
+        _currentMode.value = DisplayMode.WarningView
     }
 }

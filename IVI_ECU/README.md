@@ -16,8 +16,19 @@ Gradle project, application id `com.hackathon.v2x.ivi` (minSdk 29 / targetSdk 33
 | Path | Holds |
 |---|---|
 | [app/src/main/java/com/hackathon/v2x/ivi/model/](app/src/main/java/com/hackathon/v2x/ivi/model/) | R4/R3-derived data types (`R3Snapshot`, `SceneGeometry`) |
+| [app/src/main/java/com/hackathon/v2x/ivi/net/](app/src/main/java/com/hackathon/v2x/ivi/net/) | ADA → IVI R4 UDP listener (`0.0.0.0:46004`) |
 | [app/src/main/java/com/hackathon/v2x/ivi/ui/](app/src/main/java/com/hackathon/v2x/ivi/ui/) | UI logic — `MainViewModel`, `DisplayMode` |
 | [app/src/main/java/com/hackathon/v2x/ivi/ui/screen/](app/src/main/java/com/hackathon/v2x/ivi/ui/screen/) | R16 layout composables |
 | [app/src/main/java/com/hackathon/v2x/ivi/ui/view/](app/src/main/java/com/hackathon/v2x/ivi/ui/view/) | R17 warning view behind the view seam (`IviWarningViewSeam`, `CanvasWarningView`, `SceneCoordinateMapper`) |
+
+## ADA integration smoke
+
+The app entry point starts an R4 UDP listener on port `46004`, decodes ADA's `r4_warning.schema.json` payload, maps `geometry.b` / `geometry.c` to the warning scene, and switches the Display Area to the Canvas warning view.
+
+ADA sends to the same default port in `ada-ecu/config/ada-ecu.conf`:
+
+```sh
+ivi_port=46004
+```
 
 The view seam is what keeps optional 3D (SceneView/Filament) additive — new renderers implement the seam rather than editing the 2D Canvas view. Tunables are `buildConfigField`s (e.g. `WARNING_TIMEOUT_MS`), never literals in source ([CLAUDE.md](../CLAUDE.md) governing principle 5).
