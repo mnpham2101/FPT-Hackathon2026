@@ -103,6 +103,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 1.0.1.1 (F1/F7 conventions frozen first). **Commit:** `[2.0.1.3] feat: freeze R2 v2x-object schema and shared sample`
 
+**Status:** done 2026-07-31 — schema+sample parse; check_schema passes; sample (and its sender.speed=null variant) validates against the schema (jsonschema 4.26, Python 3.14); distance 25.03 = hypot(25.0, 1.2) (F7), sender.speed nullable (F1).
+
 ### `3.0.1.4` — Freeze the R3 schema + shared sample *(agent)*
 
 **Objective:** write `contracts/r3-tracked-object.schema.json` and `contracts/samples/r3-tracked-object.json`.
