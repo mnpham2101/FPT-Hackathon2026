@@ -470,6 +470,7 @@ Standing user decisions governing §2 and §3:
 - telux porting is declined for M1; the R7 parity notes + port plan keep the hardware swap mechanical.
 - The Cortex-M ECU and its mock node are omitted; ego own-sensor objects come from R12.
 - The IVI renders relative geometry only — no map and no GNSS injection on the IVI node.
+- The single-Ethernet-Bridge topology is adopted (§1 Baseline Propose Topology): all four nodes on one bridge in one subnet — no multi-bridge segmentation and no KUKSA databroker (§5 records the rejected alternative).
 
 ## 5. Suggested alternative network topology
 
