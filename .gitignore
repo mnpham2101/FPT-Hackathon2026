@@ -10,3 +10,6 @@ local.properties
 *.iml
 captures/
 .kotlin/
+
+# local credentials - never commit
+secrets/
