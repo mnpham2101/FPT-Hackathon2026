@@ -11,7 +11,7 @@ Governs the artifact [[project-architecture]] produces at the "make the HLD" and
 
 Every HLD is a markdown document. It must include:
 
-- **Folder structure map** — the module/directory layout implementing the MVC separation, scoped to the node folder(s) the design touches (`Scenario_Player/`, `V2X_ECU/`, `ADA_ECU/`, `IVI_ECU/` — mapped in [node-code-layout.md](node-code-layout.md), resolved by [ecu-implementation-scoping](../skills/ecu-implementation-scoping/SKILL.md) when the design started from a phase/requirement rather than a named folder).
+- **Folder structure map with file-location designation** — the module/directory layout implementing the MVC separation, scoped to the node folder(s) the design touches (`Scenario_Player/`, `V2X_ECU/`, `ADA_ECU/`, `IVI_ECU/` — mapped in [node-code-layout.md](node-code-layout.md), resolved by [ecu-implementation-scoping](../skills/ecu-implementation-scoping/SKILL.md) when the design started from a phase/requirement rather than a named folder), designating the target path of every new deliverable (source, schema, config, test, doc) so no implementer picks a path ad hoc. A deliverable placed outside the four node folders is called out with its rationale and goes through the approval option in the propose step of [high-level-design-procedure](../skills/high-level-design-procedure/SKILL.md).
 - **Tech stack** — the languages/libraries/frameworks the design uses, traceable to the report's §3 per-ECU tech stack.
 - **Call-flow diagram** (PlantUML sequence diagram) — interaction over time between components (e.g. B detects C → broadcasts → A receives → composes → displays).
 
