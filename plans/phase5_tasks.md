@@ -44,6 +44,8 @@ It is the **Display Track** — developed entirely against mock R4 data, then wi
 
 ### `4.5.1.1` — Define R4 Kotlin Data Models
 
+> **Superseded by Phase 0:** `4.0.6.1` ([phase0_tasks.md](phase0_tasks.md)) delivers the R4 Kotlin models against the frozen schema — do not implement this subtask separately.
+
 **Objective:** Create typed Kotlin data classes matching the R4 contract schema for both the `warning` event and the optional `state` message. This is the canonical model layer for the whole IVI app.
 
 **Scope:**
@@ -66,6 +68,8 @@ It is the **Display Track** — developed entirely against mock R4 data, then wi
 ---
 
 ### `4.5.1.2` — Implement R4 JSON Deserializer with Additive-Version Safety
+
+> **Scope reduced by Phase 0:** model definition and the additive-version fixtures moved to Phase 0 task group 0.6 ([phase0_tasks.md](phase0_tasks.md)); this subtask keeps only the service-layer deserializer wiring.
 
 **Objective:** Build a deserializer that safely parses incoming R4 JSON bytes into `R4Message` sealed types. Unknown `warningType` values must degrade gracefully to a generic warning — never crash.
 
