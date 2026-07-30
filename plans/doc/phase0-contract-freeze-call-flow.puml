@@ -1,0 +1,66 @@
+@startuml phase0-contract-freeze-call-flow
+title Phase 0 — Contract freeze: verification call flow (R1–R4)
+
+note across
+Runtime hops these contracts govern (frozen here, exercised in Phases 1–6):
+bench —R1 CPM/UPER→ V2X ECU —R2 JSON/UDP→ ADA ECU (R3 store) —R4 JSON/UDP→ IVI
+R5/R6 smoke test: adopted from plans/doc/research_notes/baseline-connectivity-smoke-test.md (C1–C5, M1–M12) — not re-drawn here.
+Contract source-of-truth folder: contracts/ (user-approved 2026-07-30 — HLD §3 D1).
+end note
+
+box "Contract source of truth"
+participant "contracts/" as SRC
+end box
+box "V2X_ECU/ (C++17)"
+participant "gv_tool\n(tools/golden_vectors)" as GV
+participant "VanetzaCpmCodec\n(src/codec, r2::Cpm only)" as CODEC
+participant "V2X tests" as VT
+end box
+box "ADA_ECU/"
+participant "core tests (C++)" as AT
+participant "detector tests (Python)" as ADT
+end box
+box "Scenario_Player/"
+participant "bench tests (Python)" as BT
+end box
+box "IVI_ECU/"
+participant "model tests (Kotlin)" as IT
+end box
+
+== Author ==
+[-> SRC : commit r1-cpm-profile.md,\nr1..r4 schemas, samples/
+
+== Generate golden vectors (R1 codec seam) ==
+SRC -> GV : <case>.json (CpmContent,\nper r1-cpm-content.schema.json)
+GV -> CODEC : encode(CpmContent)
+CODEC --> GV : ASN.1 UPER bytes
+GV -> CODEC : decode(bytes)
+CODEC --> GV : CpmContent'
+GV -> GV : assert CpmContent == CpmContent'
+GV -> SRC : write golden-vectors/<case>.json + <case>.uper
+
+== Sync node-local copies ==
+SRC -> SRC : check_sync.py — byte-identity of every copy\nper sync-manifest.json + F2 grep ban
+
+== Round-trip tests per consumer language ==
+SRC -> VT : fixtures: golden/, samples/r2-object.json
+VT -> CODEC : decode(<case>.uper) == <case>.json
+VT -> VT : R2 struct <-> JSON round-trip (nlohmann)
+
+SRC -> AT : fixtures: samples/ (all five)
+AT -> AT : R2 / R3 / R4 round-trips (nlohmann)
+AT -> AT : r4-unknown-warning.json parses,\nclassified unknown — no failure (R4 additive)
+
+SRC -> ADT : fixtures: samples/
+ADT -> ADT : R3 JSONL round-trip +\njsonschema validation of shared samples
+
+SRC -> BT : fixtures: golden-vectors *.json side
+BT -> BT : CpmContent round-trip\n(wire-native units)
+
+SRC -> IT : fixtures: samples/ (r3 + r4)
+IT -> IT : R4 warning/state round-trip (kotlinx)
+IT -> IT : r4-unknown-warning.json degrades\ngracefully (R4 additive)
+
+== Freeze ==
+[-> SRC : contracts frozen — Phases 1–6 build against them;\nany change re-freezes across every consumer
+@enduml
