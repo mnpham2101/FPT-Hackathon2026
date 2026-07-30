@@ -41,6 +41,7 @@ Working order: **project-researcher → project-architecture → project-planner
 - [.claude/rules/](.claude/rules/) — standing process rules (task planning, report format, requirement quality, solution selection, HLD format).
 - [.claude/skills/](.claude/skills/) — reusable procedures (requirement analysis, HLD, environment research, markdown style).
 - [.claude/agents/](.claude/agents/) — the three agent specs. [.claude/prompts/](.claude/prompts/) — saved prompts + debate scratchpads. [.claude/references/](.claude/references/) — cached external evidence.
+- **`doc/` inside each work folder** — [plans/doc/](plans/doc/) and the four node folders' `doc/` ([Scenario_Player/doc/](Scenario_Player/doc/), `V2X_ECU/doc/`, `ADA_ECU/doc/`, `IVI_ECU/doc/`) hold report-style documents on that folder's design and rationale (HLDs, design notes, `doc/research_notes/` findings and diagrams). Agents read the target folder's `doc/` as context before working in it, and add their design/rationale write-ups there — rules in [.claude/rules/node-code-layout.md](.claude/rules/node-code-layout.md#per-folder-doc).
 
 ## Commit & task discipline
 
