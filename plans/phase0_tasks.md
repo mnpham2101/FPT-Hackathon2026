@@ -139,6 +139,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 4.0.1.5. **Commit:** `[4.0.1.6] feat: add shared R4 additive-version fixture`
 
+**Status:** done 2026-07-31 — fixture parses and still validates against the R4 schema; programmatic diff proves exactly the three D4 deltas vs r4-warning.json (schemaVersion 2, warningType slippery_road, extra field hazardDetail).
+
 ---
 
 ## Task Group 0.2 — V2X ECU: toolchain, R1 codec seam, golden vectors (serves R1)
