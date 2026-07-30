@@ -53,6 +53,28 @@ Responsibility of each ECU and the Scenario Player in Milestone 1; the Cortex-M 
 - **Cortex-M ECU**
   - Not developed — sensor data is omitted.
 
+### Baseline Propose Topology
+
+The committed network layout for the nodes above. It realizes R5 and R6 as frozen: four role nodes, one Ethernet Bridge, one subnet.
+
+- Blueprint: [baseline-blueprint-1EthBridge-1SubDomain-3ECU-1Bench.json](baseline-blueprint-1EthBridge-1SubDomain-3ECU-1Bench.json).
+
+![Baseline single-bridge topology](baseline-topology-single-bridge.svg)
+
+*Source: [baseline-topology-single-bridge.drawio](baseline-topology-single-bridge.drawio)*
+
+| Node | Address | Sends to | Port |
+|---|---|---|---|
+| Bench — Scenario Player | `10.99.0.10` | V2X ECU | `47100` |
+| V2X ECU | `10.99.0.11` | ADA ECU | `47200` |
+| ADA ECU | `10.99.0.12` | IVI ECU | `47300` |
+| IVI ECU | `10.99.0.13` | — | terminal |
+
+- Each node declares exactly one `ethernet` pin, wired to the single bridge — a star, not a chain.
+- Every hop is same-subnet and same-bridge, so each ECU addresses the next one directly. No routing, gateway, or broker.
+- Open item: the IVI Skycraft node needs its `image` artifact reference before the Room can reach 5/5 Running.
+- An explored alternative that segments the network per ECU is recorded in §5.
+
 ### Cloud development constraints
 
 Development runs entirely on the CarSky cloud platform, under its blueprint/node/pin model ([Car-Sky-Platform.html](development-platform-doc/Car-Sky-Platform.html)):
@@ -449,7 +471,9 @@ Standing user decisions governing §2 and §3:
 - The Cortex-M ECU and its mock node are omitted; ego own-sensor objects come from R12.
 - The IVI renders relative geometry only — no map and no GNSS injection on the IVI node.
 
-## 5. Suggested network topology
+## 5. Suggested alternative network topology
+
+Alternative to the committed layout in §1 [Baseline Propose Topology](#baseline-propose-topology), which stays the design of record.
 
 Session context only. **Not ratified.** R6 (§2 Contracts) stays frozen: one Ethernet Bridge, every ECU wired to it.
 

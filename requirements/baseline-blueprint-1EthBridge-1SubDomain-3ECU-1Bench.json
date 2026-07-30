@@ -1,0 +1,170 @@
+{
+  "version": 1,
+  "exportedAt": "2026-07-30T09:52:28.738Z",
+  "blueprint": {
+    "name": "trial2_minh",
+    "description": "Milestone 1 — Cooperative (NLOS) Vehicle Awareness over V2X. 4-node star topology: Bench Scenario Player -> V2X ECU -> ADA ECU -> IVI ECU, all wired through one Ethernet Bridge (R5/R6). Importable via Nydus Import-from-File: creates the 4 nodes with full config only. ETHERNET pins/edges are rejected on import (same platform limitation as the REST addPin/addEdge endpoints) — add each node's ethernet pin and wire it to the bridge manually afterward per carsky-4-node-blueprint.md §4 steps 4-5.",
+    "zones": [],
+    "nodes": [
+      {
+        "id": "V-4QS02xBGk0bi09b2Zv_",
+        "label": "IVI ECU",
+        "nodeType": "skycraft",
+        "config": {
+          "prefix": "ivi",
+          "gpuBackend": "virglrenderer",
+          "displayWidth": 1920,
+          "displayHeight": 1080
+        },
+        "positionX": -312.89855072463763,
+        "positionY": -51.362318840579725,
+        "pins": [
+          {
+            "id": "AraJ2Wlg70OxeCF6cVn8A",
+            "name": "eth",
+            "pinType": "ETHERNET",
+            "direction": "OUTPUT",
+            "side": null,
+            "port": null,
+            "properties": {
+              "address": "10.99.0.13"
+            }
+          }
+        ]
+      },
+      {
+        "id": "Zl-G4f5yZkD_c-EzH5eGn",
+        "label": "V2X ECU",
+        "nodeType": "container",
+        "config": {
+          "env": {
+            "LISTEN_PORT": "47100",
+            "ADA_ECU_HOST": "10.99.0.12",
+            "ADA_ECU_PORT": "47200"
+          },
+          "image": "registry.carsky.io/m1-v2x-ecu:latest",
+          "command": [
+            "./v2x_ecu"
+          ]
+        },
+        "positionX": 500.93751050353984,
+        "positionY": -51.395980738987745,
+        "pins": [
+          {
+            "id": "Dx7G8uyQdg-SVCgW9nQ8x",
+            "name": "eth",
+            "pinType": "ETHERNET",
+            "direction": "OUTPUT",
+            "side": null,
+            "port": null,
+            "properties": {
+              "address": "10.99.0.11"
+            }
+          }
+        ]
+      },
+      {
+        "id": "eth-bridge-9f17e151d95f4e9e8d10069e32856322",
+        "label": "Ethernet Bridge 1",
+        "nodeType": "eth-bridge",
+        "config": null,
+        "positionX": 91.79673719662367,
+        "positionY": -14.342854172295853,
+        "pins": [
+          {
+            "id": "gQY5HRgk2f2KF4J3UmmDd",
+            "name": "eth",
+            "pinType": "ETHERNET",
+            "direction": "INPUT",
+            "side": null,
+            "port": null,
+            "properties": null
+          }
+        ]
+      },
+      {
+        "id": "nwqATmroGqIgn6ShQoMu2",
+        "label": "ADA ECU",
+        "nodeType": "container",
+        "config": {
+          "env": {
+            "GATE_EXIT_M": "35",
+            "GATE_ENTER_M": "30",
+            "IVI_ECU_HOST": "10.99.0.13",
+            "IVI_ECU_PORT": "47300",
+            "V2X_LISTEN_PORT": "47200"
+          },
+          "image": "registry.carsky.io/m1-ada-ecu:latest",
+          "command": [
+            "./ada_ecu"
+          ]
+        },
+        "positionX": 506.0579710144927,
+        "positionY": 202.72463768115938,
+        "pins": [
+          {
+            "id": "7M_gdZRJd1u5qrozHTMIy",
+            "name": "eth",
+            "pinType": "ETHERNET",
+            "direction": "OUTPUT",
+            "side": null,
+            "port": null,
+            "properties": {
+              "address": "10.99.0.12"
+            }
+          }
+        ]
+      },
+      {
+        "id": "opGN-QB6HQuJ6QlM9zpgx",
+        "label": "Bench - Scenario Player",
+        "nodeType": "container",
+        "config": {
+          "env": {
+            "V2X_ECU_HOST": "10.99.0.11",
+            "V2X_ECU_PORT": "47100",
+            "SCENARIO_CONFIG": "/app/scenarios/default.yaml"
+          },
+          "image": "registry.carsky.io/m1-scenario-player:latest",
+          "command": [
+            "python",
+            "main.py"
+          ]
+        },
+        "positionX": 506.2176629945289,
+        "positionY": -295.6291280705136,
+        "pins": [
+          {
+            "id": "tkQX8tMiQ72ZRWs6t7EAa",
+            "name": "eth",
+            "pinType": "ETHERNET",
+            "direction": "OUTPUT",
+            "side": null,
+            "port": null,
+            "properties": {
+              "address": "10.99.0.10"
+            }
+          }
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "sourcePinId": "tkQX8tMiQ72ZRWs6t7EAa",
+        "targetPinId": "gQY5HRgk2f2KF4J3UmmDd"
+      },
+      {
+        "sourcePinId": "AraJ2Wlg70OxeCF6cVn8A",
+        "targetPinId": "gQY5HRgk2f2KF4J3UmmDd"
+      },
+      {
+        "sourcePinId": "7M_gdZRJd1u5qrozHTMIy",
+        "targetPinId": "gQY5HRgk2f2KF4J3UmmDd"
+      },
+      {
+        "sourcePinId": "Dx7G8uyQdg-SVCgW9nQ8x",
+        "targetPinId": "gQY5HRgk2f2KF4J3UmmDd"
+      }
+    ]
+  }
+}
