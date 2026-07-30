@@ -76,7 +76,7 @@ Gate constants are **externalized configuration, never literals**. R13 fixes the
 
 ![Track admission state machine with proximity gate and hysteresis](../requirements/vehicleC_track_admission_state_machine.png)
 
-*Own-sensor objects traverse `not_tracked → tentative → tracked`; relayed C is admitted on R2 distance within the gate, dropped on leaving it or when messages stop, and carries `source = v2x_relayed` only. Ego's own Tx (R10) snapshots `own_sensor` tracks — the B-side relay trigger is simulated by the bench scenarios (R11).*
+*Own-sensor objects traverse `not_tracked → tentative → tracked`; relayed C is admitted on R2 distance within the gate, dropped on leaving it or when messages stop, and carries `source = v2x_relayed` only. ~~Ego's own Tx (R10) snapshots `own_sensor` tracks~~ — **R10 moved to the future plan**; the B-side relay trigger is simulated by the bench scenarios (R11), so nothing in M1 consumes an ego Tx snapshot.*
 
 ---
 
@@ -99,14 +99,14 @@ Per-phase demo methods follow the deck's "defined output for each phase" table. 
 - [ ] The R4 additive-version test is defined (a consumer parsing an unknown `warningType` degrades gracefully).
 - [ ] Blueprint topology documented (nodes, `ethernet` pins, edges to the bridge).
 
-### Phase 1 — Comms bring-up: V2X ECU + Scenario Player (R5–R11)
+### Phase 1 — Comms bring-up: V2X ECU + Scenario Player (R5–R9, R11 — **R10 moved to the future plan**)
 
-**Objective.** Bench and ego exchange the full R1 message over the deployed Room: bench CPMs decode into R2 messages at the ADA ECU, and ego broadcasts CPMs from (mock) store snapshots.
+**Objective.** Bench CPMs reach the deployed Room and decode into R2 messages at the ADA ECU. **Receive-only** — ego broadcasts nothing.
 
 **Tasks.**
 - Build & push the OCI images, author the blueprint, deploy, verify all nodes Running (R5); prove pair-wise UDP reachability (R6).
 - Radio adapter seam `init · configure · subscribeRx · send` (R7); modem stub FSM with fault injection (R8).
-- Rx pipeline decode → validate → dedupe → forward (R9); ego Tx via the adapter `send` (R10 — mock store contents until Phase 6).
+- Rx pipeline decode → validate → dedupe → forward (R9). ~~Ego Tx via the adapter `send` (R10)~~ — **moved to the future plan; not implemented in M1.** The R7 seam still declares `send`, but nothing calls it.
 - Bench scenario-configurable CPM generation (R11).
 - V2X-side JSONL event logs (message rx/tx, decode results) — the R18 evidence stream starts here.
 
@@ -183,18 +183,18 @@ Per-phase demo methods follow the deck's "defined output for each phase" table. 
 - [ ] A newer message with an unknown `warningType` degrades gracefully (R4 additive-version test).
 - [ ] Optional paths, only if built: an ADA message wakes the separate warning app; 3D renders through the view seam.
 
-### Phase 6 — Convergence: real data end-to-end (R10, R18, R19)
+### Phase 6 — Convergence: real data end-to-end (R18, R19 — **R10 moved to the future plan**)
 
 **Objective.** Replace every mock with **real** data and record the definition-of-done run — a swap-and-verify step, not a new build.
 
 **Tasks.**
-- Point the IVI at live ADA output; feed ego Tx (R10) from the real R12 store snapshot instead of mock contents.
+- Point the IVI at live ADA output. ~~Feed ego Tx (R10) from the real R12 store snapshot instead of mock contents.~~ — **moved to the future plan.**
 - Full-chain rehearsal bench → V2X ECU → ADA → IVI across bench scenarios (e.g. C approaching vs C out of range).
 - Record the R19 run with its captures.
 
 **Acceptance Criteria.**
 - [ ] No mocks anywhere in the ego path (the bench is sanctioned test equipment, not a mock).
-- [ ] Ego Tx frames captured on the bridge carry live store data, not constants (R10).
+- ~~[ ] Ego Tx frames captured on the bridge carry live store data, not constants (R10).~~ — **moved to the future plan; not an M1 acceptance criterion.**
 - [ ] One continuous recorded run: the IVI warns and renders ghost C from `v2x_relayed` only, while the R12 detection log shows zero C for the whole run (R19).
 - [ ] Wireshark/pcap of the V2X exchange and of the ADA→IVI traffic corroborates the chain (R15, R19).
 - [ ] Every §1 demo-evidence method that cites logs is producible from the R18 logs.
@@ -203,7 +203,7 @@ Per-phase demo methods follow the deck's "defined output for each phase" table. 
 
 ## 6. Deferred to Later Milestones
 
-The single source is the report's § Future developments, mirrored in the [future-features register](../requirements/future/m1-future-features-register.md). Standing M1 exclusions live in the report's §4 decision record (Cortex-M omitted, telux port declined, 3D and multi-process optional, ego video clip deferred, no GPU, no map/GNSS on the IVI).
+The single source is the report's § Future developments, mirrored in the [future-features register](../requirements/future/m1-future-features-register.md). Standing M1 exclusions live in the report's §4 decision record (**R10 ego Tx deferred — the V2X ECU is receive-only**, Cortex-M omitted, telux port declined, 3D and multi-process optional, ego video clip deferred, no GPU, no map/GNSS on the IVI).
 
 ## 7. Definition of Done
 

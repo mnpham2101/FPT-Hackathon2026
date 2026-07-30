@@ -9,8 +9,8 @@
 
 - Configures the modem and interfaces with it — simulated only.
 - Connects to the V2X network — simulated (UDP toward the bench, below the R7 adapter seam).
-- Rx: receives CPM payloads, decodes/validates/dedupes, forwards R2 JSON to the ADA ECU (R9).
-- Tx: receives ADA store data, constructs CPMs, broadcasts them over the V2X network (R10).
+- Rx: receives CPM payloads, decodes/validates/dedupes, forwards R2 JSON to the ADA ECU informing it of an obstruction outside ego's line of sight (R9). **This is the whole M1 V2X data path — receive-only.**
+- ~~Tx: receives ADA store data, constructs CPMs, broadcasts them over the V2X network (R10).~~ — **R10 moved to the future plan** (2026-07-30); not implemented in M1.
 
 ## Tech stack
 
@@ -66,12 +66,12 @@ This pin's edge targets the Ethernet Bridge node's single `ETHERNET`/`INPUT` pin
 
 **Why nothing else:**
 - No `kuksa`/`can`/`lin` — the V2X protocol stack ships in the modem and stays out of scope for the whole project (report § Input constraints); this node exchanges already-decoded CPM objects over ethernet/UDP, not vehicle-bus or VSS signals.
-- No `gpio`/`video`/`usb`/`tunnel` — nothing in R7–R10 needs them.
+- No `gpio`/`video`/`usb`/`tunnel` — nothing in R7–R9 needs them.
 
-## Verification (feeds R7–R10 acceptance)
+## Verification (feeds R7–R9 acceptance)
 
 - CI import check: no direct transport imports above the R7 adapter seam.
 - Golden-vector CPMs decode correctly; malformed-input corpus fully rejected, zero crashes (R9).
 - R2 messages observed at the ADA ECU carrying decoded bench-scenario values, not constants.
-- Broadcast frames captured on the bridge with fields populated from live store data (R10).
+- ~~Broadcast frames captured on the bridge with fields populated from live store data (R10).~~ — **R10 moved to the future plan.**
 - Wireshark capture of V2X PDUs at this node's interface (report §1 demo table, committed method).

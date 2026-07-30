@@ -9,7 +9,7 @@ The repo has exactly four code folders — one per node in the R5 blueprint ([ca
 | Folder | CarSky node | Requirements | Language / runtime (report §3(d)) | Artifact | Node guide |
 |---|---|---|---|---|---|
 | [Scenario_Player/](../../Scenario_Player/) | Container Node (bench) | R11 | Python | OCI image `scenario-player:latest` | [node-scenario-player.md](../../requirements/car-sky-guide/node-scenario-player.md) |
-| [V2X_ECU/](../../V2X_ECU/) | Container Node | R1, R7–R10 | C++17 (Vanetza codec in-process) | OCI image `v2x-ecu:latest` | [node-v2x-ecu.md](../../requirements/car-sky-guide/node-v2x-ecu.md) |
+| [V2X_ECU/](../../V2X_ECU/) | Container Node | R1, R7–R9 (R10 deferred) | C++17 (Vanetza codec in-process) | OCI image `v2x-ecu:latest` | [node-v2x-ecu.md](../../requirements/car-sky-guide/node-v2x-ecu.md) |
 | [ADA_ECU/](../../ADA_ECU/) | Container Node | R3, R12–R15 | C++17 core + Python detector subprocess | OCI image `ada-ecu:latest` | [node-ada-ecu.md](../../requirements/car-sky-guide/node-ada-ecu.md) |
 | [IVI_ECU/](../../IVI_ECU/) | Skycraft Node (AAOS) | R4, R16–R17 | Kotlin / Jetpack Compose | APK via Gradle | [node-ivi-ecu.md](../../requirements/car-sky-guide/node-ivi-ecu.md) |
 
