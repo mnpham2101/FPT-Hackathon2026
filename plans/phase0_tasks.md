@@ -382,6 +382,8 @@ Flag: this run commits only `plans/phase0_tasks.md`, so the supersede note is re
 
 **Dependencies:** none — fully parallel with groups 0.1–0.7. **Commit:** `[6.0.8.1] feat: add netcheck baseline connectivity smoke-test tool`
 
+**Status:** done 2026-07-31 — 4 files verbatim from the note §4.2–§4.5 (compared against the note); sh -n + bash -n and py_compile pass; LF endings verified (i/lf); docker build transfers to 5.0.8.2/M3 per acceptance (no Docker on this host).
+
 ### `5.0.8.2` — Build & push the netcheck image (M2–M4) *(car-sky — executed after this planning run, once 6.0.8.1 exists)*
 
 **Objective:** [[car-sky]] runs its deploy-preflight (confirm blueprint `trial2_minh`, target Container nodes, credential), then executes note §6 steps M2–M4: confirm + log in to the correct registry host (**closes O1** — `registry.carsky.io` 502 vs `registry.hackathon-2.carsky.io` 401-auth), `docker build`, `tag`, `push` `m1-netcheck:latest`.
