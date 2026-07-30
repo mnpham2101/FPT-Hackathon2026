@@ -313,6 +313,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 4.0.1.5. **Commit:** `[4.0.6.1] feat: freeze IVI R4 Kotlin binding and finalize R3 snapshot models`
 
+**Status:** implemented 2026-07-31, awaiting CI — sealed `R4Message` (`warning`|`state`, discriminator `type`) + finalized `R3Snapshot` (`objectClass` @SerialName class, `timestamps`) + `@Serializable SceneGeometry`; copies cmp-identical; preview call site updated; `ivi-unit-tests` CI job is the verification authority (local JDK 25 exceeds Gradle 8.13's range).
+
 ### `4.0.6.2` — IVI-side R4 additive-version test *(agent)*
 
 **Objective:** create `IVI_ECU/app/src/test/java/com/hackathon/v2x/ivi/model/R4AdditiveVersionTest.kt` on the shared D4 fixture.

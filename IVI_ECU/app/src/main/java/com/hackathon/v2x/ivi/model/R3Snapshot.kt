@@ -1,12 +1,15 @@
 package com.hackathon.v2x.ivi.model
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
- * Interim model of the R3 TrackedObject snapshot carried inside an R4
- * warning event. Subtask 4.5.1.1 finalizes it against the frozen R3 schema
- * without changing these field names.
+ * Model of the R3 TrackedObject snapshot carried inside an R4 warning event,
+ * finalized against the frozen R3 schema (3.0.1.4,
+ * `contracts/r3-tracked-object.schema.json`) by subtask 4.0.6.1 — which
+ * supersedes 4.5.1.1; field names are unchanged from the interim model.
  *
+ * @property objectClass the schema's `class` field (Kotlin-safe name); M1: `"vehicle"`
  * @property source provenance of the track — the Warning View renders Ghost C
  *   only for [SOURCE_V2X_RELAYED]; anything else trips the defensive guard
  *   (17.5.3.4)
@@ -14,15 +17,25 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class R3Snapshot(
     val id: String,
+    @SerialName("class") val objectClass: String,
     val source: String,
     val position: VehiclePosition,
     val distance: Float,
     val speed: Float,
     val confidence: Float,
     val state: String,
+    val timestamps: R3Timestamps,
 ) {
     companion object {
         const val SOURCE_V2X_RELAYED = "v2x_relayed"
         const val SOURCE_OWN_SENSOR = "own_sensor"
     }
 }
+
+/** Per-track timestamps of the frozen R3 schema (3.0.1.4), ms since epoch. */
+@Serializable
+data class R3Timestamps(
+    val measured: Long,
+    val received: Long,
+    val lastUpdated: Long,
+)
