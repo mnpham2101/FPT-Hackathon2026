@@ -127,6 +127,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 3.0.1.4 (`$ref`). **Commit:** `[4.0.1.5] feat: freeze R4 ADA-IVI schema and shared samples`
 
+**Status:** done 2026-07-31 — schema+2 samples parse; check_schema passes; both samples validate with the R3 $ref resolved via a referencing registry (jsonschema 4.26, Python 3.14); warning object.source = v2x_relayed and equals the shared R3 sample; geometry names ego/vehicleB/vehicleC match SceneGeometry.kt.
+
 ### `4.0.1.6` — Author the shared R4 additive-version fixture *(agent)*
 
 **Objective:** write `contracts/samples/r4-unknown-warning.json` per HLD D4 — one fixture both consumers test.
