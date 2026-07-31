@@ -21,5 +21,5 @@ Manual fallback (one block): `sed -n '/\[PCAP-BEGIN/,/\[PCAP-END\]/p' v2x.log | 
 ## Reading the capture in Wireshark
 
 - **CPM payloads will not dissect as ITS.** The M1 wire format is raw UPER `CollectivePerceptionMessage` per UDP datagram with **no GeoNetworking/BTP envelope** (R1 profile convention F5) — Wireshark's ITS dissector keys on GN/BTP framing, so the payload shows as opaque UDP data. This is expected, not a defect.
-- Evidence method instead: correlate datagrams with the node's `[EVT]` JSONL log by timestamp and byte length, and match payload bytes against the golden vectors (`requirements/contracts/golden-vectors/*.uper`) — that is the "V2X PDUs correctly sent/received" demo check.
+- Evidence method instead: correlate datagrams with the node's `[EVT]` JSONL log by timestamp and byte length, and match payload bytes against the golden vectors (`contracts/golden-vectors/*.uper`) — that is the "V2X PDUs correctly sent/received" demo check.
 - R2 (port 47200) payloads are plain JSON — readable directly in Wireshark's packet bytes pane.
