@@ -22,12 +22,12 @@
 
 **Output (phase acceptance = the four milestone boxes):**
 
-- [ ] R1 profile document committed; golden-vector CPMs encode/decode through the Vanetza codec seam.
-- [ ] R2, R3, R4 schemas committed; round-trip tests pass in each consumer language (C++ / Python / Kotlin).
-- [ ] The R4 additive-version test is defined (unknown `warningType` degrades gracefully).
-- [ ] Blueprint topology documented (pre-existing guides) + validated: smoke-test C1–C5 green on `trial2_minh`.
+- [x] R1 profile document committed; golden-vector CPMs encode/decode through the Vanetza codec seam. — closed 2026-07-31 by `1.0.1.1`·`1.0.1.2`·`1.0.2.1`–`1.0.2.5`; the 6-case corpus decodes to its `.json` content and re-encodes to the exact `.uper` octets (CI run 30608005574).
+- [x] R2, R3, R4 schemas committed; round-trip tests pass in each consumer language (C++ / Python / Kotlin). — closed 2026-07-31; C++ both ends (`2.0.3.1`/`2.0.3.2`·`3.0.4.2`·`4.0.4.3`), Python (`3.0.4.5`·`1.0.5.1`), Kotlin (`4.0.6.1`); integrity gate `1.0.7.1` green over 36 copies, CI run 30608202261.
+- [x] The R4 additive-version test is defined (unknown `warningType` degrades gracefully). — closed 2026-07-31 by `4.0.1.6` (shared D4 fixture) + `4.0.4.4` (ADA) + `4.0.6.2` (IVI).
+- [ ] Blueprint topology documented (pre-existing guides) + validated: smoke-test C1–C5 green on `trial2_minh`. — **open**: agent/CI half done (`6.0.8.1` tool, `5.0.8.2` image built and pushed to `registry.hackathon-2.carsky.io`); the remaining evidence is the two USER-MANUAL Nydus steps `5.0.8.3` (M5–M9 → C1) and `6.0.8.4` (M10–M12 → C2–C5 + the IVI hop), which no agent may perform.
 
-Traceability of every subtask to these boxes: § Acceptance traceability.
+**Phase 0 acceptance state 2026-07-31: 3 of 4 boxes closed.** Every agent-executable subtask of groups 0.1–0.7 is done and CI-green; the only outstanding work in the phase is group 0.8's user-manual smoke-test run. Traceability of every subtask to these boxes: § Acceptance traceability.
 
 **Suggested branch (suggestion only — creation is the user's call):** `feat/phase0-contract-freeze`
 
@@ -426,7 +426,7 @@ Flag: this run commits only `plans/phase0_tasks.md`, so the supersede note is re
 
 **Dependencies:** after 6.0.8.1. **Commit:** `[5.0.8.2] docs: record netcheck image push and confirmed registry host`
 
-**Status:** in progress 2026-07-31 — M2–M4 wired as the CI job `netcheck-image` (no Docker on the dev host, so CI replaces the local car-sky build path): build runs on every push; push runs only once `CARSKY_ZOT_API_KEY` exists as a repo secret. **O1 closed:** live probe shows `registry.hackathon-2.carsky.io` answering (405 to HEAD /v2/) while `registry.carsky.io` returns 502 — CI and all M7 image refs must use the hackathon-2 host. Flips done when a CI run reports the push and `plans/doc/phase0-smoke-test-run.md` records it.
+**Status:** done 2026-07-31 — M2–M4 wired as the CI job `netcheck-image` (no Docker on the dev host, so CI replaces the local car-sky build path): build runs on every push, push runs with the `CARSKY_ZOT_API_KEY` repo secret. Image pushed as `registry.hackathon-2.carsky.io/m1-netcheck:latest`, digest `sha256:e3283d45c1df91b0698c6ed78867144d7d1d022191b42bc17d6c2f380fb5e557`; registry API confirms the repository absent before and present after (`/v2/_catalog`, `/v2/m1-netcheck/tags/list` → `["latest"]`). **O1 closed:** `registry.carsky.io` returns 502, `registry.hackathon-2.carsky.io` serves the registry — CI and every M7 image ref must use the hackathon-2 host. Full evidence: [phase0-smoke-test-run.md](doc/phase0-smoke-test-run.md) § M2–M4.
 
 ### `5.0.8.3` — USER-MANUAL: blueprint node config + deploy → C1 (M5–M9)
 
