@@ -38,6 +38,7 @@ Trigger: any agent writing or editing a markdown file in this repo. Apply all si
 - State what is true now: what works, what doesn't, what to do about it. Never narrate how it was found — no investigation timelines, no "verified live on [date]" / "confirmed via" / "re-tested", no step-by-step reasoning trail, no preserved list of eliminated hypotheses.
 - A fact needs a date only when the fact itself is time-bound (a deadline, a version cutover); it never needs one to prove it was checked.
 - If that kind of analysis is wanted for the record, save it under `tmp/` (git-ignored) instead of the committed doc — only when explicitly requested, never by default.
+- **Exception — subtask `**Status:**` lines** ([task-planning-conventions.md § Status tracking](../../rules/task-planning-conventions.md)): these carry the auditable proof of work a subtask closed with — completion date, commit hash, CI run number, and any deviation from the brief. That's engineering traceability, not investigation narrative, and stays exempt from the no-date/no-history rule above. Still write it as a conclusion (what shipped, what it proves) — evidence citations, not a discovery story.
 
 ## Audience: pick the format for who reads it
 
