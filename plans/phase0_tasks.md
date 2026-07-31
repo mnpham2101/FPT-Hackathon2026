@@ -193,6 +193,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 1.0.2.3 + 1.0.1.1 (corpus list) + 2.0.1.3 (nominal values). **Commit:** `[1.0.2.4] feat: add gv_tool and generate the R1 golden-vector corpus`
 
+**Status:** tool done, corpus commit **blocked on hand-off** 2026-07-31 — commit `7d99b08` (`gv_tool` + CMake target + 4 CI steps); CI run **30605811757** green with every step of `v2x-core-build` success, including `Generate golden vectors (run 1)`, `(run 2)`, `Golden-vector determinism check` (`diff -r` empty ⇒ regeneration is byte-identical) and `Upload golden-vector corpus`. This run is also the strongest functional proof of 1.0.2.3: all 6 cases encoded **and** decoded back to an equal `CpmContent`, `coord-large` (CartesianCoordinateLarge out-of-range markers) included. **Blocker:** the corpus exists only as workflow artifact `golden-vectors` (id `8783540070`, 3227 bytes, run 30605811757, expires 2026-10-29); `actions/artifacts/.../zip` requires an authenticated token, and this session has none (`gh` absent, no `GITHUB_TOKEN`; unauthenticated API is 60 req/h and was exhausted once this run). **Hand-off:** the orchestrating session downloads that artifact and commits its 6 `.json` + 6 `.uper` pairs verbatim into `contracts/golden-vectors/` under this same subtask ID — do not re-generate or hand-author them, byte-identity with `gv_tool` output is the acceptance. `1.0.2.5`, `1.0.5.1` and therefore `1.0.7.1` stay blocked until that lands.
+
 ### `1.0.2.5` — Golden-vector codec test *(agent)*
 
 **Objective:** create `V2X_ECU/tests/codec/test_cpm_golden_vectors.cpp` + the synced pair copies under `V2X_ECU/tests/fixtures/golden/`.
