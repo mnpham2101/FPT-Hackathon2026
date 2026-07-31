@@ -68,6 +68,10 @@ jobs:
 
   v2x-core-build:
     runs-on: ubuntu-latest
+    # Needed by the one-shot golden-vector publish step below, which pushes a commit back to the
+    # branch. Everything else in this job is read-only.
+    permissions:
+      contents: write
     # Vanetza's asn1c-generated C (asn1_support + asn1_its + asn1_its_r2, ~1400 translation units)
     # is a long first-run compile, hence the raised timeout.
     timeout-minutes: 60
