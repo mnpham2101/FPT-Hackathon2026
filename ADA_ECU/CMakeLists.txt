@@ -36,6 +36,7 @@ ada_add_test(ada_sanity_test tests/test_sanity.cpp)
 add_library(ada_contracts STATIC
   src/contracts/tracked_object.cpp
   src/contracts/r2_message.cpp
+  src/contracts/r4_message.cpp
 )
 target_include_directories(ada_contracts PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(ada_contracts PUBLIC nlohmann_json::nlohmann_json)
@@ -47,4 +48,7 @@ target_link_libraries(ada_r3_roundtrip_test PRIVATE ada_contracts)
 ada_add_test(ada_r2_roundtrip_test tests/contracts/test_r2_roundtrip.cpp)
 target_link_libraries(ada_r2_roundtrip_test PRIVATE ada_contracts)
 
-# Later subtasks add here: contracts sources + test targets for 4.0.4.3, 4.0.4.4.
+ada_add_test(ada_r4_roundtrip_test tests/contracts/test_r4_roundtrip.cpp)
+target_link_libraries(ada_r4_roundtrip_test PRIVATE ada_contracts)
+
+# Later subtasks add here: test target for 4.0.4.4.

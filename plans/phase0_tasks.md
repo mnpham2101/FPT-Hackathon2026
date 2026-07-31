@@ -263,6 +263,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 4.0.1.5 + 3.0.4.2. **Commit:** `[4.0.4.3] feat: add ADA R4 binding with round-trip test`
 
+**Status:** implemented 2026-07-31, awaiting CI — `ada::contracts::R4WarningEvent`/`R4StateMessage` producer binding (embedded `object` reuses the R3 `TrackedObject` binding; shared `R4VehicleSet` with nullable-or-absent `vehicleC`) + round-trip tests on both shared samples; copies cmp-identical; `ada-core-build` CI job is the verification authority (no local cmake).
+
 ### `4.0.4.4` — ADA-side R4 additive-version test *(agent)*
 
 **Objective:** create `ADA_ECU/tests/contracts/test_r4_additive_version.cpp` on the shared D4 fixture.
