@@ -275,6 +275,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 4.0.1.6 + 4.0.4.3. **Commit:** `[4.0.4.4] test: add ADA-side R4 additive-version test`
 
+**Status:** implemented 2026-07-31, awaiting CI — D4 fixture parses through the unmodified 4.0.4.3 binding (unknown `warningType` preserved, `schemaVersion` 2 carried, `hazardDetail` ignored and absent from re-emit); copy cmp-identical; `ada-core-build` CI job is the verification authority (no local cmake).
+
 ### `3.0.4.5` — Detector Python R3 binding + Python-side fixture validation *(agent)*
 
 **Objective:** create `ADA_ECU/detector/contracts/tracked_object.py` (R3 dataclass + JSONL encode/decode — the R12 subprocess wire shape), `ADA_ECU/detector/tests/test_r3_roundtrip.py`, `ADA_ECU/detector/requirements-dev.txt` (pytest, jsonschema — test-only; runtime deps come with Phase 3).

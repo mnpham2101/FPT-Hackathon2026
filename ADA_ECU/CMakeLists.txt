@@ -51,4 +51,7 @@ target_link_libraries(ada_r2_roundtrip_test PRIVATE ada_contracts)
 ada_add_test(ada_r4_roundtrip_test tests/contracts/test_r4_roundtrip.cpp)
 target_link_libraries(ada_r4_roundtrip_test PRIVATE ada_contracts)
 
-# Later subtasks add here: test target for 4.0.4.4.
+ada_add_test(ada_r4_additive_version_test tests/contracts/test_r4_additive_version.cpp)
+target_link_libraries(ada_r4_additive_version_test PRIVATE ada_contracts)
+
+# Group 0.4 C++ targets complete; remaining ADA additions come with later phases (Phase 2 HLD), not Phase 0.
