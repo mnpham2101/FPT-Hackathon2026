@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Baseline connectivity check. Env: ROLE, LISTEN_PORT?, NEXT_HOP_HOST?, NEXT_HOP_PORT?, HZ, PAD, START_DELAY_S."""
-import os, socket, threading, time
+import os, socket, sys, threading, time
 
 ROLE   = os.environ.get("ROLE", "node")
 LISTEN = os.environ.get("LISTEN_PORT")                  # relay/sink nodes only
@@ -9,7 +9,9 @@ HZ     = float(os.environ.get("HZ", "1"))               # 1 Hz: log stays readab
 PAD    = int(os.environ.get("PAD", "0"))                # payload padding, for the MTU check
 DELAY  = float(os.environ.get("START_DELAY_S", "20"))   # let the downstream nodes come up first
 
-def log(tag, msg): print(f"[{tag}] {ROLE} {msg}", flush=True)
+def log(tag, msg): print(f"[{tag}] {time.strftime('%H:%M:%S')} {ROLE} {msg}", flush=True)
+
+log("BOOT", f"netcheck.py running (python {sys.version.split()[0]})")
 
 def route_check():
     """Reachability without ICMP: connect() forces a route lookup and sends nothing."""
@@ -23,9 +25,10 @@ def route_check():
         s.close()
 
 def receiver():
+    log("BOOT", f"receiver binding udp/{LISTEN}")
     rx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     rx.bind(("0.0.0.0", int(LISTEN)))     # never bind a named interface - the bridge NIC's name is not guaranteed
-    log("NET", f"listening on udp/{LISTEN}")
+    log("NET", f"listening on udp/{LISTEN}, waiting for first datagram")
     fwd, n = socket.socket(socket.AF_INET, socket.SOCK_DGRAM), 0
     while True:
         data, src = rx.recvfrom(65535); n += 1
@@ -36,7 +39,9 @@ def receiver():
             log("TX", f"#{n} relayed to {NH}:{NP} len={len(out)}")
 
 def sender():
+    log("BOOT", f"sender waiting START_DELAY_S={DELAY}s before first send")
     time.sleep(DELAY)
+    log("BOOT", "sender loop starting")
     tx, i = socket.socket(socket.AF_INET, socket.SOCK_DGRAM), 0
     while True:                           # runs forever, so the log is alive whenever it is opened
         out = f"seq={i}|{ROLE}".encode() + b"x" * PAD
@@ -50,4 +55,7 @@ def sender():
 if NH: route_check()
 if LISTEN: threading.Thread(target=receiver, daemon=True).start()
 if NH and not LISTEN: sender()            # source node
-while True: time.sleep(3600)              # keep the pod Running so View Log stays open
+log("BOOT", "startup complete, entering idle keepalive")
+while True:                               # keep the pod Running so View Log stays open
+    time.sleep(60)
+    log("ALIVE", "keepalive - process healthy, receiver thread active" if LISTEN else "keepalive")
