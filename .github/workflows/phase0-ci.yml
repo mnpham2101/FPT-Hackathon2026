@@ -30,6 +30,13 @@ jobs:
           else
             echo "contracts/check_sync.py not landed yet (subtask 1.0.7.1) - skipping"
           fi
+      - name: R7 transport-import gate (lands with 7.1.3.5)
+        run: |
+          if [ -f V2X_ECU/tools/check_transport_imports.py ]; then
+            python V2X_ECU/tools/check_transport_imports.py
+          else
+            echo "V2X_ECU/tools/check_transport_imports.py not landed yet (subtask 7.1.3.5) - skipping"
+          fi
 
   python-tests:
     runs-on: ubuntu-latest

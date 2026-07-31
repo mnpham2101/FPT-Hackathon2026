@@ -220,6 +220,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none (passes trivially before 7.1.2.2 lands; binding once it does). **Commit:** `[7.1.3.5] feat: add transport-import CI gate`
 
+**Status:** implemented 2026-08-01 — script exits 0 from repo root and an unrelated cwd; probes behaved (`<sys/socket.h>` include → exit 1 naming file:line, bare `asn1::Cpm` → exit 1, `vanetza::asn1::r2::Cpm` → exit 0), probe deleted and tree back to exit 0; guarded step added to CI `contracts-gate`; CI verification pending wave push.
+
 ### [ ] `7.1.3.6` — Telux parity notes + port plan `doc/telux-parity-and-port-plan.md` *(agent)*
 
 **Objective:** the committed R7 doc deliverable (HLD §4/§10): why the seam's names/call order mirror telux, and what porting to real modem hardware changes.
