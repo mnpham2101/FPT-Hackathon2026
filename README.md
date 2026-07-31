@@ -6,7 +6,7 @@ This project implements **V2X (Vehicle-to-Everything)** features that let vehicl
 
 **Milestone 1** demonstrates cooperative, non-line-of-sight (NLOS) awareness: three vehicles drive in a collinear convoy — **A** follows **B** follows **C**. Vehicle A's camera can never see C because B blocks the line of sight. Vehicle B *can* see C, and broadcasts that perception to A over V2X — so both A and B end up displaying C and its relative position, even though A never detects C directly.
 
-Full mission, scope, contracts, and phase plan live in [CLAUDE.md](CLAUDE.md) and [plans/milestone1.md](plans/milestone1.md). Original goals and the deferred future-feature list are in [.claude/prompt/project_goals.md](.claude/prompt/project_goals.md).
+Full mission, scope, contracts, and phase plan live in [CLAUDE.md](CLAUDE.md) and [plans/milestone1.md](plans/milestone1.md). Original goals and the deferred future-feature list are in [.claude/prompts/project_goals.md](.claude/prompts/project_goals.md).
 
 ## Repository layout
 
@@ -19,7 +19,11 @@ Full mission, scope, contracts, and phase plan live in [CLAUDE.md](CLAUDE.md) an
 | [.claude/rules/](.claude/rules/) | Standing process rules (task/commit conventions, solution selection, HLD format) |
 | [.claude/agents/](.claude/agents/) | Subagent specs: project-researcher, project-planner, project-architecture |
 | [.claude/skills/](.claude/skills/) | Reusable procedures the agents follow |
-| [.claude/prompt/](.claude/prompt/) | Important prompts saved verbatim, with self-graded outcomes |
+| [.claude/prompts/](.claude/prompts/) | Important prompts saved verbatim, with self-graded outcomes |
+
+## Platform access & credentials
+
+Building and deploying on CarSky needs a **Zot registry API key** (`zak_...`) — the `docker login` password for pushing the ECU/bench images, and the `CARSKY_ZOT_API_KEY` GitHub Actions secret the CI push job uses. How to create, store, and use it: [requirements/car-sky-guide/zot-registry-api-key.md](requirements/car-sky-guide/zot-registry-api-key.md). All other CarSky deployment guides live in [requirements/car-sky-guide/](requirements/car-sky-guide/).
 
 ## Hướng dẫn dành cho contributor
 
@@ -31,7 +35,7 @@ Full mission, scope, contracts, and phase plan live in [CLAUDE.md](CLAUDE.md) an
   3. Gọi agent **[project-planner](.claude/agents/project-planner.md)** tạo task/subtask theo mã `X.Y.Z.W` từ kế hoạch đó và điều phối subagent thực hiện.
   4. **Build và test**: mỗi subtask chỉ được coi là "done" khi build pass, unit test pass, và có đúng một atomic commit ([task-planning-conventions.md](.claude/rules/task-planning-conventions.md)).
   5. Nếu điều kiện cho phép, **deploy blueprint lên CarSky** (tạo Room) để kiểm thử end-to-end trên môi trường thật (R5/R6).
-- **Lưu lại prompt quan trọng.** Các prompt khởi tạo hoặc định hình lớn cho một task nên được lưu nguyên văn vào [.claude/prompt/](.claude/prompt/) dưới dạng markdown. Sau khi agent hoàn thành task, hãy **tự chấm điểm (rate) prompt của mình theo thang 0–10**, kèm nhận xét ngắn gọn vì sao (prompt có rõ ràng không, agent có hiểu đúng scope không, có thiếu rule/context nào không...). Xem format mẫu ở các file có sẵn trong `.claude/prompt/`.
+- **Lưu lại prompt quan trọng.** Các prompt khởi tạo hoặc định hình lớn cho một task nên được lưu nguyên văn vào [.claude/prompts/](.claude/prompts/) dưới dạng markdown. Sau khi agent hoàn thành task, hãy **tự chấm điểm (rate) prompt của mình theo thang 0–10**, kèm nhận xét ngắn gọn vì sao (prompt có rõ ràng không, agent có hiểu đúng scope không, có thiếu rule/context nào không...). Xem format mẫu ở các file có sẵn trong `.claude/prompts/`.
 - **Bắt buộc atomic commit, single objective.** Khi prompt cho agent/subagent thực hiện task, luôn yêu cầu rõ: mỗi subtask chỉ có **một mục tiêu duy nhất (single objective)**, tạo ra đúng **một atomic commit**, và **không** được lẫn code ngoài phạm vi (out-of-scope) vào cùng commit đó. Quy tắc đầy đủ ở [task-planning-conventions.md](.claude/rules/task-planning-conventions.md).
 - **Dùng AI platform khác (ví dụ Cursor...).** Nếu không dùng Claude Code, hãy tạo một thư mục ẩn tương ứng (ví dụ `.cursor/`) với cấu trúc tương tự `.claude/` để lưu prompt, rules, skills, agents, plan, task, subtask cho platform đó. Các thư mục này **phải được commit vào git như bình thường**, không được `.gitignore`.
 - **Làm việc theo branch, mở Pull Request.** Mỗi feature làm trên một branch riêng, không commit thẳng vào `main`/`master`. Khi xong, mở Pull Request (PR) để review trước khi merge.

@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "type": "state",
+  "seq": 42,
+  "vehicles": {
+    "ego": { "x": 0.0, "y": 0.0 },
+    "vehicleB": { "x": 30.0, "y": 0.5 },
+    "vehicleC": { "x": 55.0, "y": 1.7 }
+  }
+}

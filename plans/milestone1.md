@@ -94,10 +94,12 @@ Per-phase demo methods follow the deck's "defined output for each phase" table. 
 - Blueprint topology decided: node set (R5) and pin/edge wiring matching the communication topology (R6).
 
 **Acceptance Criteria.**
-- [ ] R1 profile document committed; golden-vector CPMs encode/decode through the Vanetza codec seam.
-- [ ] R2, R3, R4 schemas committed; round-trip tests pass in each consumer language (C++ / Python / Kotlin).
-- [ ] The R4 additive-version test is defined (a consumer parsing an unknown `warningType` degrades gracefully).
+- [x] R1 profile document committed; golden-vector CPMs encode/decode through the Vanetza codec seam.
+- [x] R2, R3, R4 schemas committed; round-trip tests pass in each consumer language (C++ / Python / Kotlin).
+- [x] The R4 additive-version test is defined (a consumer parsing an unknown `warningType` degrades gracefully).
 - [ ] Blueprint topology documented (nodes, `ethernet` pins, edges to the bridge).
+
+Topology is documented and `validate` passes ([preflight](doc/phase0-trial2-minh-preflight.md)), but **the blueprint has never deployed successfully**: no container node has pulled its image, so C1–C5 are unproven and the whole smoke-test group (`5.0.8.2`, `5.0.8.3`, `6.0.8.4`) is open. The blocker is platform-side — another team's image fails identically — and needs BTC escalation. Evidence: [phase0-smoke-test-run.md § Open blocker](doc/phase0-smoke-test-run.md).
 
 ### Phase 1 — Comms bring-up: V2X ECU + Scenario Player (R5–R9, R11 — **R10 moved to the future plan**)
 

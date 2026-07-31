@@ -1,0 +1,184 @@
+# Phase 0 Linux verification (subtask 1.0.7.2) - the project's Linux build/test path while the
+# dev host has no Docker/WSL.
+#
+# Later lanes plug in here (do not pre-create empty jobs):
+# - group 0.2 (V2X_ECU): C++ CMake build+ctest landed with 1.0.2.1 (v2x-core-build below; ADA's
+#   landed with 3.0.4.1). Still pending: the docker-build jobs for both C++ nodes, added by those
+#   subtasks when their Dockerfiles land.
+# - registry push (5.0.8.2): the netcheck-image job below builds always and pushes only when the
+#   CARSKY_ZOT_API_KEY repo secret exists (never commit the credential). Host per the live O1
+#   probe 2026-07-31: registry.hackathon-2.carsky.io (registry.carsky.io answers 502).
+name: phase0-ci
+
+on:
+  push:
+  pull_request:
+    branches: [main]
+
+jobs:
+  contracts-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Contract byte-identity gate (lands with 1.0.7.1)
+        run: |
+          if [ -f contracts/check_sync.py ]; then
+            python contracts/check_sync.py
+          else
+            echo "contracts/check_sync.py not landed yet (subtask 1.0.7.1) - skipping"
+          fi
+
+  python-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Scenario_Player unit tests (lands with 1.0.5.1)
+        run: |
+          if [ -f Scenario_Player/requirements-dev.txt ] && [ -d Scenario_Player/tests ]; then
+            python -m pip install -r Scenario_Player/requirements-dev.txt
+            python -m pytest Scenario_Player/tests
+          else
+            echo "Scenario_Player tests not landed yet - skipping"
+          fi
+      - name: ADA_ECU detector unit tests (lands with 3.0.4.5)
+        run: |
+          if [ -f ADA_ECU/detector/requirements-dev.txt ] && [ -d ADA_ECU/detector/tests ]; then
+            python -m pip install -r ADA_ECU/detector/requirements-dev.txt
+            python -m pytest ADA_ECU/detector/tests
+          else
+            echo "ADA_ECU detector tests not landed yet - skipping"
+          fi
+
+  ada-core-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S ADA_ECU -B ADA_ECU/build
+      - name: Build
+        run: cmake --build ADA_ECU/build -j
+      - name: Test
+        run: ctest --test-dir ADA_ECU/build --output-on-failure
+
+  v2x-core-build:
+    runs-on: ubuntu-latest
+    # Needed by the one-shot golden-vector publish step below, which pushes a commit back to the
+    # branch. Everything else in this job is read-only.
+    permissions:
+      contents: write
+    # Vanetza's asn1c-generated C (asn1_support + asn1_its + asn1_its_r2, ~1400 translation units)
+    # is a long first-run compile, hence the raised timeout.
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Boost (Vanetza hard dependency)
+        run: sudo apt-get update && sudo apt-get install -y libboost-dev libboost-date-time-dev
+      # The cache key carries the exact Vanetza pin, so a re-pin invalidates it. _deps holds the
+      # clone, the FetchContent stamps and Vanetza's own object files, so a cache hit skips both
+      # the clone and the ASN.1 recompile.
+      - name: Cache Vanetza FetchContent deps
+        uses: actions/cache@v4
+        with:
+          path: V2X_ECU/build/_deps
+          key: v2x-deps-${{ runner.os }}-vanetza-fb6c5510-json-v3.11.3-gtest-v1.14.0-${{ hashFiles('V2X_ECU/CMakeLists.txt') }}
+          restore-keys: |
+            v2x-deps-${{ runner.os }}-vanetza-fb6c5510-json-v3.11.3-gtest-v1.14.0-
+      - name: Configure
+        run: cmake -S V2X_ECU -B V2X_ECU/build
+      # Bounded parallelism on purpose: a bare `-j` makes CMake pass `-j` with no number to make,
+      # i.e. unlimited jobs - ~700 concurrent compilers for asn1_its alone would OOM the runner.
+      - name: Build
+        run: cmake --build V2X_ECU/build -j $(nproc)
+      - name: Test
+        run: ctest --test-dir V2X_ECU/build --output-on-failure
+      - name: Generate golden vectors (run 1)
+        run: V2X_ECU/build/gv_tool "$RUNNER_TEMP/gv1"
+      - name: Generate golden vectors (run 2)
+        run: V2X_ECU/build/gv_tool "$RUNNER_TEMP/gv2"
+      # Determinism is 1.0.2.4's acceptance: the same tool run twice must emit byte-identical
+      # trees. diff exits non-zero on any difference, which fails the step.
+      - name: Golden-vector determinism check
+        run: diff -r "$RUNNER_TEMP/gv1" "$RUNNER_TEMP/gv2"
+      # The corpus is generated on Linux and handed back as an artifact; committing it into
+      # contracts/golden-vectors/ is a separate hand-off step (1.0.2.5 consumes it).
+      - name: Upload golden-vector corpus
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-vectors
+          path: ${{ runner.temp }}/gv1
+      # One-shot self-publish: artifact download needs an authenticated token the dev session does
+      # not have, so the corpus lands via CI instead. The hashFiles guard makes this fire exactly
+      # once - the moment contracts/golden-vectors/ exists in the tree, the step stops running.
+      # [skip ci] keeps the push from re-triggering this workflow.
+      - name: Publish golden-vector corpus (once, when absent)
+        if: hashFiles('contracts/golden-vectors/**') == ''
+        run: |
+          mkdir -p contracts/golden-vectors
+          cp -r "$RUNNER_TEMP/gv1/." contracts/golden-vectors/
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add contracts/golden-vectors
+          git commit -m "[1.0.2.4] feat: add gv_tool golden-vector corpus [skip ci]
+
+          Generated on Linux by V2X_ECU/tools/golden_vectors/gv_tool in this run and verified
+          byte-identical across two consecutive generations (determinism step above).
+
+          Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
+          git push origin HEAD:${{ github.ref_name }}
+
+  ivi-unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+      - name: IVI_ECU Gradle unit tests
+        working-directory: IVI_ECU
+        run: |
+          chmod +x gradlew
+          ./gradlew :app:testDebugUnitTest --no-daemon
+
+  netcheck-image:
+    runs-on: ubuntu-latest
+    env:
+      # Live host per the O1 probe (2026-07-31): registry.carsky.io 502s, hackathon-2 answers.
+      REGISTRY_HOST: registry.hackathon-2.carsky.io
+      IMAGE: m1-netcheck:latest
+      # arm64 only: the cluster's runnable evidence is uniformly aarch64 (AAOS skycraft artifact,
+      # and tanbd2/dummy-video-color - the one arm64-only team image in the registry). A
+      # single-arch manifest also matches the shape of the images that the registry has actually
+      # served (both non-KIS repos are single-arch), removing the index as a variable.
+      PLATFORMS: linux/arm64
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - name: Build netcheck image (smoke-test M3)
+        # --provenance/--sbom=false: buildx otherwise adds unknown/unknown attestation entries
+        # to the manifest index, which older containerd releases fail to resolve (a second
+        # pull-failure mode observed on the 2026-07-31 deploy after the multi-arch push).
+        run: docker buildx build --platform "$PLATFORMS" --provenance=false --sbom=false -t "$IMAGE" tools/netcheck/
+      - name: Push to CarSky Zot registry (M2+M4; skips until the secret exists)
+        env:
+          ZOT_KEY: ${{ secrets.CARSKY_ZOT_API_KEY }}
+          # Registry account (not a secret) - verified live 2026-07-31: this user plus the
+          # CARSKY_ZOT_API_KEY secret returns 200 on /v2/. Override with the
+          # CARSKY_REGISTRY_USER repo variable if the account changes.
+          REGISTRY_USER: ${{ vars.CARSKY_REGISTRY_USER || 'kis@hackathon.fpt.com' }}
+        run: |
+          if [ -z "$ZOT_KEY" ]; then
+            echo "::notice::CARSKY_ZOT_API_KEY secret not set - image built but NOT pushed (M4 pending)"
+            exit 0
+          fi
+          echo "$ZOT_KEY" | docker login "$REGISTRY_HOST" -u "$REGISTRY_USER" --password-stdin
+          docker buildx build --platform "$PLATFORMS" --provenance=false --sbom=false -t "$REGISTRY_HOST/$IMAGE" --push tools/netcheck/
+          echo "::notice::pushed $REGISTRY_HOST/$IMAGE ($PLATFORMS)"

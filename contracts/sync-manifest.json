@@ -1,0 +1,148 @@
+{
+  "description": "Phase 0 contract-integrity gate (subtask 1.0.7.1). Every target listed below must be a byte-identical verbatim copy of its source; the copies exist because each node folder is a self-contained Docker build context and may not read the repo-root contracts/ folder (HLD decision D1). Enforced by contracts/check_sync.py, which also enforces convention F2 via the banned-token fields.",
+  "f2BannedToken": "asn1::Cpm",
+  "f2Scope": "V2X_ECU/src",
+  "copies": [
+    {
+      "source": "contracts/r1-cpm-content.schema.json",
+      "targets": [
+        "V2X_ECU/contracts/r1-cpm-content.schema.json",
+        "Scenario_Player/contracts/r1-cpm-content.schema.json"
+      ]
+    },
+    {
+      "source": "contracts/r2-v2x-object.schema.json",
+      "targets": [
+        "V2X_ECU/contracts/r2-v2x-object.schema.json",
+        "ADA_ECU/contracts/r2-v2x-object.schema.json"
+      ]
+    },
+    {
+      "source": "contracts/r3-tracked-object.schema.json",
+      "targets": [
+        "ADA_ECU/contracts/r3-tracked-object.schema.json",
+        "IVI_ECU/contracts/r3-tracked-object.schema.json"
+      ]
+    },
+    {
+      "source": "contracts/r4-ada-ivi.schema.json",
+      "targets": [
+        "ADA_ECU/contracts/r4-ada-ivi.schema.json",
+        "IVI_ECU/contracts/r4-ada-ivi.schema.json"
+      ]
+    },
+    {
+      "source": "contracts/samples/r2-object.json",
+      "targets": [
+        "V2X_ECU/tests/fixtures/samples/r2-object.json",
+        "ADA_ECU/tests/fixtures/samples/r2-object.json"
+      ]
+    },
+    {
+      "source": "contracts/samples/r3-tracked-object.json",
+      "targets": [
+        "ADA_ECU/tests/fixtures/samples/r3-tracked-object.json",
+        "IVI_ECU/app/src/test/resources/contracts/samples/r3-tracked-object.json"
+      ]
+    },
+    {
+      "source": "contracts/samples/r4-warning.json",
+      "targets": [
+        "ADA_ECU/tests/fixtures/samples/r4-warning.json",
+        "IVI_ECU/app/src/test/resources/contracts/samples/r4-warning.json"
+      ]
+    },
+    {
+      "source": "contracts/samples/r4-state.json",
+      "targets": [
+        "ADA_ECU/tests/fixtures/samples/r4-state.json",
+        "IVI_ECU/app/src/test/resources/contracts/samples/r4-state.json"
+      ]
+    },
+    {
+      "source": "contracts/samples/r4-unknown-warning.json",
+      "targets": [
+        "ADA_ECU/tests/fixtures/samples/r4-unknown-warning.json",
+        "IVI_ECU/app/src/test/resources/contracts/samples/r4-unknown-warning.json"
+      ]
+    },
+    {
+      "source": "contracts/golden-vectors/nominal.json",
+      "targets": [
+        "V2X_ECU/tests/fixtures/golden/nominal.json",
+        "Scenario_Player/tests/fixtures/golden/nominal.json"
+      ]
+    },
+    {
+      "source": "contracts/golden-vectors/mdt-max.json",
+      "targets": [
+        "V2X_ECU/tests/fixtures/golden/mdt-max.json",
+        "Scenario_Player/tests/fixtures/golden/mdt-max.json"
+      ]
+    },
+    {
+      "source": "contracts/golden-vectors/mdt-min.json",
+      "targets": [
+        "V2X_ECU/tests/fixtures/golden/mdt-min.json",
+        "Scenario_Player/tests/fixtures/golden/mdt-min.json"
+      ]
+    },
+    {
+      "source": "contracts/golden-vectors/conf-unavailable.json",
+      "targets": [
+        "V2X_ECU/tests/fixtures/golden/conf-unavailable.json",
+        "Scenario_Player/tests/fixtures/golden/conf-unavailable.json"
+      ]
+    },
+    {
+      "source": "contracts/golden-vectors/gate-boundary.json",
+      "targets": [
+        "V2X_ECU/tests/fixtures/golden/gate-boundary.json",
+        "Scenario_Player/tests/fixtures/golden/gate-boundary.json"
+      ]
+    },
+    {
+      "source": "contracts/golden-vectors/coord-large.json",
+      "targets": [
+        "V2X_ECU/tests/fixtures/golden/coord-large.json",
+        "Scenario_Player/tests/fixtures/golden/coord-large.json"
+      ]
+    },
+    {
+      "source": "contracts/golden-vectors/nominal.uper",
+      "targets": [
+        "V2X_ECU/tests/fixtures/golden/nominal.uper"
+      ]
+    },
+    {
+      "source": "contracts/golden-vectors/mdt-max.uper",
+      "targets": [
+        "V2X_ECU/tests/fixtures/golden/mdt-max.uper"
+      ]
+    },
+    {
+      "source": "contracts/golden-vectors/mdt-min.uper",
+      "targets": [
+        "V2X_ECU/tests/fixtures/golden/mdt-min.uper"
+      ]
+    },
+    {
+      "source": "contracts/golden-vectors/conf-unavailable.uper",
+      "targets": [
+        "V2X_ECU/tests/fixtures/golden/conf-unavailable.uper"
+      ]
+    },
+    {
+      "source": "contracts/golden-vectors/gate-boundary.uper",
+      "targets": [
+        "V2X_ECU/tests/fixtures/golden/gate-boundary.uper"
+      ]
+    },
+    {
+      "source": "contracts/golden-vectors/coord-large.uper",
+      "targets": [
+        "V2X_ECU/tests/fixtures/golden/coord-large.uper"
+      ]
+    }
+  ]
+}

@@ -49,6 +49,13 @@ A **workflow** is a YAML file in `.github/workflows/`. Ours is [phase0-ci.yml](.
 
 Each job starts on a clean machine, so it checks the code out first (`actions/checkout`).
 
+**Reading the raw YAML, briefly:**
+
+- `key: value` — one mapping entry; nesting is indentation (2 spaces), no braces.
+- `- item` — a list entry; a job's `steps:` is a list of these.
+- `${{ ... }}` — an expression evaluated at run time, e.g. `${{ secrets.CARSKY_ZOT_API_KEY }}`.
+- `|` before a block — a literal multi-line string, used for a multi-line `run:` script.
+
 > Reference: [GitHub Actions documentation](https://docs.github.com/actions) — workflow syntax, contexts, and expressions in full.
 
 ### 2.4 Zot — the container registry
@@ -57,14 +64,14 @@ Each job starts on a clean machine, so it checks the code out first (`actions/ch
 
 **Credentials.** Sign in to the Zot web UI through **A8 Keycloak** (single sign-on), then create an **API key** (`zak_…`, shown once). That key is the *password* for `docker login`; the username is the registry account. Full procedure: [zot-registry-api-key.md](zot-registry-api-key.md).
 
-**Host caveat:** use `registry.hackathon-2.carsky.io`. The `registry.carsky.io` host answers 502 and every reference to it fails as if the image did not exist.
+**Host caveat:** `registry.hackathon-2.carsky.io` is the verified **push** host from outside (CI, dev machine); `registry.carsky.io` answers 502 externally. **Resolved:** nodes pull from this same host — the earlier pull failures were a single-platform-image requirement, not a host mismatch. See [phase0-smoke-test-run.md § Standing requirement](../../plans/doc/phase0-smoke-test-run.md).
 
-**How the push works from GitHub Actions** — three commands, run by the `netcheck-image` job:
+**How the push works from GitHub Actions** — run by the `netcheck-image` job. Images must be single-platform `linux/arm64` ([phase0-smoke-test-run.md § Standing requirement](../../plans/doc/phase0-smoke-test-run.md)); attestations stay disabled so the result is one manifest, not an index:
 
 ```
 docker login <registry-host> -u <account> --password-stdin   # key supplied from the secret
-docker tag  m1-netcheck:latest  <registry-host>/m1-netcheck:latest
-docker push <registry-host>/m1-netcheck:latest
+docker buildx build --platform linux/arm64 --provenance=false --sbom=false \
+  -t <registry-host>/m1-netcheck:latest --push tools/netcheck/
 ```
 
 The key lives only in GitHub Secrets and is never written to the repository.
@@ -118,6 +125,8 @@ The registry account is not secret and lives in the workflow (`REGISTRY_USER`); 
 
 Both are done by the `netcheck-image` job on every push — no local Docker required.
 
+**Requires the CI workflow script.** This is automatic only because [phase0-ci.yml](../../.github/workflows/phase0-ci.yml) already has a `netcheck-image` job that builds and pushes this exact image. If that job doesn't exist yet, or its `PLATFORMS`/tag/registry don't match the target, fix the `.yml` first — there is nothing to verify without it.
+
 **Verify:** GitHub → **Actions** → newest **phase0-ci** run → job **netcheck-image**:
 
 - *"Build netcheck image"* green → **M3 done**.
@@ -129,7 +138,7 @@ Both are done by the `netcheck-image` job on every push — no local Docker requ
 
 Nydus → blueprint list → open the target (here `trial2_minh_netcheck`).
 
-Working on a **clone** keeps the known-good baseline untouched — recommended. Note that deploying also creates a snapshot named `<name>-deploy`; **always edit the original**, never the snapshot.
+Working on a **clone** keeps the known-good baseline untouched — recommended. Deploying also creates a snapshot named `<name>-deploy`; **always edit the original**, never the snapshot.
 
 Clicking empty canvas shows the **blueprint** Inspector — the panel that owns the whole design rather than one node:
 
@@ -161,7 +170,7 @@ Confirm each of the four role nodes has one `ethernet` pin wired to the Ethernet
 
 | Field | Value | Explanation |
 |---|---|---|
-| Image | `registry.hackathon-2.carsky.io/m1-netcheck:latest` | The Zot address pushed in M4. Host must be `hackathon-2`; `registry.carsky.io` returns 502 and the pull fails. |
+| Image | `registry.hackathon-2.carsky.io/m1-netcheck:latest` | Same host CI pushes to. Must be single-platform `linux/arm64` ([phase0-smoke-test-run.md § Standing requirement](../../plans/doc/phase0-smoke-test-run.md)) — a multi-platform manifest index fails to pull. |
 | Command | `./entrypoint.sh` | Overrides the container entrypoint. Relative to the image's workdir `/app` — `/entrypoint.sh` (absolute) does not exist and the container dies at start. May be left empty: the Dockerfile already defaults to it. |
 | Args | *(empty)* | Not used. |
 | Capabilities | `NET_RAW` | Linux privilege for opening raw sockets, required by `tcpdump` in `capture.sh`. Without it capture degrades to packet counters and criterion C4 weakens. |
@@ -202,7 +211,7 @@ The Skycraft node runs an Android VM, not a container — it cannot run these sc
 ![Deploy Blueprint dialog — deployment name and device selection](images/nydus-deploy-dialog.png)
 
 - **Deployment Name** — defaults to `<blueprint>-deploy`; keep it unless running two Rooms from one blueprint.
-- **Device** — pick an **existing** entry from the dropdown. A Device is the Kubernetes resource pool the Room runs on, *not* an ECU, so `+ Create new device` is unnecessary here and eats into the 2-concurrent-deployment budget.
+- **Device** — pick an **existing** entry from the dropdown (§2.5: the K8s resource pool, not an ECU). `+ Create new device` is unnecessary here and eats into the 2-concurrent-deployment budget.
 
 Then **Deploy**, and wait until every node badge reads `Running` with restart count 0 — that is **C1**. The Android node takes longer than the containers.
 
@@ -221,10 +230,19 @@ Click each node → **View Log**. The programs are already running; nothing to t
 
 Zero `[ERR]` lines is **C2**; a live, readable log per node is **C3**.
 
-**The IVI hop (hop 3)** — the Android node has no APK yet, so verify it one of two ways, and record which was used:
+### Checking IVI RX traffic (hop 3)
 
-1. **Preferred:** the node's **ADB Shell** widget → `nc -u -l -p 47300` (run `toybox` first to confirm `nc` exists). Traffic arrives within a second or two.
-2. **Fallback:** ADA's `[TX] … relayed to 10.99.0.13:47300` plus its `[CAP]` line — proves the datagram was put on the wire, not that it was received.
+The Android node has no APK yet ([`R4ListenerService`](../../plans/phase5_tasks.md), task `4.5.1.3`, not built), so it never produces `[RX]`/`[TX]` logs like the other three nodes. Two ways to check it received ADA's relay, strongest first — per [baseline-connectivity-smoke-test.md §7](../../plans/doc/research_notes/baseline-connectivity-smoke-test.md#7-the-ivi-hop) — and record which was used.
+
+**Note:** a REST-driven listener (`POST` a `toybox nc -u -l -p 47300` to the VM shell route, `GET` the result) is not doable — the VM shell route returns 502 on this deployment, same as `screenshot`/`accessibility`/`container-exec` ([carsky-rest-api-blueprint.md](carsky-rest-api-blueprint.md)). Toybox's availability can't even be checked until that's fixed.
+
+#### Option 1 — ADA-side evidence (currently the only working option)
+
+ADA's `[TX] … relayed to 10.99.0.13:47300` plus its `[CAP]` line proves the datagram was put on the wire — it does not prove IVI received it.
+
+#### Option 2 — Wait for the real R4 listener
+
+Once `4.5.1.3` lands, hop 3 verifies through the actual R4 UDP path and this whole check retires — no netcheck-specific verification needed from then on.
 
 ### M11 — Optional: MTU headroom
 
@@ -243,7 +261,7 @@ Every row below cost real time on the first run (2026-07-31). They are ordered b
 | # | Mistake | Symptom | Fix |
 |---|---|---|---|
 | 1 | **Deployed before doing M7.** The clone carried the baseline's ECU images (`registry.carsky.io/m1-v2x-ecu:latest` …), which do not exist yet. | All three container nodes stuck in `Provisioning`; the bridge and IVI reach `Running`. Log API reports `waiting to start: trying and failing to pull image`. | Apply M7 to all three nodes, delete the failed deployment, redeploy. |
-| 2 | **Wrong registry host** — `registry.carsky.io` instead of `registry.hackathon-2.carsky.io`. | Identical to #1: the pull fails and the node never starts. | Use the `hackathon-2` host everywhere: CI, image tags, node config. |
+| 2 | **Wrong registry host in CI** — `registry.carsky.io` instead of `registry.hackathon-2.carsky.io` for the *push*. | The push itself fails (502) or lands nowhere the catalog shows. | Push to the `hackathon-2` host — nodes pull from the same host (M7); the image also needs to be single-platform `linux/arm64` (see [§ Standing requirement](../../plans/doc/phase0-smoke-test-run.md)). |
 | 3 | **Typo in an address** — `NEXT_HOP_HOST = 10.99.0.2` instead of `10.99.0.12`. | Node runs and logs, but `[ERR] no route to 10.99.0.2:47200`; the chain stops at that hop, so C5 never appears downstream. | Re-read each address digit by digit; they differ by one character. |
 | 4 | **`ROLE` in uppercase** (`V2X` instead of `v2x`). | Runs, but log lines and the datagram stamp read `\|V2X`, so the expected `seq=0\|bench\|v2x` never matches and C5 cannot be confirmed by eye. | Lowercase: `bench`, `v2x`, `ada`. |
 | 5 | **Absolute command path** — `/entrypoint.sh` instead of `./entrypoint.sh`. | Container exits immediately; restart count climbs. The script lives in the image workdir `/app`, not at the filesystem root. | Use `./entrypoint.sh`, or clear the field and let the image's own default run. |
@@ -257,8 +275,8 @@ Every row below cost real time on the first run (2026-07-31). They are ordered b
 
 | Thing | Value |
 |---|---|
-| Registry host | `registry.hackathon-2.carsky.io` |
-| Image | `registry.hackathon-2.carsky.io/m1-netcheck:latest` |
+| Registry host (push) | `registry.hackathon-2.carsky.io` |
+| Image (node pull reference) | `registry.hackathon-2.carsky.io/m1-netcheck:latest`, single-platform `linux/arm64` |
 | GitHub secret | `CARSKY_ZOT_API_KEY` (`zak_…`) |
 | Node addresses | bench `.10` · V2X `.11` · ADA `.12` · IVI `.13` on `10.99.0.0/24` |
 | Ports | bench→V2X `47100` · V2X→ADA `47200` · ADA→IVI `47300` |

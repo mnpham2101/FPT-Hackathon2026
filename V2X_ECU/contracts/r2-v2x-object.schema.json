@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "r2-v2x-object.schema.json",
+  "title": "R2 V2X-to-ADA object message",
+  "description": "One JSON message per perceived-object update, V2X ECU -> ADA ECU over UDP (report section 2 R2). SI units. sender.speed is nullable (F1: derived at the V2X ECU, null until two CPMs from that station arrived). object.distance is derived as hypot(position.x, position.y) in R9 (F7). Unknown extra fields are tolerated for additive evolution.",
+  "type": "object",
+  "required": ["schemaVersion", "type", "stationId", "rxTime", "sender", "object"],
+  "properties": {
+    "schemaVersion": { "type": "integer", "minimum": 1 },
+    "type": { "const": "v2x_object" },
+    "stationId": { "type": "integer", "minimum": 0, "maximum": 4294967295, "description": "sender (B) station ID from the CPM" },
+    "rxTime": { "type": "integer", "minimum": 0, "description": "receive timestamp at the V2X ECU, ms epoch" },
+    "sender": {
+      "type": "object",
+      "required": ["lat", "lon", "heading", "speed"],
+      "properties": {
+        "lat": { "type": "number", "minimum": -90, "maximum": 90, "description": "WGS84 degrees" },
+        "lon": { "type": "number", "minimum": -180, "maximum": 180, "description": "WGS84 degrees" },
+        "heading": { "type": "number", "minimum": 0, "maximum": 360, "description": "degrees, from CPM orientationAngle (0.1-degree wire units / 10)" },
+        "speed": { "type": ["number", "null"], "description": "m/s; null until derived from consecutive reference positions (F1)" }
+      }
+    },
+    "object": {
+      "type": "object",
+      "required": ["objectId", "timeOfMeasurement", "distance", "position", "speed", "classification", "confidence"],
+      "properties": {
+        "objectId": { "type": "integer", "minimum": 0, "maximum": 65535, "description": "B-assigned ID of the perceived object (C)" },
+        "timeOfMeasurement": { "type": "integer", "minimum": -2048, "maximum": 2047, "description": "ms vs the CPM referenceTime" },
+        "distance": { "type": "number", "minimum": 0, "description": "B->C range, m - derived hypot(position.x, position.y) (F7); input to R13 admission" },
+        "position": {
+          "type": "object",
+          "required": ["x", "y", "confidence"],
+          "properties": {
+            "x": { "type": "number", "description": "longitudinal, m, relative to B" },
+            "y": { "type": "number", "description": "lateral, m, relative to B" },
+            "confidence": { "type": "number", "minimum": 0, "description": "position accuracy in metres (F6 - not a probability)" }
+          }
+        },
+        "speed": { "type": "number", "minimum": 0, "description": "C speed, m/s" },
+        "classification": { "type": "string", "description": "object class; M1: vehicle" },
+        "confidence": { "type": ["number", "null"], "minimum": 0, "maximum": 1, "description": "class confidence 0-1; null when CPM ConfidenceLevel = 101 (F6)" }
+      }
+    }
+  }
+}

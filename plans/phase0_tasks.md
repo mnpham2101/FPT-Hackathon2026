@@ -22,12 +22,12 @@
 
 **Output (phase acceptance = the four milestone boxes):**
 
-- [ ] R1 profile document committed; golden-vector CPMs encode/decode through the Vanetza codec seam.
-- [ ] R2, R3, R4 schemas committed; round-trip tests pass in each consumer language (C++ / Python / Kotlin).
-- [ ] The R4 additive-version test is defined (unknown `warningType` degrades gracefully).
-- [ ] Blueprint topology documented (pre-existing guides) + validated: smoke-test C1–C5 green on `trial2_minh`.
+- [x] R1 profile document committed; golden-vector CPMs encode/decode through the Vanetza codec seam. — closed 2026-07-31 by `1.0.1.1`·`1.0.1.2`·`1.0.2.1`–`1.0.2.5`; the 6-case corpus decodes to its `.json` content and re-encodes to the exact `.uper` octets (CI run 30608005574).
+- [x] R2, R3, R4 schemas committed; round-trip tests pass in each consumer language (C++ / Python / Kotlin). — closed 2026-07-31; C++ both ends (`2.0.3.1`/`2.0.3.2`·`3.0.4.2`·`4.0.4.3`), Python (`3.0.4.5`·`1.0.5.1`), Kotlin (`4.0.6.1`); integrity gate `1.0.7.1` green over 36 copies, CI run 30608202261.
+- [x] The R4 additive-version test is defined (unknown `warningType` degrades gracefully). — closed 2026-07-31 by `4.0.1.6` (shared D4 fixture) + `4.0.4.4` (ADA) + `4.0.6.2` (IVI).
+- [x] Blueprint topology documented (pre-existing guides) + validated: smoke-test C1–C5 green on `trial2_minh`. — closed 2026-07-31 by `6.0.8.1`·`5.0.8.2`·`5.0.8.3`·`6.0.8.4`; `trial2_minh_netcheck` deployed, 5/5 nodes `Running`, C1–C5 all met. Evidence: [phase0-smoke-test-run.md](doc/phase0-smoke-test-run.md).
 
-Traceability of every subtask to these boxes: § Acceptance traceability.
+**Phase 0 acceptance state 2026-07-31: 4 of 4 boxes closed — phase complete.** Every subtask in groups 0.1–0.8 is done. Traceability of every subtask to these boxes: § Acceptance traceability.
 
 **Suggested branch (suggestion only — creation is the user's call):** `feat/phase0-contract-freeze`
 
@@ -41,7 +41,9 @@ Traceability of every subtask to these boxes: § Acceptance traceability.
 
 ### Subtask discipline (applies to every subtask below)
 
-Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-planning-conventions.md#subtask-discipline-non-negotiable): single objective, no out-of-scope code, exactly one atomic commit with the stated message, build passes, unit tests pass, brief is self-contained. Implementation subagents inherit this as their definition of done. C++ builds run on Linux (WSL2 or a Linux container on this Windows host — Vanetza and the pinned FetchContent toolchain are Linux-targeted per [solution-selection-criteria.md](../.claude/rules/solution-selection-criteria.md)).
+Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-planning-conventions.md#subtask-discipline-non-negotiable): single objective, no out-of-scope code, exactly one atomic commit with the stated message, build passes, unit tests pass, brief is self-contained. Implementation subagents inherit this as their definition of done. C++ builds run on Linux — Vanetza and the pinned FetchContent toolchain are Linux-targeted per [solution-selection-criteria.md](../.claude/rules/solution-selection-criteria.md); the dev host has no Docker/WSL (verified 2026-07-31), so Linux verification runs on GitHub Actions CI (subtask 1.0.7.2), where the C++ lanes (groups 0.2–0.4) verify once their toolchains land.
+
+**Status tracking:** as execution proceeds each subtask gains a `**Status:**` line (appended in that subtask's own atomic commit) recording done/blocked plus the verification evidence; a subtask without a status line is not started.
 
 ### Per-node build commands (cited in acceptance below)
 
@@ -61,7 +63,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 > Authors every artifact of the user-approved top-level `contracts/` folder (HLD D1) except the golden vectors (generated in group 0.2) and the sync gate (group 0.7). All contract JSON uses JSON Schema draft 2020-12 (HLD §8).
 
-### `1.0.1.1` — Author the R1 CPM profile document *(agent)*
+### [x] `1.0.1.1` — Author the R1 CPM profile document *(agent)*
 
 **Objective:** write `contracts/r1-cpm-profile.md`, the versioned normative R1 profile.
 
@@ -77,7 +79,9 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none — starts immediately. **Commit:** `[1.0.1.1] docs: author R1 CPM profile document with frozen conventions`
 
-### `1.0.1.2` — Author the CpmContent logical-content schema *(agent)*
+**Status:** done 2026-07-31 — committed; 8 conventions (F1/F2/F5/F6/F7/F8/F9/VF) + 6-case corpus with per-case parameters present; markdown style followed (no hard wrap, bullets/tables).
+
+### [x] `1.0.1.2` — Author the CpmContent logical-content schema *(agent)*
 
 **Objective:** write `contracts/r1-cpm-content.schema.json` — JSON Schema mirroring the codec-seam struct `CpmContent` 1:1, wire-native integer units (the golden vectors' JSON side).
 
@@ -87,7 +91,9 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 1.0.1.1. **Commit:** `[1.0.1.2] feat: add CpmContent JSON Schema mirroring the R1 codec seam`
 
-### `2.0.1.3` — Freeze the R2 schema + shared sample *(agent)*
+**Status:** done 2026-07-31 — parses (python -m json.tool); Draft202012Validator.check_schema passes and the profile §4 nominal instance validates (jsonschema 4.26, Python 3.14); wire-native bounds encoded as constraints.
+
+### [x] `2.0.1.3` — Freeze the R2 schema + shared sample *(agent)*
 
 **Objective:** write `contracts/r2-v2x-object.schema.json` and `contracts/samples/r2-object.json`.
 
@@ -97,7 +103,9 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 1.0.1.1 (F1/F7 conventions frozen first). **Commit:** `[2.0.1.3] feat: freeze R2 v2x-object schema and shared sample`
 
-### `3.0.1.4` — Freeze the R3 schema + shared sample *(agent)*
+**Status:** done 2026-07-31 — schema+sample parse; check_schema passes; sample (and its sender.speed=null variant) validates against the schema (jsonschema 4.26, Python 3.14); distance 25.03 = hypot(25.0, 1.2) (F7), sender.speed nullable (F1).
+
+### [x] `3.0.1.4` — Freeze the R3 schema + shared sample *(agent)*
 
 **Objective:** write `contracts/r3-tracked-object.schema.json` and `contracts/samples/r3-tracked-object.json`.
 
@@ -107,7 +115,9 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none — parallel with the R1/R2 chain. **Commit:** `[3.0.1.4] feat: freeze R3 TrackedObject schema and shared sample`
 
-### `4.0.1.5` — Freeze the R4 schema + nominal shared samples *(agent)*
+**Status:** done 2026-07-31 — schema+sample parse; check_schema passes; sample validates and carries source v2x_relayed (ghost-C shape), distance 55.03 = hypot(55.0, 1.7) coherent with the R2 sample (jsonschema 4.26, Python 3.14).
+
+### [x] `4.0.1.5` — Freeze the R4 schema + nominal shared samples *(agent)*
 
 **Objective:** write `contracts/r4-ada-ivi.schema.json`, `contracts/samples/r4-warning.json`, `contracts/samples/r4-state.json`.
 
@@ -117,7 +127,9 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 3.0.1.4 (`$ref`). **Commit:** `[4.0.1.5] feat: freeze R4 ADA-IVI schema and shared samples`
 
-### `4.0.1.6` — Author the shared R4 additive-version fixture *(agent)*
+**Status:** done 2026-07-31 — schema+2 samples parse; check_schema passes; both samples validate with the R3 $ref resolved via a referencing registry (jsonschema 4.26, Python 3.14); warning object.source = v2x_relayed and equals the shared R3 sample; geometry names ego/vehicleB/vehicleC match SceneGeometry.kt.
+
+### [x] `4.0.1.6` — Author the shared R4 additive-version fixture *(agent)*
 
 **Objective:** write `contracts/samples/r4-unknown-warning.json` per HLD D4 — one fixture both consumers test.
 
@@ -127,13 +139,15 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 4.0.1.5. **Commit:** `[4.0.1.6] feat: add shared R4 additive-version fixture`
 
+**Status:** done 2026-07-31 — fixture parses and still validates against the R4 schema; programmatic diff proves exactly the three D4 deltas vs r4-warning.json (schemaVersion 2, warningType slippery_road, extra field hazardDetail).
+
 ---
 
 ## Task Group 0.2 — V2X ECU: toolchain, R1 codec seam, golden vectors (serves R1)
 
 > Delivers the single R1 codec source behind the seam (HLD D3, §7) and the committed golden-vector corpus. All paths inside `V2X_ECU/`; build command per § Per-node build commands.
 
-### `1.0.2.1` — V2X_ECU CMake toolchain bring-up *(agent)*
+### [x] `1.0.2.1` — V2X_ECU CMake toolchain bring-up *(agent)*
 
 **Objective:** create `V2X_ECU/CMakeLists.txt` — C++17; nlohmann/json + Vanetza **ASN.1-only** targets + GoogleTest, all via **pinned** FetchContent (exact tags/commits, no floating branches); CTest wired.
 
@@ -143,7 +157,9 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none — starts immediately. **Commit:** `[1.0.2.1] chore: bring up V2X_ECU C++17 toolchain with Vanetza ASN.1 targets`
 
-### `1.0.2.2` — CpmContent + ICpmCodec seam *(agent)*
+**Status:** done 2026-07-31 — commit `34fccba`; verified green on CI run 30603467579 (new job `v2x-core-build`, separate Configure/Build/Test steps). Pins: nlohmann `v3.11.3`, googletest `v1.14.0`, Vanetza commit `fb6c551030dcc12b924299bf401e35e5fe814713` (tag v26.06) with `EXCLUDE_FROM_ALL` so only the ASN.1 targets build; sanity test links `Vanetza::asn1` + `Vanetza::asn1_its_r2` and constructs `vanetza::asn1::r2::Cpm`. Two recorded deviations: CMake floor is **3.28** (not ADA's 3.22) because `FetchContent_Declare(... EXCLUDE_FROM_ALL)` needs 3.28 — without it Vanetza's root adds all 13 components to `all`; and the CI Build step uses `-j $(nproc)` rather than a bare `-j`, which make expands to *unlimited* jobs (~1400 asn1c TUs would OOM the runner). `actions/cache` over `V2X_ECU/build/_deps` is keyed on the exact Vanetza pin, so later lanes do not repay the ASN.1 compile.
+
+### [x] `1.0.2.2` — CpmContent + ICpmCodec seam *(agent)*
 
 **Objective:** create `V2X_ECU/src/codec/cpm_codec.hpp` with `CpmContent`, `DecodeError`, and `ICpmCodec` **exactly** per the frozen shape in [HLD §7](doc/phase0-contract-freeze-hld.md#7-codec-seam-interface-frozen-shape), plus nlohmann `to_json`/`from_json` for `CpmContent`.
 
@@ -153,7 +169,9 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 1.0.1.2 + 1.0.2.1. **Commit:** `[1.0.2.2] feat: define CpmContent and ICpmCodec seam with JSON binding`
 
-### `1.0.2.3` — VanetzaCpmCodec implementation *(agent)*
+**Status:** done 2026-07-31 — commit `96a2043`; verified green on CI run 30603927615 (`v2x-core-build`; that run's tree also carries 2.0.3.1). Seam block machine-diffed against HLD §7 — identical signatures/const-ness/return types; namespace `v2x::codec`; header-only (inline nlohmann binding) exposed by the new `v2x_codec_seam` INTERFACE target. All 19 schema property paths bound 1:1 in wire-native integer types; copy `cmp`-identical; tests `StructToJsonToStructEquality` · `WireShapeMatchesSchemaKeys` · `RejectsMissingRequiredKey`.
+
+### [x] `1.0.2.3` — VanetzaCpmCodec implementation *(agent)*
 
 **Objective:** implement `V2X_ECU/src/codec/vanetza_cpm_codec.{hpp,cpp}` — the sole `ICpmCodec` implementation over `vanetza::asn1::r2::Cpm`.
 
@@ -163,7 +181,9 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 1.0.2.2. **Commit:** `[1.0.2.3] feat: implement VanetzaCpmCodec over r2::Cpm`
 
-### `1.0.2.4` — gv_tool + golden-vector corpus generation *(agent)*
+**Status:** done 2026-07-31 — commit `0c99a38`; verified green on CI run 30605356736 (`v2x-core-build`, all steps Configure/Build/Test success; 31 s job — the `_deps` cache restored the ASN.1 objects, so only the new TU compiled). Every ASN.1 member was verified against the pinned headers (commit `fb6c5510`, tag v26.06) before being written — three CDD shapes differ from the naive assumption and are recorded here for later consumers: `PerceivedObject.velocity` is a CHOICE `Velocity3dWithConfidence*` (cartesian arm selected), `PerceivedObject.classification` is an `ObjectClassDescription*` SEQUENCE OF, and `ReferencePosition.positionConfidenceEllipse` is a `PosConfidenceEllipse`; `objectId` is an OPTIONAL pointer; `TimestampIts` is `INTEGER_t`, so `referenceTime` goes through `asn_uint642INTEGER`/`asn_INTEGER2uint64`. Unsent-mandatory fields use CDD named `*_unavailable` values (never magic literals) — these are now locked by the golden vectors. F9 violations (`|measurementDeltaTime| > 2047`, including the wire-legal −2048) throw `std::out_of_range`; `decode` guards null/empty and catches everything, returning `DecodeError`. F2 grep over `V2X_ECU/src/` is clean (the r2 spelling `vanetza::asn1::r2::Cpm` cannot match the banned token).
+
+### [x] `1.0.2.4` — gv_tool + golden-vector corpus generation *(agent)*
 
 **Objective:** create `V2X_ECU/tools/golden_vectors/main.cpp` (CMake target `gv_tool`, build-only, never shipped in a node image) and generate + commit the 6-case corpus into `contracts/golden-vectors/`.
 
@@ -173,7 +193,9 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 1.0.2.3 + 1.0.1.1 (corpus list) + 2.0.1.3 (nominal values). **Commit:** `[1.0.2.4] feat: add gv_tool and generate the R1 golden-vector corpus`
 
-### `1.0.2.5` — Golden-vector codec test *(agent)*
+**Status:** done 2026-07-31 — tool commit `7d99b08` (`gv_tool` + CMake target + 4 CI steps); corpus commit `9e0f43d`, authored by CI itself. CI run **30605811757** first proved determinism (every `v2x-core-build` step success, including `Generate golden vectors (run 1)`, `(run 2)` and `Golden-vector determinism check` — `diff -r` empty ⇒ regeneration is byte-identical); that run is also the strongest functional proof of 1.0.2.3, since all 6 cases encoded **and** decoded back to an equal `CpmContent`, `coord-large` (CartesianCoordinateLarge bounds) included. **Corpus hand-off resolved without a token:** artifact download needs authentication this session lacks, so a one-shot `Publish golden-vector corpus (once, when absent)` step (guarded by `hashFiles('contracts/golden-vectors/**') == ''`, `[skip ci]` on the message) committed the 6 `.json` + 6 `.uper` pairs from the determinism-checked run-1 tree straight into `contracts/golden-vectors/` — run **30607280047** (head `17526b8`, success) after `17526b8` granted the job `permissions: contents: write` (three earlier runs had failed only on that push). The bytes are therefore CI-generated and determinism-checked, never hand-authored; the guard makes the step inert from now on. Unblocks `1.0.2.5`, `1.0.5.1` and thereby `1.0.7.1`.
+
+### [x] `1.0.2.5` — Golden-vector codec test *(agent)*
 
 **Objective:** create `V2X_ECU/tests/codec/test_cpm_golden_vectors.cpp` + the synced pair copies under `V2X_ECU/tests/fixtures/golden/`.
 
@@ -183,13 +205,15 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 1.0.2.4. **Commit:** `[1.0.2.5] test: verify golden vectors through the Vanetza codec seam`
 
+**Status:** done 2026-07-31 — commit `1f81ed1`; verified green on CI run **30608005574** (`v2x-core-build`, Configure/Build/Test all success). Value-parameterized `CpmGoldenVectorTest` over the 6 case names: `DecodeYieldsTheFrozenContent` (decode of `<case>.uper` holds a `CpmContent` equal to the `<case>.json` content, printing `DecodeError::reason` on failure) and `EncodeReproducesTheFrozenOctets` (size assert then per-octet compare, so a regression names the first differing offset). Hyphenated case names are transliterated to underscores by a name generator — gtest suffixes must be alphanumeric. All 12 fixtures `cmp`-identical **and** same-blob as `contracts/golden-vectors/`; the `.uper` files each carry NUL bytes, so Git's binary detection keeps `core.autocrlf=true` on this Windows host from mangling them (`Bin 0 -> 58 bytes` in the diffstat). Closes the milestone box *"golden-vector CPMs encode/decode through the Vanetza codec seam"*. Caveat for future fixtures: a binary fixture with CR/LF but no NUL would **not** be safe by default on this host.
+
 ---
 
 ## Task Group 0.3 — R2 bindings + round-trip tests, both C++ ends (serves R2)
 
 > One handwritten binding per node (HLD D1/D2) — no cross-node source imports; wire compatibility is enforced by the byte-synced shared sample both tests parse.
 
-### `2.0.3.1` — V2X-side R2 binding + round-trip test *(agent)*
+### [x] `2.0.3.1` — V2X-side R2 binding + round-trip test *(agent)*
 
 **Objective:** create `V2X_ECU/src/contracts/r2_message.{hpp,cpp}` (nlohmann binding, producer side) + `V2X_ECU/tests/contracts/test_r2_roundtrip.cpp`.
 
@@ -199,7 +223,9 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 2.0.1.3 + 1.0.2.1. Parallel with the 1.0.2.x codec chain. **Commit:** `[2.0.3.1] feat: add V2X-side R2 binding with round-trip test`
 
-### `2.0.3.2` — ADA-side R2 binding + round-trip test *(agent)*
+**Status:** done 2026-07-31 — commit `f702cda`; verified green on CI run 30603927615 (`v2x-core-build`). `v2x::contracts::R2Message` producer binding, handwritten independently of the ADA sibling (no cross-node include) but mirroring its CI-green `std::optional<double>` idiom: `sender.speed` (F1) and `object.confidence` (F6) always emit the key, `null` when `nullopt`. Both copies `cmp`-identical; tests `StructAndWireEquality` · `FieldSpotChecks` (distance 25.03 = F7 hypot) · `NullSenderSpeedRoundTrips`.
+
+### [x] `2.0.3.2` — ADA-side R2 binding + round-trip test *(agent)*
 
 **Objective:** create `ADA_ECU/src/contracts/r2_message.{hpp,cpp}` (nlohmann binding, consumer side) + `ADA_ECU/tests/contracts/test_r2_roundtrip.cpp`.
 
@@ -209,13 +235,15 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 2.0.1.3 + 3.0.4.1 (ADA toolchain). Parallel with 2.0.3.1. **Commit:** `[2.0.3.2] feat: add ADA-side R2 binding with round-trip test`
 
+**Status:** done 2026-07-31 — `ada::contracts::R2Message` consumer binding (nullable `sender.speed`/`object.confidence` via std::optional, F1/F6) + round-trip and null-speed tests; copies cmp-identical; verified green on CI run 30602159929. **Commit anomaly:** implementation landed in `dc0d424`, mis-tagged `[5.0.8.2]` — a concurrent-session `git commit` swept this subtask's already-staged files into its commit (index collision, recorded honestly; history not rewritten since pushed).
+
 ---
 
 ## Task Group 0.4 — ADA ECU contract layer: toolchain, R3/R4 bindings, additive test, detector Python (serves R3, R4)
 
 > Phase 0 lands only the contract layer of `ADA_ECU/` (HLD §5) — the Phase 2 HLD extends the tree later.
 
-### `3.0.4.1` — ADA_ECU CMake toolchain bring-up *(agent)*
+### [x] `3.0.4.1` — ADA_ECU CMake toolchain bring-up *(agent)*
 
 **Objective:** create `ADA_ECU/CMakeLists.txt` — C++17; nlohmann/json + GoogleTest via pinned FetchContent; CTest; one sanity test. No Vanetza (ADA never touches UPER).
 
@@ -223,7 +251,9 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none — starts immediately. **Commit:** `[3.0.4.1] chore: bring up ADA_ECU C++17 toolchain`
 
-### `3.0.4.2` — R3 C++ binding + round-trip test *(agent)*
+**Status:** done 2026-07-31 — toolchain + sanity test committed; `ada-core-build` job (Configure/Build/Test steps) added to `phase0-ci.yml`; verified green on CI run 30591588639 (no local cmake on this host — CI is the Linux verification authority).
+
+### [x] `3.0.4.2` — R3 C++ binding + round-trip test *(agent)*
 
 **Objective:** create `ADA_ECU/src/contracts/tracked_object.{hpp,cpp}` + `ADA_ECU/tests/contracts/test_r3_roundtrip.cpp`.
 
@@ -233,7 +263,9 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 3.0.1.4 + 3.0.4.1. **Commit:** `[3.0.4.2] feat: add ADA R3 TrackedObject binding with round-trip test`
 
-### `4.0.4.3` — R4 C++ binding + round-trip test *(agent)*
+**Status:** done 2026-07-31 — `ada::contracts::TrackedObject` binding (`object_class` ↔ `"class"`, enum wire strings via NLOHMANN_JSON_SERIALIZE_ENUM) + round-trip test; copies cmp-identical; verified green on CI run 30602040565 (`ada-core-build` — no local cmake, CI is the authority).
+
+### [x] `4.0.4.3` — R4 C++ binding + round-trip test *(agent)*
 
 **Objective:** create `ADA_ECU/src/contracts/r4_message.{hpp,cpp}` (producer side: warning event + state message) + `ADA_ECU/tests/contracts/test_r4_roundtrip.cpp`.
 
@@ -243,7 +275,9 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 4.0.1.5 + 3.0.4.2. **Commit:** `[4.0.4.3] feat: add ADA R4 binding with round-trip test`
 
-### `4.0.4.4` — ADA-side R4 additive-version test *(agent)*
+**Status:** done 2026-07-31 — `ada::contracts::R4WarningEvent`/`R4StateMessage` producer binding (embedded `object` reuses the R3 `TrackedObject` binding; shared `R4VehicleSet` with nullable-or-absent `vehicleC`) + round-trip tests on both shared samples; copies cmp-identical; verified green on CI run 30602717230 (`ada-core-build`).
+
+### [x] `4.0.4.4` — ADA-side R4 additive-version test *(agent)*
 
 **Objective:** create `ADA_ECU/tests/contracts/test_r4_additive_version.cpp` on the shared D4 fixture.
 
@@ -253,7 +287,9 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 4.0.1.6 + 4.0.4.3. **Commit:** `[4.0.4.4] test: add ADA-side R4 additive-version test`
 
-### `3.0.4.5` — Detector Python R3 binding + Python-side fixture validation *(agent)*
+**Status:** done 2026-07-31 — D4 fixture parses through the unmodified 4.0.4.3 binding (unknown `warningType` preserved, `schemaVersion` 2 carried, `hazardDetail` ignored and absent from re-emit); copy cmp-identical; verified green on CI run 30602717230 (`ada-core-build`).
+
+### [x] `3.0.4.5` — Detector Python R3 binding + Python-side fixture validation *(agent)*
 
 **Objective:** create `ADA_ECU/detector/contracts/tracked_object.py` (R3 dataclass + JSONL encode/decode — the R12 subprocess wire shape), `ADA_ECU/detector/tests/test_r3_roundtrip.py`, `ADA_ECU/detector/requirements-dev.txt` (pytest, jsonschema — test-only; runtime deps come with Phase 3).
 
@@ -263,11 +299,13 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 2.0.3.2 + 3.0.4.2 + 4.0.4.3 + 4.0.4.4. **Commit:** `[3.0.4.5] feat: add detector R3 JSONL binding and Python fixture validation`
 
+**Status:** done 2026-07-31 — stdlib dataclass+JSONL binding (`object_class` ↔ `"class"`); pytest green locally (Python 3.14, jsonschema 4.26: JSONL round-trip + all five node-local samples validate against the three schemas, r4 `$ref` via referencing.Registry) and on CI run 30602717230 (`python-tests`).
+
 ---
 
 ## Task Group 0.5 — Scenario Player contract layer (serves R1)
 
-### `1.0.5.1` — Bench CpmContent dataclass + golden round-trip test *(agent)*
+### [x] `1.0.5.1` — Bench CpmContent dataclass + golden round-trip test *(agent)*
 
 **Objective:** create `Scenario_Player/player/contracts/cpm_content.py` (CpmContent Python dataclass, wire-native units — the bench side of the codec seam), `Scenario_Player/tests/test_cpm_content_roundtrip.py`, `Scenario_Player/requirements-dev.txt` (pytest, jsonschema).
 
@@ -277,11 +315,13 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 1.0.1.2 + 1.0.2.4 (golden `.json` fixtures exist). **Commit:** `[1.0.5.1] feat: add bench CpmContent dataclass with golden-vector round-trip test`
 
+**Status:** done 2026-07-31 — commit `9878555`; unblocked by 1.0.2.4's corpus landing (`9e0f43d`) and run first of the three remaining lanes because it is the only locally verifiable one. Stdlib-only nested dataclasses (`CpmContent`/`ReferencePosition`/`PerceivedObject`/`ObjectPosition`/`ObjectVelocity`) with `to_dict`/`from_dict`/`to_json`/`from_json`, namespace-package layout mirroring `ADA_ECU/detector/`. 21 tests green **locally** (`python -m pytest Scenario_Player/tests` at the repo root — Python 3.14.5, pytest 9.1.1, jsonschema 4.26): 6 dict round-trips + 6 JSON-text round-trips + 6 Draft-2020-12 validations + `check_schema` + a wire-native edge spot-check (mdt ±2047, classConfidence 101, gate-boundary x=3000, coord-large x=131071/y=−131072) + unknown-extra-keys tolerance. Re-verified green on CI run **30607692500** (`python-tests` → step `Scenario_Player unit tests` success). All 7 copies `cmp`-identical **and** blob-SHA-identical to their `contracts/` sources. F3 respected: `.json` side only, zero UPER/ASN.1 code in Python.
+
 ---
 
 ## Task Group 0.6 — IVI Kotlin R4/R3 binding (serves R4) — reconciled with phase5
 
-### `4.0.6.1` — Freeze the IVI R4 sealed binding + finalize interim R3 models + round-trip test *(agent)*
+### [x] `4.0.6.1` — Freeze the IVI R4 sealed binding + finalize interim R3 models + round-trip test *(agent)*
 
 **Objective:** create `IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/model/R4Message.kt` (sealed: `R4WarningEvent` | `R4StateMessage` per the frozen 4.0.1.5 schema) and finalize the interim models against the frozen R3/R4 schemas, with `IVI_ECU/app/src/test/java/com/hackathon/v2x/ivi/model/R4RoundTripTest.kt`.
 
@@ -297,7 +337,9 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 4.0.1.5. **Commit:** `[4.0.6.1] feat: freeze IVI R4 Kotlin binding and finalize R3 snapshot models`
 
-### `4.0.6.2` — IVI-side R4 additive-version test *(agent)*
+**Status:** done 2026-07-31 — sealed `R4Message` (`warning`|`state`, discriminator `type`) + finalized `R3Snapshot` (`objectClass` @SerialName class, `timestamps`) + `@Serializable SceneGeometry`; copies cmp-identical; preview call site updated; verified green on CI run 30602040565 (`ivi-unit-tests` — local JDK 25 exceeds Gradle 8.13's range, CI is the authority).
+
+### [x] `4.0.6.2` — IVI-side R4 additive-version test *(agent)*
 
 **Objective:** create `IVI_ECU/app/src/test/java/com/hackathon/v2x/ivi/model/R4AdditiveVersionTest.kt` on the shared D4 fixture.
 
@@ -306,6 +348,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 **Acceptance:** IVI test command green; copy byte-identical.
 
 **Dependencies:** after 4.0.6.1 + 4.0.1.6. **Commit:** `[4.0.6.2] test: add IVI-side R4 additive-version test`
+
+**Status:** done 2026-07-31 — D4 fixture decodes through the unmodified 4.0.6.1 binding (`ignoreUnknownKeys` lenient parse; unknown `warningType` preserved as a usable warning, `schemaVersion` 2 carried, `hazardDetail` ignored); copy cmp-identical; verified green on CI run 30602717230 (`ivi-unit-tests`).
 
 ### IVI reconciliation with phase5 (HLD §11 item 5 — resolved here)
 
@@ -321,9 +365,9 @@ Flag: this run commits only `plans/phase0_tasks.md`, so the supersede note is re
 
 ---
 
-## Task Group 0.7 — Contract integrity gate (serves R1–R4; ID anchored to R1, which also owns the F2 ban)
+## Task Group 0.7 — Contract integrity gate + CI Linux verification (serves R1–R4; IDs anchored to R1, which also owns the F2 ban)
 
-### `1.0.7.1` — sync-manifest + byte-identity gate *(agent)*
+### [x] `1.0.7.1` — sync-manifest + byte-identity gate *(agent)*
 
 **Objective:** create `contracts/sync-manifest.json` (source → node-local copy map, exactly the [HLD §5 sync map](doc/phase0-contract-freeze-hld.md#sync-map-sync-manifestjson-content)) and `contracts/check_sync.py` (Python 3 stdlib), and run it green over the completed tree.
 
@@ -333,13 +377,34 @@ Flag: this run commits only `plans/phase0_tasks.md`, so the supersede note is re
 
 **Dependencies:** sequential, after every copy-landing subtask — 1.0.2.2, 1.0.2.5, 2.0.3.1, 2.0.3.2, 3.0.4.2, 4.0.4.3, 4.0.4.4, 1.0.5.1, 4.0.6.1, 4.0.6.2. **Commit:** `[1.0.7.1] feat: add contract sync manifest and byte-identity gate`
 
+**Status:** done 2026-07-31 — commit `4a1dedb`; ran sequential-last as designed, after all 10 copy-landing predecessors. `contracts/sync-manifest.json` carries **21 sources → 36 copies**, exactly the [HLD §5 sync map](doc/phase0-contract-freeze-hld.md#sync-map-sync-manifestjson-content) expanded to concrete paths (all 57 paths verified present and already byte-identical before the manifest was written — no copy was found drifted). `contracts/check_sync.py` is Python-3 stdlib-only, reads the path map **and** the banned token + its scope from the manifest (no hardcoded tunables), compares `read_bytes()` (never text mode — the `.uper` fixtures are binary), collects and prints every failure before exiting 1. All three acceptance checks demonstrated: (a) exit 0 from three different cwds — repo root, `contracts/`, and an unrelated directory — printing `check_sync: OK - 36 copies byte-identical, F2 grep clean over V2X_ECU/src`; (b) a one-byte corruption of `ADA_ECU/contracts/r3-tracked-object.schema.json` ⇒ exit 1 naming the pair and both sizes, restored and re-green; (c) an F2 probe under `V2X_ECU/src/` tested **both** directions — a file containing only `vanetza::asn1::r2::Cpm` keeps the gate at exit 0 (no false positive), appending the bare `asn1::Cpm` token flips it to exit 1 naming the file; probe deleted, re-green. Verified green on CI run **30608202261** (`contracts-gate` job now takes the real branch of its existence guard — the gate therefore also proves byte-identity survives a Linux checkout, `core.autocrlf=true` on the dev host notwithstanding).
+
+### [x] `1.0.7.2` — GitHub Actions CI: Linux verification for Phase 0 *(agent)*
+
+**Objective:** create `.github/workflows/phase0-ci.yml` — Linux (`ubuntu-latest`) verification on every push and on PRs to `main`: contracts sync gate, Python unit tests, IVI Gradle unit tests.
+
+**Scope:**
+
+- Rationale: the dev host has no Docker/WSL (user decision 2026-07-31) — GitHub Actions (`origin` = `mnpham2101/FPT-Hackathon2026`) is the project's Linux verification path until then.
+- Job `contracts-gate`: runs `python contracts/check_sync.py` only if that file exists — the guard keeps CI green until 1.0.7.1 lands (it is sequenced after all copy-landing subtasks).
+- Job `python-tests`: for each of `Scenario_Player/` and `ADA_ECU/detector/`, install `requirements-dev.txt` and run pytest only where that lane's tests exist (green before 1.0.5.1 / 3.0.4.5 land).
+- Job `ivi-unit-tests`: `chmod +x gradlew && ./gradlew :app:testDebugUnitTest` in `IVI_ECU/` (temurin JDK 17, Gradle cache) — the per-node build command above; the runner image carries the Android SDK.
+- YAML comments mark where groups 0.2/0.4 add C++ build / docker-build jobs when their toolchains and Dockerfiles land — no empty placeholder jobs.
+- **No registry-push job** — the CarSky Zot API key is not yet a repo secret; push-to-registry is a later subtask added once the user stores the credential (flag, don't absorb).
+
+**Acceptance:** workflow committed and YAML-valid; on the current tree every job passes (guards skip not-yet-landed lanes); full CI-green evidence is recordable only after the user pushes the branch — local JDK 25 exceeds Gradle 8.13's supported range, so the IVI job is CI-only by design.
+
+**Dependencies:** none — lands immediately; later lanes plug into the existing guards (no workflow rewrite). **Commit:** `[1.0.7.2] chore: add Phase 0 Linux-verification CI workflow`
+
+**Status:** done 2026-07-31 — first `phase0-ci` Actions run on `feat/phase0-contract-freeze` completed `success` (run 30590952652, branch pushed by the user's session; poll evidence in-session). YAML parse-validated locally (PyYAML); every job guarded green-by-design on the current tree; no local Docker/WSL and local JDK 25 exceeds Gradle 8.13's range — CI is the Linux path.
+
 ---
 
 ## Task Group 0.8 — R5/R6 baseline connectivity smoke test (blueprint `trial2_minh`)
 
 > Procedure adopted wholesale from the [smoke-test note](doc/research_notes/baseline-connectivity-smoke-test.md) (HLD §6) — subtasks below reference its sections, never restate them. **Startup self-run guarantee (HLD §6, user requirement 2026-07-31) is acceptance on every run subtask:** node start ⇒ `entrypoint.sh` self-runs `capture.sh` (background) + `netcheck.py` (foreground), roles/ports wired purely by node-config env ⇒ C1–C5 observable in each node's View Log with **no manual invocation — a run needing a manual exec fails**. Run evidence accumulates in `plans/doc/phase0-smoke-test-run.md` (created by 5.0.8.2).
 
-### `6.0.8.1` — Author the netcheck tool *(agent)*
+### [x] `6.0.8.1` — Author the netcheck tool *(agent)*
 
 **Objective:** create `tools/netcheck/Dockerfile`, `entrypoint.sh`, `capture.sh`, `netcheck.py` with **exactly** the contents of the note [§4.2–§4.5](doc/research_notes/baseline-connectivity-smoke-test.md#4-tool-implementation) — do not redesign (closes step M1).
 
@@ -349,7 +414,9 @@ Flag: this run commits only `plans/phase0_tasks.md`, so the supersede note is re
 
 **Dependencies:** none — fully parallel with groups 0.1–0.7. **Commit:** `[6.0.8.1] feat: add netcheck baseline connectivity smoke-test tool`
 
-### `5.0.8.2` — Build & push the netcheck image (M2–M4) *(car-sky — executed after this planning run, once 6.0.8.1 exists)*
+**Status:** done 2026-07-31 — 4 files verbatim from the note §4.2–§4.5 (compared against the note); sh -n + bash -n and py_compile pass; LF endings verified (i/lf); docker build transfers to 5.0.8.2/M3 per acceptance (no Docker on this host).
+
+### [x] `5.0.8.2` — Build & push the netcheck image (M2–M4) *(car-sky — executed after this planning run, once 6.0.8.1 exists)*
 
 **Objective:** [[car-sky]] runs its deploy-preflight (confirm blueprint `trial2_minh`, target Container nodes, credential), then executes note §6 steps M2–M4: confirm + log in to the correct registry host (**closes O1** — `registry.carsky.io` 502 vs `registry.hackathon-2.carsky.io` 401-auth), `docker build`, `tag`, `push` `m1-netcheck:latest`.
 
@@ -359,7 +426,9 @@ Flag: this run commits only `plans/phase0_tasks.md`, so the supersede note is re
 
 **Dependencies:** after 6.0.8.1. **Commit:** `[5.0.8.2] docs: record netcheck image push and confirmed registry host`
 
-### `5.0.8.3` — USER-MANUAL: blueprint node config + deploy → C1 (M5–M9)
+**Status:** done 2026-07-31 — pushed as `registry.hackathon-2.carsky.io/m1-netcheck:latest`, single-platform `linux/arm64` (commit `5e75920`; closes O1). Pulls and runs on `trial2_minh_netcheck`'s three container nodes. Container images must be single-platform `linux/arm64` — see [phase0-smoke-test-run.md § Standing requirement](doc/phase0-smoke-test-run.md).
+
+### [x] `5.0.8.3` — USER-MANUAL: blueprint node config + deploy → C1 (M5–M9)
 
 **Objective:** the user performs note §6 steps M5–M9 in the Nydus UI: open/clone the blueprint (M5), verify the four `ethernet` pins + edges (M6), set `image`/`command`/`capabilities: ["NET_RAW"]`/env per the note §6.1 table on bench `.10` / V2X `.11` / ADA `.12` (M7 — note: ADA **adds** `LISTEN_PORT=47200` alongside `V2X_LISTEN_PORT`, no renaming), keep the IVI AAOS artifact (M8), New Deployment → every node `Running`, restart count 0 = **C1** (M9).
 
@@ -369,9 +438,11 @@ Flag: this run commits only `plans/phase0_tasks.md`, so the supersede note is re
 
 **Dependencies:** after 5.0.8.2. **Commit:** `[5.0.8.3] docs: record smoke-test deployment and C1 node-Running evidence`
 
-### `6.0.8.4` — USER-MANUAL: View Log verification C2–C5 + IVI hop (M10–M12)
+**Status:** done 2026-07-31 — deployed as `trial2_minh_netcheck` on room `27gs83k3oeju2mbywu1j8`. 5/5 nodes `Running`, restart count 0, stable across a 10-minute window (C1). Deploy alone started every script — no manual exec used, self-run guarantee met. Evidence: [phase0-smoke-test-run.md § M5–M9](doc/phase0-smoke-test-run.md).
 
-**Objective:** the user performs note §6 steps M10–M12: read each node's View Log against the note §6.2 expected logs — **C2** (zero `[ERR]`), **C3** (live per-node logs), **C4** (`[CAP]` tcpdump lines; `/proc` counter fallback acceptable if O2 is negative), **C5** (the `|v2x|ada`-stamped token at the last hop — the chain proof); record the IVI hop-3 evidence using one of the note [§7 options](doc/research_notes/baseline-connectivity-smoke-test.md#7-the-ivi-hop) (ADB Shell `nc -u -l`, ADA-side `[TX]`+`[CAP]` evidence, or the real R4 listener) **and which option was used**; optional M11 MTU probe (`PAD=1400` — closes O3, feeds the CPM size budget); M12 delete the deployment (2-deployment quota).
+### [x] `6.0.8.4` — USER-MANUAL: View Log verification C2–C5 + IVI hop (M10–M12)
+
+**Objective:** the user performs note §6 steps M10–M12: read each node's View Log against the note §6.2 expected logs — **C2** (zero `[ERR]`), **C3** (live per-node logs), **C4** (`[CAP]` tcpdump lines; `/proc` counter fallback acceptable if O2 is negative), **C5** (the `|v2x|ada`-stamped token at the last hop — the chain proof); record IVI hop-3 evidence per [deploy-walkthrough-netcheck.md](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#checking-ivi-rx-traffic-hop-3) (indirect ADA-side evidence, or wait for the real R4 listener) **and which was used**; optional M11 MTU probe (`PAD=1400` — closes O3, feeds the CPM size budget); M12 delete the deployment (2-deployment quota).
 
 **Scope:** answers to O2/O3/O4 recorded as observed. **Self-run acceptance:** all C2–C5 evidence must come from logs of self-started scripts — any manual invocation fails the run.
 
@@ -379,11 +450,13 @@ Flag: this run commits only `plans/phase0_tasks.md`, so the supersede note is re
 
 **Dependencies:** after 5.0.8.3. **Commit:** `[6.0.8.4] docs: record C2-C5 smoke-test evidence and IVI hop option`
 
+**Status:** done 2026-07-31 — C2–C5 all met (0 `[ERR]` lines, live logs on all 5 nodes, `[CAP]` capture on the wire, accumulated stamp `seq=…|bench|v2x` at ADA). O2 closed: `NET_RAW` honored (real tcpdump capture, not the counter fallback). Hop-3 used the indirect check (ADA-side `[TX]`+`[CAP]` evidence) — the only one available, since the VM has no listener. O3, O4 stay open (M11 not run). Evidence: [phase0-smoke-test-run.md § M10](doc/phase0-smoke-test-run.md).
+
 ---
 
 ## Execution order & parallelism
 
-Dependencies are real (files, contract artifacts, fixtures) — not default assumptions. Four independent start points: `1.0.1.1`, `1.0.2.1`, `3.0.4.1`, `6.0.8.1` (plus `3.0.1.4`).
+Dependencies are real (files, contract artifacts, fixtures) — not default assumptions. Independent start points: `1.0.1.1`, `1.0.2.1`, `3.0.4.1`, `6.0.8.1`, `1.0.7.2` (plus `3.0.1.4`).
 
 ```
 Lane A  contracts/:      1.0.1.1 ──► 1.0.1.2                 3.0.1.4 ──► 4.0.1.5 ──► 4.0.1.6
@@ -402,20 +475,22 @@ Lane E  IVI_ECU:         4.0.1.5 ──► 4.0.6.1 ──► 4.0.6.2 (also needs
 
 Gate    contracts/:      all copy-landing subtasks ──► 1.0.7.1
 
+CI      .github/:        1.0.7.2 (fully parallel — guarded jobs go live as lanes A–E and the gate land)
+
 Lane F  smoke test:      6.0.8.1 ──► 5.0.8.2 (car-sky) ──► 5.0.8.3 (USER) ──► 6.0.8.4 (USER)
                          (fully parallel with lanes A–E and the gate)
 ```
 
 - **Parallel:** lanes B, C, E, F against each other once their lane-A inputs exist; within lane C, `2.0.3.2 ∥ 3.0.4.2`; `2.0.3.1` parallel with `1.0.2.2–1.0.2.5`.
 - **Sequential:** every arrow above; `1.0.7.1` is last of the contract work; lane F is internally strictly sequential.
-- **Blocked-until-spawnable:** all *agent* subtasks are ready to hand to implementation subagents (design final in the Phase 0 HLD); `5.0.8.2` goes to [[car-sky]] only after `6.0.8.1` is committed; `5.0.8.3`/`6.0.8.4` wait on the user.
+- **Spawn order (historical):** all *agent* subtasks were ready to hand to implementation subagents once the Phase 0 HLD design was final; `5.0.8.2` went to [[car-sky]] after `6.0.8.1` was committed; `5.0.8.3`/`6.0.8.4` were completed by the user. All of lane F is now done.
 
 ## Acceptance traceability
 
 | Milestone Phase 0 box | Closed by |
 |---|---|
 | R1 profile committed; golden vectors encode/decode through the Vanetza seam | 1.0.1.1 · 1.0.1.2 · 1.0.2.1–1.0.2.5 |
-| R2/R3/R4 schemas committed; round-trip tests pass in C++ / Python / Kotlin | 2.0.1.3 · 3.0.1.4 · 4.0.1.5 · 2.0.3.1 · 2.0.3.2 · 3.0.4.1 · 3.0.4.2 · 4.0.4.3 · 3.0.4.5 · 1.0.5.1 · 4.0.6.1 · (integrity: 1.0.7.1) |
+| R2/R3/R4 schemas committed; round-trip tests pass in C++ / Python / Kotlin | 2.0.1.3 · 3.0.1.4 · 4.0.1.5 · 2.0.3.1 · 2.0.3.2 · 3.0.4.1 · 3.0.4.2 · 4.0.4.3 · 3.0.4.5 · 1.0.5.1 · 4.0.6.1 · (integrity: 1.0.7.1 · CI: 1.0.7.2) |
 | R4 additive-version test defined | 4.0.1.6 · 4.0.4.4 · 4.0.6.2 |
 | Blueprint topology documented + validated (nodes, `ethernet` pins, edges) | pre-existing guides (HLD §1) + 6.0.8.1 · 5.0.8.2 · 5.0.8.3 · 6.0.8.4 (C1–C5 on `trial2_minh`) |
 
@@ -424,10 +499,10 @@ Lane F  smoke test:      6.0.8.1 ──► 5.0.8.2 (car-sky) ──► 5.0.8.3 (
 | Item | Owner / closes at |
 |---|---|
 | Bench Python → R1 codec path (F3) — `1.0.5.1` explicitly must not improvise it | [[project-architecture]], R11 HLD |
-| Smoke-test O1–O4 | their M-steps: O1 → 5.0.8.2 · O2 → 5.0.8.3/6.0.8.4 · O3 → 6.0.8.4 (M11) · O4 → 6.0.8.4 (§7 option 1) |
+| Smoke-test O3, O4 | O1 and O2 closed by 5.0.8.2/6.0.8.4. O3 (MTU headroom) — M11 optional, not run. O4 (AAOS `nc` availability) — the direct listener check is unavailable on this deployment (deploy-walkthrough-netcheck.md), so only the indirect check ran. Neither blocks Phase 0 |
 | Report errata: R2 sample `distance 25.4` vs derived `25.03` (F7); `sender.speed` source wording (F1) — HLD §11 items 3–4 | [[project-researcher]] — contracts use the derived/nullable values meanwhile |
 | Annotating `4.5.1.1`/`4.5.1.2` in `phase5_tasks.md` per § IVI reconciliation | main session, follow-up docs edit (this run's commit scope is this file only) |
 
 ---
 
-*Created 2026-07-31 by project-planner from the Phase 0 HLD (`d807c37` + `70796c0`) and [milestone1.md § Phase 0](milestone1.md#phase-0--freeze-the-contracts-r1r6). 8 task groups, 26 subtasks: 23 agent-implemented (incl. the 1.0.7.1 gate), 1 car-sky-executed, 2 user-manual.*
+*Created 2026-07-31 by project-planner from the Phase 0 HLD (`d807c37` + `70796c0`) and [milestone1.md § Phase 0](milestone1.md#phase-0--freeze-the-contracts-r1r6). 8 task groups, 27 subtasks: 24 agent-implemented (incl. the 1.0.7.1 gate and the 1.0.7.2 CI workflow, added 2026-07-31), 1 car-sky-executed, 2 user-manual.*
