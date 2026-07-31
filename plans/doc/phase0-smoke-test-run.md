@@ -23,9 +23,26 @@ Executed by GitHub Actions (the dev host has no Docker), job `netcheck-image` in
 
 **Verification (registry API, 2026-07-31):** `/v2/_catalog` → `{"repositories":["m1-netcheck","tanbd2/dummy-video-color","vitalguard/vital-guard-ai-dms"]}`; `/v2/m1-netcheck/tags/list` → `{"name":"m1-netcheck","tags":["latest"]}`. The repository was absent before the push and present after.
 
+## Open blocker — the image pull reference (found 2026-07-31)
+
+Two deploy attempts failed with the containers stuck in `Provisioning` and Kubernetes reporting `waiting to start: trying and failing to pull image`, while the bridge and IVI reached `Running`.
+
+- **Attempt 1** — node configs still carried the baseline ECU images (`registry.carsky.io/m1-v2x-ecu:latest` …), which do not exist. Cause: M7 not yet applied.
+- **Attempt 2** — M7 applied and verified correct over REST (`registry.hackathon-2.carsky.io/m1-netcheck:latest`, `./entrypoint.sh`, `NET_RAW`), yet the pull still failed.
+
+Evidence gathered:
+
+- The image genuinely exists — manifest `sha256:e3283d45…` readable with the Zot credential.
+- Anonymous pull is refused (401) for **every** repository, ours and other teams' alike, so the cluster must pull with a credential we do not control.
+- The one known-working platform blueprint ([blueprint-KIS.json](../../requirements/development-platform-doc/blueprint-KIS.json)) references images as **`localhost:5000/<namespace>/<image>:tag`**, not by public hostname; every other repository in the registry is namespaced `<team>/<image>` while ours sits at the root.
+
+**Hypothesis:** the address used to *push* (external ingress `registry.hackathon-2.carsky.io`) is not the address a node must use to *pull*. Candidates, in order: `registry.carsky.io/m1-netcheck:latest` (the platform doc's own convention and the baseline's; its 502 is on the external ingress and may not affect in-cluster resolution) → `localhost:5000/m1-netcheck:latest` (matches KIS exactly) → a namespaced path such as `kis/m1-netcheck:latest`, which would also require re-pushing under that path.
+
+**Action:** confirm the required pull reference with the organizers before further redeploys; correct [deploy-walkthrough-netcheck.md](../../requirements/car-sky-guide/deploy-walkthrough-netcheck.md) §M7 and this file once known.
+
 ## M5–M9 — blueprint config + deploy (USER-MANUAL, subtask `5.0.8.3`)
 
-Pending. Per-node config values and the M5–M8 readiness assessment: [phase0-trial2-minh-preflight.md](phase0-trial2-minh-preflight.md). Blueprint `trial2_minh` is already fully wired (M6 requires nothing) and validates.
+In progress — blocked by the pull reference above. Per-node config values and the M5–M8 readiness assessment: [phase0-trial2-minh-preflight.md](phase0-trial2-minh-preflight.md). Blueprint `trial2_minh` is already fully wired (M6 requires nothing) and validates.
 
 **Self-run acceptance:** deploying alone must start the programs — if any node needs a manual exec to produce logs, the run fails (HLD §6 startup guarantee).
 

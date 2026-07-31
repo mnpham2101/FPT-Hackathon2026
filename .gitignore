@@ -13,3 +13,7 @@ captures/
 
 # local credentials - never commit
 secrets/
+
+# Python
+__pycache__/
+*.pyc

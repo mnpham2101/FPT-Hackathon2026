@@ -161,7 +161,7 @@ Confirm each of the four role nodes has one `ethernet` pin wired to the Ethernet
 
 | Field | Value | Explanation |
 |---|---|---|
-| Image | `registry.hackathon-2.carsky.io/m1-netcheck:latest` | The Zot address pushed in M4. Host must be `hackathon-2`; `registry.carsky.io` returns 502 and the pull fails. |
+| Image | ⚠️ **unresolved — see below** | The address a *node pulls from* is not necessarily the one CI *pushes to* (`registry.hackathon-2.carsky.io`). Pushing there works; a node referencing that same address failed with `trying and failing to pull image`. Confirm the correct pull reference with the organizers — details and candidates in [phase0-smoke-test-run.md § Open blocker](../../plans/doc/phase0-smoke-test-run.md). |
 | Command | `./entrypoint.sh` | Overrides the container entrypoint. Relative to the image's workdir `/app` — `/entrypoint.sh` (absolute) does not exist and the container dies at start. May be left empty: the Dockerfile already defaults to it. |
 | Args | *(empty)* | Not used. |
 | Capabilities | `NET_RAW` | Linux privilege for opening raw sockets, required by `tcpdump` in `capture.sh`. Without it capture degrades to packet counters and criterion C4 weakens. |
