@@ -9,7 +9,7 @@
 | Note | Adopted |
 |---|---|
 | [scenario-player-v2x-callflow-messages.md](research_notes/scenario-player-v2x-callflow-messages.md) | §2 wire model (bench is the sole talker, unidirectional), §4 M1 CPM profile as the content the generator must produce, F3's ranked codec-path candidates (D1 picks #1), F8 (10 Hz default as `cpm_rate_hz` config), F9 (bench-side bound validation before encode). |
-| [Phase 0 HLD](../../requirements/phase0-contract-freeze-hld.md) | D3 codec seam (`CpmContent` + `ICpmCodec`, wire-native units) as the exact source this bench reuses; D1 sync mechanism (copies + `check_sync.py`) extended to the codec source (D2 below); `player/contracts/cpm_content.py` + golden `.json` fixtures as the Phase 0-designated bench contract layer. |
+| [Phase 0 HLD](../../plans/doc/phase0-contract-freeze-hld.md) | D3 codec seam (`CpmContent` + `ICpmCodec`, wire-native units) as the exact source this bench reuses; D1 sync mechanism (copies + `check_sync.py`) extended to the codec source (D2 below); `player/contracts/cpm_content.py` + golden `.json` fixtures as the Phase 0-designated bench contract layer. |
 
 ## 2. Design decisions
 
@@ -26,8 +26,8 @@ Node folders are self-contained build contexts with no cross-folder reads, so th
 | Master (normative home) | Synced copy here |
 |---|---|
 | `V2X_ECU/src/codec/cpm_codec.hpp` · `vanetza_cpm_codec.{hpp,cpp}` | `codec_helper/src/codec/` |
-| `requirements/contracts/vanetza-pin.cmake` *(new shared fragment: Vanetza git tag + asn1-only target list)* | `V2X_ECU/cmake/` · `codec_helper/cmake/` |
-| `requirements/contracts/golden-vectors/*.uper` | `tests/fixtures/golden/` *(Phase 0 synced `.json` only — the "until the R11 codec path is decided" condition is now resolved, so `.uper` syncs too)* |
+| `contracts/vanetza-pin.cmake` *(new shared fragment: Vanetza git tag + asn1-only target list)* | `V2X_ECU/cmake/` · `codec_helper/cmake/` |
+| `contracts/golden-vectors/*.uper` | `tests/fixtures/golden/` *(Phase 0 synced `.json` only — the "until the R11 codec path is decided" condition is now resolved, so `.uper` syncs too)* |
 
 Drift is caught twice: byte-identity by `check_sync.py`, and wire-truth by `test_encoder_golden.py` — `cpm_encode(golden .json) == golden .uper`, byte-for-byte.
 
