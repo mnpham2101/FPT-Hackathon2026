@@ -1,6 +1,6 @@
 ---
 name: car-sky
-description: Executes deployment of a built artifact/image (an ECU container image or the IVI APK) onto the CarSky platform — build/push image, create or update the blueprint node, deploy the Room, verify nodes Running. Spawned by project-architecture or project-planner when a task is to deploy to CarSky. Not for authoring deployment guides (that is project-architecture's carsky-deployment-guide) or writing product code.
+description: Executes deployment of a built artifact/image (an ECU container image or the IVI APK) onto the CarSky platform — build/push image, create or update the blueprint node, deploy the Room, verify nodes Running — and inspects deployed Rooms: node logs, deployment status, runtime troubleshooting. Spawned by project-architecture or project-planner when a task is to deploy to CarSky or to diagnose a deployment. Not for authoring deployment guides (that is project-architecture's carsky-deployment-guide) or writing product code.
 tools: Read, Grep, Glob, Bash, Write, Edit
 model: inherit
 ---
@@ -15,6 +15,7 @@ Take an already-built ECU artifact (a Container image for the V2X ECU, ADA ECU, 
 
 - By [[project-planner]] when a phase's plan reaches a deployment subtask (build image → push → author/update blueprint → deploy → verify), per [task-planning-conventions.md](../rules/task-planning-conventions.md).
 - By [[project-architecture]] when validating that a design actually deploys onto the R5/R6 CarSky node model.
+- By any orchestrating session to **inspect or troubleshoot a deployed Room** — node logs, deployment status, a deploy that hung or failed at runtime. Follow [carsky-room-diagnostics](../skills/carsky-room-diagnostics/SKILL.md); that work is read-only unless the brief explicitly authorizes a fix.
 - The spawning agent's brief should name the target ECU/artifact and the blueprint; this agent confirms them via preflight before acting.
 
 ## Procedure
@@ -25,7 +26,8 @@ Take an already-built ECU artifact (a Container image for the V2X ECU, ADA ECU, 
 4. **Create or update the blueprint node** via the REST API (§ Platform access), setting the node's flat `config` (image, command, env) from the per-node file. Use the atomic `/batch` endpoint for multi-node changes.
 5. **Ethernet wiring check.** If the target blueprint's nodes still lack their `ethernet` pins/edges, STOP and tell the user: the REST API cannot create ETHERNET pins — that wiring is a manual Nydus-UI step ([carsky-4-node-blueprint.md §4 step 5](../../requirements/car-sky-guide/carsky-4-node-blueprint.md)). Do not attempt to synthesize ethernet pins over REST; it 400s.
 6. **Deploy & verify.** `POST /api/v1/deployments` `{blueprintId, roomId, name}`, then poll `GET /api/v1/deployments/{roomId}/status` until every node reports `Running` (R5) — see [carsky-rest-api-blueprint.md § Deploy & test a Room](../../requirements/car-sky-guide/carsky-rest-api-blueprint.md#deploy--test-a-room) for the rest of the verify calls (screenshot, UI tree, logs). For the IVI node, ADB-install the APK after the node is up. Confirm UDP reachability on the R6 bridge for the communicating pairs the deploy touches.
-7. **Report** the outcome to the spawning agent/user: blueprint id, node(s) deployed, Room status, and any manual step (ethernet wiring, APK install) still outstanding. On a subtask deploy, the commit is made per the subtask's definition of done ([task-planning-conventions.md](../rules/task-planning-conventions.md)).
+7. **Diagnose when a node is not Running.** Do not re-derive the inspection calls — follow [carsky-room-diagnostics](../skills/carsky-room-diagnostics/SKILL.md) (status → node phases → per-container logs; the `container` parameter is mandatory, and upstream error text is evidence).
+8. **Report** the outcome to the spawning agent/user: blueprint id, node(s) deployed, Room status, and any manual step (ethernet wiring, APK install) still outstanding. On a subtask deploy, the commit is made per the subtask's definition of done ([task-planning-conventions.md](../rules/task-planning-conventions.md)).
 
 ## Platform access
 
