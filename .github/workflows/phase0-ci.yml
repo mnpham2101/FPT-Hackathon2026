@@ -93,6 +93,21 @@ jobs:
         run: cmake --build V2X_ECU/build -j $(nproc)
       - name: Test
         run: ctest --test-dir V2X_ECU/build --output-on-failure
+      - name: Generate golden vectors (run 1)
+        run: V2X_ECU/build/gv_tool "$RUNNER_TEMP/gv1"
+      - name: Generate golden vectors (run 2)
+        run: V2X_ECU/build/gv_tool "$RUNNER_TEMP/gv2"
+      # Determinism is 1.0.2.4's acceptance: the same tool run twice must emit byte-identical
+      # trees. diff exits non-zero on any difference, which fails the step.
+      - name: Golden-vector determinism check
+        run: diff -r "$RUNNER_TEMP/gv1" "$RUNNER_TEMP/gv2"
+      # The corpus is generated on Linux and handed back as an artifact; committing it into
+      # contracts/golden-vectors/ is a separate hand-off step (1.0.2.5 consumes it).
+      - name: Upload golden-vector corpus
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-vectors
+          path: ${{ runner.temp }}/gv1
 
   ivi-unit-tests:
     runs-on: ubuntu-latest

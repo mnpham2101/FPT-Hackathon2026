@@ -98,5 +98,16 @@ target_compile_features(v2x_cpm_codec PUBLIC cxx_std_17)
 v2x_add_test(v2x_vanetza_cpm_codec_test tests/codec/test_vanetza_cpm_codec.cpp)
 target_link_libraries(v2x_vanetza_cpm_codec_test PRIVATE v2x_cpm_codec)
 
+# Golden-vector generator (1.0.2.4) - build-only developer/CI tool, never shipped in a node
+# image (HLD D3). A plain add_executable, deliberately NOT v2x_add_test: it is a CLI that
+# writes the frozen corpus, not a gtest binary, so it must not be registered with CTest.
+# Linking v2x_cpm_codec is enough - it carries v2x_codec_seam (src/ include path + nlohmann)
+# PUBLIC-ly, and the Vanetza ASN.1 links PRIVATE-ly (F2: no ASN.1 headers reach this TU).
+add_executable(gv_tool tools/golden_vectors/main.cpp)
+target_link_libraries(gv_tool PRIVATE v2x_cpm_codec)
+# CI invokes the literal path V2X_ECU/build/gv_tool, so pin the output dir rather than rely
+# on no FetchContent subproject having leaked a CMAKE_RUNTIME_OUTPUT_DIRECTORY into cache.
+set_target_properties(gv_tool PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+
 # Later subtasks add their targets here:
-# gv_tool (1.0.2.4) and the golden-vector test (1.0.2.5).
+# the golden-vector test (1.0.2.5).
