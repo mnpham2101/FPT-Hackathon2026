@@ -9,6 +9,8 @@ Every human-facing presentation in this repo is two files: a **Marp markdown sou
 
 The animated slide-canvas mechanics below are current as of the phase0 deck; the root `m1-proposal-deck.html` predates them and still hard-toggles `display: none`/`flex` with no transition — treat the phase0 deck, not the root one, as the transition reference.
 
+Centering must be done with `left/top/margin` on `.slide`, never with `display: flex; align-items: center; justify-content: center` on `.deck`. A flex-centered `.deck` with many stacked `opacity: 0` (not `display: none`) siblings makes Chromium mis-size whichever slide is `.active` — the box collapses to a sliver of its 1280px width while its height stays correct, because absolutely-positioned flex children still enter the container's intrinsic-size computation even though the spec says they shouldn't affect sibling layout. It reproduces with as few as two `bg-light content` slides (e.g. one with a `table.fpt`) sharing a flex-centered `.deck`, and only headless-vs-real-browser testing catches it — a quick static screenshot of the first slide looks fine. Absolute centering side-steps the computation entirely.
+
 ## Folder placement
 
 - One subfolder per deck under `presentation/`: `presentation/<deck-slug>/<deck-slug>-deck.{md,html}`. The top-level `m1-proposal-deck.*` predates this convention and stays at the root.
@@ -45,28 +47,30 @@ Rule: a gradient layered over a photo must use `rgba(...)` alpha, not opaque hex
 
 ## Slide canvas mechanics
 
-Fixed-size slides (`1280×720`), stacked absolutely, one `.active` at a time, scaled to fit the viewport — this is what makes the deck behave the same in a browser window, fullscreen, or print. Transitions are opacity + scale + a slight vertical settle, driven entirely by CSS so `show()` only ever toggles the `.active` class:
+Fixed-size slides (`1280×720`), stacked absolutely and centered via `left/top/margin` (not flex — see above), one `.active` at a time, scaled to fit the viewport — this is what makes the deck behave the same in a browser window, fullscreen, or print. The transition is a simple opacity + horizontal slide-in from the left, driven entirely by CSS so `show()` only ever toggles the `.active` class:
 
 ```css
-.deck { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.deck { position: fixed; inset: 0; overflow: hidden; }
 .slide {
-  width: 1280px; height: 720px; position: absolute; display: flex; flex-direction: column;
+  width: 1280px; height: 720px; position: absolute;
+  left: 50%; top: 50%; margin: -360px 0 0 -640px;
+  display: flex; flex-direction: column;
   transform-origin: center center; background: var(--paper); color: var(--ink);
   box-shadow: 0 18px 60px rgba(0,0,0,.45); overflow: hidden;
   opacity: 0; pointer-events: none; z-index: 1;
-  transform: scale(var(--s, 1)) scale(.96) translateY(10px);
+  transform: scale(var(--s, 1)) translateX(-60px);
   transition: opacity .45s ease, transform .5s cubic-bezier(.22,.75,.32,1);
 }
 .slide.active {
   opacity: 1; pointer-events: auto; z-index: 2;
-  transform: scale(var(--s, 1)) scale(1) translateY(0);
+  transform: scale(var(--s, 1)) translateX(0);
 }
 @media (prefers-reduced-motion: reduce) {
   .slide { transition: opacity .01s linear; transform: scale(var(--s, 1)); }
 }
 ```
 
-The viewport-fit scale lives in the `--s` custom property (not an inline `transform`) precisely so the stylesheet can compose it with the per-slide pop/settle transform above — setting `sl.style.transform` directly, as older decks in this repo do, would overwrite that composition and kill the animation:
+The viewport-fit scale lives in the `--s` custom property (not an inline `transform`) precisely so the stylesheet can compose it with the per-slide translateX above — setting `sl.style.transform` directly, as older decks in this repo do, would overwrite that composition and kill the animation:
 
 ```js
 function fit() {
@@ -75,7 +79,7 @@ function fit() {
 }
 ```
 
-`@media print` must additionally force `opacity: 1 !important; transition: none !important;` on `.slide` — otherwise every non-active slide prints blank, since the opacity-based hide is the default state.
+`@media print` must force `opacity: 1 !important; transition: none !important;` on `.slide` — otherwise every non-active slide prints blank, since the opacity-based hide is the default state — and must also reset `left: auto; top: auto;`, since the print rule switches `.slide` to `position: relative` and the screen rule's `left: 50%; top: 50%` would otherwise offset every printed page by half its own size.
 
 ## Navigation & controls
 
