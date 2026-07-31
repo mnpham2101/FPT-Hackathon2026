@@ -49,6 +49,13 @@ A **workflow** is a YAML file in `.github/workflows/`. Ours is [phase0-ci.yml](.
 
 Each job starts on a clean machine, so it checks the code out first (`actions/checkout`).
 
+**Reading the raw YAML, briefly:**
+
+- `key: value` — one mapping entry; nesting is indentation (2 spaces), no braces.
+- `- item` — a list entry; a job's `steps:` is a list of these.
+- `${{ ... }}` — an expression evaluated at run time, e.g. `${{ secrets.CARSKY_ZOT_API_KEY }}`.
+- `|` before a block — a literal multi-line string, used for a multi-line `run:` script.
+
 > Reference: [GitHub Actions documentation](https://docs.github.com/actions) — workflow syntax, contexts, and expressions in full.
 
 ### 2.4 Zot — the container registry
@@ -59,11 +66,11 @@ Each job starts on a clean machine, so it checks the code out first (`actions/ch
 
 **Host caveat:** `registry.hackathon-2.carsky.io` is the verified **push** host from outside (CI, dev machine); `registry.carsky.io` answers 502 externally. Which address a **node must pull from** is a separate, unresolved question — see the M7 image row and [phase0-smoke-test-run.md § Open blocker](../../plans/doc/phase0-smoke-test-run.md).
 
-**How the push works from GitHub Actions** — run by the `netcheck-image` job (buildx publishes a multi-arch amd64+arm64 manifest, attestations disabled so older container runtimes can resolve it):
+**How the push works from GitHub Actions** — run by the `netcheck-image` job. Images must be single-platform `linux/arm64` ([phase0-smoke-test-run.md § Standing requirement](../../plans/doc/phase0-smoke-test-run.md)); attestations stay disabled so the result is one manifest, not an index:
 
 ```
 docker login <registry-host> -u <account> --password-stdin   # key supplied from the secret
-docker buildx build --platform linux/amd64,linux/arm64 --provenance=false --sbom=false \
+docker buildx build --platform linux/arm64 --provenance=false --sbom=false \
   -t <registry-host>/m1-netcheck:latest --push tools/netcheck/
 ```
 
@@ -117,6 +124,8 @@ The registry account is not secret and lives in the workflow (`REGISTRY_USER`); 
 ### M3 + M4 — Build and push (automatic)
 
 Both are done by the `netcheck-image` job on every push — no local Docker required.
+
+**Requires the CI workflow script.** This is automatic only because [phase0-ci.yml](../../.github/workflows/phase0-ci.yml) already has a `netcheck-image` job that builds and pushes this exact image. If that job doesn't exist yet, or its `PLATFORMS`/tag/registry don't match the target, fix the `.yml` first — there is nothing to verify without it.
 
 **Verify:** GitHub → **Actions** → newest **phase0-ci** run → job **netcheck-image**:
 
