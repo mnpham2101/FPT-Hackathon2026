@@ -70,5 +70,16 @@ target_compile_features(v2x_codec_seam INTERFACE cxx_std_17)
 v2x_add_test(v2x_cpm_content_roundtrip_test tests/codec/test_cpm_content_roundtrip.cpp)
 target_link_libraries(v2x_cpm_content_roundtrip_test PRIVATE v2x_codec_seam)
 
+# Contracts library — pure model code, no transport (2.0.3.1).
+add_library(v2x_contracts STATIC
+  src/contracts/r2_message.cpp
+)
+target_include_directories(v2x_contracts PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(v2x_contracts PUBLIC nlohmann_json::nlohmann_json)
+target_compile_features(v2x_contracts PUBLIC cxx_std_17)
+
+v2x_add_test(v2x_r2_roundtrip_test tests/contracts/test_r2_roundtrip.cpp)
+target_link_libraries(v2x_r2_roundtrip_test PRIVATE v2x_contracts)
+
 # Later subtasks add their targets here: VanetzaCpmCodec (1.0.2.3),
-# gv_tool (1.0.2.4), the golden-vector test (1.0.2.5) and the R2 binding (2.0.3.1).
+# gv_tool (1.0.2.4) and the golden-vector test (1.0.2.5).
