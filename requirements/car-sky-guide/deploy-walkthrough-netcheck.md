@@ -131,6 +131,18 @@ Nydus → blueprint list → open the target (here `trial2_minh_netcheck`).
 
 Working on a **clone** keeps the known-good baseline untouched — recommended. Note that deploying also creates a snapshot named `<name>-deploy`; **always edit the original**, never the snapshot.
 
+Clicking empty canvas shows the **blueprint** Inspector — the panel that owns the whole design rather than one node:
+
+![Nydus Inspector — blueprint panel with name, deployments, ownership](images/nydus-inspector-blueprint.png)
+
+| Control | Use |
+|---|---|
+| Name / Description | Identify the trial — put the differentiator here, never in code |
+| **Locked** | Freezes topology and metadata edits; leave off while configuring |
+| **Deployments (n)** + **New Deployment** | Live Rooms from this blueprint, and where M9 starts |
+| Public / Owner | Private by default; owner is the CarSky account (the same identity used for the registry) |
+| **Delete Blueprint** | Only after its deployments are deleted (M12) |
+
 ### M6 — Check the wiring ⚠️
 
 Confirm each of the four role nodes has one `ethernet` pin wired to the Ethernet Bridge, with addresses `10.99.0.10` (bench), `.11` (V2X), `.12` (ADA), `.13` (IVI).
@@ -185,11 +197,14 @@ The Skycraft node runs an Android VM, not a container — it cannot run these sc
 
 ### M9 — Deploy → criterion C1
 
-**New Deployment** → name it → pick a **Device** from the list (any existing one; a Device is a resource pool, not an ECU — creating extras wastes the 2-deployment budget) → **Deploy**.
-
-Wait until every node badge reads `Running` with restart count 0 — that is **C1**. The Android node takes longer than the containers.
+**New Deployment** opens the Deploy dialog:
 
 ![Deploy Blueprint dialog — deployment name and device selection](images/nydus-deploy-dialog.png)
+
+- **Deployment Name** — defaults to `<blueprint>-deploy`; keep it unless running two Rooms from one blueprint.
+- **Device** — pick an **existing** entry from the dropdown. A Device is the Kubernetes resource pool the Room runs on, *not* an ECU, so `+ Create new device` is unnecessary here and eats into the 2-concurrent-deployment budget.
+
+Then **Deploy**, and wait until every node badge reads `Running` with restart count 0 — that is **C1**. The Android node takes longer than the containers.
 
 *Stuck in `Provisioning`* almost always means the image could not be pulled: re-check the M7 image field, host, and that M4 actually pushed. Diagnosis procedure: [carsky-room-diagnostics](../../.claude/skills/carsky-room-diagnostics/SKILL.md).
 
