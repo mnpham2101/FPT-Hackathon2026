@@ -17,14 +17,14 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class R3Snapshot(
     val id: String,
-    @SerialName("class") val objectClass: String,
+    @SerialName("class") val objectClass: String = "vehicle",
     val source: String,
     val position: VehiclePosition,
     val distance: Float,
     val speed: Float,
     val confidence: Float,
     val state: String,
-    val timestamps: R3Timestamps,
+    val timestamps: R3Timestamps = R3Timestamps(measured = 0L, received = 0L, lastUpdated = 0L),
 ) {
     companion object {
         const val SOURCE_V2X_RELAYED = "v2x_relayed"

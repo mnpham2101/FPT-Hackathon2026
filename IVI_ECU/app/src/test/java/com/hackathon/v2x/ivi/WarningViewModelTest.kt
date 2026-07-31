@@ -61,9 +61,15 @@ class WarningViewModelTest {
             warningType = warningType,
             riskState = "high",
             objectSnapshot = R3Snapshot(
-                id = "C-001", source = "v2x_relayed",
+                id = "C-001",
+                objectClass = "vehicle",
+                source = "v2x_relayed",
                 position = VehiclePosition(25f, 1.5f),
-                distance = 25f, speed = 13.5f, confidence = 0.87f, state = "tracked"
+                distance = 25f,
+                speed = 13.5f,
+                confidence = 0.87f,
+                state = "tracked",
+                timestamps = com.hackathon.v2x.ivi.model.R3Timestamps(measured = 0L, received = 0L, lastUpdated = 0L)
             ),
             geometry = SceneGeometry(
                 ego = VehiclePosition(0f, 0f),
