@@ -80,7 +80,7 @@ class R4ListenerService : Service() {
                     Log.w(TAG, "UDP socket error (attempt $retries/$MAX_RETRIES): ${e.message}")
                     if (retries >= MAX_RETRIES) {
                         Log.e(TAG, "Max retries reached — emitting ServiceErrorEvent")
-                        _r4EventFlow.emit(ServiceErrorEvent)
+                        _r4EventFlow.emit(com.hackathon.v2x.ivi.model.R4ServiceError())
                         return@launch
                     }
                     delay(RETRY_DELAY_MS)
@@ -88,7 +88,7 @@ class R4ListenerService : Service() {
                     Log.e(TAG, "Unexpected error in receive loop", e)
                     retries++
                     if (retries >= MAX_RETRIES) {
-                        _r4EventFlow.emit(ServiceErrorEvent)
+                        _r4EventFlow.emit(com.hackathon.v2x.ivi.model.R4ServiceError())
                         return@launch
                     }
                     delay(RETRY_DELAY_MS)
@@ -133,8 +133,6 @@ class R4ListenerService : Service() {
         private const val MAX_RETRIES = 5
         private const val RETRY_DELAY_MS = 1_000L
         private const val NOTIFICATION_ID = 1001
-
-        /** Sentinel emitted when max retries are exhausted. */
-        object ServiceErrorEvent : R4Message()
     }
 }
+

@@ -52,6 +52,14 @@ data class R4StateMessage(
     }
 }
 
+/** Sentinel message emitted when R4ListenerService encounters unrecoverable errors. */
+@Serializable
+@SerialName("error")
+data class R4ServiceError(
+    override val schemaVersion: Int = 0,
+    val message: String = "Service Error",
+) : R4Message()
+
 /** Minimal vehicle state carried inside the R4 state heartbeat. */
 @Serializable
 data class VehicleState(
@@ -72,4 +80,5 @@ val R4Json: Json = Json {
     classDiscriminator = "type"
     ignoreUnknownKeys = true
 }
+
 
