@@ -21,20 +21,10 @@ FetchContent_Declare(googletest
   GIT_REPOSITORY https://github.com/google/googletest.git
   GIT_TAG v1.14.0
 )
-FetchContent_Declare(vanetza
-  GIT_REPOSITORY https://github.com/riebl/vanetza.git
-  GIT_TAG fb6c551030dcc12b924299bf401e35e5fe814713  # tag v26.06
-  EXCLUDE_FROM_ALL
-)
-
-# ASN.1-only: no security/geodesy/RPC backends (HLD section 8 - no GN/BTP full-stack pull-in).
-# Vanetza defaults these options to "was the package found on this machine", which would make the
-# configure step depend on the runner image; forcing them keeps it deterministic.
-set(BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(VANETZA_WITH_GEOGRAPHICLIB OFF CACHE BOOL "" FORCE)
-set(VANETZA_WITH_RPC OFF CACHE BOOL "" FORCE)
-set(VANETZA_WITH_CRYPTOPP OFF CACHE BOOL "" FORCE)
-set(VANETZA_WITH_OPENSSL OFF CACHE BOOL "" FORCE)
+# Vanetza declare + ASN.1-only option forcing live in the shared pin fragment (master:
+# contracts/vanetza-pin.cmake, byte-synced copy here) shared with the Scenario Player
+# codec helper. The fragment declares only; MakeAvailable stays below.
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/vanetza-pin.cmake)
 
 FetchContent_MakeAvailable(nlohmann_json googletest vanetza)
 

@@ -87,6 +87,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none — starts immediately. **Commit:** `[11.1.1.1] chore: extract shared vanetza-pin.cmake fragment and switch V2X_ECU to it`
 
+**Status:** implemented 2026-08-01 — cmp identical (`contracts/vanetza-pin.cmake` ≡ `V2X_ECU/cmake/vanetza-pin.cmake`), extraction lossless by diff (declare block + 5 forced options moved verbatim, replaced by one `include()`), cache key hashes both files, check_sync + import gate exit 0; CI verification pending wave push.
+
 ### [ ] `11.1.1.2` — Extend `contracts/sync-manifest.json` with the D2 entries *(agent — sequential-last of the contract work)*
 
 **Objective:** the sync gate covers every Phase 1 copy: pin fragment, codec-seam sources, and the Scenario Player `.uper` fixtures.

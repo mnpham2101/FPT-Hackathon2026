@@ -93,7 +93,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: V2X_ECU/build/_deps
-          key: v2x-deps-${{ runner.os }}-vanetza-fb6c5510-json-v3.11.3-gtest-v1.14.0-${{ hashFiles('V2X_ECU/CMakeLists.txt') }}
+          key: v2x-deps-${{ runner.os }}-vanetza-fb6c5510-json-v3.11.3-gtest-v1.14.0-${{ hashFiles('V2X_ECU/CMakeLists.txt', 'V2X_ECU/cmake/vanetza-pin.cmake') }}
           restore-keys: |
             v2x-deps-${{ runner.os }}-vanetza-fb6c5510-json-v3.11.3-gtest-v1.14.0-
       - name: Configure
