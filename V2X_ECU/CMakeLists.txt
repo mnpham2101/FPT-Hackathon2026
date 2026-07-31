@@ -81,5 +81,22 @@ target_compile_features(v2x_contracts PUBLIC cxx_std_17)
 v2x_add_test(v2x_r2_roundtrip_test tests/contracts/test_r2_roundtrip.cpp)
 target_link_libraries(v2x_r2_roundtrip_test PRIVATE v2x_contracts)
 
-# Later subtasks add their targets here: VanetzaCpmCodec (1.0.2.3),
+# R1 codec implementation (1.0.2.3) - the sole ICpmCodec: CpmContent <-> ASN.1 UPER over
+# vanetza::asn1::r2::Cpm. Vanetza::asn1 carries the asn1c PER wrapper + allocator; the
+# release-2 type descriptors (asn_DEF_Vanetza_ITS2_*) live in Vanetza::asn1_its_r2.
+# Both Vanetza links are PRIVATE: vanetza_cpm_codec.hpp names no ASN.1 type, so seam
+# consumers never need the ASN.1 headers on their include path (F2).
+add_library(v2x_cpm_codec STATIC
+  src/codec/vanetza_cpm_codec.cpp
+)
+target_link_libraries(v2x_cpm_codec
+  PUBLIC v2x_codec_seam
+  PRIVATE Vanetza::asn1 Vanetza::asn1_its_r2
+)
+target_compile_features(v2x_cpm_codec PUBLIC cxx_std_17)
+
+v2x_add_test(v2x_vanetza_cpm_codec_test tests/codec/test_vanetza_cpm_codec.cpp)
+target_link_libraries(v2x_vanetza_cpm_codec_test PRIVATE v2x_cpm_codec)
+
+# Later subtasks add their targets here:
 # gv_tool (1.0.2.4) and the golden-vector test (1.0.2.5).
