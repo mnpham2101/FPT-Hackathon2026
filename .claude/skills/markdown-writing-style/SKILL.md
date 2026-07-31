@@ -44,7 +44,7 @@ Trigger: any agent writing or editing a markdown file in this repo. Apply all si
 
 - **Agent-context reference** (default — research notes, rule docs, HLDs, per-node guides, API references): rules 1–6 as-is. Dense, scannable, no prose padding.
 - **Human how-to guide** (a walkthrough read once and followed): simple language, numbered steps, one action per step. Still no hard line-wrap, still no invented terms.
-- **Human-facing presentation** (meant to be read or exported as slides): author as a Marp deck — `marp: true` frontmatter, `---` slide separators, `<!-- _class: lead -->` section-divider slides, one idea per slide. Follow [m1-proposal-deck.md](../../../presentation/m1-proposal-deck.md) as the template.
+- **Human-facing presentation** (meant to be read or exported as slides): author as a Marp deck — `marp: true` frontmatter, `---` slide separators, `<!-- _class: lead -->` section-divider slides, one idea per slide. Follow [m1-proposal-deck.md](../../../presentation/m1-proposal-deck.md) as the template. Before authoring or exporting to static HTML, read [deck-design-system.md](../../../presentation/template/deck-design-system.md) — colors, background images, the reusable CSS class catalog, slide-canvas mechanics, and nav JS, so the design isn't re-derived from scratch each time.
 
 ## How to apply
 
