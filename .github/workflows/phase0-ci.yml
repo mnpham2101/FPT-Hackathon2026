@@ -5,8 +5,9 @@
 # - group 0.2 (V2X_ECU): C++ CMake build+ctest jobs, and the docker-build jobs for both C++ nodes,
 #   added by those subtasks when their CMakeLists.txt / Dockerfiles land (ADA core build+ctest
 #   landed with 3.0.4.1).
-# - registry push: NOT included yet - the CarSky Zot API key is not a repo secret. A later
-#   subtask adds the push job once the user stores the credential (never commit it).
+# - registry push (5.0.8.2): the netcheck-image job below builds always and pushes only when the
+#   CARSKY_ZOT_API_KEY repo secret exists (never commit the credential). Host per the live O1
+#   probe 2026-07-31: registry.hackathon-2.carsky.io (registry.carsky.io answers 502).
 name: phase0-ci
 
 on:
@@ -79,3 +80,27 @@ jobs:
         run: |
           chmod +x gradlew
           ./gradlew :app:testDebugUnitTest --no-daemon
+
+  netcheck-image:
+    runs-on: ubuntu-latest
+    env:
+      # Live host per the O1 probe (2026-07-31): registry.carsky.io 502s, hackathon-2 answers.
+      REGISTRY_HOST: registry.hackathon-2.carsky.io
+      REGISTRY_USER: mnpham1986@gmail.com
+      IMAGE: m1-netcheck:latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build netcheck image (smoke-test M3)
+        run: docker build -t "$IMAGE" tools/netcheck/
+      - name: Push to CarSky Zot registry (M2+M4; skips until the secret exists)
+        env:
+          ZOT_KEY: ${{ secrets.CARSKY_ZOT_API_KEY }}
+        run: |
+          if [ -z "$ZOT_KEY" ]; then
+            echo "::notice::CARSKY_ZOT_API_KEY secret not set - image built but NOT pushed (M4 pending)"
+            exit 0
+          fi
+          echo "$ZOT_KEY" | docker login "$REGISTRY_HOST" -u "$REGISTRY_USER" --password-stdin
+          docker tag "$IMAGE" "$REGISTRY_HOST/$IMAGE"
+          docker push "$REGISTRY_HOST/$IMAGE"
+          echo "::notice::pushed $REGISTRY_HOST/$IMAGE"

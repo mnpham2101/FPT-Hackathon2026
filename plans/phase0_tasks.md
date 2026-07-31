@@ -400,6 +400,8 @@ Flag: this run commits only `plans/phase0_tasks.md`, so the supersede note is re
 
 **Dependencies:** after 6.0.8.1. **Commit:** `[5.0.8.2] docs: record netcheck image push and confirmed registry host`
 
+**Status:** in progress 2026-07-31 — M2–M4 wired as the CI job `netcheck-image` (no Docker on the dev host, so CI replaces the local car-sky build path): build runs on every push; push runs only once `CARSKY_ZOT_API_KEY` exists as a repo secret. **O1 closed:** live probe shows `registry.hackathon-2.carsky.io` answering (405 to HEAD /v2/) while `registry.carsky.io` returns 502 — CI and all M7 image refs must use the hackathon-2 host. Flips done when a CI run reports the push and `plans/doc/phase0-smoke-test-run.md` records it.
+
 ### `5.0.8.3` — USER-MANUAL: blueprint node config + deploy → C1 (M5–M9)
 
 **Objective:** the user performs note §6 steps M5–M9 in the Nydus UI: open/clone the blueprint (M5), verify the four `ethernet` pins + edges (M6), set `image`/`command`/`capabilities: ["NET_RAW"]`/env per the note §6.1 table on bench `.10` / V2X `.11` / ADA `.12` (M7 — note: ADA **adds** `LISTEN_PORT=47200` alongside `V2X_LISTEN_PORT`, no renaming), keep the IVI AAOS artifact (M8), New Deployment → every node `Running`, restart count 0 = **C1** (M9).
