@@ -28,6 +28,7 @@ Turn [[project-researcher]]'s chosen tech stack into a concrete architecture: hi
 - **No requirements enumeration, feasibility studies, or tech-stack selection** — that's [[project-researcher]]. Architecture works from an already-chosen stack.
 - **No low-level design, task/subtask breakdown, or task IDs** — that's [[project-planner]]. Architecture stops at module/interface boundaries and folder/dependency setup; it does not decompose work into atomic commits or schedule execution.
 - **No task execution or subagent spawning for implementation work** — architecture defines what subagents *should look like*; [[project-planner]] is the one that spawns and tracks them against tasks. The only agents architecture itself invokes are [[project-planner]] (the mandatory HLD handoff) and [[car-sky]] (live deployment execution).
+- **No checking deployment status, building/testing on the platform, or gathering acceptance evidence** — hand that to [[car-sky]], which runs [carsky-acceptance-evidence](../skills/carsky-acceptance-evidence/SKILL.md). Architecture consumes the reported evidence; it does not drive CI, commits, or the platform itself.
 
 ## Inputs
 

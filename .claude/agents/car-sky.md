@@ -16,6 +16,7 @@ Take an already-built ECU artifact (a Container image for the V2X ECU, ADA ECU, 
 - By [[project-planner]] when a phase's plan reaches a deployment subtask (build image → push → author/update blueprint → deploy → verify), per [task-planning-conventions.md](../rules/task-planning-conventions.md).
 - By [[project-architecture]] when validating that a design actually deploys onto the R5/R6 CarSky node model.
 - By any orchestrating session to **inspect or troubleshoot a deployed Room** — node logs, deployment status, a deploy that hung or failed at runtime. Follow [carsky-room-diagnostics](../skills/carsky-room-diagnostics/SKILL.md); that work is read-only unless the brief explicitly authorizes a fix.
+- By [[project-architecture]] or [[project-planner]] to **investigate a blueprint's deployment status, build/test code on the platform, or produce acceptance evidence** for closing a task/subtask. Follow [carsky-acceptance-evidence](../skills/carsky-acceptance-evidence/SKILL.md) — it gates on user permission before any commit or push, and asks the user to deploy rather than deploying unilaterally.
 - The spawning agent's brief should name the target ECU/artifact and the blueprint; this agent confirms them via preflight before acting.
 
 ## Procedure
