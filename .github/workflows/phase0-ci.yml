@@ -162,7 +162,10 @@ jobs:
       - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
       - name: Build netcheck image (smoke-test M3)
-        run: docker buildx build --platform "$PLATFORMS" -t "$IMAGE" tools/netcheck/
+        # --provenance/--sbom=false: buildx otherwise adds unknown/unknown attestation entries
+        # to the manifest index, which older containerd releases fail to resolve (a second
+        # pull-failure mode observed on the 2026-07-31 deploy after the multi-arch push).
+        run: docker buildx build --platform "$PLATFORMS" --provenance=false --sbom=false -t "$IMAGE" tools/netcheck/
       - name: Push to CarSky Zot registry (M2+M4; skips until the secret exists)
         env:
           ZOT_KEY: ${{ secrets.CARSKY_ZOT_API_KEY }}
@@ -176,5 +179,5 @@ jobs:
             exit 0
           fi
           echo "$ZOT_KEY" | docker login "$REGISTRY_HOST" -u "$REGISTRY_USER" --password-stdin
-          docker buildx build --platform "$PLATFORMS" -t "$REGISTRY_HOST/$IMAGE" --push tools/netcheck/
+          docker buildx build --platform "$PLATFORMS" --provenance=false --sbom=false -t "$REGISTRY_HOST/$IMAGE" --push tools/netcheck/
           echo "::notice::pushed $REGISTRY_HOST/$IMAGE ($PLATFORMS)"
