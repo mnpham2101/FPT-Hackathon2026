@@ -20,11 +20,11 @@ data class R3Snapshot(
     @SerialName("class") val objectClass: String = "vehicle",
     val source: String,
     val position: VehiclePosition,
-    val distance: Float,
-    val speed: Float,
-    val confidence: Float,
-    val state: String,
-    val timestamps: R3Timestamps = R3Timestamps(measured = 0L, received = 0L, lastUpdated = 0L),
+    val distance: Float = 0f,
+    val speed: Float = 0f,
+    val confidence: Float = 1.0f,
+    val state: String = "tracked",
+    val timestamps: R3Timestamps = R3Timestamps(),
 ) {
     companion object {
         const val SOURCE_V2X_RELAYED = "v2x_relayed"
@@ -35,7 +35,8 @@ data class R3Snapshot(
 /** Per-track timestamps of the frozen R3 schema (3.0.1.4), ms since epoch. */
 @Serializable
 data class R3Timestamps(
-    val measured: Long,
-    val received: Long,
-    val lastUpdated: Long,
+    val measured: Long = 0L,
+    val received: Long = 0L,
+    val lastUpdated: Long = 0L,
 )
+

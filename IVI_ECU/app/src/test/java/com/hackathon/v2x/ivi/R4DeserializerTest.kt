@@ -36,12 +36,14 @@ class R4DeserializerTest {
               "riskState": "high",
               "object": {
                 "id": "C-001",
+                "class": "vehicle",
                 "source": "v2x_relayed",
                 "position": {"x": 25.0, "y": 1.5},
                 "distance": 25.0,
                 "speed": 13.5,
                 "confidence": 0.87,
-                "state": "tracked"
+                "state": "tracked",
+                "timestamps": { "measured": 1000, "received": 1010, "lastUpdated": 1010 }
               },
               "geometry": {
                 "ego":      {"x": 0.0, "y": 0.0},
@@ -98,9 +100,12 @@ class R4DeserializerTest {
               "warningType": "future_unknown_type",
               "riskState": "medium",
               "object": {
-                "id": "C-001", "source": "v2x_relayed",
+                "id": "C-001",
+                "class": "vehicle",
+                "source": "v2x_relayed",
                 "position": {"x": 28.0, "y": 1.5},
-                "distance": 28.0, "speed": 13.5, "confidence": 0.87, "state": "tracked"
+                "distance": 28.0, "speed": 13.5, "confidence": 0.87, "state": "tracked",
+                "timestamps": { "measured": 1000, "received": 1010, "lastUpdated": 1010 }
               },
               "geometry": {
                 "ego": {"x": 0.0, "y": 0.0},
@@ -142,9 +147,12 @@ class R4DeserializerTest {
               "futureFieldNotInSchema": "some_value",
               "anotherNewField": 999,
               "object": {
-                "id": "C-002", "source": "v2x_relayed",
+                "id": "C-002",
+                "class": "vehicle",
+                "source": "v2x_relayed",
                 "position": {"x": 40.0, "y": 0.5},
                 "distance": 40.0, "speed": 11.0, "confidence": 0.75, "state": "tracked",
+                "timestamps": { "measured": 1000, "received": 1010, "lastUpdated": 1010 },
                 "extraObjectField": true
               },
               "geometry": {

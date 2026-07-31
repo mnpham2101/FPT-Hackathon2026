@@ -1,10 +1,10 @@
 package com.hackathon.v2x.ivi.data
 
 import android.util.Log
+import com.hackathon.v2x.ivi.model.R4Json
 import com.hackathon.v2x.ivi.model.R4Message
 import com.hackathon.v2x.ivi.model.R4StateMessage
 import com.hackathon.v2x.ivi.model.R4WarningEvent
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
@@ -13,17 +13,11 @@ import kotlinx.serialization.json.jsonPrimitive
  *
  * Subtask 4.5.1.2 — Additive-version safety rules:
  * - Unknown [R4WarningEvent.warningType] → degraded to [R4WarningEvent.UNKNOWN_WARNING_TYPE]
- * - Unknown extra JSON fields → ignored silently (lenient mode)
+ * - Unknown extra JSON fields → ignored silently (lenient mode via [R4Json])
  * - Unknown message `type` → [Result.failure] with [UnknownMessageTypeException]
  * - Malformed JSON → [Result.failure] with [MalformedR4PayloadException] (byte offset included)
  */
 class R4Deserializer {
-
-    private val json = Json {
-        ignoreUnknownKeys = true
-        isLenient = true
-        coerceInputValues = true
-    }
 
     /**
      * Parse raw [bytes] into an [R4Message].
@@ -44,26 +38,26 @@ class R4Deserializer {
         }
     }.onFailure { e ->
         if (e !is UnknownMessageTypeException && e !is MalformedR4PayloadException) {
-            Log.w(TAG, "R4 parse failure: ${bytes.take(256).toByteArray().decodeToString()}", e)
+            safeLogW(TAG, "R4 parse failure: ${bytes.take(256).toByteArray().decodeToString()}", e)
         }
     }
 
     private fun parseJsonObject(raw: String, bytes: ByteArray): JsonObject =
-        runCatching { json.parseToJsonElement(raw) as? JsonObject }
+        runCatching { R4Json.parseToJsonElement(raw) as? JsonObject }
             .getOrNull()
             ?: throw MalformedR4PayloadException("Not a JSON object", bytes)
 
     private fun parseWarningEvent(raw: String, bytes: ByteArray): Result<R4Message> {
         val event = runCatching {
-            json.decodeFromString<R4WarningEvent>(raw)
+            R4Json.decodeFromString<R4WarningEvent>(raw)
         }.getOrElse { e ->
-            Log.w(TAG, "Warning event parse error: ${bytes.take(256).toByteArray().decodeToString()}")
+            safeLogW(TAG, "Warning event parse error: ${bytes.take(256).toByteArray().decodeToString()}")
             return Result.failure(MalformedR4PayloadException(e.message ?: "parse error", bytes))
         }
 
         // Additive-version safety: unknown warningType degrades gracefully, never throws.
         val safeEvent = if (event.warningType.isBlank() || !isKnownWarningType(event.warningType)) {
-            Log.w(TAG, "Unknown warningType='${event.warningType}' — degrading to '${R4WarningEvent.UNKNOWN_WARNING_TYPE}'")
+            safeLogW(TAG, "Unknown warningType='${event.warningType}' — degrading to '${R4WarningEvent.UNKNOWN_WARNING_TYPE}'")
             event.copy(warningType = R4WarningEvent.UNKNOWN_WARNING_TYPE)
         } else {
             event
@@ -73,17 +67,26 @@ class R4Deserializer {
 
     private fun parseStateMessage(raw: String): Result<R4Message> =
         runCatching {
-            val msg: R4Message = json.decodeFromString<R4StateMessage>(raw)
+            val msg: R4Message = R4Json.decodeFromString<R4StateMessage>(raw)
             Result.success(msg)
         }.getOrElse { e -> Result.failure(e) }
 
     private fun isKnownWarningType(type: String): Boolean =
         type == R4WarningEvent.WARNING_TYPE_NLOS_OBSTRUCTION || type == R4WarningEvent.UNKNOWN_WARNING_TYPE
 
+    private fun safeLogW(tag: String, message: String, throwable: Throwable? = null) {
+        runCatching {
+            if (throwable != null) Log.w(tag, message, throwable) else Log.w(tag, message)
+        }.onFailure {
+            println("[$tag] WARN: $message")
+        }
+    }
+
     companion object {
         private const val TAG = "R4Deserializer"
     }
 }
+
 
 /** Thrown when the R4 packet's `type` field is not "warning" or "state". */
 class UnknownMessageTypeException(type: String) :
