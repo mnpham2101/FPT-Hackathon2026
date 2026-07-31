@@ -9,13 +9,13 @@
 - V2X ECU application: R7 radio adapter seam, R8 modem stub FSM with fault injection, R9 Rx pipeline (decode → validate → dedupe → forward R2), and the start of the R18 JSONL evidence stream.
 - Deployment shape of this node for R5/R6: image layout, entrypoint, blueprint node-config changes, and the R6 **traffic capture** design (tcpdump, per user directive 2026-07-30).
 - Phase 1 interim observation point at the ADA node (its real code is Phase 2) so the "R2 observed at the ADA ECU" acceptance is checkable.
-- **Prerequisite:** the Phase 0 contract layer ([phase0-contract-freeze-hld.md](../../requirements/phase0-contract-freeze-hld.md)) — codec seam `src/codec/`, R2 binding `src/contracts/`, golden vectors, `CMakeLists.txt` baseline. Phase 1 extends that tree; it does not redefine it.
+- **Prerequisite:** the Phase 0 contract layer ([phase0-contract-freeze-hld.md](../../plans/doc/phase0-contract-freeze-hld.md)) — codec seam `src/codec/`, R2 binding `src/contracts/`, golden vectors, `CMakeLists.txt` baseline. Phase 1 extends that tree; it does not redefine it.
 
 ## 2. Sourced research notes
 
 | Note | Adopted |
 |---|---|
-| [scenario-player-v2x-callflow-messages.md](../../Scenario_Player/doc/research_notes/scenario-player-v2x-callflow-messages.md) | §2 call flow (§A bring-up produces no wire traffic; §B is the only live flow; wire is unidirectional) — this HLD's runtime flow is that note made concrete. Conventions F1/F6/F7 (derivations in R9, above the codec seam) and F9 (reject + count) placed per [Phase 0 HLD §4](../../requirements/phase0-contract-freeze-hld.md). |
+| [scenario-player-v2x-callflow-messages.md](../../Scenario_Player/doc/research_notes/scenario-player-v2x-callflow-messages.md) | §2 call flow (§A bring-up produces no wire traffic; §B is the only live flow; wire is unidirectional) — this HLD's runtime flow is that note made concrete. Conventions F1/F6/F7 (derivations in R9, above the codec seam) and F9 (reject + count) placed per [Phase 0 HLD §4](../../plans/doc/phase0-contract-freeze-hld.md). |
 | [baseline-connectivity-smoke-test.md](../../plans/doc/research_notes/baseline-connectivity-smoke-test.md) | Capture technique (`[CAP]`-prefixed tcpdump in-container, `NET_RAW` via flat `capabilities`, `/proc/net/dev` fallback), View-Log-as-retrieval model, and the `tools/netcheck/` image reused as the Phase 1 ADA-side R2 sink (D6). Open items O1–O3 inherited (§11). |
 
 ## 3. Design decisions
