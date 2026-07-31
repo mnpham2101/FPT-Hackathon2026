@@ -275,7 +275,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 4.0.1.6 + 4.0.4.3. **Commit:** `[4.0.4.4] test: add ADA-side R4 additive-version test`
 
-**Status:** implemented 2026-07-31, awaiting CI — D4 fixture parses through the unmodified 4.0.4.3 binding (unknown `warningType` preserved, `schemaVersion` 2 carried, `hazardDetail` ignored and absent from re-emit); copy cmp-identical; `ada-core-build` CI job is the verification authority (no local cmake).
+**Status:** done 2026-07-31 — D4 fixture parses through the unmodified 4.0.4.3 binding (unknown `warningType` preserved, `schemaVersion` 2 carried, `hazardDetail` ignored and absent from re-emit); copy cmp-identical; verified green on CI run 30602717230 (`ada-core-build`).
 
 ### `3.0.4.5` — Detector Python R3 binding + Python-side fixture validation *(agent)*
 
