@@ -287,7 +287,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 2.0.3.2 + 3.0.4.2 + 4.0.4.3 + 4.0.4.4. **Commit:** `[3.0.4.5] feat: add detector R3 JSONL binding and Python fixture validation`
 
-**Status:** implemented 2026-07-31, locally green — stdlib dataclass+JSONL binding (`object_class` ↔ `"class"`); pytest passes locally (Python 3.14, jsonschema 4.26): JSONL round-trip + all five node-local samples validate against the three schemas (r4 `$ref` via referencing.Registry); awaiting CI `python-tests` confirmation.
+**Status:** done 2026-07-31 — stdlib dataclass+JSONL binding (`object_class` ↔ `"class"`); pytest green locally (Python 3.14, jsonschema 4.26: JSONL round-trip + all five node-local samples validate against the three schemas, r4 `$ref` via referencing.Registry) and on CI run 30602717230 (`python-tests`).
 
 ---
 
