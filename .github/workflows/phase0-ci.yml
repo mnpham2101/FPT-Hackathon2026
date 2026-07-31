@@ -153,10 +153,16 @@ jobs:
       # Live host per the O1 probe (2026-07-31): registry.carsky.io 502s, hackathon-2 answers.
       REGISTRY_HOST: registry.hackathon-2.carsky.io
       IMAGE: m1-netcheck:latest
+      # amd64 + arm64: the deploy of 2026-07-31 stuck in Provisioning pulling the amd64-only
+      # image while the cluster's runnable evidence (aarch64 AAOS skycraft, arm64 team images
+      # Running) points at arm64 nodes - a multi-arch manifest works on either.
+      PLATFORMS: linux/amd64,linux/arm64
     steps:
       - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
       - name: Build netcheck image (smoke-test M3)
-        run: docker build -t "$IMAGE" tools/netcheck/
+        run: docker buildx build --platform "$PLATFORMS" -t "$IMAGE" tools/netcheck/
       - name: Push to CarSky Zot registry (M2+M4; skips until the secret exists)
         env:
           ZOT_KEY: ${{ secrets.CARSKY_ZOT_API_KEY }}
@@ -170,6 +176,5 @@ jobs:
             exit 0
           fi
           echo "$ZOT_KEY" | docker login "$REGISTRY_HOST" -u "$REGISTRY_USER" --password-stdin
-          docker tag "$IMAGE" "$REGISTRY_HOST/$IMAGE"
-          docker push "$REGISTRY_HOST/$IMAGE"
-          echo "::notice::pushed $REGISTRY_HOST/$IMAGE"
+          docker buildx build --platform "$PLATFORMS" -t "$REGISTRY_HOST/$IMAGE" --push tools/netcheck/
+          echo "::notice::pushed $REGISTRY_HOST/$IMAGE ($PLATFORMS)"
