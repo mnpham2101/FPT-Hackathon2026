@@ -181,6 +181,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 1.0.2.2. **Commit:** `[1.0.2.3] feat: implement VanetzaCpmCodec over r2::Cpm`
 
+**Status:** done 2026-07-31 — commit `0c99a38`; verified green on CI run 30605356736 (`v2x-core-build`, all steps Configure/Build/Test success; 31 s job — the `_deps` cache restored the ASN.1 objects, so only the new TU compiled). Every ASN.1 member was verified against the pinned headers (commit `fb6c5510`, tag v26.06) before being written — three CDD shapes differ from the naive assumption and are recorded here for later consumers: `PerceivedObject.velocity` is a CHOICE `Velocity3dWithConfidence*` (cartesian arm selected), `PerceivedObject.classification` is an `ObjectClassDescription*` SEQUENCE OF, and `ReferencePosition.positionConfidenceEllipse` is a `PosConfidenceEllipse`; `objectId` is an OPTIONAL pointer; `TimestampIts` is `INTEGER_t`, so `referenceTime` goes through `asn_uint642INTEGER`/`asn_INTEGER2uint64`. Unsent-mandatory fields use CDD named `*_unavailable` values (never magic literals) — these are now locked by the golden vectors. F9 violations (`|measurementDeltaTime| > 2047`, including the wire-legal −2048) throw `std::out_of_range`; `decode` guards null/empty and catches everything, returning `DecodeError`. F2 grep over `V2X_ECU/src/` is clean (the r2 spelling `vanetza::asn1::r2::Cpm` cannot match the banned token).
+
 ### `1.0.2.4` — gv_tool + golden-vector corpus generation *(agent)*
 
 **Objective:** create `V2X_ECU/tools/golden_vectors/main.cpp` (CMake target `gv_tool`, build-only, never shipped in a node image) and generate + commit the 6-case corpus into `contracts/golden-vectors/`.
