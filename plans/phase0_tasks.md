@@ -217,6 +217,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 2.0.1.3 + 1.0.2.1. Parallel with the 1.0.2.x codec chain. **Commit:** `[2.0.3.1] feat: add V2X-side R2 binding with round-trip test`
 
+**Status:** done 2026-07-31 — commit `f702cda`; verified green on CI run 30603927615 (`v2x-core-build`). `v2x::contracts::R2Message` producer binding, handwritten independently of the ADA sibling (no cross-node include) but mirroring its CI-green `std::optional<double>` idiom: `sender.speed` (F1) and `object.confidence` (F6) always emit the key, `null` when `nullopt`. Both copies `cmp`-identical; tests `StructAndWireEquality` · `FieldSpotChecks` (distance 25.03 = F7 hypot) · `NullSenderSpeedRoundTrips`.
+
 ### `2.0.3.2` — ADA-side R2 binding + round-trip test *(agent)*
 
 **Objective:** create `ADA_ECU/src/contracts/r2_message.{hpp,cpp}` (nlohmann binding, consumer side) + `ADA_ECU/tests/contracts/test_r2_roundtrip.cpp`.
