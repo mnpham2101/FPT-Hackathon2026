@@ -57,14 +57,14 @@ Each job starts on a clean machine, so it checks the code out first (`actions/ch
 
 **Credentials.** Sign in to the Zot web UI through **A8 Keycloak** (single sign-on), then create an **API key** (`zak_…`, shown once). That key is the *password* for `docker login`; the username is the registry account. Full procedure: [zot-registry-api-key.md](zot-registry-api-key.md).
 
-**Host caveat:** use `registry.hackathon-2.carsky.io`. The `registry.carsky.io` host answers 502 and every reference to it fails as if the image did not exist.
+**Host caveat:** `registry.hackathon-2.carsky.io` is the verified **push** host from outside (CI, dev machine); `registry.carsky.io` answers 502 externally. Which address a **node must pull from** is a separate, unresolved question — see the M7 image row and [phase0-smoke-test-run.md § Open blocker](../../plans/doc/phase0-smoke-test-run.md).
 
-**How the push works from GitHub Actions** — three commands, run by the `netcheck-image` job:
+**How the push works from GitHub Actions** — run by the `netcheck-image` job (buildx publishes a multi-arch amd64+arm64 manifest, attestations disabled so older container runtimes can resolve it):
 
 ```
 docker login <registry-host> -u <account> --password-stdin   # key supplied from the secret
-docker tag  m1-netcheck:latest  <registry-host>/m1-netcheck:latest
-docker push <registry-host>/m1-netcheck:latest
+docker buildx build --platform linux/amd64,linux/arm64 --provenance=false --sbom=false \
+  -t <registry-host>/m1-netcheck:latest --push tools/netcheck/
 ```
 
 The key lives only in GitHub Secrets and is never written to the repository.
@@ -243,7 +243,7 @@ Every row below cost real time on the first run (2026-07-31). They are ordered b
 | # | Mistake | Symptom | Fix |
 |---|---|---|---|
 | 1 | **Deployed before doing M7.** The clone carried the baseline's ECU images (`registry.carsky.io/m1-v2x-ecu:latest` …), which do not exist yet. | All three container nodes stuck in `Provisioning`; the bridge and IVI reach `Running`. Log API reports `waiting to start: trying and failing to pull image`. | Apply M7 to all three nodes, delete the failed deployment, redeploy. |
-| 2 | **Wrong registry host** — `registry.carsky.io` instead of `registry.hackathon-2.carsky.io`. | Identical to #1: the pull fails and the node never starts. | Use the `hackathon-2` host everywhere: CI, image tags, node config. |
+| 2 | **Wrong registry host in CI** — `registry.carsky.io` instead of `registry.hackathon-2.carsky.io` for the *push*. | The push itself fails (502) or lands nowhere the catalog shows. | Push to the `hackathon-2` host. ⚠️ For the *node config* the correct pull host is still unresolved — `hackathon-2` there also failed to pull (see M7 and the [open blocker](../../plans/doc/phase0-smoke-test-run.md)); do not treat this row as proof that host works in blueprints. |
 | 3 | **Typo in an address** — `NEXT_HOP_HOST = 10.99.0.2` instead of `10.99.0.12`. | Node runs and logs, but `[ERR] no route to 10.99.0.2:47200`; the chain stops at that hop, so C5 never appears downstream. | Re-read each address digit by digit; they differ by one character. |
 | 4 | **`ROLE` in uppercase** (`V2X` instead of `v2x`). | Runs, but log lines and the datagram stamp read `\|V2X`, so the expected `seq=0\|bench\|v2x` never matches and C5 cannot be confirmed by eye. | Lowercase: `bench`, `v2x`, `ada`. |
 | 5 | **Absolute command path** — `/entrypoint.sh` instead of `./entrypoint.sh`. | Container exits immediately; restart count climbs. The script lives in the image workdir `/app`, not at the filesystem root. | Use `./entrypoint.sh`, or clear the field and let the image's own default run. |
@@ -257,8 +257,8 @@ Every row below cost real time on the first run (2026-07-31). They are ordered b
 
 | Thing | Value |
 |---|---|
-| Registry host | `registry.hackathon-2.carsky.io` |
-| Image | `registry.hackathon-2.carsky.io/m1-netcheck:latest` |
+| Registry host (push) | `registry.hackathon-2.carsky.io` |
+| Image (node pull reference) | ⚠️ unresolved — `registry.hackathon-2.carsky.io/m1-netcheck:latest` fails to pull; candidates in [the open blocker](../../plans/doc/phase0-smoke-test-run.md) |
 | GitHub secret | `CARSKY_ZOT_API_KEY` (`zak_…`) |
 | Node addresses | bench `.10` · V2X `.11` · ADA `.12` · IVI `.13` on `10.99.0.0/24` |
 | Ports | bench→V2X `47100` · V2X→ADA `47200` · ADA→IVI `47300` |

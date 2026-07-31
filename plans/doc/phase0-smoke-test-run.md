@@ -36,9 +36,17 @@ Evidence gathered:
 - Anonymous pull is refused (401) for **every** repository, ours and other teams' alike, so the cluster must pull with a credential we do not control.
 - The one known-working platform blueprint ([blueprint-KIS.json](../../requirements/development-platform-doc/blueprint-KIS.json)) references images as **`localhost:5000/<namespace>/<image>:tag`**, not by public hostname; every other repository in the registry is namespaced `<team>/<image>` while ours sits at the root.
 
-**Hypothesis:** the address used to *push* (external ingress `registry.hackathon-2.carsky.io`) is not the address a node must use to *pull*. Candidates, in order: `registry.carsky.io/m1-netcheck:latest` (the platform doc's own convention and the baseline's; its 502 is on the external ingress and may not affect in-cluster resolution) → `localhost:5000/m1-netcheck:latest` (matches KIS exactly) → a namespaced path such as `kis/m1-netcheck:latest`, which would also require re-pushing under that path.
+**Hypothesis:** the address used to *push* (external ingress `registry.hackathon-2.carsky.io`) is not the address a node must use to *pull*. Candidates, in order: `localhost:5000/m1-netcheck:latest` (matches the working KIS blueprint exactly) → `registry.carsky.io/m1-netcheck:latest` (the platform doc's own convention and the baseline's; its 502 is on the external ingress and may not affect in-cluster resolution). A namespaced path alone (`kis/m1-netcheck` via the public host) is **weakened** by the cross-team evidence below — Vital-Guard's image is namespaced and fails identically.
 
-**Action:** confirm the required pull reference with the organizers before further redeploys; correct [deploy-walkthrough-netcheck.md](../../requirements/car-sky-guide/deploy-walkthrough-netcheck.md) §M7 and this file once known.
+**Eliminated live (2026-07-31, attempts 3–4):**
+
+- **Architecture** — re-pushed as a multi-arch amd64+arm64 manifest list (CI `896bc7a`); fresh pods (restart recreated them) still failed.
+- **Buildx attestations** — re-pushed with `--provenance=false --sbom=false` (CI `e55f0ec`), verified a clean two-entry index in the registry; still failed.
+- **Ours-only problem** — Vital-Guard's `DMS AI Engine` node fails with the byte-identical `trying and failing to pull image` on their own namespaced image, while every non-registry node type (script-node, can-bus, skycraft, eth-bridge, kuksa) runs fine platform-wide. No container node demonstrably pulling from this Zot registry has been observed running.
+
+Also found while diagnosing: `POST /deployments/{roomId}/restart[/{node}]` returns 500 `INTERNAL_ERROR` (though pods were observed recreated afterwards) and `container-exec` returns `Conduit service not configured` — both platform-side gaps, recorded in [carsky-rest-api-blueprint.md](../../requirements/car-sky-guide/carsky-rest-api-blueprint.md).
+
+**Action:** (a) cheap UI test — point one node's image at `localhost:5000/m1-netcheck:latest`, then `registry.carsky.io/m1-netcheck:latest`, redeploying between; (b) escalate to the BTC organizers with the evidence above (image present + multi-arch, anonymous pull 401, second team failing identically) asking how Rooms authenticate pulls and which reference blueprints must use. Correct [deploy-walkthrough-netcheck.md](../../requirements/car-sky-guide/deploy-walkthrough-netcheck.md) §M7 and this file once known.
 
 ## M5–M9 — blueprint config + deploy (USER-MANUAL, subtask `5.0.8.3`)
 
