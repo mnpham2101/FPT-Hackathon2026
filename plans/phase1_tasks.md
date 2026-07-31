@@ -2,7 +2,7 @@
 
 > **Authority & context:**
 > - **Phase content:** [milestone1.md § Phase 1](milestone1.md#phase-1--comms-bring-up-v2x-ecu--scenario-player-r5r9-r11--r10-moved-to-the-future-plan) — its eight acceptance checkboxes are the phase output.
-> - **Design (V2X ECU):** [phase1-v2x-ecu-comms-hld.md](../V2X_ECU/doc/phase1-v2x-ecu-comms-hld.md) (commits `3d0c655` + `f823d08`) — decisions D1–D6, §4 folder map, §6 env table, §9 deployment shape. Every V2X_ECU path below is cited from its §4.
+> - **Design (V2X ECU):** [phase1-v2x-ecu-comms-hld.md](../V2X_ECU/doc/phase1-v2x-ecu-comms-hld.md) (commits `3d0c655` + `f823d08` + `dda1566`) — decisions D1–D7 (D4 amended: payload-carrying events; D7: bench↔V2X comms check), §4 folder map, §6 env table, §9 deployment shape. Every V2X_ECU path below is cited from its §4; the D7 script pair lives at repo-root `tools/comms_check/` (user-mandated location, netcheck precedent).
 > - **Design (Scenario Player):** [phase1-scenario-player-hld.md](../Scenario_Player/doc/phase1-scenario-player-hld.md) (commits `dc16c81` + `03805dc`) — decisions D1–D4, §3 folder map, §5 config. Every Scenario_Player path below is cited from its §3.
 > - **Requirements:** [m1-cooperative-awareness.md §2](../requirements/m1-cooperative-awareness.md) R2, R5–R9, R11, R18 — referenced by number, never restated. **R10 is deferred**: the R7 seam declares `send`, nothing calls it, no subtask implements it.
 > - **Phase 0 baseline (do not re-plan):** [phase0_tasks.md](phase0_tasks.md) § Output — contracts frozen, codec seam + R2 binding + golden vectors + `check_sync.py` landed, smoke test C1–C5 green on `trial2_minh`, CI lanes live.
@@ -13,7 +13,7 @@
 
 ## Phase 1 overview
 
-**Objective.** Bench CPMs reach the deployed Room and decode into R2 messages at the ADA ECU — receive-only, ego broadcasts nothing. Deliverables: the V2X ECU application (R7 adapter seam, R8 modem-stub FSM + fault injection, R9 Rx pipeline, R18 JSONL event stream, R6 tcpdump capture), the Scenario Player application (R11 scenario-configurable CPM generation over the D1 `cpm_encode` helper), both node images (R5), and the live deploy + verification with the netcheck sink on the ADA node (D6).
+**Objective.** Bench CPMs reach the deployed Room and decode into R2 messages at the ADA ECU — receive-only, ego broadcasts nothing. Deliverables: the V2X ECU application (R7 adapter seam, R8 modem-stub FSM + fault injection, R9 Rx pipeline, R18 JSONL event stream, R6 tcpdump capture), the Scenario Player application (R11 scenario-configurable CPM generation over the D1 `cpm_encode` helper), both node images (R5), the D7 bench↔V2X comms-check script pair + CI lane, and the live deploy + verification with the netcheck sink on the ADA node (D6).
 
 **Input (must exist before start — all present as of 2026-08-01):**
 
@@ -31,6 +31,7 @@
 - [ ] Different bench scenario configurations produce observably different message streams (R11).
 - [ ] R2 messages observed at the ADA ECU carrying decoded bench-scenario values, not constants (R2).
 - [ ] **Demo:** Wireshark capture of V2X PDUs correctly sent/received at the V2X ECU interface.
+- [ ] Scripted send/capture between bench and V2X ECU passes; V2X `[EVT]` logs demonstrate message receive (`rx_datagram`), event raised (`decode_ok` with decoded CpmContent JSON), and CPM deserialized to JSON (`r2_forwarded` with the R2 body) — per HLD D7.
 
 **Suggested branch (suggestion only — creation is the orchestrator/user's call):** `feat/phase1-comms-bringup` — one branch for the whole phase; implementation subtasks commit onto it. Docs-only subtasks (this plan file, `5.1.11.1`, group 1.10 evidence records) follow the repo convention of committing straight to `main`.
 
@@ -42,7 +43,7 @@
 | *car-sky* | executed by the [[car-sky]] agent (deploy preflight → build/push/deploy/verify); planner keeps the ID and done-tracking. **Not spawnable this session — planned and tracked here, execution deferred; never blocks the code groups** |
 | *USER-MANUAL* | Nydus UI steps performed by the user; the plan tracks them; the evidence-record commit is made by the orchestrating session after the user confirms |
 
-**Implementation-subagent specification** (inherited by every *agent* subtask): general-purpose agent; tools Read/Grep/Glob/Write/Edit/Bash; writes ONLY inside the node folder its subtask names (plus its own `**Status:**` line in this file and, where the subtask explicitly says so, `contracts/`, `tools/netcheck/`, or `.github/workflows/`); reads the target folder's `doc/` first; inherits § Subtask discipline as its definition of done; makes the atomic commit itself with the exact commit message from the brief plus trailer `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>`; never pushes — the orchestrator pushes and watches CI. Language best practice is part of done: C++17 core guidelines / RAII / no raw owning pointers; Python type hints + dataclasses + no globals; tests deterministic.
+**Implementation-subagent specification** (inherited by every *agent* subtask): general-purpose agent; tools Read/Grep/Glob/Write/Edit/Bash; writes ONLY inside the node folder its subtask names (plus its own `**Status:**` line in this file and, where the subtask explicitly says so, `contracts/`, `tools/netcheck/`, `tools/comms_check/`, or `.github/workflows/`); reads the target folder's `doc/` first; inherits § Subtask discipline as its definition of done; makes the atomic commit itself with the exact commit message from the brief plus trailer `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>`; never pushes — the orchestrator pushes and watches CI. Language best practice is part of done: C++17 core guidelines / RAII / no raw owning pointers; Python type hints + dataclasses + no globals; tests deterministic.
 
 ### Subtask discipline (applies to every subtask below)
 
@@ -64,6 +65,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 | R7 import gate | `python V2X_ECU/tools/check_transport_imports.py` → exit 0 | local + CI `contracts-gate` step (7.1.3.5) |
 | Node images | `docker buildx build --platform linux/arm64 --provenance=false --sbom=false -t <tag> <folder>/` | CI `v2x-ecu-image` / `scenario-player-image` (5.1.8.2) |
 | `tools/netcheck/` | `python -m py_compile tools/netcheck/netcheck.py` | local |
+| `tools/comms_check/` | `python -m py_compile tools/comms_check/send_cpm.py tools/comms_check/check_v2x_log.py` | local + CI `v2x-comms-check` (9.1.12.3) |
 
 ---
 
@@ -137,8 +139,9 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 **Scope:**
 
 - Event vocabulary exactly D4: `rx_datagram`, `decode_ok`, `decode_reject`, `validate_reject`, `dedupe_drop`, `r2_forwarded`, `stub_transition`, `fault_injected`, `recovery` — each line carries event name, monotonic + epoch timestamps, and the current per-stage counters.
+- **Payload-carrying events (D4 as amended 2026-08-01, consumed by D7):** `decode_ok` embeds the decoded `CpmContent` as JSON; `r2_forwarded` embeds the forwarded R2 JSON body — the `[EVT]` stream alone demonstrates receive → event raised → CPM deserialized to JSON. `check_v2x_log.py` (9.1.12.2) parses these fields, so their names freeze here.
 - Sink: stdout always (flushed per line — CarSky View Log is the live window); additionally append to `EVENT_LOG_PATH` when non-empty. nlohmann/json for serialization (Phase 0 pin).
-- Test `tests/log/test_event_log.cpp`: line shape (parseable JSON after the `[EVT]` prefix), counter accumulation, file sink writes when path set (temp dir).
+- Test `tests/log/test_event_log.cpp`: line shape (parseable JSON after the `[EVT]` prefix), counter accumulation, embedded `decode_ok`/`r2_forwarded` payloads present and parseable, file sink writes when path set (temp dir).
 
 **Acceptance:** V2X build + ctest green on CI.
 
@@ -537,15 +540,15 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 5.1.10.1. **Commit:** `[5.1.10.2] docs: record phase1 blueprint config and Running evidence`
 
-### [ ] `2.1.10.3` — USER-MANUAL: R2 observed at the ADA ECU
+### [ ] `2.1.10.3` — USER-MANUAL: R2 observed at the ADA ECU + scripted `[EVT]`-chain check
 
-**Objective:** close the R2 box live: the ADA sink's `[RX]` lines show R2 JSON carrying decoded bench-scenario values, not constants.
+**Objective:** close the R2 box live and the on-platform half of the D7 box: the ADA sink's `[RX]` lines show R2 JSON carrying decoded bench-scenario values, and the V2X `[EVT]` stream passes `check_v2x_log.py`.
 
-**Scope:** V2X node View Log — `[EVT]` `stub_transition` bring-up sequence (the R8 scripted-call-flow live evidence), then `decode_ok`/`r2_forwarded` at the scenario cadence; ADA node View Log — `[RX]` bodies (512-char preview) showing `object.distance` **changing over time** per `default.yaml`'s approach kinematics. Optional supplementary R8 evidence: redeploy V2X with `FAULT_PLAN=init_fail`, observe `fault_injected`/`recovery`/retry lines, restore `none`.
+**Scope:** save the V2X node View Log export and run `python tools/comms_check/check_v2x_log.py <saved.log>` in stream mode (D7 on-platform — bench = the live Scenario Player): exit 0 proves `rx_datagram` → `decode_ok` (CpmContent JSON) → `r2_forwarded` (R2 JSON) per received message — **replaces the manual eyeball check of the Rx chain**. Still read directly: the `[EVT]` `stub_transition` bring-up sequence (the R8 scripted-call-flow live evidence) and the ADA node View Log `[RX]` bodies (512-char preview) showing `object.distance` **changing over time** per `default.yaml`'s approach kinematics. Optional supplementary R8 evidence: redeploy V2X with `FAULT_PLAN=init_fail`, observe `fault_injected`/`recovery`/retry lines, restore `none`.
 
-**Acceptance:** both log excerpts recorded in `plans/doc/phase1-comms-run.md`; evidence commit by the orchestrating session.
+**Acceptance:** `check_v2x_log.py` exit 0 on the saved export with its output recorded, plus the bring-up and ADA `[RX]` excerpts, in `plans/doc/phase1-comms-run.md`; evidence commit by the orchestrating session.
 
-**Dependencies:** after 5.1.10.2. **Commit:** `[2.1.10.3] docs: record R2-at-ADA live evidence`
+**Dependencies:** after 5.1.10.2 + 9.1.12.2. **Commit:** `[2.1.10.3] docs: record R2-at-ADA live evidence`
 
 ### [ ] `11.1.10.4` — USER-MANUAL: scenario swap → observably different streams
 
@@ -583,6 +586,42 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 ---
 
+## Task Group 1.12 — Bench↔V2X comms check (serves R6, R9; HLD D7)
+
+> The D7 script pair + CI lane — scripted acceptance that messages sent between bench and V2X ECU are received, raise events, and deserialize to JSON. Location `tools/comms_check/` at the repo root is user-mandated (cross-node test equipment spanning bench and V2X ECU — the `tools/netcheck/` precedent) and explicitly in these subtasks' write scope. Test equipment only — never shipped in a node image.
+
+### [ ] `6.1.12.1` — Golden-vector UDP sender `tools/comms_check/send_cpm.py` *(agent)*
+
+**Objective:** the bench-side send stand-in for local/CI runs (D7): send each golden-vector `.uper` payload as one UDP datagram to a target `host:port`.
+
+**Scope:** Python 3 stdlib only; target host/port and corpus directory (default `contracts/golden-vectors/`) from CLI args/env — no hardcoded peers (governing principle 5); deterministic case order + configurable inter-send delay; one stdout line per sent vector (case name, byte length) for downstream correlation. On-platform the live sender is the Scenario Player — this script never deploys.
+
+**Acceptance:** `python -m py_compile tools/comms_check/send_cpm.py` passes; loopback self-check — a scratch UDP listener receives all six vectors byte-identical (stdlib-only, runs on the Windows host; evidence in the Status line).
+
+**Dependencies:** none. **Commit:** `[6.1.12.1] feat: add golden-vector UDP sender for the comms check`
+
+### [ ] `9.1.12.2` — `[EVT]`-stream assertion `tools/comms_check/check_v2x_log.py` *(agent)*
+
+**Objective:** assert the D7 receive-evidence chain from a V2X ECU `[EVT]` stream: per message, `rx_datagram` (received) → `decode_ok` carrying the decoded `CpmContent` JSON (event raised, deserialization shown) → `r2_forwarded` carrying the R2 JSON body; non-zero exit naming the first missing link.
+
+**Scope:** Python 3 stdlib; input = file path or stdin — accepts CI-captured stdout **or** a saved View Log export (the smoke-test View-Log-as-retrieval model), tolerating interleaved `[CAP]`/non-`[EVT]` lines; two modes: **expected-vector mode** (CI — given the golden corpus dir, asserts the chain per sent case and cross-checks the embedded `decode_ok` content against the golden `.json`) and **stream mode** (on-platform — every observed `rx_datagram` must complete the chain; minimum-count threshold arg). Line shape = 18.1.2.3's amended-D4 output.
+
+**Acceptance:** `python -m py_compile tools/comms_check/check_v2x_log.py` passes; demonstrated exit 0 on a synthetic conforming log and non-zero on logs missing each link kind, both modes (evidence in the Status line).
+
+**Dependencies:** after 18.1.2.3 (the embedded-payload field names freeze there). **Commit:** `[9.1.12.2] feat: add EVT-stream assertion script for the comms check`
+
+### [ ] `9.1.12.3` — CI lane `v2x-comms-check` *(agent)*
+
+**Objective:** the CI-side closure of the D7 acceptance box: build `v2x_ecu`, run it loopback, send golden vectors, assert the `[EVT]` chain.
+
+**Scope:** `.github/workflows/phase0-ci.yml` (explicitly in write scope): job `v2x-comms-check` — boost install + the `v2x-core-build` `_deps` cache (same key incl. the 11.1.1.1 fragment hash); build the `v2x_ecu` target; start a stdlib UDP sink standing in for ADA; run `v2x_ecu` in the background with env `LISTEN_PORT`/`ADA_ECU_HOST=127.0.0.1`/`ADA_ECU_PORT`/`FAULT_PLAN=none`, stdout captured to a file; `send_cpm.py` against the listen port; stop the app; `check_v2x_log.py` in expected-vector mode over the captured stdout — the job fails on any non-zero exit.
+
+**Acceptance:** lane green on the pushed branch.
+
+**Dependencies:** after 8.1.5.1 + 6.1.12.1 + 9.1.12.2. **Commit:** `[9.1.12.3] chore: add v2x-comms-check CI lane`
+
+---
+
 ## Execution order & parallelism
 
 Dependencies are real (files, frozen interfaces, CI lanes) — not default assumptions. At run time everything executes sequentially in one working tree (§ Subtask discipline); the lanes below are the logical structure. The two node folders are **logically parallel tracks** — they share only the frozen contracts and the synced codec sources.
@@ -606,13 +645,14 @@ Lane P (Scenario_Player)
   image:       5.1.7.3 (needs 11.1.7.1 + 11.1.6.8 + 5.1.8.2)
 
 Sink       2.1.9.1                                    (anytime before 5.1.10.1)
+D7 check   6.1.12.1 (anytime) ∥ 9.1.12.2 (after 18.1.2.3) ──► 9.1.12.3 (after 8.1.5.1 + both scripts)
 
 Lane D (deploy — deferred, never blocks code)
-  5.1.10.1 (car-sky; needs 5.1.5.4 + 5.1.7.3 + 2.1.9.1) ──► 5.1.10.2 (USER) ──► 2.1.10.3 ──► 11.1.10.4
+  5.1.10.1 (car-sky; needs 5.1.5.4 + 5.1.7.3 + 2.1.9.1) ──► 5.1.10.2 (USER) ──► 2.1.10.3 (also needs 9.1.12.2) ──► 11.1.10.4
                                                                         └─────► 6.1.10.5 (∥ with 2.1.10.3)
 ```
 
-**Recommended runtime order (single tree):** 5.1.11.1 → 11.1.8.1 → 5.1.8.2 → 7.1.3.5 → 11.1.1.1 → 8.1.2.1 → 7.1.2.2 → 18.1.2.3 → 2.1.2.4 → 7.1.3.1 → 7.1.3.6 → 8.1.3.2 → 8.1.3.3 → 7.1.3.4 → 9.1.4.1 → 9.1.4.2 → 9.1.4.3 → 9.1.4.4 → 9.1.4.5 → 8.1.5.1 → 6.1.5.2 → 6.1.5.3 → 5.1.5.4 → 11.1.6.1 → 11.1.6.2 → 11.1.6.3 → 11.1.6.4 → 11.1.6.5 → 11.1.6.6 → 11.1.6.7 → 11.1.6.8 → 11.1.7.1 → 11.1.7.2 → 5.1.7.3 → 11.1.1.2 → 2.1.9.1 → group 1.10 when unblocked.
+**Recommended runtime order (single tree):** 5.1.11.1 → 11.1.8.1 → 5.1.8.2 → 7.1.3.5 → 11.1.1.1 → 8.1.2.1 → 7.1.2.2 → 18.1.2.3 → 2.1.2.4 → 7.1.3.1 → 7.1.3.6 → 8.1.3.2 → 8.1.3.3 → 7.1.3.4 → 9.1.4.1 → 9.1.4.2 → 9.1.4.3 → 9.1.4.4 → 9.1.4.5 → 8.1.5.1 → 6.1.12.1 → 9.1.12.2 → 9.1.12.3 → 6.1.5.2 → 6.1.5.3 → 5.1.5.4 → 11.1.6.1 → 11.1.6.2 → 11.1.6.3 → 11.1.6.4 → 11.1.6.5 → 11.1.6.6 → 11.1.6.7 → 11.1.6.8 → 11.1.7.1 → 11.1.7.2 → 5.1.7.3 → 11.1.1.2 → 2.1.9.1 → group 1.10 when unblocked.
 
 ## Acceptance traceability
 
@@ -626,6 +666,7 @@ Lane D (deploy — deferred, never blocks code)
 | Different scenario configs → observably different streams (R11) | 11.1.6.2 · 11.1.6.4 (model) · 11.1.10.4 (live) — via codec path 11.1.7.1/11.1.7.2 |
 | R2 at the ADA ECU with decoded bench values (R2) | 9.1.4.3 · 2.1.2.4 · 2.1.9.1 · 2.1.10.3 |
 | **Demo:** Wireshark capture at the V2X interface | 6.1.5.2 · 6.1.5.3 · 6.1.10.5 (D5 dissection caveat noted) |
+| Scripted send/capture bench↔V2X; logs demonstrate receive → event → CPM-to-JSON (D7) | 6.1.12.1 · 9.1.12.2 · 9.1.12.3 (CI) · 18.1.2.3 (payload-carrying events) · 2.1.10.3 (on-platform) |
 | *(phase task, no box)* R18 evidence stream starts | 18.1.2.3 · `[EVT]` emission 9.1.4.4/8.1.5.1 · bench `[TX]` 11.1.6.7 |
 
 ## Open items & flags (no Phase 1 subtask may silently close them)
@@ -642,4 +683,4 @@ Lane D (deploy — deferred, never blocks code)
 
 ---
 
-*Created 2026-08-01 by project-planner from the two Phase 1 HLDs and [milestone1.md § Phase 1](milestone1.md#phase-1--comms-bring-up-v2x-ecu--scenario-player-r5r9-r11--r10-moved-to-the-future-plan). 11 task groups, 41 subtasks: 36 agent-implemented, 1 car-sky-executed (deferred), 4 user-manual.*
+*Created 2026-08-01 by project-planner from the two Phase 1 HLDs and [milestone1.md § Phase 1](milestone1.md#phase-1--comms-bring-up-v2x-ecu--scenario-player-r5r9-r11--r10-moved-to-the-future-plan); amended same day per HLD D7 (`dda1566`): group 1.12 comms check, ninth acceptance box, payload-carrying `[EVT]` events. 12 task groups, 44 subtasks: 39 agent-implemented, 1 car-sky-executed (deferred), 4 user-manual.*
