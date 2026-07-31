@@ -315,6 +315,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 1.0.1.2 + 1.0.2.4 (golden `.json` fixtures exist). **Commit:** `[1.0.5.1] feat: add bench CpmContent dataclass with golden-vector round-trip test`
 
+**Status:** blocked 2026-07-31 — not started, same blocker as 1.0.2.5: the golden `.json` side it must copy into `Scenario_Player/tests/fixtures/golden/` and round-trip against exists only as CI artifact `golden-vectors` (id `8783540070`, run 30605811757), not in the repo. Deliberately **not** split into a fixture-less partial subtask — the round-trip against every golden `.json` is its acceptance. Note this lane is otherwise locally verifiable (pure Python, `python -m pytest Scenario_Player/tests`), so it should be first to run once the corpus lands.
+
 ---
 
 ## Task Group 0.6 — IVI Kotlin R4/R3 binding (serves R4) — reconciled with phase5
