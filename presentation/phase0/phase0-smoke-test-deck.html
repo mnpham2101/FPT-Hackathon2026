@@ -24,28 +24,15 @@
   .slide {
     width: 1280px; height: 720px;
     position: absolute;
-    display: flex;
+    display: none;
     flex-direction: column;
     transform-origin: center center;
     background: var(--paper);
     color: var(--ink);
     box-shadow: 0 18px 60px rgba(0,0,0,.45);
     overflow: hidden;
-    opacity: 0;
-    pointer-events: none;
-    z-index: 1;
-    transform: scale(var(--s, 1)) scale(.96) translateY(10px);
-    transition: opacity .45s ease, transform .5s cubic-bezier(.22,.75,.32,1);
   }
-  .slide.active {
-    opacity: 1;
-    pointer-events: auto;
-    z-index: 2;
-    transform: scale(var(--s, 1)) scale(1) translateY(0);
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .slide { transition: opacity .01s linear; transform: scale(var(--s, 1)); }
-  }
+  .slide.active { display: flex; }
 
   /* ---------- backgrounds ---------- */
   .bg-light { background: linear-gradient(135deg, #f6f6f8 0%, #ececef 55%, #e0e1e6 100%); }
@@ -181,7 +168,7 @@
   @media print {
     html, body { background: #fff; height: auto; }
     .deck { position: static; display: block; }
-    .slide { display: flex !important; position: relative; transform: none !important; opacity: 1 !important; transition: none !important; box-shadow: none; page-break-after: always; margin: 0 auto; }
+    .slide { display: flex !important; position: relative; transform: none !important; box-shadow: none; page-break-after: always; margin: 0 auto; }
     .hud, .progress, .hint { display: none !important; }
     @page { size: 13.55in 7.65in; margin: 0; }
   }
@@ -500,7 +487,7 @@ tx.sendto(out, (NH, int(NP)))</pre>
 
   function fit() {
     const s = Math.min(innerWidth / 1280, innerHeight / 720);
-    document.documentElement.style.setProperty('--s', s);
+    slides.forEach(sl => sl.style.transform = `scale(${s})`);
   }
   function show(i) {
     cur = Math.max(0, Math.min(slides.length - 1, i));
