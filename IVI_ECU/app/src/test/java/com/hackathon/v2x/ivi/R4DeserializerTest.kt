@@ -4,6 +4,8 @@ import com.hackathon.v2x.ivi.data.MalformedR4PayloadException
 import com.hackathon.v2x.ivi.data.R4Deserializer
 import com.hackathon.v2x.ivi.data.UnknownMessageTypeException
 import com.hackathon.v2x.ivi.model.R4Message
+import com.hackathon.v2x.ivi.model.R4StateMessage
+import com.hackathon.v2x.ivi.model.R4WarningEvent
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -52,7 +54,7 @@ class R4DeserializerTest {
         val result = deserializer.deserialize(json.toByteArray())
 
         assertTrue("Result should be success", result.isSuccess)
-        val event = result.getOrThrow() as R4Message.R4WarningEvent
+        val event = result.getOrThrow() as R4WarningEvent
         assertEquals(1, event.schemaVersion)
         assertEquals("nlos_obstruction", event.warningType)
         assertEquals("high", event.riskState)
@@ -71,8 +73,8 @@ class R4DeserializerTest {
               "type": "state",
               "seq": 42,
               "vehicles": {
-                "ego": {"position": {"x": 0.0, "y": 0.0}, "speed": 10.0},
-                "B":   {"position": {"x": 15.0, "y": 0.0}, "speed": 9.5}
+                "ego": {"x": 0.0, "y": 0.0},
+                "vehicleB": {"x": 15.0, "y": 0.0}
               }
             }
         """.trimIndent()
@@ -80,10 +82,9 @@ class R4DeserializerTest {
         val result = deserializer.deserialize(json.toByteArray())
 
         assertTrue(result.isSuccess)
-        val state = result.getOrThrow() as R4Message.R4StateMessage
-        assertEquals(42, state.seq)
-        assertEquals(2, state.vehicles.size)
-        assertEquals(10.0f, state.vehicles["ego"]!!.speed)
+        val state = result.getOrThrow() as R4StateMessage
+        assertEquals(42L, state.seq)
+        assertEquals(0.0f, state.vehicles.ego.x)
     }
 
     // ── Test 3: Unknown warningType → "unknown", no exception ────────────────
@@ -112,8 +113,8 @@ class R4DeserializerTest {
         val result = deserializer.deserialize(json.toByteArray())
 
         assertTrue("Should succeed even with unknown warningType", result.isSuccess)
-        val event = result.getOrThrow() as R4Message.R4WarningEvent
-        assertEquals(R4Message.UNKNOWN_WARNING_TYPE, event.warningType)
+        val event = result.getOrThrow() as R4WarningEvent
+        assertEquals(R4WarningEvent.UNKNOWN_WARNING_TYPE, event.warningType)
     }
 
     // ── Test 4: Malformed JSON → Result.failure, no crash ────────────────────
@@ -158,10 +159,11 @@ class R4DeserializerTest {
         val result = deserializer.deserialize(json.toByteArray())
 
         assertTrue("Extra fields must not cause failure", result.isSuccess)
-        val event = result.getOrThrow() as R4Message.R4WarningEvent
+        val event = result.getOrThrow() as R4WarningEvent
         assertEquals("nlos_obstruction", event.warningType)
         assertEquals("low", event.riskState)
         assertEquals("C-002", event.trackedObject.id)
         assertEquals(40.0f, event.geometry.vehicleC!!.x)
     }
 }
+

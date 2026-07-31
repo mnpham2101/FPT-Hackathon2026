@@ -5,8 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.hackathon.v2x.ivi.BuildConfig
 import com.hackathon.v2x.ivi.data.R4Repository
 import com.hackathon.v2x.ivi.model.R4Message
+import com.hackathon.v2x.ivi.model.R4WarningEvent
 import com.hackathon.v2x.ivi.model.SceneGeometry
-import com.hackathon.v2x.ivi.service.R4ListenerService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -57,15 +57,14 @@ class WarningViewModel @Inject constructor(
                 onWarningReceived(event)
             }
         }
-        // Also watch for service error events from the service flow (handled via repository)
         viewModelScope.launch {
             repository.currentState.collect {
-                // State heartbeat received — scene data will be updated via warningEvents geometry
+                // State heartbeat received — scene data updated via warningEvents geometry
             }
         }
     }
 
-    private fun onWarningReceived(event: R4Message.R4WarningEvent) {
+    private fun onWarningReceived(event: R4WarningEvent) {
         _uiWarningState.value = WarningUiState.Active(event)
         _latestScene.value = event.geometry
         scheduleAutoClear()
@@ -92,3 +91,4 @@ class WarningViewModel @Inject constructor(
         super.onCleared()
     }
 }
+

@@ -1,7 +1,9 @@
 package com.hackathon.v2x.ivi.data
 
 import com.hackathon.v2x.ivi.model.R4Message
-import com.hackathon.v2x.ivi.model.SceneGeometry
+import com.hackathon.v2x.ivi.model.R4ServiceError
+import com.hackathon.v2x.ivi.model.R4StateMessage
+import com.hackathon.v2x.ivi.model.R4WarningEvent
 import com.hackathon.v2x.ivi.service.R4ListenerService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -18,21 +20,21 @@ import javax.inject.Singleton
  * Single source of truth for R4 events and scene state.
  *
  * Subtask 4.5.1.4 — Collects raw [R4ListenerService.r4EventFlow], routes by type:
- * - [R4Message.R4WarningEvent] → re-emitted on [warningEvents]
- * - [R4Message.R4StateMessage] → last-value-wins on [currentState]
+ * - [R4WarningEvent] → re-emitted on [warningEvents]
+ * - [R4StateMessage] → last-value-wins on [currentState]
  *
  * Pure Kotlin — zero Android UI or framework imports.
  */
 @Singleton
 class R4Repository @Inject constructor() {
 
-    private val _warningEvents = MutableSharedFlow<R4Message.R4WarningEvent>(extraBufferCapacity = 32)
+    private val _warningEvents = MutableSharedFlow<R4WarningEvent>(extraBufferCapacity = 32)
     /** Edge-triggered warning events. Collect in [WarningViewModel]. */
-    val warningEvents: SharedFlow<R4Message.R4WarningEvent> = _warningEvents.asSharedFlow()
+    val warningEvents: SharedFlow<R4WarningEvent> = _warningEvents.asSharedFlow()
 
-    private val _currentState = MutableStateFlow<R4Message.R4StateMessage?>(null)
+    private val _currentState = MutableStateFlow<R4StateMessage?>(null)
     /** Latest state heartbeat from ADA ECU (last-value-wins per R4 spec). */
-    val currentState: StateFlow<R4Message.R4StateMessage?> = _currentState.asStateFlow()
+    val currentState: StateFlow<R4StateMessage?> = _currentState.asStateFlow()
 
     /**
      * Attach to a live service flow. Call from DI / ViewModel scope after service binds.
@@ -44,12 +46,12 @@ class R4Repository @Inject constructor() {
         scope.launch {
             serviceFlow.collect { message ->
                 when (message) {
-                    is R4Message.R4WarningEvent -> _warningEvents.emit(message)
-                    is R4Message.R4StateMessage -> _currentState.value = message
-                    R4ListenerService.ServiceErrorEvent -> Unit // handled by WarningViewModel
-                    else -> Unit
+                    is R4WarningEvent -> _warningEvents.emit(message)
+                    is R4StateMessage -> _currentState.value = message
+                    is R4ServiceError -> Unit // handled by WarningViewModel
                 }
             }
         }
     }
 }
+

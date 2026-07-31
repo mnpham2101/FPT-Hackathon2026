@@ -2,8 +2,10 @@ package com.hackathon.v2x.ivi
 
 import app.cash.turbine.test
 import com.hackathon.v2x.ivi.data.R4Repository
-import com.hackathon.v2x.ivi.model.R4Message
 import com.hackathon.v2x.ivi.model.R3Snapshot
+import com.hackathon.v2x.ivi.model.R4Message
+import com.hackathon.v2x.ivi.model.R4StateMessage
+import com.hackathon.v2x.ivi.model.R4WarningEvent
 import com.hackathon.v2x.ivi.model.SceneGeometry
 import com.hackathon.v2x.ivi.model.VehiclePosition
 import com.hackathon.v2x.ivi.ui.WarningUiState
@@ -13,6 +15,7 @@ import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.resetMain
@@ -33,7 +36,7 @@ class WarningViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()
     private lateinit var repository: R4Repository
-    private lateinit var warningFlow: MutableSharedFlow<R4Message.R4WarningEvent>
+    private lateinit var warningFlow: MutableSharedFlow<R4WarningEvent>
     private lateinit var viewModel: WarningViewModel
 
     @Before
@@ -42,9 +45,7 @@ class WarningViewModelTest {
         warningFlow = MutableSharedFlow(extraBufferCapacity = 8)
         repository = mockk {
             every { warningEvents } returns warningFlow
-            every { currentState } returns MutableSharedFlow<R4Message.R4StateMessage?>().let {
-                kotlinx.coroutines.flow.MutableStateFlow(null)
-            }
+            every { currentState } returns MutableStateFlow<R4StateMessage?>(null)
         }
         viewModel = WarningViewModel(repository)
     }
@@ -55,12 +56,11 @@ class WarningViewModelTest {
     }
 
     private fun makeWarningEvent(warningType: String = "nlos_obstruction") =
-        R4Message.R4WarningEvent(
+        R4WarningEvent(
             schemaVersion = 1,
-            type = "warning",
             warningType = warningType,
             riskState = "high",
-            trackedObject = R3Snapshot(
+            objectSnapshot = R3Snapshot(
                 id = "C-001", source = "v2x_relayed",
                 position = VehiclePosition(25f, 1.5f),
                 distance = 25f, speed = 13.5f, confidence = 0.87f, state = "tracked"
@@ -139,3 +139,4 @@ class WarningViewModelTest {
         assertNull("Scene should be cleared after timeout", viewModel.latestScene.value)
     }
 }
+

@@ -1,6 +1,6 @@
 package com.hackathon.v2x.ivi.ui
 
-import com.hackathon.v2x.ivi.model.R4Message
+import com.hackathon.v2x.ivi.model.R4WarningEvent
 
 /**
  * UI state for the Warning View display area.
@@ -12,6 +12,7 @@ import com.hackathon.v2x.ivi.model.R4Message
  */
 sealed class WarningUiState {
     object Idle : WarningUiState()
-    data class Active(val event: R4Message.R4WarningEvent) : WarningUiState()
+    data class Active(val event: R4WarningEvent) : WarningUiState()
     object Error : WarningUiState()
 }
+
