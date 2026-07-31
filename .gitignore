@@ -17,3 +17,10 @@ captures/
 skills-lock.json
 .DS_Store
 
+# local credentials - never commit
+secrets/
+
+# Python
+__pycache__/
+*.pyc
+

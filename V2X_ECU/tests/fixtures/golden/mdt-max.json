@@ -1,0 +1,25 @@
+{
+  "object": {
+    "classConfidence": 95,
+    "classification": 5,
+    "measurementDeltaTime": 2047,
+    "objectId": 7,
+    "position": {
+      "x": 2500,
+      "xConfidence": 90,
+      "y": 120,
+      "yConfidence": 90
+    },
+    "velocity": {
+      "x": 1520,
+      "y": 0
+    }
+  },
+  "orientationAngle": 900,
+  "referencePosition": {
+    "latitude": 210285110,
+    "longitude": 1058048170
+  },
+  "referenceTime": 716084805123,
+  "stationId": 1201
+}

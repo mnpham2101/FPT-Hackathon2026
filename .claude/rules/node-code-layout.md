@@ -39,7 +39,7 @@ Each work folder — the four node folders above plus [plans/](../../plans/) —
 - **Entrypoint** `main.py` at the image workdir `/app`, which mirrors `Scenario_Player/` — fixed by the blueprint node config `command: ["python", "main.py"]` ([node-scenario-player.md](../../requirements/car-sky-guide/node-scenario-player.md#blueprint-node-config)).
 - **Scenario configs are data, not code**: files under `Scenario_Player/scenarios/`, selected at runtime by the `SCENARIO_CONFIG` env var (default `/app/scenarios/default.yaml`). Different configs must produce observably different message streams — that is R11's acceptance, so scenario variants (e.g. C approaching vs C out of range) are added as config files, never as code branches.
 - **Target peer** is the V2X ECU via `V2X_ECU_HOST`/`V2X_ECU_PORT`; the bench wires exactly one `ethernet` OUTPUT pin to the Ethernet Bridge (R6).
-- **Open item — flag, don't invent:** the report §3(c) has the bench (Python) drive "the shared R1 codec (Vanetza-based encoder)", but Vanetza is a C++ library. How Python reaches the R1 encoder (binding, sidecar, or pre-encoded vectors) is unresolved; [[project-architecture]] decides it in the R11 HLD and records it here-adjacent, in that HLD — no agent may improvise a codec path in implementation code.
+- **Codec path — resolved (2026-07-30):** how Python reaches the R1 encoder is decided in the [R11 HLD, decision D1](../../Scenario_Player/doc/phase1-scenario-player-hld.md): a `cpm_encode` C++ helper subprocess built inside `Scenario_Player/codec_helper/` from byte-synced copies of the V2X ECU codec-seam sources (sync-manifest extension, HLD D2). Implementation follows that HLD — no agent may improvise a different codec path.
 
 ## How to apply
 
