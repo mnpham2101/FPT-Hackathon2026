@@ -153,10 +153,11 @@ jobs:
       # Live host per the O1 probe (2026-07-31): registry.carsky.io 502s, hackathon-2 answers.
       REGISTRY_HOST: registry.hackathon-2.carsky.io
       IMAGE: m1-netcheck:latest
-      # amd64 + arm64: the deploy of 2026-07-31 stuck in Provisioning pulling the amd64-only
-      # image while the cluster's runnable evidence (aarch64 AAOS skycraft, arm64 team images
-      # Running) points at arm64 nodes - a multi-arch manifest works on either.
-      PLATFORMS: linux/amd64,linux/arm64
+      # arm64 only: the cluster's runnable evidence is uniformly aarch64 (AAOS skycraft artifact,
+      # and tanbd2/dummy-video-color - the one arm64-only team image in the registry). A
+      # single-arch manifest also matches the shape of the images that the registry has actually
+      # served (both non-KIS repos are single-arch), removing the index as a variable.
+      PLATFORMS: linux/arm64
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-qemu-action@v3
