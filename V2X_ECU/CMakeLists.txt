@@ -109,5 +109,9 @@ target_link_libraries(gv_tool PRIVATE v2x_cpm_codec)
 # on no FetchContent subproject having leaked a CMAKE_RUNTIME_OUTPUT_DIRECTORY into cache.
 set_target_properties(gv_tool PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
-# Later subtasks add their targets here:
-# the golden-vector test (1.0.2.5).
+# Golden-vector conformance test (1.0.2.5) - reads the frozen corpus synced to
+# tests/fixtures/golden/ (V2X_FIXTURE_DIR, set by v2x_add_test) and drives it through the
+# real codec, so it links v2x_cpm_codec rather than the bare seam: the seam alone has no
+# implementation to encode/decode with.
+v2x_add_test(v2x_cpm_golden_vectors_test tests/codec/test_cpm_golden_vectors.cpp)
+target_link_libraries(v2x_cpm_golden_vectors_test PRIVATE v2x_cpm_codec)
