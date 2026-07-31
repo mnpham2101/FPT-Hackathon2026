@@ -377,6 +377,8 @@ Flag: this run commits only `plans/phase0_tasks.md`, so the supersede note is re
 
 **Dependencies:** sequential, after every copy-landing subtask — 1.0.2.2, 1.0.2.5, 2.0.3.1, 2.0.3.2, 3.0.4.2, 4.0.4.3, 4.0.4.4, 1.0.5.1, 4.0.6.1, 4.0.6.2. **Commit:** `[1.0.7.1] feat: add contract sync manifest and byte-identity gate`
 
+**Status:** blocked 2026-07-31 — not started. 8 of the 10 predecessor copy-landing subtasks are done; the two outstanding (`1.0.2.5`, `1.0.5.1`) are themselves blocked on the golden-vector corpus hand-off (CI artifact `golden-vectors`, id `8783540070`, run 30605811757). Writing the manifest now would either omit the two `golden-vectors/*` rows of the [HLD §5 sync map](doc/phase0-contract-freeze-hld.md#sync-map-sync-manifestjson-content) or point at files that do not exist — both fail the gate's own acceptance, so it stays sequential-last as designed. No CI change is needed when it lands: the `contracts-gate` job already runs `contracts/check_sync.py` behind an existence guard. The F2 grep half is already provably clean — `grep -rn "asn1::Cpm" V2X_ECU/src/` returns nothing (the release-2 spelling `vanetza::asn1::r2::Cpm` cannot contain the banned token).
+
 ### `1.0.7.2` — GitHub Actions CI: Linux verification for Phase 0 *(agent)*
 
 **Objective:** create `.github/workflows/phase0-ci.yml` — Linux (`ubuntu-latest`) verification on every push and on PRs to `main`: contracts sync gate, Python unit tests, IVI Gradle unit tests.
