@@ -124,6 +124,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none. **Commit:** `[8.1.2.1] feat: add V2X ECU env config loader`
 
+**Status:** implemented 2026-08-01 — `src/config/config.{hpp,cpp}` + `tests/config/test_config.cpp` added, `v2x_config` static lib + `v2x_config_test` registered in `V2X_ECU/CMakeLists.txt`, transport-import and contract-sync gates exit 0; CI verification pending wave push.
+
 ### [ ] `7.1.2.2` — Sole socket holder `src/net/udp_socket.{hpp,cpp}` *(agent)*
 
 **Objective:** `net::UdpSocket` — the **only** V2X_ECU code allowed to include socket headers (HLD D1).

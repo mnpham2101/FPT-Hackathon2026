@@ -105,3 +105,16 @@ set_target_properties(gv_tool PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY
 # implementation to encode/decode with.
 v2x_add_test(v2x_cpm_golden_vectors_test tests/codec/test_cpm_golden_vectors.cpp)
 target_link_libraries(v2x_cpm_golden_vectors_test PRIVATE v2x_cpm_codec)
+
+# Env config loader (8.1.2.1) - the app's only env reader (Phase 1 HLD sections 4/6).
+# Transport-blind data-layer code: stdlib only - no nlohmann, no Vanetza, and no socket
+# headers (the tools/check_transport_imports.py gate applies). Static-lib shape mirrors
+# v2x_contracts; the HLD section 6 defaults table lives in src/config/config.cpp alone.
+add_library(v2x_config STATIC
+  src/config/config.cpp
+)
+target_include_directories(v2x_config PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_compile_features(v2x_config PUBLIC cxx_std_17)
+
+v2x_add_test(v2x_config_test tests/config/test_config.cpp)
+target_link_libraries(v2x_config_test PRIVATE v2x_config)
