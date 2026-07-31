@@ -169,6 +169,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 1.0.1.2 + 1.0.2.1. **Commit:** `[1.0.2.2] feat: define CpmContent and ICpmCodec seam with JSON binding`
 
+**Status:** done 2026-07-31 — commit `96a2043`; verified green on CI run 30603927615 (`v2x-core-build`; that run's tree also carries 2.0.3.1). Seam block machine-diffed against HLD §7 — identical signatures/const-ness/return types; namespace `v2x::codec`; header-only (inline nlohmann binding) exposed by the new `v2x_codec_seam` INTERFACE target. All 19 schema property paths bound 1:1 in wire-native integer types; copy `cmp`-identical; tests `StructToJsonToStructEquality` · `WireShapeMatchesSchemaKeys` · `RejectsMissingRequiredKey`.
+
 ### `1.0.2.3` — VanetzaCpmCodec implementation *(agent)*
 
 **Objective:** implement `V2X_ECU/src/codec/vanetza_cpm_codec.{hpp,cpp}` — the sole `ICpmCodec` implementation over `vanetza::asn1::r2::Cpm`.
