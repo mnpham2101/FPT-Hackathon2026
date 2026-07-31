@@ -205,6 +205,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 1.0.2.4. **Commit:** `[1.0.2.5] test: verify golden vectors through the Vanetza codec seam`
 
+**Status:** blocked 2026-07-31 — not started. Its inputs (`contracts/golden-vectors/<case>.{json,uper}`) do not exist in the repo: `gv_tool` can only run on Linux CI, and 1.0.2.4's corpus is currently only workflow artifact `golden-vectors` (id `8783540070`, run 30605811757), whose download requires an authenticated token this session does not have. Unblocks the moment the orchestrating session commits the corpus; nothing else about this subtask changes.
+
 ---
 
 ## Task Group 0.3 — R2 bindings + round-trip tests, both C++ ends (serves R2)
