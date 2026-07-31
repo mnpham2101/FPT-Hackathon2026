@@ -2,9 +2,9 @@
 # dev host has no Docker/WSL.
 #
 # Later lanes plug in here (do not pre-create empty jobs):
-# - group 0.2 (V2X_ECU): C++ CMake build+ctest jobs, and the docker-build jobs for both C++ nodes,
-#   added by those subtasks when their CMakeLists.txt / Dockerfiles land (ADA core build+ctest
-#   landed with 3.0.4.1).
+# - group 0.2 (V2X_ECU): C++ CMake build+ctest landed with 1.0.2.1 (v2x-core-build below; ADA's
+#   landed with 3.0.4.1). Still pending: the docker-build jobs for both C++ nodes, added by those
+#   subtasks when their Dockerfiles land.
 # - registry push (5.0.8.2): the netcheck-image job below builds always and pushes only when the
 #   CARSKY_ZOT_API_KEY repo secret exists (never commit the credential). Host per the live O1
 #   probe 2026-07-31: registry.hackathon-2.carsky.io (registry.carsky.io answers 502).
@@ -65,6 +65,34 @@ jobs:
         run: cmake --build ADA_ECU/build -j
       - name: Test
         run: ctest --test-dir ADA_ECU/build --output-on-failure
+
+  v2x-core-build:
+    runs-on: ubuntu-latest
+    # Vanetza's asn1c-generated C (asn1_support + asn1_its + asn1_its_r2, ~1400 translation units)
+    # is a long first-run compile, hence the raised timeout.
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Boost (Vanetza hard dependency)
+        run: sudo apt-get update && sudo apt-get install -y libboost-dev libboost-date-time-dev
+      # The cache key carries the exact Vanetza pin, so a re-pin invalidates it. _deps holds the
+      # clone, the FetchContent stamps and Vanetza's own object files, so a cache hit skips both
+      # the clone and the ASN.1 recompile.
+      - name: Cache Vanetza FetchContent deps
+        uses: actions/cache@v4
+        with:
+          path: V2X_ECU/build/_deps
+          key: v2x-deps-${{ runner.os }}-vanetza-fb6c5510-json-v3.11.3-gtest-v1.14.0-${{ hashFiles('V2X_ECU/CMakeLists.txt') }}
+          restore-keys: |
+            v2x-deps-${{ runner.os }}-vanetza-fb6c5510-json-v3.11.3-gtest-v1.14.0-
+      - name: Configure
+        run: cmake -S V2X_ECU -B V2X_ECU/build
+      # Bounded parallelism on purpose: a bare `-j` makes CMake pass `-j` with no number to make,
+      # i.e. unlimited jobs - ~700 concurrent compilers for asn1_its alone would OOM the runner.
+      - name: Build
+        run: cmake --build V2X_ECU/build -j $(nproc)
+      - name: Test
+        run: ctest --test-dir V2X_ECU/build --output-on-failure
 
   ivi-unit-tests:
     runs-on: ubuntu-latest
