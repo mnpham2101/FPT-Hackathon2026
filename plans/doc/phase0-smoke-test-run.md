@@ -51,6 +51,16 @@ A namespaced path alone (`kis/m1-netcheck` via the public host) is **weakened** 
 
 Also found while diagnosing: `POST /deployments/{roomId}/restart[/{node}]` returns 500 `INTERNAL_ERROR` (though pods were observed recreated afterwards) and `container-exec` returns `Conduit service not configured` — both platform-side gaps, recorded in [carsky-rest-api-blueprint.md](../../requirements/car-sky-guide/carsky-rest-api-blueprint.md).
 
+### Minimal reproduction — 2-node blueprint (2026-07-31 08:16Z)
+
+`netcheck-2node` (blueprint `RyVEIzL4MaMPc1TNP1a_N`, deployment `netcheck-2node-deploy` / `YOr4TVms5spugfjCregrC` on room `27gs83k3oeju2mbywu1j8`, namespace `room-wccdlruk`) reduces the case to **two container nodes and one bridge, one image, no ECU code**. Import file kept locally at `tmp/blueprint-netcheck-2node.json`.
+
+Everything user-controllable is verified correct in the deployed blueprint: both nodes reference `registry.hackathon-2.carsky.io/m1-netcheck:latest`, both `ethernet` pins exist with the right addresses (`10.99.0.10` sender, `10.99.0.11` receiver), and both are wired to the bridge.
+
+Result: **Ethernet Bridge `Running`; both container nodes `Provisioning` with the byte-identical `waiting to start: trying and failing to pull image`.**
+
+This removes every remaining alternative explanation — node count, ECU images, env complexity, the 4-node wiring, prior blueprint history. **A Room cannot pull a team image from this Zot registry. The fix is platform-side; nothing in this repository can close it.**
+
 **Action:** (a) cheap UI test — point one node's image at `localhost:5000/m1-netcheck:latest`, then `registry.carsky.io/m1-netcheck:latest`, redeploying between; (b) escalate to the BTC organizers with the evidence above (image present + multi-arch, anonymous pull 401, second team failing identically) asking how Rooms authenticate pulls and which reference blueprints must use. Correct [deploy-walkthrough-netcheck.md](../../requirements/car-sky-guide/deploy-walkthrough-netcheck.md) §M7 and this file once known.
 
 ## M5–M9 — blueprint config + deploy (USER-MANUAL, subtask `5.0.8.3`)
