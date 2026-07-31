@@ -143,6 +143,8 @@ Confirm each of the four role nodes has one `ethernet` pin wired to the Ethernet
 
 ![Nydus Inspector — V2X ECU node configuration](images/nydus-inspector-v2x-ecu.png)
 
+> Capture that screenshot **only after the values are verified correct** (§4). The first run's screenshot showed `NEXT_HOP_HOST = 10.99.0.2` and `ROLE = V2X` — both wrong — and would teach the mistakes it was meant to prevent.
+
 **Common to all three nodes:**
 
 | Field | Value | Explanation |
@@ -219,7 +221,24 @@ Set `PAD=1400` on the bench node and redeploy. If large datagrams do not arrive 
 
 ---
 
-## 4. Quick reference
+## 4. Mistakes already made — check these first
+
+Every row below cost real time on the first run (2026-07-31). They are ordered by how expensive they were.
+
+| # | Mistake | Symptom | Fix |
+|---|---|---|---|
+| 1 | **Deployed before doing M7.** The clone carried the baseline's ECU images (`registry.carsky.io/m1-v2x-ecu:latest` …), which do not exist yet. | All three container nodes stuck in `Provisioning`; the bridge and IVI reach `Running`. Log API reports `waiting to start: trying and failing to pull image`. | Apply M7 to all three nodes, delete the failed deployment, redeploy. |
+| 2 | **Wrong registry host** — `registry.carsky.io` instead of `registry.hackathon-2.carsky.io`. | Identical to #1: the pull fails and the node never starts. | Use the `hackathon-2` host everywhere: CI, image tags, node config. |
+| 3 | **Typo in an address** — `NEXT_HOP_HOST = 10.99.0.2` instead of `10.99.0.12`. | Node runs and logs, but `[ERR] no route to 10.99.0.2:47200`; the chain stops at that hop, so C5 never appears downstream. | Re-read each address digit by digit; they differ by one character. |
+| 4 | **`ROLE` in uppercase** (`V2X` instead of `v2x`). | Runs, but log lines and the datagram stamp read `\|V2X`, so the expected `seq=0\|bench\|v2x` never matches and C5 cannot be confirmed by eye. | Lowercase: `bench`, `v2x`, `ada`. |
+| 5 | **Absolute command path** — `/entrypoint.sh` instead of `./entrypoint.sh`. | Container exits immediately; restart count climbs. The script lives in the image workdir `/app`, not at the filesystem root. | Use `./entrypoint.sh`, or clear the field and let the image's own default run. |
+| 6 | **IVI node missing its VM artifact.** | Deploy rejected outright: `skycraft requires 'image' config with VM image artifact details`. | Attach artifact `AAOS` v`0.0.1`, arch `aarch64` (M8). |
+| 7 | **Renaming instead of adding on ADA** — the baseline's `V2X_LISTEN_PORT` is not read by this image. | ADA never binds a socket, so it receives nothing. | **Add** `LISTEN_PORT=47200`; leave the old variable in place. |
+| 8 | **Editing the `-deploy` snapshot.** Deploying creates a copy named `<blueprint>-deploy`. | Edits appear to save but the next deploy ignores them. | Always edit the original blueprint. |
+
+**Before deploying, verify by reading the config back** rather than trusting the Inspector's truncated fields — `GET /api/v1/blueprints/{id}` returns each node's stored `config` exactly, and catches #2, #3, #4 and #5 in one look.
+
+## 5. Quick reference
 
 | Thing | Value |
 |---|---|
