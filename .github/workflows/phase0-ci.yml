@@ -86,7 +86,6 @@ jobs:
     env:
       # Live host per the O1 probe (2026-07-31): registry.carsky.io 502s, hackathon-2 answers.
       REGISTRY_HOST: registry.hackathon-2.carsky.io
-      REGISTRY_USER: mnpham1986@gmail.com
       IMAGE: m1-netcheck:latest
     steps:
       - uses: actions/checkout@v4
@@ -95,6 +94,9 @@ jobs:
       - name: Push to CarSky Zot registry (M2+M4; skips until the secret exists)
         env:
           ZOT_KEY: ${{ secrets.CARSKY_ZOT_API_KEY }}
+          # CarSky account username for the registry. Set the CARSKY_REGISTRY_USER repo
+          # variable if the account name differs from the login email.
+          REGISTRY_USER: ${{ vars.CARSKY_REGISTRY_USER || 'mnpham1986@gmail.com' }}
         run: |
           if [ -z "$ZOT_KEY" ]; then
             echo "::notice::CARSKY_ZOT_API_KEY secret not set - image built but NOT pushed (M4 pending)"

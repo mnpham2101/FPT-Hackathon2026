@@ -223,6 +223,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 2.0.1.3 + 3.0.4.1 (ADA toolchain). Parallel with 2.0.3.1. **Commit:** `[2.0.3.2] feat: add ADA-side R2 binding with round-trip test`
 
+**Status:** implemented 2026-07-31, awaiting CI — `ada::contracts::R2Message` consumer binding (nullable `sender.speed`/`object.confidence` via std::optional, F1/F6) + round-trip and null-speed tests; copies cmp-identical; `ada-core-build` CI job is the verification authority (no local cmake).
+
 ---
 
 ## Task Group 0.4 — ADA ECU contract layer: toolchain, R3/R4 bindings, additive test, detector Python (serves R3, R4)
