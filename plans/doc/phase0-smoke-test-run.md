@@ -2,6 +2,31 @@
 
 Evidence log for task group 0.8 ([phase0_tasks.md](../phase0_tasks.md)), executing [baseline-connectivity-smoke-test.md](research_notes/baseline-connectivity-smoke-test.md). Steps are recorded as they complete; pass criteria C1–C5 are the note's.
 
+## Standing requirement — container images must be single-platform arm64
+
+**Every image a Container node pulls must be built for `linux/arm64` alone.** A multi-platform manifest index is not accepted — the node stays in `Provisioning` with `waiting to start: trying and failing to pull image`.
+
+This governs every container node in the project (`Scenario_Player`, `V2X_ECU`, `ADA_ECU`), not just netcheck. In CI that means one platform in the buildx invocation:
+
+```yaml
+PLATFORMS: linux/arm64
+```
+
+```
+docker buildx build --platform linux/arm64 --provenance=false --sbom=false \
+  -t <host>/<image>:<tag> --push <context>/
+```
+
+Keep `--provenance=false --sbom=false`: buildx otherwise attaches attestation entries that turn the result back into a multi-entry index.
+
+**Verify before deploying** — the tag must resolve to a single-platform image, not an index:
+
+```
+curl -u <user>:<zak_key> https://registry.hackathon-2.carsky.io/v2/<repo>/manifests/<tag>
+```
+
+The Zot UI shows the same thing: one architecture chip on the repository card, not `amd64  arm64`.
+
 ## M1 — netcheck tool authored
 
 Subtask `6.0.8.1`, commit `c17b488`: `tools/netcheck/` (Dockerfile, entrypoint.sh, capture.sh, netcheck.py) verbatim from the note §4.2–§4.5.
@@ -16,59 +41,40 @@ Executed by GitHub Actions (the dev host has no Docker), job `netcheck-image` in
 | Registry account | `kis@hackathon.fpt.com` (workflow default; `CARSKY_REGISTRY_USER` variable overrides) |
 | Credential | `CARSKY_ZOT_API_KEY` GitHub Actions secret (`zak_…`, never committed) |
 | Pushed tag | `registry.hackathon-2.carsky.io/m1-netcheck:latest` |
-| Manifest digest | `sha256:e3283d45c1df91b0698c6ed78867144d7d1d022191b42bc17d6c2f380fb5e557` |
-| Image size | 5 layers, 19 121 467 bytes |
+| Platform | `linux/arm64`, single-platform (commit `5e75920`) |
 
-**O1 resolved:** `registry.carsky.io` returns 502; `registry.hackathon-2.carsky.io` serves the registry (`GET /v2/` → 401 challenge `Basic realm="Authorization Required"`, → 200 with the key). Every image reference — CI, blueprint node configs, M7 — must use the hackathon-2 host.
+`registry.carsky.io` returns 502; `registry.hackathon-2.carsky.io` serves the registry (`GET /v2/` → 401 challenge, → 200 with the key) and is the host for both push and blueprint node `image` fields.
 
-**Verification (registry API, 2026-07-31):** `/v2/_catalog` → `{"repositories":["m1-netcheck","tanbd2/dummy-video-color","vitalguard/vital-guard-ai-dms"]}`; `/v2/m1-netcheck/tags/list` → `{"name":"m1-netcheck","tags":["latest"]}`. The repository was absent before the push and present after.
+## M5–M9 — blueprint config + deploy ✅ 2026-07-31
 
-## Open blocker — the image pull reference (found 2026-07-31)
+Deployed as `trial2_minh_netcheck` on room `27gs83k3oeju2mbywu1j8`, namespace `room-12tviahc`, blueprint snapshot `mZPNS7C8VA-cD1Ethjebq`. All three container nodes carry `registry.hackathon-2.carsky.io/m1-netcheck:latest`, `command: ["./entrypoint.sh"]`, `capabilities: ["NET_RAW"]`.
 
-Two deploy attempts failed with the containers stuck in `Provisioning` and Kubernetes reporting `waiting to start: trying and failing to pull image`, while the bridge and IVI reached `Running`.
+**Room `RUNNING`, 5/5 nodes `Running`**, stable across a 10-minute observation window with no restarts. Per-node config values and the M5–M8 readiness assessment: [phase0-trial2-minh-preflight.md](phase0-trial2-minh-preflight.md).
 
-- **Attempt 1** — node configs still carried the baseline ECU images (`registry.carsky.io/m1-v2x-ecu:latest` …), which do not exist. Cause: M7 not yet applied.
-- **Attempt 2** — M7 applied and verified correct over REST (`registry.hackathon-2.carsky.io/m1-netcheck:latest`, `./entrypoint.sh`, `NET_RAW`), yet the pull still failed.
+Deploying alone started the programs — no manual exec was needed, satisfying the HLD §6 startup guarantee.
 
-Evidence gathered:
+## M10 — pass criteria ✅ 2026-07-31
 
-- The image genuinely exists — manifest `sha256:e3283d45…` readable with the Zot credential.
-- Anonymous pull is refused (401) for **every** repository, ours and other teams' alike, so the cluster must pull with a credential we do not control.
-- The one known-working platform blueprint ([blueprint-KIS.json](../../requirements/development-platform-doc/blueprint-KIS.json)) references images as **`localhost:5000/<namespace>/<image>:tag`**, not by public hostname; every other repository in the registry is namespaced `<team>/<image>` while ours sits at the root.
+| Criterion | Evidence |
+|---|---|
+| C1 all `Running` | 5/5 nodes; every pod reports `sidecar=running user=running` |
+| C2 no `[ERR]` | 0 error lines across bench / V2X / ADA |
+| C3 live log per node | 100 lines each, streaming |
+| C4 wire capture | 80 / 66 / 66 `[CAP]` lines, `e-eth In/Out` on `10.99.0.x` |
+| C5 accumulated stamps | ADA logs `body=seq=288\|bench\|v2x` |
 
-**Hypothesis (all self-serve candidates now eliminated):** the address used to *push* (external ingress `registry.hackathon-2.carsky.io`) is not the address a node must use to *pull* — but no reachable alternative works either. Eliminated live 2026-07-31, each tested on the V2X node with hackathon-2 refs on the other two nodes as controls, all with the identical `waiting to start: trying and failing to pull image`:
+```
+bench  [TX] #285 to 10.99.0.11:47100          len=13
+v2x    [RX] #288 from 10.99.0.10  body=seq=287|bench
+       [TX] #288 relayed to 10.99.0.12:47200  len=17
+ada    [RX] #289 from 10.99.0.11  body=seq=288|bench|v2x
+       [TX] #289 relayed to 10.99.0.13:47300  len=21
+```
 
-- `localhost:5000/m1-netcheck:latest` (deploy `dn7lg2xt8m6hdqr7ce-uz`) — the KIS blueprint's `localhost:5000` references presumably resolve only for platform-mirrored images.
-- `registry.carsky.io/m1-netcheck:latest` (deploy `27gs83k3oeju2mbywu1j8`, namespace `room-j7wtls51`) — the platform doc's own convention fails too, so the 502 is not edge-only.
+**Hop 3 (IVI) used the note §7 option 2 (fallback), not option 1.** ADA's `[TX] … relayed to 10.99.0.13:47300` plus its `[CAP]` line prove the datagram reached the wire; the Skycraft node has no listener, so receipt is unconfirmed. Option 1 (ADB `nc -u -l -p 47300`) remains available if a confirmed hop-3 receipt is wanted.
 
-A namespaced path alone (`kis/m1-netcheck` via the public host) is **weakened** by the cross-team evidence below — Vital-Guard's image is namespaced and fails identically. **Conclusion: the cluster cannot pull team images from the Zot registry under any reference we can set; the fix is platform-side.**
+## Open items
 
-**Eliminated live (2026-07-31, attempts 3–4):**
-
-- **Architecture** — re-pushed as a multi-arch amd64+arm64 manifest list (CI `896bc7a`); fresh pods (restart recreated them) still failed.
-- **Buildx attestations** — re-pushed with `--provenance=false --sbom=false` (CI `e55f0ec`), verified a clean two-entry index in the registry; still failed.
-- **Ours-only problem** — Vital-Guard's `DMS AI Engine` node fails with the byte-identical `trying and failing to pull image` on their own namespaced image, while every non-registry node type (script-node, can-bus, skycraft, eth-bridge, kuksa) runs fine platform-wide. No container node demonstrably pulling from this Zot registry has been observed running.
-
-Also found while diagnosing: `POST /deployments/{roomId}/restart[/{node}]` returns 500 `INTERNAL_ERROR` (though pods were observed recreated afterwards) and `container-exec` returns `Conduit service not configured` — both platform-side gaps, recorded in [carsky-rest-api-blueprint.md](../../requirements/car-sky-guide/carsky-rest-api-blueprint.md).
-
-### Minimal reproduction — 2-node blueprint (2026-07-31 08:16Z)
-
-`netcheck-2node` (blueprint `RyVEIzL4MaMPc1TNP1a_N`, deployment `netcheck-2node-deploy` / `YOr4TVms5spugfjCregrC` on room `27gs83k3oeju2mbywu1j8`, namespace `room-wccdlruk`) reduces the case to **two container nodes and one bridge, one image, no ECU code**. Import file kept locally at `tmp/blueprint-netcheck-2node.json`.
-
-Everything user-controllable is verified correct in the deployed blueprint: both nodes reference `registry.hackathon-2.carsky.io/m1-netcheck:latest`, both `ethernet` pins exist with the right addresses (`10.99.0.10` sender, `10.99.0.11` receiver), and both are wired to the bridge.
-
-Result: **Ethernet Bridge `Running`; both container nodes `Provisioning` with the byte-identical `waiting to start: trying and failing to pull image`.**
-
-This removes every remaining alternative explanation — node count, ECU images, env complexity, the 4-node wiring, prior blueprint history. **A Room cannot pull a team image from this Zot registry. The fix is platform-side; nothing in this repository can close it.**
-
-**Action:** (a) cheap UI test — point one node's image at `localhost:5000/m1-netcheck:latest`, then `registry.carsky.io/m1-netcheck:latest`, redeploying between; (b) escalate to the BTC organizers with the evidence above (image present + multi-arch, anonymous pull 401, second team failing identically) asking how Rooms authenticate pulls and which reference blueprints must use. Correct [deploy-walkthrough-netcheck.md](../../requirements/car-sky-guide/deploy-walkthrough-netcheck.md) §M7 and this file once known.
-
-## M5–M9 — blueprint config + deploy (USER-MANUAL, subtask `5.0.8.3`)
-
-In progress — blocked by the pull reference above. Per-node config values and the M5–M8 readiness assessment: [phase0-trial2-minh-preflight.md](phase0-trial2-minh-preflight.md). Blueprint `trial2_minh` is already fully wired (M6 requires nothing) and validates.
-
-**Self-run acceptance:** deploying alone must start the programs — if any node needs a manual exec to produce logs, the run fails (HLD §6 startup guarantee).
-
-## M10 — pass criteria (USER-MANUAL, subtask `6.0.8.4`)
-
-Pending. C1–C5 per the note §2; IVI hop (hop 3) per the note §7 — record which option was used.
+- **Platform tenancy gap** — `GET /api/v1/blueprints` returns all blueprints across every owner unfiltered, and `GET /api/v1/blueprints/{id}` returns another owner's `"visibility": "PRIVATE"` blueprint in full, including node `config`, `env`, and inline script source. Rival teams' designs and images are readable by any participant. Report to BTC; unrelated to M1 delivery.
+- **Unreliable REST routes** (2026-07-31): `POST /deployments/{roomId}/restart[/{node}]` returns 500 `INTERNAL_ERROR`; `container-exec` returns 503 `Conduit service not configured`. Prefer teardown + redeploy. Recorded in [carsky-rest-api-blueprint.md](../../requirements/car-sky-guide/carsky-rest-api-blueprint.md).
+- Propagate the single-platform arm64 requirement into [deploy-walkthrough-netcheck.md](../../requirements/car-sky-guide/deploy-walkthrough-netcheck.md) §M7 and its §5 quick reference, and into the three ECU node guides before their images are built.
