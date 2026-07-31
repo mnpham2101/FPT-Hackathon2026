@@ -157,6 +157,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none — starts immediately. **Commit:** `[1.0.2.1] chore: bring up V2X_ECU C++17 toolchain with Vanetza ASN.1 targets`
 
+**Status:** done 2026-07-31 — commit `34fccba`; verified green on CI run 30603467579 (new job `v2x-core-build`, separate Configure/Build/Test steps). Pins: nlohmann `v3.11.3`, googletest `v1.14.0`, Vanetza commit `fb6c551030dcc12b924299bf401e35e5fe814713` (tag v26.06) with `EXCLUDE_FROM_ALL` so only the ASN.1 targets build; sanity test links `Vanetza::asn1` + `Vanetza::asn1_its_r2` and constructs `vanetza::asn1::r2::Cpm`. Two recorded deviations: CMake floor is **3.28** (not ADA's 3.22) because `FetchContent_Declare(... EXCLUDE_FROM_ALL)` needs 3.28 — without it Vanetza's root adds all 13 components to `all`; and the CI Build step uses `-j $(nproc)` rather than a bare `-j`, which make expands to *unlimited* jobs (~1400 asn1c TUs would OOM the runner). `actions/cache` over `V2X_ECU/build/_deps` is keyed on the exact Vanetza pin, so later lanes do not repay the ASN.1 compile.
+
 ### `1.0.2.2` — CpmContent + ICpmCodec seam *(agent)*
 
 **Objective:** create `V2X_ECU/src/codec/cpm_codec.hpp` with `CpmContent`, `DecodeError`, and `ICpmCodec` **exactly** per the frozen shape in [HLD §7](doc/phase0-contract-freeze-hld.md#7-codec-seam-interface-frozen-shape), plus nlohmann `to_json`/`from_json` for `CpmContent`.
