@@ -335,6 +335,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 4.0.6.1 + 4.0.1.6. **Commit:** `[4.0.6.2] test: add IVI-side R4 additive-version test`
 
+**Status:** implemented 2026-07-31, awaiting CI — D4 fixture decodes through the unmodified 4.0.6.1 binding (`ignoreUnknownKeys` lenient parse; unknown `warningType` preserved as a usable warning, `schemaVersion` 2 carried, `hazardDetail` ignored); copy cmp-identical; `ivi-unit-tests` CI job is the verification authority (local JDK 25 exceeds Gradle 8.13's range).
+
 ### IVI reconciliation with phase5 (HLD §11 item 5 — resolved here)
 
 Ownership split so no deliverable is decomposed twice; [phase5_tasks.md](phase5_tasks.md) IDs stay stable (never renumbered):
