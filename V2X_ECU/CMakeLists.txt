@@ -56,5 +56,19 @@ v2x_add_test(v2x_sanity_test tests/test_sanity.cpp)
 # own ItsAsn1Rel2 test. Security ASN.1 targets are deliberately not linked.
 target_link_libraries(v2x_sanity_test PRIVATE Vanetza::asn1 Vanetza::asn1_its_r2)
 
-# Later subtasks add their targets here: the codec seam (1.0.2.2), VanetzaCpmCodec (1.0.2.3),
+# R1 codec seam (1.0.2.2) - header-only: CpmContent, the nlohmann binding and the
+# ICpmCodec pure-virtual interface all live in src/codec/cpm_codec.hpp, so there is
+# no .cpp and no compiled library - an INTERFACE target is the right shape. It puts
+# src/ on the include path for every consumer (1.0.2.3 VanetzaCpmCodec, 1.0.2.4
+# gv_tool, 1.0.2.5 golden vectors, 2.0.3.1 R2 binding). Deliberately no Vanetza
+# link: the seam itself is codec-library-agnostic (F2).
+add_library(v2x_codec_seam INTERFACE)
+target_include_directories(v2x_codec_seam INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(v2x_codec_seam INTERFACE nlohmann_json::nlohmann_json)
+target_compile_features(v2x_codec_seam INTERFACE cxx_std_17)
+
+v2x_add_test(v2x_cpm_content_roundtrip_test tests/codec/test_cpm_content_roundtrip.cpp)
+target_link_libraries(v2x_cpm_content_roundtrip_test PRIVATE v2x_codec_seam)
+
+# Later subtasks add their targets here: VanetzaCpmCodec (1.0.2.3),
 # gv_tool (1.0.2.4), the golden-vector test (1.0.2.5) and the R2 binding (2.0.3.1).
