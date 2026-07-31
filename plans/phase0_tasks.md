@@ -223,7 +223,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 2.0.1.3 + 3.0.4.1 (ADA toolchain). Parallel with 2.0.3.1. **Commit:** `[2.0.3.2] feat: add ADA-side R2 binding with round-trip test`
 
-**Status:** implemented 2026-07-31, awaiting CI — `ada::contracts::R2Message` consumer binding (nullable `sender.speed`/`object.confidence` via std::optional, F1/F6) + round-trip and null-speed tests; copies cmp-identical; `ada-core-build` CI job is the verification authority (no local cmake).
+**Status:** done 2026-07-31 — `ada::contracts::R2Message` consumer binding (nullable `sender.speed`/`object.confidence` via std::optional, F1/F6) + round-trip and null-speed tests; copies cmp-identical; verified green on CI run 30602159929. **Commit anomaly:** implementation landed in `dc0d424`, mis-tagged `[5.0.8.2]` — a concurrent-session `git commit` swept this subtask's already-staged files into its commit (index collision, recorded honestly; history not rewritten since pushed).
 
 ---
 
