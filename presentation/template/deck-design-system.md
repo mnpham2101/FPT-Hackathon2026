@@ -7,6 +7,8 @@ description: Reusable design system for this project's Marp decks and their stat
 
 Every human-facing presentation in this repo is two files: a **Marp markdown source** (`<slug>-deck.md`) and a **hand-authored static HTML export** (`<slug>-deck.html`) — not a `marp-cli` build output. This doc is the design system behind both, extracted from [m1-proposal-deck.md](../m1-proposal-deck.md)/[.html](../m1-proposal-deck.html) (full proposal) and [phase0/phase0-smoke-test-deck.md](../phase0/phase0-smoke-test-deck.md)/[.html](../phase0/phase0-smoke-test-deck.html) (report deck). Read this instead of re-reading either full HTML file to rebuild the design from scratch.
 
+The animated slide-canvas mechanics below are current as of the phase0 deck; the root `m1-proposal-deck.html` predates them and still hard-toggles `display: none`/`flex` with no transition — treat the phase0 deck, not the root one, as the transition reference.
+
 ## Folder placement
 
 - One subfolder per deck under `presentation/`: `presentation/<deck-slug>/<deck-slug>-deck.{md,html}`. The top-level `m1-proposal-deck.*` predates this convention and stays at the root.
@@ -43,22 +45,37 @@ Rule: a gradient layered over a photo must use `rgba(...)` alpha, not opaque hex
 
 ## Slide canvas mechanics
 
-Fixed-size slides (`1280×720`), stacked absolutely, one `.active` at a time, scaled to fit the viewport — this is what makes the deck behave the same in a browser window, fullscreen, or print:
+Fixed-size slides (`1280×720`), stacked absolutely, one `.active` at a time, scaled to fit the viewport — this is what makes the deck behave the same in a browser window, fullscreen, or print. Transitions are opacity + scale + a slight vertical settle, driven entirely by CSS so `show()` only ever toggles the `.active` class:
 
 ```css
 .deck { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-.slide { width: 1280px; height: 720px; position: absolute; display: none; flex-direction: column;
+.slide {
+  width: 1280px; height: 720px; position: absolute; display: flex; flex-direction: column;
   transform-origin: center center; background: var(--paper); color: var(--ink);
-  box-shadow: 0 18px 60px rgba(0,0,0,.45); overflow: hidden; }
-.slide.active { display: flex; }
+  box-shadow: 0 18px 60px rgba(0,0,0,.45); overflow: hidden;
+  opacity: 0; pointer-events: none; z-index: 1;
+  transform: scale(var(--s, 1)) scale(.96) translateY(10px);
+  transition: opacity .45s ease, transform .5s cubic-bezier(.22,.75,.32,1);
+}
+.slide.active {
+  opacity: 1; pointer-events: auto; z-index: 2;
+  transform: scale(var(--s, 1)) scale(1) translateY(0);
+}
+@media (prefers-reduced-motion: reduce) {
+  .slide { transition: opacity .01s linear; transform: scale(var(--s, 1)); }
+}
 ```
+
+The viewport-fit scale lives in the `--s` custom property (not an inline `transform`) precisely so the stylesheet can compose it with the per-slide pop/settle transform above — setting `sl.style.transform` directly, as older decks in this repo do, would overwrite that composition and kill the animation:
 
 ```js
 function fit() {
   const s = Math.min(innerWidth / 1280, innerHeight / 720);
-  slides.forEach(sl => sl.style.transform = `scale(${s})`);
+  document.documentElement.style.setProperty('--s', s);
 }
 ```
+
+`@media print` must additionally force `opacity: 1 !important; transition: none !important;` on `.slide` — otherwise every non-active slide prints blank, since the opacity-based hide is the default state.
 
 ## Navigation & controls
 
