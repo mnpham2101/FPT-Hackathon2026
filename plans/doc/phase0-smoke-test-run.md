@@ -36,7 +36,12 @@ Evidence gathered:
 - Anonymous pull is refused (401) for **every** repository, ours and other teams' alike, so the cluster must pull with a credential we do not control.
 - The one known-working platform blueprint ([blueprint-KIS.json](../../requirements/development-platform-doc/blueprint-KIS.json)) references images as **`localhost:5000/<namespace>/<image>:tag`**, not by public hostname; every other repository in the registry is namespaced `<team>/<image>` while ours sits at the root.
 
-**Hypothesis:** the address used to *push* (external ingress `registry.hackathon-2.carsky.io`) is not the address a node must use to *pull*. Remaining candidate: `registry.carsky.io/m1-netcheck:latest` (the platform doc's own convention and the baseline's; its 502 is on the external ingress and may not affect in-cluster resolution). Eliminated: `localhost:5000/m1-netcheck:latest` — tested live 2026-07-31 on the V2X node (deploy `dn7lg2xt8m6hdqr7ce-uz`, hackathon-2 refs on the other two nodes as controls), identical pull failure; the KIS blueprint's `localhost:5000` references presumably resolve only for platform-mirrored images. A namespaced path alone (`kis/m1-netcheck` via the public host) is **weakened** by the cross-team evidence below — Vital-Guard's image is namespaced and fails identically.
+**Hypothesis (all self-serve candidates now eliminated):** the address used to *push* (external ingress `registry.hackathon-2.carsky.io`) is not the address a node must use to *pull* — but no reachable alternative works either. Eliminated live 2026-07-31, each tested on the V2X node with hackathon-2 refs on the other two nodes as controls, all with the identical `waiting to start: trying and failing to pull image`:
+
+- `localhost:5000/m1-netcheck:latest` (deploy `dn7lg2xt8m6hdqr7ce-uz`) — the KIS blueprint's `localhost:5000` references presumably resolve only for platform-mirrored images.
+- `registry.carsky.io/m1-netcheck:latest` (deploy `27gs83k3oeju2mbywu1j8`, namespace `room-j7wtls51`) — the platform doc's own convention fails too, so the 502 is not edge-only.
+
+A namespaced path alone (`kis/m1-netcheck` via the public host) is **weakened** by the cross-team evidence below — Vital-Guard's image is namespaced and fails identically. **Conclusion: the cluster cannot pull team images from the Zot registry under any reference we can set; the fix is platform-side.**
 
 **Eliminated live (2026-07-31, attempts 3–4):**
 
