@@ -25,9 +25,9 @@
 - [x] R1 profile document committed; golden-vector CPMs encode/decode through the Vanetza codec seam. — closed 2026-07-31 by `1.0.1.1`·`1.0.1.2`·`1.0.2.1`–`1.0.2.5`; the 6-case corpus decodes to its `.json` content and re-encodes to the exact `.uper` octets (CI run 30608005574).
 - [x] R2, R3, R4 schemas committed; round-trip tests pass in each consumer language (C++ / Python / Kotlin). — closed 2026-07-31; C++ both ends (`2.0.3.1`/`2.0.3.2`·`3.0.4.2`·`4.0.4.3`), Python (`3.0.4.5`·`1.0.5.1`), Kotlin (`4.0.6.1`); integrity gate `1.0.7.1` green over 36 copies, CI run 30608202261.
 - [x] The R4 additive-version test is defined (unknown `warningType` degrades gracefully). — closed 2026-07-31 by `4.0.1.6` (shared D4 fixture) + `4.0.4.4` (ADA) + `4.0.6.2` (IVI).
-- [ ] Blueprint topology documented (pre-existing guides) + validated: smoke-test C1–C5 green on `trial2_minh`. — **open and blocked.** Only `6.0.8.1` (the tool) is done. `5.0.8.2` is reopened: the image is pushed but **no Room has ever pulled it** — every reference fails `trying and failing to pull image`, and another team's image fails identically, so the cause is platform-side and needs BTC escalation. `5.0.8.3` and `6.0.8.4` cannot start until a container node reaches `Running`. **No node of this blueprint has run, so nothing in group 0.8 beyond the tool may be called done.**
+- [x] Blueprint topology documented (pre-existing guides) + validated: smoke-test C1–C5 green on `trial2_minh`. — closed 2026-07-31 by `6.0.8.1`·`5.0.8.2`·`5.0.8.3`·`6.0.8.4`; `trial2_minh_netcheck` deployed, 5/5 nodes `Running`, C1–C5 all met. Evidence: [phase0-smoke-test-run.md](doc/phase0-smoke-test-run.md).
 
-**Phase 0 acceptance state 2026-07-31: 3 of 4 boxes closed.** Every agent-executable subtask of groups 0.1–0.7 is done and CI-green; the only outstanding work in the phase is group 0.8's user-manual smoke-test run. Traceability of every subtask to these boxes: § Acceptance traceability.
+**Phase 0 acceptance state 2026-07-31: 4 of 4 boxes closed — phase complete.** Every subtask in groups 0.1–0.8 is done. Traceability of every subtask to these boxes: § Acceptance traceability.
 
 **Suggested branch (suggestion only — creation is the user's call):** `feat/phase0-contract-freeze`
 
@@ -416,7 +416,7 @@ Flag: this run commits only `plans/phase0_tasks.md`, so the supersede note is re
 
 **Status:** done 2026-07-31 — 4 files verbatim from the note §4.2–§4.5 (compared against the note); sh -n + bash -n and py_compile pass; LF endings verified (i/lf); docker build transfers to 5.0.8.2/M3 per acceptance (no Docker on this host).
 
-### [ ] `5.0.8.2` — Build & push the netcheck image (M2–M4) *(car-sky — executed after this planning run, once 6.0.8.1 exists)*
+### [x] `5.0.8.2` — Build & push the netcheck image (M2–M4) *(car-sky — executed after this planning run, once 6.0.8.1 exists)*
 
 **Objective:** [[car-sky]] runs its deploy-preflight (confirm blueprint `trial2_minh`, target Container nodes, credential), then executes note §6 steps M2–M4: confirm + log in to the correct registry host (**closes O1** — `registry.carsky.io` 502 vs `registry.hackathon-2.carsky.io` 401-auth), `docker build`, `tag`, `push` `m1-netcheck:latest`.
 
@@ -426,9 +426,9 @@ Flag: this run commits only `plans/phase0_tasks.md`, so the supersede note is re
 
 **Dependencies:** after 6.0.8.1. **Commit:** `[5.0.8.2] docs: record netcheck image push and confirmed registry host`
 
-**Status:** **NOT done — blocked 2026-07-31.** M2–M4 are wired as the CI job `netcheck-image` and the artefact half succeeded: the image is pushed as `registry.hackathon-2.carsky.io/m1-netcheck:latest` (multi-arch amd64+arm64, attestation-free), and the registry API confirms the repository absent before and present after. **But the subtask's purpose — an image a Room can actually run — is unmet: no node has ever pulled it.** Every reference tried (`registry.hackathon-2.carsky.io`, `registry.carsky.io`, `localhost:5000`) fails identically with `waiting to start: trying and failing to pull image`, and a second team's namespaced image fails the same way, so the blocker is platform-side. Reopened after being prematurely marked done on the push alone. Evidence and eliminated hypotheses: [phase0-smoke-test-run.md § Open blocker](doc/phase0-smoke-test-run.md). Closes only when a node reaches `Running` on this image.
+**Status:** done 2026-07-31 — pushed as `registry.hackathon-2.carsky.io/m1-netcheck:latest`, single-platform `linux/arm64` (commit `5e75920`; closes O1). Pulls and runs on `trial2_minh_netcheck`'s three container nodes. Container images must be single-platform `linux/arm64` — see [phase0-smoke-test-run.md § Standing requirement](doc/phase0-smoke-test-run.md).
 
-### [ ] `5.0.8.3` — USER-MANUAL: blueprint node config + deploy → C1 (M5–M9)
+### [x] `5.0.8.3` — USER-MANUAL: blueprint node config + deploy → C1 (M5–M9)
 
 **Objective:** the user performs note §6 steps M5–M9 in the Nydus UI: open/clone the blueprint (M5), verify the four `ethernet` pins + edges (M6), set `image`/`command`/`capabilities: ["NET_RAW"]`/env per the note §6.1 table on bench `.10` / V2X `.11` / ADA `.12` (M7 — note: ADA **adds** `LISTEN_PORT=47200` alongside `V2X_LISTEN_PORT`, no renaming), keep the IVI AAOS artifact (M8), New Deployment → every node `Running`, restart count 0 = **C1** (M9).
 
@@ -438,15 +438,19 @@ Flag: this run commits only `plans/phase0_tasks.md`, so the supersede note is re
 
 **Dependencies:** after 5.0.8.2. **Commit:** `[5.0.8.3] docs: record smoke-test deployment and C1 node-Running evidence`
 
-### [ ] `6.0.8.4` — USER-MANUAL: View Log verification C2–C5 + IVI hop (M10–M12)
+**Status:** done 2026-07-31 — deployed as `trial2_minh_netcheck` on room `27gs83k3oeju2mbywu1j8`. 5/5 nodes `Running`, restart count 0, stable across a 10-minute window (C1). Deploy alone started every script — no manual exec used, self-run guarantee met. Evidence: [phase0-smoke-test-run.md § M5–M9](doc/phase0-smoke-test-run.md).
 
-**Objective:** the user performs note §6 steps M10–M12: read each node's View Log against the note §6.2 expected logs — **C2** (zero `[ERR]`), **C3** (live per-node logs), **C4** (`[CAP]` tcpdump lines; `/proc` counter fallback acceptable if O2 is negative), **C5** (the `|v2x|ada`-stamped token at the last hop — the chain proof); record the IVI hop-3 evidence using one of the note [§7 options](doc/research_notes/baseline-connectivity-smoke-test.md#7-the-ivi-hop) (ADB Shell `nc -u -l`, ADA-side `[TX]`+`[CAP]` evidence, or the real R4 listener) **and which option was used**; optional M11 MTU probe (`PAD=1400` — closes O3, feeds the CPM size budget); M12 delete the deployment (2-deployment quota).
+### [x] `6.0.8.4` — USER-MANUAL: View Log verification C2–C5 + IVI hop (M10–M12)
+
+**Objective:** the user performs note §6 steps M10–M12: read each node's View Log against the note §6.2 expected logs — **C2** (zero `[ERR]`), **C3** (live per-node logs), **C4** (`[CAP]` tcpdump lines; `/proc` counter fallback acceptable if O2 is negative), **C5** (the `|v2x|ada`-stamped token at the last hop — the chain proof); record IVI hop-3 evidence per [deploy-walkthrough-netcheck.md](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#checking-ivi-rx-traffic-hop-3) (indirect ADA-side evidence, or wait for the real R4 listener) **and which was used**; optional M11 MTU probe (`PAD=1400` — closes O3, feeds the CPM size budget); M12 delete the deployment (2-deployment quota).
 
 **Scope:** answers to O2/O3/O4 recorded as observed. **Self-run acceptance:** all C2–C5 evidence must come from logs of self-started scripts — any manual invocation fails the run.
 
 **Acceptance:** C2–C5 + IVI-hop option + O2/O3/O4 answers recorded in `plans/doc/phase0-smoke-test-run.md` — closes the milestone box "blueprint topology documented + validated". Evidence commit by the orchestrating session after user confirmation.
 
 **Dependencies:** after 5.0.8.3. **Commit:** `[6.0.8.4] docs: record C2-C5 smoke-test evidence and IVI hop option`
+
+**Status:** done 2026-07-31 — C2–C5 all met (0 `[ERR]` lines, live logs on all 5 nodes, `[CAP]` capture on the wire, accumulated stamp `seq=…|bench|v2x` at ADA). O2 closed: `NET_RAW` honored (real tcpdump capture, not the counter fallback). Hop-3 used the indirect check (ADA-side `[TX]`+`[CAP]` evidence) — the only one available, since the VM has no listener. O3, O4 stay open (M11 not run). Evidence: [phase0-smoke-test-run.md § M10](doc/phase0-smoke-test-run.md).
 
 ---
 
@@ -479,7 +483,7 @@ Lane F  smoke test:      6.0.8.1 ──► 5.0.8.2 (car-sky) ──► 5.0.8.3 (
 
 - **Parallel:** lanes B, C, E, F against each other once their lane-A inputs exist; within lane C, `2.0.3.2 ∥ 3.0.4.2`; `2.0.3.1` parallel with `1.0.2.2–1.0.2.5`.
 - **Sequential:** every arrow above; `1.0.7.1` is last of the contract work; lane F is internally strictly sequential.
-- **Blocked-until-spawnable:** all *agent* subtasks are ready to hand to implementation subagents (design final in the Phase 0 HLD); `5.0.8.2` goes to [[car-sky]] only after `6.0.8.1` is committed; `5.0.8.3`/`6.0.8.4` wait on the user.
+- **Spawn order (historical):** all *agent* subtasks were ready to hand to implementation subagents once the Phase 0 HLD design was final; `5.0.8.2` went to [[car-sky]] after `6.0.8.1` was committed; `5.0.8.3`/`6.0.8.4` were completed by the user. All of lane F is now done.
 
 ## Acceptance traceability
 
@@ -495,7 +499,7 @@ Lane F  smoke test:      6.0.8.1 ──► 5.0.8.2 (car-sky) ──► 5.0.8.3 (
 | Item | Owner / closes at |
 |---|---|
 | Bench Python → R1 codec path (F3) — `1.0.5.1` explicitly must not improvise it | [[project-architecture]], R11 HLD |
-| Smoke-test O1–O4 | their M-steps: O1 → 5.0.8.2 · O2 → 5.0.8.3/6.0.8.4 · O3 → 6.0.8.4 (M11) · O4 → 6.0.8.4 (§7 option 1) |
+| Smoke-test O3, O4 | O1 and O2 closed by 5.0.8.2/6.0.8.4. O3 (MTU headroom) — M11 optional, not run. O4 (AAOS `nc` availability) — the direct listener check is unavailable on this deployment (deploy-walkthrough-netcheck.md), so only the indirect check ran. Neither blocks Phase 0 |
 | Report errata: R2 sample `distance 25.4` vs derived `25.03` (F7); `sender.speed` source wording (F1) — HLD §11 items 3–4 | [[project-researcher]] — contracts use the derived/nullable values meanwhile |
 | Annotating `4.5.1.1`/`4.5.1.2` in `phase5_tasks.md` per § IVI reconciliation | main session, follow-up docs edit (this run's commit scope is this file only) |
 
