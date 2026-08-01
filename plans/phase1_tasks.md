@@ -294,6 +294,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none — parallel with 9.1.4.1/9.1.4.2 (uses only Phase 0 seam + binding). **Commit:** `[9.1.4.3] feat: implement R2 builder with F1/F6/F7 derivations`
 
+**Status:** implemented 2026-08-01 — F1 (per-station equirectangular speed, null until 2nd msg, Δt ≤ 0 guard) / F6 (101→null, /100 clamped, coord confidence ×0.01 m) / F7 (exact hypot, no rounding) per the profile; nominal golden → field-by-field cross-check against `samples/r2-object.json` in `v2x_r2_builder_test`; transport-import + contract-sync gates exit 0; CI verification pending wave push.
+
 ### [ ] `9.1.4.4` — Pipeline composition `src/pipeline/rx_pipeline.{hpp,cpp}` *(agent)*
 
 **Objective:** the four-stage synchronous pipeline: datagram bytes → `ICpmCodec::decode` → validator → deduper → r2_builder → injected R2 sink callback; every stage outcome emitted to `event_log`.
