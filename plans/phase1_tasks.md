@@ -104,6 +104,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 11.1.1.1 + 11.1.7.1 + 11.1.7.2 (all new copies must exist first — the gate fails on missing targets). **Commit:** `[11.1.1.2] chore: extend sync manifest with codec-source and uper syncs`
 
+**Status:** done 2026-08-01 — manifest extended to 47 copies (pin fragment ×2, codec-seam sources ×3, golden `.uper` ×6); `check_sync.py` exits 0 on the committed tree and exit 1 naming the pair when a new text copy and a new binary copy are each corrupted unstaged (both restored, gate re-green); no script change needed.
+
 ---
 
 ## Task Group 1.2 — V2X ECU foundation: config, socket, event log, forwarder (serves R8, R7, R18, R2)
