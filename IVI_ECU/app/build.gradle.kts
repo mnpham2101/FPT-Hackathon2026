@@ -92,7 +92,15 @@ dependencies {
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
 
     // Unit / integration testing
+    // compileOnly: fwcd Kotlin LS resolves only the main compile classpath for files under
+    // src/test when the workspace root is the monorepo (not IVI_ECU). Expose test APIs to
+    // analysis without packaging them into the APK; tests still use testImplementation.
+    compileOnly("junit:junit:4.13.2")
+    compileOnly("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
+    compileOnly("io.mockk:mockk:1.13.13")
+    compileOnly("app.cash.turbine:turbine:1.2.0")
     testImplementation("junit:junit:4.13.2")
+    testImplementation("androidx.test.ext:junit:1.2.1")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
     testImplementation("io.mockk:mockk:1.13.13")
     testImplementation("app.cash.turbine:turbine:1.2.0")
