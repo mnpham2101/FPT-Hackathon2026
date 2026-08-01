@@ -1,5 +1,6 @@
 #include "ada/config.hpp"
 
+#include <cstdlib>
 #include <fstream>
 #include <sstream>
 #include <stdexcept>
@@ -14,6 +15,30 @@ std::string trim(const std::string& value) {
     }
     const auto last = value.find_last_not_of(" \t\r\n");
     return value.substr(first, last - first + 1);
+}
+
+void apply_env_string(const char* name, std::string& target) {
+    if (const char* value = std::getenv(name)) {
+        target = value;
+    }
+}
+
+void apply_env_int(const char* name, int& target) {
+    if (const char* value = std::getenv(name)) {
+        target = std::stoi(value);
+    }
+}
+
+void apply_env_int64(const char* name, std::int64_t& target) {
+    if (const char* value = std::getenv(name)) {
+        target = std::stoll(value);
+    }
+}
+
+void apply_env_double(const char* name, double& target) {
+    if (const char* value = std::getenv(name)) {
+        target = std::stod(value);
+    }
 }
 
 }  // namespace
@@ -60,6 +85,18 @@ AdaConfig load_config(const std::string& path) {
             config.ivi_port = std::stoi(value);
         }
     }
+
+    apply_env_double("GATE_ENTER_M", config.gate_enter_m);
+    apply_env_double("GATE_EXIT_M", config.gate_exit_m);
+    apply_env_int64("MISS_LIMIT_MS", config.miss_limit_ms);
+    apply_env_int("TENTATIVE_HITS", config.tentative_hits);
+    apply_env_string("LOG_PATH", config.log_path);
+    apply_env_string("ADA_LISTEN_HOST", config.ada_listen_host);
+    apply_env_int("ADA_LISTEN_PORT", config.ada_listen_port);
+    apply_env_int("V2X_LISTEN_PORT", config.ada_listen_port);
+    apply_env_int64("R2_RECEIVE_TIMEOUT_MS", config.r2_receive_timeout_ms);
+    apply_env_string("IVI_HOST", config.ivi_host);
+    apply_env_int("IVI_PORT", config.ivi_port);
 
     return config;
 }

@@ -83,7 +83,15 @@ Terminal 2:
 ada-ecu/build/ada_ecu --config ada-ecu/config/ada-ecu.conf --mock
 ```
 
-The IVI receiver should print one R4 warning with `trackedObjects` containing `own:B` and `v2x:1201:7`.
+The IVI receiver should print one R4 warning with `geometry.vehicleB`, `geometry.vehicleC`, and debug `trackedObjects` containing `own:B` and `v2x:1201:7`.
+
+For CarSky deployment, keep the local defaults above and override the bridge ports through env:
+
+```sh
+V2X_LISTEN_PORT=47200
+IVI_HOST=10.99.0.13
+IVI_PORT=47300
+```
 
 Generate a Phase 3 detector JSONL sample:
 

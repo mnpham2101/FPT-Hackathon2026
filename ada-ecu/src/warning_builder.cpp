@@ -15,8 +15,16 @@ std::string tracked_object_json(const TrackedObject& object) {
         << "\"distance\":" << object.distance_m << ","
         << "\"speed\":" << object.speed_mps << ","
         << "\"confidence\":" << object.confidence << ","
-        << "\"state\":\"" << to_string(object.state) << "\"}";
+        << "\"state\":\"" << to_string(object.state) << "\","
+        << "\"timestamps\":{"
+        << "\"measured\":" << object.timestamps.measured_ms << ","
+        << "\"received\":" << object.timestamps.received_ms << ","
+        << "\"lastUpdated\":" << object.timestamps.last_updated_ms << "}}";
     return out.str();
+}
+
+const char* r4_risk_state(RiskState state) {
+    return state == RiskState::Warning ? "high" : "low";
 }
 
 }  // namespace
@@ -33,7 +41,7 @@ std::string build_r4_warning_json(const RiskEvent& event, const TrackStore& stor
     out << "{\"schemaVersion\":1,"
         << "\"type\":\"warning\","
         << "\"warningType\":\"nlos_obstruction\","
-        << "\"riskState\":\"" << to_string(event.state) << "\","
+        << "\"riskState\":\"" << r4_risk_state(event.state) << "\","
         << "\"object\":" << tracked_object_json(event.object) << ","
         << "\"trackedObjects\":[";
     if (own_b) {
@@ -42,8 +50,8 @@ std::string build_r4_warning_json(const RiskEvent& event, const TrackStore& stor
     out << tracked_object_json(event.object) << "],"
         << "\"geometry\":{"
         << "\"ego\":{\"x\":0,\"y\":0},"
-        << "\"b\":{\"x\":" << d_ab << ",\"y\":" << b_y << "},"
-        << "\"c\":{\"x\":" << c_x << ",\"y\":" << c_y << "}"
+        << "\"vehicleB\":{\"x\":" << d_ab << ",\"y\":" << b_y << "},"
+        << "\"vehicleC\":{\"x\":" << c_x << ",\"y\":" << c_y << "}"
         << "}}";
     return out.str();
 }

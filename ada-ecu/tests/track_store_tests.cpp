@@ -70,7 +70,10 @@ int main() {
     assert(warning.find("\"type\":\"warning\"") != std::string::npos);
     assert(warning.find("\"warningType\":\"nlos_obstruction\"") != std::string::npos);
     assert(warning.find("\"source\":\"v2x_relayed\"") != std::string::npos);
+    assert(warning.find("\"riskState\":\"high\"") != std::string::npos);
     assert(warning.find("\"trackedObjects\"") != std::string::npos);
+    assert(warning.find("\"vehicleB\"") != std::string::npos);
+    assert(warning.find("\"vehicleC\"") != std::string::npos);
     assert(warning.find("\"id\":\"own:B\"") != std::string::npos);
     assert(warning.find("\"distance\":12") != std::string::npos);
 
@@ -103,7 +106,8 @@ int main() {
     assert(timeout_clear_event->state == ada::RiskState::Clear);
     const auto timeout_clear_warning = ada::build_r4_warning_json(*timeout_clear_event, store);
     assert(timeout_clear_warning.find("\"id\":\"own:B\"") != std::string::npos);
-    assert(timeout_clear_warning.find("\"b\":{\"x\":12") != std::string::npos);
+    assert(timeout_clear_warning.find("\"riskState\":\"low\"") != std::string::npos);
+    assert(timeout_clear_warning.find("\"vehicleB\":{\"x\":12") != std::string::npos);
 
     return 0;
 }

@@ -34,9 +34,16 @@ def main() -> int:
             if message.get("warningType") != "nlos_obstruction":
                 print("received unexpected warningType", file=sys.stderr)
                 return 3
+            if message.get("riskState") not in {"low", "medium", "high"}:
+                print("received unexpected riskState", file=sys.stderr)
+                return 4
+            geometry = message.get("geometry", {})
+            if "vehicleB" not in geometry or "vehicleC" not in geometry:
+                print("R4 warning missing vehicleB/vehicleC geometry", file=sys.stderr)
+                return 5
             if not any(obj.get("id") == "own:B" for obj in message.get("trackedObjects", [])):
                 print("R4 warning missing own:B tracked object", file=sys.stderr)
-                return 4
+                return 6
 
             print(json.dumps({"sender": sender[0], "port": sender[1], "r4": message}, separators=(",", ":")))
     return 0

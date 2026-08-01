@@ -46,7 +46,7 @@ python3 ada-ecu/tools/mock_ivi_receiver.py --host 127.0.0.1 --port 46004
 ada-ecu/build/ada_ecu --config ada-ecu/config/ada-ecu.conf --mock
 ```
 
-Expected IVI receiver output: one R4 warning with `trackedObjects` containing `own:B` and `v2x:1201:7`.
+Expected IVI receiver output: one R4 warning with `geometry.vehicleB`, `geometry.vehicleC`, and debug `trackedObjects` containing `own:B` and `v2x:1201:7`.
 
 External V2X mock sender smoke:
 
