@@ -2,6 +2,18 @@
 
 Evidence for [phase1_tasks.md § Task Group 1.10](../phase1_tasks.md). Each section closes one subtask; sections stay in the plan's order and are filled as the work happens. Deployment procedure is not restated here — it lives in [deploy-walkthrough-netcheck.md](../../requirements/car-sky-guide/deploy-walkthrough-netcheck.md), which the ECU nodes follow with different images and env.
 
+## To do
+
+Five items close out Phase 1, cheapest first. Items 1–3 need a **live Room**; 4–5 need only a saved View Log.
+
+1. **`11.1.10.4` — scenario swap.** Set the bench node's `SCENARIO_CONFIG` to `/app/scenarios/c-out-of-range.yaml`, redeploy, and compare against the `default.yaml` baseline in § `2.1.10.3`: a static beyond-gate distance instead of the 0.25 m-per-message approach. Config-only, no rebuild — that is R11's point.
+2. **`5.1.10.2` — confirm node status.** Read the per-node `Running` badges and restart counts in the Deployment Viewer, not the summary header (which read `Pending — 0/0 nodes ready` while traffic flowed normally). The R5 box's wording is "every node Running".
+3. **`2.1.10.3` — capture the R8 bring-up.** The `[EVT] stub_transition` sequence (`init` → `configure` → `subscribeRx`) only prints once at node start, and scrolled away before it was recorded. Restart the V2X node and grab the first seconds of its log.
+4. **`2.1.10.3` — scripted `[EVT]` check.** Download the V2X View Log and run `python tools/comms_check/check_v2x_log.py <saved.log>` in stream mode. Exit 0 replaces the manual read of the Rx chain.
+5. **`6.1.10.5` — pcap → Wireshark.** Needs a View Log download that contains a `[PCAP-BEGIN]`/`[PCAP-END]` block, so the Room must have run at least one `CAPTURE_ROTATE_S` period. Then `V2X_ECU/tools/extract_pcap.sh <saved.log>` and open the `.pcap`. Expect UDP data, not an ITS protocol tree (D5) — the evidence is payload-byte correlation.
+
+Sequencing note: items 3–5 all read the V2X node's log, so one restart plus one sufficiently long download can serve all three.
+
 ## `5.1.10.1` — Images in the registry
 
 Push path was the CI lanes, not the [[car-sky]] agent: `CARSKY_ZOT_API_KEY` is present as a repo secret, so the secret-gated push step in each lane ran instead of skipping. Registry host `registry.hackathon-2.carsky.io` (the O1 live host — the node guides' `registry.carsky.io` login lines remain stale).
@@ -18,7 +30,7 @@ First confirmed push: CI run `30698630956` on `7a02fb5` (10 lanes green). Both E
 
 **All three tags verified by deployment**, which is stronger evidence than a catalog listing: every node pulled and ran. `m1-netcheck:latest` specifically carries `2.1.9.1` — the deployed sink emits full 339-character `[RX]` bodies, so `BODY_PREVIEW=512` is being read and the image is not the 96-char build.
 
-**Standing hazard.** `main` pushes `m1-netcheck:latest` from different code: `2.1.9.1` (`1925ce8`) is branch-only, so any commit to `main` before the branch merges silently reverts the registry copy to the hardcoded-96 build, with no visible change in Nydus. Re-check the `[RX]` body length after any `main` activity.
+**Split-tag hazard — resolved by the merge.** While `2.1.9.1` (`1925ce8`) was branch-only, `main` and the feature branch pushed `m1-netcheck:latest` from different code, so any commit to `main` silently reverted the registry copy to the hardcoded-96 build with no visible change in Nydus. Merging Phase 1 to `main` (`aa21f34`) put `BODY_PREVIEW` on both, closing the divergence. The general rule still holds for any future branch-only change to an image's source: the tag is shared, so whichever branch pushed last wins.
 
 ### Benign error in both push steps
 
