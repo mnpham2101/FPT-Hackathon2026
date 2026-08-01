@@ -136,6 +136,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none — parallel with 8.1.2.1. **Commit:** `[7.1.2.2] feat: add UdpSocket sole transport holder`
 
+**Status:** implemented 2026-08-01 — `src/net/udp_socket.{hpp,cpp}` + `tests/net/test_udp_socket.cpp` added (`v2x_net` static lib + `v2x_udp_socket_test` registered), RAII move-only fd with socket includes confined to the .cpp (header POSIX-free), transport-import and contract-sync gates exit 0; CI verification pending wave push.
+
 ### [ ] `18.1.2.3` — R18 JSONL event log `src/log/event_log.{hpp,cpp}` *(agent)*
 
 **Objective:** the R18 evidence-stream writer (HLD D4) — one JSONL line per event, `[EVT]`-prefixed.

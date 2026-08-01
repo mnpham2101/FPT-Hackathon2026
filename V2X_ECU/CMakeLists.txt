@@ -118,3 +118,17 @@ target_compile_features(v2x_config PUBLIC cxx_std_17)
 
 v2x_add_test(v2x_config_test tests/config/test_config.cpp)
 target_link_libraries(v2x_config_test PRIVATE v2x_config)
+
+# Sole socket-API holder (7.1.2.2, Phase 1 HLD D1) - src/net/ is the only code
+# allowed to include transport headers, and only udp_socket.cpp does; the header
+# stays POSIX-free so consumers (R7 stub Rx, 2.1.2.4 ADA forwarder) never see
+# them (tools/check_transport_imports.py enforces this). Static-lib shape
+# mirrors v2x_config: stdlib + POSIX only - no nlohmann, no Vanetza.
+add_library(v2x_net STATIC
+  src/net/udp_socket.cpp
+)
+target_include_directories(v2x_net PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_compile_features(v2x_net PUBLIC cxx_std_17)
+
+v2x_add_test(v2x_udp_socket_test tests/net/test_udp_socket.cpp)
+target_link_libraries(v2x_udp_socket_test PRIVATE v2x_net)
