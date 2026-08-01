@@ -7,7 +7,6 @@ import com.hackathon.v2x.ivi.model.R4Message
 import com.hackathon.v2x.ivi.model.R4StateMessage
 import com.hackathon.v2x.ivi.model.R4WarningEvent
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
