@@ -360,6 +360,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none (marker format is HLD-frozen; logically pairs with 6.1.5.2). **Commit:** `[6.1.5.3] feat: add host-side pcap extraction script`
 
+**Status:** implemented 2026-08-01 — bash -n clean; real round-trip through the landed capture.sh --export-one producer extracted 2 blocks byte-identically (cmp clean, binary bytes incl. CR/LF/NUL); no-block exit 1, truncated/corrupt block non-zero with partial extraction, path-escape name sanitized, CRLF-saved log handled.
+
 ### [ ] `5.1.5.4` — `V2X_ECU/Dockerfile` + `entrypoint.sh` *(agent)*
 
 **Objective:** the deployable `v2x-ecu:latest` image (HLD §9): multi-stage — cmake build stage → slim runtime with tcpdump.
