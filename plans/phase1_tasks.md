@@ -403,6 +403,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 11.1.6.1. **Commit:** `[11.1.6.3] feat: implement constant-velocity scenario kinematics`
 
+**Status:** done 2026-08-01 — pytest 85 passed locally; hand-computed t=0/10/20 wire values exact, F9 ±2048 rejected.
+
 ### [ ] `11.1.6.4` — Model-level stream-difference test *(agent)*
 
 **Objective:** `tests/test_streams_differ.py` — the two committed YAMLs yield differing `CpmContent` sequences (the model-level half of the R11 box; the live half is 11.1.10.4).
