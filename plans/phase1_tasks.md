@@ -547,6 +547,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none — lands immediately. **Commit:** `[11.1.8.1] chore: add codec-helper build and encoder-golden CI lane`
 
+**Status:** implemented 2026-08-01 — YAML valid (8 jobs), run-blocks bash -n clean, cache key carries the same Vanetza pin as v2x-core-build; lane builds cpm_encode, smoke-tests --encode over the six synced golden .json, and runs the SP suite with ENCODER_PATH so test_encoder_golden executes unskipped (expected 123 passed / 0 skipped vs 116/7 locally). CI verification pending wave push.
+
 ### [ ] `5.1.8.2` — Lanes: `v2x-ecu-image` + `scenario-player-image` docker builds *(agent)*
 
 **Objective:** arm64 image build (+ gated push) for both node images — `netcheck-image` is the template.

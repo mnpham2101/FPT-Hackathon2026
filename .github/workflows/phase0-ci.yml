@@ -8,6 +8,8 @@
 # - D7 comms check: the v2x-comms-check job below (9.1.12.3) builds v2x_ecu, runs it loopback
 #   against a UDP sink standing in for ADA, sends the golden-vector corpus and asserts the [EVT]
 #   receive -> decode -> forward chain.
+# - bench codec helper (11.1.8.1): the sp-codec-helper job below builds Scenario_Player's cpm_encode
+#   and runs the Scenario_Player suite with ENCODER_PATH set, so test_encoder_golden runs unskipped.
 # - registry push (5.0.8.2): the netcheck-image job below builds always and pushes only when the
 #   CARSKY_ZOT_API_KEY repo secret exists (never commit the credential). Host per the live O1
 #   probe 2026-07-31: registry.hackathon-2.carsky.io (registry.carsky.io answers 502).
@@ -307,6 +309,136 @@ jobs:
             ${{ runner.temp }}/v2x.log
             ${{ runner.temp }}/ada_sink.log
           if-no-files-found: warn
+
+  # Bench-side codec verification (11.1.8.1). This is the only lane that proves the Scenario
+  # Player's R1 encoder byte-exact: it builds the SP HLD D1 cpm_encode helper on Linux and runs
+  # Scenario_Player/tests with ENCODER_PATH set, which un-skips test_encoder_golden's encoder
+  # equality cases (they skip everywhere the binary is absent, including the python-tests lane).
+  sp-codec-helper:
+    runs-on: ubuntu-latest
+    # Same reason as v2x-core-build: codec_helper is a second build context over the same Vanetza
+    # pin (SP HLD D2), so a cold _deps cache pays the identical asn1c ~1400-TU compile.
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Boost (Vanetza hard dependency)
+        run: sudo apt-get update && sudo apt-get install -y libboost-dev libboost-date-time-dev
+      # Same key CONSTRUCTION as v2x-core-build - same Vanetza pin string, so one re-pin invalidates
+      # both lanes - but necessarily its own path and hashFiles set: the helper builds in a different
+      # binary dir, so the two caches cannot be shared. gtest is deliberately absent from this key:
+      # codec_helper/CMakeLists.txt fetches no GoogleTest (there are no C++ tests in that context).
+      - name: Cache Vanetza FetchContent deps (bench build context)
+        uses: actions/cache@v4
+        with:
+          path: Scenario_Player/codec_helper/build/_deps
+          key: sp-helper-deps-${{ runner.os }}-vanetza-fb6c5510-json-v3.11.3-${{ hashFiles('Scenario_Player/codec_helper/CMakeLists.txt', 'Scenario_Player/codec_helper/cmake/vanetza-pin.cmake') }}
+          restore-keys: |
+            sp-helper-deps-${{ runner.os }}-vanetza-fb6c5510-json-v3.11.3-
+      # Guard style for every run: block below: `[ -f ... ] || { echo "::notice::..."; exit 0; }`
+      # rather than a job-level output plus `if:` on each step - fewer moving parts, and `exit 0`
+      # under `set -euo pipefail` ends that step successfully, so an absent codec_helper degrades
+      # the whole lane into notices instead of a red run. 11.1.7.1 has landed, so this guard is
+      # belt-and-braces: the expected path is a real build.
+      - name: Configure
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ -f Scenario_Player/codec_helper/CMakeLists.txt ] || {
+            echo "::notice::Scenario_Player/codec_helper/CMakeLists.txt not landed yet (11.1.7.1) - skipping configure"
+            exit 0
+          }
+          cmake -S Scenario_Player/codec_helper -B Scenario_Player/codec_helper/build
+      # Bounded parallelism for the same reason as v2x-core-build: a bare `-j` passes no number to
+      # make, i.e. unlimited jobs - ~700 concurrent compilers for asn1_its alone would OOM the
+      # runner. Only the cpm_encode target; the context has no other.
+      - name: Build cpm_encode
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ -f Scenario_Player/codec_helper/CMakeLists.txt ] || {
+            echo "::notice::codec_helper absent - skipping build"
+            exit 0
+          }
+          cmake --build Scenario_Player/codec_helper/build --target cpm_encode -j $(nproc)
+      # Fast pre-check ahead of pytest: if the binary is broken at all, this says so in one line
+      # instead of inside a parametrized assertion dump. It encodes the SYNCED fixtures under
+      # Scenario_Player/tests/fixtures/golden/ rather than the contracts/ masters, because those
+      # copies are what the bench itself is built against (the masters are covered by the
+      # fixture-identity tests in the pytest step, which compare the two byte-for-byte).
+      - name: Smoke --encode over the six synced golden vectors
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ -f Scenario_Player/codec_helper/CMakeLists.txt ] || {
+            echo "::notice::codec_helper absent - skipping --encode smoke"
+            exit 0
+          }
+
+          BIN="$PWD/Scenario_Player/codec_helper/build/cpm_encode"
+          if [ ! -x "$BIN" ]; then
+            echo "::error::cpm_encode missing at $BIN after a successful build"
+            exit 1
+          fi
+
+          echo "::group::cpm_encode --encode (one base64 line per vector)"
+          COUNT=0
+          for JSON in Scenario_Player/tests/fixtures/golden/*.json; do
+            CASE=$(basename "$JSON" .json)
+            # Capture first, assert second: under `set -e` a non-zero exit would abort the step
+            # before the diagnostic could be printed.
+            STATUS=0
+            OUT=$("$BIN" --encode "$JSON") || STATUS=$?
+            if [ "$STATUS" -ne 0 ]; then
+              echo "::error::$CASE: cpm_encode exited $STATUS (expected 0); stdout: $OUT"
+              exit 1
+            fi
+            # Exactly one line, checked before the regex: `grep -Eq` matches if ANY line matches,
+            # so without this a stray extra line would slip through.
+            LINES=$(printf '%s\n' "$OUT" | wc -l | tr -d ' ')
+            if [ "$LINES" -ne 1 ]; then
+              echo "::error::$CASE: expected 1 stdout line, got $LINES"
+              exit 1
+            fi
+            # Standard RFC 4648 alphabet, no whitespace, no URL-safe '-_' - the exact shape
+            # player/encoder_client.py feeds to b64decode(validate=True). `+` also rejects empty.
+            printf '%s' "$OUT" | grep -Eq '^[A-Za-z0-9+/]+=*$' || {
+              echo "::error::$CASE: stdout is not a single bare base64 payload: $OUT"
+              exit 1
+            }
+            BYTES=$(printf '%s' "$OUT" | base64 -d | wc -c | tr -d ' ')
+            echo "[LANE] $CASE: ${#OUT} base64 chars -> $BYTES UPER bytes"
+            COUNT=$((COUNT + 1))
+          done
+          echo "::endgroup::"
+
+          # Also catches an unmatched glob (the loop would have run once on the literal pattern).
+          if [ "$COUNT" -ne 6 ]; then
+            echo "::error::encoded $COUNT vectors, expected the 6 frozen Phase 0 cases"
+            exit 1
+          fi
+          echo "[LANE] --encode smoke PASSED ($COUNT vectors)"
+      # The wire truth of SP HLD D2, and the human-readable evidence for it: -v prints each
+      # test_encoder_matches_golden_uper[<case>] PASSED. Expected totals with the binary present:
+      # 123 passed, 0 skipped. Without it (e.g. the python-tests lane, or a local run) the same
+      # suite reports 116 passed, 7 skipped - the 6 encode-equality cases plus the failure-contract
+      # test. Any other split means drift: fix the cause, then update these numbers.
+      - name: Scenario_Player suite with ENCODER_PATH (encoder-golden unskipped)
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ -f Scenario_Player/codec_helper/CMakeLists.txt ] || {
+            echo "::notice::codec_helper absent - skipping the ENCODER_PATH pytest run"
+            exit 0
+          }
+          python -m pip install -r Scenario_Player/requirements-dev.txt
+          ENCODER_PATH="$PWD/Scenario_Player/codec_helper/build/cpm_encode" \
+            python -m pytest Scenario_Player/tests -v
+      # No upload-artifact step on purpose: the only output worth keeping is the pytest log, which
+      # is already in the job output, and the built binary is a heavy artifact that proves nothing
+      # a green run does not.
 
   ivi-unit-tests:
     runs-on: ubuntu-latest
