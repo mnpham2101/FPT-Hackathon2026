@@ -379,6 +379,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none. **Commit:** `[11.1.6.1] feat: add scenario config loader and validation`
 
+**Status:** done 2026-08-01 — pytest 69 passed locally (config loader + env defaults + rejections); requirements.txt created with -r include from dev.
+
 ### [ ] `11.1.6.2` — Committed scenario variants `scenarios/*.yaml` *(agent)*
 
 **Objective:** the two R11-acceptance scenario files (SP HLD D3) — observably different by construction.
