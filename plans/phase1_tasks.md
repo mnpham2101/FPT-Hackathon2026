@@ -505,6 +505,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 11.1.1.1 (fragment master) + 11.1.8.1 (lane exists to verify). **Commit:** `[11.1.7.1] feat: build cpm_encode helper from synced codec seam`
 
+**Status:** implemented 2026-08-01 — 4 synced copies blob-hash-identical to their masters (git hash-object verified); cpm_encode CLI (--stream JSONL loop, --encode one-shot) + second-build-context CMakeLists landed; inline RFC-4648 base64 hand-verified; both gates exit 0. Build + --encode verification lands with the 11.1.8.1 CI lane.
+
 ### [ ] `11.1.7.2` — Encoder-golden test + `.uper` fixture sync *(agent)*
 
 **Objective:** wire-truth proof of D2: `cpm_encode(golden .json) == golden .uper`, byte-for-byte.
