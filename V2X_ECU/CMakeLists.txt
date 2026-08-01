@@ -28,6 +28,11 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/vanetza-pin.cmake)
 
 FetchContent_MakeAvailable(nlohmann_json googletest vanetza)
 
+# std::thread needs the platform thread library explicitly on Linux/gcc (the R7 adapter's Rx
+# thread, 7.1.3.4) - Threads::Threads carries -pthread for compile and link.
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
+
 enable_testing()
 include(GoogleTest)
 
@@ -202,6 +207,26 @@ target_compile_features(v2x_stub PUBLIC cxx_std_17)
 
 v2x_add_test(v2x_modem_stub_fsm_test tests/stub/test_modem_stub_fsm.cpp)
 target_link_libraries(v2x_modem_stub_fsm_test PRIVATE v2x_stub)
+
+# R7 seam implementation (7.1.3.4, Phase 1 HLD D2) - the only IRadioAdapter in M1:
+# delegates init/configure/subscribeRx to the R8 stub (which owns the FSM and every
+# D2 fault/recovery) and adds what the pure-logic stub deliberately lacks - the
+# LISTEN_PORT Rx socket and its dedicated Rx thread, both RAII-owned (the destructor
+# joins; nothing is detached). send() returns NotSupported (R10 deferred). Links
+# PUBLIC v2x_adapter_seam (the frozen interface it implements), v2x_stub (ModemStub&
+# in its constructor), v2x_net (std::optional<net::UdpSocket> member - the sole
+# socket holder it consumes, so no socket headers appear here and
+# tools/check_transport_imports.py applies) and Threads::Threads for std::thread.
+add_library(v2x_adapter STATIC
+  src/adapter/stub_radio_adapter.cpp
+)
+target_link_libraries(v2x_adapter
+  PUBLIC v2x_adapter_seam v2x_stub v2x_net Threads::Threads
+)
+target_compile_features(v2x_adapter PUBLIC cxx_std_17)
+
+v2x_add_test(v2x_stub_radio_adapter_test tests/adapter/test_stub_radio_adapter.cpp)
+target_link_libraries(v2x_stub_radio_adapter_test PRIVATE v2x_adapter)
 
 # R9 Rx pipeline (Phase 1 HLD D3) - the stage-2 profile validator (9.1.4.1),
 # the stage-3 deduper (9.1.4.2), the stage-4a R2 builder (9.1.4.3) and the

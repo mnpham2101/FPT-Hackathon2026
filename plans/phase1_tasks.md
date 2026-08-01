@@ -223,6 +223,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 7.1.3.1 + 8.1.3.3 + 7.1.2.2. **Commit:** `[7.1.3.4] feat: implement StubRadioAdapter over the modem stub`
 
+**Status:** implemented 2026-08-01 — `src/adapter/stub_radio_adapter.{hpp,cpp}` implements the frozen seam by delegating `init`/`configure`/`subscribeRx` to `ModemStub` verbatim (no adapter-side retry) and adds the live Rx path: one RAII-owned thread + `std::optional<net::UdpSocket>` bound to `stub.config().rx_port`, shutdown by atomic flag + join within the 200 ms `kRxPollTimeout` poll (no detach, no self-pipe), throwing consumers caught and logged, `send` → `NotSupported` with one logged line; `tests/adapter/test_stub_radio_adapter.cpp` covers loopback byte-identical delivery, repeat-subscribe rejection, throwing callback survival, prompt/idempotent `stop()` + port rebindable after destruction, and `InitFail`/`ConfigureReject` passthrough with no thread started; new `v2x_adapter` target (+`find_package(Threads)`); `check_transport_imports.py` and `contracts/check_sync.py` both exit 0; CI verification pending wave push.
+
 ### [ ] `7.1.3.5` — R7 transport-import gate `tools/check_transport_imports.py` + CI step *(agent)*
 
 **Objective:** the R7 acceptance check, made permanent (HLD D1): no direct transport imports above the seam.
