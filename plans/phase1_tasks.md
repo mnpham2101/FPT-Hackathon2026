@@ -336,6 +336,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 8.1.2.1 + 2.1.2.4 + 7.1.3.4 + 9.1.4.4. **Commit:** `[8.1.5.1] feat: add v2x_ecu composition root`
 
+**Status:** implemented 2026-08-01 — full chain wired (Config→EventLog→codec→stages→pipeline→forwarder sink, stub observer→D4 `stub_transition`/`fault_injected`/`recovery`), documented exit codes 0/2/3/4/5, SIGTERM/SIGINT stop → `adapter.stop()`; both gates exit 0 (`check_transport_imports` 25 files clean, `check_sync` 36 copies identical); CI verification pending wave push.
+
 ### [ ] `6.1.5.2` — Capture script `capture.sh` *(agent)*
 
 **Objective:** the D5 in-container capture: live `[CAP]` text + rotating pcap + base64 export through View Log.

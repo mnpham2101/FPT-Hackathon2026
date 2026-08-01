@@ -271,3 +271,31 @@ target_link_libraries(v2x_rx_pipeline_test PRIVATE v2x_pipeline)
 # instead of crashing is the point of the suite, which a fake codec cannot do.
 v2x_add_test(v2x_rx_pipeline_malformed_test tests/pipeline/test_rx_pipeline_malformed.cpp)
 target_link_libraries(v2x_rx_pipeline_malformed_test PRIVATE v2x_pipeline v2x_cpm_codec)
+
+# The node application (8.1.5.1, Phase 1 HLD section 4) - src/main.cpp is the
+# composition root and the ONLY translation unit in this target: Config ->
+# EventLog -> codec + R9 stages -> RxPipeline (AdaForwarder as sink) -> ModemStub
+# (observer on the D4 events) -> StubRadioAdapter, then the scripted D2 bring-up.
+# Deliberately NOT a v2x_add_test target: it is the shipped entrypoint
+# (entrypoint.sh exec's it), not a gtest binary, so it must not be registered
+# with CTest. Every library it composes is linked explicitly rather than relying
+# on the PUBLIC transitivity between them, so the link list documents the whole
+# chain; Threads::Threads is named because main.cpp itself uses
+# std::this_thread::sleep_for in its signal-poll loop (v2x_adapter also carries
+# it PUBLIC-ly for the Rx thread).
+add_executable(v2x_ecu src/main.cpp)
+target_link_libraries(v2x_ecu PRIVATE
+  v2x_config
+  v2x_event_log
+  v2x_cpm_codec
+  v2x_pipeline
+  v2x_stub
+  v2x_adapter
+  v2x_forward
+  Threads::Threads
+)
+# CI and the D7 comms-check lane invoke the literal path V2X_ECU/build/v2x_ecu,
+# so pin the output dir exactly as gv_tool does rather than rely on no
+# FetchContent subproject having leaked a CMAKE_RUNTIME_OUTPUT_DIRECTORY into
+# the cache.
+set_target_properties(v2x_ecu PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
