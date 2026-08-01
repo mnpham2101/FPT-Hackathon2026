@@ -181,3 +181,24 @@ target_compile_features(v2x_adapter_seam INTERFACE cxx_std_17)
 
 v2x_add_test(v2x_i_radio_adapter_test tests/adapter/test_i_radio_adapter.cpp)
 target_link_libraries(v2x_i_radio_adapter_test PRIVATE v2x_adapter_seam)
+
+# R8 modem stub FSM (8.1.3.2, Phase 1 HLD D2) - pure bring-up logic
+# idle -> initialized -> configured -> rx-subscribed, each call acked with the
+# seam's RadioResult and every outcome (ack or illegal-order rejection)
+# reported to the injectable TransitionObserver (main wires it to
+# EventLog::stubTransition). Constructor takes plain params (FaultPlan +
+# RetryParams), never reads env; plans other than None are stored unused
+# until 8.1.3.3 adds fault injection + recoveries. Transport-blind: no
+# sockets/threads (tools/check_transport_imports.py applies). Links PUBLIC
+# v2x_config (FaultPlan in the constructor signature) and v2x_adapter_seam
+# (RadioConfig/RadioResult in the API).
+add_library(v2x_stub STATIC
+  src/stub/modem_stub.cpp
+)
+target_link_libraries(v2x_stub
+  PUBLIC v2x_config v2x_adapter_seam
+)
+target_compile_features(v2x_stub PUBLIC cxx_std_17)
+
+v2x_add_test(v2x_modem_stub_fsm_test tests/stub/test_modem_stub_fsm.cpp)
+target_link_libraries(v2x_modem_stub_fsm_test PRIVATE v2x_stub)

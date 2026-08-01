@@ -195,6 +195,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 7.1.3.1 (uses `RadioConfig` + result codes). **Commit:** `[8.1.3.2] feat: implement modem stub FSM happy path`
 
+**Status:** implemented 2026-08-01 — `v2x::stub::ModemStub` (`src/stub/modem_stub.{hpp,cpp}`, `v2x_stub` lib) with `tests/stub/test_modem_stub_fsm.cpp` (`v2x_modem_stub_fsm_test`) covering the happy path acked in order plus all 9 illegal-order rejections (failure code, state unchanged, observer notified); transport-import and contract-sync gates both exit 0; CI verification pending wave push.
+
 ### [ ] `8.1.3.3` — Fault injection + defined recoveries in the stub *(agent)*
 
 **Objective:** config-driven fault injection with the D2 recovery table — each injected fault produces a defined, observable recovery.
