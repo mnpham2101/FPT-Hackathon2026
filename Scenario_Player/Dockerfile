@@ -13,6 +13,16 @@
 #   one platform goes in the buildx invocation. --provenance/--sbom off for the same reason -
 #   attestations turn the tag into an index.
 #
+# ONE BASE IMAGE FOR BOTH STAGES - fallback F1, ratified by the architecture owner 2026-08-01.
+#   Stage 1 and stage 2 both resolve ${BASE_IMAGE} (python:3.11-slim), so cpm_encode links against
+#   exactly the glibc and libstdc++ it later runs on: cross-base symbol skew
+#   (`version GLIBCXX_3.4.30 not found`, `__isoc23_strtol`) is impossible BY CONSTRUCTION rather
+#   than something the stage-2 ldd guard has to catch at the end of an expensive emulated build.
+#   The single ARG is what keeps the two references from drifting - never hardcode a tag in a FROM.
+#   cmake comes from pip, not apt, because this base is bookworm-based and bookworm's apt cmake is
+#   3.25 - below the 3.28 floor (see the stage-1 comment). No HLD change: SP HLD section 4 fixes
+#   only the stage-2 runtime as python-slim and names no builder base.
+#
 # BUILD-TIME RISKS this image carries (the Wave D CI lane 5.1.8.2 is what proves them):
 #   * arm64 under QEMU: the helper drags in Vanetza's asn1c-generated C (asn1_support + asn1_its +
 #     asn1_its_r2, ~1400 translation units), emulated instruction-by-instruction on an amd64
@@ -22,56 +32,44 @@
 #   * Network is required at build time: dependencies come in via CMake FetchContent (Vanetza and
 #     nlohmann/json are git-cloned during `cmake -S`), so the build host must reach github.com.
 #     There is no vendored/offline path.
-#   * GLIBC / LIBSTDC++ SKEW BETWEEN THE STAGES - the one risk this image has and V2X_ECU's does
-#     not. That image pins the IDENTICAL base tag in both stages so the binary runs on the libs it
-#     linked against; here stage 2's base is fixed by the HLD (section 4: "python-slim runtime")
-#     while stage 1 must be trixie to get cmake >= 3.28 (see the stage-1 comment). So the helper is
-#     compiled against trixie's glibc/GCC 14 libstdc++ and then runs on bookworm-based
-#     python:3.11-slim (older glibc, GCC 12 libstdc++) - a forward-compat symbol mismatch
-#     (`version GLIBCXX_3.4.3x not found`, `__isoc23_strtol`) is possible and would be caught by
-#     the stage-2 `ldd` guard at the END of an expensive build.
-#     Mitigation chosen: (b) keep trixie and let the 5.1.8.2 lane prove it. Rejected: (a) building
-#     stage 1 on python:3.11-slim with apt's cmake - bookworm ships cmake 3.25, below the 3.28
-#     floor, so apt alone cannot configure this project at all.
-#     DOCUMENTED FALLBACKS if the lane reports a mismatch, best first:
-#       F1. `FROM python:3.11-slim AS build` + `pip install "cmake>=3.28,<4"` (Kitware's PyPI
-#           wheels; `<4` keeps Vanetza's older cmake_minimum_required valid). Same base tag in both
-#           stages, so the skew is gone BY CONSTRUCTION - this is variant (a) with cmake from a
-#           non-apt source, and the HLD names no stage-1 base, so it needs no design change.
-#       F2. Move stage 2 onto a trixie-based python tag (python:3.11-slim-trixie if published,
-#           else the newest published trixie python-slim) - pins one glibc, but changes the runtime
-#           tag the HLD section 4 names, so it needs an HLD touch.
-#       F3. Also stage stage-1's libstdc++.so.6 into /out/lib - fixes the C++ runtime half only,
-#           leaves the glibc half. Partial; prefer F1.
 #
 # LICENSE POSTURE (report section 4, SP HLD section 10 item 2): Vanetza is LGPLv3, so it is linked
 # DYNAMICALLY - -DBUILD_SHARED_LIBS=ON below, and the resulting libvanetza_asn1*.so are copied into
 # the runtime stage. Never link it statically here.
 
+# Declared before the first FROM so it is a GLOBAL build arg - the only scope from which a value
+# can be substituted into a FROM instruction. Both FROM lines below use it verbatim.
+ARG BASE_IMAGE=python:3.11-slim
+
 # ---------------------------------------------------------------------------
 # Stage 1 - build the cpm_encode helper
 # ---------------------------------------------------------------------------
-# debian:trixie-slim, NOT bookworm: codec_helper/CMakeLists.txt sets
-# cmake_minimum_required(VERSION 3.28) (the synced Vanetza pin uses
-# FetchContent_Declare(... EXCLUDE_FROM_ALL), which only exists from 3.28 on), and bookworm's apt
-# cmake is 3.25 - it cannot configure this project at all. trixie ships 3.31. Same reasoning, same
-# tag as V2X_ECU/Dockerfile's build stage: the two contexts compile the same codec seam.
-FROM debian:trixie-slim AS build
+FROM ${BASE_IMAGE} AS build
 
 # make: the default CMake generator is Unix Makefiles and neither cmake nor g++ depends on make.
 # git + ca-certificates: FetchContent clones over https.
 # libboost-dev + libboost-date-time-dev: Vanetza's hard dependency, same pair the
 # v2x-core-build CI lane installs.
+# Deliberately NO cmake here - apt's is too old on this base (next RUN).
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
       ca-certificates \
-      cmake \
       g++ \
       git \
       libboost-date-time-dev \
       libboost-dev \
       make \
  && rm -rf /var/lib/apt/lists/*
+
+# cmake from Kitware's PyPI wheel, not apt: codec_helper/CMakeLists.txt sets
+# cmake_minimum_required(VERSION 3.28) because the synced Vanetza pin uses
+# FetchContent_Declare(... EXCLUDE_FROM_ALL), which only exists from 3.28 on - and this base is
+# bookworm-based, whose apt cmake is 3.25 and cannot configure the project at all. The wheel
+# satisfies the floor without moving the base image off the runtime's.
+# The `<4` upper bound is load-bearing: CMake 4 removed compatibility with the pre-3.5
+# cmake_minimum_required that Vanetza's own CMakeLists still declares, so an unbounded install
+# would break the FetchContent subproject.
+RUN pip install --no-cache-dir "cmake>=3.28,<4"
 
 WORKDIR /src
 
@@ -124,17 +122,17 @@ RUN set -eu; \
 # ---------------------------------------------------------------------------
 # Stage 2 - runtime
 # ---------------------------------------------------------------------------
-# python:3.11-slim per SP HLD section 4 (Python 3.11 + PyYAML generator). Pinned to the minor, not
-# :latest, so the interpreter the tests ran against is the interpreter the node runs.
-FROM python:3.11-slim
+# Same ${BASE_IMAGE} as stage 1 (header), and python:3.11-slim is what SP HLD section 4 names for
+# the runtime (Python 3.11 + PyYAML generator). Pinned to the minor, not :latest, so the
+# interpreter the tests ran against is the interpreter the node runs.
+FROM ${BASE_IMAGE}
 
-# libstdc++6 is installed EXPLICITLY rather than assumed: cpm_encode is a C++ binary, and the
-# official python:*-slim images keep only the shared libs CPython itself resolved (their build
-# apt-marks those and purges the rest of the toolchain), so libstdc++6 being present is an
-# ASSUMPTION, not a documented guarantee of the base. One apt line makes it deterministic instead.
-# Caveat: this installs bookworm's GCC 12 libstdc++, which does NOT resolve a GLIBCXX symbol newer
-# than 3.4.30 - it fixes "missing entirely", not the header's version-skew risk. The ldd guard
-# below is what turns that into a build failure rather than a start-up failure on the node.
+# libstdc++6 is KEPT as an explicit install even though the shared base makes the VERSION question
+# moot - it now buys presence, not compatibility. cpm_encode is a C++ binary, and the official
+# python:*-slim images keep only the shared libs CPython itself resolved (their build apt-marks
+# those and purges the rest of the toolchain), so libstdc++6 shipping in the base is an ASSUMPTION.
+# One apt line makes it deterministic, and on this base it can only resolve to the same GCC 12
+# libstdc++ stage 1 compiled against - so it cannot reintroduce skew.
 # libc6 / libgcc-s1 / ldd come with the base image.
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
@@ -184,9 +182,10 @@ COPY scenarios/ ./scenarios/
 RUN chmod +x ./cpm_encode
 
 # Fail the BUILD, not the deploy, if the runtime stage is missing something the helper links
-# against (a Vanetza .so left behind, or the header's glibc/libstdc++ skew): a "not found" here
-# would otherwise surface as a node that starts, spawns the helper, and dies on the first encode
-# with only a loader error in View Log.
+# against (a Vanetza .so left behind): a "not found" here would otherwise surface as a node that
+# starts, spawns the helper, and dies on the first encode with only a loader error in View Log.
+# With one base image across both stages this guard is a regression detector, not the safety net
+# it had to be when the stages differed.
 RUN if ldd ./cpm_encode | grep -q 'not found'; then \
       echo "FATAL: unresolved shared libraries in the runtime stage:"; ldd ./cpm_encode; exit 1; \
     fi \
