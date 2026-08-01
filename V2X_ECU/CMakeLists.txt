@@ -239,3 +239,10 @@ target_link_libraries(v2x_r2_builder_test PRIVATE v2x_pipeline)
 # path is covered by v2x_cpm_golden_vectors_test and 9.1.4.5.
 v2x_add_test(v2x_rx_pipeline_test tests/pipeline/test_rx_pipeline.cpp)
 target_link_libraries(v2x_rx_pipeline_test PRIVATE v2x_pipeline)
+
+# R9 malformed-corpus acceptance test (9.1.4.5): the SAME pipeline driven by the
+# REAL VanetzaCpmCodec over tests/fixtures/malformed/, so it links v2x_cpm_codec
+# in addition to v2x_pipeline - proving the actual ASN.1 decoder rejects garbage
+# instead of crashing is the point of the suite, which a fake codec cannot do.
+v2x_add_test(v2x_rx_pipeline_malformed_test tests/pipeline/test_rx_pipeline_malformed.cpp)
+target_link_libraries(v2x_rx_pipeline_malformed_test PRIVATE v2x_pipeline v2x_cpm_codec)

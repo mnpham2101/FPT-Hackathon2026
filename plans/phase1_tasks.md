@@ -318,6 +318,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 9.1.4.4. **Commit:** `[9.1.4.5] test: reject the malformed-input corpus with zero crashes`
 
+**Status:** implemented 2026-08-01 — 7-case corpus committed as binary fixtures (`*.uper binary` `.gitattributes`) with byte-level provenance + regeneration recipe in the test comments; `v2x_rx_pipeline_malformed_test` drives the **real** `VanetzaCpmCodec` through all 7 in a parameterized suite plus a whole-corpus/not-wedged run (golden `nominal.uper` still decodes afterwards) and asserts no `unexpected_exception:` attribution anywhere; transport-import + contract-sync gates exit 0; CI verification pending wave push. **Deviation flagged:** the 3 header-edit cases (`wrong-message-id`, `wrong-protocol-version`, `r1-variant`) are **not** rejectable — profile §3 freezes `protocolVersion`/`messageId` as *ignored on decode*, every octet value is in ASN.1 range, and `CpmContent` carries no header field for the validator; they are asserted as profile-tolerated negative controls (4 rejected / 3 forwarded). Closing that gap needs a header-conformance check in the R1 codec + a profile §3 re-freeze — out of this subtask's scope.
+
 ---
 
 ## Task Group 1.5 — V2X app assembly + capture + image (serves R8, R6, R5)
