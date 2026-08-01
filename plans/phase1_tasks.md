@@ -415,6 +415,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 11.1.6.2 + 11.1.6.3. **Commit:** `[11.1.6.4] test: prove committed scenarios yield differing streams`
 
+**Status:** done 2026-08-01 — pytest 92 passed locally; approaching-vs-static sequences differ at every t>0, non-kinematic fields identical.
+
 ### [ ] `11.1.6.5` — Encoder client `player/encoder_client.py` *(agent)*
 
 **Objective:** the persistent `cpm_encode` subprocess client (SP HLD D1/D4): one `CpmContent` JSON per stdin line → one base64 UPER payload per stdout line.
