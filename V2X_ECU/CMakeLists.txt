@@ -166,3 +166,18 @@ target_compile_features(v2x_forward PUBLIC cxx_std_17)
 
 v2x_add_test(v2x_ada_forwarder_test tests/forward/test_ada_forwarder.cpp)
 target_link_libraries(v2x_ada_forwarder_test PRIVATE v2x_forward)
+
+# R7 radio-adapter seam (7.1.3.1, Phase 1 HLD D2) - the FROZEN interface:
+# RadioConfig, RxCallback, RadioResult and the pure-virtual IRadioAdapter all
+# live header-only in src/adapter/i_radio_adapter.hpp, so an INTERFACE target
+# is the right shape (pattern: v2x_codec_seam; no nlohmann link - the seam
+# includes only <cstdint>/<functional>/<vector>). Deliberately transport-free
+# per HLD D1: the seam mirrors the radio (telux) surface only, and the
+# tools/check_transport_imports.py gate applies. Consumers: 7.1.3.4
+# StubRadioAdapter, 8.1.3.2 modem stub (RadioConfig + result codes).
+add_library(v2x_adapter_seam INTERFACE)
+target_include_directories(v2x_adapter_seam INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_compile_features(v2x_adapter_seam INTERFACE cxx_std_17)
+
+v2x_add_test(v2x_i_radio_adapter_test tests/adapter/test_i_radio_adapter.cpp)
+target_link_libraries(v2x_i_radio_adapter_test PRIVATE v2x_adapter_seam)

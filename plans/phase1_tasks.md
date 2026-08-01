@@ -183,6 +183,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none. **Commit:** `[7.1.3.1] feat: freeze IRadioAdapter seam interface`
 
+**Status:** implemented 2026-08-01 — frozen header-only seam `src/adapter/i_radio_adapter.hpp` (`RadioConfig`/`RxCallback`/`RadioResult` + pure-virtual `IRadioAdapter`, `v2x_adapter_seam` INTERFACE target) with fake-impl test `tests/adapter/test_i_radio_adapter.cpp` registered as `v2x_i_radio_adapter_test`; transport-import and contract-sync gates both exit 0; CI verification pending wave push.
+
 ### [ ] `8.1.3.2` — Modem stub FSM happy path `src/stub/modem_stub.{hpp,cpp}` *(agent)*
 
 **Objective:** the R8 FSM `idle → initialized → configured → rx-subscribed`, acking each call (HLD D2) — happy path only.
