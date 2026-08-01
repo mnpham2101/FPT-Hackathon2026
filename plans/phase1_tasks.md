@@ -153,6 +153,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none — parallel with 8.1.2.1/7.1.2.2. **Commit:** `[18.1.2.3] feat: add R18 JSONL event log writer`
 
+**Status:** implemented 2026-08-01 — `src/log/event_log.{hpp,cpp}` + `tests/log/test_event_log.cpp` added (`v2x_event_log` static lib + `v2x_event_log_test` registered); frozen field names `event`/`mono_ms`/`epoch_ms`/`counters` (+ `cpm` on decode_ok, `r2` on r2_forwarded) recorded in the header comment; transport-import and contract-sync gates exit 0; CI verification pending wave push.
+
 ### [ ] `2.1.2.4` — ADA forwarder `src/forward/ada_forwarder.{hpp,cpp}` *(agent)*
 
 **Objective:** the intra-ego R2 edge (HLD D1 — deliberately **not** under the R7 seam): serialize the Phase 0 `v2x::contracts::R2Message` to JSON and UDP-send to `ADA_ECU_HOST:ADA_ECU_PORT`.

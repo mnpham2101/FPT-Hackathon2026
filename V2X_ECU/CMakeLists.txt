@@ -132,3 +132,19 @@ target_compile_features(v2x_net PUBLIC cxx_std_17)
 
 v2x_add_test(v2x_udp_socket_test tests/net/test_udp_socket.cpp)
 target_link_libraries(v2x_udp_socket_test PRIVATE v2x_net)
+
+# R18 JSONL event-log writer (18.1.2.3, Phase 1 HLD D4) - the [EVT] evidence
+# stream. Links PUBLIC v2x_codec_seam (src/ include path + nlohmann + the
+# CpmContent binding embedded by decode_ok) and v2x_contracts (the R2Message
+# binding embedded by r2_forwarded). Transport-blind: no socket headers
+# (tools/check_transport_imports.py applies).
+add_library(v2x_event_log STATIC
+  src/log/event_log.cpp
+)
+target_link_libraries(v2x_event_log
+  PUBLIC v2x_codec_seam v2x_contracts
+)
+target_compile_features(v2x_event_log PUBLIC cxx_std_17)
+
+v2x_add_test(v2x_event_log_test tests/log/test_event_log.cpp)
+target_link_libraries(v2x_event_log_test PRIVATE v2x_event_log)
