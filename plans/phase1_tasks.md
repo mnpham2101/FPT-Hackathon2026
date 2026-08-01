@@ -306,6 +306,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 9.1.4.1 + 9.1.4.2 + 9.1.4.3 + 18.1.2.3. **Commit:** `[9.1.4.4] feat: compose the four-stage Rx pipeline`
 
+**Status:** implemented 2026-08-01 — `noexcept` four-stage composition (`onDatagram`) over caller-owned injected collaborators + `R2Sink`, whole-body `catch(...)` with documented single-reject attribution, counting left to `EventLog`; `v2x_rx_pipeline_test` drives a fake `ICpmCodec` through all 6 golden contents (F6/F7 spot checks), decode/validate short-circuits, in-window duplicate, and a throwing sink; transport-import + contract-sync gates exit 0; CI verification pending wave push. Test uses a fake `ICpmCodec` per coordinator amendment; real-codec proof lands with 9.1.4.5 + the comms-check lane.
+
 ### [ ] `9.1.4.5` — Malformed-input corpus + rejection test *(agent)*
 
 **Objective:** the R9 acceptance corpus: `tests/fixtures/malformed/` fully rejected, zero crashes, counters correct.

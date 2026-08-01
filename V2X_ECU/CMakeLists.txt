@@ -203,20 +203,24 @@ target_compile_features(v2x_stub PUBLIC cxx_std_17)
 v2x_add_test(v2x_modem_stub_fsm_test tests/stub/test_modem_stub_fsm.cpp)
 target_link_libraries(v2x_modem_stub_fsm_test PRIVATE v2x_stub)
 
-# R9 Rx pipeline stages (Phase 1 HLD D3) - the stage-2 profile validator
-# (9.1.4.1), the stage-3 deduper (9.1.4.2) and the stage-4a R2 builder
-# (9.1.4.3); rx_pipeline lands in 9.1.4.4 and grows this same library. Links
-# PUBLIC v2x_codec_seam (CpmContent in the stages' public signatures + src/
-# include path and nlohmann transitively) and v2x_contracts (the R2 builder
-# produces R2Message). Transport-blind: no socket headers
-# (tools/check_transport_imports.py applies).
+# R9 Rx pipeline (Phase 1 HLD D3) - the stage-2 profile validator (9.1.4.1),
+# the stage-3 deduper (9.1.4.2), the stage-4a R2 builder (9.1.4.3) and the
+# composition root rx_pipeline that wires all four stages behind one
+# onDatagram entry point (9.1.4.4). Links PUBLIC v2x_codec_seam (CpmContent in
+# the stages' public signatures + src/ include path and nlohmann transitively),
+# v2x_contracts (the R2 builder produces R2Message) and v2x_event_log
+# (rx_pipeline.hpp names EventLog& in its constructor, and every stage outcome
+# is emitted through it). Transport-blind: no socket headers - rx_pipeline
+# takes both edges injected (onDatagram in, R2Sink out), so
+# tools/check_transport_imports.py applies to this whole library.
 add_library(v2x_pipeline STATIC
   src/pipeline/validator.cpp
   src/pipeline/deduper.cpp
   src/pipeline/r2_builder.cpp
+  src/pipeline/rx_pipeline.cpp
 )
 target_link_libraries(v2x_pipeline
-  PUBLIC v2x_codec_seam v2x_contracts
+  PUBLIC v2x_codec_seam v2x_contracts v2x_event_log
 )
 target_compile_features(v2x_pipeline PUBLIC cxx_std_17)
 
@@ -228,3 +232,10 @@ target_link_libraries(v2x_deduper_test PRIVATE v2x_pipeline)
 
 v2x_add_test(v2x_r2_builder_test tests/pipeline/test_r2_builder.cpp)
 target_link_libraries(v2x_r2_builder_test PRIVATE v2x_pipeline)
+
+# Composition test (9.1.4.4): drives onDatagram with a FAKE ICpmCodec scripted
+# from the golden .json fixtures, so it needs no Vanetza link - v2x_pipeline
+# carries the seam, the contracts and the event log PUBLIC-ly. The real decode
+# path is covered by v2x_cpm_golden_vectors_test and 9.1.4.5.
+v2x_add_test(v2x_rx_pipeline_test tests/pipeline/test_rx_pipeline.cpp)
+target_link_libraries(v2x_rx_pipeline_test PRIVATE v2x_pipeline)
