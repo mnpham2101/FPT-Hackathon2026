@@ -2,7 +2,7 @@
 
 The template consumed by [build-slides.py](../slide-build-tool/build-slides.py). Every block below marked `<!-- block: NAME -->` is extracted by the builder and filled by replacing `{{PLACEHOLDER}}` tokens. Edit a block here and every deck rebuilt from it changes — the builder holds no markup of its own.
 
-Design source: [m1-proposal-deck.html](../m1-proposal-deck.html), documented in [deck-design-system.md](deck-design-system.md).
+Design source: [m1-proposal-deck.html](../m1-proposal-deck.html). Authoring conventions — file placement, the asset policy, the build workflow — are in [deck-authoring-conventions.md](../../.claude/rules/deck-authoring-conventions.md).
 
 ## Slide canvas
 
