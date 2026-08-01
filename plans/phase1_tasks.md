@@ -543,6 +543,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none. **Commit:** `[2.1.9.1] feat: parameterize netcheck body preview length`
 
+**Status:** done 2026-08-01 — py_compile passes; diff is exactly the env constant + docstring + slice; default 96 preserves today's behavior byte-identically.
+
 ---
 
 ## Task Group 1.10 — Deploy & live verification (serves R5, R2, R11, R6 + the Demo box)
