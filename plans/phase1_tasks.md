@@ -250,6 +250,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 7.1.3.1. **Commit:** `[7.1.3.6] docs: author telux parity notes and port plan`
 
+**Status:** done 2026-08-01 — doc committed; all four seam signatures verified character-identical to the frozen `i_radio_adapter.hpp`, `send` row marked R10-deferred; telux symbol names marked unconfirmed pending SDK headers (no API invented); links resolve.
+
 ---
 
 ## Task Group 1.4 — R9 Rx pipeline: decode → validate → dedupe → forward (serves R9, with the R2 build stage)
