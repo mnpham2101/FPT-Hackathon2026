@@ -23,6 +23,8 @@ import kotlinx.coroutines.launch
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.SocketException
+import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 /**
  * Android ForegroundService that opens a UDP socket on [BuildConfig.R4_UDP_PORT],
@@ -35,9 +37,12 @@ import java.net.SocketException
  * - After [MAX_RETRIES] consecutive failures, emits [ServiceErrorEvent] on [r4EventFlow]
  * - Port is driven by [BuildConfig.R4_UDP_PORT] — no hardcoded literals in source
  */
+@AndroidEntryPoint
 class R4ListenerService : Service() {
 
-    private val deserializer = R4Deserializer()
+    @Inject
+    lateinit var deserializer: R4Deserializer
+
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var receiveJob: Job? = null
 

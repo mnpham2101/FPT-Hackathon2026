@@ -42,9 +42,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import com.hackathon.v2x.ivi.model.SceneGeometry
 import com.hackathon.v2x.ivi.ui.DisplayMode
 import com.hackathon.v2x.ivi.ui.MainViewModel
+import com.hackathon.v2x.ivi.ui.WarningUiState
+import com.hackathon.v2x.ivi.ui.WarningViewModel
+import com.hackathon.v2x.ivi.ui.view.IviWarningViewSeam
 
 // ---------------------------------------------------------------------------
 // R16 design tokens — dark automotive scheme. All dimensions are Dp tokens;
@@ -113,19 +116,27 @@ private val DisplayMode.statusLabel: String
 // ---------------------------------------------------------------------------
 
 /**
- * R16 main HMI screen — stateful entry point. Collects [MainViewModel]'s
- * `currentMode` and delegates rendering to the stateless [MainScreenContent]
- * (which is what previews and tests exercise directly).
+ * R16 main HMI screen — stateful entry point (16.5.4.1).
+ *
+ * Collects [MainViewModel] mode + [WarningViewModel] scene/warning state and
+ * renders Warning View through [IviWarningViewSeam] (no [WarningBannerOverlay]).
  */
 @Composable
 fun MainScreen(
+    mainViewModel: MainViewModel,
+    warningViewModel: WarningViewModel,
+    warningViewSeam: IviWarningViewSeam,
     modifier: Modifier = Modifier,
-    viewModel: MainViewModel = viewModel(),
 ) {
-    val currentMode by viewModel.currentMode.collectAsState()
+    val currentMode by mainViewModel.currentMode.collectAsState()
+    val uiWarningState by warningViewModel.uiWarningState.collectAsState()
+    val latestScene by warningViewModel.latestScene.collectAsState()
     MainScreenContent(
         currentMode = currentMode,
-        onModeSelected = viewModel::setMode,
+        onModeSelected = mainViewModel::setMode,
+        uiWarningState = uiWarningState,
+        latestScene = latestScene,
+        warningViewSeam = warningViewSeam,
         modifier = modifier,
     )
 }
@@ -134,12 +145,17 @@ fun MainScreen(
  * Stateless scaffold: central Display Area (~70% width) flanked by side
  * button bars, with a status bottom bar. The Display Area content is driven
  * by [currentMode] through an [AnimatedContent] fade switcher.
+ *
+ * [warningViewSeam] may be null in previews that only exercise chrome layout.
  */
 @Composable
 fun MainScreenContent(
     currentMode: DisplayMode,
     onModeSelected: (DisplayMode) -> Unit,
     modifier: Modifier = Modifier,
+    uiWarningState: WarningUiState = WarningUiState.Idle,
+    latestScene: SceneGeometry? = null,
+    warningViewSeam: IviWarningViewSeam? = null,
 ) {
     BoxWithConstraints(
         modifier = modifier
@@ -167,7 +183,12 @@ fun MainScreenContent(
                         .fillMaxHeight()
                         .weight(DISPLAY_AREA_WIDTH_FRACTION),
                 ) {
-                    DisplayModeSwitcher(currentMode = currentMode)
+                    DisplayModeSwitcher(
+                        currentMode = currentMode,
+                        uiWarningState = uiWarningState,
+                        latestScene = latestScene,
+                        warningViewSeam = warningViewSeam,
+                    )
                 }
                 SideButtonBar(
                     items = RightBarItems,
@@ -207,11 +228,17 @@ private fun DisplayArea(
 
 /**
  * Fades between Display Area contents when [currentMode] changes.
- * Warning View gets a real renderer in Task Group 5.3; the other modes are
- * placeholders until their features land.
+ * Warning View is rendered via [IviWarningViewSeam] (16.5.4.1); other modes
+ * remain placeholders. Do not mount [WarningBannerOverlay] here.
  */
 @Composable
-private fun DisplayModeSwitcher(currentMode: DisplayMode, modifier: Modifier = Modifier) {
+private fun DisplayModeSwitcher(
+    currentMode: DisplayMode,
+    uiWarningState: WarningUiState,
+    latestScene: SceneGeometry?,
+    warningViewSeam: IviWarningViewSeam?,
+    modifier: Modifier = Modifier,
+) {
     AnimatedContent(
         targetState = currentMode,
         transitionSpec = {
@@ -223,12 +250,40 @@ private fun DisplayModeSwitcher(currentMode: DisplayMode, modifier: Modifier = M
     ) { mode ->
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             when (mode) {
-                DisplayMode.WarningView -> WarningViewPlaceholder()
+                DisplayMode.WarningView -> WarningViewContent(
+                    uiWarningState = uiWarningState,
+                    latestScene = latestScene,
+                    warningViewSeam = warningViewSeam,
+                )
                 DisplayMode.HomeView -> ViewPlaceholder("Home View Placeholder")
                 DisplayMode.AppsView -> ViewPlaceholder("Apps View Placeholder")
                 DisplayMode.SettingsView -> ViewPlaceholder("Settings View Placeholder")
             }
         }
+    }
+}
+
+/**
+ * God-View Warning View via the injected seam. Falls back to a quiet
+ * placeholder when scene data has not arrived yet (Idle / waiting).
+ */
+@Composable
+private fun WarningViewContent(
+    uiWarningState: WarningUiState,
+    latestScene: SceneGeometry?,
+    warningViewSeam: IviWarningViewSeam?,
+) {
+    val active = uiWarningState as? WarningUiState.Active
+    val scene = when {
+        latestScene == null -> null
+        active != null -> latestScene.copy(vehicleCSnapshot = active.event.objectSnapshot)
+        else -> latestScene
+    }
+    if (warningViewSeam != null && scene != null) {
+        val riskState = active?.event?.riskState ?: "low"
+        warningViewSeam.Render(scene = scene, riskState = riskState)
+    } else {
+        WarningViewPlaceholder()
     }
 }
 

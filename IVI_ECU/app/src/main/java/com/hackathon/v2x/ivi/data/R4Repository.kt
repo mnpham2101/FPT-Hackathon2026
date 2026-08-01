@@ -13,9 +13,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import javax.inject.Inject
-import javax.inject.Singleton
-
 /**
  * Single source of truth for R4 events and scene state.
  *
@@ -24,9 +21,9 @@ import javax.inject.Singleton
  * - [R4StateMessage] → last-value-wins on [currentState]
  *
  * Pure Kotlin — zero Android UI or framework imports.
+ * Singleton lifetime is provided by [com.hackathon.v2x.ivi.di.AppModule] (16.5.4.1).
  */
-@Singleton
-class R4Repository @Inject constructor() {
+class R4Repository {
 
     private val _warningEvents = MutableSharedFlow<R4WarningEvent>(extraBufferCapacity = 32)
     /** Edge-triggered warning events. Collect in [WarningViewModel]. */
