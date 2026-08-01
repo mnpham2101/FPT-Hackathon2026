@@ -16,6 +16,7 @@ captures/
 .temp_ag_kit/
 skills-lock.json
 .DS_Store
+.cursor/
 
 # local credentials - never commit
 secrets/
