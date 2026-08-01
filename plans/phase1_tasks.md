@@ -650,6 +650,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none. **Commit:** `[6.1.12.1] feat: add golden-vector UDP sender for the comms check`
 
+**Status:** done 2026-08-01 — py_compile passes; loopback self-check delivered all 6 golden .uper byte-identical (sha256 match), no-args exit 2, empty-corpus exit 1, cwd-independent corpus default.
+
 ### [ ] `9.1.12.2` — `[EVT]`-stream assertion `tools/comms_check/check_v2x_log.py` *(agent)*
 
 **Objective:** assert the D7 receive-evidence chain from a V2X ECU `[EVT]` stream: per message, `rx_datagram` (received) → `decode_ok` carrying the decoded `CpmContent` JSON (event raised, deserialization shown) → `r2_forwarded` carrying the R2 JSON body; non-zero exit naming the first missing link.
