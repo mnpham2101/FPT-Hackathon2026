@@ -439,6 +439,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none — parallel. **Commit:** `[11.1.6.6] feat: add UDP sender to the V2X ECU`
 
+**Status:** done 2026-08-01 — pytest 102 passed locally; loopback byte-identical delivery, never-raises error path.
+
 ### [ ] `11.1.6.7` — Rate-loop generator `player/generator.py` *(agent)*
 
 **Objective:** the `cpm_rate_hz` loop with scenario clock, `duration_s`/`loop` handling, and the `[TX]` JSONL line per datagram (SP HLD D4).
