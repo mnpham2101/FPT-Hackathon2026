@@ -15,6 +15,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -46,6 +47,10 @@ class R4ListenerService : Service() {
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var receiveJob: Job? = null
 
+    /** Live UDP socket — closed in [onDestroy] so blocking [DatagramSocket.receive] unblocks. */
+    @Volatile
+    private var datagramSocket: DatagramSocket? = null
+
     private val _r4EventFlow = MutableSharedFlow<R4Message>(extraBufferCapacity = 64)
     /** Public API — collect in [R4Repository]. */
     val r4EventFlow: SharedFlow<R4Message> = _r4EventFlow
@@ -68,19 +73,24 @@ class R4ListenerService : Service() {
 
     override fun onDestroy() {
         receiveJob?.cancel()
+        // Unblock Dispatchers.IO receive(); cancel alone cannot interrupt socket.receive.
+        runCatching { datagramSocket?.close() }
+        datagramSocket = null
         super.onDestroy()
     }
 
     // ── Receive loop ──────────────────────────────────────────────────────────
 
     private fun startReceiveLoop() {
-        receiveJob = serviceScope.launch {
+        // Explicit IO dispatcher: DatagramSocket.receive must never run on the main thread (ANR).
+        receiveJob = serviceScope.launch(Dispatchers.IO) {
             var retries = 0
             while (isActive) {
                 try {
                     openSocketAndReceive()
                     retries = 0
                 } catch (e: SocketException) {
+                    if (!isActive) return@launch
                     retries++
                     Log.w(TAG, "UDP socket error (attempt $retries/$MAX_RETRIES): ${e.message}")
                     if (retries >= MAX_RETRIES) {
@@ -90,6 +100,7 @@ class R4ListenerService : Service() {
                     }
                     delay(RETRY_DELAY_MS)
                 } catch (e: Exception) {
+                    if (!isActive) return@launch
                     Log.e(TAG, "Unexpected error in receive loop", e)
                     retries++
                     if (retries >= MAX_RETRIES) {
@@ -106,13 +117,20 @@ class R4ListenerService : Service() {
         val buffer = ByteArray(BUFFER_SIZE)
         val packet = DatagramPacket(buffer, buffer.size)
         DatagramSocket(BuildConfig.R4_UDP_PORT).use { socket ->
+            datagramSocket = socket
             Log.i(TAG, "UDP socket open on port ${BuildConfig.R4_UDP_PORT}")
-            while (true) {
-                socket.receive(packet)
-                val bytes = packet.data.copyOf(packet.length)
-                deserializer.deserialize(bytes)
-                    .onSuccess { message -> _r4EventFlow.emit(message) }
-                    .onFailure { e -> Log.w(TAG, "Skipping bad packet: ${e.message}") }
+            try {
+                while (currentCoroutineContext().isActive) {
+                    socket.receive(packet)
+                    val bytes = packet.data.copyOf(packet.length)
+                    deserializer.deserialize(bytes)
+                        .onSuccess { message -> _r4EventFlow.emit(message) }
+                        .onFailure { e -> Log.w(TAG, "Skipping bad packet: ${e.message}") }
+                }
+            } finally {
+                if (datagramSocket === socket) {
+                    datagramSocket = null
+                }
             }
         }
     }
