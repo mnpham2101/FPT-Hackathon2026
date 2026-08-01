@@ -97,7 +97,7 @@ class R4DeserializerTest {
             {
               "schemaVersion": 1,
               "type": "warning",
-              "warningType": "future_unknown_type",
+              "warningType": "future_type",
               "riskState": "medium",
               "object": {
                 "id": "C-001",
