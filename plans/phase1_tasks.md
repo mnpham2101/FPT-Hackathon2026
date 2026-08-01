@@ -348,6 +348,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none. **Commit:** `[6.1.5.2] feat: add tcpdump capture script with pcap export`
 
+**Status:** implemented 2026-08-01 — sh -n + bash -n clean; --export-one round-trip base64-decodes byte-identically (the format 6.1.5.3 parses); LF enforced via .gitattributes, staged blob CR-free; runtime tcpdump evidence lands at 6.1.10.5.
+
 ### [ ] `6.1.5.3` — Host-side extraction `tools/extract_pcap.sh` *(agent)*
 
 **Objective:** the "automatic tool" retrieval path of D5: saved View Log in → `.pcap` files out ([usage contract](../requirements/car-sky-guide/traffic-capture-wireshark.md)).
