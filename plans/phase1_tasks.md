@@ -276,6 +276,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none — parallel with 9.1.4.1. **Commit:** `[9.1.4.2] feat: implement Rx deduper`
 
+**Status:** implemented 2026-08-01 — window + clock injected (no literal window outside tests; default stays in config.cpp), signed-sum key semantics tested (refTime 1000+5 collides with 995+10), pruning bounded via once-per-window sweep asserted by `size()`, transport-import + contract-sync gates exit 0; CI verification pending wave push.
+
 ### [ ] `9.1.4.3` — R2 builder `src/pipeline/r2_builder.{hpp,cpp}` *(agent)*
 
 **Objective:** stage 4a — map `CpmContent` (wire-native integers) → the Phase 0 `v2x::contracts::R2Message` (SI), owning **every** derivation the codec seam excludes (HLD D3).

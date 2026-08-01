@@ -203,14 +203,15 @@ target_compile_features(v2x_stub PUBLIC cxx_std_17)
 v2x_add_test(v2x_modem_stub_fsm_test tests/stub/test_modem_stub_fsm.cpp)
 target_link_libraries(v2x_modem_stub_fsm_test PRIVATE v2x_stub)
 
-# R9 Rx pipeline stages (Phase 1 HLD D3) - starts with the stage-2 profile
-# validator (9.1.4.1); deduper/r2_builder/rx_pipeline land in the sibling
-# subtasks and grow this same library. Links PUBLIC v2x_codec_seam: CpmContent
-# is in the validator's public signature (+ src/ include path and nlohmann
-# transitively). Transport-blind: no socket headers
+# R9 Rx pipeline stages (Phase 1 HLD D3) - the stage-2 profile validator
+# (9.1.4.1) and the stage-3 deduper (9.1.4.2); r2_builder/rx_pipeline land in
+# the sibling subtasks and grow this same library. Links PUBLIC v2x_codec_seam:
+# CpmContent is in the stages' public signatures (+ src/ include path and
+# nlohmann transitively). Transport-blind: no socket headers
 # (tools/check_transport_imports.py applies).
 add_library(v2x_pipeline STATIC
   src/pipeline/validator.cpp
+  src/pipeline/deduper.cpp
 )
 target_link_libraries(v2x_pipeline
   PUBLIC v2x_codec_seam
@@ -219,3 +220,6 @@ target_compile_features(v2x_pipeline PUBLIC cxx_std_17)
 
 v2x_add_test(v2x_validator_test tests/pipeline/test_validator.cpp)
 target_link_libraries(v2x_validator_test PRIVATE v2x_pipeline)
+
+v2x_add_test(v2x_deduper_test tests/pipeline/test_deduper.cpp)
+target_link_libraries(v2x_deduper_test PRIVATE v2x_pipeline)
