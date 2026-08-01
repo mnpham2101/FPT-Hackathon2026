@@ -376,6 +376,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 8.1.5.1 + 6.1.5.2 + 11.1.1.1 + 5.1.8.2 (lane must exist to verify). **Commit:** `[5.1.5.4] feat: add V2X ECU multi-stage Dockerfile and entrypoint`
 
+**Status:** implemented 2026-08-01 — entrypoint `sh -n`/`bash -n` clean, LF + exec bit set; Dockerfile self-reviewed (multi-stage, `BUILD_SHARED_LIBS=ON` + staged `libvanetza_asn1*.so` with a fail-loud guard, tcpdump/coreutils runtime, no ENV shadowing HLD §6, target-scoped build excludes tests). No local Docker — image build verification lands with the 5.1.8.2 CI lane (Wave D).
+
 ---
 
 ## Task Group 1.6 — Scenario Player application (serves R11)
