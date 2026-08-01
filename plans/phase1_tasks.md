@@ -662,6 +662,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 18.1.2.3 (the embedded-payload field names freeze there). **Commit:** `[9.1.12.2] feat: add EVT-stream assertion script for the comms check`
 
+**Status:** done 2026-08-01 — py_compile passes; synthetic conforming log (6 golden cases, `[CAP]`/`[BOOT]`/blank noise interleaved) exits 0 in both modes, plus a `--repeat 2` corpus in expected-vector mode; 10 negative fixtures (missing rx/decode/forward link, unmatched cpm, `decode_reject` non-zero, unknown event, non-monotonic counters, lost-line counter gap, malformed `[EVT]` JSON, no `[EVT]` lines) each exit 1 naming the failing link — the cpm cross-check and `decode_reject == 0` are expected-vector-mode assertions by design, so those two fixtures pass in stream mode; stdin input, `MIN_MESSAGES` env and 9 exit-2 invocation cases checked; contract-sync and transport-import gates exit 0.
+
 ### [ ] `9.1.12.3` — CI lane `v2x-comms-check` *(agent)*
 
 **Objective:** the CI-side closure of the D7 acceptance box: build `v2x_ecu`, run it loopback, send golden vectors, assert the `[EVT]` chain.
