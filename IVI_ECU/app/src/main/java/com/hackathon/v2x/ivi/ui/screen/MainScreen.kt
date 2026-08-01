@@ -30,7 +30,6 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,6 +41,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hackathon.v2x.ivi.model.SceneGeometry
 import com.hackathon.v2x.ivi.ui.DisplayMode
 import com.hackathon.v2x.ivi.ui.MainViewModel
@@ -128,9 +128,10 @@ fun MainScreen(
     warningViewSeam: IviWarningViewSeam,
     modifier: Modifier = Modifier,
 ) {
-    val currentMode by mainViewModel.currentMode.collectAsState()
-    val uiWarningState by warningViewModel.uiWarningState.collectAsState()
-    val latestScene by warningViewModel.latestScene.collectAsState()
+    // Lifecycle-aware: pause collection when the Activity is STOPPED (no leak / wasted work).
+    val currentMode by mainViewModel.currentMode.collectAsStateWithLifecycle()
+    val uiWarningState by warningViewModel.uiWarningState.collectAsStateWithLifecycle()
+    val latestScene by warningViewModel.latestScene.collectAsStateWithLifecycle()
     MainScreenContent(
         currentMode = currentMode,
         onModeSelected = mainViewModel::setMode,

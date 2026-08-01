@@ -52,6 +52,7 @@ android {
     testOptions {
         unitTests {
             isReturnDefaultValues = true
+            isIncludeAndroidResources = true
         }
     }
 }
@@ -73,6 +74,7 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.6")
     implementation("androidx.lifecycle:lifecycle-service:2.8.6")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.6")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.6")
     implementation("androidx.activity:activity-compose:1.9.2")
 
     // Compose BOM 2024.09.03 (Compose UI 1.7.x, Material3 1.3.0) — compatible with compileSdk 34.
@@ -89,9 +91,13 @@ dependencies {
     ksp("com.google.dagger:hilt-android-compiler:2.58")
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
 
-    // Unit testing
+    // Unit / integration testing
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
     testImplementation("io.mockk:mockk:1.13.13")
     testImplementation("app.cash.turbine:turbine:1.2.0")
+    testImplementation("org.robolectric:robolectric:4.13")
+    testImplementation("com.google.dagger:hilt-android-testing:2.58")
+    kspTest("com.google.dagger:hilt-android-compiler:2.58")
+    testImplementation("androidx.test:core:1.6.1")
 }
