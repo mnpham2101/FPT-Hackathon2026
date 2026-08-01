@@ -3,8 +3,8 @@
 #
 # Later lanes plug in here (do not pre-create empty jobs):
 # - group 0.2 (V2X_ECU): C++ CMake build+ctest landed with 1.0.2.1 (v2x-core-build below; ADA's
-#   landed with 3.0.4.1). Still pending: the docker-build jobs for both C++ nodes, added by those
-#   subtasks when their Dockerfiles land.
+#   landed with 3.0.4.1). Still pending: the ADA docker-build job, added when that node's
+#   Dockerfile lands.
 # - D7 comms check: the v2x-comms-check job below (9.1.12.3) builds v2x_ecu, runs it loopback
 #   against a UDP sink standing in for ADA, sends the golden-vector corpus and asserts the [EVT]
 #   receive -> decode -> forward chain.
@@ -13,6 +13,9 @@
 # - registry push (5.0.8.2): the netcheck-image job below builds always and pushes only when the
 #   CARSKY_ZOT_API_KEY repo secret exists (never commit the credential). Host per the live O1
 #   probe 2026-07-31: registry.hackathon-2.carsky.io (registry.carsky.io answers 502).
+# - node images (5.1.8.2): the v2x-ecu-image and scenario-player-image jobs below build both node
+#   images arm64-only under the same secret-gated push - the first lane that proves either image
+#   builds at all.
 name: phase0-ci
 
 on:
@@ -489,4 +492,190 @@ jobs:
           fi
           echo "$ZOT_KEY" | docker login "$REGISTRY_HOST" -u "$REGISTRY_USER" --password-stdin
           docker buildx build --platform "$PLATFORMS" --provenance=false --sbom=false -t "$REGISTRY_HOST/$IMAGE" --push tools/netcheck/
+          echo "::notice::pushed $REGISTRY_HOST/$IMAGE ($PLATFORMS)"
+
+  # The two node-image lanes (5.1.8.2). Same shape as netcheck-image above - qemu + buildx,
+  # single-platform arm64, attestations off, push gated on the CARSKY_ZOT_API_KEY secret - with two
+  # additions that netcheck (a ~20-line Python image) does not need:
+  #   * a buildx type=gha layer cache, because both images compile Vanetza's asn1c-generated C
+  #     (asn1_support + asn1_its + asn1_its_r2, ~1400 translation units) INSIDE the image build,
+  #     under QEMU aarch64 emulation on an amd64 runner;
+  #   * a runtime-token export step, without which type=gha cannot reach the Actions cache from a
+  #     plain `run:` step (see the step comment in v2x-ecu-image).
+  v2x-ecu-image:
+    runs-on: ubuntu-latest
+    env:
+      # Live host per the O1 probe (2026-07-31): registry.carsky.io 502s, hackathon-2 answers.
+      # (The node guides still name registry.carsky.io - known stale, tracked as a plan open item.)
+      REGISTRY_HOST: registry.hackathon-2.carsky.io
+      IMAGE: m1-v2x-ecu:latest
+      # arm64 only, and for a harder reason than netcheck-image's: a CarSky Container node rejects a
+      # multi-platform manifest index and hangs in Provisioning (plans/doc/phase0-smoke-test-run.md,
+      # standing requirement), so exactly one platform goes in the buildx invocation.
+      PLATFORMS: linux/arm64
+      # Build context = the node folder, which is self-contained by the node-code-layout rule.
+      # Carries its trailing slash netcheck-image style, hence "${CONTEXT}Dockerfile" below with no
+      # extra separator.
+      CONTEXT: V2X_ECU/
+      # One cache scope PER IMAGE, never one shared scope: the gha cache is scoped storage under a
+      # repo-wide eviction budget, and two ~1400-TU ASN.1 layer sets in one scope would evict each
+      # other run after run - turning every run back into a cold emulated compile.
+      CACHE_SCOPE: v2x-ecu-image
+    # Emulated, this compile is roughly an order of magnitude slower than the ~30-40 min native
+    # first build seen in v2x-core-build. 360 is the largest useful value, not a guess: GitHub
+    # hard-caps a hosted-runner job at 6 h regardless of what is written here. Reruns are minutes,
+    # not hours, once the type=gha cache is warm.
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      # ACTIONS_CACHE_URL / ACTIONS_RESULTS_URL / ACTIONS_RUNTIME_TOKEN are handed to *actions*, not
+      # to `run:` steps, so a plain `docker buildx build --cache-to type=gha` cannot see them and
+      # fails to configure its cache exporter. Re-exporting them through GITHUB_ENV is what makes
+      # the cache work outside docker/build-push-action; actions/github-script is used rather than a
+      # third-party runtime-exposing action to keep this first-party. Only names actually present are
+      # exported, so an empty value can never be mistaken for a configured endpoint.
+      - name: Expose the Actions cache runtime to the buildx gha cache
+        uses: actions/github-script@v7
+        with:
+          script: |
+            for (const name of ['ACTIONS_CACHE_URL', 'ACTIONS_RESULTS_URL', 'ACTIONS_RUNTIME_TOKEN']) {
+              const value = process.env[name];
+              if (value) {
+                core.exportVariable(name, value);
+              }
+            }
+      - name: Build V2X ECU node image (arm64)
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ -f "${CONTEXT}Dockerfile" ] || {
+            echo "::notice::${CONTEXT}Dockerfile not landed yet (5.1.5.4) - skipping build"
+            exit 0
+          }
+
+          # NO --load, and NO --push here, ON PURPOSE - do not "fix" this. With --platform set and
+          # neither exporter given, buildx builds the image and exports nothing, which is exactly
+          # what a build-only verification wants: a linux/arm64 image cannot be --loaded into an
+          # amd64 runner's docker image store, so adding --load breaks the lane rather than
+          # improving it. The push step below is where an exporter belongs.
+          # ignore-error on --cache-to: a cache-service hiccup must not turn a successful multi-hour
+          # emulated build red. A cache MISS is cheap to retry; a lost build is not.
+          echo "::group::docker buildx build $IMAGE ($PLATFORMS) from $CONTEXT"
+          docker buildx build \
+            --platform "$PLATFORMS" \
+            --provenance=false --sbom=false \
+            --cache-from "type=gha,scope=$CACHE_SCOPE" \
+            --cache-to "type=gha,mode=max,scope=$CACHE_SCOPE,ignore-error=true" \
+            -t "$IMAGE" \
+            "$CONTEXT"
+          echo "::endgroup::"
+          echo "::notice::built $IMAGE ($PLATFORMS) - not pushed by this step"
+      - name: Push to CarSky Zot registry (skips until the secret exists)
+        shell: bash
+        env:
+          ZOT_KEY: ${{ secrets.CARSKY_ZOT_API_KEY }}
+          # Registry account (not a secret) - verified live 2026-07-31. Override with the
+          # CARSKY_REGISTRY_USER repo variable if the account changes.
+          REGISTRY_USER: ${{ vars.CARSKY_REGISTRY_USER || 'kis@hackathon.fpt.com' }}
+        run: |
+          set -euo pipefail
+          [ -f "${CONTEXT}Dockerfile" ] || {
+            echo "::notice::${CONTEXT}Dockerfile not landed yet (5.1.5.4) - nothing to push"
+            exit 0
+          }
+          if [ -z "$ZOT_KEY" ]; then
+            echo "::notice::CARSKY_ZOT_API_KEY secret not set - image built but NOT pushed"
+            exit 0
+          fi
+          echo "$ZOT_KEY" | docker login "$REGISTRY_HOST" -u "$REGISTRY_USER" --password-stdin
+          # THE SAME CACHE SCOPE as the build step above, deliberately: every layer this build needs
+          # was just written to that scope, so this invocation is a cache hit that only re-resolves
+          # the graph and uploads - minutes instead of a second full emulated Vanetza compile. A
+          # different (or missing) scope here is the difference between ~6 minutes and ~6 hours.
+          docker buildx build \
+            --platform "$PLATFORMS" \
+            --provenance=false --sbom=false \
+            --cache-from "type=gha,scope=$CACHE_SCOPE" \
+            --cache-to "type=gha,mode=max,scope=$CACHE_SCOPE,ignore-error=true" \
+            -t "$REGISTRY_HOST/$IMAGE" \
+            --push \
+            "$CONTEXT"
+          echo "::notice::pushed $REGISTRY_HOST/$IMAGE ($PLATFORMS)"
+
+  # Bench image. Mirrors v2x-ecu-image step for step; the per-line rationale lives there and is not
+  # repeated. This image is NOT the cheaper of the two: codec_helper compiles the same ASN.1 set
+  # (SP HLD D2), so it carries the same timeout and its own cache scope.
+  scenario-player-image:
+    runs-on: ubuntu-latest
+    env:
+      REGISTRY_HOST: registry.hackathon-2.carsky.io
+      IMAGE: m1-scenario-player:latest
+      PLATFORMS: linux/arm64
+      CONTEXT: Scenario_Player/
+      # Distinct from v2x-ecu-image's scope - see the eviction note there.
+      CACHE_SCOPE: scenario-player-image
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - name: Expose the Actions cache runtime to the buildx gha cache
+        uses: actions/github-script@v7
+        with:
+          script: |
+            for (const name of ['ACTIONS_CACHE_URL', 'ACTIONS_RESULTS_URL', 'ACTIONS_RUNTIME_TOKEN']) {
+              const value = process.env[name];
+              if (value) {
+                core.exportVariable(name, value);
+              }
+            }
+      - name: Build Scenario Player node image (arm64)
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ -f "${CONTEXT}Dockerfile" ] || {
+            echo "::notice::${CONTEXT}Dockerfile not landed yet (5.1.7.3) - skipping build"
+            exit 0
+          }
+
+          # Build-only: no --load (a cross-platform image cannot enter the local store) and no
+          # --push (that is the next step). See v2x-ecu-image for the full reasoning.
+          echo "::group::docker buildx build $IMAGE ($PLATFORMS) from $CONTEXT"
+          docker buildx build \
+            --platform "$PLATFORMS" \
+            --provenance=false --sbom=false \
+            --cache-from "type=gha,scope=$CACHE_SCOPE" \
+            --cache-to "type=gha,mode=max,scope=$CACHE_SCOPE,ignore-error=true" \
+            -t "$IMAGE" \
+            "$CONTEXT"
+          echo "::endgroup::"
+          echo "::notice::built $IMAGE ($PLATFORMS) - not pushed by this step"
+      - name: Push to CarSky Zot registry (skips until the secret exists)
+        shell: bash
+        env:
+          ZOT_KEY: ${{ secrets.CARSKY_ZOT_API_KEY }}
+          REGISTRY_USER: ${{ vars.CARSKY_REGISTRY_USER || 'kis@hackathon.fpt.com' }}
+        run: |
+          set -euo pipefail
+          [ -f "${CONTEXT}Dockerfile" ] || {
+            echo "::notice::${CONTEXT}Dockerfile not landed yet (5.1.7.3) - nothing to push"
+            exit 0
+          }
+          if [ -z "$ZOT_KEY" ]; then
+            echo "::notice::CARSKY_ZOT_API_KEY secret not set - image built but NOT pushed"
+            exit 0
+          fi
+          echo "$ZOT_KEY" | docker login "$REGISTRY_HOST" -u "$REGISTRY_USER" --password-stdin
+          # Same cache scope as this job's build step, for the same reason as v2x-ecu-image: the
+          # push build must be a cache hit, not a second emulated compile.
+          docker buildx build \
+            --platform "$PLATFORMS" \
+            --provenance=false --sbom=false \
+            --cache-from "type=gha,scope=$CACHE_SCOPE" \
+            --cache-to "type=gha,mode=max,scope=$CACHE_SCOPE,ignore-error=true" \
+            -t "$REGISTRY_HOST/$IMAGE" \
+            --push \
+            "$CONTEXT"
           echo "::notice::pushed $REGISTRY_HOST/$IMAGE ($PLATFORMS)"

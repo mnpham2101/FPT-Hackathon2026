@@ -561,6 +561,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none — lands immediately, parallel with 11.1.8.1. **Commit:** `[5.1.8.2] chore: add node-image docker build-push CI lanes`
 
+**Status:** implemented 2026-08-01 — YAML valid (10 jobs), run-blocks bash -n clean; both lanes build arm64 single-platform with --provenance/--sbom=false and per-image type=gha cache scopes, push gated on CARSKY_ZOT_API_KEY (missing secret ⇒ green build-only). Expect these lanes to be SLOW (Vanetza's ~1400 ASN.1 TUs under QEMU emulation, timeout-minutes 360) — they are the first real proof either node image builds. CI verification pending wave push. Added beyond the brief: an `actions/github-script@v7` step per lane re-exporting `ACTIONS_CACHE_URL`/`ACTIONS_RESULTS_URL`/`ACTIONS_RUNTIME_TOKEN` into `GITHUB_ENV`, without which `type=gha` cannot reach the Actions cache from a plain `run:` step (those vars are given to actions, not run steps) — and `ignore-error=true` on `--cache-to` so a cache-service fault cannot fail an otherwise-successful multi-hour build.
+
 ---
 
 ## Task Group 1.9 — ADA-side R2 sink update (serves R2; D6)
