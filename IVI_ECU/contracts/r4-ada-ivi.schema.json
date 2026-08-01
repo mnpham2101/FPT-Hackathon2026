@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "r4-ada-ivi.schema.json",
+  "title": "R4 ADA-to-IVI message set",
+  "description": "Versioned JSON messages the ADA ECU sends to the IVI ECU over UDP (report section 2 R4): edge-triggered warning events (committed) plus an optional periodic awareness state (R15). Consumers must ignore unknown fields and treat an unknown warningType as a generic warning (additive evolution, HLD D4).",
+  "oneOf": [
+    { "$ref": "#/$defs/warningEvent" },
+    { "$ref": "#/$defs/stateMessage" }
+  ],
+  "$defs": {
+    "vehiclePosition": {
+      "type": "object",
+      "required": ["x", "y"],
+      "properties": {
+        "x": { "type": "number", "description": "longitudinal, m, ego frame" },
+        "y": { "type": "number", "description": "lateral, m, ego frame" }
+      }
+    },
+    "warningEvent": {
+      "type": "object",
+      "required": ["schemaVersion", "type", "warningType", "riskState", "object", "geometry"],
+      "properties": {
+        "schemaVersion": { "type": "integer", "minimum": 1 },
+        "type": { "const": "warning" },
+        "warningType": { "type": "string", "description": "warning-registry key; M1 registry: nlos_obstruction. Unknown values must degrade gracefully at the consumer (D4)" },
+        "riskState": { "type": "string", "description": "risk level from the R14 assessment; M1 NLOS plugin emits low | medium | high" },
+        "object": { "$ref": "r3-tracked-object.schema.json", "description": "R3 snapshot of the triggering track (C)" },
+        "geometry": {
+          "type": "object",
+          "description": "composed scene; field names frozen to the IVI SceneGeometry model",
+          "required": ["ego", "vehicleB", "vehicleC"],
+          "properties": {
+            "ego": { "$ref": "#/$defs/vehiclePosition", "description": "always the frame origin (0, 0)" },
+            "vehicleB": { "$ref": "#/$defs/vehiclePosition", "description": "the occluder, relative to ego" },
+            "vehicleC": {
+              "oneOf": [ { "$ref": "#/$defs/vehiclePosition" }, { "type": "null" } ],
+              "description": "the relayed vehicle; null until C is first tracked"
+            }
+          }
+        }
+      }
+    },
+    "stateMessage": {
+      "type": "object",
+      "required": ["schemaVersion", "type", "seq", "vehicles"],
+      "properties": {
+        "schemaVersion": { "type": "integer", "minimum": 1 },
+        "type": { "const": "state" },
+        "seq": { "type": "integer", "minimum": 0, "description": "sequence number, last-value-wins (R15)" },
+        "vehicles": {
+          "type": "object",
+          "required": ["ego", "vehicleB"],
+          "properties": {
+            "ego": { "$ref": "#/$defs/vehiclePosition" },
+            "vehicleB": { "$ref": "#/$defs/vehiclePosition" },
+            "vehicleC": {
+              "oneOf": [ { "$ref": "#/$defs/vehiclePosition" }, { "type": "null" } ],
+              "description": "absent or null until C is relayed"
+            }
+          }
+        }
+      }
+    }
+  }
+}

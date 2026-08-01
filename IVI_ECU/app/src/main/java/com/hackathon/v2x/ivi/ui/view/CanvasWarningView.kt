@@ -30,6 +30,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.hackathon.v2x.ivi.model.R3Snapshot
+import com.hackathon.v2x.ivi.model.R3Timestamps
 import com.hackathon.v2x.ivi.model.SceneGeometry
 import com.hackathon.v2x.ivi.model.VehiclePosition
 import kotlinx.serialization.json.Json
@@ -374,12 +375,14 @@ private fun DrawScope.drawVehicleLabel(
 
 private fun previewSnapshot(source: String) = R3Snapshot(
     id = "C",
+    objectClass = "vehicle",
     source = source,
     position = VehiclePosition(35f, 0f),
     distance = 35f,
     speed = 8.3f,
     confidence = 0.9f,
     state = "tracked",
+    timestamps = R3Timestamps(measured = 0L, received = 0L, lastUpdated = 0L),
 )
 
 @Preview(name = "God View — Ego, B, Ghost C", widthDp = 420, heightDp = 560, showBackground = true)

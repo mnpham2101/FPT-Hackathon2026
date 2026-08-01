@@ -17,19 +17,28 @@ Kotlin, Jetpack Compose, AndroidX; Compose Canvas for 2D (SceneView/Filament for
 
 ## Prepare the VM artifact (once per team, not per deploy)
 
-1. In **Artifacts → New Artifact**, category **ANDROID IMAGE**, create e.g. `aosp-ivi`.
-2. **Add Version**: upload the AOSP composite image zip (role `image`) and `cvd-host_package.tar.gz` (role `host_package`) from the starter pack.
-3. Note the artifact ID and version ID for the node config below.
+**Already done on this deployment — reuse it, do not upload a new one.** The platform carries one `ANDROID_IMAGE` artifact named **AAOS** (confirmed live 2026-07-31) with both required file roles (`image`, `host_package`):
+
+| Field | Value |
+|---|---|
+| `artifactId` | `x9oqgIwzTp1m26SWIQqJt` |
+| `versionId` | `xSU_Q7YJZUxxUgDr4Ugcp` |
+| `version` | `0.0.1` |
+| `arch` | `aarch64` (matches the actual image; the artifact's own metadata leaves arch unset) |
+
+Only if that artifact is ever missing: **Artifacts → New Artifact**, category **ANDROID IMAGE** → **Add Version**, uploading the AOSP composite image zip (role `image`) and `cvd-host_package.tar.gz` (role `host_package`) from the starter pack, then note the new IDs.
+
+**A Skycraft node without this block fails deployment** with `invalid blueprint: node 'IVI ECU': skycraft requires 'image' config with VM image artifact details` — the config is not optional, and it is not visible in a REST topology dump until set.
 
 ## Blueprint node config
 
 ```json
 {
   "image": {
-    "artifactId": "aosp-ivi",
-    "versionId": "v2026.07.15-01",
-    "os": "android",
-    "arch": "x86_64"
+    "artifactId": "x9oqgIwzTp1m26SWIQqJt",
+    "versionId": "xSU_Q7YJZUxxUgDr4Ugcp",
+    "version": "0.0.1",
+    "arch": "aarch64"
   }
 }
 ```

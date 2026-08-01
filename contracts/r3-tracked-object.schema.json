@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "r3-tracked-object.schema.json",
+  "title": "R3 TrackedObject",
+  "description": "Language-neutral schema for every object the ego system handles (report section 2 R3) - shared by the ADA store, the video detector output (R12), and V2X-relayed entries (R9), so perception sources are interchangeable behind one interface. Unknown extra fields are tolerated for additive evolution.",
+  "type": "object",
+  "required": ["id", "class", "source", "position", "distance", "speed", "confidence", "state", "timestamps"],
+  "properties": {
+    "id": { "type": "string", "description": "unique track ID in the ego store" },
+    "class": { "type": "string", "description": "object class; M1: vehicle" },
+    "source": { "enum": ["own_sensor", "v2x_relayed"], "description": "perception source of the track" },
+    "position": {
+      "type": "object",
+      "required": ["x", "y"],
+      "properties": {
+        "x": { "type": "number", "description": "longitudinal, m, ego frame" },
+        "y": { "type": "number", "description": "lateral, m, ego frame" }
+      }
+    },
+    "distance": { "type": "number", "minimum": 0, "description": "range from ego, m" },
+    "speed": { "type": "number", "minimum": 0, "description": "object speed, m/s" },
+    "confidence": { "type": "number", "minimum": 0, "maximum": 1, "description": "detection/track confidence" },
+    "state": { "enum": ["not_tracked", "tentative", "tracked"], "description": "per the R13 track state machine" },
+    "timestamps": {
+      "type": "object",
+      "required": ["measured", "received", "lastUpdated"],
+      "properties": {
+        "measured": { "type": "integer", "minimum": 0, "description": "measurement time, ms epoch" },
+        "received": { "type": "integer", "minimum": 0, "description": "receive time at the ego system, ms epoch" },
+        "lastUpdated": { "type": "integer", "minimum": 0, "description": "last store update, ms epoch" }
+      }
+    }
+  }
+}

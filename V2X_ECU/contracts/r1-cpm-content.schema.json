@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "r1-cpm-content.schema.json",
+  "title": "CpmContent",
+  "description": "Logical content of one profiled R1 CPM - mirrors the V2X_ECU codec-seam struct CpmContent 1:1 in wire-native integer units. No SI floats, no derived fields. Normative home: contracts/r1-cpm-profile.md section 3.",
+  "type": "object",
+  "required": ["stationId", "referenceTime", "referencePosition", "orientationAngle", "object"],
+  "properties": {
+    "stationId": { "type": "integer", "minimum": 0, "maximum": 4294967295, "description": "ItsPduHeader stationId of sender B" },
+    "referenceTime": { "type": "integer", "minimum": 0, "maximum": 4398046511103, "description": "TimestampIts - ms since 2004-01-01T00:00:00.000 TAI" },
+    "referencePosition": {
+      "type": "object",
+      "required": ["latitude", "longitude"],
+      "properties": {
+        "latitude": { "type": "integer", "minimum": -900000000, "maximum": 900000001, "description": "WGS84 latitude, 1e-7 degree; 900000001 = unavailable" },
+        "longitude": { "type": "integer", "minimum": -1800000000, "maximum": 1800000001, "description": "WGS84 longitude, 1e-7 degree; 1800000001 = unavailable" }
+      }
+    },
+    "orientationAngle": { "type": "integer", "minimum": 0, "maximum": 3601, "description": "Wgs84AngleValue, 0.1 degree; 3601 = unavailable; maps to R2 sender.heading" },
+    "object": {
+      "type": "object",
+      "required": ["objectId", "measurementDeltaTime", "position", "velocity", "classification", "classConfidence"],
+      "properties": {
+        "objectId": { "type": "integer", "minimum": 0, "maximum": 65535, "description": "Identifier2B - B-assigned ID of perceived object C" },
+        "measurementDeltaTime": { "type": "integer", "minimum": -2048, "maximum": 2047, "description": "DeltaTimeMilliSecondSigned, ms; profile-valid range is +/-2047 (F9)" },
+        "position": {
+          "type": "object",
+          "required": ["x", "y", "xConfidence", "yConfidence"],
+          "properties": {
+            "x": { "type": "integer", "minimum": -131072, "maximum": 131071, "description": "CartesianCoordinateLarge, 0.01 m, sender-B frame" },
+            "y": { "type": "integer", "minimum": -131072, "maximum": 131071, "description": "CartesianCoordinateLarge, 0.01 m, sender-B frame" },
+            "xConfidence": { "type": "integer", "minimum": 1, "maximum": 4096, "description": "CoordinateConfidence, 0.01 m; 4096 = unavailable (F6)" },
+            "yConfidence": { "type": "integer", "minimum": 1, "maximum": 4096, "description": "CoordinateConfidence, 0.01 m; 4096 = unavailable (F6)" }
+          }
+        },
+        "velocity": {
+          "type": "object",
+          "required": ["x", "y"],
+          "properties": {
+            "x": { "type": "integer", "minimum": -16383, "maximum": 16383, "description": "VelocityComponentValue, 0.01 m/s, sender-B frame" },
+            "y": { "type": "integer", "minimum": -16383, "maximum": 16383, "description": "VelocityComponentValue, 0.01 m/s, sender-B frame" }
+          }
+        },
+        "classification": { "type": "integer", "minimum": 0, "maximum": 255, "description": "TrafficParticipantType; M1 uses passengerCar(5)" },
+        "classConfidence": { "type": "integer", "minimum": 1, "maximum": 101, "description": "ConfidenceLevel; 101 = unavailable -> R2 null (F6)" }
+      }
+    }
+  }
+}

@@ -1,0 +1,44 @@
+@startuml phase1-scenario-player-callflow
+title Phase 1 — Scenario Player CPM generation (R11)\nbench → V2X ECU, unidirectional (R10 deferred)
+
+box "Bench node (one container)" #F8F8F8
+  participant "main.py\n(controller)" as Main
+  participant "config.py" as Cfg
+  participant "scenario.py\n(kinematic model)" as Scn
+  participant "encoder_client.py" as Enc
+  participant "cpm_encode --stream\n(C++ subprocess,\nsynced R1 codec)" as Helper
+  participant "sender.py" as Snd
+end box
+participant "V2X ECU\n10.99.0.11:47100" as V2X
+
+== Boot ==
+Main -> Cfg : load env (SCENARIO_CONFIG, V2X_ECU_HOST/PORT)
+Cfg -> Cfg : load + validate scenario YAML\n(cpm_rate_hz, duration, sender, object — D3)
+Main -> Enc : start()
+Enc -> Helper : spawn (stdin/stdout pipes, JSONL protocol)
+
+== Rate loop (cpm_rate_hz, scenario clock t) ==
+loop until duration_s (restart t if loop: true)
+  Main -> Scn : sample(t)
+  Scn --> Main : CpmContent (wire-native units;\nB pose + C relative state; F9 bound asserted)
+  Main -> Enc : encode(CpmContent)
+  Enc -> Helper : one JSON line on stdin
+  alt encode OK
+    Helper --> Enc : base64 UPER line
+    Enc --> Main : bytes
+    Main -> Snd : send(bytes)
+    Snd -> V2X : UDP datagram (raw UPER CPM, R1 — F5: no GN/BTP)
+    Main -> Main : [TX] JSONL log (t, seq, len)
+  else encode error
+    Helper --> Enc : {"error": …} line
+    Main -> Main : [ERR] log + counter — datagram skipped, loop continues
+  end
+end
+
+alt helper subprocess dies
+  Enc -> Main : EOF detected
+  Main -> Main : [ERR] log
+  Main -> Enc : restart with backoff (bench stays alive + observable)
+  Enc -> Helper : respawn
+end
+@enduml
