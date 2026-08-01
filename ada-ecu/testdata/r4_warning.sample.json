@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "type": "warning",
   "warningType": "nlos_obstruction",
-  "riskState": "warning",
+  "riskState": "high",
   "object": {
     "id": "v2x:1201:7",
     "class": "vehicle",
@@ -64,7 +64,7 @@
   ],
   "geometry": {
     "ego": { "x": 0.0, "y": 0.0 },
-    "b": { "x": 12.0, "y": 0.2 },
-    "c": { "x": 37.4, "y": 1.4 }
+    "vehicleB": { "x": 12.0, "y": 0.2 },
+    "vehicleC": { "x": 37.4, "y": 1.4 }
   }
 }
