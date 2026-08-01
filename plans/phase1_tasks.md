@@ -427,6 +427,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none — parallel with 11.1.6.1–4 (D1 protocol is HLD-frozen). **Commit:** `[11.1.6.5] feat: add persistent cpm_encode subprocess client`
 
+**Status:** done 2026-08-01 — pytest 98 passed locally; echo/error/death-restart covered against the committed fake helper.
+
 ### [ ] `11.1.6.6` — UDP sender `player/sender.py` *(agent)*
 
 **Objective:** stdlib-socket UDP tx of encoded payload bytes to `V2X_ECU_HOST:V2X_ECU_PORT` (SP HLD §3/§4).
