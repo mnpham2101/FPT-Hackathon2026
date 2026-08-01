@@ -463,6 +463,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 11.1.6.1 + 11.1.6.3 + 11.1.6.5 + 11.1.6.6 + 11.1.6.7. **Commit:** `[11.1.6.8] feat: add scenario player entrypoint main.py`
 
+**Status:** done 2026-08-01 — pytest 110 passed locally; end-to-end smoke (fake encoder → loopback UDP) received datagrams with [TX] lines; [FATAL] path returns 1.
+
 ---
 
 ## Task Group 1.7 — Bench codec path: `cpm_encode` helper + encoder goldens + image (serves R11 D1/D2, R5)
