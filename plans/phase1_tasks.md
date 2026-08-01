@@ -517,6 +517,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 11.1.7.1. **Commit:** `[11.1.7.2] test: verify cpm_encode against golden vectors`
 
+**Status:** implemented 2026-08-01 — six .uper copies blob-hash-identical to contracts/golden-vectors/; test skips cleanly without the binary (suite 116 passed / 7 skipped) and, proven against a stand-in binary, passes 6/6 on matching bytes and fails with a first-differing-offset report on drift; both gates exit 0. Real-binary execution lands with the 11.1.8.1 CI lane.
+
 ### [ ] `5.1.7.3` — `Scenario_Player/Dockerfile` *(agent)*
 
 **Objective:** the deployable `scenario-player:latest` image (SP HLD §3/§8): stage 1 cmake-builds `codec_helper` → stage 2 python-slim runtime.
