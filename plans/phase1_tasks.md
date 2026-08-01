@@ -43,7 +43,7 @@ Every subtask not listed below is implemented and closed. Two primary verificati
 
 | Subtask(s) | Kind | What it still needs |
 |---|---|---|
-| `5.1.10.1` | *car-sky* | Push the three images to `registry.hackathon-2.carsky.io`. Needs the [[car-sky]] agent (not spawnable in any session so far) **or** `CARSKY_ZOT_API_KEY` as a repo secret so the CI lanes push instead. |
+| `5.1.10.1` | **done** (CI, not *car-sky*) | All three images push from the CI lanes and all three pulled and ran on `phase1_Minh_test-deploy` — record in [phase1-comms-run.md](doc/phase1-comms-run.md). No [[car-sky]] agent needed. Standing hazard, not a residual: `main` writes `m1-netcheck:latest` from pre-`2.1.9.1` code. |
 | `5.1.10.2` | *USER-MANUAL* | Nydus UI node-config edits per § Task Group 1.10 + a deploy with every node Running. |
 | `2.1.10.3` | *USER-MANUAL* | Read the V2X node View Log, save the export, and run `tools/comms_check/check_v2x_log.py` over it in stream mode. |
 | `11.1.10.4` | *USER-MANUAL* | Swap the bench `SCENARIO_CONFIG` to `c-out-of-range.yaml`, redeploy, and compare the two log sets. |
@@ -609,6 +609,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 **Acceptance:** all three tags pull-able from the registry; evidence doc created.
 
 **Dependencies:** after 5.1.5.4 + 5.1.7.3 + 2.1.9.1. **Commit:** `[5.1.10.1] docs: record phase1 image pushes to the CarSky registry`
+
+**Status:** **partly closed 2026-08-01 — executed by CI, not [[car-sky]].** `CARSKY_ZOT_API_KEY` turned out to be present, so the secret-gated push step in each image lane ran: run `30698630956` logged `Notice: pushed registry.hackathon-2.carsky.io/m1-v2x-ecu:latest (linux/arm64)` and the same for `m1-scenario-player:latest`, each a single manifest (not an index); record in [phase1-comms-run.md](doc/phase1-comms-run.md). This retires the "needs the car-sky agent" framing of § Open items item 4 for good. **Closed:** the acceptance's "all three tags pull-able" is met by deployment itself — every node on `phase1_Minh_test-deploy` pulled and ran, and the sink's full 339-char `[RX]` bodies prove `m1-netcheck:latest` carries `2.1.9.1`'s `BODY_PREVIEW` rather than the hardcoded-96 build. **Standing hazard, not a residual:** `main` pushes that same tag from pre-`2.1.9.1` code, so any `main` commit before the branch merges silently reverts the registry copy — re-check the `[RX]` body length after `main` activity. No digests are recorded: all three tags are mutable and every branch push re-pushes them, so identify the deployed image at deploy time.
 
 ### [ ] `5.1.10.2` — USER-MANUAL: blueprint node config + deploy → all nodes Running
 
