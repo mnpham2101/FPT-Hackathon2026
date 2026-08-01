@@ -529,6 +529,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 11.1.7.1 + 11.1.6.8 + 5.1.8.2. **Commit:** `[5.1.7.3] feat: add Scenario Player multi-stage Dockerfile`
 
+**Status:** implemented 2026-08-01 — self-reviewed multi-stage image (trixie build stage for cmake ≥3.28 → python:3.11-slim runtime carrying cpm_encode + staged libvanetza_asn1*.so with fail-loud guards; only main.py/player/scenarios/requirements.txt reach stage 2; no ENV shadowing HLD §5; CMD matches the blueprint command); .dockerignore cross-checked against every COPY; glibc trixie→bookworm and arm64/QEMU risks flagged for the 5.1.8.2 lane. No local Docker — image build verification lands with 5.1.8.2.
+
 ---
 
 ## Task Group 1.8 — CI lanes (workflow-file edits, one objective each; serves R11, R5)
