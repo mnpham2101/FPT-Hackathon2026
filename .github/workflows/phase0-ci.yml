@@ -3,11 +3,19 @@
 #
 # Later lanes plug in here (do not pre-create empty jobs):
 # - group 0.2 (V2X_ECU): C++ CMake build+ctest landed with 1.0.2.1 (v2x-core-build below; ADA's
-#   landed with 3.0.4.1). Still pending: the docker-build jobs for both C++ nodes, added by those
-#   subtasks when their Dockerfiles land.
+#   landed with 3.0.4.1). Still pending: the ADA docker-build job, added when that node's
+#   Dockerfile lands.
+# - D7 comms check: the v2x-comms-check job below (9.1.12.3) builds v2x_ecu, runs it loopback
+#   against a UDP sink standing in for ADA, sends the golden-vector corpus and asserts the [EVT]
+#   receive -> decode -> forward chain.
+# - bench codec helper (11.1.8.1): the sp-codec-helper job below builds Scenario_Player's cpm_encode
+#   and runs the Scenario_Player suite with ENCODER_PATH set, so test_encoder_golden runs unskipped.
 # - registry push (5.0.8.2): the netcheck-image job below builds always and pushes only when the
 #   CARSKY_ZOT_API_KEY repo secret exists (never commit the credential). Host per the live O1
 #   probe 2026-07-31: registry.hackathon-2.carsky.io (registry.carsky.io answers 502).
+# - node images (5.1.8.2): the v2x-ecu-image and scenario-player-image jobs below build both node
+#   images arm64-only under the same secret-gated push - the first lane that proves either image
+#   builds at all.
 name: phase0-ci
 
 on:
@@ -29,6 +37,13 @@ jobs:
             python contracts/check_sync.py
           else
             echo "contracts/check_sync.py not landed yet (subtask 1.0.7.1) - skipping"
+          fi
+      - name: R7 transport-import gate (lands with 7.1.3.5)
+        run: |
+          if [ -f V2X_ECU/tools/check_transport_imports.py ]; then
+            python V2X_ECU/tools/check_transport_imports.py
+          else
+            echo "V2X_ECU/tools/check_transport_imports.py not landed yet (subtask 7.1.3.5) - skipping"
           fi
 
   python-tests:
@@ -86,7 +101,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: V2X_ECU/build/_deps
-          key: v2x-deps-${{ runner.os }}-vanetza-fb6c5510-json-v3.11.3-gtest-v1.14.0-${{ hashFiles('V2X_ECU/CMakeLists.txt') }}
+          key: v2x-deps-${{ runner.os }}-vanetza-fb6c5510-json-v3.11.3-gtest-v1.14.0-${{ hashFiles('V2X_ECU/CMakeLists.txt', 'V2X_ECU/cmake/vanetza-pin.cmake') }}
           restore-keys: |
             v2x-deps-${{ runner.os }}-vanetza-fb6c5510-json-v3.11.3-gtest-v1.14.0-
       - name: Configure
@@ -131,6 +146,302 @@ jobs:
 
           Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
           git push origin HEAD:${{ github.ref_name }}
+
+  # D7 (HLD §3) CI-side acceptance: a bench-sent CPM is received, raises events, deserializes to
+  # JSON and is forwarded as R2. No landed-file guard on purpose - V2X_ECU/src/main.cpp and
+  # tools/comms_check/ are both on the tree, so the skip-with-notice pattern the placeholder lanes
+  # above use would never fire; a missing file here should fail the lane, not silently pass it.
+  v2x-comms-check:
+    runs-on: ubuntu-latest
+    # Same reason as v2x-core-build: on a cold _deps cache this pays Vanetza's ~1400-TU ASN.1
+    # compile before it can link v2x_ecu.
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Boost (Vanetza hard dependency)
+        run: sudo apt-get update && sudo apt-get install -y libboost-dev libboost-date-time-dev
+      # key + restore-keys are byte-identical to v2x-core-build's on purpose: the two lanes share
+      # one warmed _deps tree, so this job never repays the ASN.1 recompile. Re-pinning Vanetza
+      # must update both.
+      - name: Cache Vanetza FetchContent deps
+        uses: actions/cache@v4
+        with:
+          path: V2X_ECU/build/_deps
+          key: v2x-deps-${{ runner.os }}-vanetza-fb6c5510-json-v3.11.3-gtest-v1.14.0-${{ hashFiles('V2X_ECU/CMakeLists.txt', 'V2X_ECU/cmake/vanetza-pin.cmake') }}
+          restore-keys: |
+            v2x-deps-${{ runner.os }}-vanetza-fb6c5510-json-v3.11.3-gtest-v1.14.0-
+      - name: Configure
+        run: cmake -S V2X_ECU -B V2X_ECU/build
+      # Bounded parallelism for the same reason as v2x-core-build (a bare `-j` is unlimited jobs
+      # and OOMs the runner on asn1_its). Only the app target: the test binaries belong to that
+      # job, this lane needs the executable at the pinned path V2X_ECU/build/v2x_ecu.
+      - name: Build v2x_ecu
+        run: cmake --build V2X_ECU/build --target v2x_ecu -j $(nproc)
+      - name: Loopback comms check (send golden vectors, assert the [EVT] chain)
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Blueprint ports (HLD §6). Fixed values are safe here: the whole lane is loopback-only
+          # inside a fresh runner, so nothing else can hold them.
+          LISTEN_PORT=47100
+          ADA_PORT=47200
+          V2X_LOG="$RUNNER_TEMP/v2x.log"
+          SINK_LOG="$RUNNER_TEMP/ada_sink.log"
+
+          # UDP sink standing in for the ADA ECU (ADA's real code is Phase 2). A UDP sendto
+          # succeeds with no listener at all, so this is not here to keep the forwarder happy - it
+          # is the R2-arrival evidence: one "len=" line per datagram that actually reached the
+          # forward target.
+          cat > "$RUNNER_TEMP/ada_sink.py" <<'PY'
+          import socket
+          import sys
+
+          sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+          sock.bind(("127.0.0.1", int(sys.argv[1])))
+          print("[SINK] bound port=%s" % sys.argv[1], flush=True)
+          while True:                                   # runs until the lane kills it
+              data, _ = sock.recvfrom(65535)
+              print("len=%d" % len(data), flush=True)
+          PY
+
+          echo "[LANE] starting the ADA sink on 127.0.0.1:$ADA_PORT"
+          python "$RUNNER_TEMP/ada_sink.py" "$ADA_PORT" > "$SINK_LOG" 2>&1 &
+          SINK_PID=$!
+
+          # Bounded readiness poll, never a bare sleep: a datagram sent before the bind is simply
+          # lost, which would surface as a confusing count mismatch instead of a clear error.
+          SINK_READY=0
+          for _ in $(seq 1 30); do
+            if grep -q '\[SINK\] bound' "$SINK_LOG" 2>/dev/null; then SINK_READY=1; break; fi
+            sleep 0.2
+          done
+          if [ "$SINK_READY" -ne 1 ]; then
+            echo "::error::ADA sink did not bind 127.0.0.1:$ADA_PORT within 6s"
+            cat "$SINK_LOG" || true
+            kill -TERM "$SINK_PID" 2>/dev/null || true
+            exit 1
+          fi
+
+          # DEDUPE_WINDOW_MS=1 is deliberate test configuration (env-injected per HLD §6, not a
+          # hardcoded tunable): four of the six golden vectors - conf-unavailable, coord-large,
+          # gate-boundary and nominal - carry the same stationId 1201, objectId 7, referenceTime
+          # and measurementDeltaTime -50, i.e. one R9 dedupe key (stationId, objectId,
+          # referenceTime + measurementDeltaTime). Under the 1500 ms default three of them would
+          # be dropped and the expected-vector check would correctly fail. A 1 ms window plus
+          # --delay-ms 100 below (send gap >= window) puts every repeat of that key outside it.
+          echo "[LANE] starting v2x_ecu (stub radio, FAULT_PLAN=none, listen $LISTEN_PORT)"
+          LISTEN_PORT="$LISTEN_PORT" \
+          ADA_ECU_HOST=127.0.0.1 \
+          ADA_ECU_PORT="$ADA_PORT" \
+          FAULT_PLAN=none \
+          DEDUPE_WINDOW_MS=1 \
+            V2X_ECU/build/v2x_ecu > "$V2X_LOG" 2>&1 &
+          APP_PID=$!
+
+          # Readiness = main.cpp's bring-up-complete banner (init -> configure -> subscribeRx all
+          # acked and the Rx socket bound). Bounded wait, loud failure.
+          APP_READY=0
+          for _ in $(seq 1 30); do
+            if grep -q '\[BOOT\] bring-up complete' "$V2X_LOG" 2>/dev/null; then APP_READY=1; break; fi
+            sleep 0.2
+          done
+          if [ "$APP_READY" -ne 1 ]; then
+            echo "::error::v2x_ecu never logged '[BOOT] bring-up complete' within 6s"
+            cat "$V2X_LOG" || true
+            kill -TERM "$APP_PID" 2>/dev/null || true
+            kill -TERM "$SINK_PID" 2>/dev/null || true
+            exit 1
+          fi
+
+          # Repeat 1 (the default): expected-vector mode expects exactly one complete chain per
+          # golden case, so a second pass would only add ambiguity here.
+          echo "[LANE] sending the golden-vector corpus"
+          python tools/comms_check/send_cpm.py 127.0.0.1 "$LISTEN_PORT" --delay-ms 100
+
+          # Drain time: decode/validate/dedupe/forward run on the Rx thread, so the last datagram
+          # needs a moment to reach the sink before teardown. Bounded and generous - the
+          # assertions below, not this sleep, are what decide the lane.
+          sleep 2
+
+          echo "[LANE] stopping v2x_ecu (SIGTERM)"
+          kill -TERM "$APP_PID"
+          APP_STATUS=0
+          wait "$APP_PID" || APP_STATUS=$?
+          kill -TERM "$SINK_PID" 2>/dev/null || true
+          wait "$SINK_PID" 2>/dev/null || true
+
+          # Dump both logs BEFORE any assertion, so a red run is diagnosable from the job output
+          # alone (they also ship as an artifact below).
+          echo "::group::v2x_ecu stdout"
+          cat "$V2X_LOG"
+          echo "::endgroup::"
+          echo "::group::ADA sink"
+          cat "$SINK_LOG"
+          echo "::endgroup::"
+
+          # main.cpp exit codes: 0 = clean SIGTERM shutdown; 2/3/4/5 = config / init / configure /
+          # subscribeRx failure.
+          if [ "$APP_STATUS" -ne 0 ]; then
+            echo "::error::v2x_ecu exited $APP_STATUS on SIGTERM (expected 0)"
+            exit 1
+          fi
+
+          # The D7 assertion itself: per vector rx_datagram -> decode_ok carrying the decoded
+          # CpmContent JSON -> r2_forwarded carrying the R2 body, with zero decode rejects.
+          # [BOOT]/[FWD-ERR] and any other non-[EVT] text in the capture is ignored by design.
+          python tools/comms_check/check_v2x_log.py "$V2X_LOG" --expect-vectors contracts/golden-vectors
+
+          # R2 forwarded on the wire, not merely logged.
+          SINK_COUNT=$(grep -c '^len=' "$SINK_LOG" || true)
+          echo "[LANE] ADA sink datagrams: $SINK_COUNT"
+          if [ "$SINK_COUNT" -lt 6 ]; then
+            echo "::error::ADA sink received $SINK_COUNT datagrams, expected >= 6 (one per vector)"
+            exit 1
+          fi
+          echo "[LANE] comms check PASSED"
+      - name: Upload comms-check logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v2x-comms-check-logs
+          path: |
+            ${{ runner.temp }}/v2x.log
+            ${{ runner.temp }}/ada_sink.log
+          if-no-files-found: warn
+
+  # Bench-side codec verification (11.1.8.1). This is the only lane that proves the Scenario
+  # Player's R1 encoder byte-exact: it builds the SP HLD D1 cpm_encode helper on Linux and runs
+  # Scenario_Player/tests with ENCODER_PATH set, which un-skips test_encoder_golden's encoder
+  # equality cases (they skip everywhere the binary is absent, including the python-tests lane).
+  sp-codec-helper:
+    runs-on: ubuntu-latest
+    # Same reason as v2x-core-build: codec_helper is a second build context over the same Vanetza
+    # pin (SP HLD D2), so a cold _deps cache pays the identical asn1c ~1400-TU compile.
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Boost (Vanetza hard dependency)
+        run: sudo apt-get update && sudo apt-get install -y libboost-dev libboost-date-time-dev
+      # Same key CONSTRUCTION as v2x-core-build - same Vanetza pin string, so one re-pin invalidates
+      # both lanes - but necessarily its own path and hashFiles set: the helper builds in a different
+      # binary dir, so the two caches cannot be shared. gtest is deliberately absent from this key:
+      # codec_helper/CMakeLists.txt fetches no GoogleTest (there are no C++ tests in that context).
+      - name: Cache Vanetza FetchContent deps (bench build context)
+        uses: actions/cache@v4
+        with:
+          path: Scenario_Player/codec_helper/build/_deps
+          key: sp-helper-deps-${{ runner.os }}-vanetza-fb6c5510-json-v3.11.3-${{ hashFiles('Scenario_Player/codec_helper/CMakeLists.txt', 'Scenario_Player/codec_helper/cmake/vanetza-pin.cmake') }}
+          restore-keys: |
+            sp-helper-deps-${{ runner.os }}-vanetza-fb6c5510-json-v3.11.3-
+      # Guard style for every run: block below: `[ -f ... ] || { echo "::notice::..."; exit 0; }`
+      # rather than a job-level output plus `if:` on each step - fewer moving parts, and `exit 0`
+      # under `set -euo pipefail` ends that step successfully, so an absent codec_helper degrades
+      # the whole lane into notices instead of a red run. 11.1.7.1 has landed, so this guard is
+      # belt-and-braces: the expected path is a real build.
+      - name: Configure
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ -f Scenario_Player/codec_helper/CMakeLists.txt ] || {
+            echo "::notice::Scenario_Player/codec_helper/CMakeLists.txt not landed yet (11.1.7.1) - skipping configure"
+            exit 0
+          }
+          cmake -S Scenario_Player/codec_helper -B Scenario_Player/codec_helper/build
+      # Bounded parallelism for the same reason as v2x-core-build: a bare `-j` passes no number to
+      # make, i.e. unlimited jobs - ~700 concurrent compilers for asn1_its alone would OOM the
+      # runner. Only the cpm_encode target; the context has no other.
+      - name: Build cpm_encode
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ -f Scenario_Player/codec_helper/CMakeLists.txt ] || {
+            echo "::notice::codec_helper absent - skipping build"
+            exit 0
+          }
+          cmake --build Scenario_Player/codec_helper/build --target cpm_encode -j $(nproc)
+      # Fast pre-check ahead of pytest: if the binary is broken at all, this says so in one line
+      # instead of inside a parametrized assertion dump. It encodes the SYNCED fixtures under
+      # Scenario_Player/tests/fixtures/golden/ rather than the contracts/ masters, because those
+      # copies are what the bench itself is built against (the masters are covered by the
+      # fixture-identity tests in the pytest step, which compare the two byte-for-byte).
+      - name: Smoke --encode over the six synced golden vectors
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ -f Scenario_Player/codec_helper/CMakeLists.txt ] || {
+            echo "::notice::codec_helper absent - skipping --encode smoke"
+            exit 0
+          }
+
+          BIN="$PWD/Scenario_Player/codec_helper/build/cpm_encode"
+          if [ ! -x "$BIN" ]; then
+            echo "::error::cpm_encode missing at $BIN after a successful build"
+            exit 1
+          fi
+
+          echo "::group::cpm_encode --encode (one base64 line per vector)"
+          COUNT=0
+          for JSON in Scenario_Player/tests/fixtures/golden/*.json; do
+            CASE=$(basename "$JSON" .json)
+            # Capture first, assert second: under `set -e` a non-zero exit would abort the step
+            # before the diagnostic could be printed.
+            STATUS=0
+            OUT=$("$BIN" --encode "$JSON") || STATUS=$?
+            if [ "$STATUS" -ne 0 ]; then
+              echo "::error::$CASE: cpm_encode exited $STATUS (expected 0); stdout: $OUT"
+              exit 1
+            fi
+            # Exactly one line, checked before the regex: `grep -Eq` matches if ANY line matches,
+            # so without this a stray extra line would slip through.
+            LINES=$(printf '%s\n' "$OUT" | wc -l | tr -d ' ')
+            if [ "$LINES" -ne 1 ]; then
+              echo "::error::$CASE: expected 1 stdout line, got $LINES"
+              exit 1
+            fi
+            # Standard RFC 4648 alphabet, no whitespace, no URL-safe '-_' - the exact shape
+            # player/encoder_client.py feeds to b64decode(validate=True). `+` also rejects empty.
+            printf '%s' "$OUT" | grep -Eq '^[A-Za-z0-9+/]+=*$' || {
+              echo "::error::$CASE: stdout is not a single bare base64 payload: $OUT"
+              exit 1
+            }
+            BYTES=$(printf '%s' "$OUT" | base64 -d | wc -c | tr -d ' ')
+            echo "[LANE] $CASE: ${#OUT} base64 chars -> $BYTES UPER bytes"
+            COUNT=$((COUNT + 1))
+          done
+          echo "::endgroup::"
+
+          # Also catches an unmatched glob (the loop would have run once on the literal pattern).
+          if [ "$COUNT" -ne 6 ]; then
+            echo "::error::encoded $COUNT vectors, expected the 6 frozen Phase 0 cases"
+            exit 1
+          fi
+          echo "[LANE] --encode smoke PASSED ($COUNT vectors)"
+      # The wire truth of SP HLD D2, and the human-readable evidence for it: -v prints each
+      # test_encoder_matches_golden_uper[<case>] PASSED. Expected totals with the binary present:
+      # 123 passed, 0 skipped. Without it (e.g. the python-tests lane, or a local run) the same
+      # suite reports 116 passed, 7 skipped - the 6 encode-equality cases plus the failure-contract
+      # test. Any other split means drift: fix the cause, then update these numbers.
+      - name: Scenario_Player suite with ENCODER_PATH (encoder-golden unskipped)
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ -f Scenario_Player/codec_helper/CMakeLists.txt ] || {
+            echo "::notice::codec_helper absent - skipping the ENCODER_PATH pytest run"
+            exit 0
+          }
+          python -m pip install -r Scenario_Player/requirements-dev.txt
+          ENCODER_PATH="$PWD/Scenario_Player/codec_helper/build/cpm_encode" \
+            python -m pytest Scenario_Player/tests -v
+      # No upload-artifact step on purpose: the only output worth keeping is the pytest log, which
+      # is already in the job output, and the built binary is a heavy artifact that proves nothing
+      # a green run does not.
 
   ivi-unit-tests:
     runs-on: ubuntu-latest
@@ -181,4 +492,190 @@ jobs:
           fi
           echo "$ZOT_KEY" | docker login "$REGISTRY_HOST" -u "$REGISTRY_USER" --password-stdin
           docker buildx build --platform "$PLATFORMS" --provenance=false --sbom=false -t "$REGISTRY_HOST/$IMAGE" --push tools/netcheck/
+          echo "::notice::pushed $REGISTRY_HOST/$IMAGE ($PLATFORMS)"
+
+  # The two node-image lanes (5.1.8.2). Same shape as netcheck-image above - qemu + buildx,
+  # single-platform arm64, attestations off, push gated on the CARSKY_ZOT_API_KEY secret - with two
+  # additions that netcheck (a ~20-line Python image) does not need:
+  #   * a buildx type=gha layer cache, because both images compile Vanetza's asn1c-generated C
+  #     (asn1_support + asn1_its + asn1_its_r2, ~1400 translation units) INSIDE the image build,
+  #     under QEMU aarch64 emulation on an amd64 runner;
+  #   * a runtime-token export step, without which type=gha cannot reach the Actions cache from a
+  #     plain `run:` step (see the step comment in v2x-ecu-image).
+  v2x-ecu-image:
+    runs-on: ubuntu-latest
+    env:
+      # Live host per the O1 probe (2026-07-31): registry.carsky.io 502s, hackathon-2 answers.
+      # (The node guides still name registry.carsky.io - known stale, tracked as a plan open item.)
+      REGISTRY_HOST: registry.hackathon-2.carsky.io
+      IMAGE: m1-v2x-ecu:latest
+      # arm64 only, and for a harder reason than netcheck-image's: a CarSky Container node rejects a
+      # multi-platform manifest index and hangs in Provisioning (plans/doc/phase0-smoke-test-run.md,
+      # standing requirement), so exactly one platform goes in the buildx invocation.
+      PLATFORMS: linux/arm64
+      # Build context = the node folder, which is self-contained by the node-code-layout rule.
+      # Carries its trailing slash netcheck-image style, hence "${CONTEXT}Dockerfile" below with no
+      # extra separator.
+      CONTEXT: V2X_ECU/
+      # One cache scope PER IMAGE, never one shared scope: the gha cache is scoped storage under a
+      # repo-wide eviction budget, and two ~1400-TU ASN.1 layer sets in one scope would evict each
+      # other run after run - turning every run back into a cold emulated compile.
+      CACHE_SCOPE: v2x-ecu-image
+    # Emulated, this compile is roughly an order of magnitude slower than the ~30-40 min native
+    # first build seen in v2x-core-build. 360 is the largest useful value, not a guess: GitHub
+    # hard-caps a hosted-runner job at 6 h regardless of what is written here. Reruns are minutes,
+    # not hours, once the type=gha cache is warm.
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      # ACTIONS_CACHE_URL / ACTIONS_RESULTS_URL / ACTIONS_RUNTIME_TOKEN are handed to *actions*, not
+      # to `run:` steps, so a plain `docker buildx build --cache-to type=gha` cannot see them and
+      # fails to configure its cache exporter. Re-exporting them through GITHUB_ENV is what makes
+      # the cache work outside docker/build-push-action; actions/github-script is used rather than a
+      # third-party runtime-exposing action to keep this first-party. Only names actually present are
+      # exported, so an empty value can never be mistaken for a configured endpoint.
+      - name: Expose the Actions cache runtime to the buildx gha cache
+        uses: actions/github-script@v7
+        with:
+          script: |
+            for (const name of ['ACTIONS_CACHE_URL', 'ACTIONS_RESULTS_URL', 'ACTIONS_RUNTIME_TOKEN']) {
+              const value = process.env[name];
+              if (value) {
+                core.exportVariable(name, value);
+              }
+            }
+      - name: Build V2X ECU node image (arm64)
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ -f "${CONTEXT}Dockerfile" ] || {
+            echo "::notice::${CONTEXT}Dockerfile not landed yet (5.1.5.4) - skipping build"
+            exit 0
+          }
+
+          # NO --load, and NO --push here, ON PURPOSE - do not "fix" this. With --platform set and
+          # neither exporter given, buildx builds the image and exports nothing, which is exactly
+          # what a build-only verification wants: a linux/arm64 image cannot be --loaded into an
+          # amd64 runner's docker image store, so adding --load breaks the lane rather than
+          # improving it. The push step below is where an exporter belongs.
+          # ignore-error on --cache-to: a cache-service hiccup must not turn a successful multi-hour
+          # emulated build red. A cache MISS is cheap to retry; a lost build is not.
+          echo "::group::docker buildx build $IMAGE ($PLATFORMS) from $CONTEXT"
+          docker buildx build \
+            --platform "$PLATFORMS" \
+            --provenance=false --sbom=false \
+            --cache-from "type=gha,scope=$CACHE_SCOPE" \
+            --cache-to "type=gha,mode=max,scope=$CACHE_SCOPE,ignore-error=true" \
+            -t "$IMAGE" \
+            "$CONTEXT"
+          echo "::endgroup::"
+          echo "::notice::built $IMAGE ($PLATFORMS) - not pushed by this step"
+      - name: Push to CarSky Zot registry (skips until the secret exists)
+        shell: bash
+        env:
+          ZOT_KEY: ${{ secrets.CARSKY_ZOT_API_KEY }}
+          # Registry account (not a secret) - verified live 2026-07-31. Override with the
+          # CARSKY_REGISTRY_USER repo variable if the account changes.
+          REGISTRY_USER: ${{ vars.CARSKY_REGISTRY_USER || 'kis@hackathon.fpt.com' }}
+        run: |
+          set -euo pipefail
+          [ -f "${CONTEXT}Dockerfile" ] || {
+            echo "::notice::${CONTEXT}Dockerfile not landed yet (5.1.5.4) - nothing to push"
+            exit 0
+          }
+          if [ -z "$ZOT_KEY" ]; then
+            echo "::notice::CARSKY_ZOT_API_KEY secret not set - image built but NOT pushed"
+            exit 0
+          fi
+          echo "$ZOT_KEY" | docker login "$REGISTRY_HOST" -u "$REGISTRY_USER" --password-stdin
+          # THE SAME CACHE SCOPE as the build step above, deliberately: every layer this build needs
+          # was just written to that scope, so this invocation is a cache hit that only re-resolves
+          # the graph and uploads - minutes instead of a second full emulated Vanetza compile. A
+          # different (or missing) scope here is the difference between ~6 minutes and ~6 hours.
+          docker buildx build \
+            --platform "$PLATFORMS" \
+            --provenance=false --sbom=false \
+            --cache-from "type=gha,scope=$CACHE_SCOPE" \
+            --cache-to "type=gha,mode=max,scope=$CACHE_SCOPE,ignore-error=true" \
+            -t "$REGISTRY_HOST/$IMAGE" \
+            --push \
+            "$CONTEXT"
+          echo "::notice::pushed $REGISTRY_HOST/$IMAGE ($PLATFORMS)"
+
+  # Bench image. Mirrors v2x-ecu-image step for step; the per-line rationale lives there and is not
+  # repeated. This image is NOT the cheaper of the two: codec_helper compiles the same ASN.1 set
+  # (SP HLD D2), so it carries the same timeout and its own cache scope.
+  scenario-player-image:
+    runs-on: ubuntu-latest
+    env:
+      REGISTRY_HOST: registry.hackathon-2.carsky.io
+      IMAGE: m1-scenario-player:latest
+      PLATFORMS: linux/arm64
+      CONTEXT: Scenario_Player/
+      # Distinct from v2x-ecu-image's scope - see the eviction note there.
+      CACHE_SCOPE: scenario-player-image
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - name: Expose the Actions cache runtime to the buildx gha cache
+        uses: actions/github-script@v7
+        with:
+          script: |
+            for (const name of ['ACTIONS_CACHE_URL', 'ACTIONS_RESULTS_URL', 'ACTIONS_RUNTIME_TOKEN']) {
+              const value = process.env[name];
+              if (value) {
+                core.exportVariable(name, value);
+              }
+            }
+      - name: Build Scenario Player node image (arm64)
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ -f "${CONTEXT}Dockerfile" ] || {
+            echo "::notice::${CONTEXT}Dockerfile not landed yet (5.1.7.3) - skipping build"
+            exit 0
+          }
+
+          # Build-only: no --load (a cross-platform image cannot enter the local store) and no
+          # --push (that is the next step). See v2x-ecu-image for the full reasoning.
+          echo "::group::docker buildx build $IMAGE ($PLATFORMS) from $CONTEXT"
+          docker buildx build \
+            --platform "$PLATFORMS" \
+            --provenance=false --sbom=false \
+            --cache-from "type=gha,scope=$CACHE_SCOPE" \
+            --cache-to "type=gha,mode=max,scope=$CACHE_SCOPE,ignore-error=true" \
+            -t "$IMAGE" \
+            "$CONTEXT"
+          echo "::endgroup::"
+          echo "::notice::built $IMAGE ($PLATFORMS) - not pushed by this step"
+      - name: Push to CarSky Zot registry (skips until the secret exists)
+        shell: bash
+        env:
+          ZOT_KEY: ${{ secrets.CARSKY_ZOT_API_KEY }}
+          REGISTRY_USER: ${{ vars.CARSKY_REGISTRY_USER || 'kis@hackathon.fpt.com' }}
+        run: |
+          set -euo pipefail
+          [ -f "${CONTEXT}Dockerfile" ] || {
+            echo "::notice::${CONTEXT}Dockerfile not landed yet (5.1.7.3) - nothing to push"
+            exit 0
+          }
+          if [ -z "$ZOT_KEY" ]; then
+            echo "::notice::CARSKY_ZOT_API_KEY secret not set - image built but NOT pushed"
+            exit 0
+          fi
+          echo "$ZOT_KEY" | docker login "$REGISTRY_HOST" -u "$REGISTRY_USER" --password-stdin
+          # Same cache scope as this job's build step, for the same reason as v2x-ecu-image: the
+          # push build must be a cache hit, not a second emulated compile.
+          docker buildx build \
+            --platform "$PLATFORMS" \
+            --provenance=false --sbom=false \
+            --cache-from "type=gha,scope=$CACHE_SCOPE" \
+            --cache-to "type=gha,mode=max,scope=$CACHE_SCOPE,ignore-error=true" \
+            -t "$REGISTRY_HOST/$IMAGE" \
+            --push \
+            "$CONTEXT"
           echo "::notice::pushed $REGISTRY_HOST/$IMAGE ($PLATFORMS)"
