@@ -264,6 +264,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none (Phase 0 seam suffices). **Commit:** `[9.1.4.1] feat: implement CPM profile validator`
 
+**Status:** implemented 2026-08-01 — 10 reject reasons mirroring the schema bounds as named constants (stationId type-tight, out-of-range unconstructible post-decode), F9 −2048 rejected as `MdtF9Range`, both gates (`check_transport_imports.py`, `check_sync.py`) exit 0; CI verification pending wave push.
+
 ### [ ] `9.1.4.2` — Deduper `src/pipeline/deduper.{hpp,cpp}` *(agent)*
 
 **Objective:** stage 3 — duplicate drop over key `(stationId, objectId, referenceTime + measurementDeltaTime)` within a sliding window.
