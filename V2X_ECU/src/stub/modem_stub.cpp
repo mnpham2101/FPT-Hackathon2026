@@ -1,46 +1,120 @@
-// V2X_ECU/src/stub/modem_stub.cpp — R8 FSM transitions (subtask 8.1.3.2,
-// Phase 1 HLD D2), happy path only: FaultPlan::None is the only implemented
-// path; fault injection + the D2 recoveries are 8.1.3.3's scope.
+// V2X_ECU/src/stub/modem_stub.cpp — R8 FSM transitions (8.1.3.2) + fault
+// injection with the D2 recovery table (8.1.3.3, Phase 1 HLD D2). Semantics
+// documented in the header; every fault path here mirrors one D2 recovery row.
 
 #include "stub/modem_stub.hpp"
+
+#include <thread>  // default real-sleep Sleeper only — no thread is spawned here
+#include <utility>
 
 namespace v2x::stub {
 
 using v2x::adapter::RadioConfig;
 using v2x::adapter::RadioResult;
+using v2x::config::FaultPlan;
 
-ModemStub::ModemStub(v2x::config::FaultPlan plan, RetryParams retry, TransitionObserver observer)
-    : plan_(plan), retry_(retry), observer_(observer) {}
+ModemStub::ModemStub(FaultPlan plan, RetryParams retry, TransitionObserver observer,
+                     Sleeper sleeper, int fault_fail_count)
+    : plan_(plan),
+      retry_(retry),
+      observer_(std::move(observer)),
+      sleep_(std::move(sleeper)),
+      fault_remaining_(fault_fail_count) {
+  // Empty Sleeper means real sleep (header contract): substitute the
+  // std::this_thread::sleep_for wrapper so backoff sites never null-check.
+  if (!sleep_) {
+    sleep_ = [](std::chrono::milliseconds duration) { std::this_thread::sleep_for(duration); };
+  }
+}
 
-RadioResult ModemStub::applyOutcome(StubState to, const char* call, RadioResult result) {
+void ModemStub::emitEvent(EventKind kind, StubState from, StubState to, const char* call,
+                          RadioResult result) {
+  if (observer_) {
+    observer_(TransitionEvent{kind, from, to, call, result});
+  }
+}
+
+RadioResult ModemStub::applyOutcome(EventKind kind, StubState to, const char* call,
+                                    RadioResult result) {
   const StubState from = state_;
   state_ = to;
-  if (observer_) {
-    observer_(TransitionEvent{from, to, call, result});
-  }
+  emitEvent(kind, from, to, call, result);
   return result;
 }
 
-RadioResult ModemStub::init() {
-  if (state_ != StubState::Idle) {
-    return applyOutcome(state_, "init", RadioResult::InitFailed);
+bool ModemStub::runBoundedFaultRetries(const char* call, RadioResult failure) {
+  const int max_attempts = 1 + retry_.init_retry_max;
+  for (int attempt = 1; attempt <= max_attempts; ++attempt) {
+    if (fault_remaining_ <= 0) {
+      return true;  // fail budget spent — this attempt succeeds
+    }
+    --fault_remaining_;
+    emitEvent(EventKind::FaultInjected, state_, state_, call, failure);
+    if (attempt < max_attempts) {
+      sleep_(retry_.retry_backoff);  // constant backoff per retry (D2)
+    }
   }
-  return applyOutcome(StubState::Initialized, "init", RadioResult::Ok);
+  return false;  // all 1 + init_retry_max attempts failed — terminal
+}
+
+RadioResult ModemStub::init() {
+  // Illegal-order check FIRST: an out-of-order call is a Reject regardless of
+  // the selected fault plan.
+  if (state_ != StubState::Idle) {
+    return applyOutcome(EventKind::Reject, state_, "init", RadioResult::InitFailed);
+  }
+  if (plan_ == FaultPlan::InitFail && fault_remaining_ > 0) {
+    if (!runBoundedFaultRetries("init", RadioResult::InitFailed)) {
+      // Terminal failure: state stays Idle, no Ack. The caller exits non-zero;
+      // container restart is the logged last-resort recovery (D2).
+      return RadioResult::InitFailed;
+    }
+    emitEvent(EventKind::Recovery, state_, state_, "init", RadioResult::Ok);
+  }
+  return applyOutcome(EventKind::Ack, StubState::Initialized, "init", RadioResult::Ok);
 }
 
 RadioResult ModemStub::configure(const RadioConfig& config) {
   if (state_ != StubState::Initialized) {
-    return applyOutcome(state_, "configure", RadioResult::ConfigureRejected);
+    return applyOutcome(EventKind::Reject, state_, "configure", RadioResult::ConfigureRejected);
   }
-  config_ = config;
-  return applyOutcome(StubState::Configured, "configure", RadioResult::Ok);
+  if (plan_ == FaultPlan::ConfigureReject && fault_remaining_ > 0) {
+    if (!runBoundedFaultRetries("configure", RadioResult::ConfigureRejected)) {
+      // Terminal (D2, as init): no Ack, nothing stored, caller exits non-zero.
+      return RadioResult::ConfigureRejected;
+    }
+    emitEvent(EventKind::Recovery, state_, state_, "configure", RadioResult::Ok);
+  }
+  config_ = config;  // stored only on success
+  return applyOutcome(EventKind::Ack, StubState::Configured, "configure", RadioResult::Ok);
 }
 
 RadioResult ModemStub::subscribeRx() {
   if (state_ != StubState::Configured) {
-    return applyOutcome(state_, "subscribeRx", RadioResult::SubscribeFailed);
+    return applyOutcome(EventKind::Reject, state_, "subscribeRx", RadioResult::SubscribeFailed);
   }
-  return applyOutcome(StubState::RxSubscribed, "subscribeRx", RadioResult::Ok);
+  // Normal establishment ack first — the D2 drop happens AFTER establishment.
+  applyOutcome(EventKind::Ack, StubState::RxSubscribed, "subscribeRx", RadioResult::Ok);
+  if (plan_ == FaultPlan::SubscriptionDrop && fault_remaining_ > 0) {
+    // Drop once: the only injected event that moves state (RxSubscribed →
+    // Configured).
+    --fault_remaining_;
+    applyOutcome(EventKind::FaultInjected, StubState::Configured, "subscribeRx",
+                 RadioResult::SubscribeFailed);
+    sleep_(retry_.retry_backoff);
+    // Automatic re-subscribe: UNBOUNDED retry loop — deliberately not limited
+    // by init_retry_max (that ceiling bounds only init/configure); it runs
+    // until the fail budget is spent, i.e. until a re-attempt succeeds.
+    while (fault_remaining_ > 0) {
+      --fault_remaining_;
+      emitEvent(EventKind::FaultInjected, state_, state_, "subscribeRx",
+                RadioResult::SubscribeFailed);
+      sleep_(retry_.retry_backoff);
+    }
+    emitEvent(EventKind::Recovery, state_, state_, "subscribeRx", RadioResult::Ok);
+    applyOutcome(EventKind::Ack, StubState::RxSubscribed, "subscribeRx", RadioResult::Ok);
+  }
+  return RadioResult::Ok;
 }
 
 StubState ModemStub::state() const { return state_; }

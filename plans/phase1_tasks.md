@@ -211,6 +211,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 8.1.3.2. **Commit:** `[8.1.3.3] feat: add fault injection and recovery to modem stub`
 
+**Status:** implemented 2026-08-01 — D2 recovery table in `src/stub/modem_stub.{hpp,cpp}` with the `EventKind` observer surface (Ack/Reject/FaultInjected/Recovery), injectable `Sleeper`, and `fault_fail_count` knob; `test_modem_stub_fsm.cpp` extended with all four plans, retry-then-succeed, retry-exhaustion terminal path, and unbounded resubscribe after drop; transport-import and contract-sync gates both exit 0; CI verification pending wave push.
+
 ### [ ] `7.1.3.4` — Seam implementation `src/adapter/stub_radio_adapter.{hpp,cpp}` *(agent)*
 
 **Objective:** `StubRadioAdapter : IRadioAdapter` over the modem stub, with the live Rx path: on `rx-subscribed` the stub side opens the `LISTEN_PORT` UDP socket (via `net::UdpSocket`) on a dedicated Rx thread and delivers each datagram to the subscribed callback (HLD D2).
