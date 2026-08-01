@@ -5,6 +5,9 @@
 # - group 0.2 (V2X_ECU): C++ CMake build+ctest landed with 1.0.2.1 (v2x-core-build below; ADA's
 #   landed with 3.0.4.1). Still pending: the docker-build jobs for both C++ nodes, added by those
 #   subtasks when their Dockerfiles land.
+# - D7 comms check: the v2x-comms-check job below (9.1.12.3) builds v2x_ecu, runs it loopback
+#   against a UDP sink standing in for ADA, sends the golden-vector corpus and asserts the [EVT]
+#   receive -> decode -> forward chain.
 # - registry push (5.0.8.2): the netcheck-image job below builds always and pushes only when the
 #   CARSKY_ZOT_API_KEY repo secret exists (never commit the credential). Host per the live O1
 #   probe 2026-07-31: registry.hackathon-2.carsky.io (registry.carsky.io answers 502).
@@ -138,6 +141,172 @@ jobs:
 
           Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
           git push origin HEAD:${{ github.ref_name }}
+
+  # D7 (HLD §3) CI-side acceptance: a bench-sent CPM is received, raises events, deserializes to
+  # JSON and is forwarded as R2. No landed-file guard on purpose - V2X_ECU/src/main.cpp and
+  # tools/comms_check/ are both on the tree, so the skip-with-notice pattern the placeholder lanes
+  # above use would never fire; a missing file here should fail the lane, not silently pass it.
+  v2x-comms-check:
+    runs-on: ubuntu-latest
+    # Same reason as v2x-core-build: on a cold _deps cache this pays Vanetza's ~1400-TU ASN.1
+    # compile before it can link v2x_ecu.
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Boost (Vanetza hard dependency)
+        run: sudo apt-get update && sudo apt-get install -y libboost-dev libboost-date-time-dev
+      # key + restore-keys are byte-identical to v2x-core-build's on purpose: the two lanes share
+      # one warmed _deps tree, so this job never repays the ASN.1 recompile. Re-pinning Vanetza
+      # must update both.
+      - name: Cache Vanetza FetchContent deps
+        uses: actions/cache@v4
+        with:
+          path: V2X_ECU/build/_deps
+          key: v2x-deps-${{ runner.os }}-vanetza-fb6c5510-json-v3.11.3-gtest-v1.14.0-${{ hashFiles('V2X_ECU/CMakeLists.txt', 'V2X_ECU/cmake/vanetza-pin.cmake') }}
+          restore-keys: |
+            v2x-deps-${{ runner.os }}-vanetza-fb6c5510-json-v3.11.3-gtest-v1.14.0-
+      - name: Configure
+        run: cmake -S V2X_ECU -B V2X_ECU/build
+      # Bounded parallelism for the same reason as v2x-core-build (a bare `-j` is unlimited jobs
+      # and OOMs the runner on asn1_its). Only the app target: the test binaries belong to that
+      # job, this lane needs the executable at the pinned path V2X_ECU/build/v2x_ecu.
+      - name: Build v2x_ecu
+        run: cmake --build V2X_ECU/build --target v2x_ecu -j $(nproc)
+      - name: Loopback comms check (send golden vectors, assert the [EVT] chain)
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Blueprint ports (HLD §6). Fixed values are safe here: the whole lane is loopback-only
+          # inside a fresh runner, so nothing else can hold them.
+          LISTEN_PORT=47100
+          ADA_PORT=47200
+          V2X_LOG="$RUNNER_TEMP/v2x.log"
+          SINK_LOG="$RUNNER_TEMP/ada_sink.log"
+
+          # UDP sink standing in for the ADA ECU (ADA's real code is Phase 2). A UDP sendto
+          # succeeds with no listener at all, so this is not here to keep the forwarder happy - it
+          # is the R2-arrival evidence: one "len=" line per datagram that actually reached the
+          # forward target.
+          cat > "$RUNNER_TEMP/ada_sink.py" <<'PY'
+          import socket
+          import sys
+
+          sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+          sock.bind(("127.0.0.1", int(sys.argv[1])))
+          print("[SINK] bound port=%s" % sys.argv[1], flush=True)
+          while True:                                   # runs until the lane kills it
+              data, _ = sock.recvfrom(65535)
+              print("len=%d" % len(data), flush=True)
+          PY
+
+          echo "[LANE] starting the ADA sink on 127.0.0.1:$ADA_PORT"
+          python "$RUNNER_TEMP/ada_sink.py" "$ADA_PORT" > "$SINK_LOG" 2>&1 &
+          SINK_PID=$!
+
+          # Bounded readiness poll, never a bare sleep: a datagram sent before the bind is simply
+          # lost, which would surface as a confusing count mismatch instead of a clear error.
+          SINK_READY=0
+          for _ in $(seq 1 30); do
+            if grep -q '\[SINK\] bound' "$SINK_LOG" 2>/dev/null; then SINK_READY=1; break; fi
+            sleep 0.2
+          done
+          if [ "$SINK_READY" -ne 1 ]; then
+            echo "::error::ADA sink did not bind 127.0.0.1:$ADA_PORT within 6s"
+            cat "$SINK_LOG" || true
+            kill -TERM "$SINK_PID" 2>/dev/null || true
+            exit 1
+          fi
+
+          # DEDUPE_WINDOW_MS=1 is deliberate test configuration (env-injected per HLD §6, not a
+          # hardcoded tunable): four of the six golden vectors - conf-unavailable, coord-large,
+          # gate-boundary and nominal - carry the same stationId 1201, objectId 7, referenceTime
+          # and measurementDeltaTime -50, i.e. one R9 dedupe key (stationId, objectId,
+          # referenceTime + measurementDeltaTime). Under the 1500 ms default three of them would
+          # be dropped and the expected-vector check would correctly fail. A 1 ms window plus
+          # --delay-ms 100 below (send gap >= window) puts every repeat of that key outside it.
+          echo "[LANE] starting v2x_ecu (stub radio, FAULT_PLAN=none, listen $LISTEN_PORT)"
+          LISTEN_PORT="$LISTEN_PORT" \
+          ADA_ECU_HOST=127.0.0.1 \
+          ADA_ECU_PORT="$ADA_PORT" \
+          FAULT_PLAN=none \
+          DEDUPE_WINDOW_MS=1 \
+            V2X_ECU/build/v2x_ecu > "$V2X_LOG" 2>&1 &
+          APP_PID=$!
+
+          # Readiness = main.cpp's bring-up-complete banner (init -> configure -> subscribeRx all
+          # acked and the Rx socket bound). Bounded wait, loud failure.
+          APP_READY=0
+          for _ in $(seq 1 30); do
+            if grep -q '\[BOOT\] bring-up complete' "$V2X_LOG" 2>/dev/null; then APP_READY=1; break; fi
+            sleep 0.2
+          done
+          if [ "$APP_READY" -ne 1 ]; then
+            echo "::error::v2x_ecu never logged '[BOOT] bring-up complete' within 6s"
+            cat "$V2X_LOG" || true
+            kill -TERM "$APP_PID" 2>/dev/null || true
+            kill -TERM "$SINK_PID" 2>/dev/null || true
+            exit 1
+          fi
+
+          # Repeat 1 (the default): expected-vector mode expects exactly one complete chain per
+          # golden case, so a second pass would only add ambiguity here.
+          echo "[LANE] sending the golden-vector corpus"
+          python tools/comms_check/send_cpm.py 127.0.0.1 "$LISTEN_PORT" --delay-ms 100
+
+          # Drain time: decode/validate/dedupe/forward run on the Rx thread, so the last datagram
+          # needs a moment to reach the sink before teardown. Bounded and generous - the
+          # assertions below, not this sleep, are what decide the lane.
+          sleep 2
+
+          echo "[LANE] stopping v2x_ecu (SIGTERM)"
+          kill -TERM "$APP_PID"
+          APP_STATUS=0
+          wait "$APP_PID" || APP_STATUS=$?
+          kill -TERM "$SINK_PID" 2>/dev/null || true
+          wait "$SINK_PID" 2>/dev/null || true
+
+          # Dump both logs BEFORE any assertion, so a red run is diagnosable from the job output
+          # alone (they also ship as an artifact below).
+          echo "::group::v2x_ecu stdout"
+          cat "$V2X_LOG"
+          echo "::endgroup::"
+          echo "::group::ADA sink"
+          cat "$SINK_LOG"
+          echo "::endgroup::"
+
+          # main.cpp exit codes: 0 = clean SIGTERM shutdown; 2/3/4/5 = config / init / configure /
+          # subscribeRx failure.
+          if [ "$APP_STATUS" -ne 0 ]; then
+            echo "::error::v2x_ecu exited $APP_STATUS on SIGTERM (expected 0)"
+            exit 1
+          fi
+
+          # The D7 assertion itself: per vector rx_datagram -> decode_ok carrying the decoded
+          # CpmContent JSON -> r2_forwarded carrying the R2 body, with zero decode rejects.
+          # [BOOT]/[FWD-ERR] and any other non-[EVT] text in the capture is ignored by design.
+          python tools/comms_check/check_v2x_log.py "$V2X_LOG" --expect-vectors contracts/golden-vectors
+
+          # R2 forwarded on the wire, not merely logged.
+          SINK_COUNT=$(grep -c '^len=' "$SINK_LOG" || true)
+          echo "[LANE] ADA sink datagrams: $SINK_COUNT"
+          if [ "$SINK_COUNT" -lt 6 ]; then
+            echo "::error::ADA sink received $SINK_COUNT datagrams, expected >= 6 (one per vector)"
+            exit 1
+          fi
+          echo "[LANE] comms check PASSED"
+      - name: Upload comms-check logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v2x-comms-check-logs
+          path: |
+            ${{ runner.temp }}/v2x.log
+            ${{ runner.temp }}/ada_sink.log
+          if-no-files-found: warn
 
   ivi-unit-tests:
     runs-on: ubuntu-latest

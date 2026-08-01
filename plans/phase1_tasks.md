@@ -674,6 +674,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 8.1.5.1 + 6.1.12.1 + 9.1.12.2. **Commit:** `[9.1.12.3] chore: add v2x-comms-check CI lane`
 
+**Status:** implemented 2026-08-01 — YAML valid, run-block bash -n clean, cache key identical to v2x-core-build; lane injects DEDUPE_WINDOW_MS=1 + --delay-ms 100 because four golden vectors share the dedupe key; CI verification pending wave push.
+
 ---
 
 ## Execution order & parallelism
