@@ -451,6 +451,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 11.1.6.3. **Commit:** `[11.1.6.7] feat: add rate-loop generator`
 
+**Status:** done 2026-08-01 — pytest 107 passed locally; cadence/loop-restart/duration-exit/[TX]-shape/encode-skip covered with fake clock.
+
 ### [ ] `11.1.6.8` — Entrypoint `main.py` *(agent)*
 
 **Objective:** the blueprint-fixed entrypoint at the folder root (`command: ["python", "main.py"]`, workdir `/app`): load env + YAML → spawn encoder → run the generator (SP HLD D4) — controller only, no business logic.
