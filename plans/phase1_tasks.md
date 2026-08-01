@@ -391,6 +391,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 11.1.6.1. **Commit:** `[11.1.6.2] feat: add the two committed scenario variants`
 
+**Status:** done 2026-08-01 — pytest 72 passed locally; default 60→~10 m approach, c-out-of-range static at 60.0 m > 35 m exit gate.
+
 ### [ ] `11.1.6.3` — Kinematic model `player/scenario.py` *(agent)*
 
 **Objective:** the single constant-velocity model (SP HLD D3): `sample(t)` → `CpmContent` in wire-native units.

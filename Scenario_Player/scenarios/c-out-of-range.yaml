@@ -1,0 +1,25 @@
+# c-out-of-range.yaml - C static beyond the exit gate (SP HLD D3): zero closing speed at 60 m,
+# deliberately > gate_exit (35 m) so C never enters the R13 admission lifecycle.
+# Pairing with the frozen Phase 2 gate values is re-checked then (SP HLD section 10, item 3).
+# All values here are scenario data, never code - new variants are new YAML files (D3).
+# Sender/object values stay in the family of the frozen contract samples
+# (contracts/golden-vectors/nominal.json, contracts/samples/r2-object.json), in human units.
+
+name: c-out-of-range
+cpm_rate_hz: 10
+duration_s: 20.0
+loop: true
+
+sender:                   # B's static WGS84 pose (nominal.json converted to degrees)
+  station_id: 1201
+  lat: 21.028511
+  lon: 105.804817
+  heading_deg: 90.0
+
+object:                   # C relative to B, SI units
+  object_id: 7
+  initial_distance_m: 60.0  # must stay > gate_exit 35 m (Phase 2 cross-check)
+  closing_speed_mps: 0.0    # static - distance never changes over the run
+  lateral_offset_m: 1.2     # frozen-sample family (r2-object.json position.y)
+  classification: 5         # vehicle (wire-native class code, nominal.json)
+  confidence: 95

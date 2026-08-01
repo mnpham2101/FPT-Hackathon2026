@@ -247,3 +247,40 @@ def test_load_env_partial_override_keeps_other_defaults():
 def test_load_env_bad_port_rejected_naming_variable(bad_port):
     with pytest.raises(ValueError, match="V2X_ECU_PORT"):
         load_env({"V2X_ECU_PORT": bad_port})
+
+
+# --- committed scenario variants (11.1.6.2, SP HLD D3) -------------------------------------------
+
+
+SCENARIOS_DIR = Path(__file__).resolve().parents[1] / "scenarios"
+
+
+class TestCommittedScenarioVariants:
+    """The two R11-acceptance scenario files load and are observably different by construction."""
+
+    def test_default_is_c_approaching_60m_closing_to_10m(self):
+        scenario = load_scenario(SCENARIOS_DIR / "default.yaml")
+        assert scenario.object.initial_distance_m == 60.0
+        assert scenario.object.closing_speed_mps > 0
+        final_distance = (
+            scenario.object.initial_distance_m
+            - scenario.object.closing_speed_mps * scenario.duration_s
+        )
+        assert final_distance == pytest.approx(10.0, abs=2.0)
+
+    def test_c_out_of_range_is_static_beyond_35m_exit_gate(self):
+        scenario = load_scenario(SCENARIOS_DIR / "c-out-of-range.yaml")
+        assert scenario.object.closing_speed_mps == 0.0
+        # gate_exit pairing re-checked when Phase 2 freezes gate values (SP HLD §10 item 3)
+        assert scenario.object.initial_distance_m > 35.0
+
+    def test_variants_differ_in_d3_kinematic_fields(self):
+        default = load_scenario(SCENARIOS_DIR / "default.yaml")
+        out_of_range = load_scenario(SCENARIOS_DIR / "c-out-of-range.yaml")
+        assert (
+            default.object.initial_distance_m,
+            default.object.closing_speed_mps,
+        ) != (
+            out_of_range.object.initial_distance_m,
+            out_of_range.object.closing_speed_mps,
+        )
