@@ -11,6 +11,13 @@ local.properties
 captures/
 .kotlin/
 
+# AG-Kit, agent files & skills (local only, do not push to git)
+.agents/
+.temp_ag_kit/
+skills-lock.json
+.DS_Store
+.cursor/
+
 # local credentials - never commit
 secrets/
 
@@ -18,11 +25,3 @@ secrets/
 __pycache__/
 *.pyc
 
-# Raw downloaded footage - the encoded clip is committed, its source is not
-ADA_ECU/media/source/
-
-# AG-Kit, agent files & skills (local only, do not push to git)
-.agents/
-.temp_ag_kit/
-skills-lock.json
-.DS_Store
