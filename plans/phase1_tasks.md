@@ -165,6 +165,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 7.1.2.2. **Commit:** `[2.1.2.4] feat: add ADA forwarder for R2 JSON`
 
+**Status:** implemented 2026-08-01 — `src/forward/ada_forwarder.{hpp,cpp}` + `tests/forward/test_ada_forwarder.cpp` added (`v2x_forward` static lib + `v2x_ada_forwarder_test` registered); consumes `net::UdpSocket` only, never-throws `send()` with bool result, one compact-JSON datagram per R2 message; transport-import and contract-sync gates exit 0; CI verification pending wave push.
+
 ---
 
 ## Task Group 1.3 — R7 adapter seam + R8 modem stub (serves R7, R8)

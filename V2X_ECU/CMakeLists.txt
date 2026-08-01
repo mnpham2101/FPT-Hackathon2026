@@ -148,3 +148,21 @@ target_compile_features(v2x_event_log PUBLIC cxx_std_17)
 
 v2x_add_test(v2x_event_log_test tests/log/test_event_log.cpp)
 target_link_libraries(v2x_event_log_test PRIVATE v2x_event_log)
+
+# ADA forwarder (2.1.2.4, Phase 1 HLD D1 / D3 stage 4) - the intra-ego R2
+# edge, deliberately NOT under the R7 seam: serializes the Phase 0 R2Message
+# to compact JSON and sends one UDP datagram per message. Links PUBLIC
+# v2x_net (the sole socket holder it consumes - no socket headers here, the
+# transport-import gate applies) and v2x_contracts (the R2 binding in its
+# public signature + nlohmann transitively). Fire-and-forget per HLD D3:
+# no retry/queueing target exists.
+add_library(v2x_forward STATIC
+  src/forward/ada_forwarder.cpp
+)
+target_link_libraries(v2x_forward
+  PUBLIC v2x_net v2x_contracts
+)
+target_compile_features(v2x_forward PUBLIC cxx_std_17)
+
+v2x_add_test(v2x_ada_forwarder_test tests/forward/test_ada_forwarder.cpp)
+target_link_libraries(v2x_ada_forwarder_test PRIVATE v2x_forward)
