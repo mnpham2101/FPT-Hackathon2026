@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Phase 1 — Task Execution</title>
+<meta name="description" content="Planning deck — how Phase 1&#x27;s comms bring-up was decomposed into 44 subtasks across two node lanes, who or what performed each, the order they ran in, what code landed, and exactly how far the acceptance evidence reaches">
+<style>
+  :root {
+    --fpt-orange: #F37021;
+    --fpt-green: #50B848;
+    --fpt-blue: #034EA2;
+    --fpt-teal: #33B2C1;
+    --fpt-navy: #19226D;
+    --navy-deep: #0E1540;
+    --ink: #080808;
+    --ink-soft: #3d3d46;
+    --paper: #f4f4f6;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; background: #14183a; font-family: "Segoe UI", "Segoe UI Variable", "Helvetica Neue", Arial, sans-serif; }
+
+  .deck { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+
+  .slide {
+    width: 1280px; height: 720px;
+    position: absolute;
+    display: none;
+    flex-direction: column;
+    transform-origin: center center;
+    background: var(--paper);
+    color: var(--ink);
+    box-shadow: 0 18px 60px rgba(0,0,0,.45);
+    overflow: hidden;
+  }
+  .slide.active { display: flex; }
+
+  /* ---------- backgrounds ---------- */
+  .bg-light { background: linear-gradient(135deg, #f6f6f8 0%, #ececef 55%, #e0e1e6 100%); }
+  .bg-light::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720"><g fill="none" stroke-width="2"><g transform="skewX(-16)"><rect x="240" y="60" width="380" height="460" rx="70" stroke="rgba(255,255,255,0.85)"/><rect x="1010" y="210" width="400" height="470" rx="75" stroke="rgba(25,34,109,0.05)"/><rect x="520" y="400" width="330" height="380" rx="60" stroke="rgba(25,34,109,0.06)"/></g><line x1="880" y1="-40" x2="640" y2="780" stroke="rgba(255,255,255,0.9)"/><line x1="1180" y1="-40" x2="940" y2="780" stroke="rgba(25,34,109,0.05)"/></g></svg>');
+    background-size: cover;
+  }
+  .bg-navy { background: linear-gradient(135deg, #10173f 0%, #151d55 45%, var(--fpt-navy) 100%); color: #fff; }
+  .bg-navy::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720"><g fill="none" stroke-width="2"><g transform="skewX(-16)"><rect x="240" y="60" width="380" height="460" rx="70" stroke="rgba(120,180,255,0.20)"/><rect x="1010" y="210" width="400" height="470" rx="75" stroke="rgba(255,255,255,0.10)"/><rect x="520" y="400" width="330" height="380" rx="60" stroke="rgba(120,180,255,0.10)"/></g><line x1="880" y1="-40" x2="640" y2="780" stroke="rgba(120,180,255,0.30)"/><line x1="1180" y1="-40" x2="940" y2="780" stroke="rgba(120,180,255,0.16)"/></g></svg>');
+    background-size: cover;
+  }
+
+  /* cover / divider / thanks carry their photo as an inline background-image */
+  .cover-photo { background-size: cover; background-position: center; color: #fff; }
+  .divider { background-size: cover; background-position: center; color: #fff; justify-content: center; padding: 0 110px; }
+  .divider .sec-num { font-size: 120px; font-weight: 700; color: var(--fpt-orange); line-height: 1; opacity: .95; }
+  .divider h1 { font-size: 56px; font-weight: 700; color: #fff; margin-top: 10px; }
+  .divider .rule { width: 110px; height: 6px; background: var(--fpt-orange); border-radius: 3px; margin-top: 26px; }
+  .thanks { background-size: cover; background-position: center 20%; color: #fff; justify-content: center; align-items: center; text-align: center; }
+  .thanks h1 { font-size: 84px; font-weight: 700; }
+  .thanks .rule { width: 130px; height: 6px; background: var(--fpt-orange); border-radius: 3px; margin: 30px auto; }
+  .thanks p { font-size: 22px; color: #cdd6f7; }
+
+  /* ---------- title / closing text ---------- */
+  .cover { justify-content: center; padding: 0 110px; }
+  .cover .eyebrow { font-size: 20px; letter-spacing: .35em; text-transform: uppercase; color: var(--fpt-orange); font-weight: 600; margin-bottom: 26px; }
+  .cover h1 { font-size: 66px; line-height: 1.08; font-weight: 700; color: #fff; max-width: 900px; }
+  .cover .rule { width: 130px; height: 6px; background: var(--fpt-orange); border-radius: 3px; margin: 30px 0; }
+  .cover .tagline { font-size: 30px; font-weight: 300; color: #dfe6ff; margin-bottom: 14px; }
+  .cover .meta { font-size: 18px; color: #b9c2ea; }
+  .cover .meta a { color: #b9c2ea; }
+  .cover .accents, .divider .accents, .thanks .accents { position: absolute; bottom: 0; left: 0; right: 0; height: 8px; display: flex; }
+  .accents span { flex: 1; }
+
+  /* ---------- content slide chrome ---------- */
+  .content { padding: 44px 64px 58px; position: relative; }
+  .content > * { position: relative; }
+  .slide-head { display: flex; align-items: baseline; gap: 18px; border-bottom: 3px solid transparent; padding-bottom: 12px; margin-bottom: 18px;
+    border-image: linear-gradient(90deg, var(--fpt-orange) 0 90px, rgba(25,34,109,.15) 90px 100%) 1; }
+  .slide-head .num { font-size: 40px; font-weight: 700; color: var(--fpt-orange); line-height: 1; }
+  .slide-head h2 { font-size: 31px; font-weight: 700; color: var(--fpt-navy); line-height: 1.15; }
+  .lead { font-size: 19px; color: var(--ink-soft); margin-bottom: 16px; }
+  .lead:last-of-type { margin-bottom: 0; }
+  .lead strong, .lead b { color: var(--ink); }
+  .content a { color: var(--fpt-blue); }
+
+  .footer { position: absolute; left: 64px; right: 64px; bottom: 18px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #8a8d99; }
+  .footer .page { background: var(--fpt-navy); color: #fff; border-radius: 4px; padding: 2px 10px; font-weight: 600; }
+
+  ul.points { list-style: none; display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
+  ul.points:last-child { margin-bottom: 0; }
+  ul.points li { font-size: 18.5px; line-height: 1.42; color: var(--ink-soft); padding-left: 26px; position: relative; }
+  ul.points li::before { content: ""; position: absolute; left: 0; top: 9px; width: 12px; height: 12px; background: var(--fpt-orange); border-radius: 3px; transform: skewX(-12deg); }
+  ul.points li strong { color: var(--fpt-navy); }
+  ul.points li code, .content code { font-family: "Consolas", "Courier New", monospace; font-size: .92em; background: rgba(25,34,109,.07); border-radius: 4px; padding: 1px 6px; }
+
+  .imgbox { display: flex; flex-direction: column; align-items: center; gap: 8px; margin: 6px 0 14px; }
+  .imgbox img { border-radius: 10px; box-shadow: 0 6px 22px rgba(15,20,60,.16); background: #fff; max-width: 100%; }
+  .imgbox .cap { font-size: 13.5px; color: #8a8d99; font-style: italic; }
+  .imgbox img.flat { box-shadow: none; background: transparent; }
+
+  .cols { display: flex; gap: 34px; align-items: center; }
+
+  /* TOC */
+  .toc { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 26px; margin-top: 8px; }
+  .toc .item { display: flex; gap: 18px; align-items: baseline; background: #fff; border-radius: 10px; padding: 18px 22px; box-shadow: 0 5px 18px rgba(15,20,60,.10); border-left: 6px solid var(--fpt-orange); height: 100%; }
+  .toc .item:nth-child(2) { border-left-color: var(--fpt-green); }
+  .toc .item:nth-child(3) { border-left-color: var(--fpt-blue); }
+  .toc .item:nth-child(4) { border-left-color: var(--fpt-teal); }
+  .toc .item:nth-child(5) { border-left-color: var(--fpt-navy); }
+  .toc .item:nth-child(6) { border-left-color: var(--fpt-orange); }
+  .toc .n { font-size: 34px; font-weight: 700; color: var(--fpt-orange); min-width: 52px; }
+  .toc .item:nth-child(2) .n { color: var(--fpt-green); }
+  .toc .item:nth-child(3) .n { color: var(--fpt-blue); }
+  .toc .item:nth-child(4) .n { color: var(--fpt-teal); }
+  .toc .item:nth-child(5) .n { color: var(--fpt-navy); }
+  .toc h3 { font-size: 21px; color: var(--fpt-navy); margin-bottom: 4px; }
+  .toc p { font-size: 15px; color: var(--ink-soft); line-height: 1.35; }
+
+  /* cards */
+  .cards3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin: 6px 0 18px; }
+  .card { background: #fff; border-radius: 10px; padding: 16px 18px 14px; box-shadow: 0 5px 18px rgba(15,20,60,.10); border-top: 5px solid var(--fpt-orange); }
+  .card.g { border-top-color: var(--fpt-green); }
+  .card.b { border-top-color: var(--fpt-blue); }
+  .card h3 { font-size: 19px; color: var(--fpt-navy); margin-bottom: 6px; }
+  .card p { font-size: 15.5px; line-height: 1.4; color: var(--ink-soft); }
+
+  /* tables */
+  table.fpt { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 5px 18px rgba(15,20,60,.10); margin-bottom: 14px; }
+  table.fpt th { background: var(--fpt-navy); color: #fff; text-align: left; font-size: 16px; padding: 9px 16px; }
+  table.fpt td { font-size: 15.5px; line-height: 1.35; padding: 8.5px 16px; border-bottom: 1px solid #e7e8ee; color: var(--ink-soft); vertical-align: top; }
+  table.fpt tr:last-child td { border-bottom: none; }
+  table.fpt td strong { color: var(--fpt-navy); white-space: nowrap; }
+  .tag { display: inline-block; padding: 1px 9px; border-radius: 4px; color: #fff; font-size: 14px; font-weight: 600; }
+  .tag.o { background: var(--fpt-orange); } .tag.b { background: var(--fpt-blue); } .tag.t { background: var(--fpt-teal); } .tag.g { background: var(--fpt-green); } .tag.n { background: var(--fpt-navy); }
+
+  /* seam cards */
+  .seams { display: flex; flex-direction: column; gap: 13px; margin-bottom: 16px; }
+  .seam { background: #fff; border-radius: 8px; border-left: 6px solid var(--fpt-orange); box-shadow: 0 4px 14px rgba(15,20,60,.09); padding: 12px 18px; display: flex; gap: 16px; align-items: baseline; }
+  .seam.b { border-left-color: var(--fpt-blue); } .seam.t { border-left-color: var(--fpt-teal); }
+  .seam .who { font-weight: 700; color: var(--fpt-navy); font-size: 17.5px; white-space: nowrap; min-width: 200px; }
+  .seam p { font-size: 16px; line-height: 1.4; color: var(--ink-soft); }
+  .strip { background: linear-gradient(90deg, var(--fpt-navy), #2a35a0); color: #dfe6ff; border-radius: 8px; padding: 12px 20px; font-size: 15.5px; line-height: 1.45; margin-bottom: 14px; }
+  .strip strong { color: #fff; }
+  .strip:last-child { margin-bottom: 0; }
+
+  /* chain visual */
+  .chain { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 10px 0 22px; flex-wrap: nowrap; }
+  .chain .link { background: var(--fpt-navy); color: #fff; font-size: 16.5px; font-weight: 600; padding: 9px 20px; border-radius: 7px; transform: skewX(-10deg); box-shadow: 0 4px 12px rgba(15,20,60,.18); }
+  .chain .link > span { display: inline-block; transform: skewX(10deg); }
+  .chain .link.hot { background: var(--fpt-orange); }
+  .chain .arr { color: var(--fpt-orange); font-size: 22px; font-weight: 700; }
+  .chain .link small { display: block; font-size: 12px; font-weight: 400; opacity: .8; transform: skewX(10deg); }
+
+  .badges { display: flex; gap: 10px; justify-content: center; margin: 0 0 20px; flex-wrap: wrap; }
+  .badge { border: 2px solid var(--fpt-orange); color: #b34e0e; background: rgba(243,112,33,.07); font-size: 14.5px; font-weight: 600; padding: 5px 14px; border-radius: 999px; }
+  .badge.g { border-color: var(--fpt-green); color: #2c7a25; background: rgba(80,184,72,.09); }
+
+  /* terminal / log evidence */
+  pre.log { background: var(--navy-deep); color: #cfd6f5; font-family: "Consolas", "Courier New", monospace; font-size: 13.5px; line-height: 1.5; border-radius: 8px; padding: 14px 18px; overflow: hidden; margin-bottom: 14px; }
+  pre.log .ok { color: #7ee787; }
+  pre.log .dim { color: #7f88ad; }
+
+  /* ---------- controls ---------- */
+  .hint { position: fixed; left: 18px; bottom: 12px; color: rgba(255,255,255,.45); font-size: 12.5px; z-index: 50; }
+  .hud { position: fixed; right: 18px; bottom: 14px; z-index: 50; display: flex; gap: 8px; align-items: center; font-family: inherit; }
+  .hud button { background: rgba(255,255,255,.12); color: #fff; border: 1px solid rgba(255,255,255,.25); border-radius: 6px; padding: 5px 12px; font-size: 15px; cursor: pointer; }
+  .hud button:hover { background: var(--fpt-orange); border-color: var(--fpt-orange); }
+  .hud .ctr { color: rgba(255,255,255,.75); font-size: 14px; min-width: 60px; text-align: center; }
+  .progress { position: fixed; left: 0; bottom: 0; height: 4px; background: var(--fpt-orange); width: 0; z-index: 60; transition: width .25s ease; }
+
+  @media print {
+    html, body { background: #fff; height: auto; }
+    .deck { position: static; display: block; }
+    .slide { display: flex !important; position: relative; transform: none !important; box-shadow: none; page-break-after: always; margin: 0 auto; }
+    .hud, .progress, .hint { display: none !important; }
+    @page { size: 13.55in 7.65in; margin: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="deck">
+  <section class="slide cover-photo cover active" style="background-image: linear-gradient(90deg, rgba(8,12,38,.92) 0%, rgba(8,12,38,.72) 40%, rgba(8,12,38,.18) 100%), url('../assets/bg-title-city.jpg')">
+    <div class="eyebrow">Milestone 1 · Cooperative Vehicle Awareness — FPT Hackathon 2026</div>
+    <h1>Phase 1 — Task Execution</h1>
+    <div class="rule"></div>
+    <div class="tagline">Two node lanes, 44 subtasks, and one live Room</div>
+    <div class="meta">comms bring-up · 12 task groups · 44 subtasks · 39 closed by machine, 5 needing the platform<br>The work it organizes is Phase 0's contract freeze: <a href="../phase0/phase0-task-execution-deck.html">phase0-task-execution-deck.html</a> · <a href="../phase0/phase0-design-concepts-deck.html">phase0-design-concepts-deck.html</a><br>Source: <a href="../../plans/phase1_tasks.md">phase1_tasks.md</a> · <a href="../../plans/doc/phase1-comms-run.md">phase1-comms-run.md</a> · the two design documents <a href="../../V2X_ECU/doc/phase1-v2x-ecu-comms-hld.md">V2X</a> and <a href="../../Scenario_Player/doc/phase1-scenario-player-hld.md">bench</a></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">§</div><h2>Table of contents</h2></div>
+    <div class="toc">
+      <div class="item"><div class="n">01</div><div><h3>Work organization</h3><p>track, execution lane, CI lane, and why Phase 1 has three of them</p></div></div>
+      <div class="item"><div class="n">02</div><div><h3>Work decomposition</h3><p>the ID scheme, the shape of the phase, and who performed what</p></div></div>
+      <div class="item"><div class="n">03</div><div><h3>Task groups</h3><p>what each of the twelve delivered</p></div></div>
+      <div class="item"><div class="n">04</div><div><h3>Code delivered</h3><p>the files Phase 1 put in the repository</p></div></div>
+      <div class="item"><div class="n">05</div><div><h3>Execution order</h3><p>lane by lane, one diagram at a time</p></div></div>
+      <div class="item"><div class="n">06</div><div><h3>Parallel or sequential</h3><p>and what forced each</p></div></div>
+      <div class="item"><div class="n">07</div><div><h3>What it proved</h3><p>the nine acceptance boxes, and how far the evidence reaches</p></div></div>
+      <div class="item"><div class="n">08</div><div><h3>Handoff</h3><p>what Phase 2 may assume, and what stays open</p></div></div>
+    </div>
+    <div class="footer"><span>Phase 1 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">01</div>
+    <h1>Work organization</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">01</div><h2>What Phase 1 had to do</h2></div>
+    <p class="lead">The bench sends made-up traffic messages; the V2X ECU receives them, decodes them, and hands the result to the ADA ECU as a plain object message. <strong>Receive only</strong> — the car broadcasts nothing in this phase.</p>
+    <ul class="points">
+      <li><strong>A phase is a stage of work with a written input and a written acceptance check.</strong> Phase 1 could start only because Phase 0 had frozen the message formats; it is finished only when its nine acceptance boxes are ticked.</li>
+      <li><strong>Two node folders were built at once:</strong> the V2X ECU (C++) and the bench, called the Scenario Player (Python). They share no source code — only the frozen message formats and a byte-for-byte copy of the encoder sources.</li>
+      <li><strong>Everything the phase produces is either a running program on a node, or a check that proves the program does what was agreed.</strong></li>
+    </ul>
+    <div class="strip">The bench is test equipment, not a mock: it is a real node on the real network sending real messages. Nothing downstream can tell the difference — which is the point.</div>
+    <div class="footer"><span>Phase 1 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">01</div><h2>Planning terminology</h2></div>
+    <p class="lead">Three different things get called a <em>lane</em> or a <em>track</em> in this project. They are not interchangeable.</p>
+    <table class="fpt">
+      <thead><tr><th>Term</th><th>What it groups</th><th>Defined in</th><th>Example in Phase 1</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Track</strong></td><td>a workstream of whole phases, run by different people at the same time</td><td><a href="../../plans/milestone1.md">milestone1.md</a></td><td>the comms track = Phase 1</td></tr>
+        <tr><td><strong>Phase</strong></td><td>one stage with an input list and acceptance criteria</td><td><a href="../../.claude/rules/task-planning-conventions.md">task-planning-conventions.md</a></td><td>Phase 1</td></tr>
+        <tr><td><strong>Execution lane</strong></td><td>subtasks that must run in dependency order, named after the folder they write into</td><td>the phase plan's <em>Execution order &amp; parallelism</em></td><td>Lane V = <code>V2X_ECU/</code></td></tr>
+        <tr><td><strong>CI lane</strong></td><td>one job in the GitHub Actions workflow — it builds, it tests, it passes or fails</td><td><a href="../../.github/workflows/phase0-ci.yml">phase0-ci.yml</a></td><td><code>v2x-comms-check</code></td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>Lane letters are phase-local and they collide.</strong> Phase 0's Lane D was the bench folder; Phase 1's Lane D is the deploy chain. Always say which phase.</li>
+      <li><strong>Lane letters are not an order.</strong> Only a stated dependency sequences one lane against another, and a dependency always names an artifact, never a letter.</li>
+      <li><strong>Only a CI lane actually runs.</strong> A track and an execution lane are planning structure, not programs.</li>
+    </ul>
+    <div class="footer"><span>Phase 1 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">01</div><h2>Execution lanes in Phase 1</h2></div>
+    <p class="lead">Named after the folder each writes into, so no two lanes touch the same files.</p>
+    <table class="fpt">
+      <thead><tr><th>Lane</th><th>Writes into</th><th>Waits on</th><th>What it lands</th></tr></thead>
+      <tbody>
+        <tr><td><strong>V</strong></td><td><code>V2X_ECU/</code></td><td>Phase 0's frozen formats</td><td>the receive pipeline, the application, the capture scripts, the image</td></tr>
+        <tr><td><strong>P</strong></td><td><code>Scenario_Player/</code></td><td>Phase 0's formats + the encoder sources</td><td>the bench application, its encoder helper, the image</td></tr>
+        <tr><td><strong>Shared</strong></td><td><code>contracts/</code></td><td>nothing — then everything</td><td>one pinned codec version for two builds; the copy-integrity gate</td></tr>
+        <tr><td><strong>CI</strong></td><td><code>.github/workflows/</code></td><td>nothing</td><td>four new verification jobs, landed before the code they verify</td></tr>
+        <tr><td><strong>Comms check</strong></td><td><code>tools/comms_check/</code></td><td>the event log format</td><td>the scripted proof that a sent message is received, decoded and forwarded</td></tr>
+        <tr><td><strong>D</strong></td><td>the deployed Room</td><td>V and P</td><td>push the images, deploy, read the logs, swap the scenario, capture traffic</td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>Lanes V and P are logically parallel workstreams.</strong> They were run one after another only because every subtask shares a single working folder on one machine.</li>
+    </ul>
+    <div class="footer"><span>Phase 1 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">01</div><h2>CI lanes — the verification path, not a safety net</h2></div>
+    <p class="lead">The development machine is Windows with no Docker and no Linux subsystem. Every C++ compile, every container image, every Linux test therefore runs on GitHub Actions.</p>
+    <ul class="points">
+      <li><strong>Ten jobs in one workflow file.</strong> Phase 0 left six; Phase 1 added four: <code>sp-codec-helper</code>, <code>v2x-comms-check</code>, <code>v2x-ecu-image</code>, <code>scenario-player-image</code>.</li>
+      <li>**For a C++ subtask, "tests pass" <em>means</em> "the lane is green".** There is nowhere else to run them, so the definition of done points at a run URL.</li>
+      <li><strong>Three runs carry the whole phase:</strong> <a href="https://github.com/mnpham2101/FPT-Hackathon2026/actions/runs/30697863324">8 lanes green</a> over the phase's code · <a href="https://github.com/mnpham2101/FPT-Hackathon2026/actions/runs/30698630956">10 lanes green</a> adding both node images, which also pushed them to the platform registry · <a href="https://github.com/mnpham2101/FPT-Hackathon2026/actions/runs/30700052056">10 lanes green</a> confirming the deliberately-broken-message tests.</li>
+      <li><strong>The image lanes are slow and were expected to fail.</strong> Compiling the message library for the platform's ARM processor runs under emulation; both images built inside the 6-hour ceiling on the first attempt, roughly 19 and 20 minutes each.</li>
+    </ul>
+    <div class="footer"><span>Phase 1 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">02</div>
+    <h1>Work decomposition</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">02</div><h2>The unit of work is a subtask, and its ID says everything</h2></div>
+    <p class="lead">Every task and subtask carries <code>X.Y.Z.W</code>.</p>
+    <table class="fpt">
+      <thead><tr><th>Segment</th><th>Reads as</th><th>In <code>9.1.4.4</code></th></tr></thead>
+      <tbody>
+        <tr><td><code>X</code></td><td>the requirement served</td><td>the requirement to decode incoming messages safely</td></tr>
+        <tr><td><code>Y</code></td><td>the phase</td><td>1 — comms bring-up</td></tr>
+        <tr><td><code>Z</code></td><td>the task group</td><td>group 1.4 — the receive pipeline</td></tr>
+        <tr><td><code>W</code></td><td>the subtask</td><td>the fourth: compose the four stages, one commit</td></tr>
+      </tbody>
+    </table>
+    <p class="lead"><strong>The group number is not the requirement number.</strong> Group 1.5 holds <code>8.1.5.1</code>, <code>6.1.5.2</code>, <code>6.1.5.3</code> and <code>5.1.5.4</code> — four different requirements in one group, because they jointly deliver one thing: a V2X ECU that runs, captures its own traffic, and ships as an image.</p>
+    <div class="footer"><span>Phase 1 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">02</div><h2>What Phase 1 looked like as a work item</h2></div>
+    <ul class="points">
+      <li><strong>12 task groups, 44 subtasks, six lanes.</strong> Lane V 19 · lane P 11 · deploy 5 · comms check 3 · shared pin 2 · CI 2 · ADA sink 1 · plan upkeep 1.</li>
+      <li><strong>One subtask, one objective, one atomic commit</strong>, a build that passes and unit tests that pass. A subtask with no <code>**Status:**</code> line in the plan file has not started.</li>
+      <li><strong>Every subtask brief is self-contained</strong> — file paths, the message fields it touches, its acceptance check — so the agent implementing it does not need to read the rest of the codebase.</li>
+      <li><strong>Nothing was hardcoded.</strong> Ports, peers, retry counts, the duplicate-message window, the capture filter and the scenario itself are all configuration the platform injects, which is why the second traffic scenario is a second file rather than a second build.</li>
+    </ul>
+    <div class="strip">39 of the 44 needed no platform at all. That was deliberate: the deployment was known to be the scarce resource, so everything provable off-platform was made provable off-platform first.</div>
+    <div class="footer"><span>Phase 1 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">02</div><h2>Who — or what — performed the work</h2></div>
+    <table class="fpt">
+      <thead><tr><th>Performer</th><th>Count</th><th>What it did</th></tr></thead>
+      <tbody>
+        <tr><td><strong>AI implementation agents</strong></td><td>39</td><td>Wrote every line of application code, its tests and its CI jobs; each made its own single commit</td></tr>
+        <tr><td><strong>The cloud platform (CarSky)</strong></td><td>1</td><td>Planned as an agent-run step: push all three images to the platform registry</td></tr>
+        <tr><td><strong>A person, in the platform UI</strong></td><td>4</td><td>Configure the nodes, deploy, read the node logs, swap the scenario, pull the capture into Wireshark</td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>The one platform step was executed by CI instead.</strong> The registry key turned out to be present in the repository, so the image lanes pushed the images themselves — the platform agent was never needed, and never was available in any session.</li>
+      <li><strong>Human effort is unavoidable for the last four</strong>, and not for want of trying: node configuration — image, start command, capabilities, environment variables — is editable <strong>only</strong> in the platform's web UI. Its REST API cannot set it. Reading a node's log window and opening a capture in Wireshark are the same kind of work.</li>
+      <li><strong>All 44 are tracked identically.</strong> Only the performer differs; the evidence requirement does not.</li>
+    </ul>
+    <div class="footer"><span>Phase 1 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">03</div>
+    <h1>Task groups</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">03</div><h2>Groups 1.1 – 1.6 — the shared pin, the V2X ECU, the bench</h2></div>
+    <table class="fpt">
+      <thead><tr><th>Task group</th><th>What it delivers, and which lane it serves</th></tr></thead>
+      <tbody>
+        <tr><td><strong>1.1</strong> — shared codec pin + copy gate</td><td>One pinned version of the message library, used by both C++ builds, and the integrity gate extended from 36 to 47 tracked copies. <strong>Shared lane</strong>, and it finishes last.</td></tr>
+        <tr><td><strong>1.2</strong> — V2X ECU foundation</td><td>The only piece that reads the environment, the only piece that owns a socket, the event log, and the sender to the ADA node. <strong>Lane V</strong>, and nothing above it knows about transport.</td></tr>
+        <tr><td><strong>1.3</strong> — radio interface + stand-in modem</td><td>The four-call radio interface a real modem would implement, and a stand-in that acknowledges each call, injects faults on demand and recovers from them. <strong>Lane V.</strong></td></tr>
+        <tr><td><strong>1.4</strong> — the receive pipeline</td><td>Decode, reject anything outside the agreed profile, drop repeats, convert to real-world units, forward. Four independently tested stages, then composed. <strong>Lane V.</strong></td></tr>
+        <tr><td><strong>1.5</strong> — application, capture, image</td><td>The program itself, the traffic capture running inside its container, the host-side extraction tool, and the deployable image. <strong>Lane V.</strong></td></tr>
+        <tr><td><strong>1.6</strong> — the bench application</td><td>Config loading, the two scenario files, the motion model, the encoder client, the sender, the rate loop and the entrypoint. <strong>Lane P.</strong></td></tr>
+      </tbody>
+    </table>
+    <div class="footer"><span>Phase 1 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">03</div><h2>Groups 1.7 – 1.12 — the encoder, the lanes, the checks, the deploy</h2></div>
+    <table class="fpt">
+      <thead><tr><th>Task group</th><th>What it delivers, and which lane it serves</th></tr></thead>
+      <tbody>
+        <tr><td><strong>1.7</strong> — the bench's encoder path</td><td>A small C++ helper the Python bench talks to, built from byte-identical copies of the V2X ECU's encoder sources, proven against the six reference messages, plus the bench image. <strong>Lane P.</strong></td></tr>
+        <tr><td><strong>1.8</strong> — two new CI jobs</td><td>The helper build lane and the two node-image lanes. <strong>Landed before their consumers</strong>, skipping themselves until the code they verify exists.</td></tr>
+        <tr><td><strong>1.9</strong> — the ADA-side listener</td><td>The stand-in listener on the ADA node prints whole message bodies instead of the first 96 characters — one line changed, so the deploy could actually show the payload.</td></tr>
+        <tr><td><strong>1.10</strong> — deploy and live verification</td><td>Push, configure, deploy, then read the evidence off the running nodes. <strong>Lane D</strong> — one step on CI, four performed by a person.</td></tr>
+        <tr><td><strong>1.11</strong> — plan upkeep</td><td>Reconciled the Phase 0 acceptance record with what Phase 0 actually closed. Docs only.</td></tr>
+        <tr><td><strong>1.12</strong> — the bench-to-V2X check</td><td>A sender, a log-chain assertion script, and the CI job that runs the real application between them. It is the only check that exercises the whole program without a deployed Room.</td></tr>
+      </tbody>
+    </table>
+    <div class="footer"><span>Phase 1 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">04</div>
+    <h1>Code delivered</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">04</div><h2>The V2X ECU — a receiving program in eleven modules</h2></div>
+    <table class="fpt">
+      <thead><tr><th>File group</th><th>Delivered by</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td><code>src/config/</code> · <code>src/net/</code> · <code>src/log/</code> · <code>src/forward/</code></td><td><code>8.1.2.1</code> <code>7.1.2.2</code> <code>18.1.2.3</code> <code>2.1.2.4</code></td><td>The foundation: the one environment reader, the one socket owner, the JSON event stream, and the sender to the ADA node</td></tr>
+        <tr><td><code>src/adapter/</code> · <code>src/stub/</code></td><td><code>7.1.3.1</code> – <code>7.1.3.4</code></td><td>The frozen four-call radio interface and the stand-in modem behind it, with fault injection and defined recoveries</td></tr>
+        <tr><td><code>src/pipeline/</code> — validator, deduper, builder, composition</td><td><code>9.1.4.1</code> – <code>9.1.4.4</code></td><td>Decode → check against the profile → drop repeats → convert to metres and m/s → hand on. Each stage tested alone</td></tr>
+        <tr><td><code>src/main.cpp</code> · <code>CMakeLists.txt</code></td><td><code>8.1.5.1</code></td><td>The application: wires every part together, drives start-up, then serves traffic. No logic of its own</td></tr>
+        <tr><td><code>tests/</code> — 11 suites · <code>tests/fixtures/malformed/</code> — 10 cases</td><td>across all groups, <code>9.1.4.5</code></td><td>Including ten deliberately broken messages: six that must be rejected, four that must be tolerated</td></tr>
+        <tr><td><code>capture.sh</code> · <code>tools/extract_pcap.sh</code> · <code>Dockerfile</code> · <code>entrypoint.sh</code></td><td><code>6.1.5.2</code> <code>6.1.5.3</code> <code>5.1.5.4</code></td><td>Capture running inside the container, extraction on the host, and the deployable image</td></tr>
+        <tr><td><code>tools/check_transport_imports.py</code> · <code>doc/telux-parity-and-port-plan.md</code></td><td><code>7.1.3.5</code> <code>7.1.3.6</code></td><td>The gate that keeps sockets below the radio interface, and what changes when a real modem replaces the stand-in</td></tr>
+      </tbody>
+    </table>
+    <div class="footer"><span>Phase 1 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">04</div><h2>The bench, the shared pin, and the test equipment</h2></div>
+    <table class="fpt">
+      <thead><tr><th>File group</th><th>Delivered by</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td><code>player/config.py</code> · <code>scenarios/default.yaml</code> · <code>scenarios/c-out-of-range.yaml</code></td><td><code>11.1.6.1</code> <code>11.1.6.2</code></td><td>Configuration loading, and the two traffic situations as data: C approaching, and C parked out of range</td></tr>
+        <tr><td><code>player/scenario.py</code> · <code>player/generator.py</code></td><td><code>11.1.6.3</code> <code>11.1.6.7</code></td><td>Where C is at any instant, and the loop that turns that into one message every 100 ms</td></tr>
+        <tr><td><code>player/encoder_client.py</code> · <code>player/sender.py</code> · <code>main.py</code></td><td><code>11.1.6.5</code> <code>11.1.6.6</code> <code>11.1.6.8</code></td><td>Talking to the encoder helper, putting bytes on the wire, and the entrypoint the platform starts</td></tr>
+        <tr><td><code>codec_helper/</code> — <code>cpm_encode</code> · <code>Dockerfile</code></td><td><code>11.1.7.1</code> <code>5.1.7.3</code></td><td>A C++ encoder built from byte-identical copies of the V2X ECU's sources, and the bench image that carries it</td></tr>
+        <tr><td><code>tests/</code> — 10 suites, 116 local tests + the encoder-golden test</td><td><code>11.1.6.4</code> <code>11.1.7.2</code></td><td>Including the proof that the two scenario files produce different message streams, and that the helper's bytes match the reference messages exactly</td></tr>
+        <tr><td><code>contracts/vanetza-pin.cmake</code> · <code>contracts/sync-manifest.json</code></td><td><code>11.1.1.1</code> <code>11.1.1.2</code></td><td>One pinned library version for both builds; the gate now covers 47 byte-identical copies</td></tr>
+        <tr><td><code>tools/comms_check/</code> · <code>tools/netcheck/netcheck.py</code></td><td><code>6.1.12.1</code> <code>9.1.12.2</code> <code>2.1.9.1</code></td><td>Test equipment: the message sender, the log-chain assertion, and the listener that prints whole bodies</td></tr>
+      </tbody>
+    </table>
+    <div class="footer"><span>Phase 1 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">05</div>
+    <h1>Execution order</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">05</div><h2>Eight independent starting points</h2></div>
+    <div class="imgbox"><img src="../assets/phase1-exec-overview.svg" style="height:470px" alt="Phase 1 lane overview: eight starting points, two node lanes running side by side, and the deploy chain that can only begin once both images exist"><div class="cap">Phase 1 lane overview: eight starting points, two node lanes running side by side, and the deploy chain that can only begin once both images exist</div></div>
+    <ul class="points">
+      <li><strong>Horizontal position is dependency depth</strong> — how far a piece of work sits from the start of the phase — not calendar time.</li>
+    </ul>
+    <div class="footer"><span>Phase 1 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">05</div><h2>Lane V, part 1 — the foundation and the radio interface</h2></div>
+    <div class="imgbox"><img src="../assets/phase1-exec-lane-v-foundation.svg" style="height:495px" alt="Lane V foundation and radio interface: the parallel starts on the left and the four-step radio chain below"><div class="cap">Lane V foundation and radio interface: the parallel starts on the left and the four-step radio chain below</div></div>
+    <div class="footer"><span>Phase 1 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">05</div><h2>Lane V, part 2 — the pipeline, the program, the image</h2></div>
+    <div class="imgbox"><img src="../assets/phase1-exec-lane-v-pipeline.svg" style="height:495px" alt="Lane V pipeline and assembly: three parallel stages feeding the composition, then the application and the container image"><div class="cap">Lane V pipeline and assembly: three parallel stages feeding the composition, then the application and the container image</div></div>
+    <div class="footer"><span>Phase 1 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">05</div><h2>Lane P — the bench</h2></div>
+    <div class="imgbox"><img src="../assets/phase1-exec-lane-p.svg" style="height:500px" alt="Lane P: the bench application chain, the encoder helper path beneath it, and the image both feed"><div class="cap">Lane P: the bench application chain, the encoder helper path beneath it, and the image both feed</div></div>
+    <div class="footer"><span>Phase 1 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">05</div><h2>What landed first, what landed last, and the check in between</h2></div>
+    <div class="imgbox"><img src="../assets/phase1-exec-ci-and-checks.svg" style="height:495px" alt="CI lanes landed first, the shared pin and its copy gate, and the bench-to-V2X comms check with its CI lane"><div class="cap">CI lanes landed first, the shared pin and its copy gate, and the bench-to-V2X comms check with its CI lane</div></div>
+    <div class="footer"><span>Phase 1 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">05</div><h2>Lane D — the five steps that need the live platform</h2></div>
+    <div class="imgbox"><img src="../assets/phase1-exec-lane-d-deploy.svg" style="height:430px" alt="Lane D: push, deploy, then read the object messages, swap the scenario and pull the capture — colour-coded by how far the evidence reaches"><div class="cap">Lane D: push, deploy, then read the object messages, swap the scenario and pull the capture — colour-coded by how far the evidence reaches</div></div>
+    <ul class="points">
+      <li><strong>The Room was deployed and messages did arrive.</strong> What is still missing is narrower than "the deploy": per-node status badges, a scripted check over a saved log, the second scenario, and a capture file.</li>
+    </ul>
+    <div class="footer"><span>Phase 1 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">06</div>
+    <h1>Parallel or sequential</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">06</div><h2>What ran beside what, and what forced the order</h2></div>
+    <table class="fpt">
+      <thead><tr><th>Relationship</th><th>What it covers</th><th>What forces it</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Parallel — the two node lanes</strong></td><td>all of <code>V2X_ECU/</code> against all of <code>Scenario_Player/</code></td><td>Disjoint folders. They meet only at frozen message formats and at byte-identical copies of the encoder sources</td></tr>
+        <tr><td><strong>Parallel — inside the foundation</strong></td><td>the config reader, the socket, the event log</td><td>Different files, no shared type; only the forwarder needs the socket</td></tr>
+        <tr><td><strong>Parallel — inside the pipeline</strong></td><td>validator, deduper, builder</td><td>None of the three calls another; the composition is what needs all of them</td></tr>
+        <tr><td><strong>Sequential — the radio chain</strong></td><td>interface → stand-in modem → faults → live receive thread</td><td>Each step compiles against the one before it</td></tr>
+        <tr><td><strong>Sequential — CI before code</strong></td><td>the three verification jobs before the subtasks they verify</td><td>A subtask whose acceptance check is "the lane is green" needs the lane to exist on the day it lands</td></tr>
+        <tr><td><strong>Sequential — last of all</strong></td><td>the copy-integrity gate, after every new copy exists</td><td>The gate fails on a missing target, so running it early would prove nothing</td></tr>
+        <tr><td><strong>Sequential — the deploy chain</strong></td><td>push → configure and deploy → read the logs → swap the scenario</td><td>You cannot deploy an image that was never pushed, or read logs from a node that is not running</td></tr>
+      </tbody>
+    </table>
+    <div class="strip">At run time everything was executed one subtask at a time: all the agents shared a single working folder. The parallel marks above are the dependency structure — what <em>could</em> run at once given more workers.</div>
+    <div class="footer"><span>Phase 1 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">07</div>
+    <h1>What it proved</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">07</div><h2>The nine acceptance boxes</h2></div>
+    <table class="fpt">
+      <thead><tr><th>Acceptance box</th><th>State</th><th>What the evidence actually is</th></tr></thead>
+      <tbody>
+        <tr><td>No socket code above the radio interface</td><td><strong>closed</strong></td><td>The gate runs on every push; the porting notes are committed</td></tr>
+        <tr><td>Start-up calls acknowledged; every fault recovers</td><td><strong>closed</strong></td><td>Unit tests and the end-to-end CI job — <strong>not</strong> a deployed node</td></tr>
+        <tr><td>Reference messages decode; broken ones rejected</td><td><strong>closed</strong></td><td>Through the real decoder: 6 rejected, 4 correctly tolerated, no crashes</td></tr>
+        <tr><td>A bench message is received, decoded and forwarded</td><td><strong>closed</strong></td><td>The <code>v2x-comms-check</code> job, which fails if any link is removed</td></tr>
+        <tr><td>Both images build for the platform, and the Room deploys</td><td><em>partly</em></td><td>Built, pushed, pulled and run — per-node status badges unconfirmed</td></tr>
+        <tr><td>Traffic captured on the bridge network</td><td><em>partly</em></td><td>Capture runs and shows both directions; no file pulled off yet</td></tr>
+        <tr><td>Different scenarios give different message streams</td><td><em>partly</em></td><td>Proven in the model and in the bytes; the live swap is not done</td></tr>
+        <tr><td>Object messages at the ADA ECU are not constants</td><td><em>partly</em></td><td>Seen live and checked; the scripted check on a saved log is pending</td></tr>
+        <tr><td><strong>Demo:</strong> the capture opened in Wireshark</td><td><strong>open</strong></td><td>Needs a log from a Room that ran long enough to rotate a file</td></tr>
+      </tbody>
+    </table>
+    <div class="footer"><span>Phase 1 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">07</div><h2>How far the evidence reaches</h2></div>
+    <p class="lead">A green pipeline and a running node prove different things. The plan says which, per box, and so does this deck.</p>
+    <ul class="points">
+      <li><strong>Closed by machine, on every push:</strong> the import gate, the fault recoveries, the broken-message tests, and the whole received → decoded → forwarded chain. These re-prove themselves on every commit.</li>
+      <li><strong>Seen once, on a live Room:</strong> object messages arriving at the ADA node with <code>distance</code> falling exactly <strong>0.25 m per message</strong> at 10 messages a second — precisely the 2.5 m/s closing speed in the scenario file. The derived distance matches <code>hypot(50.25, 1.2)</code> to every printed digit, so it is genuinely computed from the decoded position rather than copied through.</li>
+      <li><strong>Measured as a side effect:</strong> the V2X ECU's whole decode-to-forward path took <strong>142–151 µs</strong>, consistently, across every message pair sampled at the capture point.</li>
+      <li><strong>Not proven at all yet:</strong> anything needing a saved log export — the scripted log check, the second scenario, and the capture file.</li>
+    </ul>
+    <div class="strip">The bench-to-V2X check is not vacuous: deleting the forward event fails it at the forward link, and stripping the decoded payload fails it at the decode link. It was tested for its ability to fail.</div>
+    <div class="footer"><span>Phase 1 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">07</div><h2>Three places the sources disagree</h2></div>
+    <p class="lead">Flagged, not resolved — reconciling them is a planning decision to take with the owner, not something a deck should quietly fix.</p>
+    <ul class="points">
+      <li><strong>The push step is recorded three ways in one file.</strong> <code>5.1.10.1</code> is an unticked checkbox, is listed as <strong>done</strong> in the remaining-work table, and its own status line says "partly closed … Closed". The substance is not in doubt — the images are in the registry and every node pulled them — only the bookkeeping is.</li>
+      <li><strong>The remaining-work table still lists the broken-message tests as awaiting confirmation</strong>, while the same file's open-items table records the confirming run and marks it closed. The later record is the run that actually exists.</li>
+      <li><strong>The phase's own summary line says 39 of 44 closed</strong>, which was written before the deploy evidence landed. The deploy happened; the run record is the more recent source.</li>
+    </ul>
+    <div class="strip">The plan file also carries a standing hazard worth keeping: all three image tags are mutable, so whichever branch pushes last wins the tag. Identify a deployed image at deploy time, never from an old run log.</div>
+    <div class="footer"><span>Phase 1 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">08</div>
+    <h1>Handoff</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">08</div><h2>What Phase 2 may assume</h2></div>
+    <p class="lead">Phase 2 builds the ADA ECU's track store and admission logic on mock input. Everything below is a Phase 1 deliverable it does not have to re-prove.</p>
+    <ul class="points">
+      <li><strong>Real object messages arrive at the ADA node.</strong> Their shape, units and field values were checked against the running bench, so Phase 2 can build against a format that has already been observed rather than only agreed.</li>
+      <li><strong>The platform is a known quantity.</strong> Images build for its processor, push to its registry and run; the node configuration gotchas — the start command is space-separated, not a JSON array — are written down in the run record.</li>
+      <li><strong>The event stream exists.</strong> Every stage of the receive path emits one JSON line with running counters; the later phases' reconstruction of a whole run starts from this format.</li>
+      <li><strong>Ten CI jobs verify the tree on every push</strong>, four of them added by this phase, and the copy-integrity gate now covers 47 files.</li>
+      <li><strong>Test equipment is reusable.</strong> The message sender, the log-chain assertion and the listener that prints whole bodies are all node-independent.</li>
+    </ul>
+    <div class="footer"><span>Phase 1 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">08</div><h2>What stays open</h2></div>
+    <ul class="points">
+      <li><strong>Five subtasks need the live platform.</strong> One deploy session with a long enough log download closes four of them: the status badges, the scripted log check, the scenario swap and the capture file.</li>
+      <li><strong>One requirement was moved out of the milestone.</strong> The car does not transmit; the radio interface still declares the send call, and nothing calls it.</li>
+      <li><strong>Two decisions are still the user's.</strong> Whether the phase's retry and duplicate-window defaults are ratified as chosen, and whether the "team app launches on the display node" clause belongs to this phase at all — no design document covers it, and the deployment keeps the supplied artifact.</li>
+      <li><strong>Two documentation corrections are owned elsewhere.</strong> The node guides still print the old registry hostname, and the network's maximum-packet-size probe from Phase 0 was never run — harmless here, since a message is 58 bytes.</li>
+    </ul>
+    <div class="strip">None of the open items blocks Phase 2. All of them are written down where the next person will look for them.</div>
+    <div class="footer"><span>Phase 1 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide thanks" style="background-image: linear-gradient(rgba(8,12,38,.66), rgba(14,21,64,.86)), url('../assets/bg-fpt-tower.jpg')">
+    <h1>Thank you!</h1>
+    <div class="rule"></div>
+    <p><strong>Phase 1 — Task Execution</strong> · Milestone 1 · FPT Hackathon 2026</p>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+</div>
+
+<div class="hint">← → navigate · F fullscreen · print for PDF</div>
+<div class="hud">
+  <button id="prev" aria-label="Previous slide">‹</button>
+  <span class="ctr" id="ctr"></span>
+  <button id="next" aria-label="Next slide">›</button>
+</div>
+<div class="progress" id="prog"></div>
+
+<script>
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  slides.forEach((sl, i) => { const p = sl.querySelector('.page'); if (p) p.textContent = i + 1; });
+  let cur = 0;
+
+  function fit() {
+    const s = Math.min(innerWidth / 1280, innerHeight / 720);
+    slides.forEach(sl => sl.style.transform = `scale(${s})`);
+  }
+  function show(i) {
+    cur = Math.max(0, Math.min(slides.length - 1, i));
+    slides.forEach((sl, k) => sl.classList.toggle('active', k === cur));
+    document.getElementById('ctr').textContent = `${cur + 1} / ${slides.length}`;
+    document.getElementById('prog').style.width = `${(cur + 1) / slides.length * 100}%`;
+    location.hash = cur ? `#${cur + 1}` : '';
+  }
+  addEventListener('resize', fit);
+  addEventListener('keydown', e => {
+    if (['ArrowRight', 'PageDown', ' ', 'Enter'].includes(e.key)) { e.preventDefault(); show(cur + 1); }
+    else if (['ArrowLeft', 'PageUp', 'Backspace'].includes(e.key)) { e.preventDefault(); show(cur - 1); }
+    else if (e.key === 'Home') show(0);
+    else if (e.key === 'End') show(slides.length - 1);
+    else if (e.key.toLowerCase() === 'f') document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+  });
+  document.getElementById('prev').onclick = () => show(cur - 1);
+  document.getElementById('next').onclick = () => show(cur + 1);
+  let tx = null;
+  addEventListener('touchstart', e => tx = e.touches[0].clientX);
+  addEventListener('touchend', e => { if (tx !== null) { const dx = e.changedTouches[0].clientX - tx; if (Math.abs(dx) > 50) show(cur + (dx < 0 ? 1 : -1)); tx = null; } });
+
+  const h = parseInt((location.hash || '').slice(1), 10);
+  fit(); show(isNaN(h) ? 0 : h - 1);
+</script>
+
+</body>
+</html>
