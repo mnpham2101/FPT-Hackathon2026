@@ -315,15 +315,15 @@ Stated once, referenced by every clip-gated subtask.
 
 ## Task Group 3.6 — Image and deployment (serves R5)
 
-### [ ] `5.3.6.1` — Extend the ADA image with the detector, model and clip *(agent, push by CI or [[car-sky]])*
+### [ ] `5.3.6.1` — Extend the ADA image with the detector and model *(agent, push by CI or [[car-sky]])*
 
 **Objective:** the deployable image carries both processes (D9 image layout).
 
-**Scope:** `ADA_ECU/Dockerfile` — add `COPY detector/ /app/detector/`, `RUN pip install --no-cache-dir -r /app/detector/requirements.txt` (build stage or runtime stage per the single-base design), `COPY models/ /app/models/`, and confirm `COPY media/` from `12.3.7.2`. **Layer order is load-bearing** ([m1-video-source-and-ivi-dashcam.md §5](../requirements/m1-video-source-and-ivi-dashcam.md)): `COPY media/` then `COPY models/` — both rarely-changing, so their blobs are pushed once and cached — and `COPY detector/` last, because it changes every commit. `detector/tests/` and `requirements-dev.txt` stay out via `.dockerignore`. Image layout ends as `/app/ada_ecu`, `/app/entrypoint.sh`, `/app/detector/`, `/app/models/yolo11n.onnx`, `/app/media/ego-b-occluding-c.mp4`.
+**Scope:** `ADA_ECU/Dockerfile` — add **exactly two** COPY lines, `COPY models/ /app/models/` and `COPY detector/ /app/detector/`, plus `RUN pip install --no-cache-dir -r /app/detector/requirements.txt` (build stage or runtime stage per the single-base design). **`COPY media/` is not this subtask's to write** — `12.3.7.2` owns that line and lands before this one; verify it is present and sits above the two added here, and do not duplicate or reorder it. **Layer order is load-bearing** ([m1-video-source-and-ivi-dashcam.md §5](../requirements/m1-video-source-and-ivi-dashcam.md)): `COPY media/` then `COPY models/` — both rarely-changing, so their blobs are pushed once and cached — and `COPY detector/` last, because it changes every commit. `detector/tests/` and `requirements-dev.txt` stay out via `.dockerignore`. Image layout ends as `/app/ada_ecu`, `/app/entrypoint.sh`, `/app/detector/`, `/app/models/yolo11n.onnx`, `/app/media/ego-b-occluding-c.mp4`.
 
 **Acceptance:** `ada-ecu-image` lane green; the lane's in-image run step starts `detector/main.py --synthetic` inside the pulled arm64 image and observes R3 JSONL on stdout — proving the wheels resolved for aarch64 in the real image, which is what [HLD §11 item 6](../ADA_ECU/doc/phase2-4-ada-ecu-hld.md#11-open-items-and-flags) asks for.
 
-**Dependencies:** after `12.3.1.1` + `12.3.2.7` + `12.3.3.1` (+ `12.3.7.2` when the clip exists). **Commit:** `[5.3.6.1] feat: add the detector, model and clip to the ADA image`
+**Dependencies:** after `12.3.1.1` + `12.3.2.7` + `12.3.3.1` + `12.3.7.2` (which must have written `COPY media/` first). **Commit:** `[5.3.6.1] feat: add the detector and model to the ADA image`
 
 ### [ ] `5.3.6.2` — USER-MANUAL: deploy the ADA node and measure the deployed inference rate *(user, Nydus UI)*
 
@@ -415,15 +415,17 @@ ffmpeg -ss <in> -to <out> -i ADA_ECU/media/source/<raw> \
 
 - Final path **`ADA_ECU/media/ego-b-occluding-c.mp4`** — the path `VIDEO_CLIP_PATH` already defaults to inside the container as `/app/media/ego-b-occluding-c.mp4` (`12.3.2.1`, [HLD §6](../ADA_ECU/doc/phase2-4-ada-ecu-hld.md#6-configuration--no-hardcoded-tunables)). No code change: the path and the stride are env, never literals (CLAUDE.md principle 5).
 - `.gitattributes`: `ADA_ECU/media/*.mp4 binary -diff -merge` so the blob is never diffed or merge-mangled.
-- `ADA_ECU/Dockerfile`: `COPY media/  /app/media/` **as its own early layer**, ahead of `COPY models/` and well ahead of `COPY detector/`, per [§5](../requirements/m1-video-source-and-ivi-dashcam.md):
+- `ADA_ECU/Dockerfile`: add **one line only — `COPY media/ /app/media/`** — as its own early layer, per [§5](../requirements/m1-video-source-and-ivi-dashcam.md). **This subtask is the sole owner of that line**; `5.3.6.1` adds `COPY models/` and `COPY detector/` afterwards and only verifies this one. Write it where those two will follow it:
 
   ```dockerfile
   # media and model: change rarely, pushed once, cached thereafter
-  COPY media/  /app/media/
-  COPY models/ /app/models/
+  COPY media/  /app/media/    # <- this subtask
+  COPY models/ /app/models/   # <- 5.3.6.1, later
   # code: changes every commit
-  COPY detector/ /app/detector/
+  COPY detector/ /app/detector/   # <- 5.3.6.1, later
   ```
+
+  Ordering is why the split matters, not bureaucracy: `media/` must sit above `models/` and `detector/` so its blob is pushed once and cached thereafter — the property `5.3.7.3` measures as KPI 7 (identical media-layer digest across two builds).
 
 - Confirm `ADA_ECU/.dockerignore` does **not** exclude `media/` (it excludes `doc/`, `tests/`, `tools/`, `requirements-dev.txt` — check the pattern list rather than assuming).
 - **Measure and record the image-size delta** in `plans/doc/phase3-ada-detector-run.md`: `docker image inspect -f '{{.Size}}'` before and after, the media layer's own size from `docker history`, and the layer digest. Expect the delta to be ≈ the file size — H.264 is already compressed, so the layer's gzip gains ~0%.
