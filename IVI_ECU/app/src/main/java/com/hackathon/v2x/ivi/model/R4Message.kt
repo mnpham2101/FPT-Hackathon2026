@@ -9,6 +9,9 @@ import kotlinx.serialization.json.Json
  * `contracts/r4-ada-ivi.schema.json`): an [R4WarningEvent] or an
  * [R4StateMessage], discriminated on the wire by `"type": "warning" | "state"`
  * (see [R4Json]).
+ *
+ * NOTE: [R4ServiceError] is intentionally NOT a subtype — it is transport-only
+ * state, has no wire representation, and must not be serializable.
  */
 @Serializable
 sealed class R4Message {
@@ -52,13 +55,18 @@ data class R4StateMessage(
     }
 }
 
-/** Sentinel message emitted when R4ListenerService encounters unrecoverable errors. */
-@Serializable
-@SerialName("error")
+/**
+ * Transport-only sentinel emitted by [com.hackathon.v2x.ivi.service.R4ListenerService]
+ * when it encounters unrecoverable errors.
+ *
+ * §4.3 fix: this is NOT a subtype of [R4Message] and is NOT @Serializable. A transport-
+ * level condition must not be a wire message type — "error" does not exist in
+ * r4-ada-ivi.schema.json, and a @Serializable subclass could be accidentally emitted
+ * on the wire. Transport state belongs outside the wire message hierarchy.
+ */
 data class R4ServiceError(
-    override val schemaVersion: Int = 0,
     val message: String = "Service Error",
-) : R4Message()
+)
 
 /** Minimal vehicle state carried inside the R4 state heartbeat. */
 @Serializable

@@ -11,13 +11,16 @@ import android.util.Log
 import com.hackathon.v2x.ivi.BuildConfig
 import com.hackathon.v2x.ivi.data.R4Deserializer
 import com.hackathon.v2x.ivi.model.R4Message
+import com.hackathon.v2x.ivi.model.R4ServiceError
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.net.DatagramPacket
@@ -44,6 +47,12 @@ class R4ListenerService : Service() {
     private val _r4EventFlow = MutableSharedFlow<R4Message>(extraBufferCapacity = 64)
     /** Public API — collect in [R4Repository]. */
     val r4EventFlow: SharedFlow<R4Message> = _r4EventFlow
+
+    // §4.3 fix: transport errors are NOT R4 wire messages. Expose them on a separate
+    // channel so callers can distinguish link-state from message-stream events.
+    private val _serviceError = MutableStateFlow<R4ServiceError?>(null)
+    /** Emits once when the receive loop gives up after [MAX_RETRIES] consecutive failures. */
+    val serviceError: StateFlow<R4ServiceError?> = _serviceError
 
     private val binder = LocalBinder()
 
@@ -79,8 +88,8 @@ class R4ListenerService : Service() {
                     retries++
                     Log.w(TAG, "UDP socket error (attempt $retries/$MAX_RETRIES): ${e.message}")
                     if (retries >= MAX_RETRIES) {
-                        Log.e(TAG, "Max retries reached — emitting ServiceErrorEvent")
-                        _r4EventFlow.emit(com.hackathon.v2x.ivi.model.R4ServiceError())
+                        Log.e(TAG, "Max retries reached — emitting ServiceError")
+                        _serviceError.value = R4ServiceError("Max UDP retries reached")
                         return@launch
                     }
                     delay(RETRY_DELAY_MS)
@@ -88,7 +97,7 @@ class R4ListenerService : Service() {
                     Log.e(TAG, "Unexpected error in receive loop", e)
                     retries++
                     if (retries >= MAX_RETRIES) {
-                        _r4EventFlow.emit(com.hackathon.v2x.ivi.model.R4ServiceError())
+                        _serviceError.value = R4ServiceError("Unexpected error: ${e.message}")
                         return@launch
                     }
                     delay(RETRY_DELAY_MS)
