@@ -424,6 +424,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Status:** done 2026-08-01 — pytest 69 passed locally (config loader + env defaults + rejections); requirements.txt created with -r include from dev. Closed: CI run 30697863324 green (`python-tests`).
 
+**Follow-up (not this subtask's scope, do not reopen it):** [m1-run-timing-and-event-triggering.md §6.1](../requirements/m1-run-timing-and-event-triggering.md) adds two YAML keys this loader will have to validate — `start_delay_s` (default 0.0; the grace before the first CPM, set above the AAOS boot-to-listener time for demo runs) and `reference_time_epoch` (default `its`; §6.5(b)). Neither is planned in any phase — § Open items items 9 and 10.
+
 ### [x] `11.1.6.2` — Committed scenario variants `scenarios/*.yaml` *(agent)*
 
 **Objective:** the two R11-acceptance scenario files (SP HLD D3) — observably different by construction.
@@ -447,6 +449,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 **Dependencies:** after 11.1.6.1. **Commit:** `[11.1.6.3] feat: implement constant-velocity scenario kinematics`
 
 **Status:** done 2026-08-01 — pytest 85 passed locally; hand-computed t=0/10/20 wire values exact, F9 ±2048 rejected. Closed: CI run 30697863324 green (`python-tests`).
+
+**Two conformance defects found after closeout — flagged, not scheduled** ([m1-run-timing-and-event-triggering.md §6.5](../requirements/m1-run-timing-and-event-triggering.md)): **(b)** `referenceTime` is populated with Unix epoch ms (`int(time.time() * 1000)`, the generator's `now_ms` default) while the frozen R1 profile defines it as `TimestampIts`, ms since 2004-01-01 TAI — it passes the schema bound and changes no M1 behaviour, because the V2X ECU uses `referenceTime` only as a *difference* for the F1 speed derivation and never forwards it, but it is non-conformant to a frozen profile. **(c)** `measurementDeltaTime` is always 0 on the wire — the generator never passes the third argument to `Scenario.sample`; harmless for M1, and §6.2's `measured` rule stays correct when it changes. **Neither is a contract change**, and §8(4) leaves (b) awaiting the user's word — § Open items item 9.
 
 ### [x] `11.1.6.4` — Model-level stream-difference test *(agent)*
 
@@ -495,6 +499,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 **Dependencies:** after 11.1.6.3. **Commit:** `[11.1.6.7] feat: add rate-loop generator`
 
 **Status:** done 2026-08-01 — pytest 107 passed locally; cadence/loop-restart/duration-exit/[TX]-shape/encode-skip covered with fake clock. Closed: CI run 30697863324 green (`python-tests`).
+
+**Follow-up — this loop is R20's bench half** ([m1-run-timing-and-event-triggering.md §2(d)](../requirements/m1-run-timing-and-event-triggering.md)): scenario time is a tick counter (`t = cycle_tick * period`) advanced by a fixed `sleep(period)` with no drift correction, so it diverges from wall time by the per-tick work cost, ~1 % accumulating and unbounded over a run; and the `[TX]` line carries **no timestamp at all**, which is why K5 of §6.4 cannot be measured today. **`20.4.8.1` in [phase4_tasks.md](phase4_tasks.md) group 4.8 adds the `mono_ms` field** — the check input. **Deadline scheduling against `CLOCK_MONOTONIC` is not planned in any phase** (§ Open items item 10); until it lands, a red K5 is a real measurement of this loop, not a tool defect.
 
 ### [x] `11.1.6.8` — Entrypoint `main.py` *(agent)*
 
@@ -780,6 +786,8 @@ Lane D (deploy — deferred, never blocks code)
 | 6 | `node-v2x-ecu.md` / `node-scenario-player.md` "Build & push" sections still cite `registry.carsky.io`; live host is `registry.hackathon-2.carsky.io` (Phase 0 O1) — guide touch-up owned by architecture; 5.1.10.1 uses the live host meanwhile | [[project-architecture]] |
 | 7 | Smoke-test O3 (bridge MTU headroom) still open — nominal CPM is 58 bytes so no Phase 1 risk; optional `PAD` probe may ride a group 1.10 run | group 1.10 (optional) |
 | 8 | **R9 "malformed" scope — RESOLVED BY RULING** ([[project-architecture]] owner, 2026-08-01): the 4-reject/3-tolerated finding is a **mis-categorisation in the corpus, not a defect in R9's wording**. Under the frozen [contracts/r1-cpm-profile.md](../contracts/r1-cpm-profile.md) §3, `protocolVersion`/`messageId` are ignored on decode and `CpmContent` carries no header field, so `wrong-message-id`, `wrong-protocol-version` and `r1-variant` are **not malformed inputs at all** — they are valid-but-different-header inputs, and R9's "fully rejected" governs **structurally invalid** input. Consequence: **no frozen-contract change and no requirement re-wording** — neither the R1 codec nor profile §3 nor R9's text is touched. `9.1.4.5` was amended to match: the three are relabelled profile-tolerated negative controls, two genuinely structural fixtures were added (`truncated-mid-object`, `bit-flipped-payload`) along with the honest `trailing-garbage` control (predicted tolerated, because `uper_decode_complete` ignores unconsumed octets), and every case now asserts an explicit expected `Disposition`. **Residual: CI confirmation only** — the new dispositions are predicted, never measured locally, and CI run `30698630956` does **not** confirm them: it ran on `7a02fb5`, the parent of the amendment commit `3202c72`, so the three new fixtures did not exist in the tree it built | **closed** by the ruling + CI run 30700052056 (all 10 dispositions confirmed) |
+| 9 | **CPM `referenceTime` epoch conformance defect — awaiting the user's word, not scheduled.** The bench writes Unix epoch ms where the frozen R1 profile defines `TimestampIts` (ms since 2004-01-01 TAI, golden vector `716084805123`) — [m1-run-timing-and-event-triggering.md §6.5(b)](../requirements/m1-run-timing-and-event-triggering.md). It is a **conformance fix, not a contract change**: nothing rejects the value, and no M1 behaviour changes, because the V2X ECU consumes `referenceTime` only as a difference (`9.1.4.3` F1) and never forwards it. The fix is an epoch constant in config (`reference_time_epoch`, §6.1), never a literal in the loop. §8(4) leaves it explicitly to the user — **flagged, deliberately not scheduled**. `measurementDeltaTime` always 0 (§6.5(c)) rides the same decision | **user**, then `11.1.6.1` + `11.1.6.3` |
+| 10 | **R20's bench half — deadline scheduling — is not planned in any phase.** `11.1.6.7`'s fixed-sleep loop drifts ~1 % accumulating ([§3.4](../requirements/m1-run-timing-and-event-triggering.md)). §8(2) rates the deadline fix plus the `mono_ms` field at ~1 h on code already running live and recommends doing it regardless; this plan schedules only the `mono_ms` half (`20.4.8.1`, [phase4_tasks.md](phase4_tasks.md) group 4.8) because §8(1) puts R20/R21 behind Phase 3 and Phase 4 acceptance. The bench `start_delay_s` of the §4.2 B-1 readiness pick is unscheduled with it. **Visible and unscheduled, not absorbed** | **user** (accept/reject R20 per §8(1)) |
 
 ---
 

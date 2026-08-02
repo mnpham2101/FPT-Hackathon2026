@@ -4,6 +4,7 @@
 > - **Phase content:** [milestone1.md § Phase 4](milestone1.md#phase-4--obscured-object-fusion-relayed-c--risk--warning-r13r15--runs--with-phase-3) — its acceptance checkboxes are the phase output, plus the output-evidence box this plan adds (§ Phase 4 output acceptance).
 > - **Design:** [phase2-4-ada-ecu-hld.md](../ADA_ECU/doc/phase2-4-ada-ecu-hld.md) (commit `093f6d6`) — **D4** (CRA interface, registry, database), **D5** (risk vocabulary, thresholds, edge-triggered emission, composition), **D7** (output stage), **D8** (evidence stream), **D9** (capture on this node); §4 folder map; §6 env table.
 > - **Requirements:** [m1-cooperative-awareness.md §2](../requirements/m1-cooperative-awareness.md) R2, R4, R5, R6, R13, R14, R15, R18 — referenced by number, never restated.
+> - **Run timing:** [m1-run-timing-and-event-triggering.md](../requirements/m1-run-timing-and-event-triggering.md) — R20/R21, the §6.4 K1–K5 checks that group 4.8 implements, and the §6.2 clock-domain ruling. Its §8(1) fixes this group's schedule: demo-quality, behind every acceptance box, never in front.
 > - **Phase 2 baseline (do not re-plan):** [phase2_tasks.md § Output](phase2_tasks.md#phase-2-overview) — store, R13 machine, `ICollisionRiskAssessment`, `registry` + `builtin_plugins.cpp`, `assessment_db` + its schema, `event_log`, `udp_socket`, `main.cpp` fusion tick, `tools/check_evt_log.py`, the image and `entrypoint.sh`'s capture hook.
 > - **Capture prior art (reuse, do not reinvent):** [traffic-capture-wireshark.md](../requirements/car-sky-guide/traffic-capture-wireshark.md) and the Phase 1 pair `V2X_ECU/capture.sh` (`[6.1.5.2]`) + `V2X_ECU/tools/extract_pcap.sh` (`[6.1.5.3]`) on `main`.
 > - **Rules:** [task-planning-conventions.md](../.claude/rules/task-planning-conventions.md); [node-code-layout.md](../.claude/rules/node-code-layout.md).
@@ -284,6 +285,8 @@ The user's requirement: *the TrackedObjects of vehicle B and vehicle C are sent 
 
 **Scope:** ADA node `.12` per [node-ada-ecu.md § Blueprint node config](../requirements/car-sky-guide/node-ada-ecu.md) as updated by `5.2.9.4` — image `…/m1-ada-ecu:latest`, `command: ["./entrypoint.sh"]`, `capabilities: ["NET_RAW"]`, the §6 env set with `V2X_LISTEN_PORT=47200` and `IVI_ECU_HOST=10.99.0.13`/`IVI_ECU_PORT=47300`. The ADA node replaces the Phase 1 netcheck sink at `.12`. Bench + V2X nodes keep their Phase 1 config. New Deployment → Deployment Viewer shows every node Running, restart 0; mind the 2-deployment quota.
 
+**Readiness is this check, and nothing else is coming** — [m1-run-timing-and-event-triggering.md §4.2](../requirements/m1-run-timing-and-event-triggering.md) rules out a node-to-node startup handshake: the platform offers no `dependsOn`, no readiness probe and no "deployment started" event into a container, the R5/R6 topology has no reverse path to build acks on, and **R5's Deployment-Viewer check performed here by a human *is* the barrier**, paired with a configured bench `start_delay_s`. Do not plan or assume a barrier message; if a node misses early traffic, the remedy is the delay. The §4.2 B-1 pick's other half — one `[EVT] ready` line per node — is unscheduled (§ Open items item 7).
+
 **Acceptance:** per-node Running badges + restart 0 recorded in `plans/doc/phase4-ada-fusion-run.md` (the Deployment Viewer summary header is unreliable — the Phase 1 finding); evidence commit by the orchestrating session after the user confirms.
 
 **Dependencies:** after `5.4.6.1`. **Commit:** `[5.4.6.2] docs: record the phase 4 ADA node config and Running evidence`
@@ -379,6 +382,78 @@ The user's requirement: *the TrackedObjects of vehicle B and vehicle C are sent 
 
 ---
 
+## Task Group 4.8 — R21 run-alignment verification (serves R21, R20) — **scheduled last; gates no acceptance box**
+
+> Source: [m1-run-timing-and-event-triggering.md](../requirements/m1-run-timing-and-event-triggering.md) — §6.4 the five checks, §6.3 where the numbers come from, §7 R20/R21.
+>
+> **Why this phase.** Three of the five checks (K1–K3 — the ones carrying R21's measurable output) read the ADA `[EVT]` vocabulary that only this phase completes: `r4_tx` and the `risk_transition`/`track_transition` sequence. The tool also joins its siblings in `ADA_ECU/tools/` (`check_zero_c.py`, `event_report.py`, `check_evt_log.py`), which is where a check script that reads a node's log belongs ([node-code-layout.md](../.claude/rules/node-code-layout.md)).
+>
+> **Report §8(1) is binding on the schedule.** R20/R21 are demo-*quality*, not R19-gating: no box in § Output depends on this group, no subtask above waits on it, and it runs only once every Phase 3 and Phase 4 acceptance box is closed. What lands here is the **instrument** plus the one missing check input; the **run that produces a verdict** is Phase 6's continuous run, where all three logs coexist for the first time (§ Open items item 7).
+
+### [ ] `20.4.8.1` — Bench `[TX]` line gains `mono_ms` *(agent — **writes in `Scenario_Player/`**)*
+
+**Objective:** the bench `[TX]` JSONL line carries the monotonic stamp K5 regresses `scenario_time_s` against — the one K-check input that exists nowhere today (report §6.3: the line currently carries `{seq, scenario_time_s, bytes}` and no timestamp at all).
+
+**Write scope — explicit exception to this phase's subagent spec:** this subtask writes in `Scenario_Player/` only, not `ADA_ECU/`. It is planned here rather than in Phase 1 so the enabler stays visible beside the checker that consumes it, and so §8(1)'s "behind Phase 3 and Phase 4 acceptance" scheduling holds for both.
+
+**Scope:**
+
+- `Scenario_Player/player/generator.py` (the `[TX]` printer from `11.1.6.7`): add an injectable `mono_ms: Callable[[], int] | None = None` constructor parameter defaulting to `int(time.monotonic() * 1000)` — the same injectable-callable pattern the file already uses for `now_ms` / `sleep` / `log`. The emitted line becomes `{"seq", "scenario_time_s", "bytes", "mono_ms"}` with `separators=(",", ":")` unchanged; `mono_ms` is read once per emitted datagram, immediately after `send` returns.
+- **`CLOCK_MONOTONIC`, never `time.time()`** (report §6.2: intervals use the monotonic clock, wire and log timestamps use the realtime clock). `[TX]` carries no realtime stamp today and gains none here. The existing `_wall_clock_ms` stays exactly as it is — it feeds the sample's `reference_time_ms`, which is a different concern.
+- **Out of scope, deliberately:** deadline scheduling of the tick loop, `start_delay_s`, `reference_time_epoch`, and any `[ENC-SKIP]` change. Those are R20's remaining halves and are not planned in this phase — § Open items item 7.
+- Test — extend `Scenario_Player/tests/test_generator.py`: against a fake monotonic clock, each `[TX]` line parses as JSON and carries an integer `mono_ms` equal to the injected sequence; values are non-decreasing across a `loop: true` restart; the existing cadence / loop-restart / duration-exit / `[TX]`-shape / encode-skip cases stay green.
+
+**Acceptance:** `pip install -r Scenario_Player/requirements-dev.txt && python -m pytest Scenario_Player/tests` green locally **and** on CI `python-tests`; no new `time.time()` call anywhere in `player/`.
+
+**Dependencies:** none — `11.1.6.7` is done and running live. **Commit:** `[20.4.8.1] feat: stamp the bench TX line with a monotonic timestamp`
+
+### [ ] `21.4.8.2` — Run-alignment checker `tools/check_run_alignment.py` *(agent)*
+
+**Objective:** the post-run verification script report §6.4 specifies — measure K1–K5 from saved logs and exit non-zero when a bound is missed. **Post-run verification only: it is not a trigger, not an orchestrator, and never runs on the ego data path** (report §5 — the tool that should exist is a checker, not a trigger).
+
+**Scope:**
+
+- `ADA_ECU/tools/check_run_alignment.py`, **Python 3 stdlib only** (no numpy, no jsonschema) — the `check_zero_c.py` / `event_report.py` shape. Test equipment only, never in the image (`.dockerignore` already excludes `tools/`).
+- **Three optional input logs, at least one required.** Each supplied log enables its own checks; every check reads timestamps produced by **one** clock, so none depends on cross-node agreement (report §6.4).
+
+| Flag | Log | Line shape | Enables |
+|---|---|---|---|
+| `--evt` | ADA `[EVT]` JSONL | `[EVT] ` prefix + `{event, mono_ms, epoch_ms, counters, payload}` (Phase 2 `18.2.2.3`) | K1, K2, K3 |
+| `--detector` | detector R3 JSONL | one `TrackedObject` per line (Phase 3 `12.3.2.6`) | K4 |
+| `--tx` | bench `[TX]` JSONL | `[TX] ` prefix + `{seq, scenario_time_s, bytes, mono_ms}` (`mono_ms` from `20.4.8.1`) | K5 |
+
+- Tolerate interleaved `[CAP]` and non-`[EVT]` lines in the `--evt` input — View Log exports carry both, the same tolerance `tools/check_evt_log.py` already implements.
+- **The five checks** (report §6.4; bounds are defaults, every one overridable — see the flag table):
+
+| # | Check | Bound | Reconstructed from |
+|---|---|---|---|
+| K1 | At every `r4_tx`, a `tracked` `own_sensor` entry exists whose `timestamps.lastUpdated` is within `--track-timeout-ms` of that `r4_tx`'s `epoch_ms` | binary pass | `own_sensor_ingest` payloads + `track_transition` (`id`, `source`, `from`, `to`) replayed in order to a per-id state |
+| K2 | The first `own_sensor` → `tracked` transition precedes the first `v2x_relayed` → `tracked` transition | binary pass | `track_transition` line order; **absence of either is a fail**, not a skip |
+| K3 | `max │lastUpdated(newest tracked own_sensor) − lastUpdated(newest tracked v2x_relayed)│` over all `r4_tx` | ≤ `--max-skew-ms` (1000) | same replay as K1; both values are ADA's own `CLOCK_REALTIME` at store write (report §6.2), so the subtraction stays in one clock domain |
+| K4 | Observed sampled-frame rate = `(distinct frames − 1) / Δ(timestamps.received) seconds`, against expected `--clip-fps / --frame-stride` | within `--detector-tolerance-pct` (2 %) over ≥ `--min-window-s` | detector R3 JSONL: `timestamps.measured` is the frame-capture stamp (clip time), `timestamps.received` the emit time (wall) |
+| K5 | `Δscenario_time_s / Δ(mono_ms/1000)` | within `--bench-tolerance-pct` (1 %) over ≥ `--min-window-s` | bench `[TX]`; **`loop: true` resets `scenario_time_s` to 0 mid-stream** — accumulate across cycles by detecting the decrease and carrying the previous cycle's maximum |
+
+- **Flags, no literals in the check bodies** (CLAUDE.md principle 5, the `check_clip_spec.py` pattern — every expected value from a CLI flag or the matching env var, with the §6.4 values as defaults): `--track-timeout-ms` (1000) · `--max-skew-ms` (1000) · `--detector-tolerance-pct` (2.0) · `--bench-tolerance-pct` (1.0) · `--min-window-s` (60) · `--clip-fps` · `--frame-stride` · `--require K1,K2,…`. **`--clip-fps` and `--frame-stride` have no defaults** — they are the detector's `DETECTOR_CLIP_FPS` / `DETECTOR_FRAME_STRIDE`, and `DETECTOR_CLIP_FPS` is a §6.1 key that does not exist yet (§ Open items item 7); K4 skips when they are absent rather than guessing.
+- **Exit-code semantics** — an empty log is never a pass, the `check_zero_c.py` rule:
+
+| Code | Meaning |
+|---|---|
+| 0 | every enabled check passed **and** every enabled check examined a non-empty record set |
+| 1 | an enabled check missed its bound — output names the check id, the bound, the measured value, and the offending line number |
+| 2 | a supplied log yielded zero records relevant to its checks, **or** `--require` names a check whose input log was not supplied |
+| 3 | usage error — no log supplied at all, unreadable file, `--require K4` without `--clip-fps`/`--frame-stride` |
+
+- **Output:** one line per check — `K1 PASS`, `K3 FAIL measured=1420ms bound=1000ms at r4_tx line 812`, `K5 SKIP (no --tx log)` — plus a summary naming the records examined per log, so a vacuous pass is visible rather than silent.
+- Test `ADA_ECU/tools/tests/test_check_run_alignment.py` (planner-designated path, § Open items item 3), synthetic logs written to `tmp_path`: a conforming three-log set exits 0 with five PASS · K1 fails when an `r4_tx` has no in-timeout `tracked` own-sensor entry · K2 fails when the relayed `tracked` transition comes first · K2 fails when one of the two is absent · K3 fails at a planted 1500 ms skew · K4 fails when a 60 s clip is emitted in 10 s of wall time · K5 fails at a 10× scenario-time advance · K5 **passes** across a `loop: true` restart · an empty `[EVT]` log exits 2 · `--require K5` with no `--tx` exits 2 · no log at all exits 3.
+
+**Acceptance:** `python -m py_compile ADA_ECU/tools/check_run_alignment.py` passes; the test passes locally **and** on CI `python-tests`; every bound traced to a flag or env var, none to a literal inside a check.
+
+**Dependencies:** after `14.4.1.3` + `15.4.2.2` (the `risk_transition` / `r4_tx` vocabulary and payload shapes freeze there) and `20.4.8.1` (K5's input field). K4's line shape comes from Phase 3 `12.3.2.6`. **Runs after every acceptance subtask in this phase and in Phase 3** — report §8(1). No code is shared with `check_evt_log.py`; the tools stay standalone.
+
+**Commit:** `[21.4.8.2] feat: add the R21 run-alignment post-run checker`
+
+---
+
 ## Execution order & parallelism
 
 ```
@@ -396,6 +471,9 @@ Lane D (deploy - never blocks code)
                                                                         └──► 15.4.6.5 (USER, ∥ with 18.4.6.4)
 
 Group 4.7  BLOCKED on user ratification; if ratified: 4.4.7.1 ──► 4.4.7.2 ∥ 4.4.7.3 ──► 4.4.7.4
+
+Group 4.8  LAST - after every acceptance subtask above and every Phase 3 acceptance box
+           20.4.8.1 (Scenario_Player/, no dependency) ──► 21.4.8.2 (also needs 14.4.1.3 + 15.4.2.2)
 ```
 
 **Recommended runtime order (single tree):** 18.4.3.1 → 6.4.4.1 → 6.4.4.2 → 15.4.1.1 → 14.4.1.2 → 14.4.1.3 → 15.4.2.1 → 15.4.2.2 → 15.4.2.3 → 18.4.3.2 → 18.4.3.3 → 15.4.5.1 → 15.4.2.4 *(if time)* → group 4.6 when a Room is available.
@@ -420,11 +498,13 @@ Group 4.7  BLOCKED on user ratification; if ratified: 4.4.7.1 ──► 4.4.7.2 
 |---|---|---|
 | 1 | **Contract tension on the Phase 4 output evidence — decided as option (i), flagged for the user.** The frozen R4 carries C's full R3 TrackedObject and B's *position*, not B's TrackedObject. This plan accepts that and proves B's full object from the `[EVT]` log. **Option (ii)** — an additive `trackedObjects` array — is planned in full as group 4.7 and **not started**; it is a frozen-contract change requiring a re-freeze across the ADA binding, the ADA emitter, the golden samples, both synced copy sets, the IVI Kotlin binding and both languages' round-trip tests. Recommendation: **do not run it** — reasoning in § Phase 4 output acceptance | **user** (ratification), group 4.7 |
 | 2 | **`(proposal)` risk defaults proceed as proposed** — `RISK_NEAR_M=25`, `RISK_CRITICAL_M=15`, `RISK_TTC_WARN_S=6`, `RISK_TTC_CRITICAL_S=3`, `RISK_DWELL_MS=300`, `ASSESS_LOG_EVERY_MS=1000` ([HLD §6](../ADA_ECU/doc/phase2-4-ada-ecu-hld.md#6-configuration--no-hardcoded-tunables)). Chosen so `default.yaml`'s approach produces a visible `low → medium → high` progression and `c-out-of-range.yaml` never leaves `low`. Externalized, so ratification is a node-config edit | user |
-| 3 | **Planner-designated test/tool paths beyond the HLD's list**: `tests/output/test_ivi_sender.cpp`; the `--fusion` / `--both-tracks` / `--r4-schema` modes of `tools/check_evt_log.py`. Flagged to [[project-architecture]] as HLD-consistent additions | [[project-architecture]] (ack) |
+| 3 | **Planner-designated test/tool paths beyond the HLD's list**: `tests/output/test_ivi_sender.cpp`; the `--fusion` / `--both-tracks` / `--r4-schema` modes of `tools/check_evt_log.py`; `tools/check_run_alignment.py` + `tools/tests/test_check_run_alignment.py` (group 4.8). Flagged to [[project-architecture]] as HLD-consistent additions | [[project-architecture]] (ack) |
 | 4 | **Cross-phase dependency, not this phase's work:** the branch's `IVI_ECU/app/.../model/R4WarningMessage.kt` cannot decode this design's output — no `@SerialName` on `R4Geometry(ego, b, c)`, and it requires a `trackedObjects` array this design does not emit. **`main`'s `R4Message.kt` (sealed `R4WarningEvent`/`R4StateMessage` + `SceneGeometry.kt`) is the binding the IVI uses; the branch's parallel model is superseded.** Fixing it is **Phase 5's** first task ([HLD §11 item 4](../ADA_ECU/doc/phase2-4-ada-ecu-hld.md#11-open-items-and-flags)) — recorded here so it is not lost, planned nowhere in this file | [[project-planner]] → Phase 5 |
 | 5 | **`15.4.2.4` (periodic awareness state) is optional and may be dropped** without affecting any acceptance box — R15 words it optional and the warning event alone renders the M1 demo. It must stay off by default (`STATE_RATE_HZ=0`), asserted in test | Phase 4, if time permits |
 | 6 | **Phase 6 inherits this phase's live evidence.** `15.4.6.5`'s pcap is the ADA half of R19's corroborating capture; the V2X half is Phase 1's `6.1.10.5`. Phase 6 re-records both in one continuous run — it does not re-derive them | [[project-planner]] → Phase 6 |
+| 7 | **R20/R21 are only partly planned, deliberately** ([report §7](../requirements/m1-run-timing-and-event-triggering.md)). Group 4.8 delivers the instrument (`21.4.8.2`) and §8(2)'s cheap half (`20.4.8.1`). **Not planned anywhere, and no subtask may assume it exists:** (a) **bench deadline scheduling** — `player/generator.py` still sleeps a fixed `period` with no drift correction (§2(d)), so a red K5 is a *measurement*, not a tool defect; (b) **detector real-time pacing and its §6.1 keys** `DETECTOR_REALTIME_PACING` / `DETECTOR_CLIP_FPS` / `DETECTOR_START_DELAY_S` — R20's detector half, ~2 h *inside* Phase 3 work that has not started, hence K4's `--clip-fps`/`--frame-stride` come from the command line and K4 skips without them (annotated at Phase 3 `12.3.2.1`); (c) bench `start_delay_s` / `reference_time_epoch` (§6.1) and the one `[EVT] ready` line per node of the §4.2 B-1 readiness pick; (d) **running the checker on a real run** — all three logs coexist only in Phase 6's continuous run, so this phase delivers the instrument and Phase 6 produces the verdict | **user** (accept/reject R20/R21 per §8(1)) → [[project-planner]] → Phase 6 |
+| 8 | **§6.2's clock-domain ruling is a design decision the ADA HLD does not carry** — `CLOCK_REALTIME` for wire and log stamps, `CLOCK_MONOTONIC` for intervals **including track expiry**, cross-node timestamp arithmetic forbidden. It lands on Phase 2 `13.2.4.3` (expiry) and `2.2.3.1` (the R3 mapping, which is also PR-review defect M1) — annotated there, and carried as [phase2_tasks.md § Open items item 9](phase2_tasks.md#open-items--flags-no-phase-2-subtask-may-silently-close-them). No Phase 4 subtask may implement it silently | [[project-architecture]] (HLD amendment), Phase 2 |
 
 ---
 
-*Created 2026-08-02 by project-planner from [phase2-4-ada-ecu-hld.md](../ADA_ECU/doc/phase2-4-ada-ecu-hld.md) D4/D5/D7/D8/D9 and [milestone1.md § Phase 4](milestone1.md#phase-4--obscured-object-fusion-relayed-c--risk--warning-r13r15--runs--with-phase-3). 7 task groups, 22 subtasks: 13 agent-implemented (1 of them optional), 1 car-sky, 4 user-manual, 4 gated on user ratification (group 4.7, not started). Planned from zero.*
+*Created 2026-08-02 by project-planner from [phase2-4-ada-ecu-hld.md](../ADA_ECU/doc/phase2-4-ada-ecu-hld.md) D4/D5/D7/D8/D9 and [milestone1.md § Phase 4](milestone1.md#phase-4--obscured-object-fusion-relayed-c--risk--warning-r13r15--runs--with-phase-3). 8 task groups, 24 subtasks: 15 agent-implemented (1 of them optional), 1 car-sky, 4 user-manual, 4 gated on user ratification (group 4.7, not started). Planned from zero; group 4.8 added the same day from [m1-run-timing-and-event-triggering.md](../requirements/m1-run-timing-and-event-triggering.md) §6.4.*

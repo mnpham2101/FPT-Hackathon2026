@@ -838,7 +838,9 @@ No agent performs these steps; the plan tracks them. Beware walkthrough §4 mist
 
 **Scope:** using the route proven in `16.5.8.3`: `adb install -r app-debug.apk` (the Phase 5 build from lane `16.5.7.1`), then `adb shell am start -n com.hackathon.v2x.ivi/.MainActivity` (add `--ei r4_port <p>` only if the port differs). Confirm on screen: the central Display Area flanked by the two button bars and the bottom status bar; tapping **Home / Apps / Settings** switches what the Display Area shows; the bottom bar's V2X LINK indicator reads **BOUND :47300** (proving the socket bound and the status bar is live, not the old hardcoded `STANDBY`). Capture a screenshot.
 
-**Acceptance:** screenshot showing the R16 layout with the link indicator bound; a second screenshot showing a different Display Area mode after a side-button tap; `adb logcat -s IVI_V2X` shows `[LINK] state=bound port=47300` and `[UI] mode=… cause=user`. Recorded in `plans/doc/phase5-ivi-run.md`.
+**Also record — the boot-to-listener number Phase 6 needs.** [m1-run-timing-and-event-triggering.md §9 open item 5](../requirements/m1-run-timing-and-event-triggering.md) names this the one number **only Phase 5 can produce**: the elapsed time from the AAOS guest starting to boot until `[LINK] state=bound port=47300` appears on `IVI_V2X`. It sets the **floor for the bench's `start_delay_s`** (§4.2's B-1 readiness pick — the IVI is the only node whose readiness cannot be observed from a container, which is why the guest must not be streamed into before it is bound). Record the wall-clock deltas for guest boot → launcher, launch → `[LINK] state=bound`, and their sum, in `plans/doc/phase5-ivi-run.md`. Phase 0 could not obtain this (ADB returns 502, residual O4); if `16.5.8.3` came back negative and this runs on an emulator, say so — an emulator figure is a lower bound, not the number.
+
+**Acceptance:** screenshot showing the R16 layout with the link indicator bound; a second screenshot showing a different Display Area mode after a side-button tap; `adb logcat -s IVI_V2X` shows `[LINK] state=bound port=47300` and `[UI] mode=… cause=user`; the boot-to-listener elapsed time recorded. Recorded in `plans/doc/phase5-ivi-run.md`.
 
 **Dependencies:** after `5.5.9.1`, `17.5.5.6` and `16.5.8.3`. **Commit:** `[16.5.9.2] docs: record the R16 layout running on the AAOS node`
 
@@ -936,6 +938,7 @@ Every Phase 5 acceptance criterion in [milestone1.md](milestone1.md#phase-5--ivi
 | 4 | Coroutines version skew between `:observer` and what AndroidX resolves in `:app` | Mitigated by the catalog (`4.5.1.1`); a skew shows as a runtime `NoSuchMethodError`, not a build failure — watch for it at `16.5.9.2` |
 | 5 | Deployment budget: 2 concurrent Rooms | `4.5.9.4` tears the Phase 5 Room down; coordinate with the comms track before `5.5.8.2` deploys |
 | 6 | MTU headroom (Phase 0 open item O3) | Non-issue for this hop — an R4 warning is ~450 B against a 2048 B buffer — but still formally open |
+| 7 | **AAOS boot-to-listener time sets the bench `start_delay_s` floor** — a number no other phase can produce ([m1-run-timing-and-event-triggering.md §9 item 5](../requirements/m1-run-timing-and-event-triggering.md)). Measured at `16.5.9.2`; consumed by the bench key `start_delay_s`, which §6.1 defines and no phase currently schedules ([phase1_tasks.md § Open items item 10](phase1_tasks.md#open-items--flags-no-phase-1-subtask-may-silently-close-them)). **No startup handshake is coming** — §4.2 rules readiness as R5's Deployment-Viewer check plus that delay, so nothing in this phase should be designed around a barrier the topology has no reverse path for | `16.5.9.2`, then **user** / Phase 6 |
 
 ## Deliberately not in this phase
 
