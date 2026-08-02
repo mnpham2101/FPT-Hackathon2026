@@ -29,3 +29,6 @@ __pycache__/
 ada-ecu/local-data/
 ada-ecu/tools/__pycache__/
 ada-events.jsonl
+
+# Raw downloaded footage - the encoded clip is committed, its source is not
+ADA_ECU/media/source/

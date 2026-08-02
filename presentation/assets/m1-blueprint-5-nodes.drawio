@@ -1,0 +1,60 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="m1-blueprint-5-nodes" id="m1-blueprint-5-nodes">
+    <mxGraphModel dx="1368" dy="788" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1320" pageHeight="670" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="title" value="Milestone 1 blueprint — five nodes on one Ethernet Bridge" style="text;html=1;align=left;fontSize=21;fontStyle=1;fontColor=#19226D;" vertex="1" parent="1"><mxGeometry x="40" y="16" width="800" height="26" as="geometry" /></mxCell>
+        <mxCell id="subtitle" value="One blueprint = one car (vehicle A, the ego). R1–R4 label the message flows; R5 deploys the nodes, R6 is the network." style="text;html=1;align=left;fontSize=14;fontColor=#3d3d46;" vertex="1" parent="1"><mxGeometry x="40" y="44" width="900" height="20" as="geometry" /></mxCell>
+
+        <mxCell id="bench" value="Scenario Player (bench)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8eef8;strokeColor=#034EA2;fontColor=#19226D;fontSize=16;fontStyle=1;verticalAlign=top;spacingTop=12;" vertex="1" parent="1"><mxGeometry x="40" y="95" width="230" height="118" as="geometry" /></mxCell>
+        <mxCell id="benchType" value="Container Node · R11" style="text;html=1;align=center;fontSize=12;fontColor=#3d3d46;" vertex="1" parent="1"><mxGeometry x="40" y="138" width="230" height="18" as="geometry" /></mxCell>
+        <mxCell id="benchIp" value="10.99.0.10" style="text;html=1;align=center;fontSize=12.5;fontColor=#6b6e7b;" vertex="1" parent="1"><mxGeometry x="40" y="158" width="230" height="18" as="geometry" /></mxCell>
+        <mxCell id="benchRole" value="scenario configs → CPM stream" style="rounded=1;arcSize=40;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#c9cbd6;fontColor=#3d3d46;fontSize=11;" vertex="1" parent="1"><mxGeometry x="54" y="180" width="202" height="22" as="geometry" /></mxCell>
+
+        <mxCell id="v2x" value="V2X ECU" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fdece1;strokeColor=#F37021;fontColor=#19226D;fontSize=16;fontStyle=1;verticalAlign=top;spacingTop=12;" vertex="1" parent="1"><mxGeometry x="380" y="95" width="230" height="118" as="geometry" /></mxCell>
+        <mxCell id="v2xType" value="Container Node · R7–R9" style="text;html=1;align=center;fontSize=12;fontColor=#3d3d46;" vertex="1" parent="1"><mxGeometry x="380" y="138" width="230" height="18" as="geometry" /></mxCell>
+        <mxCell id="v2xIp" value="10.99.0.11" style="text;html=1;align=center;fontSize=12.5;fontColor=#6b6e7b;" vertex="1" parent="1"><mxGeometry x="380" y="158" width="230" height="18" as="geometry" /></mxCell>
+        <mxCell id="v2xRole" value="decode · validate · forward" style="rounded=1;arcSize=40;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#c9cbd6;fontColor=#3d3d46;fontSize=11;" vertex="1" parent="1"><mxGeometry x="394" y="180" width="202" height="22" as="geometry" /></mxCell>
+
+        <mxCell id="ada" value="ADA ECU" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8f0fa;strokeColor=#034EA2;fontColor=#19226D;fontSize=16;fontStyle=1;verticalAlign=top;spacingTop=12;" vertex="1" parent="1"><mxGeometry x="720" y="95" width="230" height="118" as="geometry" /></mxCell>
+        <mxCell id="adaType" value="Container Node · R12–R15" style="text;html=1;align=center;fontSize=12;fontColor=#3d3d46;" vertex="1" parent="1"><mxGeometry x="720" y="138" width="230" height="18" as="geometry" /></mxCell>
+        <mxCell id="adaIp" value="10.99.0.12" style="text;html=1;align=center;fontSize=12.5;fontColor=#6b6e7b;" vertex="1" parent="1"><mxGeometry x="720" y="158" width="230" height="18" as="geometry" /></mxCell>
+        <mxCell id="adaRole" value="R3 track store · risk · warning" style="rounded=1;arcSize=40;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#19226D;fontColor=#19226D;fontSize=11;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="734" y="180" width="202" height="22" as="geometry" /></mxCell>
+
+        <mxCell id="ivi" value="IVI ECU" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e4f4f7;strokeColor=#33B2C1;fontColor=#19226D;fontSize=16;fontStyle=1;verticalAlign=top;spacingTop=12;" vertex="1" parent="1"><mxGeometry x="1060" y="95" width="230" height="118" as="geometry" /></mxCell>
+        <mxCell id="iviType" value="Skycraft Node (AAOS) · R16–R17" style="text;html=1;align=center;fontSize=12;fontColor=#3d3d46;" vertex="1" parent="1"><mxGeometry x="1060" y="138" width="230" height="18" as="geometry" /></mxCell>
+        <mxCell id="iviIp" value="10.99.0.13" style="text;html=1;align=center;fontSize=12.5;fontColor=#6b6e7b;" vertex="1" parent="1"><mxGeometry x="1060" y="158" width="230" height="18" as="geometry" /></mxCell>
+        <mxCell id="iviRole" value="god-view HMI · APK via ADB" style="rounded=1;arcSize=40;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#c9cbd6;fontColor=#3d3d46;fontSize=11;" vertex="1" parent="1"><mxGeometry x="1074" y="180" width="202" height="22" as="geometry" /></mxCell>
+
+        <mxCell id="f1" value="R1" style="endArrow=classic;html=1;strokeColor=#F37021;strokeWidth=2.5;fontSize=15;fontStyle=1;fontColor=#F37021;verticalAlign=bottom;" edge="1" parent="1" source="bench" target="v2x"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="f1a" value="CPM · UPER" style="text;html=1;align=center;fontSize=11;fontColor=#3d3d46;" vertex="1" parent="1"><mxGeometry x="270" y="160" width="110" height="16" as="geometry" /></mxCell>
+        <mxCell id="f1b" value="UDP 47100" style="text;html=1;align=center;fontSize=10.5;fontColor=#8a8d99;" vertex="1" parent="1"><mxGeometry x="270" y="176" width="110" height="16" as="geometry" /></mxCell>
+
+        <mxCell id="f2" value="R2" style="endArrow=classic;html=1;strokeColor=#034EA2;strokeWidth=2.5;fontSize=15;fontStyle=1;fontColor=#034EA2;verticalAlign=bottom;" edge="1" parent="1" source="v2x" target="ada"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="f2a" value="v2x_object JSON" style="text;html=1;align=center;fontSize=11;fontColor=#3d3d46;" vertex="1" parent="1"><mxGeometry x="610" y="160" width="110" height="16" as="geometry" /></mxCell>
+        <mxCell id="f2b" value="UDP 47200" style="text;html=1;align=center;fontSize=10.5;fontColor=#8a8d99;" vertex="1" parent="1"><mxGeometry x="610" y="176" width="110" height="16" as="geometry" /></mxCell>
+
+        <mxCell id="f3" value="R4" style="endArrow=classic;html=1;strokeColor=#33B2C1;strokeWidth=2.5;fontSize=15;fontStyle=1;fontColor=#1d8e9d;verticalAlign=bottom;" edge="1" parent="1" source="ada" target="ivi"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="f3a" value="warning JSON" style="text;html=1;align=center;fontSize=11;fontColor=#3d3d46;" vertex="1" parent="1"><mxGeometry x="950" y="160" width="110" height="16" as="geometry" /></mxCell>
+        <mxCell id="f3b" value="UDP 47300" style="text;html=1;align=center;fontSize=10.5;fontColor=#8a8d99;" vertex="1" parent="1"><mxGeometry x="950" y="176" width="110" height="16" as="geometry" /></mxCell>
+
+        <mxCell id="bridge" value="Ethernet Bridge Node" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f4f4f6;strokeColor=#19226D;fontColor=#19226D;fontSize=16;fontStyle=1;verticalAlign=top;spacingTop=12;" vertex="1" parent="1"><mxGeometry x="525" y="400" width="270" height="86" as="geometry" /></mxCell>
+        <mxCell id="bridgeSub" value="R6 · one L2 segment · 10.99.0.0/24" style="text;html=1;align=center;fontSize=12;fontColor=#3d3d46;" vertex="1" parent="1"><mxGeometry x="525" y="443" width="270" height="18" as="geometry" /></mxCell>
+        <mxCell id="bridgeIp" value="10.99.0.1" style="text;html=1;align=center;fontSize=12.5;fontColor=#6b6e7b;" vertex="1" parent="1"><mxGeometry x="525" y="462" width="270" height="18" as="geometry" /></mxCell>
+
+        <mxCell id="p1" value="ethernet pin" style="edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=none;html=1;strokeColor=#8a8d99;strokeWidth=1.4;fontSize=10.5;fontColor=#8a8d99;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="155" y="213" as="sourcePoint" /><mxPoint x="560" y="400" as="targetPoint" /><Array as="points"><mxPoint x="155" y="350" /><mxPoint x="560" y="350" /></Array></mxGeometry></mxCell>
+        <mxCell id="p2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=none;html=1;strokeColor=#8a8d99;strokeWidth=1.4;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="495" y="213" as="sourcePoint" /><mxPoint x="620" y="400" as="targetPoint" /><Array as="points"><mxPoint x="495" y="300" /><mxPoint x="620" y="300" /></Array></mxGeometry></mxCell>
+        <mxCell id="p3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=none;html=1;strokeColor=#8a8d99;strokeWidth=1.4;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="835" y="213" as="sourcePoint" /><mxPoint x="700" y="400" as="targetPoint" /><Array as="points"><mxPoint x="835" y="300" /><mxPoint x="700" y="300" /></Array></mxGeometry></mxCell>
+        <mxCell id="p4" value="ethernet pin" style="edgeStyle=orthogonalEdgeStyle;rounded=0;endArrow=none;html=1;strokeColor=#8a8d99;strokeWidth=1.4;fontSize=10.5;fontColor=#8a8d99;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="1175" y="213" as="sourcePoint" /><mxPoint x="760" y="400" as="targetPoint" /><Array as="points"><mxPoint x="1175" y="350" /><mxPoint x="760" y="350" /></Array></mxGeometry></mxCell>
+
+        <mxCell id="n1" value="R3 (TrackedObject) is the ego-internal track schema — it reaches the wire only as the object snapshot embedded in every R4 message." style="text;html=1;align=left;fontSize=12.5;fontColor=#3d3d46;" vertex="1" parent="1"><mxGeometry x="62" y="518" width="1240" height="18" as="geometry" /></mxCell>
+        <mxCell id="n2" value="All four role nodes declare exactly one ethernet pin; the three flows are different UDP ports on the same NIC, not separate pins." style="text;html=1;align=left;fontSize=12.5;fontColor=#3d3d46;" vertex="1" parent="1"><mxGeometry x="62" y="544" width="1240" height="18" as="geometry" /></mxCell>
+        <mxCell id="n3" value="R5 — every ECU is one node of one blueprint; deploying the blueprint creates the Room that is the working environment." style="text;html=1;align=left;fontSize=12.5;fontColor=#3d3d46;" vertex="1" parent="1"><mxGeometry x="62" y="570" width="1240" height="18" as="geometry" /></mxCell>
+        <mxCell id="n4" value="The IVI is the only non-container node: the provided AAOS artifact plus the team APK installed over ADB — it runs no OCI image." style="text;html=1;align=left;fontSize=12.5;fontColor=#3d3d46;" vertex="1" parent="1"><mxGeometry x="62" y="596" width="1240" height="18" as="geometry" /></mxCell>
+        <mxCell id="src" value="Source: requirements/car-sky-guide/carsky-4-node-blueprint.md · requirements/m1-cooperative-awareness.md §2 R1–R6" style="text;html=1;align=left;fontSize=11;fontColor=#8a8d99;" vertex="1" parent="1"><mxGeometry x="40" y="632" width="1000" height="18" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

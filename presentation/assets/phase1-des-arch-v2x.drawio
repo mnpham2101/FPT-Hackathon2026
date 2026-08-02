@@ -1,0 +1,61 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="phase1-des-arch-v2x" id="phase1-des-arch-v2x">
+    <mxGraphModel dx="1400" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="690" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="t1" value="V2X ECU — module architecture" style="text;html=1;align=left;verticalAlign=middle;fontSize=23.8;fontColor=#19226D;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="24" y="20" width="1152" height="20" as="geometry" /></mxCell>
+        <mxCell id="t2" value="One process and one receive thread. Only two modules are permitted to touch the operating system." style="text;html=1;align=left;verticalAlign=middle;fontSize=16.8;fontColor=#6b6e7b;fontStyle=0;" vertex="1" parent="1"><mxGeometry x="24" y="42" width="1152" height="20" as="geometry" /></mxCell>
+        <mxCell id="main" value="src/main.cpp
+composition and start-up;
+no logic of its own" style="rounded=1;arcSize=10;html=1;fillColor=#19226D;strokeColor=none;fontColor=#ffffff;fontSize=16.8;fontStyle=1;whiteSpace=wrap;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="40" y="110" width="250" height="76" as="geometry" /></mxCell>
+        <mxCell id="cfg" value="src/config/
+the sole environment reader" style="rounded=1;arcSize=10;html=1;fillColor=#19226D;strokeColor=none;fontColor=#ffffff;fontSize=16.8;fontStyle=1;whiteSpace=wrap;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="40" y="200" width="250" height="70" as="geometry" /></mxCell>
+        <mxCell id="net" value="src/net/
+the sole holder of sockets" style="rounded=1;arcSize=10;html=1;fillColor=#19226D;strokeColor=none;fontColor=#ffffff;fontSize=16.8;fontStyle=1;whiteSpace=wrap;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="40" y="290" width="250" height="70" as="geometry" /></mxCell>
+        <mxCell id="cap" value="capture.sh
+traffic capture, separate process" style="rounded=1;arcSize=10;html=1;fillColor=#F37021;strokeColor=none;fontColor=#ffffff;fontSize=16.8;fontStyle=1;whiteSpace=wrap;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="40" y="380" width="250" height="70" as="geometry" /></mxCell>
+        <mxCell id="seam" value="src/adapter/
+the frozen radio interface
+and its implementation" style="rounded=1;arcSize=10;html=1;fillColor=#19226D;strokeColor=none;fontColor=#ffffff;fontSize=16.8;fontStyle=1;whiteSpace=wrap;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="340" y="110" width="250" height="76" as="geometry" /></mxCell>
+        <mxCell id="stub" value="src/stub/
+simulated modem: state machine,
+faults and recoveries" style="rounded=1;arcSize=10;html=1;fillColor=#19226D;strokeColor=none;fontColor=#ffffff;fontSize=16.8;fontStyle=1;whiteSpace=wrap;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="340" y="200" width="250" height="76" as="geometry" /></mxCell>
+        <mxCell id="codec" value="src/codec/
+decoder for the air message
+(delivered in Phase 0)" style="rounded=1;arcSize=10;html=1;fillColor=#33B2C1;strokeColor=none;fontColor=#ffffff;fontSize=16.8;fontStyle=1;whiteSpace=wrap;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="340" y="300" width="250" height="76" as="geometry" /></mxCell>
+        <mxCell id="r2b" value="src/contracts/
+the object-message binding
+(delivered in Phase 0)" style="rounded=1;arcSize=10;html=1;fillColor=#33B2C1;strokeColor=none;fontColor=#ffffff;fontSize=16.8;fontStyle=1;whiteSpace=wrap;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="340" y="396" width="250" height="76" as="geometry" /></mxCell>
+        <mxCell id="pipe" value="src/pipeline/
+four stages: validate, deduplicate,
+build, compose" style="rounded=1;arcSize=10;html=1;fillColor=#19226D;strokeColor=none;fontColor=#ffffff;fontSize=16.8;fontStyle=1;whiteSpace=wrap;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="660" y="110" width="250" height="76" as="geometry" /></mxCell>
+        <mxCell id="fwd" value="src/forward/
+object-message transmitter" style="rounded=1;arcSize=10;html=1;fillColor=#19226D;strokeColor=none;fontColor=#ffffff;fontSize=16.8;fontStyle=1;whiteSpace=wrap;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="660" y="210" width="250" height="70" as="geometry" /></mxCell>
+        <mxCell id="log" value="src/log/
+one JSON line per event,
+with running counters" style="rounded=1;arcSize=10;html=1;fillColor=#19226D;strokeColor=none;fontColor=#ffffff;fontSize=16.8;fontStyle=1;whiteSpace=wrap;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="940" y="300" width="250" height="76" as="geometry" /></mxCell>
+        <mxCell id="e3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#19226D;" edge="1" parent="1" source="cfg" target="main"><mxGeometry relative="1" as="geometry"></mxGeometry></mxCell>
+        <mxCell id="e4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#19226D;" edge="1" parent="1" source="net" target="seam"><mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="165" y="290" /><mxPoint x="165" y="250" /><mxPoint x="300" y="250" /><mxPoint x="300" y="148" /></Array></mxGeometry></mxCell>
+        <mxCell id="e5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#19226D;" edge="1" parent="1" source="seam" target="stub"><mxGeometry relative="1" as="geometry"></mxGeometry></mxCell>
+        <mxCell id="e6" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#19226D;" edge="1" parent="1" source="stub" target="pipe"><mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="590" y="238" /><mxPoint x="590" y="148" /></Array></mxGeometry></mxCell>
+        <mxCell id="e7" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#19226D;" edge="1" parent="1" source="codec" target="pipe"><mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="620" y="338" /><mxPoint x="620" y="172" /></Array></mxGeometry></mxCell>
+        <mxCell id="e8" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#19226D;" edge="1" parent="1" source="pipe" target="fwd"><mxGeometry relative="1" as="geometry"></mxGeometry></mxCell>
+        <mxCell id="e9" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#19226D;" edge="1" parent="1" source="pipe" target="log"><mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="910" y="148" /><mxPoint x="910" y="338" /></Array></mxGeometry></mxCell>
+        <mxCell id="e10" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#19226D;" edge="1" parent="1" source="r2b" target="fwd"><mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="620" y="434" /><mxPoint x="620" y="245" /></Array></mxGeometry></mxCell>
+        <mxCell id="n11" value="Two containment rules define the design::
+no module other than src/net/ may include a socket header, and the
+check is enforced on every push; and the radio interface mirrors the
+production modem's API, so replacing the simulation changes nothing
+above it. The link to the ADA node is deliberately outside that
+interface: it stays UDP on production hardware." style="rounded=1;arcSize=8;html=1;fillColor=#f2f4f9;strokeColor=#e3e5ea;fontColor=#3d3d46;fontSize=15.4;align=left;whiteSpace=wrap;verticalAlign=top;spacing=8;" vertex="1" parent="1"><mxGeometry x="40" y="500" width="560" height="138" as="geometry" /></mxCell>
+        <mxCell id="n12" value="Responsibility split::
+data — configuration, the message bindings, the event log;
+logic — the four pipeline stages and the modem state machine;
+control — main.cpp and the adapter, which mediate between the
+transport edge and the pipeline.
+There is no user interface: the event and capture streams are it." style="rounded=1;arcSize=8;html=1;fillColor=#f2f4f9;strokeColor=#e3e5ea;fontColor=#3d3d46;fontSize=15.4;align=left;whiteSpace=wrap;verticalAlign=top;spacing=8;" vertex="1" parent="1"><mxGeometry x="640" y="500" width="520" height="138" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

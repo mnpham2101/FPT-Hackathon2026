@@ -1,19 +1,42 @@
-# Phase 0 Linux verification (subtask 1.0.7.2) - the project's Linux build/test path while the
-# dev host has no Docker/WSL.
+# The six lanes that originate in Phase 0 (subtask 1.0.7.2 and the group 0.2/0.4/0.8 lanes) - the
+# project's Linux build/test path while the dev host has no Docker/WSL. Live, and running on every
+# push: this file is the Phase 0 half of a deliberate two-file split, not an archive.
 #
-# Later lanes plug in here (do not pre-create empty jobs):
-# - group 0.2 (V2X_ECU): C++ CMake build+ctest landed with 1.0.2.1 (v2x-core-build below; ADA's
-#   landed with 3.0.4.1). Still pending: the docker-build jobs for both C++ nodes, added by those
-#   subtasks when their Dockerfiles land.
-# - registry push (5.0.8.2): the netcheck-image job below builds always and pushes only when the
-#   CARSKY_ZOT_API_KEY repo secret exists (never commit the credential). Host per the live O1
-#   probe 2026-07-31: registry.hackathon-2.carsky.io (registry.carsky.io answers 502).
+# WHERE A NEW JOB GOES. By the lane's ORIGIN phase, not by the date it is written:
+#   * a lane originating in Phase 0 -> here;
+#   * a lane originating in Phase 1 -> .github/workflows/phase1-ci.yml (v2x-comms-check,
+#     sp-codec-helper, v2x-ecu-image, scenario-player-image);
+#   * a lane originating in a later phase -> its own phase<N>-ci.yml.
+# The two files share the same `on:` triggers, so all ten jobs still run on every push and PR -
+# the split changes where a lane is maintained, never whether it executes.
+#
+# A PHASE 1 SUBTASK MAY STILL EDIT A JOB HERE, and two did - a lane belongs to the phase that
+# created it, not to the phase that last touched it:
+#   * 7.1.3.5 added the R7 transport-import gate step to `contracts-gate`;
+#   * 11.1.1.1 extended `v2x-core-build`'s cache key to hash V2X_ECU/cmake/vanetza-pin.cmake.
+# Both are carried below. The untouched Phase 0 original is commit 5e75920 if the exact state that
+# produced the run IDs cited in plans/phase0_tasks.md is ever needed.
+#
+# CROSS-FILE COUPLING, the one thing the split makes easy to break: `v2x-core-build` below and
+# `v2x-comms-check` in phase1-ci.yml share ONE actions/cache entry by using byte-identical key and
+# restore-keys. That still works - the Actions cache is scoped to the repository, not to a workflow
+# file - but a Vanetza re-pin must now update the key in BOTH files, and nothing local to either
+# file will tell you so. There is a third, deliberately separate key: sp-codec-helper's, which
+# caches a different build directory.
 name: phase0-ci
 
 on:
   push:
   pull_request:
     branches: [main]
+
+# Superseded runs are cancelled rather than left to finish - see the fuller note in phase1-ci.yml.
+# Cheaper here (netcheck-image is a ~40 s build), but it keeps the two files behaving alike and
+# stops a queue of redundant v2x-core-build compiles. Safe for the one-shot golden-vector publish
+# step below: it is guarded on contracts/golden-vectors/ being absent, which it no longer is.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   contracts-gate:
@@ -29,6 +52,13 @@ jobs:
             python contracts/check_sync.py
           else
             echo "contracts/check_sync.py not landed yet (subtask 1.0.7.1) - skipping"
+          fi
+      - name: R7 transport-import gate (lands with 7.1.3.5)
+        run: |
+          if [ -f V2X_ECU/tools/check_transport_imports.py ]; then
+            python V2X_ECU/tools/check_transport_imports.py
+          else
+            echo "V2X_ECU/tools/check_transport_imports.py not landed yet (subtask 7.1.3.5) - skipping"
           fi
 
   python-tests:
@@ -82,11 +112,13 @@ jobs:
       # The cache key carries the exact Vanetza pin, so a re-pin invalidates it. _deps holds the
       # clone, the FetchContent stamps and Vanetza's own object files, so a cache hit skips both
       # the clone and the ASN.1 recompile.
+      # SHARED WITH phase1-ci.yml's v2x-comms-check - key and restore-keys are byte-identical there
+      # on purpose, so the two lanes warm one tree. A re-pin must edit both files (see the header).
       - name: Cache Vanetza FetchContent deps
         uses: actions/cache@v4
         with:
           path: V2X_ECU/build/_deps
-          key: v2x-deps-${{ runner.os }}-vanetza-fb6c5510-json-v3.11.3-gtest-v1.14.0-${{ hashFiles('V2X_ECU/CMakeLists.txt') }}
+          key: v2x-deps-${{ runner.os }}-vanetza-fb6c5510-json-v3.11.3-gtest-v1.14.0-${{ hashFiles('V2X_ECU/CMakeLists.txt', 'V2X_ECU/cmake/vanetza-pin.cmake') }}
           restore-keys: |
             v2x-deps-${{ runner.os }}-vanetza-fb6c5510-json-v3.11.3-gtest-v1.14.0-
       - name: Configure
@@ -168,17 +200,44 @@ jobs:
         # pull-failure mode observed on the 2026-07-31 deploy after the multi-arch push).
         run: docker buildx build --platform "$PLATFORMS" --provenance=false --sbom=false -t "$IMAGE" tools/netcheck/
       - name: Push to CarSky Zot registry (M2+M4; skips until the secret exists)
+        id: push
         env:
           ZOT_KEY: ${{ secrets.CARSKY_ZOT_API_KEY }}
           # Registry account (not a secret) - verified live 2026-07-31: this user plus the
           # CARSKY_ZOT_API_KEY secret returns 200 on /v2/. Override with the
           # CARSKY_REGISTRY_USER repo variable if the account changes.
           REGISTRY_USER: ${{ vars.CARSKY_REGISTRY_USER || 'kis@hackathon.fpt.com' }}
+        # `pushed` is written exactly once, at the end, rather than in each branch: the value gates
+        # the verification step below, and one unconditional write removes any question of what a
+        # repeated key in $GITHUB_OUTPUT resolves to.
         run: |
+          PUSHED=false
+          DIGEST=""
           if [ -z "$ZOT_KEY" ]; then
             echo "::notice::CARSKY_ZOT_API_KEY secret not set - image built but NOT pushed (M4 pending)"
-            exit 0
+          else
+            echo "$ZOT_KEY" | docker login "$REGISTRY_HOST" -u "$REGISTRY_USER" --password-stdin
+            # --metadata-file: buildx writes the digest it actually pushed, which is what the
+            # verification below must check. Resolving the tag there instead would verify whatever
+            # :latest points to at that moment - a different run's image, if one raced us.
+            docker buildx build --platform "$PLATFORMS" --provenance=false --sbom=false -t "$REGISTRY_HOST/$IMAGE" --push --metadata-file "$RUNNER_TEMP/netcheck-push.json" tools/netcheck/
+            DIGEST=$(jq -r '."containerimage.digest" // empty' "$RUNNER_TEMP/netcheck-push.json")
+            echo "::notice::pushed $REGISTRY_HOST/$IMAGE ($PLATFORMS) digest=${DIGEST:-unreported}"
+            PUSHED=true
           fi
-          echo "$ZOT_KEY" | docker login "$REGISTRY_HOST" -u "$REGISTRY_USER" --password-stdin
-          docker buildx build --platform "$PLATFORMS" --provenance=false --sbom=false -t "$REGISTRY_HOST/$IMAGE" --push tools/netcheck/
-          echo "::notice::pushed $REGISTRY_HOST/$IMAGE ($PLATFORMS)"
+          {
+            echo "pushed=$PUSHED"
+            echo "digest=$DIGEST"
+          } >> "$GITHUB_OUTPUT"
+      # Proves the pushed tag is what a Container node can pull and start, rather than trusting the
+      # build log - the check that would have caught the 2026-07-31 Provisioning hang before the
+      # deploy. Gated on the push actually happening: with no secret there is nothing to verify.
+      - name: Verify the pushed image is pullable and single-platform arm64
+        if: steps.push.outputs.pushed == 'true'
+        uses: ./.github/actions/verify-arm64-image
+        with:
+          registry-host: ${{ env.REGISTRY_HOST }}
+          image: ${{ env.IMAGE }}
+          username: ${{ vars.CARSKY_REGISTRY_USER || 'kis@hackathon.fpt.com' }}
+          password: ${{ secrets.CARSKY_ZOT_API_KEY }}
+          digest: ${{ steps.push.outputs.digest }}

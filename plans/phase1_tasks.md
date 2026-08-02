@@ -23,24 +23,43 @@
 
 **Output (phase acceptance = the eight milestone boxes):**
 
-- [ ] Blueprint deploys to a Room; Deployment Viewer shows every node Running; the team APK launches on the AAOS node (R5) — *APK clause flagged, § Open items item 2.*
-- [ ] UDP reachability between every communicating pair; traffic captured on the bridge network (R6).
-- [ ] CI import check passes — no direct transport imports above the seam; telux parity notes + port plan committed (R7).
-- [ ] The full scripted call flow is acked and logged; each injected fault produces a defined, logged recovery (R8).
-- [ ] Golden-vector CPMs decode correctly; the malformed-input corpus is fully rejected with zero crashes (R9).
-- [ ] Different bench scenario configurations produce observably different message streams (R11).
-- [ ] R2 messages observed at the ADA ECU carrying decoded bench-scenario values, not constants (R2).
-- [ ] **Demo:** Wireshark capture of V2X PDUs correctly sent/received at the V2X ECU interface.
-- [ ] Scripted send/capture between bench and V2X ECU passes; V2X `[EVT]` logs demonstrate message receive (`rx_datagram`), event raised (`decode_ok` with decoded CpmContent JSON), and CPM deserialized to JSON (`r2_forwarded` with the R2 body) — per HLD D7.
+- [ ] Blueprint deploys to a Room; Deployment Viewer shows every node Running; the team APK launches on the AAOS node (R5) — **partly:** the image-build half is met — both node images build for `linux/arm64` (CI run 30698630956, `v2x-ecu-image` + `scenario-player-image` green), closing `5.1.5.4`/`5.1.7.3`/`5.1.8.2`. A build is not a deploy, so the box stays open on its own wording: it still needs the registry push (`5.1.10.1`), the blueprint deploy with the Deployment Viewer showing every node Running (`5.1.10.2`), and a ruling on the APK clause. *APK clause still unowned, § Open items item 2.*
+- [ ] UDP reachability between every communicating pair; traffic captured on the bridge network (R6). — **partly:** reachability closed by the Phase 0 smoke test (C1–C5); the capture pair `6.1.5.2`/`6.1.5.3` is syntax- and round-trip-verified, but **no capture has run on a bridge** — needs `6.1.10.5`.
+- [x] CI import check passes — no direct transport imports above the seam; telux parity notes + port plan committed (R7). — **closed** by `7.1.3.5` (gate green in CI run 30697863324, `contracts-gate`) + `7.1.3.6` (doc committed, signatures character-identical to the frozen seam).
+- [x] The full scripted call flow is acked and logged; each injected fault produces a defined, logged recovery (R8). — **closed at unit + loopback level:** `8.1.3.2`/`8.1.3.3` prove every ack, illegal-order rejection, and D2 recovery on CI (`v2x-core-build`, run 30697863324), and the `v2x-comms-check` lane runs the real `init → configure → subscribeRx` bring-up inside `v2x_ecu`. **Not proven:** fault injection against a deployed node — optional supplementary evidence in `2.1.10.3`.
+- [x] Golden-vector CPMs decode correctly; the malformed-input corpus is fully rejected with zero crashes (R9). — **closed:** golden decode and zero crashes are **CI-proven** (Phase 0 `1.0.2.5` + `9.1.4.4`; `9.1.4.5` drives the corpus through the **real** Vanetza codec, green in run 30697863324). *Malformed* is settled by the architecture ruling of 2026-08-01 (§ Open items item 8) to mean **structurally invalid** input, and the amended `9.1.4.5` corpus is categorised accordingly: 6 structurally-malformed cases dispositioned `Reject` (`empty`, `truncated-nominal`, `truncated-mid-object`, `bit-flipped-payload`, `random`, `oversized`) and 4 valid-but-different inputs dispositioned `ToleratedControl` — the 3 header edits, which profile §3 freezes as ignored on decode ([contracts/r1-cpm-profile.md](../contracts/r1-cpm-profile.md) §3), plus `trailing-garbage`. Those 4 are **correctly-tolerated negative controls, not failures**. **Closed 2026-08-01:** the predicted dispositions were confirmed empirically — `v2x-core-build` green in run **30700052056** on `31d0347` runs the amended suite, which asserts each case's exact disposition (no "either outcome passes"), so a green lane means all 6 `Reject` cases rejected and all 4 controls decoded as the profile mandates, with zero crashes and no `unexpected_exception:` in the log.
+- [ ] Different bench scenario configurations produce observably different message streams (R11). — **partly:** the model half is closed by `11.1.6.4` and the byte-level codec path by `11.1.7.2` (`sp-codec-helper` green in run 30697863324); the live config-swap half needs `11.1.10.4`.
+- [ ] R2 messages observed at the ADA ECU carrying decoded bench-scenario values, not constants (R2). — **partly:** the `v2x-comms-check` lane observes R2 JSON carrying real decoded golden-vector values, but at a **loopback UDP sink standing in for the ADA node**, not the deployed ADA ECU — that needs `2.1.10.3`.
+- [ ] **Demo:** Wireshark capture of V2X PDUs correctly sent/received at the V2X ECU interface. — **open:** needs `6.1.10.5` on a deployed Room.
+- [x] Scripted send/capture between bench and V2X ECU passes; V2X `[EVT]` logs demonstrate message receive (`rx_datagram`), event raised (`decode_ok` with decoded CpmContent JSON), and CPM deserialized to JSON (`r2_forwarded` with the R2 body) — per HLD D7. — **closed** by the `v2x-comms-check` lane in CI run 30697863324: ≥ 6 datagrams received and the full `rx_datagram` → `decode_ok` (CpmContent JSON) → `r2_forwarded` (R2 JSON) chain asserted, `v2x_ecu` exiting 0 on SIGTERM. Not vacuous: `check_v2x_log.py` discriminates — removing the `r2_forwarded` event fails at the forward link and stripping `decode_ok`'s `cpm` payload fails at the decode link (exit 1 each), while the intact chain exits 0.
 
 **Suggested branch (suggestion only — creation is the orchestrator/user's call):** `feat/phase1-comms-bringup` — one branch for the whole phase; implementation subtasks commit onto it. Docs-only subtasks (this plan file, `5.1.11.1`, group 1.10 evidence records) follow the repo convention of committing straight to `main`.
+
+**Phase 1 acceptance state 2026-08-01: 3 of the 9 boxes closed (R7, R8, D7), 5 partly closed (R5, R6, R9, R11, R2), 1 open (Demo).** Every unclosed clause now needs a live Room — § Remaining work.
+
+### Remaining work
+
+**40 of 44 subtasks are closed. The 4 below are all USER-MANUAL — nothing remaining is agent work, CI work, or new code.**
+
+Three CI runs verify everything else: **`30697863324` on `16b8674`** (8 lanes green, the phase's code), **`30698630956` on `7a02fb5`** (10 lanes green, adding both node-image lanes — both images build for `linux/arm64` and push), and **`30700052056` on `31d0347`** (10 lanes green, confirming the amended `9.1.4.5` dispositions — the last CI gap, now closed). `5.1.10.1` closed too, executed by the CI push step rather than [[car-sky]].
+
+| Subtask | Performed by | What it still needs |
+|---|---|---|
+| `5.1.10.2` | **user** (Nydus UI) | Confirm **per-node** `Running` badges + restart 0 in the Deployment Viewer — not the summary header, which read `Pending — 0/0 nodes ready` while traffic flowed normally. Node config per § Task Group 1.10 is already applied on `phase1_Minh_test-deploy`. |
+| `2.1.10.3` | **user** (Nydus UI) | Two leftovers only — the R2-at-ADA half is closed live: capture the `[EVT] stub_transition` bring-up sequence (prints once at node start, scrolled away), and run `tools/comms_check/check_v2x_log.py` in stream mode over a saved View Log export. |
+| `11.1.10.4` | **user** (Nydus UI) | Swap the bench `SCENARIO_CONFIG` to `c-out-of-range.yaml`, redeploy, and compare the two log sets against the `default.yaml` baseline in [phase1-comms-run.md](doc/phase1-comms-run.md). |
+| `6.1.10.5` | **user** (Nydus UI) | Save a View Log containing a `[PCAP-BEGIN]` block (the Room must have run at least one `CAPTURE_ROTATE_S` period), run `V2X_ECU/tools/extract_pcap.sh`, open the `.pcap` in Wireshark. |
+
+**Sequencing:** the last three all read the V2X node's log, so **one restart plus one sufficiently long log download serves all three**.
+
+**Standing hazard, not a residual:** all three image tags are mutable, so whichever branch pushes last wins the tag — identify a deployed image at deploy time, never from an old run log.
 
 ### Execution split legend
 
 | Label | Meaning |
 |---|---|
 | *agent* | implemented by a spawned implementation subagent (default) |
-| *car-sky* | executed by the [[car-sky]] agent (deploy preflight → build/push/deploy/verify); planner keeps the ID and done-tracking. **Not spawnable this session — planned and tracked here, execution deferred; never blocks the code groups** |
+| *car-sky* | planned for the [[car-sky]] agent (deploy preflight → build/push/deploy/verify); planner keeps the ID and done-tracking. **The agent was never spawnable; the phase's one *car-sky* subtask (`5.1.10.1`) was executed by the CI push step instead — § Open items item 4** |
 | *USER-MANUAL* | Nydus UI steps performed by the user; the plan tracks them; the evidence-record commit is made by the orchestrating session after the user confirms |
 
 **Implementation-subagent specification** (inherited by every *agent* subtask): general-purpose agent; tools Read/Grep/Glob/Write/Edit/Bash; writes ONLY inside the node folder its subtask names (plus its own `**Status:**` line in this file and, where the subtask explicitly says so, `contracts/`, `tools/netcheck/`, `tools/comms_check/`, or `.github/workflows/`); reads the target folder's `doc/` first; inherits § Subtask discipline as its definition of done; makes the atomic commit itself with the exact commit message from the brief plus trailer `Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>`; never pushes — the orchestrator pushes and watches CI. Language best practice is part of done: C++17 core guidelines / RAII / no raw owning pointers; Python type hints + dataclasses + no globals; tests deterministic.
@@ -73,7 +92,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 > One codec source, two build contexts (SP HLD D2). The fragment is the single home of the Vanetza tag + ASN.1-only option set; the manifest extension is the drift gate over the new copies and runs **sequential-last** like Phase 0's `1.0.7.1`.
 
-### [ ] `11.1.1.1` — Extract `contracts/vanetza-pin.cmake` and switch V2X_ECU onto it *(agent)*
+### [x] `11.1.1.1` — Extract `contracts/vanetza-pin.cmake` and switch V2X_ECU onto it *(agent)*
 
 **Objective:** one shared Vanetza pin fragment, master at `contracts/vanetza-pin.cmake`, consumed by `V2X_ECU/CMakeLists.txt` via the byte-synced copy `V2X_ECU/cmake/vanetza-pin.cmake`.
 
@@ -87,7 +106,9 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none — starts immediately. **Commit:** `[11.1.1.1] chore: extract shared vanetza-pin.cmake fragment and switch V2X_ECU to it`
 
-### [ ] `11.1.1.2` — Extend `contracts/sync-manifest.json` with the D2 entries *(agent — sequential-last of the contract work)*
+**Status:** implemented 2026-08-01 — cmp identical (`contracts/vanetza-pin.cmake` ≡ `V2X_ECU/cmake/vanetza-pin.cmake`), extraction lossless by diff (declare block + 5 forced options moved verbatim, replaced by one `include()`), cache key hashes both files, check_sync + import gate exit 0; CI verification pending wave push. Closed: CI run 30697863324 green (`v2x-core-build`).
+
+### [x] `11.1.1.2` — Extend `contracts/sync-manifest.json` with the D2 entries *(agent — sequential-last of the contract work)*
 
 **Objective:** the sync gate covers every Phase 1 copy: pin fragment, codec-seam sources, and the Scenario Player `.uper` fixtures.
 
@@ -102,13 +123,15 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 11.1.1.1 + 11.1.7.1 + 11.1.7.2 (all new copies must exist first — the gate fails on missing targets). **Commit:** `[11.1.1.2] chore: extend sync manifest with codec-source and uper syncs`
 
+**Status:** done 2026-08-01 — manifest extended to 47 copies (pin fragment ×2, codec-seam sources ×3, golden `.uper` ×6); `check_sync.py` exits 0 on the committed tree and exit 1 naming the pair when a new text copy and a new binary copy are each corrupted unstaged (both restored, gate re-green); no script change needed. Closed: CI run 30697863324 green (`contracts-gate`) over all 47 copies.
+
 ---
 
 ## Task Group 1.2 — V2X ECU foundation: config, socket, event log, forwarder (serves R8, R7, R18, R2)
 
 > The transport-blind foundation modules of [V2X HLD §4](../V2X_ECU/doc/phase1-v2x-ecu-comms-hld.md#4-folder-structure-map--file-location-designations). All paths inside `V2X_ECU/`; build/test = V2X row of § Per-node build commands (CI `v2x-core-build`). Test-file paths here beyond the HLD's list are planner-designated per the HLD's `tests/<module>/` pattern (§ Open items item 5).
 
-### [ ] `8.1.2.1` — Env config loader `src/config/config.{hpp,cpp}` *(agent)*
+### [x] `8.1.2.1` — Env config loader `src/config/config.{hpp,cpp}` *(agent)*
 
 **Objective:** the app's **only env reader** (HLD §4): load + validate the §6 app-consumed env set into an immutable `Config` struct.
 
@@ -122,7 +145,9 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none. **Commit:** `[8.1.2.1] feat: add V2X ECU env config loader`
 
-### [ ] `7.1.2.2` — Sole socket holder `src/net/udp_socket.{hpp,cpp}` *(agent)*
+**Status:** implemented 2026-08-01 — `src/config/config.{hpp,cpp}` + `tests/config/test_config.cpp` added, `v2x_config` static lib + `v2x_config_test` registered in `V2X_ECU/CMakeLists.txt`, transport-import and contract-sync gates exit 0; CI verification pending wave push. Closed: CI run 30697863324 green (`v2x-core-build`).
+
+### [x] `7.1.2.2` — Sole socket holder `src/net/udp_socket.{hpp,cpp}` *(agent)*
 
 **Objective:** `net::UdpSocket` — the **only** V2X_ECU code allowed to include socket headers (HLD D1).
 
@@ -132,7 +157,9 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none — parallel with 8.1.2.1. **Commit:** `[7.1.2.2] feat: add UdpSocket sole transport holder`
 
-### [ ] `18.1.2.3` — R18 JSONL event log `src/log/event_log.{hpp,cpp}` *(agent)*
+**Status:** implemented 2026-08-01 — `src/net/udp_socket.{hpp,cpp}` + `tests/net/test_udp_socket.cpp` added (`v2x_net` static lib + `v2x_udp_socket_test` registered), RAII move-only fd with socket includes confined to the .cpp (header POSIX-free), transport-import and contract-sync gates exit 0; CI verification pending wave push. Closed: CI run 30697863324 green (`v2x-core-build`).
+
+### [x] `18.1.2.3` — R18 JSONL event log `src/log/event_log.{hpp,cpp}` *(agent)*
 
 **Objective:** the R18 evidence-stream writer (HLD D4) — one JSONL line per event, `[EVT]`-prefixed.
 
@@ -147,7 +174,9 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none — parallel with 8.1.2.1/7.1.2.2. **Commit:** `[18.1.2.3] feat: add R18 JSONL event log writer`
 
-### [ ] `2.1.2.4` — ADA forwarder `src/forward/ada_forwarder.{hpp,cpp}` *(agent)*
+**Status:** implemented 2026-08-01 — `src/log/event_log.{hpp,cpp}` + `tests/log/test_event_log.cpp` added (`v2x_event_log` static lib + `v2x_event_log_test` registered); frozen field names `event`/`mono_ms`/`epoch_ms`/`counters` (+ `cpm` on decode_ok, `r2` on r2_forwarded) recorded in the header comment; transport-import and contract-sync gates exit 0; CI verification pending wave push. Closed: CI run 30697863324 green (`v2x-core-build`).
+
+### [x] `2.1.2.4` — ADA forwarder `src/forward/ada_forwarder.{hpp,cpp}` *(agent)*
 
 **Objective:** the intra-ego R2 edge (HLD D1 — deliberately **not** under the R7 seam): serialize the Phase 0 `v2x::contracts::R2Message` to JSON and UDP-send to `ADA_ECU_HOST:ADA_ECU_PORT`.
 
@@ -157,13 +186,15 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 7.1.2.2. **Commit:** `[2.1.2.4] feat: add ADA forwarder for R2 JSON`
 
+**Status:** implemented 2026-08-01 — `src/forward/ada_forwarder.{hpp,cpp}` + `tests/forward/test_ada_forwarder.cpp` added (`v2x_forward` static lib + `v2x_ada_forwarder_test` registered); consumes `net::UdpSocket` only, never-throws `send()` with bool result, one compact-JSON datagram per R2 message; transport-import and contract-sync gates exit 0; CI verification pending wave push. Closed: CI run 30697863324 green (`v2x-core-build`).
+
 ---
 
 ## Task Group 1.3 — R7 adapter seam + R8 modem stub (serves R7, R8)
 
 > The seam-and-stub pair of HLD D1/D2. The seam mirrors the telux radio surface only; `send` is declared and returns `NotSupported` — R10-deferred, nothing calls it.
 
-### [ ] `7.1.3.1` — Freeze the seam: `src/adapter/i_radio_adapter.hpp` *(agent)*
+### [x] `7.1.3.1` — Freeze the seam: `src/adapter/i_radio_adapter.hpp` *(agent)*
 
 **Objective:** the frozen R7 interface — `init() · configure(RadioConfig) · subscribeRx(RxCallback) · send(bytes)` with typed result codes (HLD D2).
 
@@ -173,7 +204,9 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none. **Commit:** `[7.1.3.1] feat: freeze IRadioAdapter seam interface`
 
-### [ ] `8.1.3.2` — Modem stub FSM happy path `src/stub/modem_stub.{hpp,cpp}` *(agent)*
+**Status:** implemented 2026-08-01 — frozen header-only seam `src/adapter/i_radio_adapter.hpp` (`RadioConfig`/`RxCallback`/`RadioResult` + pure-virtual `IRadioAdapter`, `v2x_adapter_seam` INTERFACE target) with fake-impl test `tests/adapter/test_i_radio_adapter.cpp` registered as `v2x_i_radio_adapter_test`; transport-import and contract-sync gates both exit 0; CI verification pending wave push. Closed: CI run 30697863324 green (`v2x-core-build`).
+
+### [x] `8.1.3.2` — Modem stub FSM happy path `src/stub/modem_stub.{hpp,cpp}` *(agent)*
 
 **Objective:** the R8 FSM `idle → initialized → configured → rx-subscribed`, acking each call (HLD D2) — happy path only.
 
@@ -183,7 +216,9 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 7.1.3.1 (uses `RadioConfig` + result codes). **Commit:** `[8.1.3.2] feat: implement modem stub FSM happy path`
 
-### [ ] `8.1.3.3` — Fault injection + defined recoveries in the stub *(agent)*
+**Status:** implemented 2026-08-01 — `v2x::stub::ModemStub` (`src/stub/modem_stub.{hpp,cpp}`, `v2x_stub` lib) with `tests/stub/test_modem_stub_fsm.cpp` (`v2x_modem_stub_fsm_test`) covering the happy path acked in order plus all 9 illegal-order rejections (failure code, state unchanged, observer notified); transport-import and contract-sync gates both exit 0; CI verification pending wave push. Closed: CI run 30697863324 green (`v2x-core-build`).
+
+### [x] `8.1.3.3` — Fault injection + defined recoveries in the stub *(agent)*
 
 **Objective:** config-driven fault injection with the D2 recovery table — each injected fault produces a defined, observable recovery.
 
@@ -197,7 +232,9 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 8.1.3.2. **Commit:** `[8.1.3.3] feat: add fault injection and recovery to modem stub`
 
-### [ ] `7.1.3.4` — Seam implementation `src/adapter/stub_radio_adapter.{hpp,cpp}` *(agent)*
+**Status:** implemented 2026-08-01 — D2 recovery table in `src/stub/modem_stub.{hpp,cpp}` with the `EventKind` observer surface (Ack/Reject/FaultInjected/Recovery), injectable `Sleeper`, and `fault_fail_count` knob; `test_modem_stub_fsm.cpp` extended with all four plans, retry-then-succeed, retry-exhaustion terminal path, and unbounded resubscribe after drop; transport-import and contract-sync gates both exit 0; CI verification pending wave push. Closed: CI run 30697863324 green (`v2x-core-build`).
+
+### [x] `7.1.3.4` — Seam implementation `src/adapter/stub_radio_adapter.{hpp,cpp}` *(agent)*
 
 **Objective:** `StubRadioAdapter : IRadioAdapter` over the modem stub, with the live Rx path: on `rx-subscribed` the stub side opens the `LISTEN_PORT` UDP socket (via `net::UdpSocket`) on a dedicated Rx thread and delivers each datagram to the subscribed callback (HLD D2).
 
@@ -207,7 +244,9 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 7.1.3.1 + 8.1.3.3 + 7.1.2.2. **Commit:** `[7.1.3.4] feat: implement StubRadioAdapter over the modem stub`
 
-### [ ] `7.1.3.5` — R7 transport-import gate `tools/check_transport_imports.py` + CI step *(agent)*
+**Status:** implemented 2026-08-01 — `src/adapter/stub_radio_adapter.{hpp,cpp}` implements the frozen seam by delegating `init`/`configure`/`subscribeRx` to `ModemStub` verbatim (no adapter-side retry) and adds the live Rx path: one RAII-owned thread + `std::optional<net::UdpSocket>` bound to `stub.config().rx_port`, shutdown by atomic flag + join within the 200 ms `kRxPollTimeout` poll (no detach, no self-pipe), throwing consumers caught and logged, `send` → `NotSupported` with one logged line; `tests/adapter/test_stub_radio_adapter.cpp` covers loopback byte-identical delivery, repeat-subscribe rejection, throwing callback survival, prompt/idempotent `stop()` + port rebindable after destruction, and `InitFail`/`ConfigureReject` passthrough with no thread started; new `v2x_adapter` target (+`find_package(Threads)`); `check_transport_imports.py` and `contracts/check_sync.py` both exit 0; CI verification pending wave push. Closed: CI run 30697863324 green (`v2x-core-build`).
+
+### [x] `7.1.3.5` — R7 transport-import gate `tools/check_transport_imports.py` + CI step *(agent)*
 
 **Objective:** the R7 acceptance check, made permanent (HLD D1): no direct transport imports above the seam.
 
@@ -220,7 +259,9 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none (passes trivially before 7.1.2.2 lands; binding once it does). **Commit:** `[7.1.3.5] feat: add transport-import CI gate`
 
-### [ ] `7.1.3.6` — Telux parity notes + port plan `doc/telux-parity-and-port-plan.md` *(agent)*
+**Status:** implemented 2026-08-01 — script exits 0 from repo root and an unrelated cwd; probes behaved (`<sys/socket.h>` include → exit 1 naming file:line, bare `asn1::Cpm` → exit 1, `vanetza::asn1::r2::Cpm` → exit 0), probe deleted and tree back to exit 0; guarded step added to CI `contracts-gate`; CI verification pending wave push. Closed: CI run 30697863324 green (`contracts-gate`, import-gate step).
+
+### [x] `7.1.3.6` — Telux parity notes + port plan `doc/telux-parity-and-port-plan.md` *(agent)*
 
 **Objective:** the committed R7 doc deliverable (HLD §4/§10): why the seam's names/call order mirror telux, and what porting to real modem hardware changes.
 
@@ -230,13 +271,15 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 7.1.3.1. **Commit:** `[7.1.3.6] docs: author telux parity notes and port plan`
 
+**Status:** done 2026-08-01 — doc committed; all four seam signatures verified character-identical to the frozen `i_radio_adapter.hpp`, `send` row marked R10-deferred; telux symbol names marked unconfirmed pending SDK headers (no API invented); links resolve. Closed — doc-only acceptance met (`64abd97`).
+
 ---
 
 ## Task Group 1.4 — R9 Rx pipeline: decode → validate → dedupe → forward (serves R9, with the R2 build stage)
 
 > HLD D3 — four stages, each a unit-testable class; the pipeline runs synchronously on the Rx thread and is transport-blind (emits R2 via an injected sink callback; main wires the forwarder). Field/unit authority for the derivations: `contracts/r1-cpm-profile.md` (F1/F6/F7/F9) + the node-local synced schemas `V2X_ECU/contracts/r1-cpm-content.schema.json` and `V2X_ECU/contracts/r2-v2x-object.schema.json`.
 
-### [ ] `9.1.4.1` — Profile validator `src/pipeline/validator.{hpp,cpp}` *(agent)*
+### [x] `9.1.4.1` — Profile validator `src/pipeline/validator.{hpp,cpp}` *(agent)*
 
 **Objective:** stage 2 — mandatory-field presence + profile-range validation of a decoded `CpmContent`, reject + count by reason.
 
@@ -246,7 +289,9 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none (Phase 0 seam suffices). **Commit:** `[9.1.4.1] feat: implement CPM profile validator`
 
-### [ ] `9.1.4.2` — Deduper `src/pipeline/deduper.{hpp,cpp}` *(agent)*
+**Status:** implemented 2026-08-01 — 10 reject reasons mirroring the schema bounds as named constants (stationId type-tight, out-of-range unconstructible post-decode), F9 −2048 rejected as `MdtF9Range`, both gates (`check_transport_imports.py`, `check_sync.py`) exit 0; CI verification pending wave push. Closed: CI run 30697863324 green (`v2x-core-build`).
+
+### [x] `9.1.4.2` — Deduper `src/pipeline/deduper.{hpp,cpp}` *(agent)*
 
 **Objective:** stage 3 — duplicate drop over key `(stationId, objectId, referenceTime + measurementDeltaTime)` within a sliding window.
 
@@ -256,7 +301,9 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none — parallel with 9.1.4.1. **Commit:** `[9.1.4.2] feat: implement Rx deduper`
 
-### [ ] `9.1.4.3` — R2 builder `src/pipeline/r2_builder.{hpp,cpp}` *(agent)*
+**Status:** implemented 2026-08-01 — window + clock injected (no literal window outside tests; default stays in config.cpp), signed-sum key semantics tested (refTime 1000+5 collides with 995+10), pruning bounded via once-per-window sweep asserted by `size()`, transport-import + contract-sync gates exit 0; CI verification pending wave push. Closed: CI run 30697863324 green (`v2x-core-build`).
+
+### [x] `9.1.4.3` — R2 builder `src/pipeline/r2_builder.{hpp,cpp}` *(agent)*
 
 **Objective:** stage 4a — map `CpmContent` (wire-native integers) → the Phase 0 `v2x::contracts::R2Message` (SI), owning **every** derivation the codec seam excludes (HLD D3).
 
@@ -272,7 +319,9 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none — parallel with 9.1.4.1/9.1.4.2 (uses only Phase 0 seam + binding). **Commit:** `[9.1.4.3] feat: implement R2 builder with F1/F6/F7 derivations`
 
-### [ ] `9.1.4.4` — Pipeline composition `src/pipeline/rx_pipeline.{hpp,cpp}` *(agent)*
+**Status:** implemented 2026-08-01 — F1 (per-station equirectangular speed, null until 2nd msg, Δt ≤ 0 guard) / F6 (101→null, /100 clamped, coord confidence ×0.01 m) / F7 (exact hypot, no rounding) per the profile; nominal golden → field-by-field cross-check against `samples/r2-object.json` in `v2x_r2_builder_test`; transport-import + contract-sync gates exit 0; CI verification pending wave push. Closed: CI run 30697863324 green (`v2x-core-build`).
+
+### [x] `9.1.4.4` — Pipeline composition `src/pipeline/rx_pipeline.{hpp,cpp}` *(agent)*
 
 **Objective:** the four-stage synchronous pipeline: datagram bytes → `ICpmCodec::decode` → validator → deduper → r2_builder → injected R2 sink callback; every stage outcome emitted to `event_log`.
 
@@ -282,7 +331,9 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 9.1.4.1 + 9.1.4.2 + 9.1.4.3 + 18.1.2.3. **Commit:** `[9.1.4.4] feat: compose the four-stage Rx pipeline`
 
-### [ ] `9.1.4.5` — Malformed-input corpus + rejection test *(agent)*
+**Status:** implemented 2026-08-01 — `noexcept` four-stage composition (`onDatagram`) over caller-owned injected collaborators + `R2Sink`, whole-body `catch(...)` with documented single-reject attribution, counting left to `EventLog`; `v2x_rx_pipeline_test` drives a fake `ICpmCodec` through all 6 golden contents (F6/F7 spot checks), decode/validate short-circuits, in-window duplicate, and a throwing sink; transport-import + contract-sync gates exit 0; CI verification pending wave push. Test uses a fake `ICpmCodec` per coordinator amendment; real-codec proof lands with 9.1.4.5 + the comms-check lane. Closed: CI run 30697863324 green (`v2x-core-build`).
+
+### [x] `9.1.4.5` — Malformed-input corpus + rejection test *(agent)*
 
 **Objective:** the R9 acceptance corpus: `tests/fixtures/malformed/` fully rejected, zero crashes, counters correct.
 
@@ -292,11 +343,13 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 9.1.4.4. **Commit:** `[9.1.4.5] test: reject the malformed-input corpus with zero crashes`
 
+**Status:** implemented 2026-08-01 — 7-case corpus committed as binary fixtures (`*.uper binary` `.gitattributes`) with byte-level provenance + regeneration recipe in the test comments; `v2x_rx_pipeline_malformed_test` drives the **real** `VanetzaCpmCodec` through all 7 in a parameterized suite plus a whole-corpus/not-wedged run (golden `nominal.uper` still decodes afterwards) and asserts no `unexpected_exception:` attribution anywhere; transport-import + contract-sync gates exit 0; CI verification pending wave push. **Deviation flagged:** the 3 header-edit cases (`wrong-message-id`, `wrong-protocol-version`, `r1-variant`) are **not** rejectable — profile §3 freezes `protocolVersion`/`messageId` as *ignored on decode*, every octet value is in ASN.1 range, and `CpmContent` carries no header field for the validator; they are asserted as profile-tolerated negative controls (4 rejected / 3 forwarded). Closing that gap needs a header-conformance check in the R1 codec + a profile §3 re-freeze — out of this subtask's scope. Closed on its stated acceptance: CI run 30697863324 green (`v2x-core-build`) — the real-Vanetza corpus suite passes with zero crashes. The 4-reject/3-tolerated deviation above is **not** closed by it and is carried as a contract-level finding for the architecture owner in § Open items item 8; the R9 milestone box stays partly closed. **Amended 2026-08-01 per the architecture owner's ruling (§ Open items item 8):** the deviation is adjudicated a **mis-categorisation in the corpus, not a defect in R9's wording** — no frozen-contract change, no requirement re-wording. The three header-edit fixtures are kept but **relabelled** explicit *profile-tolerated negative controls*, asserting the behaviour profile §3 mandates (they decode, they forward, and their `CpmContent` is identical to the golden nominal — the ignore-on-decode rule itself under test). Three fixtures added for the genuinely-structural class: `truncated-mid-object.uper` (nominal[0:52] — cut inside `velocity.yVelocity.value`, bits 414–428, with the PerceivedObject presence bitmap already committing to velocity *and* classification and bits 436–452 absent entirely), `bit-flipped-payload.uper` (octet 36 inverted, `0x80` → `0x7f` — bits 288–295 lie strictly inside the bits 255–300 span, which holds *only* structural elements: the container identifier, the `containerData` CHOICE index, `numberOfPerceivedObjects`, the `perceivedObjects` length determinant and the PerceivedObject OPTIONAL-presence bitmap, with no plain value INTEGER to absorb the flip as a legal-but-different value), and `trailing-garbage.uper` (a complete nominal followed by `de ad be ef de ad be ef`, predicted **tolerated** rather than rejected — `uper_decode_complete` never checks unconsumed trailing octets, and the verified bit map shows nominal.uper *already* carries a whole spare zero octet past its last content bit at 452 and still decodes green). The suite now carries a per-case **`Disposition` table** (`kReject` / `kToleratedControl`) as its single source of truth: it asserts that exact disposition with **no either-outcome branch**, derives the whole-corpus counter totals from the table (`kRejectCases` / `kToleratedCases`, `static_assert`-checked) so a relabel cannot desync them, and prints a relabel-ready diagnostic on mismatch (case, expected disposition, decoded?/forwarded?, which reject counter fired, the reject `detail`, the full `[EVT]` log). Corpus is now **10 cases: 6 `Reject` / 4 `ToleratedControl`**, with a measured byte-level UPER bit map of `nominal.uper` and each new fixture's sha256 recorded in the test comments so every case is regenerable from them alone. **HONEST LIMIT — predicted, not measured:** the authoring host has no C++ toolchain and convention F3 bans an ASN.1 decoder in Python, so the three new dispositions are *reasoned predictions that the test asserts strictly*; the first `v2x-core-build` run is the empirical oracle. If a prediction is wrong the lane goes RED and that one case gets relabelled in a follow-up commit — the intended loop, not a failure of the design. Gates re-run on the amendment: `contracts/check_sync.py` exit 0 (47 copies; the malformed corpus is correctly *absent* from the sync manifest — local fixtures per HLD §4) and `V2X_ECU/tools/check_transport_imports.py` exit 0; `Scenario_Player` pytest unchanged at 116 passed / 7 skipped (the bench is untouched).
+
 ---
 
 ## Task Group 1.5 — V2X app assembly + capture + image (serves R8, R6, R5)
 
-### [ ] `8.1.5.1` — Composition root `src/main.cpp` + `v2x_ecu` executable *(agent)*
+### [x] `8.1.5.1` — Composition root `src/main.cpp` + `v2x_ecu` executable *(agent)*
 
 **Objective:** assemble Config → EventLog → stub/adapter → pipeline → forwarder and run the scripted call flow (HLD §4/§8: main is controller only — no business logic).
 
@@ -306,7 +359,9 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 8.1.2.1 + 2.1.2.4 + 7.1.3.4 + 9.1.4.4. **Commit:** `[8.1.5.1] feat: add v2x_ecu composition root`
 
-### [ ] `6.1.5.2` — Capture script `capture.sh` *(agent)*
+**Status:** implemented 2026-08-01 — full chain wired (Config→EventLog→codec→stages→pipeline→forwarder sink, stub observer→D4 `stub_transition`/`fault_injected`/`recovery`), documented exit codes 0/2/3/4/5, SIGTERM/SIGINT stop → `adapter.stop()`; both gates exit 0 (`check_transport_imports` 25 files clean, `check_sync` 36 copies identical); CI verification pending wave push. Closed: CI run 30697863324 green — `v2x-core-build` builds and links `v2x_ecu`, and the `v2x-comms-check` lane runs the binary end-to-end (exits 0 on SIGTERM).
+
+### [x] `6.1.5.2` — Capture script `capture.sh` *(agent)*
 
 **Objective:** the D5 in-container capture: live `[CAP]` text + rotating pcap + base64 export through View Log.
 
@@ -316,7 +371,9 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none. **Commit:** `[6.1.5.2] feat: add tcpdump capture script with pcap export`
 
-### [ ] `6.1.5.3` — Host-side extraction `tools/extract_pcap.sh` *(agent)*
+**Status:** implemented 2026-08-01 — sh -n + bash -n clean; --export-one round-trip base64-decodes byte-identically (the format 6.1.5.3 parses); LF enforced via .gitattributes, staged blob CR-free; runtime tcpdump evidence lands at 6.1.10.5. Closed — the script's `sh -n`/`bash -n` + marker-round-trip acceptance is met; on-platform tcpdump evidence stays with 6.1.10.5.
+
+### [x] `6.1.5.3` — Host-side extraction `tools/extract_pcap.sh` *(agent)*
 
 **Objective:** the "automatic tool" retrieval path of D5: saved View Log in → `.pcap` files out ([usage contract](../requirements/car-sky-guide/traffic-capture-wireshark.md)).
 
@@ -326,7 +383,9 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none (marker format is HLD-frozen; logically pairs with 6.1.5.2). **Commit:** `[6.1.5.3] feat: add host-side pcap extraction script`
 
-### [ ] `5.1.5.4` — `V2X_ECU/Dockerfile` + `entrypoint.sh` *(agent)*
+**Status:** implemented 2026-08-01 — bash -n clean; real round-trip through the landed capture.sh --export-one producer extracted 2 blocks byte-identically (cmp clean, binary bytes incl. CR/LF/NUL); no-block exit 1, truncated/corrupt block non-zero with partial extraction, path-escape name sanitized, CRLF-saved log handled. Closed — the script's `bash -n` + byte-identical round-trip acceptance is met.
+
+### [x] `5.1.5.4` — `V2X_ECU/Dockerfile` + `entrypoint.sh` *(agent)*
 
 **Objective:** the deployable `v2x-ecu:latest` image (HLD §9): multi-stage — cmake build stage → slim runtime with tcpdump.
 
@@ -340,13 +399,15 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 8.1.5.1 + 6.1.5.2 + 11.1.1.1 + 5.1.8.2 (lane must exist to verify). **Commit:** `[5.1.5.4] feat: add V2X ECU multi-stage Dockerfile and entrypoint`
 
+**Status:** implemented 2026-08-01 — entrypoint `sh -n`/`bash -n` clean, LF + exec bit set; Dockerfile self-reviewed (multi-stage, `BUILD_SHARED_LIBS=ON` + staged `libvanetza_asn1*.so` with a fail-loud guard, tcpdump/coreutils runtime, no ENV shadowing HLD §6, target-scoped build excludes tests). No local Docker — image build verification lands with the 5.1.8.2 CI lane (Wave D). **Open** — acceptance is the `v2x-ecu-image` lane, which has never run: no `v2x-ecu` image has ever been built (§ Remaining work). **Closed: CI run 30698630956 — the `v2x-ecu-image` lane is green,** so the stated acceptance ("CI `v2x-ecu-image` lane green") is met: `docker buildx build --platform linux/arm64` of `V2X_ECU/` completed inside the timeout, so the multi-stage image builds for real — Vanetza compiled under QEMU aarch64 emulation, `libvanetza_asn1*.so` staged, tcpdump runtime.
+
 ---
 
 ## Task Group 1.6 — Scenario Player application (serves R11)
 
 > All paths from [SP HLD §3](../Scenario_Player/doc/phase1-scenario-player-hld.md#3-folder-structure-map--file-location-designations); build/test = Scenario_Player Python row of § Per-node build commands (local pytest **and** CI `python-tests`). Wire-native conversion authority: the callflow note §4.2 mapping ([scenario-player-v2x-callflow-messages.md](../Scenario_Player/doc/research_notes/scenario-player-v2x-callflow-messages.md)); content dataclass: `Scenario_Player/player/contracts/cpm_content.py` (Phase 0). Test paths beyond the HLD's list are planner-designated per the folder's `tests/test_<module>.py` convention (§ Open items item 5).
 
-### [ ] `11.1.6.1` — Config loader `player/config.py` + runtime manifest *(agent)*
+### [x] `11.1.6.1` — Config loader `player/config.py` + runtime manifest *(agent)*
 
 **Objective:** env + scenario-YAML loading/validation — the bench's **only env reader** (SP HLD D3/§5).
 
@@ -361,7 +422,11 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none. **Commit:** `[11.1.6.1] feat: add scenario config loader and validation`
 
-### [ ] `11.1.6.2` — Committed scenario variants `scenarios/*.yaml` *(agent)*
+**Status:** done 2026-08-01 — pytest 69 passed locally (config loader + env defaults + rejections); requirements.txt created with -r include from dev. Closed: CI run 30697863324 green (`python-tests`).
+
+**Follow-up (not this subtask's scope, do not reopen it):** [m1-run-timing-and-event-triggering.md §6.1](../requirements/m1-run-timing-and-event-triggering.md) adds two YAML keys this loader will have to validate — `start_delay_s` (default 0.0; the grace before the first CPM, set above the AAOS boot-to-listener time for demo runs) and `reference_time_epoch` (default `its`; §6.5(b)). Neither is planned in any phase — § Open items items 9 and 10.
+
+### [x] `11.1.6.2` — Committed scenario variants `scenarios/*.yaml` *(agent)*
 
 **Objective:** the two R11-acceptance scenario files (SP HLD D3) — observably different by construction.
 
@@ -371,7 +436,9 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 11.1.6.1. **Commit:** `[11.1.6.2] feat: add the two committed scenario variants`
 
-### [ ] `11.1.6.3` — Kinematic model `player/scenario.py` *(agent)*
+**Status:** done 2026-08-01 — pytest 72 passed locally; default 60→~10 m approach, c-out-of-range static at 60.0 m > 35 m exit gate. Closed: CI run 30697863324 green (`python-tests`).
+
+### [x] `11.1.6.3` — Kinematic model `player/scenario.py` *(agent)*
 
 **Objective:** the single constant-velocity model (SP HLD D3): `sample(t)` → `CpmContent` in wire-native units.
 
@@ -381,7 +448,11 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 11.1.6.1. **Commit:** `[11.1.6.3] feat: implement constant-velocity scenario kinematics`
 
-### [ ] `11.1.6.4` — Model-level stream-difference test *(agent)*
+**Status:** done 2026-08-01 — pytest 85 passed locally; hand-computed t=0/10/20 wire values exact, F9 ±2048 rejected. Closed: CI run 30697863324 green (`python-tests`).
+
+**Two conformance defects found after closeout — flagged, not scheduled** ([m1-run-timing-and-event-triggering.md §6.5](../requirements/m1-run-timing-and-event-triggering.md)): **(b)** `referenceTime` is populated with Unix epoch ms (`int(time.time() * 1000)`, the generator's `now_ms` default) while the frozen R1 profile defines it as `TimestampIts`, ms since 2004-01-01 TAI — it passes the schema bound and changes no M1 behaviour, because the V2X ECU uses `referenceTime` only as a *difference* for the F1 speed derivation and never forwards it, but it is non-conformant to a frozen profile. **(c)** `measurementDeltaTime` is always 0 on the wire — the generator never passes the third argument to `Scenario.sample`; harmless for M1, and §6.2's `measured` rule stays correct when it changes. **Neither is a contract change**, and §8(4) leaves (b) awaiting the user's word — § Open items item 9.
+
+### [x] `11.1.6.4` — Model-level stream-difference test *(agent)*
 
 **Objective:** `tests/test_streams_differ.py` — the two committed YAMLs yield differing `CpmContent` sequences (the model-level half of the R11 box; the live half is 11.1.10.4).
 
@@ -391,7 +462,9 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 11.1.6.2 + 11.1.6.3. **Commit:** `[11.1.6.4] test: prove committed scenarios yield differing streams`
 
-### [ ] `11.1.6.5` — Encoder client `player/encoder_client.py` *(agent)*
+**Status:** done 2026-08-01 — pytest 92 passed locally; approaching-vs-static sequences differ at every t>0, non-kinematic fields identical. Closed: CI run 30697863324 green (`python-tests`).
+
+### [x] `11.1.6.5` — Encoder client `player/encoder_client.py` *(agent)*
 
 **Objective:** the persistent `cpm_encode` subprocess client (SP HLD D1/D4): one `CpmContent` JSON per stdin line → one base64 UPER payload per stdout line.
 
@@ -401,7 +474,9 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none — parallel with 11.1.6.1–4 (D1 protocol is HLD-frozen). **Commit:** `[11.1.6.5] feat: add persistent cpm_encode subprocess client`
 
-### [ ] `11.1.6.6` — UDP sender `player/sender.py` *(agent)*
+**Status:** done 2026-08-01 — pytest 98 passed locally; echo/error/death-restart covered against the committed fake helper. Closed: CI run 30697863324 green (`python-tests`).
+
+### [x] `11.1.6.6` — UDP sender `player/sender.py` *(agent)*
 
 **Objective:** stdlib-socket UDP tx of encoded payload bytes to `V2X_ECU_HOST:V2X_ECU_PORT` (SP HLD §3/§4).
 
@@ -411,7 +486,9 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none — parallel. **Commit:** `[11.1.6.6] feat: add UDP sender to the V2X ECU`
 
-### [ ] `11.1.6.7` — Rate-loop generator `player/generator.py` *(agent)*
+**Status:** done 2026-08-01 — pytest 102 passed locally; loopback byte-identical delivery, never-raises error path. Closed: CI run 30697863324 green (`python-tests`).
+
+### [x] `11.1.6.7` — Rate-loop generator `player/generator.py` *(agent)*
 
 **Objective:** the `cpm_rate_hz` loop with scenario clock, `duration_s`/`loop` handling, and the `[TX]` JSONL line per datagram (SP HLD D4).
 
@@ -421,7 +498,11 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 11.1.6.3. **Commit:** `[11.1.6.7] feat: add rate-loop generator`
 
-### [ ] `11.1.6.8` — Entrypoint `main.py` *(agent)*
+**Status:** done 2026-08-01 — pytest 107 passed locally; cadence/loop-restart/duration-exit/[TX]-shape/encode-skip covered with fake clock. Closed: CI run 30697863324 green (`python-tests`).
+
+**Follow-up — this loop is R20's bench half** ([m1-run-timing-and-event-triggering.md §2(d)](../requirements/m1-run-timing-and-event-triggering.md)): scenario time is a tick counter (`t = cycle_tick * period`) advanced by a fixed `sleep(period)` with no drift correction, so it diverges from wall time by the per-tick work cost, ~1 % accumulating and unbounded over a run; and the `[TX]` line carries **no timestamp at all**, which is why K5 of §6.4 cannot be measured today. **`20.4.8.1` in [phase4_tasks.md](phase4_tasks.md) group 4.8 adds the `mono_ms` field** — the check input. **Deadline scheduling against `CLOCK_MONOTONIC` is not planned in any phase** (§ Open items item 10); until it lands, a red K5 is a real measurement of this loop, not a tool defect.
+
+### [x] `11.1.6.8` — Entrypoint `main.py` *(agent)*
 
 **Objective:** the blueprint-fixed entrypoint at the folder root (`command: ["python", "main.py"]`, workdir `/app`): load env + YAML → spawn encoder → run the generator (SP HLD D4) — controller only, no business logic.
 
@@ -431,11 +512,13 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 11.1.6.1 + 11.1.6.3 + 11.1.6.5 + 11.1.6.6 + 11.1.6.7. **Commit:** `[11.1.6.8] feat: add scenario player entrypoint main.py`
 
+**Status:** done 2026-08-01 — pytest 110 passed locally; end-to-end smoke (fake encoder → loopback UDP) received datagrams with [TX] lines; [FATAL] path returns 1. Closed: CI run 30697863324 green (`python-tests`).
+
 ---
 
 ## Task Group 1.7 — Bench codec path: `cpm_encode` helper + encoder goldens + image (serves R11 D1/D2, R5)
 
-### [ ] `11.1.7.1` — `codec_helper/` — build `cpm_encode` from the synced codec seam *(agent)*
+### [x] `11.1.7.1` — `codec_helper/` — build `cpm_encode` from the synced codec seam *(agent)*
 
 **Objective:** the D1 helper CLI, built inside `Scenario_Player/` from byte-synced copies of the V2X codec-seam sources — no cross-folder reads.
 
@@ -449,7 +532,9 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 11.1.1.1 (fragment master) + 11.1.8.1 (lane exists to verify). **Commit:** `[11.1.7.1] feat: build cpm_encode helper from synced codec seam`
 
-### [ ] `11.1.7.2` — Encoder-golden test + `.uper` fixture sync *(agent)*
+**Status:** implemented 2026-08-01 — 4 synced copies blob-hash-identical to their masters (git hash-object verified); cpm_encode CLI (--stream JSONL loop, --encode one-shot) + second-build-context CMakeLists landed; inline RFC-4648 base64 hand-verified; both gates exit 0. Build + --encode verification lands with the 11.1.8.1 CI lane. Closed: CI run 30697863324 green (`sp-codec-helper`) — the helper builds and `--encode` succeeds over the six synced goldens.
+
+### [x] `11.1.7.2` — Encoder-golden test + `.uper` fixture sync *(agent)*
 
 **Objective:** wire-truth proof of D2: `cpm_encode(golden .json) == golden .uper`, byte-for-byte.
 
@@ -459,7 +544,9 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 11.1.7.1. **Commit:** `[11.1.7.2] test: verify cpm_encode against golden vectors`
 
-### [ ] `5.1.7.3` — `Scenario_Player/Dockerfile` *(agent)*
+**Status:** implemented 2026-08-01 — six .uper copies blob-hash-identical to contracts/golden-vectors/; test skips cleanly without the binary (suite 116 passed / 7 skipped) and, proven against a stand-in binary, passes 6/6 on matching bytes and fails with a first-differing-offset report on drift; both gates exit 0. Real-binary execution lands with the 11.1.8.1 CI lane. Closed: CI run 30697863324 green (`sp-codec-helper`) — the test ran **unskipped** against the built binary, so `cpm_encode(golden .json) == golden .uper` byte-for-byte is CI-proven 6/6.
+
+### [x] `5.1.7.3` — `Scenario_Player/Dockerfile` *(agent)*
 
 **Objective:** the deployable `scenario-player:latest` image (SP HLD §3/§8): stage 1 cmake-builds `codec_helper` → stage 2 python-slim runtime.
 
@@ -469,13 +556,15 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 11.1.7.1 + 11.1.6.8 + 5.1.8.2. **Commit:** `[5.1.7.3] feat: add Scenario Player multi-stage Dockerfile`
 
+**Status:** implemented 2026-08-01 — self-reviewed multi-stage image (trixie build stage for cmake ≥3.28 → python:3.11-slim runtime carrying cpm_encode + staged libvanetza_asn1*.so with fail-loud guards; only main.py/player/scenarios/requirements.txt reach stage 2; no ENV shadowing HLD §5; CMD matches the blueprint command); .dockerignore cross-checked against every COPY; glibc trixie→bookworm and arm64/QEMU risks flagged for the 5.1.8.2 lane. No local Docker — image build verification lands with 5.1.8.2. Amended 2026-08-01: F1 ratified by architecture — builder and runtime now share one base image (`python:3.11-slim`) with the CMake floor met by pip `cmake>=3.28,<4`, closing the glibc/GLIBCXX skew risk by construction (SP HLD § Open items item 2); arm64 build proof still pending the 5.1.8.2 lane. **Open** — acceptance is the `scenario-player-image` lane, which has never run: no `scenario-player` image has ever been built, and no CI run covers `e02fb7c` (§ Remaining work). **Closed: CI run 30698630956 — the `scenario-player-image` lane is green,** so `docker buildx build --platform linux/arm64` of `Scenario_Player/` succeeds and the arm64 build proof the amendment above was waiting on now exists (that run covers `e02fb7c`). It also **empirically validates F1**: the shared `python:3.11-slim` base with pip `cmake>=3.28,<4` built clean on the first attempt — the predicted glibc/GLIBCXX skew did not materialise.
+
 ---
 
 ## Task Group 1.8 — CI lanes (workflow-file edits, one objective each; serves R11, R5)
 
 > Both extend `.github/workflows/phase0-ci.yml` (explicitly in write scope), guarded on file existence like the existing jobs — they land **before** their consumers so those subtasks have CI acceptance from day one.
 
-### [ ] `11.1.8.1` — Lane: `sp-codec-helper` build + encoder-golden pytest *(agent)*
+### [x] `11.1.8.1` — Lane: `sp-codec-helper` build + encoder-golden pytest *(agent)*
 
 **Objective:** the Linux verification lane for group 1.7.
 
@@ -485,7 +574,9 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none — lands immediately. **Commit:** `[11.1.8.1] chore: add codec-helper build and encoder-golden CI lane`
 
-### [ ] `5.1.8.2` — Lanes: `v2x-ecu-image` + `scenario-player-image` docker builds *(agent)*
+**Status:** implemented 2026-08-01 — YAML valid (8 jobs), run-blocks bash -n clean, cache key carries the same Vanetza pin as v2x-core-build; lane builds cpm_encode, smoke-tests --encode over the six synced golden .json, and runs the SP suite with ENCODER_PATH so test_encoder_golden executes unskipped (expected 123 passed / 0 skipped vs 116/7 locally). CI verification pending wave push. Closed: lane green in CI run 30697863324 with `test_encoder_golden.py` executing unskipped.
+
+### [x] `5.1.8.2` — Lanes: `v2x-ecu-image` + `scenario-player-image` docker builds *(agent)*
 
 **Objective:** arm64 image build (+ gated push) for both node images — `netcheck-image` is the template.
 
@@ -495,11 +586,13 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none — lands immediately, parallel with 11.1.8.1. **Commit:** `[5.1.8.2] chore: add node-image docker build-push CI lanes`
 
+**Status:** implemented 2026-08-01 — YAML valid (10 jobs), run-blocks bash -n clean; both lanes build arm64 single-platform with --provenance/--sbom=false and per-image type=gha cache scopes, push gated on CARSKY_ZOT_API_KEY (missing secret ⇒ green build-only). Expect these lanes to be SLOW (Vanetza's ~1400 ASN.1 TUs under QEMU emulation, timeout-minutes 360) — they are the first real proof either node image builds. CI verification pending wave push. Added beyond the brief: an `actions/github-script@v7` step per lane re-exporting `ACTIONS_CACHE_URL`/`ACTIONS_RESULTS_URL`/`ACTIONS_RUNTIME_TOKEN` into `GITHUB_ENV`, without which `type=gha` cannot reach the Actions cache from a plain `run:` step (those vars are given to actions, not run steps) — and `ignore-error=true` on `--cache-to` so a cache-service fault cannot fail an otherwise-successful multi-hour build. **Open** — the lanes' own acceptance is both green on the current tree; they landed in `df90774`, after the last CI run, and have never executed (§ Remaining work). **Closed: both lanes green in CI run 30698630956** (on `7a02fb5`, which carries both Dockerfiles and both lanes) — the stated acceptance is met and the lanes are no longer unexecuted. Observed facts that supersede the pre-run cautions above: the arm64 QEMU builds completed **within** `timeout-minutes: 360`, and the per-image `type=gha` cache scopes did **not** evict the `actions/cache` `_deps` entries — `v2x-core-build`, `v2x-comms-check` and `sp-codec-helper` all stayed green in the same 10-lane run.
+
 ---
 
 ## Task Group 1.9 — ADA-side R2 sink update (serves R2; D6)
 
-### [ ] `2.1.9.1` — Parameterize netcheck `BODY_PREVIEW` *(agent)*
+### [x] `2.1.9.1` — Parameterize netcheck `BODY_PREVIEW` *(agent)*
 
 **Objective:** the D6 netcheck note made real (V2X HLD §11 item 3): the `[RX]` body-preview length becomes the `BODY_PREVIEW` env var so the ADA sink can show whole R2 JSON bodies.
 
@@ -509,13 +602,15 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none. **Commit:** `[2.1.9.1] feat: parameterize netcheck body preview length`
 
+**Status:** done 2026-08-01 — py_compile passes; diff is exactly the env constant + docstring + slice; default 96 preserves today's behavior byte-identically. Closed — the stated local acceptance (`py_compile`, byte-identical default behavior) is fully met; no CI artifact is required.
+
 ---
 
 ## Task Group 1.10 — Deploy & live verification (serves R5, R2, R11, R6 + the Demo box)
 
-> Split per Phase 0 group 0.8: [[car-sky]] for registry work, USER-MANUAL for Nydus UI (blueprint `command`/`capabilities`/env edits are manual — V2X HLD §11 item 4; REST cannot edit node config). **[[car-sky]] is not spawnable this session — 5.1.10.1 is planned and tracked, execution deferred; nothing in groups 1.1–1.9 blocks on this group.** Evidence accumulates in `plans/doc/phase1-comms-run.md` (created by 5.1.10.1). Standing requirement: images single-platform `linux/arm64` ([phase0-smoke-test-run.md](doc/phase0-smoke-test-run.md)).
+> Split per Phase 0 group 0.8: registry work was planned for [[car-sky]] and executed by CI instead; USER-MANUAL for Nydus UI (blueprint `command`/`capabilities`/env edits are manual — V2X HLD §11 item 4; REST cannot edit node config). Evidence accumulates in `plans/doc/phase1-comms-run.md` (created by 5.1.10.1). Standing requirement: images single-platform `linux/arm64` ([phase0-smoke-test-run.md](doc/phase0-smoke-test-run.md)).
 
-### [ ] `5.1.10.1` — Push the three images to the CarSky registry *(car-sky — deferred)*
+### [x] `5.1.10.1` — Push the three images to the CarSky registry *(planned car-sky — executed by CI)*
 
 **Objective:** [[car-sky]] runs deploy-preflight (blueprint `trial2_minh`, target nodes, credential), then ensures `registry.hackathon-2.carsky.io` holds current `m1-v2x-ecu:latest`, `m1-scenario-player:latest`, and `m1-netcheck:latest` (rebuilt with 2.1.9.1's `BODY_PREVIEW`).
 
@@ -524,6 +619,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 **Acceptance:** all three tags pull-able from the registry; evidence doc created.
 
 **Dependencies:** after 5.1.5.4 + 5.1.7.3 + 2.1.9.1. **Commit:** `[5.1.10.1] docs: record phase1 image pushes to the CarSky registry`
+
+**Status:** **partly closed 2026-08-01 — executed by CI, not [[car-sky]].** `CARSKY_ZOT_API_KEY` turned out to be present, so the secret-gated push step in each image lane ran: run `30698630956` logged `Notice: pushed registry.hackathon-2.carsky.io/m1-v2x-ecu:latest (linux/arm64)` and the same for `m1-scenario-player:latest`, each a single manifest (not an index); record in [phase1-comms-run.md](doc/phase1-comms-run.md). This retires the "needs the car-sky agent" framing of § Open items item 4 for good. **Closed:** the acceptance's "all three tags pull-able" is met by deployment itself — every node on `phase1_Minh_test-deploy` pulled and ran, and the sink's full 339-char `[RX]` bodies prove `m1-netcheck:latest` carries `2.1.9.1`'s `BODY_PREVIEW` rather than the hardcoded-96 build. **Standing hazard, not a residual:** `main` pushes that same tag from pre-`2.1.9.1` code, so any `main` commit before the branch merges silently reverts the registry copy — re-check the `[RX]` body length after `main` activity. No digests are recorded: all three tags are mutable and every branch push re-pushes them, so identify the deployed image at deploy time.
 
 ### [ ] `5.1.10.2` — USER-MANUAL: blueprint node config + deploy → all nodes Running
 
@@ -574,7 +671,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 ## Task Group 1.11 — Plan maintenance (docs)
 
-### [ ] `5.1.11.1` — Reconcile milestone1.md Phase 0 acceptance *(agent — docs, commits on `main`)*
+### [x] `5.1.11.1` — Reconcile milestone1.md Phase 0 acceptance *(agent — docs, commits on `main`)*
 
 **Objective:** `plans/milestone1.md` § Phase 0 still shows box 4 open with a blocker note, contradicting [phase0_tasks.md § Output](phase0_tasks.md#phase-0-overview) (closed, smoke test C1–C5 green).
 
@@ -584,13 +681,15 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none — anytime. **Commit:** `[5.1.11.1] docs: reconcile milestone1 Phase 0 acceptance with phase0_tasks`
 
+**Status:** done 2026-08-01 — landed on `main` as commit `68ef5f5`; [milestone1.md](milestone1.md) § Phase 0 there shows 4/4 closed. This branch's copy still carries the stale box until `main` merges in.
+
 ---
 
 ## Task Group 1.12 — Bench↔V2X comms check (serves R6, R9; HLD D7)
 
 > The D7 script pair + CI lane — scripted acceptance that messages sent between bench and V2X ECU are received, raise events, and deserialize to JSON. Location `tools/comms_check/` at the repo root is user-mandated (cross-node test equipment spanning bench and V2X ECU — the `tools/netcheck/` precedent) and explicitly in these subtasks' write scope. Test equipment only — never shipped in a node image.
 
-### [ ] `6.1.12.1` — Golden-vector UDP sender `tools/comms_check/send_cpm.py` *(agent)*
+### [x] `6.1.12.1` — Golden-vector UDP sender `tools/comms_check/send_cpm.py` *(agent)*
 
 **Objective:** the bench-side send stand-in for local/CI runs (D7): send each golden-vector `.uper` payload as one UDP datagram to a target `host:port`.
 
@@ -600,7 +699,9 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none. **Commit:** `[6.1.12.1] feat: add golden-vector UDP sender for the comms check`
 
-### [ ] `9.1.12.2` — `[EVT]`-stream assertion `tools/comms_check/check_v2x_log.py` *(agent)*
+**Status:** done 2026-08-01 — py_compile passes; loopback self-check delivered all 6 golden .uper byte-identical (sha256 match), no-args exit 2, empty-corpus exit 1, cwd-independent corpus default. Closed — local acceptance met, and the sender is exercised for real by the green `v2x-comms-check` lane in CI run 30697863324.
+
+### [x] `9.1.12.2` — `[EVT]`-stream assertion `tools/comms_check/check_v2x_log.py` *(agent)*
 
 **Objective:** assert the D7 receive-evidence chain from a V2X ECU `[EVT]` stream: per message, `rx_datagram` (received) → `decode_ok` carrying the decoded `CpmContent` JSON (event raised, deserialization shown) → `r2_forwarded` carrying the R2 JSON body; non-zero exit naming the first missing link.
 
@@ -610,7 +711,9 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after 18.1.2.3 (the embedded-payload field names freeze there). **Commit:** `[9.1.12.2] feat: add EVT-stream assertion script for the comms check`
 
-### [ ] `9.1.12.3` — CI lane `v2x-comms-check` *(agent)*
+**Status:** done 2026-08-01 — py_compile passes; synthetic conforming log (6 golden cases, `[CAP]`/`[BOOT]`/blank noise interleaved) exits 0 in both modes, plus a `--repeat 2` corpus in expected-vector mode; 10 negative fixtures (missing rx/decode/forward link, unmatched cpm, `decode_reject` non-zero, unknown event, non-monotonic counters, lost-line counter gap, malformed `[EVT]` JSON, no `[EVT]` lines) each exit 1 naming the failing link — the cpm cross-check and `decode_reject == 0` are expected-vector-mode assertions by design, so those two fixtures pass in stream mode; stdin input, `MIN_MESSAGES` env and 9 exit-2 invocation cases checked; contract-sync and transport-import gates exit 0. Closed — local acceptance met, exercised by the green `v2x-comms-check` lane in CI run 30697863324, and independently shown to discriminate: dropping the `r2_forwarded` event fails at the forward link and stripping `decode_ok`'s `cpm` payload fails at the decode link (both exit 1), while the complete chain exits 0.
+
+### [x] `9.1.12.3` — CI lane `v2x-comms-check` *(agent)*
 
 **Objective:** the CI-side closure of the D7 acceptance box: build `v2x_ecu`, run it loopback, send golden vectors, assert the `[EVT]` chain.
 
@@ -619,6 +722,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 **Acceptance:** lane green on the pushed branch.
 
 **Dependencies:** after 8.1.5.1 + 6.1.12.1 + 9.1.12.2. **Commit:** `[9.1.12.3] chore: add v2x-comms-check CI lane`
+
+**Status:** implemented 2026-08-01 — YAML valid, run-block bash -n clean, cache key identical to v2x-core-build; lane injects DEDUPE_WINDOW_MS=1 + --delay-ms 100 because four golden vectors share the dedupe key; CI verification pending wave push. Closed: lane green in CI run 30697863324 — ≥ 6 datagrams observed at the ADA sink stand-in with the full chain asserted.
 
 ---
 
@@ -673,14 +778,17 @@ Lane D (deploy — deferred, never blocks code)
 
 | # | Item | Owner / closes at |
 |---|---|---|
-| 1 | *(proposal)* defaults proceed as proposed: `INIT_RETRY_MAX=3`, `RETRY_BACKOFF_MS=500`, `DEDUPE_WINDOW_MS=1500` — externalized as env either way; ratification pending (V2X HLD §11 item 5) | user |
+| 1 | *(proposal)* defaults proceed as proposed: `INIT_RETRY_MAX=3`, `RETRY_BACKOFF_MS=500`, `DEDUPE_WINDOW_MS=1500` — externalized as env either way; ratification pending (V2X HLD §11 item 5). Now in service and exercised by the `v2x-comms-check` lane, which overrides `DEDUPE_WINDOW_MS=1` for its back-to-back golden sends — proving the externalization, not the values | user |
 | 2 | R5 box clause "the team APK launches on the AAOS node": neither Phase 1 HLD covers IVI work and the deploy keeps the provided AAOS artifact — needs a ruling (build+install the Phase 0 IVI skeleton APK manually, or defer the clause to Phase 5) | user / [[project-architecture]] |
-| 3 | arm64 image builds compile Vanetza under QEMU emulation (both C++-bearing images) — build-time risk; mitigated by buildx `gha` cache + raised timeouts in 5.1.8.2; if a lane exceeds its timeout, escalate before hand-rolling cross-compilation | 5.1.8.2 / orchestrator |
-| 4 | [[car-sky]] not spawnable this session — group 1.10 execution deferred; also requires `CARSKY_ZOT_API_KEY` as a repo secret for the CI push path | orchestrator / user |
+| 3 | arm64 image builds compile Vanetza under QEMU emulation (both C++-bearing images) — build-time risk; mitigated by buildx `gha` cache + raised timeouts in 5.1.8.2; if a lane exceeds its timeout, escalate before hand-rolling cross-compilation. **RESOLVED 2026-08-01 by CI run `30698630956`:** both lanes ran and both images built for `linux/arm64` **within** `timeout-minutes: 360`, first attempt — no cross-compilation escalation needed. The paired cache-eviction concern also did not materialise: the per-image `type=gha` scopes left the `actions/cache` `_deps` entries intact and `v2x-core-build`, `v2x-comms-check` and `sp-codec-helper` stayed green in the same run. The library-skew half of [SP HLD § Open items](../Scenario_Player/doc/phase1-scenario-player-hld.md#10-open-items--flags) item 2 was already closed by the F1 ratification (`e02fb7c`, one shared `python:3.11-slim` base) and is now empirically validated too; nothing residual | closed by CI run `30698630956` |
+| 4 | **Retired for Phase 1.** [[car-sky]] was never spawnable in any session, but the agent turned out not to be needed: `CARSKY_ZOT_API_KEY` was already a repo secret, so the gated push step in each image lane ran by itself and closed `5.1.10.1` (run `30698630956`). Nothing in the phase's remaining scope depends on the agent — the 4 open subtasks are Nydus UI work only | closed by CI run `30698630956` |
 | 5 | Planner-designated test paths beyond the HLDs' explicit test lists, named per each folder's existing convention (`V2X_ECU/tests/<module>/test_*.cpp`: config, net, log, forward, adapter ×2, `test_rx_pipeline.cpp`; `Scenario_Player/tests/test_*.py`: encoder_client, sender, generator, main) — required by subtask discipline (unit tests per module); flagged to [[project-architecture]] as HLD-consistent additions, not new design | [[project-architecture]] (ack) |
 | 6 | `node-v2x-ecu.md` / `node-scenario-player.md` "Build & push" sections still cite `registry.carsky.io`; live host is `registry.hackathon-2.carsky.io` (Phase 0 O1) — guide touch-up owned by architecture; 5.1.10.1 uses the live host meanwhile | [[project-architecture]] |
 | 7 | Smoke-test O3 (bridge MTU headroom) still open — nominal CPM is 58 bytes so no Phase 1 risk; optional `PAD` probe may ride a group 1.10 run | group 1.10 (optional) |
+| 8 | **R9 "malformed" scope — RESOLVED BY RULING** ([[project-architecture]] owner, 2026-08-01): the 4-reject/3-tolerated finding is a **mis-categorisation in the corpus, not a defect in R9's wording**. Under the frozen [contracts/r1-cpm-profile.md](../contracts/r1-cpm-profile.md) §3, `protocolVersion`/`messageId` are ignored on decode and `CpmContent` carries no header field, so `wrong-message-id`, `wrong-protocol-version` and `r1-variant` are **not malformed inputs at all** — they are valid-but-different-header inputs, and R9's "fully rejected" governs **structurally invalid** input. Consequence: **no frozen-contract change and no requirement re-wording** — neither the R1 codec nor profile §3 nor R9's text is touched. `9.1.4.5` was amended to match: the three are relabelled profile-tolerated negative controls, two genuinely structural fixtures were added (`truncated-mid-object`, `bit-flipped-payload`) along with the honest `trailing-garbage` control (predicted tolerated, because `uper_decode_complete` ignores unconsumed octets), and every case now asserts an explicit expected `Disposition`. **Residual: CI confirmation only** — the new dispositions are predicted, never measured locally, and CI run `30698630956` does **not** confirm them: it ran on `7a02fb5`, the parent of the amendment commit `3202c72`, so the three new fixtures did not exist in the tree it built | **closed** by the ruling + CI run 30700052056 (all 10 dispositions confirmed) |
+| 9 | **CPM `referenceTime` epoch conformance defect — awaiting the user's word, not scheduled.** The bench writes Unix epoch ms where the frozen R1 profile defines `TimestampIts` (ms since 2004-01-01 TAI, golden vector `716084805123`) — [m1-run-timing-and-event-triggering.md §6.5(b)](../requirements/m1-run-timing-and-event-triggering.md). It is a **conformance fix, not a contract change**: nothing rejects the value, and no M1 behaviour changes, because the V2X ECU consumes `referenceTime` only as a difference (`9.1.4.3` F1) and never forwards it. The fix is an epoch constant in config (`reference_time_epoch`, §6.1), never a literal in the loop. §8(4) leaves it explicitly to the user — **flagged, deliberately not scheduled**. `measurementDeltaTime` always 0 (§6.5(c)) rides the same decision | **user**, then `11.1.6.1` + `11.1.6.3` |
+| 10 | **R20's bench half — deadline scheduling — is not planned in any phase.** `11.1.6.7`'s fixed-sleep loop drifts ~1 % accumulating ([§3.4](../requirements/m1-run-timing-and-event-triggering.md)). §8(2) rates the deadline fix plus the `mono_ms` field at ~1 h on code already running live and recommends doing it regardless; this plan schedules only the `mono_ms` half (`20.4.8.1`, [phase4_tasks.md](phase4_tasks.md) group 4.8) because §8(1) puts R20/R21 behind Phase 3 and Phase 4 acceptance. The bench `start_delay_s` of the §4.2 B-1 readiness pick is unscheduled with it. **Visible and unscheduled, not absorbed** | **user** (accept/reject R20 per §8(1)) |
 
 ---
 
-*Created 2026-08-01 by project-planner from the two Phase 1 HLDs and [milestone1.md § Phase 1](milestone1.md#phase-1--comms-bring-up-v2x-ecu--scenario-player-r5r9-r11--r10-moved-to-the-future-plan); amended same day per HLD D7 (`dda1566`): group 1.12 comms check, ninth acceptance box, payload-carrying `[EVT]` events. 12 task groups, 44 subtasks: 39 agent-implemented, 1 car-sky-executed (deferred), 4 user-manual.*
+*Created 2026-08-01 by project-planner from the two Phase 1 HLDs and [milestone1.md § Phase 1](milestone1.md#phase-1--comms-bring-up-v2x-ecu--scenario-player-r5r9-r11--r10-moved-to-the-future-plan); amended same day per HLD D7 (`dda1566`): group 1.12 comms check, ninth acceptance box, payload-carrying `[EVT]` events. 12 task groups, 44 subtasks: 39 agent-implemented, 1 car-sky-executed, 4 user-manual. Closeout 2026-08-01: **40 of 44 closed** — every agent-implemented subtask, the image chain (`5.1.5.4`, `5.1.7.3`, `5.1.8.2`) included, plus `5.1.10.1`, which the CI push step executed instead of [[car-sky]] — against three CI runs: `30697863324` on `16b8674` (8 lanes green, the phase's code), `30698630956` on `7a02fb5` (10 lanes green, adding both node images) and `30700052056` on `31d0347` (10 lanes green, confirming the amended R9 dispositions). The 4 remaining are the deploy group's USER-MANUAL items — § Remaining work.*

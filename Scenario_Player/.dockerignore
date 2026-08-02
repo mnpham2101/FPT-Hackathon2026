@@ -1,0 +1,27 @@
+# Keeps the Scenario_Player/ build context small. The Dockerfile's COPY list is what actually
+# decides what lands in an image - this file only stops useless bytes being uploaded to the builder,
+# and makes the "never in the image" rule explicit for the paths that could be mistaken for app
+# code.
+#
+# Do NOT add codec_helper/ here: stage 1 builds cpm_encode from it. Only its local build tree is
+# excluded, below.
+
+# Test code and fixtures - stage 2 runs no tests, and the golden .uper/.json corpus is CI/pytest
+# input only (requirements-dev.txt, which installs pytest + jsonschema, is excluded too).
+tests/
+requirements-dev.txt
+
+# Documentation is never part of the image (node-code-layout.md: doc/ is documentation only);
+# README.md is the folder's human guide, same category.
+doc/
+README.md
+
+# A local developer build tree of the helper - _deps alone holds the whole Vanetza clone plus its
+# object files, i.e. gigabytes of context for nothing. Stage 1 configures its own build/ inside the
+# image, so a host-built one must never be uploaded (or shadow it).
+codec_helper/build/
+
+# Python bytecode from local test runs - stale, platform-specific, and would ride along in
+# COPY player/.
+**/__pycache__/
+*.pyc

@@ -1,5 +1,5 @@
 {
-  "description": "Phase 0 contract-integrity gate (subtask 1.0.7.1). Every target listed below must be a byte-identical verbatim copy of its source; the copies exist because each node folder is a self-contained Docker build context and may not read the repo-root contracts/ folder (HLD decision D1). Enforced by contracts/check_sync.py, which also enforces convention F2 via the banned-token fields.",
+  "description": "Contract-integrity gate (subtask 1.0.7.1). Every target listed below must be a byte-identical verbatim copy of its source; the copies exist because each node folder is a self-contained Docker build context and may not read the repo-root contracts/ folder or another node folder's sources (HLD decision D1; Scenario_Player HLD decision D2 for the codec-seam sources, the shared Vanetza pin fragment, and the golden .uper vectors). Each source path is that artifact's normative home: contracts/ for shared contract artifacts, V2X_ECU/src/codec/ for the R1 codec seam. Enforced by contracts/check_sync.py, which also enforces convention F2 via the banned-token fields.",
   "f2BannedToken": "asn1::Cpm",
   "f2Scope": "V2X_ECU/src",
   "copies": [
@@ -111,37 +111,68 @@
     {
       "source": "contracts/golden-vectors/nominal.uper",
       "targets": [
-        "V2X_ECU/tests/fixtures/golden/nominal.uper"
+        "V2X_ECU/tests/fixtures/golden/nominal.uper",
+        "Scenario_Player/tests/fixtures/golden/nominal.uper"
       ]
     },
     {
       "source": "contracts/golden-vectors/mdt-max.uper",
       "targets": [
-        "V2X_ECU/tests/fixtures/golden/mdt-max.uper"
+        "V2X_ECU/tests/fixtures/golden/mdt-max.uper",
+        "Scenario_Player/tests/fixtures/golden/mdt-max.uper"
       ]
     },
     {
       "source": "contracts/golden-vectors/mdt-min.uper",
       "targets": [
-        "V2X_ECU/tests/fixtures/golden/mdt-min.uper"
+        "V2X_ECU/tests/fixtures/golden/mdt-min.uper",
+        "Scenario_Player/tests/fixtures/golden/mdt-min.uper"
       ]
     },
     {
       "source": "contracts/golden-vectors/conf-unavailable.uper",
       "targets": [
-        "V2X_ECU/tests/fixtures/golden/conf-unavailable.uper"
+        "V2X_ECU/tests/fixtures/golden/conf-unavailable.uper",
+        "Scenario_Player/tests/fixtures/golden/conf-unavailable.uper"
       ]
     },
     {
       "source": "contracts/golden-vectors/gate-boundary.uper",
       "targets": [
-        "V2X_ECU/tests/fixtures/golden/gate-boundary.uper"
+        "V2X_ECU/tests/fixtures/golden/gate-boundary.uper",
+        "Scenario_Player/tests/fixtures/golden/gate-boundary.uper"
       ]
     },
     {
       "source": "contracts/golden-vectors/coord-large.uper",
       "targets": [
-        "V2X_ECU/tests/fixtures/golden/coord-large.uper"
+        "V2X_ECU/tests/fixtures/golden/coord-large.uper",
+        "Scenario_Player/tests/fixtures/golden/coord-large.uper"
+      ]
+    },
+    {
+      "source": "contracts/vanetza-pin.cmake",
+      "targets": [
+        "V2X_ECU/cmake/vanetza-pin.cmake",
+        "Scenario_Player/codec_helper/cmake/vanetza-pin.cmake"
+      ]
+    },
+    {
+      "source": "V2X_ECU/src/codec/cpm_codec.hpp",
+      "targets": [
+        "Scenario_Player/codec_helper/src/codec/cpm_codec.hpp"
+      ]
+    },
+    {
+      "source": "V2X_ECU/src/codec/vanetza_cpm_codec.hpp",
+      "targets": [
+        "Scenario_Player/codec_helper/src/codec/vanetza_cpm_codec.hpp"
+      ]
+    },
+    {
+      "source": "V2X_ECU/src/codec/vanetza_cpm_codec.cpp",
+      "targets": [
+        "Scenario_Player/codec_helper/src/codec/vanetza_cpm_codec.cpp"
       ]
     }
   ]

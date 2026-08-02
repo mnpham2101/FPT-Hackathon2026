@@ -1,0 +1,241 @@
+# Post-push verification for every image a CarSky Container node pulls.
+#
+# WHY THIS EXISTS. "The build lane is green" and "the node can run it" are different claims, and
+# the gap between them has already cost this project one deploy: a multi-platform manifest index
+# leaves the node in Provisioning with `waiting to start: trying and failing to pull image`, and
+# nothing in a build log says so (plans/doc/phase0-smoke-test-run.md, "images must be
+# single-platform arm64"). Until now the only thing that closed that gap was deploying and looking.
+# This action closes it in CI, on the artifact that was actually pushed, by asking the four
+# questions a node asks:
+#
+#   1. Does the tag resolve at all, with the registry credential the platform uses?
+#   2. Is it a single image manifest rather than a manifest INDEX? An index is the documented
+#      Provisioning-hang failure; --provenance=false --sbom=false is what keeps buildx from
+#      attaching attestation entries that silently turn a single-platform push back into one.
+#   3. Does its config report linux/arm64? The cluster is uniformly aarch64.
+#   4. Does it pull back out of the registry and actually execute? Emulated here via QEMU binfmt,
+#      which the caller registers with docker/setup-qemu-action before calling this.
+#
+# Questions 1-3 are answered against the registry API, not against the local build - the local
+# image can be perfect while the pushed one is not.
+#
+# WHAT THE CALLER STILL OWES. This action proves the image is pullable and starts on aarch64. It
+# does NOT prove the application inside it works - that check is image-specific and stays in the
+# calling lane, which is why `reference` is an output: the caller runs its own smoke against the
+# exact digest verified here, never against the mutable tag (which a parallel branch push can move
+# between this step and the next - the standing hazard recorded in plans/phase1_tasks.md).
+
+name: Verify a pushed CarSky node image
+description: >-
+  Assert a tag pushed to the CarSky Zot registry is what a Container node can pull and start:
+  a single-platform linux/arm64 image manifest, never an index, that pulls back and executes
+  under QEMU. Leaves it in the runner's image store for the caller's application smoke.
+
+inputs:
+  registry-host:
+    description: Zot host without a scheme, e.g. registry.hackathon-2.carsky.io
+    required: true
+  image:
+    description: repo:tag exactly as pushed, WITHOUT the host - e.g. m1-v2x-ecu:latest
+    required: true
+  username:
+    description: Registry account (not a secret - the CARSKY_REGISTRY_USER value)
+    required: true
+  password:
+    description: The zak_ API key (pass the CARSKY_ZOT_API_KEY secret)
+    required: true
+  digest:
+    description: >-
+      The digest THIS run pushed, from `docker buildx build --metadata-file` (.["containerimage.digest"]).
+      Strongly preferred. Every image tag in this project is mutable and every branch push re-pushes
+      it, so a concurrent run can move :latest between this run's push and this step - and then
+      resolving the tag here would verify SOMEONE ELSE'S image while reporting success for ours.
+      Given a digest, the checks below run against exactly that manifest and the tag is only
+      reported on. Omit it to fall back to resolving the tag, which is correct only when nothing
+      else can be pushing.
+    required: false
+    default: ""
+
+outputs:
+  digest:
+    description: The manifest digest the tag resolved to at verification time
+    value: ${{ steps.manifest.outputs.digest }}
+  reference:
+    description: >-
+      host/repo@sha256:... - an immutable reference to exactly what was verified. Use this for any
+      follow-up smoke; the :latest tag is mutable and may already point elsewhere.
+    value: ${{ steps.manifest.outputs.reference }}
+
+runs:
+  using: composite
+  steps:
+    - name: Registry manifest check (single-platform arm64 image, not an index)
+      id: manifest
+      shell: bash
+      env:
+        REGISTRY_HOST: ${{ inputs.registry-host }}
+        IMAGE: ${{ inputs.image }}
+        REGISTRY_USER: ${{ inputs.username }}
+        REGISTRY_PASS: ${{ inputs.password }}
+        EXPECTED_DIGEST: ${{ inputs.digest }}
+      run: |
+        set -euo pipefail
+
+        REPO="${IMAGE%%:*}"
+        TAG="${IMAGE##*:}"
+        BASE="https://${REGISTRY_HOST}/v2/${REPO}"
+        WORK="$(mktemp -d)"
+
+        # Every manifest media type a registry may answer with, in one Accept header - the same set
+        # containerd offers. Asking only for the image types would make a registry holding an index
+        # answer 406/404 instead of handing it over, which would hide the exact failure this step
+        # exists to catch.
+        ACCEPT='application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json'
+
+        # WHAT IS VERIFIED: the digest this run pushed, when the caller supplied one. Anything else
+        # would be a different image under a contended tag. The tag is still fetched afterwards,
+        # but only to report on.
+        if [ -n "$EXPECTED_DIGEST" ]; then
+          SUBJECT="$EXPECTED_DIGEST"
+          echo "[VERIFY] verifying the digest this run pushed: ${EXPECTED_DIGEST}"
+        else
+          SUBJECT="$TAG"
+          echo "::warning::no digest supplied - falling back to resolving ${IMAGE}. Under concurrent pushes this can verify another run's image."
+        fi
+
+        echo "[VERIFY] GET ${BASE}/manifests/${SUBJECT}"
+        # Status captured rather than -f'd, so a 401/404 can be reported as the specific thing it
+        # means (bad credential / absent) instead of a bare curl exit code.
+        HTTP="$(curl -sS -u "${REGISTRY_USER}:${REGISTRY_PASS}" -H "Accept: ${ACCEPT}" \
+                     -D "${WORK}/headers" -o "${WORK}/manifest.json" -w '%{http_code}' \
+                     "${BASE}/manifests/${SUBJECT}")"
+        case "$HTTP" in
+          200) ;;
+          401|403)
+            echo "::error::registry rejected the credential (HTTP ${HTTP}) for ${REGISTRY_HOST}/${REPO} - a node using this account could not pull either"
+            exit 1 ;;
+          404)
+            echo "::error::${REGISTRY_HOST}/${REPO}:${SUBJECT} does not exist in the registry (HTTP 404) - the push reported success but the manifest is not resolvable"
+            exit 1 ;;
+          *)
+            echo "::error::registry returned HTTP ${HTTP} for ${REGISTRY_HOST}/${REPO}:${SUBJECT}"
+            cat "${WORK}/manifest.json" || true
+            exit 1 ;;
+        esac
+
+        # Media type from the response header, not from the body: an OCI image manifest is allowed
+        # to omit the `mediaType` field entirely, so the body alone cannot distinguish the two
+        # shapes reliably. The header always carries it.
+        CONTENT_TYPE="$(tr -d '\r' < "${WORK}/headers" | awk 'tolower($1)=="content-type:"{print $2}' | tail -1)"
+        DIGEST="$(tr -d '\r' < "${WORK}/headers" | awk 'tolower($1)=="docker-content-digest:"{print $2}' | tail -1)"
+        # Docker-Content-Digest is a SHOULD, not a MUST, in the distribution spec. Fall back to
+        # hashing the bytes we were served - which is the definition of the digest anyway.
+        if [ -z "$DIGEST" ]; then
+          DIGEST="sha256:$(sha256sum "${WORK}/manifest.json" | cut -d' ' -f1)"
+          echo "[VERIFY] registry sent no Docker-Content-Digest header - computed ${DIGEST} from the body"
+        fi
+        # A content-addressed fetch that comes back as different content is the registry
+        # contradicting itself; never continue past it.
+        if [ -n "$EXPECTED_DIGEST" ] && [ "$DIGEST" != "$EXPECTED_DIGEST" ]; then
+          echo "::error::asked the registry for ${EXPECTED_DIGEST} and it returned ${DIGEST}"
+          exit 1
+        fi
+        echo "[VERIFY] content-type: ${CONTENT_TYPE}"
+        echo "[VERIFY] digest:       ${DIGEST}"
+
+        case "$CONTENT_TYPE" in
+          *index.v1+json*|*manifest.list.v2+json*)
+            echo "::error::${IMAGE} resolves to a MANIFEST INDEX (${CONTENT_TYPE}). A CarSky Container node cannot pull this - it hangs in Provisioning with 'trying and failing to pull image'. Push exactly one --platform, and keep --provenance=false --sbom=false so buildx does not re-add attestation entries."
+            echo "entries in the index:"
+            jq -r '.manifests[] | "  - \(.platform.os // "?")/\(.platform.architecture // "?") \(.mediaType)"' "${WORK}/manifest.json" || cat "${WORK}/manifest.json"
+            exit 1 ;;
+          *image.manifest.v1+json*|*manifest.v2+json*)
+            echo "[VERIFY] OK - single image manifest, not an index" ;;
+          *)
+            echo "::error::unexpected manifest media type '${CONTENT_TYPE}' for ${IMAGE} - neither an image manifest nor an index"
+            cat "${WORK}/manifest.json"
+            exit 1 ;;
+        esac
+
+        # The manifest itself carries no platform for a single image - only the CONFIG blob does,
+        # and the config is what containerd matches against the node's platform. So fetch it.
+        CONFIG_DIGEST="$(jq -r '.config.digest // empty' "${WORK}/manifest.json")"
+        if [ -z "$CONFIG_DIGEST" ]; then
+          echo "::error::manifest for ${IMAGE} has no .config.digest"
+          cat "${WORK}/manifest.json"
+          exit 1
+        fi
+        curl -fsSL -u "${REGISTRY_USER}:${REGISTRY_PASS}" \
+             -H 'Accept: application/vnd.oci.image.config.v1+json, application/vnd.docker.container.image.v1+json' \
+             -o "${WORK}/config.json" "${BASE}/blobs/${CONFIG_DIGEST}"
+
+        IMAGE_OS="$(jq -r '.os // "?"' "${WORK}/config.json")"
+        IMAGE_ARCH="$(jq -r '.architecture // "?"' "${WORK}/config.json")"
+        echo "[VERIFY] config platform: ${IMAGE_OS}/${IMAGE_ARCH}"
+        if [ "${IMAGE_OS}/${IMAGE_ARCH}" != "linux/arm64" ]; then
+          echo "::error::${IMAGE} is ${IMAGE_OS}/${IMAGE_ARCH}, not linux/arm64 - the CarSky cluster is uniformly aarch64 and will not run it"
+          exit 1
+        fi
+
+        # Layer sanity: a manifest with no layers pulls fine and produces an unusable container.
+        LAYERS="$(jq -r '.layers | length' "${WORK}/manifest.json")"
+        echo "[VERIFY] layers: ${LAYERS}"
+        if [ "$LAYERS" -lt 1 ]; then
+          echo "::error::${IMAGE} has ${LAYERS} layers"
+          exit 1
+        fi
+
+        # Where the TAG points, reported separately from what was verified. A node deploys by tag,
+        # so this is the number to compare against at deploy time. It is a notice and not a failure
+        # on purpose: another run winning a mutable tag is the documented standing hazard of this
+        # project, not a defect in the image just verified.
+        if [ -n "$EXPECTED_DIGEST" ]; then
+          TAG_DIGEST="$(curl -sS -u "${REGISTRY_USER}:${REGISTRY_PASS}" -H "Accept: ${ACCEPT}" \
+                             -o /dev/null -D - "${BASE}/manifests/${TAG}" \
+                        | tr -d '\r' | awk 'tolower($1)=="docker-content-digest:"{print $2}' | tail -1)"
+          if [ -z "$TAG_DIGEST" ]; then
+            echo "[VERIFY] could not read the current digest of :${TAG}"
+          elif [ "$TAG_DIGEST" = "$DIGEST" ]; then
+            echo "[VERIFY] :${TAG} points at the image verified here"
+          else
+            echo "::notice::${IMAGE} now points at ${TAG_DIGEST}, not the ${DIGEST} this run pushed - a concurrent push won the mutable tag. The image verified below is still this run's; identify the deployed image from the registry at deploy time."
+          fi
+        fi
+
+        {
+          echo "digest=${DIGEST}"
+          echo "reference=${REGISTRY_HOST}/${REPO}@${DIGEST}"
+        } >> "$GITHUB_OUTPUT"
+
+    - name: Pull it back and start it on aarch64
+      shell: bash
+      env:
+        REGISTRY_HOST: ${{ inputs.registry-host }}
+        REGISTRY_USER: ${{ inputs.username }}
+        REGISTRY_PASS: ${{ inputs.password }}
+        REFERENCE: ${{ steps.manifest.outputs.reference }}
+      run: |
+        set -euo pipefail
+
+        # The action logs in itself rather than relying on the caller's push step having done so:
+        # it must hold as a standalone check, and a login is idempotent.
+        echo "${REGISTRY_PASS}" | docker login "${REGISTRY_HOST}" -u "${REGISTRY_USER}" --password-stdin
+
+        # BY DIGEST, never by tag. Two reasons: it is the only way to be sure the thing started
+        # below is the thing verified above (:latest is mutable and every branch push re-pushes
+        # it), and it is the pull a node performs once the platform has resolved the tag.
+        echo "[VERIFY] docker pull --platform linux/arm64 ${REFERENCE}"
+        docker pull --platform linux/arm64 "${REFERENCE}"
+
+        # Executing anything at all is the claim here: the QEMU binfmt handler the caller
+        # registered runs the image's own aarch64 /bin/sh, so a wrong-arch or broken-loader image
+        # fails right here rather than on the platform. `uname -m` reads the emulated personality,
+        # so aarch64 is the expected answer on an amd64 runner.
+        ARCH_SEEN="$(docker run --rm --platform linux/arm64 --entrypoint sh "${REFERENCE}" -c 'uname -m')"
+        echo "[VERIFY] container reports uname -m = ${ARCH_SEEN}"
+        if [ "$ARCH_SEEN" != "aarch64" ]; then
+          echo "::error::container reported '${ARCH_SEEN}', expected aarch64"
+          exit 1
+        fi
+
+        echo "::notice::verified pullable single-platform linux/arm64 image ${REFERENCE}"

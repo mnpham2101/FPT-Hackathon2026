@@ -1,0 +1,64 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="phase1-exec-overview" id="phase1-exec-overview">
+    <mxGraphModel dx="1400" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="650" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="t1" value="Phase 1 execution structure — eight independent starting points" style="text;html=1;align=left;verticalAlign=middle;fontSize=23.8;fontColor=#19226D;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="24" y="20" width="1152" height="20" as="geometry" /></mxCell>
+        <mxCell id="t2" value="Horizontal position denotes dependency depth, not calendar time. Lane detail follows." style="text;html=1;align=left;verticalAlign=middle;fontSize=16.8;fontColor=#6b6e7b;fontStyle=0;" vertex="1" parent="1"><mxGeometry x="24" y="42" width="1152" height="20" as="geometry" /></mxCell>
+        <mxCell id="ln3" value="" style="line;strokeColor=#e3e5ea;direction=north;html=1;" vertex="1" parent="1"><mxGeometry x="300.0" y="108" width="1" height="448" as="geometry" /></mxCell>
+        <mxCell id="t4" value="1" style="text;html=1;align=center;verticalAlign=middle;fontSize=14.7;fontColor=#8a8d99;fontStyle=0;" vertex="1" parent="1"><mxGeometry x="-245" y="90" width="1200" height="20" as="geometry" /></mxCell>
+        <mxCell id="ln5" value="" style="line;strokeColor=#e3e5ea;direction=north;html=1;" vertex="1" parent="1"><mxGeometry x="409.5" y="108" width="1" height="448" as="geometry" /></mxCell>
+        <mxCell id="t6" value="2" style="text;html=1;align=center;verticalAlign=middle;fontSize=14.7;fontColor=#8a8d99;fontStyle=0;" vertex="1" parent="1"><mxGeometry x="-136" y="90" width="1200" height="20" as="geometry" /></mxCell>
+        <mxCell id="ln7" value="" style="line;strokeColor=#e3e5ea;direction=north;html=1;" vertex="1" parent="1"><mxGeometry x="519.0" y="108" width="1" height="448" as="geometry" /></mxCell>
+        <mxCell id="t8" value="3" style="text;html=1;align=center;verticalAlign=middle;fontSize=14.7;fontColor=#8a8d99;fontStyle=0;" vertex="1" parent="1"><mxGeometry x="-26" y="90" width="1200" height="20" as="geometry" /></mxCell>
+        <mxCell id="ln9" value="" style="line;strokeColor=#e3e5ea;direction=north;html=1;" vertex="1" parent="1"><mxGeometry x="628.5" y="108" width="1" height="448" as="geometry" /></mxCell>
+        <mxCell id="t10" value="4" style="text;html=1;align=center;verticalAlign=middle;fontSize=14.7;fontColor=#8a8d99;fontStyle=0;" vertex="1" parent="1"><mxGeometry x="83" y="90" width="1200" height="20" as="geometry" /></mxCell>
+        <mxCell id="ln11" value="" style="line;strokeColor=#e3e5ea;direction=north;html=1;" vertex="1" parent="1"><mxGeometry x="738.0" y="108" width="1" height="448" as="geometry" /></mxCell>
+        <mxCell id="t12" value="5" style="text;html=1;align=center;verticalAlign=middle;fontSize=14.7;fontColor=#8a8d99;fontStyle=0;" vertex="1" parent="1"><mxGeometry x="193" y="90" width="1200" height="20" as="geometry" /></mxCell>
+        <mxCell id="ln13" value="" style="line;strokeColor=#e3e5ea;direction=north;html=1;" vertex="1" parent="1"><mxGeometry x="847.5" y="108" width="1" height="448" as="geometry" /></mxCell>
+        <mxCell id="t14" value="6" style="text;html=1;align=center;verticalAlign=middle;fontSize=14.7;fontColor=#8a8d99;fontStyle=0;" vertex="1" parent="1"><mxGeometry x="302" y="90" width="1200" height="20" as="geometry" /></mxCell>
+        <mxCell id="ln15" value="" style="line;strokeColor=#e3e5ea;direction=north;html=1;" vertex="1" parent="1"><mxGeometry x="957.0" y="108" width="1" height="448" as="geometry" /></mxCell>
+        <mxCell id="t16" value="7" style="text;html=1;align=center;verticalAlign=middle;fontSize=14.7;fontColor=#8a8d99;fontStyle=0;" vertex="1" parent="1"><mxGeometry x="412" y="90" width="1200" height="20" as="geometry" /></mxCell>
+        <mxCell id="ln17" value="" style="line;strokeColor=#e3e5ea;direction=north;html=1;" vertex="1" parent="1"><mxGeometry x="1066.5" y="108" width="1" height="448" as="geometry" /></mxCell>
+        <mxCell id="t18" value="8" style="text;html=1;align=center;verticalAlign=middle;fontSize=14.7;fontColor=#8a8d99;fontStyle=0;" vertex="1" parent="1"><mxGeometry x="521" y="90" width="1200" height="20" as="geometry" /></mxCell>
+        <mxCell id="ln19" value="" style="line;strokeColor=#e3e5ea;direction=north;html=1;" vertex="1" parent="1"><mxGeometry x="1176.0" y="108" width="1" height="448" as="geometry" /></mxCell>
+        <mxCell id="t20" value="dependency depth" style="text;html=1;align=left;verticalAlign=middle;fontSize=14.7;fontColor=#8a8d99;fontStyle=0;" vertex="1" parent="1"><mxGeometry x="288" y="90" width="1200" height="20" as="geometry" /></mxCell>
+        <mxCell id="t21" value="Plan maintenance" style="text;html=1;align=left;verticalAlign=middle;fontSize=16.1;fontColor=#19226D;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="286" y="124" width="1200" height="20" as="geometry" /></mxCell>
+        <mxCell id="t22" value="1 subtask" style="text;html=1;align=left;verticalAlign=middle;fontSize=14;fontColor=#6b6e7b;fontStyle=0;" vertex="1" parent="1"><mxGeometry x="286" y="140" width="1200" height="20" as="geometry" /></mxCell>
+        <mxCell id="b23" value="" style="rounded=1;arcSize=12;html=1;fillColor=#6b6e7b;strokeColor=none;fontColor=#ffffff;fontSize=16.8;fontStyle=1;whiteSpace=wrap;" vertex="1" parent="1"><mxGeometry x="300.0" y="116" width="109.5" height="46" as="geometry" /></mxCell>
+        <mxCell id="t24" value="reconcile the Phase 0 record" style="text;html=1;align=left;verticalAlign=middle;fontSize=16.1;fontColor=#3d3d46;fontStyle=0;" vertex="1" parent="1"><mxGeometry x="424" y="133.0" width="1200" height="20" as="geometry" /></mxCell>
+        <mxCell id="t25" value="CI lanes" style="text;html=1;align=left;verticalAlign=middle;fontSize=16.1;fontColor=#19226D;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="286" y="180" width="1200" height="20" as="geometry" /></mxCell>
+        <mxCell id="t26" value="2 subtasks" style="text;html=1;align=left;verticalAlign=middle;fontSize=14;fontColor=#6b6e7b;fontStyle=0;" vertex="1" parent="1"><mxGeometry x="286" y="196" width="1200" height="20" as="geometry" /></mxCell>
+        <mxCell id="b27" value="CI lanes" style="rounded=1;arcSize=12;html=1;fillColor=#F37021;strokeColor=none;fontColor=#ffffff;fontSize=16.8;fontStyle=1;whiteSpace=wrap;" vertex="1" parent="1"><mxGeometry x="300.0" y="172" width="109.5" height="46" as="geometry" /></mxCell>
+        <mxCell id="t28" value="encoder-helper lane · image lanes" style="text;html=1;align=left;verticalAlign=middle;fontSize=16.1;fontColor=#3d3d46;fontStyle=0;" vertex="1" parent="1"><mxGeometry x="424" y="189.0" width="1200" height="20" as="geometry" /></mxCell>
+        <mxCell id="t29" value="Shared codec version" style="text;html=1;align=left;verticalAlign=middle;fontSize=16.1;fontColor=#19226D;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="286" y="236" width="1200" height="20" as="geometry" /></mxCell>
+        <mxCell id="t30" value="2 subtasks" style="text;html=1;align=left;verticalAlign=middle;fontSize=14;fontColor=#6b6e7b;fontStyle=0;" vertex="1" parent="1"><mxGeometry x="286" y="252" width="1200" height="20" as="geometry" /></mxCell>
+        <mxCell id="b31" value="Shared codec version
+one pinned codec version for two builds; its copy gate is scheduled last" style="rounded=1;arcSize=12;html=1;fillColor=#33B2C1;strokeColor=none;fontColor=#ffffff;fontSize=16.8;fontStyle=1;whiteSpace=wrap;" vertex="1" parent="1"><mxGeometry x="300.0" y="228" width="876.0" height="46" as="geometry" /></mxCell>
+        <mxCell id="t32" value="Lane V — V2X_ECU/" style="text;html=1;align=left;verticalAlign=middle;fontSize=16.1;fontColor=#19226D;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="286" y="292" width="1200" height="20" as="geometry" /></mxCell>
+        <mxCell id="t33" value="19 subtasks" style="text;html=1;align=left;verticalAlign=middle;fontSize=14;fontColor=#6b6e7b;fontStyle=0;" vertex="1" parent="1"><mxGeometry x="286" y="308" width="1200" height="20" as="geometry" /></mxCell>
+        <mxCell id="b34" value="Lane V
+config · socket · event log · radio interface · receive pipeline · app · image" style="rounded=1;arcSize=12;html=1;fillColor=#19226D;strokeColor=none;fontColor=#ffffff;fontSize=16.8;fontStyle=1;whiteSpace=wrap;" vertex="1" parent="1"><mxGeometry x="300.0" y="284" width="657.0" height="46" as="geometry" /></mxCell>
+        <mxCell id="t35" value="Lane P — Scenario_Player/" style="text;html=1;align=left;verticalAlign=middle;fontSize=16.1;fontColor=#19226D;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="286" y="348" width="1200" height="20" as="geometry" /></mxCell>
+        <mxCell id="t36" value="11 subtasks" style="text;html=1;align=left;verticalAlign=middle;fontSize=14;fontColor=#6b6e7b;fontStyle=0;" vertex="1" parent="1"><mxGeometry x="286" y="364" width="1200" height="20" as="geometry" /></mxCell>
+        <mxCell id="b37" value="Lane P
+scenario model · encoder client · sender · rate loop · entrypoint · image" style="rounded=1;arcSize=12;html=1;fillColor=#034EA2;strokeColor=none;fontColor=#ffffff;fontSize=16.8;fontStyle=1;whiteSpace=wrap;" vertex="1" parent="1"><mxGeometry x="300.0" y="340" width="547.5" height="46" as="geometry" /></mxCell>
+        <mxCell id="t38" value="Comms check — tools/" style="text;html=1;align=left;verticalAlign=middle;fontSize=16.1;fontColor=#19226D;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="286" y="404" width="1200" height="20" as="geometry" /></mxCell>
+        <mxCell id="t39" value="3 subtasks" style="text;html=1;align=left;verticalAlign=middle;fontSize=14;fontColor=#6b6e7b;fontStyle=0;" vertex="1" parent="1"><mxGeometry x="286" y="420" width="1200" height="20" as="geometry" /></mxCell>
+        <mxCell id="b40" value="Comms check
+message sender · log-chain assertion · its CI lane" style="rounded=1;arcSize=12;html=1;fillColor=#50B848;strokeColor=none;fontColor=#ffffff;fontSize=16.8;fontStyle=1;whiteSpace=wrap;" vertex="1" parent="1"><mxGeometry x="300.0" y="396" width="438.0" height="46" as="geometry" /></mxCell>
+        <mxCell id="t41" value="ADA listener" style="text;html=1;align=left;verticalAlign=middle;fontSize=16.1;fontColor=#19226D;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="286" y="460" width="1200" height="20" as="geometry" /></mxCell>
+        <mxCell id="t42" value="1 subtask" style="text;html=1;align=left;verticalAlign=middle;fontSize=14;fontColor=#6b6e7b;fontStyle=0;" vertex="1" parent="1"><mxGeometry x="286" y="476" width="1200" height="20" as="geometry" /></mxCell>
+        <mxCell id="b43" value="" style="rounded=1;arcSize=12;html=1;fillColor=#6b6e7b;strokeColor=none;fontColor=#ffffff;fontSize=16.8;fontStyle=1;whiteSpace=wrap;" vertex="1" parent="1"><mxGeometry x="300.0" y="452" width="109.5" height="46" as="geometry" /></mxCell>
+        <mxCell id="t44" value="print complete message bodies" style="text;html=1;align=left;verticalAlign=middle;fontSize=16.1;fontColor=#3d3d46;fontStyle=0;" vertex="1" parent="1"><mxGeometry x="424" y="469.0" width="1200" height="20" as="geometry" /></mxCell>
+        <mxCell id="t45" value="Lane D — the live Room" style="text;html=1;align=left;verticalAlign=middle;fontSize=16.1;fontColor=#19226D;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="286" y="516" width="1200" height="20" as="geometry" /></mxCell>
+        <mxCell id="t46" value="5 subtasks" style="text;html=1;align=left;verticalAlign=middle;fontSize=14;fontColor=#6b6e7b;fontStyle=0;" vertex="1" parent="1"><mxGeometry x="286" y="532" width="1200" height="20" as="geometry" /></mxCell>
+        <mxCell id="b47" value="Lane D
+push · deploy · inspect the logs" style="rounded=1;arcSize=12;html=1;fillColor=#F37021;strokeColor=none;fontColor=#ffffff;fontSize=16.8;fontStyle=1;whiteSpace=wrap;" vertex="1" parent="1"><mxGeometry x="847.5" y="508" width="328.5" height="46" as="geometry" /></mxCell>
+        <mxCell id="n48" value="Lanes V and P share only the frozen message formats and byte-identical copies of the encoder sources;
+they are therefore independent workstreams. Lane D requires both node images." style="rounded=1;arcSize=8;html=1;fillColor=#f2f4f9;strokeColor=#e3e5ea;fontColor=#3d3d46;fontSize=15.4;align=left;whiteSpace=wrap;verticalAlign=top;spacing=8;" vertex="1" parent="1"><mxGeometry x="40" y="572" width="1120" height="62" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

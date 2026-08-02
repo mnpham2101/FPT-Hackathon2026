@@ -1,0 +1,90 @@
+@startuml
+' Startup and triggered-run flow for M1 (requirements/m1-run-timing-and-event-triggering.md, R20/R21).
+' Nothing in this flow is a clock-synchronisation exchange: no node serves time to another,
+' and no node compares its own clock against another node's timestamp.
+
+title M1 startup and run flow — readiness by observation, alignment by configured offsets
+
+actor "Operator" as OP
+participant "CarSky\n(Nydus / Deployment Viewer)" as CS
+participant "Bench — Scenario Player\n10.99.0.10" as BENCH
+participant "V2X ECU\n10.99.0.11" as V2X
+participant "ADA ECU core\n10.99.0.12" as ADA
+participant "ADA detector\n(subprocess)" as DET
+participant "IVI ECU (AAOS guest)\n10.99.0.13" as IVI
+
+== Deployment — no ordering guarantee, no barrier ==
+
+OP -> CS : New Deployment (blueprint)
+CS -> IVI : start Skycraft guest (boots slowest)
+CS -> V2X : start container
+CS -> ADA : start container
+CS -> BENCH : start container
+note over CS
+  The platform provides no dependsOn, no readiness probe,
+  and no "deployment started" event delivered into a node.
+  Start order is therefore undefined.
+end note
+
+== Readiness — observed, not handshaken (R5 acceptance) ==
+
+V2X -> V2X : bind 47100, run R8 stub FSM
+V2X --> CS : [EVT] ready
+ADA -> DET : spawn detector
+DET -> DET : load YOLO11n ONNX, open VIDEO_CLIP_PATH
+DET --> CS : [EVT] ready
+ADA -> ADA : bind 47200
+ADA --> CS : [EVT] ready
+IVI -> IVI : bind 47300 (R4 listener)
+IVI --> CS : listener bound (logcat)
+BENCH --> CS : [EVT] ready
+
+OP -> CS : read per-node Running + restart 0,\nand the four ready lines
+note right of OP
+  This human check is R5's acceptance clause.
+  It replaces a node-to-node readiness handshake.
+end note
+
+== Run start — restarting the bench is the GO ==
+
+OP -> CS : Restart node (bench only)
+CS -> BENCH : restart
+BENCH -> BENCH : wait start_delay_s (scenario YAML)
+BENCH -> BENCH : t = 0; monotonic deadline loop\nat cpm_rate_hz
+
+== Paced streams — two independent sources, one scenario timeline ==
+
+loop every 1/cpm_rate_hz (100 ms), deadline-scheduled on CLOCK_MONOTONIC
+  BENCH -> BENCH : sample(t) -> CpmContent\n(referenceTime = ITS epoch ms)
+  BENCH -> V2X : CPM (UPER, 58 B) over R6
+  V2X -> V2X : stamp rxTime (CLOCK_REALTIME)\ndecode -> validate -> dedupe  [142-151 us]
+  V2X -> ADA : R2 v2x_object (JSON, ~339 B)
+  ADA -> ADA : store write\nmeasured = rxTime + timeOfMeasurement\nlastUpdated = ADA CLOCK_REALTIME
+end
+
+loop every DETECTOR_FRAME_STRIDE frames, paced to DETECTOR_CLIP_FPS
+  DET -> DET : decode frame, infer, estimate distance to B
+  DET -> ADA : R3 JSONL line (source = own_sensor)
+  ADA -> ADA : store write, R13 admission
+end
+
+== Admission and warning — ordering constraint, not a clock constraint ==
+
+ADA -> ADA : B reaches state = tracked\n(3 detections at 5 Hz)
+... bench scenario lead-in: C closes 60 m -> 30 m over 12.0 s ...
+ADA -> ADA : C crosses gate_enter, state = tracked\n(source = v2x_relayed)
+ADA -> ADA : R14 risk transition
+ADA -> IVI : R4 warning (ego, B, ghost C)
+IVI -> IVI : render; auto-dismiss after\nWARNING_TIMEOUT_MS on the guest's own clock
+note over IVI
+  R4 carries no timestamp field.
+  The guest never compares its clock to ADA's,
+  so the AAOS clock domain is outside this design.
+end note
+
+== Verification — one clock, offline ==
+
+OP -> ADA : download [EVT] JSONL
+OP -> OP : ADA_ECU/tools/check_run_alignment.py\nK1-K5 (all stamped by ADA's clock alone)
+
+@enduml

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Baseline connectivity check. Env: ROLE, LISTEN_PORT?, NEXT_HOP_HOST?, NEXT_HOP_PORT?, HZ, PAD, START_DELAY_S."""
+"""Baseline connectivity check. Env: ROLE, LISTEN_PORT?, NEXT_HOP_HOST?, NEXT_HOP_PORT?, HZ, PAD, START_DELAY_S, BODY_PREVIEW?."""
 import os, socket, sys, threading, time
 
 ROLE   = os.environ.get("ROLE", "node")
@@ -8,6 +8,7 @@ NH, NP = os.environ.get("NEXT_HOP_HOST"), os.environ.get("NEXT_HOP_PORT")
 HZ     = float(os.environ.get("HZ", "1"))               # 1 Hz: log stays readable and live
 PAD    = int(os.environ.get("PAD", "0"))                # payload padding, for the MTU check
 DELAY  = float(os.environ.get("START_DELAY_S", "20"))   # let the downstream nodes come up first
+PREVIEW = int(os.environ.get("BODY_PREVIEW", "96"))     # [RX] body preview length; ADA sink sets 512 (V2X HLD D6)
 
 def log(tag, msg): print(f"[{tag}] {time.strftime('%H:%M:%S')} {ROLE} {msg}", flush=True)
 
@@ -32,7 +33,7 @@ def receiver():
     fwd, n = socket.socket(socket.AF_INET, socket.SOCK_DGRAM), 0
     while True:
         data, src = rx.recvfrom(65535); n += 1
-        log("RX", f"#{n} from {src[0]}:{src[1]} len={len(data)} body={data[:96].decode('ascii','replace')}")
+        log("RX", f"#{n} from {src[0]}:{src[1]} len={len(data)} body={data[:PREVIEW].decode('ascii','replace')}")
         if NH:                            # relay: stamp, then forward
             out = data + f"|{ROLE}".encode()
             fwd.sendto(out, (NH, int(NP)))
