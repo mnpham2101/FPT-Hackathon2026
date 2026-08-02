@@ -308,12 +308,65 @@ this section records what was done and by whom.
 
 ### What remains open from this review
 
-The items listed below from § 4.5 and § 5 are **not** addressed by the four commits above —
-they are tracked in [phase5_minh_tasks.md](../phase5_minh_tasks.md) and require the
-five-module restructure the plan describes:
+Tasks are grouped by priority. Items marked **[NEXT]** are the immediate next steps before
+any further work. Items from § 4.5 and § 5 require the five-module restructure described
+in [phase5_minh_tasks.md](../phase5_minh_tasks.md).
 
-- Hardcoded `BUFFER_SIZE`, `MAX_RETRIES`, `RETRY_DELAY_MS`, notification constants (§ 4.5).
-- Retry policy terminates after 5 attempts — should use bounded back-off (§ 4.5).
-- Mock sender `state` message schema mismatch (§ 4.5).
-- Mock sender not loading from `contracts/samples/` (§ 4.5).
-- Module split, version catalog, CI lane, in-Room evidence — groups 5.1, 5.7, 5.9 (§ 5, 0 %).
+---
+
+#### 🔴 Priority 1 — UI is not demo-ready (discovered 2026-08-02)
+
+These three items block any live demo. They are independent of the five-module restructure
+and can be done directly on `feat/phase5-ivi-hmi-dev`.
+
+| # | Task | File(s) | Status |
+|---|------|---------|--------|
+| UI-1 | **[NEXT] Replace `HomeView` placeholder with a real automotive idle screen** — clock, speed, GPS status, V2X link indicator. This is what the driver sees *before* a warning arrives. Without it the app opens to a text stub. | `MainScreen.kt` | ⬜ Open |
+| UI-2 | **[NEXT] Wire `MainViewModel` to `WarningViewModel`** — when `WarningViewModel.uiWarningState` transitions to `Active`, `MainViewModel.setMode(DisplayMode.WarningView)` must be called automatically. When it returns to `Idle`, call `setMode(DisplayMode.HomeView)` to restore. Currently the mode never switches automatically; nothing calls `setMode` from outside. | `MainScreen.kt` (collect in composable) or new `IviApplication` wiring | ⬜ Open |
+| UI-3 | **[NEXT] Mount `CanvasWarningView` into the `WarningView` slot** — `DisplayModeSwitcher` renders `WarningViewPlaceholder()` for `DisplayMode.WarningView`. Replace with the real `CanvasWarningView().Render(scene, riskState)`, feeding `latestScene` and `riskState` from `WarningViewModel`. | `MainScreen.kt` | ⬜ Open |
+| UI-4 | **V2X link status in bottom bar** — `"V2X LINK: STANDBY"` is hardcoded. Wire to `R4ListenerService.serviceError` and to first-message-received state so the bottom bar shows `ACTIVE` when a packet has arrived in the last N seconds, and `ERROR` if `serviceError` fires. | `MainScreen.kt`, `MainViewModel.kt` | ⬜ Open |
+
+**Design decision (video vs. idle screen):** Displaying a live video feed on the IVI
+requires a dedicated video-source node, time-sync with V2X messages, and a suitable clip —
+this is out of scope and not in the requirement list. The correct approach (confirmed
+2026-08-02) is:
+
+```
+[App open / no warning]   → HomeView: automotive idle dashboard
+[R4 warning arrives]      → fade to WarningView: God-View canvas (CanvasWarningView)
+[WARNING_TIMEOUT_MS elapses] → fade back to HomeView
+```
+
+No video node is needed. The mode transition is driven entirely by the existing
+`WarningViewModel` state machine.
+
+---
+
+#### 🟡 Priority 2 — Service hardening (§ 4.5 items)
+
+| # | Task | File(s) | Status |
+|---|------|---------|--------|
+| SVC-1 | Move `BUFFER_SIZE`, `MAX_RETRIES`, `RETRY_DELAY_MS`, notification ID and channel string out of `companion object` constants and into `BuildConfig` fields or resource values — same principle as `R4_UDP_PORT` (§ 4.5) | `R4ListenerService.kt`, `build.gradle.kts` | ⬜ Open |
+| SVC-2 | Change retry policy from "give up after 5 attempts" to bounded back-off that keeps retrying — a listener that stops is worse than one that keeps trying for a recorded demo (§ 4.5) | `R4ListenerService.kt` | ⬜ Open |
+
+---
+
+#### 🟡 Priority 3 — Mock sender fixes (§ 4.5 items)
+
+| # | Task | File(s) | Status |
+|---|------|---------|--------|
+| MOCK-1 | Fix `state` message schema in mock sender — currently emits `vehicles.ego = {position:{x,y}, speed}` and key `B`; schema has `vehicles.ego = {x,y}` and `vehicleB`. State path has never worked end-to-end (§ 4.5) | `mock-sender/mock_r4_sender.py` | ⬜ Open |
+| MOCK-2 | Load payloads from `contracts/samples/` instead of Python literals — prevents producer/consumer drift (§ 4.5) | `mock-sender/mock_r4_sender.py` | ⬜ Open |
+
+---
+
+#### ⚪ Priority 4 — Structural (requires five-module restructure, § 5)
+
+These items cannot be done without the module split defined in [phase5_minh_tasks.md](../phase5_minh_tasks.md).
+They are listed here for completeness; do not start them until the UI tasks above are done.
+
+- Module split: `:observer`, `:data`, `:ui`, `:simulator`, `:app` (groups 5.1 — 0 %)
+- Version catalog (`libs.versions.toml`) for dependency management (group 5.1 — 0 %)
+- CI lane: `testDebugUnitTest` on every push (group 5.7 — 0 %)
+- In-Room evidence and ADB tunnel verification (group 5.9 — 0 %)
+- `R3Snapshot` required fields — remove Kotlin defaults that silently mask missing fields (§ 4.3)
