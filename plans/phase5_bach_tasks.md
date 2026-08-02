@@ -1,52 +1,55 @@
 # Bản kế hoạch hành động Phase 5 — Vũ Xuân Bách
 
-Đối chiếu yêu cầu Lead ([phase5_minh_tasks.md](phase5_minh_tasks.md) — **không sửa**) với tiến độ cá nhân. HMI tối giản: Standby đen + Wake-on-Warning God View (không video).
-
+> **Authority:** Lead trên `origin/main` → [`phase5_minh_tasks.md`](phase5_minh_tasks.md) (+ [`ada-ivi-plan.md`](ada-ivi-plan.md)). **Không sửa** file Lead.
+>
+> **Branch:** `feat/phase5-ivi-hmi-complete` đã **rebase lên `origin/main`** (2026-08-02). Conflict `R4Message.kt` / `SceneGeometry.kt` → lấy bản **main** (Authority Contract), rồi chỉnh consumer/UI cho khớp.
+>
 > Chỉ cập nhật trạng thái tại file này.
 
 ---
 
-## Bảng so khớp tiến độ
+## Gap vs Lead (sau rebase)
 
-| Yêu cầu Lead | Trạng thái Bách | Ghi chú |
-| :--- | :--- | :--- |
-| Nhận R4 UDP + Kotlin / kotlinx.serialization (không nlohmann) | **[x] done** | `R4ListenerService`, `R4Deserializer`, Hilt |
-| Override cổng UDP `5004` → `47300` | **[x] done** | `local.properties` → `r4.udp.port` |
-| Màn hình đen Standby mặc định (`#0D0D1A` + `V2X LINK: STANDBY`) | **[x] done** | `DisplayMode.StandbyView` |
-| Wake-on-Warning: Standby → Warning → Standby | **[x] done** | `MainViewModel` + tests |
-| Option video ego POV | **[x] cancelled (Lead: tối giản, không video)** | Đã gỡ `VideoView` / `VideoPlayerView` |
-| Defensive source guard + Canvas 2D | **[x] done** | Giữ nguyên |
-| Unit / integration tests GREEN | **[x] done** | Standby→Warning→Standby |
-| Jacoco ≥ 80% | **[ ] pending** | Chưa gate |
+| Chủ đề | Trạng thái |
+| :--- | :--- |
+| Authority Contract R4 (`R4Message` / `SceneGeometry` = main) | **[x] done** |
+| IP IVI `10.99.0.13` + UDP default `47300` (+ `local.properties` override) | **[x] done** |
+| Bỏ `StandbyView` / Video; default `HomeView`; status `BOUND :<port>` | **[x] done** |
+| Wake-on-Warning + restore `previousMode` | **[x] done** |
+| `vehicleCSnapshot` → Canvas (R19) | **[x] done** |
+| Live `R4LinkState` / module split / `IviGraph` | **[ ] pending — lane Vinh/shared** |
 
 ---
 
-## Task groups
+## Phân công
 
-### B.1 — R4 ingest & cổng ADA
+### Bách — `[x] done`
 
-- [x] **B.1.1** Models + deserializer
-- [x] **B.1.2** UDP FGS
-- [x] **B.1.3** Port override: `r4.udp.port=47300` trong `IVI_ECU/local.properties`
+- [x] **B.1** Gradle AAOS + `BuildConfig.R4_UDP_PORT=47300` (+ override `r4.udp.port`)
+- [x] **B.2** UDP FGS listener + R4 Deserializer (kotlinx.serialization; preserve unknown `warningType`)
+- [x] **B.3** Coordinate mapper + 2D Canvas God View + defensive `v2x_relayed` guard
+- [x] **B.4** HMI: bỏ Standby/Video; default `HomeView`; status `V2X LINK: BOUND :{port}`
+- [x] **B.5** Wake-on-Warning Active→`WarningView`; Idle→restore (default Home)
+- [x] **B.6** `WarningViewModel` wires `vehicleCSnapshot = objectSnapshot`
+- [x] **B.7** Mock `10.99.0.13:47300` + deploy doc + unit/integration tests
+- [x] **B.8** Rebase lên main; prefer main R4 contracts; adapt local consumers
 
-### B.2 — Standby HMI (R16) — tối giản
+### Vinh / Shared — `[ ] pending - lane Vinh`
 
-- [x] **B.2.1** R16 scaffold
-- [x] **B.2.2** Standby `#0D0D1A` + `V2X LINK: STANDBY`
-- [x] **B.2.3** Không dùng video phức tạp (theo chỉ thị Lead mới)
-
-### B.3 — Wake-on-Warning & Canvas (R17)
-
-- [x] **B.3.1** God View Canvas
-- [x] **B.3.2** Defensive source guard
-- [x] **B.3.3** Standby → Warning → Standby; tôn trọng user override
-- [x] **B.3.4** Tests: default Standby; Standby→Warning→Standby
+- [ ] **V.1** Module split (`:contract` / `:serializer` / `:observer` / `:r4-simulator`)
+- [ ] **V.2** Kotlin `:r4-simulator` (thay Python mock dài hạn)
+- [ ] **V.3** Live `R4LinkState` (`BOUND` / `REBINDING` / `ERROR`) → status bar
+- [ ] **V.4** Remove Hilt → `IviGraph` (HLD D7 / `4.5.1.2` + `4.5.5.3`)
+- [ ] **V.5** `IviRuntimeConfig` + `--ei r4_port` + full D10 BuildConfig knobs
+- [ ] **V.6** phase5-ci + in-Room evidence (groups 5.7–5.9)
 
 ---
 
-## ADA port (thủ công khi tích hợp)
+## Port override
 
 ```properties
-# IVI_ECU/local.properties
-r4.udp.port=47300
+# IVI_ECU/local.properties — chỉ khi cần lệch khỏi default 47300
+# r4.udp.port=5004
 ```
+
+Default build = **47300** (blueprint ADA→IVI `10.99.0.13:47300`).

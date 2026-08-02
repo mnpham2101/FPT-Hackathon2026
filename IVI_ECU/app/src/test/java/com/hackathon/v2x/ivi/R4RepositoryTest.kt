@@ -5,7 +5,6 @@ import com.hackathon.v2x.ivi.data.R4Repository
 import com.hackathon.v2x.ivi.model.R3Snapshot
 import com.hackathon.v2x.ivi.model.R3Timestamps
 import com.hackathon.v2x.ivi.model.R4Message
-import com.hackathon.v2x.ivi.model.R4ServiceError
 import com.hackathon.v2x.ivi.model.R4StateMessage
 import com.hackathon.v2x.ivi.model.R4Vehicles
 import com.hackathon.v2x.ivi.model.R4WarningEvent
@@ -86,20 +85,6 @@ class R4RepositoryTest {
         serviceFlow.emit(state(seq = 7))
         assertEquals(7L, repository.currentState.value?.seq)
         assertEquals(7f, repository.currentState.value?.vehicles?.vehicleB?.x)
-    }
-
-    @Test
-    fun serviceError_doesNotMutateWarningOrStateFlows() = runTest(UnconfinedTestDispatcher()) {
-        repository.attachToService(serviceFlow, backgroundScope)
-        serviceFlow.emit(state(seq = 3))
-
-        repository.warningEvents.test {
-            expectNoEvents()
-            serviceFlow.emit(R4ServiceError())
-            expectNoEvents()
-            cancelAndIgnoreRemainingEvents()
-        }
-        assertEquals(3L, repository.currentState.value?.seq)
     }
 
     @Test

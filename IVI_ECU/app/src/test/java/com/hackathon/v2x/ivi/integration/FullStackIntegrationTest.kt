@@ -93,7 +93,7 @@ class FullStackIntegrationTest {
         val warningViewModel = WarningViewModel(repository)
         val mainViewModel = MainViewModel(warningViewModel.uiWarningState)
 
-        assertEquals(DisplayMode.StandbyView, mainViewModel.currentMode.value)
+        assertEquals(DisplayMode.HomeView, mainViewModel.currentMode.value)
         assertTrue(warningViewModel.uiWarningState.value is WarningUiState.Idle)
 
         // Attach before sending — SharedFlow has replay=0.

@@ -3,14 +3,13 @@ package com.hackathon.v2x.ivi.ui
 /**
  * The view currently occupying the R16 Display Area.
  *
- * Default idle mode is [StandbyView] (black listening surface). [WarningView]
- * is forced by wake-on-warning and restores [MainViewModel.previousMode] on Idle
- * unless the driver overrode.
+ * HLD §3.1 / Lead `16.5.4.5`: this set is **[C] unchanged** — Warning / Home /
+ * Apps / Settings only. Do not add StandbyView or dashcam modes (dashcam deferred).
+ *
+ * [WarningView] is forced by wake-on-warning; Idle restores
+ * [MainViewModel.previousMode] unless the driver overrode.
  */
 sealed class DisplayMode {
-    /** Black standby surface — default when no hazard is active. */
-    data object StandbyView : DisplayMode()
-
     /** R17 2D God View (Canvas) while an R4 warning is Active. */
     data object WarningView : DisplayMode()
 

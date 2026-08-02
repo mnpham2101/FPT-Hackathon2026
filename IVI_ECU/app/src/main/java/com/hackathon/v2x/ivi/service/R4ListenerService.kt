@@ -35,7 +35,8 @@ import javax.inject.Inject
  * Subtask 4.5.1.3 — Key behaviours:
  * - Non-blocking receive loop on [Dispatchers.IO] coroutine
  * - Auto-reconnect on socket error: 1-second back-off, max [MAX_RETRIES] attempts
- * - After [MAX_RETRIES] consecutive failures, emits [ServiceErrorEvent] on [r4EventFlow]
+ * - After [MAX_RETRIES] consecutive failures, logs and stops the loop (no fake
+ *   wire message — main's [R4Message] has only warning|state)
  * - Port is driven by [BuildConfig.R4_UDP_PORT] — no hardcoded literals in source
  */
 @AndroidEntryPoint
@@ -94,8 +95,7 @@ class R4ListenerService : Service() {
                     retries++
                     Log.w(TAG, "UDP socket error (attempt $retries/$MAX_RETRIES): ${e.message}")
                     if (retries >= MAX_RETRIES) {
-                        Log.e(TAG, "Max retries reached — emitting ServiceErrorEvent")
-                        _r4EventFlow.emit(com.hackathon.v2x.ivi.model.R4ServiceError())
+                        Log.e(TAG, "Max retries reached — stopping receive loop")
                         return@launch
                     }
                     delay(RETRY_DELAY_MS)
@@ -104,7 +104,7 @@ class R4ListenerService : Service() {
                     Log.e(TAG, "Unexpected error in receive loop", e)
                     retries++
                     if (retries >= MAX_RETRIES) {
-                        _r4EventFlow.emit(com.hackathon.v2x.ivi.model.R4ServiceError())
+                        Log.e(TAG, "Max retries reached — stopping receive loop")
                         return@launch
                     }
                     delay(RETRY_DELAY_MS)

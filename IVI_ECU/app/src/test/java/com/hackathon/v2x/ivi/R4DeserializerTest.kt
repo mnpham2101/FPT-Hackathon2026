@@ -59,8 +59,8 @@ class R4DeserializerTest {
         assertEquals(1, event.schemaVersion)
         assertEquals("nlos_obstruction", event.warningType)
         assertEquals("high", event.riskState)
-        assertEquals("C-001", event.trackedObject.id)
-        assertEquals("v2x_relayed", event.trackedObject.source)
+        assertEquals("C-001", event.objectSnapshot.id)
+        assertEquals("v2x_relayed", event.objectSnapshot.source)
         assertEquals(25.0f, event.geometry.vehicleC!!.x)
     }
 
@@ -88,10 +88,10 @@ class R4DeserializerTest {
         assertEquals(0.0f, state.vehicles.ego.x)
     }
 
-    // ── Test 3: Unknown warningType → "unknown", no exception ────────────────
+    // ── Test 3: Unknown warningType preserved verbatim (HLD D4) ───────────────
 
     @Test
-    fun `unknown warningType is degraded to 'unknown' without exception`() {
+    fun `unknown warningType is preserved verbatim without exception`() {
         val json = """
             {
               "schemaVersion": 1,
@@ -118,7 +118,7 @@ class R4DeserializerTest {
 
         assertTrue("Should succeed even with unknown warningType", result.isSuccess)
         val event = result.getOrThrow() as R4WarningEvent
-        assertEquals(R4WarningEvent.UNKNOWN_WARNING_TYPE, event.warningType)
+        assertEquals("future_type", event.warningType)
     }
 
     // ── Test 4: Malformed JSON → Result.failure, no crash ────────────────────
@@ -169,7 +169,7 @@ class R4DeserializerTest {
         val event = result.getOrThrow() as R4WarningEvent
         assertEquals("nlos_obstruction", event.warningType)
         assertEquals("low", event.riskState)
-        assertEquals("C-002", event.trackedObject.id)
+        assertEquals("C-002", event.objectSnapshot.id)
         assertEquals(40.0f, event.geometry.vehicleC!!.x)
     }
 }

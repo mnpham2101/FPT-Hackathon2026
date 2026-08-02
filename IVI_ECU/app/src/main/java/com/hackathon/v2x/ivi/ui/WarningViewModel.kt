@@ -66,7 +66,8 @@ class WarningViewModel @Inject constructor(
 
     private fun onWarningReceived(event: R4WarningEvent) {
         _uiWarningState.value = WarningUiState.Active(event)
-        _latestScene.value = event.geometry
+        // Lead 17.5.4.4 / R19: ghost C must render from the warning objectSnapshot.
+        _latestScene.value = event.geometry.copy(vehicleCSnapshot = event.objectSnapshot)
         scheduleAutoClear()
     }
 

@@ -2,6 +2,8 @@
 
 Container node that fires scripted R4 UDP warning events at the IVI ECU node.
 
+> Lead note: production stimulus is Kotlin `:r4-simulator` (group 5.6). This Python sender is interim only — defaults match CarSky blueprint `10.99.0.13:47300`.
+
 ## Build & Push
 
 ```bash
@@ -13,8 +15,8 @@ docker push registry.carsky.io/m1-mock-r4-sender:latest
 
 | Variable | Default | Description |
 |---|---|---|
-| `IVI_ECU_HOST` | `10.88.0.12` | IP of IVI ECU node on the Ethernet Bridge subnet |
-| `IVI_ECU_PORT` | `5004` | UDP port of R4ListenerService on IVI ECU |
+| `IVI_ECU_HOST` | `10.99.0.13` | IVI Skycraft ethernet pin (CarSky blueprint) |
+| `IVI_ECU_PORT` | `47300` | UDP port of R4ListenerService (`BuildConfig.R4_UDP_PORT`) |
 | `INTERVAL_MS` | `2000` | Milliseconds between packets |
 | `CYCLES` | `5` | Number of full approach/leave/unknown cycles |
 | `SCHEMA_VERSION` | `1` | R4 schema version to embed in packets |
@@ -30,8 +32,8 @@ docker push registry.carsky.io/m1-mock-r4-sender:latest
 
 ```bash
 # Terminal 1 — listen to see what's being sent
-nc -ulv 5004
+nc -ulv 47300
 
 # Terminal 2 — run sender
-IVI_ECU_HOST=127.0.0.1 IVI_ECU_PORT=5004 CYCLES=2 python mock_r4_sender.py
+IVI_ECU_HOST=127.0.0.1 IVI_ECU_PORT=47300 CYCLES=2 python mock_r4_sender.py
 ```

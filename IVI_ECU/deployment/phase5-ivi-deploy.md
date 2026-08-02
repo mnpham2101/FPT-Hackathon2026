@@ -78,26 +78,26 @@ adb logcat *:E | findstr /I "FATAL com.hackathon.v2x.ivi"
 # Linux/macOS: adb logcat *:E | grep -E 'FATAL|com.hackathon.v2x.ivi'
 ```
 
-### Mock R4 sender (UDP → port 5004)
+### Mock R4 sender (UDP → port 47300)
 
-`BuildConfig.R4_UDP_PORT` defaults to **5004**. On the Room Ethernet bridge, the IVI pin address is documented in [node-ivi-ecu.md](../../requirements/car-sky-guide/node-ivi-ecu.md) (example static address `10.99.0.13` — use the live pin IP).
+`BuildConfig.R4_UDP_PORT` defaults to **47300** (Lead / CarSky blueprint ADA→IVI). Optional override: set `r4.udp.port` in `IVI_ECU/local.properties`. On the Room Ethernet bridge, the IVI pin is **`10.99.0.13`** ([node-ivi-ecu.md](../../requirements/car-sky-guide/node-ivi-ecu.md)).
 
 **Local loopback** (emulator / laptop only):
 
 ```bash
 cd mock-sender
-IVI_ECU_HOST=127.0.0.1 IVI_ECU_PORT=5004 CYCLES=2 python mock_r4_sender.py
+IVI_ECU_HOST=127.0.0.1 IVI_ECU_PORT=47300 CYCLES=2 python mock_r4_sender.py
 ```
 
 **Against the CarSky Room** (sender on a container/host that can reach the IVI eth address):
 
 ```bash
-IVI_ECU_HOST=<ivi-ethernet-ip> IVI_ECU_PORT=5004 CYCLES=2 python mock_r4_sender.py
+IVI_ECU_HOST=10.99.0.13 IVI_ECU_PORT=47300 CYCLES=2 python mock_r4_sender.py
 ```
 
 See [mock-sender/README.md](../mock-sender/README.md) for cycles (`nlos_obstruction`, state heartbeat, `future_unknown_type`).
 
-Expected UI (once wake-on-warning + Display Area wiring are active): Display Area switches to Warning View; Ghost C uses `v2x_relayed` data; unknown `warningType` must not crash the process.
+Expected UI (once wake-on-warning + Display Area wiring are active): Display Area switches to Warning View; Ghost C uses `v2x_relayed` data; unknown `warningType` must not crash the process. Status bar shows `V2X LINK: BOUND :47300` (not a hardcoded STANDBY literal).
 
 ## Smoke test checklist
 

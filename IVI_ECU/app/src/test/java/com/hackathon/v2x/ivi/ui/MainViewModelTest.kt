@@ -22,7 +22,7 @@ import org.junit.Before
 import org.junit.Test
 
 /**
- * Wake-on-warning tests: Standby → Warning → Standby (Lead-simplified HMI).
+ * Wake-on-warning tests (Lead `16.5.4.5`): Home → Warning → Home (+ override).
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class MainViewModelTest {
@@ -64,40 +64,40 @@ class MainViewModelTest {
         )
 
     @Test
-    fun defaultMode_isStandbyView() {
-        assertEquals(DisplayMode.StandbyView, viewModel.currentMode.value)
+    fun defaultMode_isHomeView() {
+        assertEquals(DisplayMode.HomeView, viewModel.currentMode.value)
     }
 
     @Test
-    fun standbyToActive_autoSwitchesToWarningView_andRecordsStandby() = runTest {
-        assertEquals(DisplayMode.StandbyView, viewModel.currentMode.value)
+    fun homeToActive_autoSwitchesToWarningView_andRecordsHome() = runTest {
+        assertEquals(DisplayMode.HomeView, viewModel.currentMode.value)
 
         viewModel.currentMode.test {
-            assertEquals(DisplayMode.StandbyView, awaitItem())
+            assertEquals(DisplayMode.HomeView, awaitItem())
 
             warningState.value = makeActiveWarning()
             advanceUntilIdle()
 
             assertEquals(DisplayMode.WarningView, awaitItem())
-            assertEquals(DisplayMode.StandbyView, viewModel.previousMode)
+            assertEquals(DisplayMode.HomeView, viewModel.previousMode)
             assertFalse(viewModel.userOverrodeDuringWarning)
             cancelAndIgnoreRemainingEvents()
         }
     }
 
     @Test
-    fun standbyToWarning_thenIdle_restoresStandby() = runTest {
-        assertEquals(DisplayMode.StandbyView, viewModel.currentMode.value)
+    fun homeToWarning_thenIdle_restoresHome() = runTest {
+        assertEquals(DisplayMode.HomeView, viewModel.currentMode.value)
 
         warningState.value = makeActiveWarning()
         advanceUntilIdle()
         assertEquals(DisplayMode.WarningView, viewModel.currentMode.value)
-        assertEquals(DisplayMode.StandbyView, viewModel.previousMode)
+        assertEquals(DisplayMode.HomeView, viewModel.previousMode)
 
         warningState.value = WarningUiState.Idle
         advanceUntilIdle()
 
-        assertEquals(DisplayMode.StandbyView, viewModel.currentMode.value)
+        assertEquals(DisplayMode.HomeView, viewModel.currentMode.value)
     }
 
     @Test

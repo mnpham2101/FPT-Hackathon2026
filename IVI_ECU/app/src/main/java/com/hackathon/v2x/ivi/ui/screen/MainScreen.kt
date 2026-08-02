@@ -42,6 +42,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.hackathon.v2x.ivi.BuildConfig
 import com.hackathon.v2x.ivi.model.SceneGeometry
 import com.hackathon.v2x.ivi.ui.DisplayMode
 import com.hackathon.v2x.ivi.ui.MainViewModel
@@ -54,11 +55,8 @@ import com.hackathon.v2x.ivi.ui.view.IviWarningViewSeam
 // ---------------------------------------------------------------------------
 
 private val BackgroundColor = Color(0xFF1A1A2E)
-/** Standby slate — Lead default black listening surface. */
-private val StandbyBlack = Color(0xFF0D0D1A)
 private val AccentColor = Color(0xFF00D4FF)
 private val TextColor = Color(0xFFE8E8F0)
-private val StandbyHintColor = Color(0xFF8A8A9A)
 private val PanelColor = Color(0xFF14142A)
 private val PanelBorderColor = Color(0xFF2A2A44)
 
@@ -97,7 +95,6 @@ private val RightBarItems = listOf(
 
 private val DisplayMode.statusLabel: String
     get() = when (this) {
-        DisplayMode.StandbyView -> "STANDBY"
         DisplayMode.WarningView -> "WARNING"
         DisplayMode.HomeView -> "HOME"
         DisplayMode.AppsView -> "APPS"
@@ -105,8 +102,8 @@ private val DisplayMode.statusLabel: String
     }
 
 /**
- * R16 main HMI — default [DisplayMode.StandbyView]; wake-on-warning → God View
- * via [IviWarningViewSeam] (no banner overlay).
+ * R16 main HMI — default [DisplayMode.HomeView]; wake-on-warning → God View
+ * via [IviWarningViewSeam] (no banner overlay; Lead `17.5.5.6`).
  */
 @Composable
 fun MainScreen(
@@ -136,6 +133,7 @@ fun MainScreenContent(
     uiWarningState: WarningUiState = WarningUiState.Idle,
     latestScene: SceneGeometry? = null,
     warningViewSeam: IviWarningViewSeam? = null,
+    linkStatusLabel: String = "BOUND :${BuildConfig.R4_UDP_PORT}",
 ) {
     BoxWithConstraints(
         modifier = modifier
@@ -162,11 +160,6 @@ fun MainScreenContent(
                     modifier = Modifier
                         .fillMaxHeight()
                         .weight(DISPLAY_AREA_WIDTH_FRACTION),
-                    fillColor = if (currentMode == DisplayMode.StandbyView) {
-                        StandbyBlack
-                    } else {
-                        PanelColor
-                    },
                 ) {
                     DisplayModeSwitcher(
                         currentMode = currentMode,
@@ -184,7 +177,11 @@ fun MainScreenContent(
                         .weight(SIDE_BAR_WIDTH_FRACTION)
                 )
             }
-            BottomNavBar(currentMode = currentMode, modifier = Modifier.fillMaxWidth())
+            BottomNavBar(
+                currentMode = currentMode,
+                linkStatusLabel = linkStatusLabel,
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
     }
 }
@@ -226,7 +223,6 @@ private fun DisplayModeSwitcher(
     ) { mode ->
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             when (mode) {
-                DisplayMode.StandbyView -> StandbyViewContent()
                 DisplayMode.WarningView -> WarningViewContent(
                     uiWarningState = uiWarningState,
                     latestScene = latestScene,
@@ -237,24 +233,6 @@ private fun DisplayModeSwitcher(
                 DisplayMode.SettingsView -> ViewPlaceholder("Settings View Placeholder")
             }
         }
-    }
-}
-
-@Composable
-private fun StandbyViewContent() {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(StandbyBlack),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = "V2X LINK: STANDBY",
-            color = StandbyHintColor,
-            fontFamily = TechFont,
-            fontWeight = FontWeight.Medium,
-            fontSize = 16.sp,
-        )
     }
 }
 
@@ -367,7 +345,11 @@ private fun SideBarButton(
 }
 
 @Composable
-private fun BottomNavBar(currentMode: DisplayMode, modifier: Modifier = Modifier) {
+private fun BottomNavBar(
+    currentMode: DisplayMode,
+    linkStatusLabel: String,
+    modifier: Modifier = Modifier,
+) {
     Row(
         modifier = modifier
             .height(BottomBarHeight)
@@ -378,12 +360,8 @@ private fun BottomNavBar(currentMode: DisplayMode, modifier: Modifier = Modifier
     ) {
         StatusIndicator(label = "MODE: ${currentMode.statusLabel}", dotColor = AccentColor)
         StatusIndicator(
-            label = if (currentMode == DisplayMode.WarningView) {
-                "V2X LINK: ACTIVE"
-            } else {
-                "V2X LINK: STANDBY"
-            },
-            dotColor = if (currentMode == DisplayMode.WarningView) AccentColor else PanelBorderColor,
+            label = "V2X LINK: $linkStatusLabel",
+            dotColor = if (currentMode == DisplayMode.WarningView) AccentColor else AccentColor,
         )
         Spacer(modifier = Modifier.weight(1f))
         Text(
@@ -417,12 +395,13 @@ private fun StatusIndicator(label: String, dotColor: Color, modifier: Modifier =
     }
 }
 
-@Preview(name = "AAOS 1280x720 — Standby", widthDp = 1280, heightDp = 720, showBackground = true)
+@Preview(name = "AAOS 1280x720 — Home", widthDp = 1280, heightDp = 720, showBackground = true)
 @Composable
 private fun MainScreenPreview() {
     MainScreenContent(
-        currentMode = DisplayMode.StandbyView,
+        currentMode = DisplayMode.HomeView,
         onModeSelected = {},
+        linkStatusLabel = "BOUND :47300",
     )
 }
 
@@ -432,5 +411,6 @@ private fun MainScreenWarningPreview() {
     MainScreenContent(
         currentMode = DisplayMode.WarningView,
         onModeSelected = {},
+        linkStatusLabel = "BOUND :47300",
     )
 }

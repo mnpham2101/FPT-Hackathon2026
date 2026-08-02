@@ -25,16 +25,16 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        // R4 warning auto-dismiss timeout (4.5.1.4 / 17.5.3.5) — externalized, no literals in source.
+        // R4 warning auto-dismiss timeout — externalized, no literals in source.
         buildConfigField("long", "WARNING_TIMEOUT_MS", "10000L")
-        // R4 UDP port — default 5004 (mock / 2-node). Override via IVI_ECU/local.properties:
-        //   r4.udp.port=47300
-        // for production / mini-ADA Rooms (Lead F2). Never hardcode the port in Kotlin.
+        // R4 UDP port — Lead `4.5.4.1` / blueprint ADA→IVI: default 47300 (not 5004).
+        // Optional local override via IVI_ECU/local.properties: r4.udp.port=<port>
+        // Never hardcode the port in Kotlin service/VM/repository logic.
         val localProps = Properties().apply {
             val f = rootProject.file("local.properties")
             if (f.exists()) f.inputStream().use { load(it) }
         }
-        val r4UdpPort = localProps.getProperty("r4.udp.port", "5004")
+        val r4UdpPort = localProps.getProperty("r4.udp.port", "47300")
         buildConfigField("int", "R4_UDP_PORT", r4UdpPort)
     }
 
