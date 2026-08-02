@@ -17,7 +17,8 @@ A design change belongs in [template.md](../../presentation/template/template.md
 
 ## Folder placement
 
-- One subfolder per deck: `presentation/<deck-slug>/<deck-slug>-deck.{md,html}`. The top-level `m1-proposal-deck.*` predates this convention and stays at the root.
+- **Decks about a phase** group by phase, not by deck: `presentation/phase<N>/<deck-slug>-deck.{md,html}`, with every deck about that phase in the one folder and its slug prefixed `phase<N>-`. Example: [presentation/phase0/](../../presentation/phase0/) holds the smoke-test, design-concepts, and task-execution decks. Authoring procedure: [task-planning-presentation](../skills/task-planning-presentation/SKILL.md).
+- **Any other deck** takes its own subfolder: `presentation/<deck-slug>/<deck-slug>-deck.{md,html}`. The top-level `m1-proposal-deck.*` predates this convention and stays at the root.
 - Shared assets — background images, team photos, SVG diagrams — live once in [presentation/assets/](../../presentation/assets/), referenced by every deck through a relative `../assets/…` path.
 
 ## Assets are referenced, never embedded
@@ -31,6 +32,22 @@ Base64-inlining an image bloats the export beyond usefulness and makes it undiff
 | `bg-fpt-tower.jpg` | closing |
 
 A gradient layered over a photo must use `rgba(…)` alpha, not opaque hex — an opaque gradient hides the image entirely.
+
+## Slide titles are condensed phrases
+
+Every slide title — section dividers and content slides alike — is a short noun phrase naming what the slide is about. Not a sentence, not a claim, not a clause with a verb in it.
+
+| Instead of | Write |
+|---|---|
+| The four acceptance boxes, and what actually closed them | The four acceptance boxes |
+| Six lanes, six places the work could start at once | Six lanes defining parallel or consecutive works |
+| Every arrow is a real dependency, never a default assumption | Relationship between lanes |
+| What Phase 1 was allowed to assume | Phase 1's input |
+| Lane F — the smoke test, and the only lane a human had to finish | Lane F — the smoke test and human work |
+
+A `Term — short gloss` shape is fine (`Execution lanes — sequential subtasks`); a trailing subordinate clause is not. The assertion belongs in the slide body, where it has room to be supported; a title that argues the point leaves the body restating it.
+
+This is a house rule, not a stylistic preference to re-litigate per deck — apply it when authoring and when editing an existing deck.
 
 ## How to apply
 
