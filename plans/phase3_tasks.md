@@ -22,7 +22,7 @@
 - Phase 2 complete: `src/observer/detector_reader` (the `DETECTOR_CMD` + stdout-JSONL contract), `src/parser/r3_parser`, the store, `ada_ecu`, the ADA image and its CI lane.
 - Phase 0's frozen `ADA_ECU/detector/contracts/tracked_object.py` binding and `detector/requirements-dev.txt`, plus `ADA_ECU/detector/tests/test_r3_roundtrip.py`.
 - `ADA_ECU/tools/check_clip_spec.py` from `12.2.9.1`.
-- **The clip** — `12.2.9.3` in [phase2_tasks.md](phase2_tasks.md). **This is a human deliverable and it gates group 3.4, group 3.5's R12 evidence, and the phase's first acceptance box.** Groups 3.1–3.3 and 3.6 do not need it and start immediately.
+- **The clip** — **no longer a blocking human deliverable as of 2026-08-02.** [m1-video-source-and-ivi-dashcam.md](../requirements/m1-video-source-and-ivi-dashcam.md) §5/§9 confirms the delivery mechanism (one `COPY media/` layer, `VIDEO_CLIP_PATH`, no volume, no `video` pin), and the user's 2026-08-02 direction makes **sourcing and post-producing the clip agent work** — new **task group 3.7** below. `12.2.9.3` in [phase2_tasks.md](phase2_tasks.md) stays open as the *preferred* source if the user already holds footage; group 3.7 is the path taken when they do not. Either one feeds `12.3.7.2`. Groups 3.1–3.3 and 3.6 need no clip and start immediately.
 
 **Output (phase acceptance = the four milestone boxes):**
 
@@ -60,7 +60,7 @@ Stated once, referenced by every clip-gated subtask.
 - **Development is not blocked.** `SyntheticFrameSource` (D6) and `tools/make_sample_video.py` drive every module, every unit test and every CI lane. Groups 3.1, 3.2, 3.3 and 3.6 complete with no clip in the repo.
 - **Evidence is blocked.** `tools/make_sample_video.py` writes flat grey rectangles labelled "B" — a **decoder-and-contract smoke fixture**. A pretrained COCO detector will not classify a labelled rectangle as `car`, so a synthetic run produces **zero detections**, which is not a detection log with per-frame objects and distance estimates.
 - **Forfeited without a real clip:** R12's first acceptance box; the distance-constant validation ([HLD §11 item 3](../ADA_ECU/doc/phase2-4-ada-ecu-hld.md#11-open-items-and-flags)); the ≥ 5 Hz KPI under real decode + inference load; and R19's zero-C claim as *measured* evidence rather than an argument from construction.
-- **Escalation, not absorption:** if the clip has not arrived by the day group 3.4 would start, the plan does not quietly substitute the fixture — `12.3.4.1` is marked blocked and the slip is reported to the user against the 2026-08-08 deadline.
+- **Escalation, not absorption:** the clip is now agent-sourced (group 3.7), so "no clip" means "no acceptably-licensed footage satisfying the content rows was found", not "the user has not sent one". In that case the plan does not quietly substitute the fixture — `12.3.7.1` reports the three closest candidates and their failing rows to the user against the 2026-08-08 deadline, and `12.3.4.1` is marked blocked.
 
 ---
 
@@ -208,11 +208,11 @@ Stated once, referenced by every clip-gated subtask.
 
 ---
 
-## Task Group 3.4 — Clip intake and calibration (serves R12) — **blocked on the human task**
+## Task Group 3.4 — Clip intake and calibration (serves R12) — **unblocked by group 3.7**
 
-> Every subtask here waits on `12.2.9.3` in [phase2_tasks.md](phase2_tasks.md). If the clip has not arrived when group 3.3 finishes, this group is marked blocked and the slip is reported — see § Clip contingency.
+> Written when the clip was a human deliverable. As of 2026-08-02 its input arrives from **group 3.7** (agent-sourced and post-produced) or from `12.2.9.3` (user-supplied), whichever lands first. `12.3.4.2` is **superseded by `12.3.7.2`** — see its entry.
 
-### [ ] `12.3.4.1` — Validate the delivered clip *(agent — blocked on `12.2.9.3`)*
+### [ ] `12.3.4.1` — Validate the delivered clip *(agent — after `12.3.7.1`, or after `12.2.9.3` if the user supplies footage)*
 
 **Objective:** a pass/fail verdict on the delivered file before it enters the repo.
 
@@ -220,9 +220,13 @@ Stated once, referenced by every clip-gated subtask.
 
 **Acceptance:** preflight exit 0 on the final file, with the report recorded. Doc-only commit.
 
-**Dependencies:** after `12.2.9.3` + `12.2.9.1`. **Commit:** `[12.3.4.1] docs: record the delivered clip preflight verdict`
+**Dependencies:** after `12.2.9.1`, and after `12.3.7.1` (agent-sourced candidate) or `12.2.9.3` (user-supplied file). **Commit:** `[12.3.4.1] docs: record the delivered clip preflight verdict`
 
-### [ ] `12.3.4.2` — Commit the clip and wire it into the image *(agent — blocked on `12.3.4.1`)*
+### `12.3.4.2` — ~~Commit the clip and wire it into the image~~ — **SUPERSEDED by `12.3.7.2` (2026-08-02)**
+
+> **Do not implement.** Its whole scope — the committed file at `ADA_ECU/media/ego-b-occluding-c.mp4`, the `.gitattributes` binary marker, `COPY media/ /app/media/`, the `.dockerignore` check — is carried by `12.3.7.2`, which additionally owns the ffmpeg post-production that produces the file and the image-size/layer evidence required by [m1-video-source-and-ivi-dashcam.md §5](../requirements/m1-video-source-and-ivi-dashcam.md). Splitting "encode it" from "land it" would have produced a repo state with an off-spec binary committed and then replaced — exactly what §5 warns against ("git keeps every blob forever… commit exactly one final file"). The ID is retired in place, never renumbered or reused; every dependency that named `12.3.4.2` now reads `12.3.7.2`.
+
+**Original scope, retained for traceability *(agent — blocked on `12.3.4.1`)*:**
 
 **Objective:** the clip reaches the container the only way it can — inside the image ([research note §1](../ADA_ECU/doc/research_notes/video-source-for-r12.md#1-platform-finding--carsky-serves-no-camera-content): a Container Node has no volume, no bind mount, no host path).
 
@@ -230,9 +234,9 @@ Stated once, referenced by every clip-gated subtask.
 
 **Acceptance:** `ada-ecu-image` lane green; the built image contains the file at `/app/media/ego-b-occluding-c.mp4` at the expected size (verified by the lane's in-image run step).
 
-**Dependencies:** after `12.3.4.1`; needs the § Open items item 2 decision. **Commit:** `[12.3.4.2] feat: bake the demo clip into the ADA image`
+**Dependencies:** after `12.3.4.1`; needs the § Open items item 2 decision. **Commit:** ~~`[12.3.4.2] feat: bake the demo clip into the ADA image`~~ — **no commit is made under this ID.**
 
-### [ ] `12.3.4.3` — Retune the distance constants against the real clip *(agent — blocked on `12.3.4.2`)*
+### [ ] `12.3.4.3` — Retune the distance constants against the real clip *(agent — blocked on `12.3.7.2`)*
 
 **Objective:** close [HLD §11 item 3](../ADA_ECU/doc/phase2-4-ada-ecu-hld.md#11-open-items-and-flags) — `VEHICLE_WIDTH_M` and `CAMERA_HFOV_DEG` are proposals with no calibration target until the clip exists.
 
@@ -245,7 +249,7 @@ Stated once, referenced by every clip-gated subtask.
 
 **Acceptance:** the estimated-range series for B is monotonic through the approach and crosses the gate once; the two constants' final values are committed in the config defaults and the node guide.
 
-**Dependencies:** after `12.3.4.2` + `12.3.2.7`. **Commit:** `[12.3.4.3] fix: retune the pinhole distance constants against the demo clip`
+**Dependencies:** after `12.3.7.2` + `12.3.2.7`. **Commit:** `[12.3.4.3] fix: retune the pinhole distance constants against the demo clip`
 
 ---
 
@@ -268,7 +272,7 @@ Stated once, referenced by every clip-gated subtask.
 
 **Dependencies:** after `12.3.2.6` (line shape). **Commit:** `[12.3.5.1] feat: add the R12 zero-C evidence check`
 
-### [ ] `12.3.5.2` — Detector smoke run over the clip: the R12 detection log *(agent — blocked on `12.3.4.2`)*
+### [ ] `12.3.5.2` — Detector smoke run over the clip: the R12 detection log *(agent — blocked on `12.3.7.2`)*
 
 **Objective:** the R12 acceptance artifact — a detection log over the provided clip with per-frame objects and distance estimates, at an acceptable offline pace.
 
@@ -281,7 +285,7 @@ Stated once, referenced by every clip-gated subtask.
 
 **Acceptance:** all four KPIs plus the measured warm-up recorded with their values; this closes the R12 detection-log box and the CPU-only/offline-pace box at host level (`5.3.6.2` repeats KPI 3 on the deployed node).
 
-**Dependencies:** after `12.3.4.2` + `12.3.4.3` + `12.3.5.1`. **Commit:** `[12.3.5.2] docs: record the R12 detection log and KPI measurements`
+**Dependencies:** after `12.3.7.2` + `12.3.4.3` + `12.3.5.1`. **Commit:** `[12.3.5.2] docs: record the R12 detection log and KPI measurements`
 
 ### [ ] `3.3.5.3` — Retire the mock: real detector into the real store *(agent)*
 
@@ -315,11 +319,11 @@ Stated once, referenced by every clip-gated subtask.
 
 **Objective:** the deployable image carries both processes (D9 image layout).
 
-**Scope:** `ADA_ECU/Dockerfile` — add `COPY detector/ /app/detector/`, `RUN pip install --no-cache-dir -r /app/detector/requirements.txt` (build stage or runtime stage per the single-base design), `COPY models/ /app/models/`, and confirm `COPY media/` from `12.3.4.2`. `detector/tests/` and `requirements-dev.txt` stay out via `.dockerignore`. Image layout ends as `/app/ada_ecu`, `/app/entrypoint.sh`, `/app/detector/`, `/app/models/yolo11n.onnx`, `/app/media/ego-b-occluding-c.mp4`.
+**Scope:** `ADA_ECU/Dockerfile` — add `COPY detector/ /app/detector/`, `RUN pip install --no-cache-dir -r /app/detector/requirements.txt` (build stage or runtime stage per the single-base design), `COPY models/ /app/models/`, and confirm `COPY media/` from `12.3.7.2`. **Layer order is load-bearing** ([m1-video-source-and-ivi-dashcam.md §5](../requirements/m1-video-source-and-ivi-dashcam.md)): `COPY media/` then `COPY models/` — both rarely-changing, so their blobs are pushed once and cached — and `COPY detector/` last, because it changes every commit. `detector/tests/` and `requirements-dev.txt` stay out via `.dockerignore`. Image layout ends as `/app/ada_ecu`, `/app/entrypoint.sh`, `/app/detector/`, `/app/models/yolo11n.onnx`, `/app/media/ego-b-occluding-c.mp4`.
 
 **Acceptance:** `ada-ecu-image` lane green; the lane's in-image run step starts `detector/main.py --synthetic` inside the pulled arm64 image and observes R3 JSONL on stdout — proving the wheels resolved for aarch64 in the real image, which is what [HLD §11 item 6](../ADA_ECU/doc/phase2-4-ada-ecu-hld.md#11-open-items-and-flags) asks for.
 
-**Dependencies:** after `12.3.1.1` + `12.3.2.7` + `12.3.3.1` (+ `12.3.4.2` when the clip exists). **Commit:** `[5.3.6.1] feat: add the detector, model and clip to the ADA image`
+**Dependencies:** after `12.3.1.1` + `12.3.2.7` + `12.3.3.1` (+ `12.3.7.2` when the clip exists). **Commit:** `[5.3.6.1] feat: add the detector, model and clip to the ADA image`
 
 ### [ ] `5.3.6.2` — USER-MANUAL: deploy the ADA node and measure the deployed inference rate *(user, Nydus UI)*
 
@@ -329,10 +333,124 @@ Stated once, referenced by every clip-gated subtask.
 
 - Node config per [node-ada-ecu.md § Blueprint node config](../requirements/car-sky-guide/node-ada-ecu.md) as updated by `5.2.9.4`: image `registry.hackathon-2.carsky.io/m1-ada-ecu:latest`, `command: ["./entrypoint.sh"]`, `capabilities: ["NET_RAW"]`, the §6 env set. New Deployment → Deployment Viewer shows the ADA node **Running**, restart 0; mind the 2-deployment quota.
 - From the node's View Log: confirm `detector_spawn` and a steady `own_sensor_ingest` stream; measure the effective sampled-frame rate from the event timestamps (**≥ 5 Hz / ≤ 200 ms per sampled frame**); if it fails, raise `DETECTOR_FRAME_STRIDE` in the node config and re-measure — config only, no rebuild.
+- **Also closes [m1-video-source-and-ivi-dashcam.md §7 KPI 9](../requirements/m1-video-source-and-ivi-dashcam.md):** `detector_spawn` followed by `own_sensor_ingest` on the deployed node is the proof that the **baked-in clip opened on the real node**, not just on a laptop — the one thing no local run can establish about the `COPY media/` delivery path. Record it as such, naming the clip path the node reports.
 
-**Acceptance:** Running evidence plus the measured deployed rate recorded in `plans/doc/phase3-ada-detector-run.md`; evidence commit by the orchestrating session after the user confirms.
+**Acceptance:** Running evidence plus the measured deployed rate recorded in `plans/doc/phase3-ada-detector-run.md`; evidence commit by the orchestrating session after the user confirms. Deployment status and the log evidence are gathered by [[car-sky]] per [carsky-acceptance-evidence](../.claude/skills/carsky-acceptance-evidence/SKILL.md); the user performs the Nydus UI steps.
 
 **Dependencies:** after `5.3.6.1`. **Commit:** `[5.3.6.2] docs: record the ADA node deploy and deployed inference rate`
+
+---
+
+## Task Group 3.7 — Demo clip: sourcing, licence, post-production, delivery (serves R12, R5)
+
+> **Added 2026-08-02** on the user's direction, against [m1-video-source-and-ivi-dashcam.md](../requirements/m1-video-source-and-ivi-dashcam.md) §1(4), §5 and §9. It converts the clip from a blocking human deliverable into agent work: find footage under a licence the project may use, cut and encode it to the [§3 spec](../ADA_ECU/doc/research_notes/video-source-for-r12.md#3-video-input-spec-to-build-phase-3-against), and land it in the repo and the image the only way a Container Node can receive a file — a `COPY` layer.
+>
+> **The two binding content rows are not negotiable and no editing step can create them:** vehicle **B** visible and occluding the ego lane at roughly **10–40 m** in **≥ 90%** of frames, and vehicle **C never visible in any frame**. The second is what R19's "zero direct C detections" asserts; a clip that violates it invalidates the definition of done regardless of how good the detection log looks.
+
+### [ ] `12.3.7.1` — Source, licence-check and download the demo clip *(agent — online search; **first in this group**)*
+
+**Objective:** obtain **one** candidate ego-POV dashcam recording that satisfies the content rows, under a licence that permits redistribution and modification, and record its provenance. This subtask does **not** cut, encode, or commit video — that is `12.3.7.2`.
+
+**Where to search — acceptable sources only.** The project is open-source-only ([solution-selection-criteria.md](../.claude/rules/solution-selection-criteria.md)), and the clip is redistributed twice: committed to this repo and pushed inside an OCI image. A licence that permits neither is disqualifying, however good the footage.
+
+| Tier | Source | Licence to expect |
+|---|---|---|
+| 1 (prefer) | [Wikimedia Commons](https://commons.wikimedia.org/) video category search; [Openverse](https://openverse.org/) | CC0 / public domain / CC BY / CC BY-SA |
+| 1 | [Internet Archive](https://archive.org/) items explicitly marked public domain or CC | PD / CC |
+| 2 | Pexels, Pixabay, Mixkit, Coverr, Videvo — **per-clip licence, read it, do not assume the site-wide one** | Site "free to use" licences permitting commercial use and modification |
+| 3 | Openly-licensed driving datasets — comma2k19 (MIT), or any dataset whose stated licence permits redistribution | MIT / BSD / CC BY |
+| **Disqualified** | YouTube/Vimeo downloads under the standard platform licence; any file with no stated licence; anything paid, watermarked, or "editorial use only"; KITTI / BDD100K and other **CC BY-NC** datasets | — |
+
+**On non-commercial (NC) licences:** an NC clip is *not* auto-rejected but is **not the agent's call** — it restricts redistribution of every image the project pushes. If the only viable candidate is NC, stop and escalate to the user with the licence text quoted (§ Open items item 10).
+
+**Content acceptance the footage must satisfy** — checked before it is accepted, on the segment intended for use:
+
+1. **Forward-facing ego dashcam view**, camera roughly fixed to the vehicle, same-heading near-collinear convoy (plan §2 composition assumption). Daylight, dry, clear — a rain-streaked or night clip costs detector confidence for nothing.
+2. **Vehicle B**: exactly one vehicle directly ahead in the ego lane, visible and occluding, apparent range roughly **10–40 m**, present in **≥ 90%** of the segment's frames. A segment where B is at 100 m is useless — the R13 gate is 30 m.
+3. **Vehicle C never visible**: operationally, **B is the frontmost visible vehicle in the ego lane for the entire segment** — no third vehicle ahead of B in that lane, and nothing visible past or through B in the ego lane at any moment. Vehicles in adjacent lanes and oncoming traffic are *not* C and are acceptable; a vehicle appearing ahead of B in the ego lane, even for one frame, disqualifies the segment (re-cut around it, or reject the clip).
+4. **Approach signal, strongly preferred:** B's apparent range decreases across the segment, so `12.3.4.3` has a monotonic series to calibrate against and the R13 gate is crossed once.
+5. **Source resolution ≥ 1280×720** so `12.3.7.2` downscales rather than upscales; ≥ 20 fps source; usable segment ≥ 60 s continuous.
+6. No burned-in overlay obscuring the lane ahead (a corner speed/time HUD is fine); no heavy compression blocking on the vehicle ahead.
+
+**How to check rows 2–4 — not by watching, by sampling.** `ffmpeg -i <raw> -vf fps=1 -q:v 3 <scratch>/frame_%04d.jpg`, then inspect **every** extracted frame of the intended segment. Row 3's claim is a claim about *all* frames, so a spot check does not establish it; sample at ≥ 1 fps and state the sampling rate in the record. Choose segment boundaries so the claim holds across them.
+
+**Scope — what this subtask writes:**
+
+- Download the chosen file to `ADA_ECU/media/source/` and add `ADA_ECU/media/source/` to `.gitignore`. **The raw download is never committed** — [§5](../requirements/m1-video-source-and-ivi-dashcam.md) is explicit that git keeps every blob forever, so exactly one final encoded file enters history and the raw stays local.
+- Write the provenance sidecar `ADA_ECU/media/ego-b-occluding-c.source.md` carrying: source URL · title and author · licence name, SPDX-or-URL, and the exact attribution string the licence requires · date accessed · SHA-256 of the raw download · the raw file's `ffprobe` summary (container, codec, resolution, fps, duration, size) · the chosen in/out timestamps for the segment · the content verdict for rows 1–6 with the frame-sampling rate used and the frame indices checked for row 3.
+- If any licence obliges attribution in the distributed artifact, the sidecar states where that attribution is carried (this file plus `ADA_ECU/README` if one exists) — an attribution that lives only in a chat message is not compliance.
+
+**Escalation, not substitution:** if no candidate satisfies all of rows 1–6 under a tier-1/2/3 licence after searching the named sources, **do not lower a content row and do not fall back to `tools/make_sample_video.py`** (§ Clip contingency — the synthetic fixture forfeits R12 evidence). Report the three closest candidates with the row each fails, and hand the decision to the user.
+
+**Acceptance:** the sidecar exists and is complete, every field filled with a real value; the licence is tier 1–3 and quoted; the content verdict states rows 1–6 pass on a named segment with the sampling evidence; the raw file is present locally at `ADA_ECU/media/source/` and is **not** staged for commit; `.gitignore` covers it. No video file enters the commit.
+
+**Dependencies:** none within this phase — startable day one, in parallel with every module lane. **Commit:** `[12.3.7.1] docs: record the demo clip source, licence and content verdict`
+
+### [ ] `12.3.7.2` — Post-produce the clip and land it in the repo and the image *(agent — after `12.3.7.1`; **needs the § Open items item 2 decision**)*
+
+**Objective:** turn the raw candidate into the one deliverable artifact and put it where the container can read it. The brief deliberately covers **both** things the clip needs before it is usable, because they are one indivisible outcome — "an off-spec file committed, then replaced" is the exact history [§5](../requirements/m1-video-source-and-ivi-dashcam.md) warns against, so the encode and the placement land in one commit. This subtask **supersedes `12.3.4.2`**.
+
+**Half A — post-processing / editing.** Tool: **ffmpeg** (LGPL/GPL, open-source, Linux — the only encoder this project uses). Target is the [§3 spec](../ADA_ECU/doc/research_notes/video-source-for-r12.md#3-video-input-spec-to-build-phase-3-against): MP4 (ISO BMFF) with `faststart` · H.264 High, `yuv420p` 8-bit progressive · **1280×720** · **20 fps constant** · 60–120 s (target 60 s) · ~4 Mbit/s → ~30 MB, **hard ceiling 60 MB** · **no audio track**.
+
+```
+ffmpeg -ss <in> -to <out> -i ADA_ECU/media/source/<raw> \
+  -vf "crop=<w>:<h>:<x>:<y>,scale=1280:720:flags=lanczos,fps=20" \
+  -c:v libx264 -profile:v high -pix_fmt yuv420p \
+  -b:v 4M -maxrate 4.5M -bufsize 8M \
+  -x264-params keyint=40:min-keyint=40:scenecut=0 \
+  -movflags +faststart -an \
+  ADA_ECU/media/ego-b-occluding-c.mp4
+```
+
+- `-ss/-to` trim to the segment `12.3.7.1` chose. `crop` first, **only** if the source aspect is not 16:9 — crop to 16:9 then scale, never letterbox (black bars are frames the detector wastes inference on) and **never upscale**.
+- `fps=20` with a fixed keyint gives the constant frame rate `12.3.2.2` depends on: `timestamp_ms = frame_index / fps * 1000` is valid only under CFR, and the fixed GOP keeps the `DETECTOR_LOOP` re-open at frame 0 clean.
+- `-an` drops audio (§3: an audio track only costs bytes). `+faststart` puts the moov atom first.
+- Record the **exact command used**, verbatim, in `plans/doc/phase3-ada-detector-run.md` — a reproducible encode is what lets the clip be re-cut later without re-deriving these flags.
+
+**Verify the content again, on the encoded file — do not inherit `12.3.7.1`'s verdict.** A trim point is a place where a frame that was excluded can reappear; re-run the same `fps=1` frame extraction against `ADA_ECU/media/ego-b-occluding-c.mp4` and re-confirm **B occluding at 10–40 m in ≥ 90% of frames** and **no vehicle ahead of B in the ego lane in any frame**. Then run `python ADA_ECU/tools/check_clip_spec.py ADA_ECU/media/ego-b-occluding-c.mp4` (from `12.2.9.1`) and require exit 0 on the format rows.
+
+**Half B — placing the artifact into the repo and the image.**
+
+- Final path **`ADA_ECU/media/ego-b-occluding-c.mp4`** — the path `VIDEO_CLIP_PATH` already defaults to inside the container as `/app/media/ego-b-occluding-c.mp4` (`12.3.2.1`, [HLD §6](../ADA_ECU/doc/phase2-4-ada-ecu-hld.md#6-configuration--no-hardcoded-tunables)). No code change: the path and the stride are env, never literals (CLAUDE.md principle 5).
+- `.gitattributes`: `ADA_ECU/media/*.mp4 binary -diff -merge` so the blob is never diffed or merge-mangled.
+- `ADA_ECU/Dockerfile`: `COPY media/  /app/media/` **as its own early layer**, ahead of `COPY models/` and well ahead of `COPY detector/`, per [§5](../requirements/m1-video-source-and-ivi-dashcam.md):
+
+  ```dockerfile
+  # media and model: change rarely, pushed once, cached thereafter
+  COPY media/  /app/media/
+  COPY models/ /app/models/
+  # code: changes every commit
+  COPY detector/ /app/detector/
+  ```
+
+- Confirm `ADA_ECU/.dockerignore` does **not** exclude `media/` (it excludes `doc/`, `tests/`, `tools/`, `requirements-dev.txt` — check the pattern list rather than assuming).
+- **Measure and record the image-size delta** in `plans/doc/phase3-ada-detector-run.md`: `docker image inspect -f '{{.Size}}'` before and after, the media layer's own size from `docker history`, and the layer digest. Expect the delta to be ≈ the file size — H.264 is already compressed, so the layer's gzip gains ~0%.
+- **Git tracking — the recommendation, and the flag.** A ~30 MB binary goes in **plain git**, committed exactly once. It joins `models/yolo11n.onnx` (~10 MB) and the repo's existing committed media (`presentation/assets/*.jpg|png`, `requirements/*.png`); ~40 MB of write-once binaries is within normal git limits and keeps the image build offline-reproducible on a node with no volume. **Git LFS is rejected** — it buys history hygiene at the cost of a remote-storage dependency and a new failure mode on every clone and CI checkout, days from the 2026-08-08 deadline (criterion C2). The one real cost is permanence: a re-encode is a full second copy, never a delta, so **iterate the encode locally and commit one final file**. This is § Open items item 2, whose owner is the **user** — the implementing agent obtains that confirmation before committing the binary and does not decide it.
+
+**Acceptance (all required):**
+
+- `check_clip_spec.py` exits 0 on `ADA_ECU/media/ego-b-occluding-c.mp4`; `ffprobe` reports MP4/H.264 High/`yuv420p`/1280×720/20 fps CFR/no audio stream/≤ 60 MB.
+- The post-edit content re-verification is recorded with its sampling rate: B occluding ≥ 90% of frames at 10–40 m, **zero frames containing a vehicle ahead of B in the ego lane**.
+- The exact ffmpeg command and the image-size delta, media-layer size and layer digest are recorded in `plans/doc/phase3-ada-detector-run.md`.
+- Build passes: `docker buildx build --platform linux/arm64 --provenance=false --sbom=false -t m1-ada-ecu:latest ADA_ECU/` succeeds and CI lane `ada-ecu-image` is green; a run step inside the built arm64 image finds `/app/media/ego-b-occluding-c.mp4` at the expected byte size.
+- Unit tests unaffected and still green (`python -m pytest ADA_ECU/detector/tests` on CI `ada-detector-tests`; `ctest --test-dir ADA_ECU/build`) — this subtask changes no code, and proving it changed no behaviour is part of being done.
+- The raw source file is still uncommitted; exactly one video file is added to git history.
+
+**Dependencies:** after `12.3.7.1`; needs the § Open items item 2 user decision. Unblocks `12.3.4.3`, `12.3.5.2`, `5.3.6.1`, `5.3.7.3`. **Commit:** `[12.3.7.2] feat: post-produce the demo clip and bake it into the ADA image`
+
+### [ ] `5.3.7.3` — Record the media-layer size, cache-stability and push KPIs *(spawn [[car-sky]] — registry push)*
+
+**Objective:** close [m1-video-source-and-ivi-dashcam.md §7 KPIs 7 and 8](../requirements/m1-video-source-and-ivi-dashcam.md) — prove the clip costs one upload rather than one per push, which is the whole reason the `COPY media/` layer is ordered early.
+
+**Scope:**
+
+- Build the ADA image twice without touching `ADA_ECU/media/`; assert from `docker history` that the **media layer digest is identical** across the two builds and its size is **≤ 60 MB** (KPI 7). A changed digest means the layer ordering is wrong and `12.3.7.2`'s Dockerfile edit is the fix.
+- `docker push registry.hackathon-2.carsky.io/m1-ada-ecu:latest` — time the first push and record the media blob's transfer time and the measured link rate. Push again and confirm the registry reports that blob **already present, 0 bytes transferred** (KPI 8) — Zot skips blobs it already holds.
+- Record both in `plans/doc/phase3-ada-detector-run.md`. No code change; doc-only commit.
+
+**Acceptance:** the two digests match and are recorded; the second push reports 0 bytes for the media blob; both numbers written to the run doc. Registry credential, tag and push are [[car-sky]]'s per [carsky-deploy-preflight](../.claude/skills/carsky-deploy-preflight/SKILL.md).
+
+**Dependencies:** after `12.3.7.2` + `5.3.6.1`. **Commit:** `[5.3.7.3] docs: record the ADA media-layer size and push-cache KPIs`
 
 ---
 
@@ -350,12 +468,16 @@ evidence   12.3.5.1 (after 12.3.2.6) ──► 12.3.5.4 (also needs 12.3.2.7)
            3.3.5.3 (after 12.3.2.7 + phase-2 13.2.8.2)
 image      5.3.6.1 (after 12.3.1.1 + 12.3.2.7 + 12.3.3.1)
 
-CLIP LANE (blocked on the human task 12.2.9.3 - never blocks the lanes above)
-           12.3.4.1 ──► 12.3.4.2 ──► 12.3.4.3 ──► 12.3.5.2
-deploy     5.3.6.2 (after 5.3.6.1; best run after 12.3.4.2 so the real clip is in the image)
+CLIP LANE (agent-owned from 2026-08-02 - runs fully parallel with every lane above)
+           12.3.7.1 (day one, no dependency) ──► 12.3.4.1 ──► 12.3.7.2 ──► 12.3.4.3 ──► 12.3.5.2
+                                                   12.3.4.2 SUPERSEDED by 12.3.7.2 - not implemented
+push/KPI   5.3.7.3 (after 12.3.7.2 + 5.3.6.1)
+deploy     5.3.6.2 (after 5.3.6.1; run after 12.3.7.2 so the real clip is in the deployed image)
 ```
 
-**Recommended runtime order (single tree):** 12.3.1.1 → 12.3.3.3 → 12.3.2.1 → 12.3.2.2 → 12.3.2.3 → 12.3.2.4 → 12.3.3.2 → 12.3.3.1 → 12.3.2.5 → 12.3.2.6 → 12.3.2.7 → 12.3.5.1 → 12.3.5.4 → 3.3.5.3 → 5.3.6.1 → *(clip lane when unblocked)* 12.3.4.1 → 12.3.4.2 → 12.3.4.3 → 12.3.5.2 → 5.3.6.2.
+**Recommended runtime order (single tree):** 12.3.7.1 *(start it first — it is the only lane with an external unknown)* → 12.3.1.1 → 12.3.3.3 → 12.3.2.1 → 12.3.2.2 → 12.3.2.3 → 12.3.2.4 → 12.3.3.2 → 12.3.3.1 → 12.3.2.5 → 12.3.2.6 → 12.3.2.7 → 12.3.5.1 → 12.3.5.4 → 3.3.5.3 → 12.3.4.1 → 12.3.7.2 → 5.3.6.1 → 12.3.4.3 → 12.3.5.2 → 5.3.7.3 → 5.3.6.2.
+
+**The clip lane is now parallel, not blocking.** `12.3.7.1` has no dependency inside the phase and no dependency on any other person, so it starts on day one alongside `12.3.1.1` and the module lane. Only the four clip-consuming subtasks (`12.3.4.1`, `12.3.7.2`, `12.3.4.3`, `12.3.5.2`) sit behind it, and none of the 15 module/CI/image subtasks do.
 
 **Relative to Phase 4.** Fully parallel. Phase 4 consumes the store, not the detector; the only shared file is `ADA_ECU/CMakeLists.txt` (C++ targets — this phase adds none) and `ADA_ECU/Dockerfile` (this phase adds COPY lines, Phase 4 adds `capture.sh`). Sequence those two edits, not the phases.
 
@@ -363,10 +485,12 @@ deploy     5.3.6.2 (after 5.3.6.1; best run after 12.3.4.2 so the real clip is i
 
 | Milestone Phase 3 box | Closed by |
 |---|---|
-| Detection log with per-frame objects and distance estimates (R12) | 12.3.5.2 — **needs the clip**; modules 12.3.2.2/3/5/6/7 |
+| Detection log with per-frame objects and distance estimates (R12) | 12.3.5.2 — **needs the clip**, now produced by 12.3.7.1 + 12.3.7.2; modules 12.3.2.2/3/5/6/7 |
 | Entries enter via the same R3 interface, `source = own_sensor`, mock retired | 3.3.5.3 · 12.3.2.6 (frozen binding) · Phase 2 `3.2.3.2` + `3.2.4.1` |
-| **Zero detections labeled C** | 12.3.5.1 (the falsifiable check) · 12.3.5.4 (repeatable in CI) · D6 structural argument · clip content row (`12.3.4.1`) |
+| **Zero detections labeled C** | 12.3.5.1 (the falsifiable check) · 12.3.5.4 (repeatable in CI) · D6 structural argument · the clip content rows, established at 12.3.7.1 and **re-established on the encoded file** at 12.3.7.2 · recorded at 12.3.4.1 |
 | CPU-only, offline pace acceptable | 12.3.5.2 KPI 3 (host) · 5.3.6.2 (deployed node) · 12.3.1.1 (CPU-only wheels) |
+| *(no milestone box)* [Update §7](../requirements/m1-video-source-and-ivi-dashcam.md) KPI 7 media layer ≤ 60 MB, digest stable · KPI 8 second push transfers 0 bytes | 5.3.7.3 |
+| *(no milestone box)* [Update §7](../requirements/m1-video-source-and-ivi-dashcam.md) KPI 9 the baked-in clip opens **on the deployed node** | 5.3.6.2 |
 | *(phase task, no box)* R18 own-sensor evidence | `own_sensor_ingest` payloads from Phase 2 `18.2.2.3`, fed by this phase's real lines |
 
 ## Open items & flags (no Phase 3 subtask may silently close them)
@@ -374,14 +498,19 @@ deploy     5.3.6.2 (after 5.3.6.1; best run after 12.3.4.2 so the real clip is i
 | # | Item | Owner / closes at |
 |---|---|---|
 | 1 | **`onnxruntime` / `opencv-python-headless` aarch64 wheel availability is unproven** ([HLD §11 item 6](../ADA_ECU/doc/phase2-4-ada-ecu-hld.md#11-open-items-and-flags)). De-risked first by `12.3.1.1`. A red lane escalates to [[project-architecture]] — pin an older wheel, change the base image, or accept a QEMU source build with a raised timeout. Not an implementer's call | `12.3.1.1`, then [[project-architecture]] |
-| 2 | **Repo size — two committed binaries** in the build context: `models/yolo11n.onnx` (~10 MB, `12.3.3.1`) and `media/ego-b-occluding-c.mp4` (≤ 60 MB, `12.3.4.2`). Both must be in the image because a Container Node has no volume; the alternative costs offline reproducibility. Recommendation: commit both. **Needed before `12.3.3.1`** | **user** |
+| 2 | **Repo size — two committed binaries** in the build context: `models/yolo11n.onnx` (~10 MB, `12.3.3.1`) and `media/ego-b-occluding-c.mp4` (~30 MB, ≤ 60 MB, `12.3.7.2`). Both must be in the image because a Container Node has no volume; the alternative costs offline reproducibility. **Recommendation: commit both to plain git, once each; Git LFS rejected** ([update §5](../requirements/m1-video-source-and-ivi-dashcam.md) — a remote-storage dependency days from the deadline, criterion C2). **Needed before `12.3.3.1` and before `12.3.7.2`** | **user** |
 | 3 | **Planner-designated test/tool paths beyond the HLD's list**: `detector/tests/test_config.py`, `test_inference.py`, `test_main.py`; `ADA_ECU/tools/tests/test_check_zero_c.py`. Required by subtask discipline; flagged to [[project-architecture]] as HLD-consistent additions | [[project-architecture]] (ack) |
-| 4 | **The clip remains the phase's gating external input** — `12.2.9.3` in [phase2_tasks.md](phase2_tasks.md). § Clip contingency states what is still delivered without it and exactly what is forfeited. **Escalate the slip; do not substitute the synthetic fixture for R12 evidence** | **user** |
+| 4 | ~~The clip remains the phase's gating external input~~ — **resolved 2026-08-02.** Sourcing and post-production are agent work in **group 3.7**; `12.2.9.3` stays open as the preferred source if the user already holds footage, but no longer gates the phase. § Clip contingency still governs the case where **no acceptably-licensed footage can be found** — escalate per `12.3.7.1`; **never substitute the synthetic fixture for R12 evidence** | `12.3.7.1` |
 | 5 | **The §3 clip-spec numbers are proposals** until FPT-Mentor confirms them ([research note §5](../ADA_ECU/doc/research_notes/video-source-for-r12.md#5-requirement-mapping-and-flags)). A delivered 1080p/30 fps clip is accepted by **raising the stride**, never by changing the model or the gate | user / `12.3.4.1` |
 | 6 | **Distance accuracy is unvalidated until the clip exists** ([HLD §11 item 3](../ADA_ECU/doc/phase2-4-ada-ecu-hld.md#11-open-items-and-flags)) — `12.3.4.3` is the retune, and it may only move `VEHICLE_WIDTH_M` / `CAMERA_HFOV_DEG`, never `GATE_ENTER_M` / `GATE_EXIT_M` | `12.3.4.3` |
 | 7 | **R20's detector half is not planned in this phase.** [m1-run-timing-and-event-triggering.md §7](../requirements/m1-run-timing-and-event-triggering.md) makes real-time pacing (`DETECTOR_REALTIME_PACING`, `DETECTOR_CLIP_FPS`, `DETECTOR_START_DELAY_S`, §6.1) a requirement, and §2(d) names the free-running detector the **dominant timing error term** — but §8(1) schedules R20/R21 **behind** this phase's acceptance, not in front of it, and §8(3) notes it only becomes mandatory if the deferred IVI dashcam view is accepted. `12.3.2.1` and `12.3.2.2` are annotated so the addition stays a table row and one sleep; the instrument that would measure it is `21.4.8.2` in [phase4_tasks.md](phase4_tasks.md) group 4.8. **No subtask here may add the keys or the pacing on its own** | **user** (accept/reject R20 per §8(1)) |
 | 8 | **Detector warm-up (ONNX load + `VideoCapture` open) is unmeasured** — estimated 2–5 s against the ≈ 6.4 s slack of §3.3, and it is the term that consumes that slack ([§9 open item 4](../requirements/m1-run-timing-and-event-triggering.md)). `12.3.5.2` is where the number is produced; `5.3.6.2` repeats it on the 2-vCPU node, where it will be worse | `12.3.5.2`, then `5.3.6.2` |
+| 9 | **Clip licence** — the sidecar `ADA_ECU/media/ego-b-occluding-c.source.md` is the compliance record for a file redistributed in this repo **and** inside every pushed OCI image. If the licence obliges attribution, the sidecar must name where that attribution is carried in the distributed artifact | `12.3.7.1` |
+| 10 | **Non-commercial (CC BY-NC) footage is not the agent's call.** It permits redistribution but restricts it in a way that touches every image push. If the only viable candidate is NC-licensed, `12.3.7.1` stops and escalates with the licence quoted rather than accepting it | **user** |
+| 11 | **The IVI dashcam view stays deferred** — [update §8](../requirements/m1-video-source-and-ivi-dashcam.md) and the user's 2026-08-02 direction. Its one consequence for *this* phase: [update §4](../requirements/m1-video-source-and-ivi-dashcam.md) makes real-time detector pacing **mandatory only if the view is built**, so with the view excluded, R20's detector half (item 7) stays optional and unplanned. No Phase 3 subtask may add clip-serving, an `exposedPorts` entry, or pacing on that basis | closed by the deferral |
 
 ---
 
 *Created 2026-08-02 by project-planner from [phase2-4-ada-ecu-hld.md D6](../ADA_ECU/doc/phase2-4-ada-ecu-hld.md#d6--r12-detector-frame-source-seam-inference-distance-zero-c-evidence), [video-source-for-r12.md](../ADA_ECU/doc/research_notes/video-source-for-r12.md) and [milestone1.md § Phase 3](milestone1.md#phase-3--object-detection-from-video-r12--runs--with-phase-4). 6 task groups, 20 subtasks: 19 agent-implemented (4 of them clip-blocked), 1 user-manual. Planned from zero.*
+
+*Amended 2026-08-02 by project-planner against [m1-video-source-and-ivi-dashcam.md](../requirements/m1-video-source-and-ivi-dashcam.md) (commit `a7808c8`) and the user's direction of that date: **task group 3.7 added** (`12.3.7.1`, `12.3.7.2`, `5.3.7.3`), `12.3.4.2` **superseded in place** by `12.3.7.2`, the clip lane converted from human-blocked to agent-owned and parallel, and open items 9–11 opened. No existing ID renumbered. Consolidated ADA+IVI view: [ada-ivi-plan.md](ada-ivi-plan.md). Now 7 task groups, 23 subtasks: 21 agent-implemented, 1 [[car-sky]], 1 user-manual, 1 superseded.*

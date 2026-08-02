@@ -1,5 +1,15 @@
 # Phase 5 — IVI HMI & Warning View: Full Task Breakdown (R4, R16, R17)
 
+> # SUPERSEDED — do not execute from this file
+>
+> **Superseded 2026-08-02 by [phase5_minh_tasks.md](phase5_minh_tasks.md)**, which was written from the Phase 5 HLD (`85387b5`), gap-checked against this file (four gaps closed, everything deliberately dropped listed in its § Deliberately not in this phase), and carries the deployment and evidence groups this file has no equivalent of.
+>
+> **Two constants were factually wrong here and have been corrected in place (2026-08-02):** the R4 UDP port is **47300**, not 5004, and the IVI address is **10.99.0.13**, not 10.88.0.12 — the frozen R6 topology of [carsky-4-node-blueprint.md](../requirements/car-sky-guide/carsky-4-node-blueprint.md). The wrong port appeared three times in this file and is gone; the wrong address never reached the body. The correction is for cross-check readers only — it does not revive the file.
+>
+> **Five IDs collide across the two files** — `4.5.1.1`–`4.5.1.5` name entirely different subtasks in each. Per [task-planning-conventions.md](../.claude/rules/task-planning-conventions.md#task-id-scheme), IDs are never renumbered, so this file is kept intact for history and **nothing here is implemented or committed against**. Read it only as a cross-check.
+>
+> Cross-node execution view: [ada-ivi-plan.md](ada-ivi-plan.md).
+
 > **Authority & Context:**
 > - **Milestone 1 Plan:** [plans/milestone1.md](milestone1.md) → Phase 5 section
 > - **Requirements Report:** [requirements/m1-cooperative-awareness.md](../requirements/m1-cooperative-awareness.md) (R4, R16, R17)
@@ -100,7 +110,7 @@ It is the **Display Track** — developed entirely against mock R4 data, then wi
 
 **Scope:**
 - `R4ListenerService.kt` — `ForegroundService` with binding lifecycle
-- Opens `DatagramSocket` on configurable port (read from `BuildConfig.R4_UDP_PORT`, default `5004`)
+- Opens `DatagramSocket` on configurable port (read from `BuildConfig.R4_UDP_PORT`, default `47300`)
 - Non-blocking receive loop on a dedicated `Dispatchers.IO` coroutine
 - Passes raw bytes to `R4Deserializer` → emits `R4Message` on `_r4EventFlow: MutableSharedFlow<R4Message>`
 - Reconnects automatically on socket error (with 1-second back-off, max 5 retries)
@@ -112,7 +122,7 @@ It is the **Display Track** — developed entirely against mock R4 data, then wi
 - [ ] Service starts on app launch and binds within 2 seconds
 - [ ] Unit test (Robolectric): 5 UDP packets sent to loopback → 5 events emitted on flow
 - [ ] Socket error → service retries; 5 consecutive errors → emits `ServiceErrorEvent`
-- [ ] `BuildConfig.R4_UDP_PORT` drives the port — no literal `5004` in source
+- [ ] `BuildConfig.R4_UDP_PORT` drives the port — no literal `47300` in source
 
 **Files:**
 - `app/src/main/java/com/hackathon/v2x/ivi/service/R4ListenerService.kt`
@@ -587,7 +597,7 @@ Final (after all above):
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 
 # Run mock sender for manual integration testing
-./gradlew :mock-sender:run --args="--ip 127.0.0.1 --port 5004 --interval-ms 2000 --cycles 5"
+./gradlew :mock-sender:run --args="--ip 127.0.0.1 --port 47300 --interval-ms 2000 --cycles 5"
 
 # Launch app after install and check no crash
 adb logcat -s "IVI_V2X" | head -50

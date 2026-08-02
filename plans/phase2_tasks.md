@@ -475,9 +475,11 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none — do this first in the phase; it has the longest external latency. **Commit:** `[12.2.9.2] docs: record the video-input proposal sent to FPT-Mentor`
 
-### [ ] `12.2.9.3` — HUMAN TASK: supply the demo clip — **blocks Phase 3** *(user)*
+### [ ] `12.2.9.3` — HUMAN TASK: supply the demo clip — ~~**blocks Phase 3**~~ **no longer blocking (2026-08-02)** *(user — optional)*
 
-**Objective:** the one artifact no agent can produce. Phase 3's R12 acceptance ("detection log over the provided clip with per-frame objects and distance estimates") has no input without it.
+> **Status change, 2026-08-02.** On the user's direction, sourcing and post-producing the clip became **agent work**: [phase3_tasks.md task group 3.7](phase3_tasks.md) — `12.3.7.1` searches openly-licensed sources, licence-checks and downloads footage; `12.3.7.2` cuts and re-encodes it with ffmpeg and bakes it into the image. This subtask stays open as the **preferred** source — footage the user already holds beats anything found online, and it skips the licence question entirely — but Phase 3 no longer waits on it. Whichever lands first feeds `12.3.7.2`. Everything below still describes exactly what a user-supplied file must be.
+
+**Objective:** the artifact Phase 3's R12 acceptance ("detection log over the provided clip with per-frame objects and distance estimates") consumes.
 
 **What the user must hand over — exactly one file:**
 
@@ -505,9 +507,9 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **A synthetic-fixture run cannot close R12's acceptance box and therefore cannot close R19.** This is the single highest-risk open input in Phases 2–4.
 
-**Acceptance:** the file exists at the stated path, passes `12.2.9.1`'s preflight, and the user confirms the two content rows by eye. Intake and commit happen in Phase 3 (`12.3.4.1`, `12.3.4.2`).
+**Acceptance:** the file exists at the stated path, passes `12.2.9.1`'s preflight, and the user confirms the two content rows by eye. Intake, re-encode if needed, and commit happen in Phase 3 (`12.3.4.1`, then `12.3.7.2`).
 
-**Dependencies:** after `12.2.9.2` if FPT supplies the footage; otherwise independent and can start today. **Commit:** *(none — the commit is `12.3.4.2`)*
+**Dependencies:** after `12.2.9.2` if FPT supplies the footage; otherwise independent and can start today. **Commit:** *(none — the commit is `12.3.7.2`)*
 
 ### [ ] `5.2.9.4` — Update `node-ada-ecu.md` with the D9 node config *(agent — writes in `requirements/car-sky-guide/`)*
 
@@ -594,7 +596,7 @@ guide       5.2.9.4 (after 13.2.2.1)
 | 3 | **Deck disposition (`5.2.1.2`)** — `presentation/ada/ada-phase2-3-4-deck.*` documents the superseded design. Recommendation: delete; alternative: banner it | **user**, at `5.2.1.2` |
 | 4 | **Planner-designated test and tool paths beyond the HLD's explicit lists**, named per the folder's own conventions: `tests/config/`, `tests/net/`, `tests/log/`, `tests/observer/test_input_queue.cpp`, `tests/observer/test_v2x_listener.cpp`, `tests/observer/test_detector_reader.cpp`, `tests/parser/test_parse_reject_corpus.cpp`, `tests/cra/test_cra_interface.cpp`, `tools/check_evt_log.py`, `tools/check_clip_spec.py`, `tools/tests/test_check_clip_spec.py`. Required by subtask discipline (unit tests per module) and by the research note's KPI 1 (preflight). Flagged to [[project-architecture]] as HLD-consistent additions, not new design | [[project-architecture]] (ack) |
 | 5 | **`(proposal)` defaults proceed as proposed** — `CONFIRM_HITS=3`, `TRACK_TIMEOUT_MS=1000`, `FUSION_TICK_MS=100`, `DETECTOR_RESTART_MAX=5`, `DETECTOR_LOOP=true` ([HLD §6](../ADA_ECU/doc/phase2-4-ada-ecu-hld.md#6-configuration--no-hardcoded-tunables)). Externalized either way, so a ratification change is a node-config edit, not a code change | user |
-| 6 | **The clip (`12.2.9.3`) is the phase's one output the project cannot manufacture** — see that subtask for the fallback and its cost. Tracked here because it blocks *Phase 3*, not Phase 2 | **user** |
+| 6 | ~~The clip (`12.2.9.3`) is the phase's one output the project cannot manufacture~~ — **downgraded 2026-08-02.** [phase3_tasks.md group 3.7](phase3_tasks.md) makes sourcing and post-production agent work, so `12.2.9.3` is now the *preferred* source rather than a blocker on Phase 3. Still tracked: user-held footage is better than anything found online and carries no licence question | **user** (optional) |
 | 7 | **Repo size** — Phase 3 commits `models/yolo11n.onnx` (~10 MB) and `media/ego-b-occluding-c.mp4` (≤ 60 MB) into the build context, because a Container Node has **no volume** and a file reaches it only inside the image. The alternative (download at image build) costs offline reproducibility and network at build time. Recommendation: commit both; ~70 MB is within normal Git limits and both are write-once. Decision needed before `12.3.3.1` | **user**, by Phase 3 group 3.3 |
 | 8 | **Cross-phase, not this plan's work:** `IVI_ECU/app/.../model/R4WarningMessage.kt` on this branch cannot decode this design's R4 output (no `@SerialName`, and it requires a `trackedObjects` array this design does not emit). `R4Message.kt` on `main` is the binding the IVI uses. Recorded as a **Phase 5 input**, per [HLD §11 item 4](../ADA_ECU/doc/phase2-4-ada-ecu-hld.md#11-open-items-and-flags) | [[project-planner]] → Phase 5 |
 | 9 | **Clock-domain ruling — a design decision the HLD does not carry.** [m1-run-timing-and-event-triggering.md §6.2](../requirements/m1-run-timing-and-event-triggering.md) fixes `CLOCK_REALTIME` for wire and log stamps, `CLOCK_MONOTONIC` for intervals **including track expiry**, and forbids arithmetic mixing two nodes' timestamps. Annotated into `13.2.4.3` (expiry) and `2.2.3.1` (the R3 mapping, which is also PR-review defect **M1**). **One sub-question stays open:** §6.2 words the relayed `measured` as `rxTime + timeOfMeasurement`, while Phase 1 `9.1.4.3` already builds `object.timeOfMeasurement` as an absolute `referenceTime + measurementDeltaTime` — summing them twice would double-count. No subtask may resolve it by choosing; the HLD §6/D3 amendment does | [[project-architecture]] (HLD amendment), then `2.2.3.1` |
