@@ -52,7 +52,7 @@ Keep the generator in the scratchpad, not the repo — it is a means of producti
 - **Canvas 1320×720** matches the deck's slide geometry; a diagram authored at a different aspect ratio letterboxes or overflows.
 - **Palette and typography** come from [template.md](../../../../presentation/template/template.md); the house reference for diagram style is [m1-phase-timeline.svg](../../../../presentation/assets/m1-phase-timeline.svg). Do not introduce a colour the deck does not already use.
 - **Minimum ~13px type** on a 1320-wide canvas. If the content will not fit legibly, split the diagram across slides — never shrink to fit.
-- **Escape `&`, `<`, `>` in shape labels** as `&amp;`, `&lt;`, `&gt;`. An unescaped ampersand in a subtask label is the most common way one of these files stops parsing.
+- **Escape `&`, `<`, `>`, `"` in shape labels** as `&amp;`, `&lt;`, `&gt;`, `&quot;` — labels land in an XML *attribute* value (`<mxCell value="…">`), where a bare quote closes the attribute early. An unescaped ampersand is the most common way one of these files stops parsing; an unescaped quote is the most deceptive, because it corrupts the `.drawio` while the `.svg` still renders perfectly and passes every visual check.
 
 ## Verification — all four, every diagram
 

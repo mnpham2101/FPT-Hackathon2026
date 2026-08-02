@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Phase 0 — Design Concepts</title>
-<meta name="description" content="Design deck — the Phase 0 architecture — the five-node blueprint and its contract-labelled message flows, the message path step by step, the smoke test, and the protocol stack">
+<meta name="description" content="Design deck — the vocabulary first, then the five-node blueprint, the four frozen contracts and where they live, the protocol stack and its libraries, the bench and V2X nodes as Phase 0 left them, and the smoke test that closed the phase">
 <style>
   :root {
     --fpt-orange: #F37021;
@@ -185,32 +185,114 @@
     <h1>Phase 0 — Design Concepts</h1>
     <div class="rule"></div>
     <div class="tagline">The architecture the contracts describe</div>
-    <div class="meta">Deck A of two — the design. How that design was planned and built is Deck B: <a href="phase0-task-execution-deck.html">phase0-task-execution-deck.html</a>.<br>Source: <a href="../../plans/phase0_tasks.md">phase0_tasks.md</a> · <a href="../../plans/phase1_tasks.md">phase1_tasks.md</a> · <a href="../../plans/milestone1.md">milestone1.md</a> · <a href="../../plans/doc/phase0-contract-freeze-hld.md">phase0-contract-freeze-hld.md</a></div>
+    <div class="meta">Deck A of two — the design. How that design was planned and built is Deck B: <a href="phase0-task-execution-deck.html">phase0-task-execution-deck.html</a>.<br>Source: <a href="../../plans/phase0_tasks.md">phase0_tasks.md</a> · <a href="../../plans/milestone1.md">milestone1.md</a> · <a href="../../plans/doc/phase0-contract-freeze-hld.md">phase0-contract-freeze-hld.md</a> · <a href="../../contracts/">contracts/</a></div>
     <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
   </section>
   <section class="slide bg-light content">
     <div class="slide-head"><div class="num">§</div><h2>Table of contents</h2></div>
     <div class="toc">
-      <div class="item"><div class="n">01</div><div><h3>The blueprint</h3><p>five nodes, four contracts, one bridge</p></div></div>
-      <div class="item"><div class="n">02</div><div><h3>The message path</h3><p>R1 → R2 → R3 → R4, step by step</p></div></div>
-      <div class="item"><div class="n">03</div><div><h3>Contract terminology</h3><p>golden vectors, corpus, UPER, octet</p></div></div>
-      <div class="item"><div class="n">04</div><div><h3>The smoke test</h3><p>what it established, and where the full story lives</p></div></div>
-      <div class="item"><div class="n">05</div><div><h3>Protocol stack &amp; libraries</h3><p>placeholder, source document pending</p></div></div>
+      <div class="item"><div class="n">01</div><div><h3>Terminology</h3><p>every coined word, before anything uses it</p></div></div>
+      <div class="item"><div class="n">02</div><div><h3>The blueprint</h3><p>five nodes, one bridge, three flows</p></div></div>
+      <div class="item"><div class="n">03</div><div><h3>The contracts</h3><p>R1, R2, R3, R4 one at a time, and where each lives</p></div></div>
+      <div class="item"><div class="n">04</div><div><h3>Protocol stack &amp; libraries</h3><p>one transport, two encodings, four third parties</p></div></div>
+      <div class="item"><div class="n">05</div><div><h3>The bench and the V2X node</h3><p>what Phase 0 left behind</p></div></div>
+      <div class="item"><div class="n">06</div><div><h3>The smoke test</h3><p>what it settled, and where the full story lives</p></div></div>
     </div>
-    <p class="lead"><em>Tracks, lanes and task groups — the planning vocabulary — moved to Deck B.</em></p>
+    <p class="lead"><em>Tracks, lanes and task groups — the planning vocabulary — are Deck B's subject, not this deck's.</em></p>
     <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
     <div class="sec-num">01</div>
+    <h1>Terminology</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">01</div><h2>The platform's words</h2></div>
+    <p class="lead">CarSky's own vocabulary. Every later slide uses these without re-explaining them.</p>
+    <table class="fpt">
+      <thead><tr><th>Term</th><th>What it means here</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Blueprint</strong></td><td>The design of one vehicle — its nodes and how they are wired. One blueprint is one car. Nothing runs yet.</td></tr>
+        <tr><td><strong>Node</strong></td><td>One ECU inside a blueprint. Its type decides how it runs: a <strong>Container Node</strong> runs an OCI image, a <strong>Skycraft Node</strong> runs an Android guest.</td></tr>
+        <tr><td><strong>Pin</strong></td><td>A node's connection point. Milestone 1 uses exactly one kind, the <code>ethernet</code> pin, and exactly one per node.</td></tr>
+        <tr><td><strong>Ethernet Bridge</strong></td><td>A node whose only job is to join the other nodes' pins into one network.</td></tr>
+        <tr><td><strong>Room</strong></td><td>What a deployed blueprint becomes — the live, running instance. The blueprint is the drawing; the Room is the built thing.</td></tr>
+        <tr><td><strong>Deployment</strong></td><td>The act of turning a blueprint into a Room. Only a deployment starts a container.</td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>Blueprint → Room is the whole mental model.</strong> Editing a blueprint changes nothing that is running; a new deployment is what makes a change real.</li>
+    </ul>
+    <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">01</div><h2>Our words</h2></div>
+    <p class="lead">Terms this project coined or narrowed. They carry a specific meaning here that they do not carry generally.</p>
+    <table class="fpt">
+      <thead><tr><th>Term</th><th>What it means here</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Contract</strong></td><td>A frozen, versioned message definition that two nodes agree on — a JSON Schema or an encoding profile, committed to the repository. Not documentation <em>about</em> code: it is the authority the code is measured against.</td></tr>
+        <tr><td><strong>R-number</strong></td><td>The requirement identifier from the requirements report. <code>R1</code>–<code>R4</code> are the four contracts; <code>R5</code>–<code>R6</code> the platform and network; <code>R7</code> and beyond, per-node behaviour.</td></tr>
+        <tr><td><strong>Seam</strong></td><td>A boundary chosen so one side can be replaced without touching the other — the codec seam, the radio-adapter seam.</td></tr>
+        <tr><td><strong>Frozen</strong></td><td>Changed only by re-freezing across <em>every</em> consumer at once. A contract that one node edits alone is broken, not updated.</td></tr>
+        <tr><td><strong>Ego</strong></td><td>The vehicle the system runs in — vehicle A, the one whose driver gets warned.</td></tr>
+        <tr><td><strong>Bench</strong></td><td>Sanctioned test equipment that shares the Room network — here the Scenario Player, which stands in for the modem and the outside world.</td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>"Contract" is the load-bearing word in this deck.</strong> Phase 0 produced no running feature; what it produced was contracts.</li>
+    </ul>
+    <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">01</div><h2>The four contracts, named</h2></div>
+    <p class="lead">The R-numbers that label every arrow on the next section's diagram. Each gets a full slide in § 03.</p>
+    <table class="fpt">
+      <thead><tr><th></th><th>Contract</th><th>Between</th><th>Carries</th></tr></thead>
+      <tbody>
+        <tr><td><strong>R1</strong></td><td>CPM profile</td><td>bench → V2X ECU</td><td>The V2X message as it exists on the air</td></tr>
+        <tr><td><strong>R2</strong></td><td><code>v2x_object</code></td><td>V2X ECU → ADA ECU</td><td>One perceived object, handed inward</td></tr>
+        <tr><td><strong>R3</strong></td><td><code>TrackedObject</code></td><td><em>inside</em> the ADA ECU</td><td>The shape every tracked object obeys, wherever it came from</td></tr>
+        <tr><td><strong>R4</strong></td><td>ADA → IVI warning</td><td>ADA ECU → IVI ECU</td><td>The warning, and the scene to draw for it</td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>Three of the four are messages between nodes. R3 is not</strong> — it is a schema used inside one node, which is why it has no port and no arrow of its own.</li>
+      <li><strong>The numbers are not a sequence of steps.</strong> They are identifiers; R1 through R4 happen to fall in flow order, which is a convenience, not a rule.</li>
+    </ul>
+    <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">01</div><h2>The contract vocabulary</h2></div>
+    <p class="lead">The words the contract artifacts themselves carry — they appear in the schemas, the CI lanes and Deck B.</p>
+    <table class="fpt">
+      <thead><tr><th>Term</th><th>What it means here</th></tr></thead>
+      <tbody>
+        <tr><td><strong>UPER</strong></td><td><em>Unaligned Packed Encoding Rules</em> — the ASN.1 rules that pack one R1 CPM into 58 bytes. The only non-JSON encoding in Milestone 1.</td></tr>
+        <tr><td><strong>Octet</strong></td><td>One byte. ASN.1 wording, kept because the profile document uses it.</td></tr>
+        <tr><td><strong>Test vector</strong></td><td>One case: a message content paired with the exact bytes it must encode to — <code>nominal.json</code> with <code>nominal.uper</code>.</td></tr>
+        <tr><td><strong>Golden</strong></td><td>Those bytes are committed and frozen. A test encodes the <code>.json</code> and compares byte for byte against the stored <code>.uper</code>, rather than recomputing what it ought to be.</td></tr>
+        <tr><td><strong>Corpus</strong></td><td>The whole set of vectors — six here, chosen to cover the edges rather than one happy path.</td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>The six cases:</strong> <code>nominal</code> · <code>mdt-max</code> / <code>mdt-min</code> (±2047 ms) · <code>conf-unavailable</code> (the 101 sentinel) · <code>gate-boundary</code> (an object at exactly 30 m) · <code>coord-large</code> (near the large-coordinate bound).</li>
+      <li><strong>Why they exist:</strong> the same message is encoded by C++ in the V2X ECU and decoded by a separate helper on the bench. The corpus is the one reference both are measured against.</li>
+    </ul>
+    <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">02</div>
     <h1>The blueprint</h1>
     <div class="rule"></div>
     <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">01</div><h2>Five nodes, not four</h2></div>
+    <div class="slide-head"><div class="num">02</div><h2>Five nodes, not four</h2></div>
     <p class="lead">One blueprint is one car — vehicle A, the ego. Four of its nodes are ECU or bench roles; the fifth is the Ethernet Bridge that turns them into a network.</p>
     <table class="fpt">
-      <thead><tr><th>Node</th><th>CarSky node type</th><th>Address</th><th>Serves</th></tr></thead>
+      <thead><tr><th>Node</th><th>Node type</th><th>Address</th><th>Serves</th></tr></thead>
       <tbody>
         <tr><td><strong>Scenario Player (bench)</strong></td><td>Container Node</td><td><code>10.99.0.10</code></td><td>R11</td></tr>
         <tr><td><strong>V2X ECU</strong></td><td>Container Node</td><td><code>10.99.0.11</code></td><td>R7–R9</td></tr>
@@ -221,20 +303,20 @@
     </table>
     <ul class="points">
       <li><strong>The bridge owns no pin of its own.</strong> Each role node declares exactly one <code>ethernet</code> pin wired to it — a star, not a chain, on the single subnet <code>10.99.0.0/24</code>.</li>
-      <li><strong>The bench is a node, not a module.</strong> It shares the Room network as sanctioned test equipment; R11 code never lands in <code>V2X_ECU/</code>.</li>
+      <li><strong>The bench is a node, not a module.</strong> It shares the Room network as test equipment; its code never lands in the V2X ECU's folder.</li>
       <li><strong>Static addresses on purpose</strong>, so every UDP target stays deterministic across redeploys — and each one arrives by node config, never as a literal in source.</li>
     </ul>
     <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">01</div><h2>Every flow labelled by its contract</h2></div>
+    <div class="slide-head"><div class="num">02</div><h2>Every flow labelled by its contract</h2></div>
     <div class="imgbox"><img src="../assets/m1-blueprint-5-nodes.svg" style="height:450px" alt="Milestone 1 blueprint: five nodes, three contract-labelled UDP flows, one Ethernet Bridge"><div class="cap">Milestone 1 blueprint: five nodes, three contract-labelled UDP flows, one Ethernet Bridge</div></div>
     <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">01</div><h2>Walking the message path</h2></div>
+    <div class="slide-head"><div class="num">02</div><h2>The routing, in one line each</h2></div>
     <div class="chain">
-    <div class="link"><span>Scenario Player</span><small>bench · R11</small></div>
+    <div class="link"><span>Scenario Player</span><small>bench</small></div>
     <div class="arr">→</div>
     <div class="link hot"><span>V2X ECU</span><small>R1 in · R2 out</small></div>
     <div class="arr">→</div>
@@ -243,65 +325,204 @@
     <div class="link"><span>IVI ECU</span><small>renders ghost C</small></div>
     </div>
     <ul class="points">
-      <li><strong>R1 — on the wire.</strong> ETSI CPM (TS 103 324), ASN.1 UPER, one PDU per UDP datagram on port <code>47100</code>. The only V2X message type in M1, and the only place a non-JSON encoding appears.</li>
-      <li><strong>R2 — V2X ECU → ADA ECU.</strong> One JSON <code>v2x_object</code> message per perceived-object update, port <code>47200</code>. <code>object.distance</code> is <em>derived</em> here from the relative position, never transmitted.</li>
-      <li><strong>R3 — TrackedObject.</strong> Not a message between nodes: the single schema every ego-side object obeys, whether it came from the detector or from the relay. It reaches the wire only as the <code>object</code> snapshot embedded in an R4 message.</li>
-      <li><strong>R4 — ADA ECU → IVI ECU.</strong> Versioned warning events carrying the composed scene geometry, port <code>47300</code> — the IVI renders the view from this message alone.</li>
-      <li><strong>Every link between nodes is same-subnet UDP.</strong> No routing, no gateway, no broker, no middleware.</li>
+      <li><strong>Every hop is same-subnet UDP.</strong> No routing, no gateway, no broker, no middleware — three different ports on one NIC, not three different pins.</li>
+      <li><strong>One PDU per datagram</strong>, on <code>47100</code> (R1), <code>47200</code> (R2) and <code>47300</code> (R4). A message never spans two datagrams.</li>
+      <li><strong>The direction is one-way at every hop</strong> in Milestone 1. Nothing flows back from the IVI toward the bench.</li>
+      <li><strong>R3 has no hop of its own</strong> — it lives inside the ADA ECU, and reaches the wire only wrapped in an R4 message.</li>
     </ul>
-    <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
-  </section>
-  <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">01</div><h2>Contract terminology</h2></div>
-    <p class="lead">The words the contract artifacts carry. They appear throughout the plan, the CI lanes and the task deck.</p>
-    <table class="fpt">
-      <thead><tr><th>Term</th><th>What it means here</th></tr></thead>
-      <tbody>
-        <tr><td><strong>UPER</strong></td><td><em>Unaligned Packed Encoding Rules</em> — the ASN.1 rules that pack one R1 CPM into 58 bytes. The only non-JSON encoding in M1.</td></tr>
-        <tr><td><strong>Octet</strong></td><td>One byte. ASN.1 wording, kept because the profile document uses it.</td></tr>
-        <tr><td><strong>Test vector</strong></td><td>One case: a message content paired with the exact bytes it must encode to — <code>nominal.json</code> + <code>nominal.uper</code>.</td></tr>
-        <tr><td><strong>Golden</strong></td><td>Those bytes are committed and frozen. A test encodes the <code>.json</code> and compares byte for byte against the stored <code>.uper</code>, instead of recomputing what it should be.</td></tr>
-        <tr><td><strong>Corpus</strong></td><td>The whole set of vectors — six here, chosen to cover the edges rather than one happy path.</td></tr>
-      </tbody>
-    </table>
-    <ul class="points">
-      <li><strong>The six cases:</strong> <code>nominal</code> · <code>mdt-max</code> / <code>mdt-min</code> (±2047 ms) · <code>conf-unavailable</code> (the 101 sentinel) · <code>gate-boundary</code> (an object at exactly 30 m) · <code>coord-large</code> (near the large-coordinate bound).</li>
-      <li><strong>Why they exist:</strong> the same message is encoded and decoded by different code — C++ in the V2X ECU, a separate helper on the bench. The corpus is the one reference both are measured against.</li>
-      <li><strong>CI generated them, not a person</strong> — and the same run proved regeneration is deterministic: generate twice, <code>diff</code> empty.</li>
-    </ul>
-    <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
-  </section>
-  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
-    <div class="sec-num">02</div>
-    <h1>The smoke test</h1>
-    <div class="rule"></div>
-    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
-  </section>
-  <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">02</div><h2>Proving the wire, before the ECUs existed</h2></div>
-    <p class="lead">Phase 0's fourth acceptance box was closed by a connectivity smoke test on blueprint <code>trial2_minh</code>. Its method, tooling, AI/human split, and evidence are a deck of their own — this slide states only what it settled.</p>
-    <ul class="points">
-      <li><strong>All five pass criteria met, 2026-07-31.</strong> C1 every node Running · C2 zero errors · C3 live per-node logs · C4 traffic captured on the wire · C5 the chain proven by the payload's own accumulated stamps.</li>
-      <li><strong>It closed the last Phase 0 acceptance box</strong> — blueprint topology documented <em>and</em> validated — which is what unblocked Phase 1.</li>
-      <li><strong>It settled two facts every later image inherits:</strong> which registry host actually answers, and that node images must be single-platform <code>linux/arm64</code>.</li>
-      <li><strong>It left O3 and O4 open</strong> — bridge MTU headroom, and whether the AAOS guest can host a listener — neither of them blocking.</li>
-      <li><strong>Full story, slide by slide:</strong> <a href="../phase0/phase0-smoke-test-deck.html">phase0-smoke-test-deck.html</a> — method, tested object, testing agent, human in the loop, results. Nothing from it is repeated here.</li>
-    </ul>
+    <p class="lead"><em>What each contract actually says is the next section, one slide at a time.</em></p>
     <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
     <div class="sec-num">03</div>
+    <h1>The contracts</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">03</div><h2>R1 — the CPM profile</h2></div>
+    <p class="lead">The V2X message as it exists on the air. The only contract that is not JSON.</p>
+    <table class="fpt">
+      <thead><tr><th><strong>Defines</strong></th><th>Which ETSI CPM fields Milestone 1 uses, their units and their bounds — a <em>profile</em>, narrowing a large standard to what the demo needs</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Standard</strong></td><td>ETSI TS 103 324, release 2</td></tr>
+        <tr><td><strong>Encoding</strong></td><td>ASN.1 UPER — 58 bytes for the nominal case</td></tr>
+        <tr><td><strong>Artifacts</strong></td><td><code>r1-cpm-content.schema.json</code> — the content shape · <code>r1-cpm-profile.md</code> — the field-by-field profile · <code>golden-vectors/</code> — six <code>.json</code>/<code>.uper</code> pairs</td></tr>
+        <tr><td><strong>Copies live in</strong></td><td><code>V2X_ECU/contracts/</code> · <code>Scenario_Player/contracts/</code></td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>Two independent implementations must agree on it</strong> — the V2X ECU's C++ codec and the bench's encoder helper — which is exactly why the golden vectors exist.</li>
+      <li><strong>CI generated the vectors, not a person</strong>, and the same run proved regeneration is deterministic: generate twice, <code>diff</code> empty.</li>
+    </ul>
+    <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">03</div><h2>R2 — <code>v2x_object</code></h2></div>
+    <p class="lead">What the V2X ECU hands inward once it has decoded the air message.</p>
+    <table class="fpt">
+      <thead><tr><th><strong>Defines</strong></th><th>One perceived-object update: identity, position, kinematics, confidence, and the timestamp it was valid at</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Direction</strong></td><td>V2X ECU → ADA ECU, UDP <code>47200</code></td></tr>
+        <tr><td><strong>Encoding</strong></td><td>JSON, versioned</td></tr>
+        <tr><td><strong>Artifacts</strong></td><td><code>r2-v2x-object.schema.json</code> · <code>samples/r2-object.json</code></td></tr>
+        <tr><td><strong>Copies live in</strong></td><td><code>V2X_ECU/contracts/</code> · <code>ADA_ECU/contracts/</code></td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong><code>object.distance</code> is derived here, never transmitted.</strong> The air message carries a relative position; distance is computed on arrival, so the two can never disagree.</li>
+      <li><strong>One message per object update</strong>, not a batch — a CPM describing three objects becomes three R2 messages.</li>
+    </ul>
+    <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">03</div><h2>R3 — <code>TrackedObject</code></h2></div>
+    <p class="lead">Not a message. The single shape every ego-side object obeys, whoever produced it.</p>
+    <table class="fpt">
+      <thead><tr><th><strong>Defines</strong></th><th>The one track record: identity, state, geometry, provenance, and the confidence carried with it</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Direction</strong></td><td>None — internal to the ADA ECU</td></tr>
+        <tr><td><strong>Encoding</strong></td><td>JSON, versioned</td></tr>
+        <tr><td><strong>Artifacts</strong></td><td><code>r3-tracked-object.schema.json</code> · <code>samples/r3-tracked-object.json</code></td></tr>
+        <tr><td><strong>Copies live in</strong></td><td><code>ADA_ECU/contracts/</code> · <code>IVI_ECU/contracts/</code></td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>Its whole purpose is to erase the difference between sources.</strong> An object the camera detected and an object that arrived over the relay become the same kind of thing the moment they enter the store.</li>
+      <li><strong><code>provenance</code> is what survives that flattening</strong> — it records <em>how</em> the object was learned, which is what lets the demo prove C was never seen directly.</li>
+      <li><strong>The IVI holds a copy</strong> because R3 arrives embedded in every R4 message; the IVI must decode it even though it never receives one alone.</li>
+    </ul>
+    <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">03</div><h2>R4 — the ADA → IVI warning</h2></div>
+    <p class="lead">The warning, and everything needed to draw it. The IVI renders from this message alone.</p>
+    <table class="fpt">
+      <thead><tr><th><strong>Defines</strong></th><th>A versioned warning event: what the risk is, which object raised it, and the composed scene geometry to display</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Direction</strong></td><td>ADA ECU → IVI ECU, UDP <code>47300</code></td></tr>
+        <tr><td><strong>Encoding</strong></td><td>JSON, versioned</td></tr>
+        <tr><td><strong>Artifacts</strong></td><td><code>r4-ada-ivi.schema.json</code> · <code>samples/r4-warning.json</code> · <code>r4-state.json</code> · <code>r4-unknown-warning.json</code></td></tr>
+        <tr><td><strong>Copies live in</strong></td><td><code>ADA_ECU/contracts/</code> · <code>IVI_ECU/contracts/</code></td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>The IVI performs no fusion and holds no world model.</strong> Everything it draws comes from the message in hand, which is what keeps the display honest.</li>
+      <li><strong><code>r4-unknown-warning.json</code> is a deliberate sample</strong> — a warning type the IVI does not recognise, proving forward compatibility is tested rather than assumed.</li>
+    </ul>
+    <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">03</div><h2>Where the contracts live</h2></div>
+    <p class="lead">One authority at the root; a working copy inside each node that consumes it.</p>
+    <table class="fpt">
+      <thead><tr><th>Location</th><th>Holds</th></tr></thead>
+      <tbody>
+        <tr><td><strong><code>contracts/</code></strong></td><td>The frozen originals — all four schemas, the R1 profile, the golden vectors, the samples</td></tr>
+        <tr><td><strong><code>V2X_ECU/contracts/</code></strong></td><td>R1, R2</td></tr>
+        <tr><td><strong><code>ADA_ECU/contracts/</code></strong></td><td>R2, R3, R4</td></tr>
+        <tr><td><strong><code>IVI_ECU/contracts/</code></strong></td><td>R3, R4</td></tr>
+        <tr><td><strong><code>Scenario_Player/contracts/</code></strong></td><td>R1</td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>The copies are not forks.</strong> <code>contracts/sync-manifest.json</code> lists every file that must match, and <code>contracts/check_sync.py</code> fails CI the moment one drifts.</li>
+      <li><strong>Why copy at all:</strong> each node folder must build on its own, with no cross-folder imports. A node reaching up into a shared directory would break that rule.</li>
+      <li><strong>A node holds only what it speaks.</strong> The bench holds R1 and nothing else, because R1 is the only contract it touches.</li>
+    </ul>
+    <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">04</div>
     <h1>Protocol stack &amp; libraries</h1>
     <div class="rule"></div>
     <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">03</div><h2>Protocol stack and supporting libraries</h2></div>
-    <p class="lead"><strong>Placeholder.</strong> The source document for this section does not exist yet — it will be authored separately, and this slide is its anchor in the deck.</p>
+    <div class="slide-head"><div class="num">04</div><h2>One transport, two encodings, four third parties</h2></div>
+    <div class="imgbox"><img src="../assets/m1-protocol-stack.svg" style="height:505px" alt="Protocol stack: message, encoding and library per contract, over a shared UDP/IPv4/Ethernet-Bridge base"><div class="cap">Protocol stack: message, encoding and library per contract, over a shared UDP/IPv4/Ethernet-Bridge base</div></div>
+    <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">04</div><h2>What each library is there for</h2></div>
+    <p class="lead">Four third-party dependencies, each doing one job. All open source, all Linux.</p>
+    <table class="fpt">
+      <thead><tr><th>Library</th><th>Licence</th><th>Serves</th><th>Job</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Vanetza</strong></td><td>LGPLv3</td><td>R1</td><td>ETSI ITS release-2 ASN.1 codec — the only component that speaks UPER</td></tr>
+        <tr><td><strong>nlohmann/json</strong></td><td>MIT</td><td>R2, R3, R4</td><td>JSON binding on both C++ sides, the V2X ECU and the ADA ECU</td></tr>
+        <tr><td><strong>Python stdlib <code>json</code></strong></td><td>PSF</td><td>R1, R3</td><td>The bench's scenario data, and the detector's R3 output stream</td></tr>
+        <tr><td><strong>kotlinx.serialization</strong></td><td>Apache-2.0</td><td>R3, R4</td><td>JSON binding on the IVI, the only Kotlin node</td></tr>
+      </tbody>
+    </table>
     <ul class="points">
-      <li><strong>Topic:</strong> the protocol stack from the wire upward, and the third-party libraries each layer rests on.</li>
-      <li><strong>One-line teaser, from what the repository already contains:</strong> Vanetza supplies the ETSI ITS release-2 ASN.1/UPER codec behind a single codec seam; nlohmann/json binds the C++ side of R2–R4; kotlinx.serialization binds the Kotlin side.</li>
-      <li><strong>Nothing further is stated here on purpose.</strong> The substance belongs to the forthcoming document — this deck holds the place, it does not invent the content.</li>
+      <li><strong>Vanetza sits behind one codec seam</strong>, so no application code imports it directly — the standard can move without the application moving with it.</li>
+      <li><strong>Nothing here is a framework.</strong> Every one of the four is a library the code calls; none of them owns the program's control flow.</li>
+      <li><strong>The transport needs no library at all</strong> — UDP sockets come from each language's standard library.</li>
+    </ul>
+    <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">05</div>
+    <h1>The bench and the V2X node</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">05</div><h2>Phase 0 built one image for both</h2></div>
+    <p class="lead">Neither node has its real implementation yet. Phase 0 needed only to prove the wire between them, so both ran the same throwaway container.</p>
+    <table class="fpt">
+      <thead><tr><th></th><th>Scenario Player (bench)</th><th>V2X ECU</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Phase 0 image</strong></td><td><code>m1-netcheck:latest</code></td><td><code>m1-netcheck:latest</code> — the same one</td></tr>
+        <tr><td><strong>Difference between them</strong></td><td>Environment variables only — <code>ROLE</code>, <code>NEXT_HOP_HOST</code>/<code>PORT</code></td><td>Environment variables only — plus <code>LISTEN_PORT</code>, which is what makes it a relay</td></tr>
+        <tr><td><strong>Phase 0 role</strong></td><td>Source: emits one datagram per second</td><td>Relay: receives, stamps, forwards</td></tr>
+        <tr><td><strong>Contract touched</strong></td><td>None</td><td>None</td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>One image, three roles, zero code branches.</strong> Whether a node sends, relays or sinks is decided entirely by which variables are set — the same discipline the real ECUs follow.</li>
+      <li><strong>This is a deliberate placeholder, not a prototype.</strong> No part of <code>netcheck.py</code> becomes production code; it is scaffolding that proved the topology and was then set aside.</li>
+    </ul>
+    <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">05</div><h2>The exchange, as Phase 0 ran it</h2></div>
+    <div class="imgbox"><img src="../assets/phase0-netcheck-callflow.svg" style="height:495px" alt="Phase 0 netcheck call flow: bench sends a stamped ASCII payload over UDP, V2X appends its role and forwards"><div class="cap">Phase 0 netcheck call flow: bench sends a stamped ASCII payload over UDP, V2X appends its role and forwards</div></div>
+    <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">05</div><h2>What Phase 1 adds to both</h2></div>
+    <p class="lead">Phase 0 answered <em>can they talk</em>. Phase 1 answers <em>what they say</em> — and that is where the real designs arrive.</p>
+    <table class="fpt">
+      <thead><tr><th></th><th>Arriving in Phase 1</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Scenario Player</strong></td><td>Scenario configs as data, the kinematic model, and the encoder helper that turns a scenario into real R1 bytes</td></tr>
+        <tr><td><strong>V2X ECU</strong></td><td>The radio-adapter seam, the modem stub behind it, and the receive pipeline: decode, validate, de-duplicate, forward as R2</td></tr>
+        <tr><td><strong>Both</strong></td><td>A high-level design, a per-node call flow, and unit tests against the golden vectors</td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>The netcheck image retires the moment either real image lands.</strong> Nothing carries forward from it except the confidence that the network works.</li>
+      <li><strong>The per-node call flows are already drafted</strong> in each node's <code>doc/</code> folder — they are Phase 1's material, and belong to Phase 1's deck.</li>
+    </ul>
+    <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">06</div>
+    <h1>The smoke test</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">06</div><h2>Proving the wire, before the ECUs existed</h2></div>
+    <p class="lead">Phase 0's fourth acceptance box was closed by a connectivity smoke test on blueprint <code>trial2_minh</code>. Its method, tooling, AI/human split and evidence are a deck of their own — this slide states only what it settled.</p>
+    <ul class="points">
+      <li><strong>All five pass criteria met, 2026-07-31.</strong> Every node running · zero errors · live per-node logs · traffic captured on the wire · the chain proven by the payload's own accumulated stamps.</li>
+      <li><strong>It closed the last Phase 0 acceptance box</strong> — blueprint topology documented <em>and</em> validated — which is what unblocked Phase 1.</li>
+      <li><strong>It settled two facts every later image inherits:</strong> which registry host actually answers, and that node images must be single-platform <code>linux/arm64</code>.</li>
+      <li><strong>It left two items open</strong> — bridge MTU headroom, and whether the AAOS guest can host a listener — neither of them blocking.</li>
+      <li><strong>Full story, slide by slide:</strong> <a href="phase0-smoke-test-deck.html">phase0-smoke-test-deck.html</a> — method, tested object, testing agent, human in the loop, results. Nothing from it is repeated here.</li>
     </ul>
     <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
