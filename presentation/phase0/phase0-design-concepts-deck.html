@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Phase 0 — Design Concepts</title>
-<meta name="description" content="Companion deck — the vocabulary Phase 0 is written in — execution lanes vs CI lanes vs tracks, the five-node blueprint and its contract-labelled message flows, the smoke test, and the protocol stack">
+<meta name="description" content="Design deck — the Phase 0 architecture — the five-node blueprint and its contract-labelled message flows, the message path step by step, the smoke test, and the protocol stack">
 <style>
   :root {
     --fpt-orange: #F37021;
@@ -184,106 +184,30 @@
     <div class="eyebrow">Milestone 1 · Cooperative Vehicle Awareness — FPT Hackathon 2026</div>
     <h1>Phase 0 — Design Concepts</h1>
     <div class="rule"></div>
-    <div class="tagline">The words the plan is written in</div>
-    <div class="meta">Deck A of two — Deck B covers the task groups, the code delivered, and the execution order.<br>Source: <a href="../../plans/phase0_tasks.md">phase0_tasks.md</a> · <a href="../../plans/phase1_tasks.md">phase1_tasks.md</a> · <a href="../../plans/milestone1.md">milestone1.md</a> · <a href="../../plans/doc/phase0-contract-freeze-hld.md">phase0-contract-freeze-hld.md</a></div>
+    <div class="tagline">The architecture the contracts describe</div>
+    <div class="meta">Deck A of two — the design. How that design was planned and built is Deck B: <a href="phase0-task-execution-deck.html">phase0-task-execution-deck.html</a>.<br>Source: <a href="../../plans/phase0_tasks.md">phase0_tasks.md</a> · <a href="../../plans/phase1_tasks.md">phase1_tasks.md</a> · <a href="../../plans/milestone1.md">milestone1.md</a> · <a href="../../plans/doc/phase0-contract-freeze-hld.md">phase0-contract-freeze-hld.md</a></div>
     <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
   </section>
   <section class="slide bg-light content">
     <div class="slide-head"><div class="num">§</div><h2>Table of contents</h2></div>
     <div class="toc">
-      <div class="item"><div class="n">01</div><div><h3>One word, three meanings</h3><p>track, execution lane, CI lane, and why they are not interchangeable</p></div></div>
-      <div class="item"><div class="n">02</div><div><h3>Lanes on the wall</h3><p>Phase 0's six chains and the ten CI jobs that verify them</p></div></div>
-      <div class="item"><div class="n">03</div><div><h3>The blueprint</h3><p>five nodes, four contracts, one bridge</p></div></div>
-      <div class="item"><div class="n">04</div><div><h3>The message path</h3><p>R1 → R2 → R3 → R4, hop by hop</p></div></div>
-      <div class="item"><div class="n">05</div><div><h3>The smoke test</h3><p>what it established, and where the full story lives</p></div></div>
-      <div class="item"><div class="n">06</div><div><h3>Protocol stack &amp; libraries</h3><p>placeholder, source document pending</p></div></div>
+      <div class="item"><div class="n">01</div><div><h3>The blueprint</h3><p>five nodes, four contracts, one bridge</p></div></div>
+      <div class="item"><div class="n">02</div><div><h3>The message path</h3><p>R1 → R2 → R3 → R4, step by step</p></div></div>
+      <div class="item"><div class="n">03</div><div><h3>Contract terminology</h3><p>golden vectors, corpus, UPER, octet</p></div></div>
+      <div class="item"><div class="n">04</div><div><h3>The smoke test</h3><p>what it established, and where the full story lives</p></div></div>
+      <div class="item"><div class="n">05</div><div><h3>Protocol stack &amp; libraries</h3><p>placeholder, source document pending</p></div></div>
     </div>
+    <p class="lead"><em>Tracks, lanes and task groups — the planning vocabulary — moved to Deck B.</em></p>
     <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
     <div class="sec-num">01</div>
-    <h1>Two things called a lane</h1>
-    <div class="rule"></div>
-    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
-  </section>
-  <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">01</div><h2>One word, three meanings</h2></div>
-    <p class="lead">Phase 0 and Phase 1 both use the word <em>lane</em> — for two different things. Neither of them is a <em>track</em>.</p>
-    <table class="fpt">
-      <thead><tr><th>Term</th><th>What it groups</th><th>Defined in</th><th>Example</th></tr></thead>
-      <tbody>
-        <tr><td><strong>Track</strong></td><td>a workstream of whole phases, run by different people at the same time</td><td><a href="../../plans/milestone1.md">milestone1.md §3</a></td><td>comms track = Phase 1</td></tr>
-        <tr><td><strong>Execution lane</strong></td><td>subtasks that must run in dependency order, grouped by the folder they write into</td><td>each phase plan's <em>Execution order &amp; parallelism</em></td><td>Lane B = <code>V2X_ECU/</code></td></tr>
-        <tr><td><strong>CI lane</strong></td><td>one job in the GitHub Actions workflow</td><td><code>.github/workflows/phase0-ci.yml</code></td><td><code>v2x-core-build</code></td></tr>
-      </tbody>
-    </table>
-    <ul class="points">
-      <li><strong>A track spans phases; a lane lives inside one phase.</strong> "The V2X work" is Lane B in Phase 0, Lane V in Phase 1, and the comms track across the milestone — three different objects with three different lifetimes.</li>
-      <li><strong>Only the CI lane is a runnable thing.</strong> The other two are structure: who works on what, and what has to finish before what.</li>
-    </ul>
-    <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
-  </section>
-  <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">01</div><h2>Execution lanes — dependency chains in the plan</h2></div>
-    <p class="lead">An execution lane is a chain of subtasks that must run in order because they share files, fixtures, or a toolchain. Lanes are grouped by target folder, so two lanes never write into the same tree.</p>
-    <table class="fpt">
-      <thead><tr><th>Phase</th><th>Lanes</th><th>Grouping</th></tr></thead>
-      <tbody>
-        <tr><td><strong>0</strong></td><td>A <code>contracts/</code> · B <code>V2X_ECU/</code> · C <code>ADA_ECU/</code> · D <code>Scenario_Player/</code> · E <code>IVI_ECU/</code> · F smoke test</td><td>one lane per folder, plus one for the on-platform smoke test</td></tr>
-        <tr><td><strong>1</strong></td><td>V <code>V2X_ECU/</code> · P <code>Scenario_Player/</code> · D deploy</td><td>the two node folders Phase 1 touches, plus the deferred deploy chain</td></tr>
-      </tbody>
-    </table>
-    <ul class="points">
-      <li><strong>Every arrow is a real dependency</strong> — a file, a contract artifact, a fixture — never a default assumption. <code>1.0.1.1 → 1.0.1.2</code> exists because the schema mirrors the profile document it is written from.</li>
-      <li><strong>Independent start points are named explicitly.</strong> Phase 0 lists <code>1.0.1.1</code>, <code>1.0.2.1</code>, <code>3.0.4.1</code>, <code>6.0.8.1</code>, <code>1.0.7.2</code>; everything else waits on an input.</li>
-      <li><strong>The integrity gate is deliberately last.</strong> <code>1.0.7.1</code> runs after every copy-landing subtask, because what it proves is that the 36 synced contract copies never drifted.</li>
-    </ul>
-    <div class="strip">Lanes are the logical dependency structure, not literal concurrency — at run time everything executes sequentially in one working tree.</div>
-    <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
-  </section>
-  <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">01</div><h2>CI lanes — the Linux verification path</h2></div>
-    <p class="lead">The dev host has no Docker and no WSL. Every Linux build, every C++ compile, every Gradle run therefore happens on GitHub Actions: CI is not a safety net here, it is <em>the</em> verification path.</p>
-    <ul class="points">
-      <li><strong>Ten jobs in one file:</strong> <code>contracts-gate</code> · <code>python-tests</code> · <code>ada-core-build</code> · <code>v2x-core-build</code> · <code>v2x-comms-check</code> · <code>sp-codec-helper</code> · <code>ivi-unit-tests</code> · <code>netcheck-image</code> · <code>v2x-ecu-image</code> · <code>scenario-player-image</code>.</li>
-      <li><strong>The file is still named <code>phase0-ci.yml</code>.</strong> Phase 1 added four jobs to it instead of starting a second workflow — the name is historical, not a scope statement.</li>
-      <li><strong>A job lands before its consumer</strong>, guarded on a file existing (<code>[ -f contracts/check_sync.py ]</code>), so the lane stays green while the code it will verify does not yet exist. No empty placeholder jobs.</li>
-      <li><strong>"Lane green" is the acceptance criterion</strong>, written literally into subtask briefs — Phase 1's <code>9.1.12.3</code> accepts on <em>lane green on the pushed branch</em>, and Phase 0's per-node build commands are only ever executed for real inside these jobs.</li>
-    </ul>
-    <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
-  </section>
-  <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">01</div><h2>One plan lane, one or two CI lanes</h2></div>
-    <p class="lead">Left: what must happen, in what order. Right: what proves it happened.</p>
-    <div class="imgbox"><img src="../assets/phase0-lanes.svg" style="height:450px" alt="Phase 0 execution lanes mapped onto the CI lanes that verify them"><div class="cap">Phase 0 execution lanes mapped onto the CI lanes that verify them</div></div>
-    <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
-  </section>
-  <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">01</div><h2>Tracks — the third axis</h2></div>
-    <p class="lead">A track is a workstream that belongs to people and runs for weeks. Phase 0 froze the contracts precisely so that three of them could start at once.</p>
-    <table class="fpt">
-      <thead><tr><th>Track</th><th>Phases</th><th>Builds against</th></tr></thead>
-      <tbody>
-        <tr><td><strong>Comms</strong></td><td>1</td><td>real R1 CPMs from the start; mock perception contents until Phase 6</td></tr>
-        <tr><td><strong>Perception (ADA)</strong></td><td>2, then 3 ∥ 4</td><td>the R3 store — detection writes <code>own_sensor</code> entries, fusion consumes the store and the live R2 feed</td></tr>
-        <tr><td><strong>Display</strong></td><td>5</td><td>mock R4 warnings from the start</td></tr>
-      </tbody>
-    </table>
-    <ul class="points">
-      <li><strong>Tracks share contracts, never internals.</strong> That is the whole reason they can run in parallel — and why freezing R1–R6 had to come first.</li>
-      <li><strong>Phases 3 and 4 are one track running two phases side by side.</strong> They never call each other; they meet only at the R3 store.</li>
-      <li><strong>The tracks converge at Phase 6</strong>, where every mock is replaced by real data.</li>
-    </ul>
-    <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
-  </section>
-  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
-    <div class="sec-num">02</div>
     <h1>The blueprint</h1>
     <div class="rule"></div>
     <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">02</div><h2>Five nodes, not four</h2></div>
+    <div class="slide-head"><div class="num">01</div><h2>Five nodes, not four</h2></div>
     <p class="lead">One blueprint is one car — vehicle A, the ego. Four of its nodes are ECU or bench roles; the fifth is the Ethernet Bridge that turns them into a network.</p>
     <table class="fpt">
       <thead><tr><th>Node</th><th>CarSky node type</th><th>Address</th><th>Serves</th></tr></thead>
@@ -303,12 +227,12 @@
     <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">02</div><h2>Every flow labelled by its contract</h2></div>
+    <div class="slide-head"><div class="num">01</div><h2>Every flow labelled by its contract</h2></div>
     <div class="imgbox"><img src="../assets/m1-blueprint-5-nodes.svg" style="height:450px" alt="Milestone 1 blueprint: five nodes, three contract-labelled UDP flows, one Ethernet Bridge"><div class="cap">Milestone 1 blueprint: five nodes, three contract-labelled UDP flows, one Ethernet Bridge</div></div>
     <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">02</div><h2>Walking the message path</h2></div>
+    <div class="slide-head"><div class="num">01</div><h2>Walking the message path</h2></div>
     <div class="chain">
     <div class="link"><span>Scenario Player</span><small>bench · R11</small></div>
     <div class="arr">→</div>
@@ -320,21 +244,41 @@
     </div>
     <ul class="points">
       <li><strong>R1 — on the wire.</strong> ETSI CPM (TS 103 324), ASN.1 UPER, one PDU per UDP datagram on port <code>47100</code>. The only V2X message type in M1, and the only place a non-JSON encoding appears.</li>
-      <li><strong>R2 — V2X ECU → ADA ECU.</strong> One JSON <code>v2x_object</code> message per perceived-object update, port <code>47200</code>. <code>object.distance</code> is <em>derived</em> at this hop from the relative position, never transmitted.</li>
-      <li><strong>R3 — TrackedObject.</strong> Not a hop: the single schema every ego-side object obeys, whether it came from the detector or from the relay. It reaches the wire only as the <code>object</code> snapshot embedded in an R4 message.</li>
+      <li><strong>R2 — V2X ECU → ADA ECU.</strong> One JSON <code>v2x_object</code> message per perceived-object update, port <code>47200</code>. <code>object.distance</code> is <em>derived</em> here from the relative position, never transmitted.</li>
+      <li><strong>R3 — TrackedObject.</strong> Not a message between nodes: the single schema every ego-side object obeys, whether it came from the detector or from the relay. It reaches the wire only as the <code>object</code> snapshot embedded in an R4 message.</li>
       <li><strong>R4 — ADA ECU → IVI ECU.</strong> Versioned warning events carrying the composed scene geometry, port <code>47300</code> — the IVI renders the view from this message alone.</li>
-      <li><strong>Every hop is same-subnet UDP.</strong> No routing, no gateway, no broker, no middleware.</li>
+      <li><strong>Every link between nodes is same-subnet UDP.</strong> No routing, no gateway, no broker, no middleware.</li>
+    </ul>
+    <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">01</div><h2>Contract terminology</h2></div>
+    <p class="lead">The words the contract artifacts carry. They appear throughout the plan, the CI lanes and the task deck.</p>
+    <table class="fpt">
+      <thead><tr><th>Term</th><th>What it means here</th></tr></thead>
+      <tbody>
+        <tr><td><strong>UPER</strong></td><td><em>Unaligned Packed Encoding Rules</em> — the ASN.1 rules that pack one R1 CPM into 58 bytes. The only non-JSON encoding in M1.</td></tr>
+        <tr><td><strong>Octet</strong></td><td>One byte. ASN.1 wording, kept because the profile document uses it.</td></tr>
+        <tr><td><strong>Test vector</strong></td><td>One case: a message content paired with the exact bytes it must encode to — <code>nominal.json</code> + <code>nominal.uper</code>.</td></tr>
+        <tr><td><strong>Golden</strong></td><td>Those bytes are committed and frozen. A test encodes the <code>.json</code> and compares byte for byte against the stored <code>.uper</code>, instead of recomputing what it should be.</td></tr>
+        <tr><td><strong>Corpus</strong></td><td>The whole set of vectors — six here, chosen to cover the edges rather than one happy path.</td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>The six cases:</strong> <code>nominal</code> · <code>mdt-max</code> / <code>mdt-min</code> (±2047 ms) · <code>conf-unavailable</code> (the 101 sentinel) · <code>gate-boundary</code> (an object at exactly 30 m) · <code>coord-large</code> (near the large-coordinate bound).</li>
+      <li><strong>Why they exist:</strong> the same message is encoded and decoded by different code — C++ in the V2X ECU, a separate helper on the bench. The corpus is the one reference both are measured against.</li>
+      <li><strong>CI generated them, not a person</strong> — and the same run proved regeneration is deterministic: generate twice, <code>diff</code> empty.</li>
     </ul>
     <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
-    <div class="sec-num">03</div>
+    <div class="sec-num">02</div>
     <h1>The smoke test</h1>
     <div class="rule"></div>
     <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">03</div><h2>Proving the wire, before the ECUs existed</h2></div>
+    <div class="slide-head"><div class="num">02</div><h2>Proving the wire, before the ECUs existed</h2></div>
     <p class="lead">Phase 0's fourth acceptance box was closed by a connectivity smoke test on blueprint <code>trial2_minh</code>. Its method, tooling, AI/human split, and evidence are a deck of their own — this slide states only what it settled.</p>
     <ul class="points">
       <li><strong>All five pass criteria met, 2026-07-31.</strong> C1 every node Running · C2 zero errors · C3 live per-node logs · C4 traffic captured on the wire · C5 the chain proven by the payload's own accumulated stamps.</li>
@@ -346,13 +290,13 @@
     <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
-    <div class="sec-num">04</div>
+    <div class="sec-num">03</div>
     <h1>Protocol stack &amp; libraries</h1>
     <div class="rule"></div>
     <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">04</div><h2>Protocol stack and supporting libraries</h2></div>
+    <div class="slide-head"><div class="num">03</div><h2>Protocol stack and supporting libraries</h2></div>
     <p class="lead"><strong>Placeholder.</strong> The source document for this section does not exist yet — it will be authored separately, and this slide is its anchor in the deck.</p>
     <ul class="points">
       <li><strong>Topic:</strong> the protocol stack from the wire upward, and the third-party libraries each layer rests on.</li>

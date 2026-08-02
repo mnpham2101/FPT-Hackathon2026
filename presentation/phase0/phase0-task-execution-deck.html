@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Phase 0 — Task Execution</title>
-<meta name="description" content="Report deck — how Phase 0&#x27;s contract freeze was decomposed into task groups, what code it delivered, and in what order the six lanes actually ran">
+<meta name="description" content="Planning deck — the vocabulary of tracks, lanes and task groups, how Phase 0&#x27;s contract freeze was decomposed, what code it delivered, and in what order the six lanes actually ran">
 <style>
   :root {
     --fpt-orange: #F37021;
@@ -185,36 +185,117 @@
     <h1>Phase 0 — Task Execution</h1>
     <div class="rule"></div>
     <div class="tagline">From six lanes to twenty-seven atomic commits</div>
-    <div class="meta">contract freeze · 8 task groups · 27 subtasks · closed 2026-07-31<br>Source: <a href="../../plans/phase0_tasks.md">phase0_tasks.md</a> · <a href="../../plans/doc/phase0-contract-freeze-hld.md">phase0-contract-freeze-hld.md</a> · <a href="../../plans/phase1_tasks.md">phase1_tasks.md</a></div>
+    <div class="meta">contract freeze · 8 task groups · 27 subtasks · closed 2026-07-31<br>The architecture it builds is Deck A: <a href="phase0-design-concepts-deck.html">phase0-design-concepts-deck.html</a>.<br>Source: <a href="../../plans/phase0_tasks.md">phase0_tasks.md</a> · <a href="../../plans/doc/phase0-contract-freeze-hld.md">phase0-contract-freeze-hld.md</a> · <a href="../../plans/phase1_tasks.md">phase1_tasks.md</a></div>
     <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
   </section>
   <section class="slide bg-light content">
     <div class="slide-head"><div class="num">§</div><h2>Table of contents</h2></div>
     <div class="toc">
-      <div class="item"><div class="n">01</div><div><h3>How work is cut</h3><p>the ID scheme, and the shape of Phase 0</p></div></div>
-      <div class="item"><div class="n">02</div><div><h3>Task groups</h3><p>which lane each group builds, and who consumes it</p></div></div>
-      <div class="item"><div class="n">03</div><div><h3>Code delivered</h3><p>the files Phase 0 put in the repository</p></div></div>
-      <div class="item"><div class="n">04</div><div><h3>Execution order</h3><p>lane by lane, one diagram at a time</p></div></div>
-      <div class="item"><div class="n">05</div><div><h3>Parallel or sequential</h3><p>and what forced each</p></div></div>
-      <div class="item"><div class="n">06</div><div><h3>Handoff</h3><p>what Phase 1 was allowed to assume</p></div></div>
+      <div class="item"><div class="n">01</div><div><h3>Work organization</h3><p>track, execution lane, CI lane, and why they are not interchangeable</p></div></div>
+      <div class="item"><div class="n">02</div><div><h3>Work decomposition</h3><p>the ID scheme, and the shape of Phase 0</p></div></div>
+      <div class="item"><div class="n">03</div><div><h3>Task groups</h3><p>which lane each group builds, and who consumes it</p></div></div>
+      <div class="item"><div class="n">04</div><div><h3>Code delivered</h3><p>the files Phase 0 put in the repository</p></div></div>
+      <div class="item"><div class="n">05</div><div><h3>Execution order</h3><p>lane by lane, one diagram at a time</p></div></div>
+      <div class="item"><div class="n">06</div><div><h3>Parallel or sequential</h3><p>and what forced each</p></div></div>
+      <div class="item"><div class="n">07</div><div><h3>Handoff</h3><p>what Phase 1 was allowed to assume</p></div></div>
     </div>
     <div class="footer"><span>Phase 0 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
     <div class="sec-num">01</div>
-    <h1>How work is cut</h1>
+    <h1>Work organization</h1>
     <div class="rule"></div>
     <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">01</div><h2>The unit of work is a subtask, and its ID says everything</h2></div>
-    <p class="lead">Every task and subtask carries <code>X.Y.Z.W</code>. Read it and you know which requirement the work serves, which phase it belongs to, which feature it groups under, and which atomic commit closed it.</p>
+    <div class="slide-head"><div class="num">01</div><h2>Planning terminology</h2></div>
+    <p class="lead">Phase 0 and Phase 1 both use the word <em>lane</em> — for two different things. Neither of them is a <em>track</em>.</p>
+    <table class="fpt">
+      <thead><tr><th>Term</th><th>What it groups</th><th>Defined in</th><th>Example</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Track</strong></td><td>a workstream of whole phases, run by different people at the same time</td><td><a href="../../plans/milestone1.md">milestone1.md §3</a></td><td>comms track = Phase 1</td></tr>
+        <tr><td><strong>Execution lane</strong></td><td>subtasks that must run in dependency order, grouped by the folder they write into</td><td>each phase plan's <em>Execution order &amp; parallelism</em></td><td>Lane B = <code>V2X_ECU/</code></td></tr>
+        <tr><td><strong>CI lane</strong></td><td>one job in the GitHub Actions workflow</td><td><code>.github/workflows/phase0-ci.yml</code></td><td><code>v2x-core-build</code></td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>A track spans phases; a lane lives inside one phase.</strong> "The V2X work" is Lane B in Phase 0, Lane V in Phase 1, and the comms track across the milestone — three different objects with three different lifetimes.</li>
+      <li><strong>A CI lane is work a machine actually performs.</strong> It builds, tests, and either passes or fails; three of the ten also push a node image. A track and an execution lane are planning structure, not programs.</li>
+    </ul>
+    <div class="footer"><span>Phase 0 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">01</div><h2>Tracks</h2></div>
+    <p class="lead">A track is a workstream that belongs to people and runs for weeks. Three of them run at once — possible only because Phase 0 first froze the <strong>contracts</strong>.</p>
+    <div class="strip">A <strong>contract</strong> is an agreed message or data format: the exact fields, types and units two nodes exchange, written down once and never changed without re-agreeing with every consumer. This project has six of them, covering every message the nodes exchange — and <strong>defining them is what Phase 0 was for</strong>.</div>
+    <table class="fpt">
+      <thead><tr><th>Track</th><th>Phases</th><th>Builds against</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Comms</strong></td><td>1</td><td>real V2X messages on the wire from the start; mock perception contents until Phase 6</td></tr>
+        <tr><td><strong>Perception (ADA)</strong></td><td>2, then 3 ∥ 4</td><td>the tracked-object store — detection writes its own entries, fusion consumes the store and the live message from the V2X ECU</td></tr>
+        <tr><td><strong>Display</strong></td><td>5</td><td>mock warning messages from the start</td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>Tracks share contracts (message schema)</strong> Phase 0 defines massage scheme, or inputs to be shared by phases, allow them to mocked input and run in parallel.</li>
+      <li><strong>Phases 3 and 4 are one track running two phases side by side.</strong> They never call each other; they meet only at the tracked-object store.</li>
+      <li><strong>The tracks converge at Phase 6</strong>, where every mock is replaced by real data.</li>
+    </ul>
+    <div class="footer"><span>Phase 0 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">01</div><h2>Tracks and the phases inside them</h2></div>
+    <p class="lead">One contract freeze, three tracks running side by side, one convergence.</p>
+    <div class="imgbox"><img src="../assets/phase0-tracks-phases.svg" style="height:440px" alt="Three tracks — comms, perception, display — each with its phases, gated by the Phase 0 contract freeze and converging at Phase 6"><div class="cap">Three tracks — comms, perception, display — each with its phases, gated by the Phase 0 contract freeze and converging at Phase 6</div></div>
+    <div class="footer"><span>Phase 0 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">01</div><h2>Execution lanes — sequential subtasks</h2></div>
+    <p class="lead">Every lane in both phases. A lane is named after the folder it writes into, so no two touch the same files.</p>
+    <table class="fpt">
+      <thead><tr><th>Phase</th><th>Lane</th><th>Writes into</th><th>Waits on</th><th>What the lane lands</th></tr></thead>
+      <tbody>
+        <tr><td><strong>0</strong></td><td>A</td><td><code>contracts/</code></td><td>nothing — it is the source</td><td>the message profile, all four schemas, shared samples</td></tr>
+        <tr><td><strong>0</strong></td><td>B</td><td><code>V2X_ECU/</code></td><td>A, from its codec steps on</td><td>C++ toolchain, the codec seam, the six reference messages</td></tr>
+        <tr><td><strong>0</strong></td><td>C</td><td><code>ADA_ECU/</code></td><td>A, from its bindings on</td><td>ADA toolchain and its C++ and Python message bindings</td></tr>
+        <tr><td><strong>0</strong></td><td>D</td><td><code>Scenario_Player/</code></td><td>A and B</td><td>the bench-side message dataclass and its round-trip test</td></tr>
+        <tr><td><strong>0</strong></td><td>E</td><td><code>IVI_ECU/</code></td><td>A</td><td>the Kotlin bindings the display decodes into</td></tr>
+        <tr><td><strong>0</strong></td><td>F</td><td>the live blueprint</td><td>nothing</td><td>the baseline connectivity smoke test, run on the platform</td></tr>
+        <tr><td><strong>1</strong></td><td>V</td><td><code>V2X_ECU/</code></td><td>Phase 0's contracts</td><td>receive pipeline, composition root, node image</td></tr>
+        <tr><td><strong>1</strong></td><td>P</td><td><code>Scenario_Player/</code></td><td>Phase 0's contracts + codec seam</td><td>the bench application and its codec helper</td></tr>
+        <tr><td><strong>1</strong></td><td>D</td><td>the deployed Room</td><td>V and P</td><td>push the images, deploy the blueprint, read the logs to confirm messages arrive</td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>Inside a lane, the order is fixed.</strong> Each subtask consumes the output of the one before it.</li>
+      <li><strong>Between lanes, there is no order at all.</strong> A through F are names, not a sequence. Only <em>Waits on</em> sequences them, and it names an artifact, never a letter.</li>
+    </ul>
+    <div class="footer"><span>Phase 0 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">01</div><h2>CI lanes — the Linux verification path</h2></div>
+    <p class="lead">The dev host has no Docker and no WSL. Every Linux build, every C++ compile, every Gradle run therefore happens on GitHub Actions: CI is not a safety net here, it is <em>the</em> verification path.</p>
+    <ul class="points">
+      <li><strong>Ten jobs in one file:</strong> <code>contracts-gate</code> · <code>python-tests</code> · <code>ada-core-build</code> · <code>v2x-core-build</code> · <code>v2x-comms-check</code> · <code>sp-codec-helper</code> · <code>ivi-unit-tests</code> · <code>netcheck-image</code> · <code>v2x-ecu-image</code> · <code>scenario-player-image</code>.</li>
+      <li><strong>The file <code>phase0-ci.yml</code></strong> defines jobd on GithubAction. Phase 1 added four jobs to it instead of starting a second workflow </li>
+    </ul>
+    <div class="footer"><span>Phase 0 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">02</div>
+    <h1>Work decomposition</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">02</div><h2>The unit of work is a subtask, and its ID says everything</h2></div>
+    <p class="lead">Every task and subtask carries <code>X.Y.Z.W</code>.</p>
     <table class="fpt">
       <thead><tr><th>Segment</th><th>Reads as</th><th>In <code>2.0.3.1</code></th></tr></thead>
       <tbody>
-        <tr><td><code>X</code></td><td>the requirement served</td><td>R2 — the V2X-to-ADA object message</td></tr>
+        <tr><td><code>X</code></td><td>the requirement served</td><td>the V2X-to-ADA object message</td></tr>
         <tr><td><code>Y</code></td><td>the phase</td><td>0 — the contract freeze</td></tr>
-        <tr><td><code>Z</code></td><td>the task group</td><td>group 0.3 — R2 bindings, both C++ ends</td></tr>
+        <tr><td><code>Z</code></td><td>the task group</td><td>group 0.3 — V2X-to-ADA bindings</td></tr>
         <tr><td><code>W</code></td><td>the subtask</td><td>the V2X-side binding, one commit</td></tr>
       </tbody>
     </table>
@@ -222,23 +303,29 @@
     <div class="footer"><span>Phase 0 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">01</div><h2>What Phase 0 looked like as a work item</h2></div>
+    <div class="slide-head"><div class="num">02</div><h2>What Phase 0 looked like as a work item</h2></div>
     <ul class="points">
       <li><strong>8 task groups, 27 subtasks, 6 lanes.</strong> Lane A <code>contracts/</code> 6 · lane B <code>V2X_ECU/</code> 6 · lane C <code>ADA_ECU/</code> 6 · lane D <code>Scenario_Player/</code> 1 · lane E <code>IVI_ECU/</code> 2 · lane F smoke test 4 · plus the integrity gate and the CI workflow, one subtask each.</li>
       <li><strong>Three execution kinds.</strong> 24 subtasks implemented by spawned agents, 1 executed by the deployment agent, 2 performed by the user in the Nydus UI. The plan tracks all three the same way; only the executor differs.</li>
       <li><strong>One subtask, one objective, one atomic commit</strong> — plus a build that passes and unit tests that pass. A subtask without a <code>**Status:**</code> line in the plan file is not started.</li>
-      <li><strong>Verification was never local for C++ or Kotlin.</strong> The dev host has no Docker and no WSL, and its JDK exceeds the Gradle wrapper's supported range, so GitHub Actions is the verification authority. Only lane D could be run on the developer's own machine.</li>
+      <li><strong>Verification done by GithubAction</strong> The dev host has no Docker and no WSL, and its JDK exceeds the Gradle wrapper's supported range, so GitHub Actions is the verification authority. Only lane D could be run on the developer's own machine.</li>
     </ul>
     <div class="footer"><span>Phase 0 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">01</div><h2>The four acceptance boxes, and what actually closed them</h2></div>
+    <div class="slide-head"><div class="num">02</div><h2>Tasks assigned to lanes</h2></div>
+    <p class="lead">Left: what must happen, in what order. Right: what proves it happened.</p>
+    <div class="imgbox"><img src="../assets/phase0-lanes.svg" style="height:450px" alt="Phase 0 execution lanes mapped onto the CI lanes that verify them"><div class="cap">Phase 0 execution lanes mapped onto the CI lanes that verify them</div></div>
+    <div class="footer"><span>Phase 0 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">02</div><h2>The four acceptance boxes</h2></div>
     <table class="fpt">
       <thead><tr><th>Acceptance box</th><th>Closed by</th><th>Proof</th></tr></thead>
       <tbody>
-        <tr><td>R1 profile committed; golden vectors encode and decode through the codec seam</td><td><code>1.0.1.1</code> · <code>1.0.1.2</code> · <code>1.0.2.1</code>–<code>1.0.2.5</code></td><td>CI run 30608005574 — the 6-case corpus decodes to its <code>.json</code> and re-encodes to the exact octets</td></tr>
-        <tr><td>R2 / R3 / R4 schemas committed; round-trip tests pass in C++, Python and Kotlin</td><td>group 0.1 schemas + six round-trip suites across groups 0.3–0.6</td><td>CI run 30608202261, with the integrity gate green over 36 synced copies</td></tr>
-        <tr><td>The R4 additive-version test is defined</td><td><code>4.0.1.6</code> · <code>4.0.4.4</code> · <code>4.0.6.2</code></td><td>CI run 30602717230 — one shared fixture, both consumers</td></tr>
+        <tr><td>V2X message profile committed; the reference messages encode and decode through the codec seam</td><td><code>1.0.1.1</code> · <code>1.0.1.2</code> · <code>1.0.2.1</code>–<code>1.0.2.5</code></td><td>the <a href="https://github.com/mnpham2101/FPT-Hackathon2026/actions/runs/30608005574"><code>v2x-core-build</code> lane green</a> — all six reference messages decode to their readable form and re-encode to exactly the same bytes</td></tr>
+        <tr><td>V2X-to-ADA, tracked-object and warning schemas committed; round-trip tests pass in C++, Python and Kotlin</td><td>group 0.1 schemas + six round-trip suites across groups 0.3–0.6</td><td>the <a href="https://github.com/mnpham2101/FPT-Hackathon2026/actions/runs/30608202261"><code>contracts-gate</code> lane green</a>, over all 36 synced copies</td></tr>
+        <tr><td>The warning-message additive-version test is defined</td><td><code>4.0.1.6</code> · <code>4.0.4.4</code> · <code>4.0.6.2</code></td><td>the <a href="https://github.com/mnpham2101/FPT-Hackathon2026/actions/runs/30602717230"><code>ada-core-build</code> lane green</a> — one shared fixture, both consumers</td></tr>
         <tr><td>Blueprint topology documented and validated</td><td><code>6.0.8.1</code> · <code>5.0.8.2</code> · <code>5.0.8.3</code> · <code>6.0.8.4</code></td><td>a live deployment, not a CI run: 5/5 nodes Running, criteria C1–C5 met</td></tr>
       </tbody>
     </table>
@@ -246,41 +333,41 @@
     <div class="footer"><span>Phase 0 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
-    <div class="sec-num">02</div>
+    <div class="sec-num">03</div>
     <h1>Task groups</h1>
     <div class="rule"></div>
     <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">02</div><h2>Every task group builds a lane, or feeds a later phase's lane</h2></div>
+    <div class="slide-head"><div class="num">03</div><h2>Every task group builds a lane, or feeds a later phase's lane</h2></div>
     <table class="fpt">
       <thead><tr><th>Task group</th><th>What it delivers, and which lane it serves</th></tr></thead>
       <tbody>
-        <tr><td><strong>0.1</strong> — contract source of truth, <code>contracts/</code></td><td>Writes the R1 profile document plus the R1–R4 schemas and shared samples. <strong>Implements lane A.</strong> Its files are the compile-time input of every other lane and of every binding written after Phase 0.</td></tr>
-        <tr><td><strong>0.2</strong> — V2X ECU toolchain, codec seam, golden vectors</td><td>Brings up the C++17 build, freezes the single R1 codec source, generates the vector corpus (R1). <strong>Implements lane B.</strong> Phase 1's receive pipeline decodes through this seam; the bench encoder helper reuses the same sources.</td></tr>
-        <tr><td><strong>0.3</strong> — R2 bindings, both C++ ends</td><td>One handwritten R2 binding per node, producer and consumer (R2). <strong>Splits across lanes B and C</strong> — <code>2.0.3.1</code> in <code>V2X_ECU/</code>, <code>2.0.3.2</code> in <code>ADA_ECU/</code>. Phase 1 forwards R2 with exactly these bindings.</td></tr>
-        <tr><td><strong>0.4</strong> — ADA ECU contract layer</td><td>ADA toolchain, R3 and R4 C++ bindings, the additive-version test, the Python detector binding (R3, R4). <strong>Implements lane C.</strong> Phase 2 extends the tree; Phases 3 and 4 meet across the R3 struct.</td></tr>
-        <tr><td><strong>0.5</strong> — Scenario Player contract layer</td><td>The bench-side CpmContent dataclass and its golden round-trip test (R1). <strong>Implements lane D.</strong> Phase 1's bench starts here — and it deliberately stops short of an encoder.</td></tr>
-        <tr><td><strong>0.6</strong> — IVI Kotlin R4 and R3 binding</td><td>The sealed Kotlin R4 binding and the finalized R3 snapshot models (R4). <strong>Implements lane E.</strong> Phase 5's HMI decodes into these models instead of defining its own.</td></tr>
-        <tr><td><strong>0.7</strong> — contract integrity gate and CI</td><td>The byte-identity gate over every synced copy, and the Linux verification workflow (R1–R4). <strong>Implements the gate and the CI lanes.</strong> Every later subtask in the project is verified by this file.</td></tr>
-        <tr><td><strong>0.8</strong> — R5/R6 baseline connectivity smoke test</td><td>Builds, pushes, deploys and reads the netcheck tool on the live blueprint (R5, R6). <strong>Implements lane F.</strong> It is why Phase 1 could assume a deployable Room and reachable nodes.</td></tr>
+        <tr><td><strong>0.1</strong> — contract source of truth, <code>contracts/</code></td><td>Writes the V2X message profile document plus all four message schemas and shared samples. <strong>Implements lane A.</strong> Its files are the compile-time input of every other lane and of every binding written after Phase 0.</td></tr>
+        <tr><td><strong>0.2</strong> — V2X ECU toolchain, codec seam, reference messages</td><td>Brings up the C++17 build, freezes the single V2X codec source, generates the six reference messages. <strong>Implements lane B.</strong> Phase 1's receive pipeline decodes through this seam; the bench encoder helper reuses the same sources.</td></tr>
+        <tr><td><strong>0.3</strong> — V2X-to-ADA bindings, both C++ ends</td><td>One handwritten binding per node, producer and consumer. <strong>Splits across lanes B and C</strong> — <code>2.0.3.1</code> in <code>V2X_ECU/</code>, <code>2.0.3.2</code> in <code>ADA_ECU/</code>. Phase 1 forwards that message with exactly these bindings.</td></tr>
+        <tr><td><strong>0.4</strong> — ADA ECU contract layer</td><td>ADA toolchain, tracked-object and warning C++ bindings, the additive-version test, the Python detector binding. <strong>Implements lane C.</strong> Phase 2 extends the tree; Phases 3 and 4 meet across the tracked-object struct.</td></tr>
+        <tr><td><strong>0.5</strong> — Scenario Player contract layer</td><td>The bench-side CpmContent dataclass and its golden round-trip test. <strong>Implements lane D.</strong> Phase 1's bench starts here — and it deliberately stops short of an encoder.</td></tr>
+        <tr><td><strong>0.6</strong> — IVI Kotlin warning and snapshot bindings</td><td>The sealed Kotlin warning binding and the finalized tracked-object snapshot models. <strong>Implements lane E.</strong> Phase 5's HMI decodes into these models instead of defining its own.</td></tr>
+        <tr><td><strong>0.7</strong> — contract integrity gate and CI</td><td>The byte-identity gate over every synced copy, and the Linux verification workflow. <strong>Implements the gate and the CI lanes.</strong> Every later subtask in the project is verified by this file.</td></tr>
+        <tr><td><strong>0.8</strong> — baseline connectivity smoke test</td><td>Builds, pushes, deploys and reads the netcheck tool on the live blueprint. <strong>Implements lane F.</strong> It is why Phase 1 could assume a deployable Room and reachable nodes.</td></tr>
       </tbody>
     </table>
     <div class="footer"><span>Phase 0 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
-    <div class="sec-num">03</div>
+    <div class="sec-num">04</div>
     <h1>Code delivered</h1>
     <div class="rule"></div>
     <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">03</div><h2>Shared contracts, the gate, the pipeline, the bench tool</h2></div>
+    <div class="slide-head"><div class="num">04</div><h2>Shared contracts, the gate, the pipeline, the bench tool</h2></div>
     <table class="fpt">
       <thead><tr><th>File group</th><th>Delivered by</th><th>Purpose</th></tr></thead>
       <tbody>
         <tr><td><code>contracts/</code> — <code>r1-cpm-profile.md</code>, four JSON Schemas, five shared samples</td><td>group 0.1, subtasks <code>1.0.1.1</code> through <code>4.0.1.6</code></td><td>The single source of truth every node copies from. It freezes, and re-freezes, as one unit.</td></tr>
-        <tr><td><code>contracts/golden-vectors/</code> — six <code>.json</code> + <code>.uper</code> pairs</td><td><code>1.0.2.4</code></td><td>The R1 fixtures. Generated by a build-only tool and published by the CI run that proved regeneration byte-stable.</td></tr>
+        <tr><td><code>contracts/golden-vectors/</code> — six readable + encoded pairs</td><td><code>1.0.2.4</code></td><td>The reference messages: each one's content, plus the exact bytes it must encode to. Generated by a build-only tool, and published by the CI run that proved regenerating them is byte-stable.</td></tr>
         <tr><td><code>contracts/sync-manifest.json</code> + <code>check_sync.py</code></td><td><code>1.0.7.1</code></td><td>Maps 21 sources onto 36 node-local copies and exits 1 on any byte difference; it also carries the banned-token check over the V2X sources.</td></tr>
         <tr><td><code>.github/workflows/phase0-ci.yml</code></td><td>created by <code>1.0.7.2</code>; lanes added by <code>1.0.2.1</code>, <code>3.0.4.1</code>, <code>5.0.8.2</code></td><td>The build-configuration workflow — the project's Linux verification path, where C++ builds, Gradle tests and image builds actually run.</td></tr>
         <tr><td><code>tools/netcheck/</code> — <code>Dockerfile</code>, <code>entrypoint.sh</code>, <code>capture.sh</code>, <code>netcheck.py</code></td><td><code>6.0.8.1</code></td><td>The netcheck tool: one throwaway image, three container roles, self-starting at node start with no manual exec.</td></tr>
@@ -289,14 +376,14 @@
     <div class="footer"><span>Phase 0 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">03</div><h2>Per-node code — libraries, message definitions, skeletons</h2></div>
+    <div class="slide-head"><div class="num">04</div><h2>Per-node code — libraries, message definitions, skeletons</h2></div>
     <table class="fpt">
       <thead><tr><th>File group</th><th>Delivered by</th><th>Purpose</th></tr></thead>
       <tbody>
         <tr><td><code>V2X_ECU/src/codec/</code> — <code>cpm_codec.hpp</code>, <code>vanetza_cpm_codec.{hpp,cpp}</code></td><td><code>1.0.2.2</code>, <code>1.0.2.3</code></td><td>The V2X library files: the codec seam interface and its only implementation over the ITS-r2 CPM type. Nothing above the seam converts units.</td></tr>
-        <tr><td><code>V2X_ECU/src/contracts/r2_message.{hpp,cpp}</code> + <code>V2X_ECU/contracts/*.schema.json</code></td><td><code>2.0.3.1</code>, <code>1.0.2.2</code></td><td>The V2X message-definition files: the R2 producer binding and the synced schema copies it is written against.</td></tr>
-        <tr><td><code>V2X_ECU/CMakeLists.txt</code> · <code>tools/golden_vectors/main.cpp</code> · <code>tests/</code></td><td><code>1.0.2.1</code>, <code>1.0.2.4</code>, <code>1.0.2.5</code></td><td>Toolchain with exact dependency pins, the vector generator that never ships in the node image, and the tests that hold the corpus to its bytes.</td></tr>
-        <tr><td><code>ADA_ECU/</code> — <code>CMakeLists.txt</code>, <code>src/contracts/</code> R2 · R3 · R4, <code>detector/contracts/tracked_object.py</code></td><td>group 0.4 plus <code>2.0.3.2</code></td><td>The ADA skeleton: the consuming end of R2, the producing end of R4, and the R3 line shape the Python detector subprocess will speak.</td></tr>
+        <tr><td><code>V2X_ECU/src/contracts/r2_message.{hpp,cpp}</code> + <code>V2X_ECU/contracts/*.schema.json</code></td><td><code>2.0.3.1</code>, <code>1.0.2.2</code></td><td>The V2X message-definition files: the V2X-to-ADA producer binding and the synced schema copies it is written against.</td></tr>
+        <tr><td><code>V2X_ECU/CMakeLists.txt</code> · <code>tools/golden_vectors/main.cpp</code> · <code>tests/</code></td><td><code>1.0.2.1</code>, <code>1.0.2.4</code>, <code>1.0.2.5</code></td><td>Toolchain with exact dependency pins, the generator that never ships in the node image, and the tests that hold every reference message to its exact bytes.</td></tr>
+        <tr><td><code>ADA_ECU/</code> — <code>CMakeLists.txt</code>, <code>src/contracts/</code> for all three messages, <code>detector/contracts/tracked_object.py</code></td><td>group 0.4 plus <code>2.0.3.2</code></td><td>The ADA skeleton: the consuming end of the V2X-to-ADA message, the producing end of the warning message, and the tracked-object line shape the Python detector subprocess will speak.</td></tr>
         <tr><td><code>Scenario_Player/player/contracts/cpm_content.py</code> + golden <code>.json</code> fixtures</td><td><code>1.0.5.1</code></td><td>The bench side of the codec seam as a stdlib dataclass — model only, no encoder, by explicit constraint.</td></tr>
         <tr><td><code>IVI_ECU/app/.../model/R4Message.kt</code> + finalized <code>R3Snapshot.kt</code> and <code>SceneGeometry.kt</code></td><td><code>4.0.6.1</code>, <code>4.0.6.2</code></td><td>The IVI skeleton's data layer: the sealed Kotlin binding the HMI decodes into, including its lenient handling of unknown warning types.</td></tr>
       </tbody>
@@ -304,69 +391,69 @@
     <div class="footer"><span>Phase 0 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
-    <div class="sec-num">04</div>
+    <div class="sec-num">05</div>
     <h1>Execution order</h1>
     <div class="rule"></div>
     <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">04</div><h2>Six lanes, six places the work could start at once</h2></div>
+    <div class="slide-head"><div class="num">05</div><h2>Six lanes defining parallel or consecutive works</h2></div>
     <p class="lead">Horizontal position is dependency depth, not calendar time — how far a piece of work sits from the start of the phase.</p>
     <div class="imgbox"><img src="../assets/phase0-exec-overview.svg" style="height:430px" alt="Phase 0 lane overview: six lanes, their dependency depth, and the gate that runs last"><div class="cap">Phase 0 lane overview: six lanes, their dependency depth, and the gate that runs last</div></div>
     <div class="footer"><span>Phase 0 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">04</div><h2>Lane A — the only lane nobody waits behind</h2></div>
-    <p class="lead"><code>contracts/</code> writes documents and schemas, so it depends on no build and no toolchain. It splits into two chains that never touch each other: the R1 profile feeding the CpmContent and R2 schemas, and the R3 schema feeding R4 and the additive-version fixture.</p>
+    <div class="slide-head"><div class="num">05</div><h2>Lane A — start up work</h2></div>
+    <p class="lead"><code>contracts/</code> writes documents and schemas, so it depends on no build and no toolchain. It splits into two chains that never touch each other: the V2X message profile feeding the bench and V2X-to-ADA schemas, and the tracked-object schema feeding the warning schema and its additive-version fixture.</p>
     <div class="imgbox"><img src="../assets/phase0-exec-lane-a.svg" style="height:430px" alt="Lane A: two independent contract chains and the lanes each output feeds"><div class="cap">Lane A: two independent contract chains and the lanes each output feeds</div></div>
     <div class="footer"><span>Phase 0 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">04</div><h2>Lane B — a five-step chain, with one binding running beside it</h2></div>
-    <p class="lead">Each codec step compiles against the previous one, so the chain admits no shortcut. The R2 binding needs only the toolchain and the R2 schema, so it ran alongside the whole chain rather than after it.</p>
-    <div class="imgbox"><img src="../assets/phase0-exec-lane-b.svg" style="height:430px" alt="Lane B: the V2X codec chain, its lane-A inputs, and the parallel R2 binding"><div class="cap">Lane B: the V2X codec chain, its lane-A inputs, and the parallel R2 binding</div></div>
+    <div class="slide-head"><div class="num">05</div><h2>Lane B — a five-step chain, with one binding running beside it</h2></div>
+    <p class="lead">Each codec step compiles against the previous one, so the chain admits no shortcut. The V2X-to-ADA binding needs only the toolchain and its schema, so it ran alongside the whole chain rather than after it.</p>
+    <div class="imgbox"><img src="../assets/phase0-exec-lane-b.svg" style="height:430px" alt="Lane B: the V2X codec chain, its lane-A inputs, and the parallel V2X-to-ADA binding"><div class="cap">Lane B: the V2X codec chain, its lane-A inputs, and the parallel V2X-to-ADA binding</div></div>
     <div class="footer"><span>Phase 0 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">04</div><h2>Lane C — fan out on the toolchain, then a single file at a time</h2></div>
-    <p class="lead">The two R2/R3 bindings share only the CMake setup, so they ran side by side. Everything after them is strictly ordered: R4 embeds R3, the additive test needs the R4 binding, and the Python validator needs all four.</p>
+    <div class="slide-head"><div class="num">05</div><h2>Lane C — fan out on the toolchain, then a single file at a time</h2></div>
+    <p class="lead">The two message bindings share only the CMake setup, so they ran side by side. Everything after them is strictly ordered: the warning message embeds the tracked-object record, the additive test needs the warning binding, and the Python validator needs all four.</p>
     <div class="imgbox"><img src="../assets/phase0-exec-lane-c.svg" style="height:430px" alt="Lane C: the ADA fan-out into two bindings and the sequential chain into the Python validator"><div class="cap">Lane C: the ADA fan-out into two bindings and the sequential chain into the Python validator</div></div>
     <div class="footer"><span>Phase 0 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">04</div><h2>Lanes D and E — the two that had to wait</h2></div>
-    <p class="lead">Neither lane was slow; both were blocked on frozen artifacts. Lane D needed the golden vectors that lane B generates, lane E needed the R4 schema and its additive fixture. That is the cost of contract-first, and it is paid once.</p>
+    <div class="slide-head"><div class="num">05</div><h2>Lanes D and E — the two that had to wait</h2></div>
+    <p class="lead">Neither lane was slow; both were blocked on frozen artifacts. Lane D needed the reference messages that lane B generates, lane E needed the warning schema and its additive fixture. That is the cost of contract-first, and it is paid once.</p>
     <div class="imgbox"><img src="../assets/phase0-exec-lanes-d-e.svg" style="height:420px" alt="Lanes D and E: the bench dataclass and the IVI Kotlin binding, with the inputs each waited on"><div class="cap">Lanes D and E: the bench dataclass and the IVI Kotlin binding, with the inputs each waited on</div></div>
     <div class="footer"><span>Phase 0 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">04</div><h2>The gate and the CI lanes — opposite ends of the ordering</h2></div>
+    <div class="slide-head"><div class="num">05</div><h2>The gate and the CI lanes — opposite ends of the ordering</h2></div>
     <p class="lead">The integrity gate is the one subtask deliberately scheduled last: it fails on a missing target, so it can only run once all ten copy-landing subtasks exist. The CI workflow is the opposite — it landed on day one and guarded every job it could not yet run.</p>
     <div class="imgbox"><img src="../assets/phase0-exec-gate-ci.svg" style="height:430px" alt="The contract integrity gate fed by ten copy-landing subtasks, and the six CI lanes with the subtask that made each live"><div class="cap">The contract integrity gate fed by ten copy-landing subtasks, and the six CI lanes with the subtask that made each live</div></div>
     <div class="footer"><span>Phase 0 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">04</div><h2>Lane F — the smoke test, and the only lane a human had to finish</h2></div>
+    <div class="slide-head"><div class="num">05</div><h2>Lane F — the smoke test and human work</h2></div>
     <p class="lead">Fully parallel with everything else, because it shares no file with any node folder. Internally it admits no reordering at all, and its last two steps are Nydus UI work the plan tracks but no agent performs.</p>
     <div class="imgbox"><img src="../assets/phase0-exec-lane-f.svg" style="height:400px" alt="Lane F: author the tool, push the image, deploy, read the logs — with the open items each step closed or left open"><div class="cap">Lane F: author the tool, push the image, deploy, read the logs — with the open items each step closed or left open</div></div>
     <div class="footer"><span>Phase 0 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
-    <div class="sec-num">05</div>
+    <div class="sec-num">06</div>
     <h1>Parallel or sequential</h1>
     <div class="rule"></div>
     <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">05</div><h2>Every arrow is a real dependency, never a default assumption</h2></div>
+    <div class="slide-head"><div class="num">06</div><h2>Relationship between lanes</h2></div>
     <table class="fpt">
       <thead><tr><th>Relationship</th><th>What it covers</th><th>What forces it</th></tr></thead>
       <tbody>
         <tr><td><strong>Parallel — across lanes</strong></td><td>A, B, C, F and CI all start with no predecessor</td><td>They write disjoint folders: <code>contracts/</code>, <code>V2X_ECU/</code>, <code>ADA_ECU/</code>, <code>tools/netcheck/</code>, <code>.github/</code>. No shared file, no ordering</td></tr>
-        <tr><td><strong>Parallel — inside lane A</strong></td><td><code>1.0.1.1</code> against <code>3.0.1.4</code></td><td>The R3 schema references neither R1 nor R2, so the two chains are independent from the first minute</td></tr>
-        <tr><td><strong>Parallel — inside lane B</strong></td><td><code>2.0.3.1</code> against the whole <code>1.0.2.x</code> chain</td><td>The R2 binding needs the toolchain and a schema, not the codec</td></tr>
+        <tr><td><strong>Parallel — inside lane A</strong></td><td><code>1.0.1.1</code> against <code>3.0.1.4</code></td><td>The tracked-object schema references neither the V2X message nor the V2X-to-ADA message, so the two chains are independent from the first minute</td></tr>
+        <tr><td><strong>Parallel — inside lane B</strong></td><td><code>2.0.3.1</code> against the whole <code>1.0.2.x</code> chain</td><td>The V2X-to-ADA binding needs the toolchain and a schema, not the codec</td></tr>
         <tr><td><strong>Parallel — inside lane C</strong></td><td><code>2.0.3.2</code> against <code>3.0.4.2</code></td><td>Different schemas, same toolchain, different files</td></tr>
-        <tr><td><strong>Sequential — lane B</strong></td><td><code>1.0.2.1</code> → <code>1.0.2.2</code> → <code>1.0.2.3</code> → <code>1.0.2.4</code> → <code>1.0.2.5</code></td><td>Each step is the next step's compile-time input; the corpus cannot exist before the codec that writes it</td></tr>
+        <tr><td><strong>Sequential — lane B</strong></td><td><code>1.0.2.1</code> → <code>1.0.2.2</code> → <code>1.0.2.3</code> → <code>1.0.2.4</code> → <code>1.0.2.5</code></td><td>Each step is the next step's compile-time input; the reference messages cannot exist before the codec that writes them</td></tr>
         <tr><td><strong>Sequential — lane F</strong></td><td><code>6.0.8.1</code> → <code>5.0.8.2</code> → <code>5.0.8.3</code> → <code>6.0.8.4</code></td><td>You cannot push an image that has not been written, deploy a tag that was not pushed, or read logs from a node that is not running</td></tr>
         <tr><td><strong>Sequential — last of all</strong></td><td><code>1.0.7.1</code> after all ten copy-landing subtasks</td><td>The gate walks a manifest and fails on a missing target, so partial runs are meaningless</td></tr>
       </tbody>
@@ -374,16 +461,16 @@
     <div class="footer"><span>Phase 0 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
-    <div class="sec-num">06</div>
+    <div class="sec-num">07</div>
     <h1>Handoff</h1>
     <div class="rule"></div>
     <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">06</div><h2>What Phase 1 was allowed to assume</h2></div>
-    <p class="lead">Phase 1's plan opens with an explicit input list. Every line of it is a Phase 0 deliverable — the handoff is a contract, not a hope.</p>
+    <div class="slide-head"><div class="num">07</div><h2>Phase1's input</h2></div>
+    <p class="lead">Phase 1's plan opens with an explicit input list. Every line of it is a Phase 0 deliverable — the handoff is a contract.</p>
     <ul class="points">
-      <li><strong>Frozen contracts on disk.</strong> <code>contracts/</code> with golden vectors, <code>sync-manifest.json</code> and <code>check_sync.py</code>; Phase 1 extended the manifest rather than re-deriving it.</li>
+      <li><strong>Frozen contracts on disk.</strong> <code>contracts/</code> with the reference messages, <code>sync-manifest.json</code> and <code>check_sync.py</code>; Phase 1 extended the manifest rather than re-deriving it.</li>
       <li><strong>A codec seam to build on.</strong> <code>V2X_ECU/src/codec/</code> and <code>src/contracts/</code> plus the <code>CMakeLists.txt</code> baseline — Phase 1's receive pipeline decodes through the same seam, and the bench's encoder helper is built from byte-synced copies of those sources.</li>
       <li><strong>A bench that already speaks the wire shape.</strong> <code>Scenario_Player/player/contracts/cpm_content.py</code> and the golden <code>.json</code> fixtures.</li>
       <li><strong>A platform proven deployable.</strong> <code>tools/netcheck/</code> ran on real nodes, so Phase 1 planned deployment tasks instead of re-proving the bridge.</li>
@@ -392,13 +479,11 @@
     <div class="footer"><span>Phase 0 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">06</div><h2>Carried forward, and recorded rather than rounded up</h2></div>
+    <div class="slide-head"><div class="num">07</div><h2>Deferred work from Phase 0</h2></div>
     <ul class="points">
       <li><strong>Two smoke-test items stay open.</strong> The MTU headroom probe was optional and not run; the AAOS listener check was unavailable on this deployment. Neither blocks Phase 0 or Phase 1.</li>
-      <li><strong>Hop 3 has indirect evidence only.</strong> The ADA node's own transmit and capture lines prove the datagram left the bridge for the IVI address — not that it arrived. The gap closes when the real listener lands.</li>
+      <li><strong>Incoming traffic to the IVI ECU has indirect evidence only.</strong> The ADA node's own transmit and capture lines prove the message left the bridge addressed to the IVI ECU — not that anything received it. The gap closes when the real listener lands there.</li>
       <li><strong>The bench encode path was left undecided on purpose.</strong> <code>1.0.5.1</code> was explicitly forbidden from improvising one; the decision belongs to the bench design, and that is where it was made.</li>
-      <li><strong>Two report errata were flagged, not absorbed.</strong> A sample distance and a sender-speed wording both disagree with the frozen conventions; the contracts use the derived and nullable values while the report is corrected by its owner.</li>
-      <li><strong>Three subtasks were recorded blocked before they were done,</strong> and one implementation commit carries the wrong tag because a concurrent session swept its staged files. Both are in the plan file as they happened; the history was not rewritten.</li>
     </ul>
     <div class="strip">A green pipeline proves the code. The plan file is what proves the process — including the parts that did not go to plan.</div>
     <div class="footer"><span>Phase 0 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
