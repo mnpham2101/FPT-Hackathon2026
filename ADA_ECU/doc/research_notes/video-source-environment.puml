@@ -1,0 +1,40 @@
+@startuml
+title R12 video input — environment model (M1, CarSky Room)
+
+skinparam componentStyle rectangle
+skinparam shadowing false
+
+package "Repo (build time)" {
+  artifact "ADA_ECU/media/ego-b-occluding-c.mp4\nH.264 / MP4, user-supplied" as CLIP
+  artifact "ADA_ECU/Dockerfile\nCOPY media/ -> /app/media/" as DF
+}
+
+package "CarSky Room (runtime)" {
+  node "ADA ECU (Container Node)" as ADA {
+    component "detector subprocess (Python)\nOpenCV VideoCapture -> YOLO11n ONNX CPU" as DET
+    component "ADA core (C++17)\nR3 store, R13, R14, R15" as CORE
+    file "/app/media/ego-b-occluding-c.mp4" as INFILE
+  }
+  node "Ethernet Bridge Node" as BR
+  node "V2X ECU (Container Node)" as V2X
+  node "Bench Scenario Player (Container Node)" as BENCH
+}
+
+CLIP --> DF : baked into the image
+DF --> INFILE : image layer
+INFILE --> DET : VIDEO_CLIP_PATH (env, blueprint node config)
+DET --> CORE : R3 TrackedObject JSONL on stdout
+BENCH --> BR : ethernet pin (R1 CPM)
+BR --> V2X : ethernet pin
+V2X --> BR : ethernet pin (R2 JSON)
+BR --> ADA : ethernet pin
+
+note right of ADA
+  No `video` pin is declared in M1.
+  CarSky's `video` pin is an iceoryx2
+  shared-memory RGBA transport only —
+  the platform publishes no camera or
+  dashcam content onto it.
+end note
+
+@enduml

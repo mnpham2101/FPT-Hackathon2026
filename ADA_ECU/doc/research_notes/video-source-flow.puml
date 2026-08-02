@@ -1,0 +1,39 @@
+@startuml
+title R12 video input — frame-to-track flow (M1)
+
+|User / FPT-Mentor|
+start
+:Supply ego-POV clip matching the A-B-C scenario;
+:B visible and occluding the lane ahead, C never in frame;
+
+|Build (CI / developer)|
+:Preflight the clip with ffprobe against the agreed spec;
+if (container/codec/resolution/fps/duration within spec?) then (no)
+  :Reject the clip, report the failing attribute;
+  stop
+else (yes)
+endif
+:COPY media/ into the ADA ECU image at /app/media/;
+
+|ADA ECU detector subprocess|
+:Read VIDEO_CLIP_PATH and DETECTOR_FRAME_STRIDE from env;
+:Open the clip with OpenCV VideoCapture;
+repeat
+  :Read next frame;
+  if (frame index modulo stride equals 0?) then (yes)
+    :Run YOLO11n ONNX on the letterboxed frame;
+    :Estimate distance for each vehicle detection;
+    :Emit one R3 TrackedObject JSONL line with source own_sensor;
+  else (no)
+  endif
+repeat while (frames remaining?) is (yes)
+->no;
+
+|ADA ECU core|
+:Ingest R3 JSONL from the subprocess stdout;
+:Admit own-sensor tracks through the R13 state machine;
+:Compose the scene with relayed C and emit R4 warnings;
+:Assert zero detections labeled C over the whole run;
+stop
+
+@enduml
