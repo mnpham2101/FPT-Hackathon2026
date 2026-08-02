@@ -12,6 +12,8 @@
 > **Task ID legend:** `X.5.Z.W` — X = requirement served · 5 = this phase · Z = task group · W = subtask. IDs are stable; never renumber.
 >
 > **Independence note.** This breakdown was written from the requirements and the HLD alone, from zero, on 2026-08-02. It does not read, reconcile with, or inherit IDs from any earlier Phase 5 task file, and it marks nothing as pre-existing except where the HLD itself designates a file `[C]` (already committed) or `[R]` (relocated verbatim).
+>
+> **Gap check (2026-08-02, orchestrating session).** After the independent pass, this plan was diffed against [phase5_tasks.md](phase5_tasks.md). Four gaps were closed here: the renderer-guard unit test (`17.5.5.9`), the unreachable `R4LinkState.Error` (`4.5.3.4`), APK-size recording (`16.5.7.1`), and § Prior work below. Everything the older file carries that this one deliberately does not is listed in § Deliberately not in this phase. `phase5_tasks.md` itself was not modified.
 
 ## Phase 5 overview
 
@@ -73,6 +75,28 @@ All Gradle commands run from `IVI_ECU/` (`gradlew.bat` on the Windows dev host, 
 | Simulator image | `docker buildx build --platform linux/arm64 --provenance=false --sbom=false -f IVI_ECU/r4-simulator/Dockerfile -t m1-r4-sim:latest IVI_ECU/` |
 
 Until subtask `4.5.1.4` lands, the only valid test command is `./gradlew :app:testDebugUnitTest` — the other modules do not exist yet.
+
+---
+
+## Prior work — the unmerged Phase 5 branch is a salvage source, not an authority
+
+An earlier Phase 5 implementation exists on **`origin/feat/phase5-ivi-hmi-complete`** (tip `1e36cdc`, 2026-08-01, ~2 000 lines, never merged; `feat/phase5-ivi-hmi-dev` is its ancestor). Nothing on `main` carries it, so this plan's "nothing is started" is accurate for the trunk — but no subagent should retype from scratch what is already written and reviewable.
+
+**The rule for every code subtask below:** read the corresponding file on that branch first (`git show origin/feat/phase5-ivi-hmi-complete:IVI_ECU/<path>`), lift what meets the brief, and write the rest. The brief is the specification; the branch is prior art with no authority. **Do not merge or cherry-pick the branch wholesale** — it predates the mini-blueprint, the module split, and the port freeze, and it carries the defects below.
+
+| Branch file | Useful to | Carry over? |
+|---|---|---|
+| `data/R4Deserializer.kt` | `4.5.2.2` | Structure only. It rewrites unknown `warningType` to `"unknown"` — **forbidden by D4**; and it decodes `ByteArray` whole, with no offset/length (D3) |
+| `service/R4ListenerService.kt` | `4.5.3.2`, `4.5.3.3`, `4.5.5.2` | Notification/foreground shape yes. **The receive loop never calls `packet.setLength(...)` before `receive()`** — every datagram after the first short one is silently truncated (the exact bug `4.5.3.2` exists to prevent). Loop, socket and decode are also fused into the service, which D2/D5 separate |
+| `data/R4Repository.kt`, `ui/WarningViewModel.kt` | `4.5.4.2`, `17.5.4.4` | Flow shapes yes. **`_latestScene = event.geometry` passes the scene through without `vehicleCSnapshot`, so the R19 provenance guard is inert** — the defect `17.5.4.4` fixes. No last-value-wins by `seq` |
+| `ui/MainViewModel.kt` | `16.5.4.5` | Yes — wake-on-warning, `previousMode`, `userOverrodeDuringWarning` are all there and match the brief |
+| `MainActivity.kt`, `IviApplication.kt`, manifest | `16.5.5.4`, `16.5.5.5` | Manifest shape yes (activity + service + LAUNCHER). Wiring is Hilt-based, which **D7 removes** — rewrite against `IviGraph`. It also adds `res/values/themes.xml`, an undesignated file |
+| `ui/screen/MainScreen.kt` | `17.5.5.6` | Yes — seam mounting and `collectAsStateWithLifecycle` are sound, and it correctly does **not** mount the banner. The status bar is still hardcoded |
+| `mock-sender/mock_r4_sender.py` | group 5.6 | **No.** Python, writes its own payloads (D9 forbids), targets `10.88.0.12:5004` — both wrong — and its `state` message shape (`vehicles.ego.position/speed`, key `B`) does not match the frozen R4 schema at all |
+| test files | groups 5.2–5.5 | Case lists are a useful checklist. They test the branch's behaviour, including the two defects above, so no assertion transfers unread |
+| `deployment/phase5-ivi-deploy.md`, `phase5_completion_report.md` | `16.5.8.4`, `5.5.8.1` | Content is useful (a real Skycraft device id, the logcat filters). The **location is not sanctioned** — a repo-root/node-root `deployment/` folder is not in [node-code-layout.md](../.claude/rules/node-code-layout.md); the material lands in `requirements/car-sky-guide/` |
+
+Two branch-wide constants are wrong against the frozen topology and must not survive into any subtask: the UDP port is **`47300`**, not `5004`, and the IVI address is **`10.99.0.13`**, not `10.88.0.12`.
 
 ---
 
@@ -291,7 +315,8 @@ class R4SocketObserver(
 **Scope:**
 
 - Extend `R4SocketObserver` (no new production file): on a bind or receive error → log at ERROR, `linkState = Rebinding`, close the source, `delay(d)`, recreate through `sourceFactory()`, retry; `d` starts at `config.retryInitialMs`, doubles to a ceiling of `config.retryMaxMs`, and **resets to `retryInitialMs` on the next successful bind**. `linkState` returns to `Bound`.
-- `observer/src/test/kotlin/.../RetryBackoffTest.kt` using `kotlinx-coroutines-test` virtual time: a source factory that fails the first three binds then succeeds → assert the observed delays are `initial, 2×initial, 4×initial` clamped at `retryMaxMs`, that `linkState` passes `Rebinding → Bound`, and that after a later failure the delay restarts at `retryInitialMs` (reset-on-success).
+- **Make `R4LinkState.Error` reachable.** `4.5.3.1` declares it, and a declared state that nothing ever emits is a defect, not a spare: once the back-off has saturated at `retryMaxMs` (the link has been down long enough that a transient blip is ruled out), set `linkState = Error(detail)` and **keep retrying** — the observer never gives up, because a listener that stops after N attempts is worse for a recorded demo than one that keeps trying. A successful bind returns it to `Bound`. The status bar of `17.5.5.6` renders this state.
+- `observer/src/test/kotlin/.../RetryBackoffTest.kt` using `kotlinx-coroutines-test` virtual time: a source factory that fails the first three binds then succeeds → assert the observed delays are `initial, 2×initial, 4×initial` clamped at `retryMaxMs`, that `linkState` passes `Rebinding → Bound`, and that after a later failure the delay restarts at `retryInitialMs` (reset-on-success). One further case: a factory that keeps failing past the ceiling → `linkState` reaches `Error`, retries continue, and a later success returns it to `Bound`.
 
 **Acceptance:** `./gradlew :observer:test` green; no `Thread.sleep` anywhere — the test runs on virtual time.
 
@@ -528,6 +553,20 @@ class R4SocketObserver(
 
 **Dependencies:** after `4.5.1.4`. **Fully parallel** with everything else in groups 5.2–5.6. **Commit:** `[17.5.5.8] test: cover SceneCoordinateMapper's ego anchor, clamping and null-C path`
 
+### [ ] `17.5.5.9` — Unit-test the Ghost C provenance guard itself *(agent)*
+
+**Objective:** put the R19 guard under test at the renderer, not only at the view-model that arms it (`17.5.4.4`) and the in-Room observation that exercises it (`4.5.9.4`).
+
+**Scope:** `app/src/test/java/com/hackathon/v2x/ivi/ui/view/CanvasWarningViewTest.kt`.
+
+The guard decision currently lives inline in `CanvasWarningView.Render`, and a `Canvas`-drawn marker is not in the Compose semantics tree, so it cannot be asserted from a composition test. Extract the decision and its ERROR line into two `internal` top-level functions in the committed `CanvasWarningView.kt` — `isGhostCSourceTrusted(snapshot: R3Snapshot?): Boolean` and `ghostCSourceGuardErrorMessage(snapshot: R3Snapshot): String` — and have `Render` call them. **Extraction only: no behaviour may change**, and the three committed `@Preview` functions must compile untouched.
+
+Then assert: `null` snapshot → trusted (the dev/mock-scene path); `source = "v2x_relayed"` → trusted; `source = "own_sensor"` → **not** trusted; the error message names both the offending source and `v2x_relayed` and carries the snapshot JSON; and `riskColor` maps an unknown `riskState` to the high-urgency colour (fail-safe, HLD §9.2) so this test and `WarningClassifier.normaliseRisk` (`4.5.4.3`) cannot drift apart.
+
+**Acceptance:** `./gradlew :app:testDebugUnitTest` green with all five cases; `git diff` on the three `@Preview` functions is empty.
+
+**Dependencies:** after `4.5.1.4`. Parallel with `17.5.5.8`. **Commit:** `[17.5.5.9] test: cover the Ghost C provenance guard and fail-safe risk colour`
+
 ---
 
 ## Task Group 5.6 — Test equipment: `:r4-simulator` and the dev injector (serves R4; injection points I3, I4)
@@ -667,7 +706,7 @@ class R4SocketObserver(
 - Add `android-actions/setup-android` only if the runner image's SDK/licence state turns out insufficient (HLD §6.1) — try without it first and record which was needed.
 - If `lint` fails on **pre-existing** findings, do not fix them in this subtask: set `lint { abortOnError = false }` in `app/build.gradle.kts` with a comment naming the findings, and record them in the commit body. Scope creep into lint fixes is out of scope here.
 
-**Acceptance:** the lane runs green on the branch and the `app-debug-apk` artifact is downloadable from the run; record the run ID in the status line.
+**Acceptance:** the lane runs green on the branch and the `app-debug-apk` artifact is downloadable from the run; record the run ID **and the APK's size** in the status line. The size is recorded, not gated: the stale plan cites a "< 50 MB" budget which no requirement in the report carries, so a number over it is a finding to raise, not a build failure.
 
 **Dependencies:** none beyond a pushable branch — **land this early, in parallel with group 5.1**, so an APK artifact exists for group 5.8. **Commit:** `[16.5.7.1] ci: add phase5-ci with the ivi-assemble lane`
 
@@ -838,7 +877,7 @@ Lane D  app logic:    { 4.5.4.1 ∥ 4.5.4.2 ∥ 4.5.4.3 } ─► 17.5.4.4 ─►
                       (4.5.4.1/4.5.4.2 need 4.5.3.1; 4.5.4.3 needs only 4.5.1.4)
 Lane E  app shell:    18.5.5.1 ─► 4.5.5.2 ─► 4.5.5.3 ─► 16.5.5.4 ─► 16.5.5.5 ─► 17.5.5.6
                       (4.5.5.3 also needs lane D through 17.5.4.4; 17.5.5.6 also needs 16.5.4.5)
-                      17.5.5.7 (after 4.5.5.3, ∥ 17.5.5.6)     17.5.5.8 (∥ everything, after 4.5.1.4)
+                      17.5.5.7 (after 4.5.5.3, ∥ 17.5.5.6)     17.5.5.8 ∥ 17.5.5.9 (∥ everything, after 4.5.1.4)
 Lane F  test equip:   4.5.6.1 ─► 4.5.6.2 ─► 4.5.6.3 ─► 4.5.6.4 ─► 4.5.6.5 ─► 5.5.6.6
                       (needs only 4.5.1.4 — fully parallel with lanes B–E)
                       4.5.6.7 dev injector (after 16.5.5.5 + 4.5.4.2)
@@ -871,7 +910,7 @@ Every Phase 5 acceptance criterion in [milestone1.md](milestone1.md#phase-5--ivi
 |---|---|
 | The HMI runs on the AAOS node with the R16 layout; button/app areas switch the Display area | `16.5.5.4` · `16.5.5.5` (the launcher entry the APK lacks today) · `17.5.5.6` · `16.5.4.5` · deployed and observed by `5.5.8.2` · `16.5.8.3` · `16.5.9.2` |
 | **(Dev)** A mock R4 warning brings the warning view up with ego, B and ghost C at the composed positions | `4.5.2.2` · `4.5.3.3` · `4.5.4.2` · `17.5.4.4` · `16.5.4.5` · `17.5.5.6` · simulator `4.5.6.3`/`4.5.6.4` (`approach.json`) · dev path `4.5.6.7` (I3) · observed by `17.5.9.3` (I4) |
-| Ghost C renders from `v2x_relayed` data only; the 2D drawing is delivered | **`17.5.4.4`** (the §9.2 snapshot wiring that arms the committed guard — without it the guard silently disables) · `17.5.5.6` · `17.5.5.7` · `17.5.5.8` · `4.5.3.3` (`cSource=` on every `[RX]`) · `degrade.json` guard-trip step in `4.5.6.4` · observed by `17.5.9.3` and `4.5.9.4` |
+| Ghost C renders from `v2x_relayed` data only; the 2D drawing is delivered | **`17.5.4.4`** (the §9.2 snapshot wiring that arms the committed guard — without it the guard silently disables) · **`17.5.5.9`** (the guard itself under test) · `17.5.5.6` · `17.5.5.7` · `17.5.5.8` · `4.5.3.3` (`cSource=` on every `[RX]`) · `degrade.json` guard-trip step in `4.5.6.4` · observed by `17.5.9.3` and `4.5.9.4` |
 | A newer message with an unknown `warningType` degrades gracefully | `4.5.1.4` (the committed `R4AdditiveVersionTest` relocated and still green) · `4.5.2.2` (decode preserves the value, D4) · `4.5.4.3` (`WarningClassifier` generic presentation) · `4.5.6.4` (`degrade.json`) · observed by `4.5.9.4` |
 | Optional paths, only if built | **Not built in M1** — declared, not attempted. `SceneViewWarning3D.kt`'s location is designated by HLD §3.1 and nothing depends on it; multi-process wake-on-warning stays reachable because `4.5.5.2` chose the foreground service (D5). Recorded as "not built" in `plans/doc/phase5-ivi-run.md` by `4.5.9.4`. |
 
@@ -894,6 +933,13 @@ Every Phase 5 acceptance criterion in [milestone1.md](milestone1.md#phase-5--ivi
 - **Runtime JSON-Schema validation on the device** — the typed decode already enforces required fields and types; the schema is enforced in the round-trip tests on both sides (HLD §5.1).
 - **Real ADA data.** Phase 5 is mock-driven by definition; the simulator honours the real ADA node's env var *names* so Phase 6 is an image swap with no node-config edit (HLD §8).
 
+Carried by [phase5_tasks.md](phase5_tasks.md) and deliberately not carried here, beyond the four items above:
+
+- **A 3D `SceneViewWarning3D` stub subtask.** R17 makes 3D optional and six days do not justify a stub whose only acceptance is that it does not crash. Its file location stays designated (HLD §3.1) so the optional path remains open.
+- **"Five consecutive socket errors → terminate and emit a service error".** Replaced by bounded back-off that never gives up (`4.5.3.4`); a listener that stops trying mid-run is worse for a recorded demo than one that keeps rebinding.
+- **A `--cycles`/`--interval-ms` sender CLI.** Repetition and cadence are scenario data (`loop`, `defaultRateHz`), not flags — D9's "scenarios are data, not code".
+- **A 2-second service-bind latency criterion.** Neither R4, R16 nor R17 states a latency requirement, and nothing in the acceptance boxes turns on it.
+
 ---
 
-*Created 2026-08-02 by project-planner from the Phase 5 HLD (`85387b5`), its four research notes, and [milestone1.md § Phase 5](milestone1.md#phase-5--ivi-hmi-mock-driven-r16-r17--display-track-parallel-from-the-start). 9 task groups, 44 subtasks: 38 agent-implemented, 6 user-manual. Nothing started.*
+*Created 2026-08-02 by project-planner from the Phase 5 HLD (`85387b5`), its four research notes, and [milestone1.md § Phase 5](milestone1.md#phase-5--ivi-hmi-mock-driven-r16-r17--display-track-parallel-from-the-start); gap-checked the same day against [phase5_tasks.md](phase5_tasks.md). 9 task groups, 45 subtasks: 39 agent-implemented, 6 user-manual. Nothing started.*
