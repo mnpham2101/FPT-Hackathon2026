@@ -66,7 +66,11 @@ class WarningViewModel @Inject constructor(
 
     private fun onWarningReceived(event: R4WarningEvent) {
         _uiWarningState.value = WarningUiState.Active(event)
-        _latestScene.value = event.geometry
+        // §4.1 fix (subtask 17.5.4.4): vehicleCSnapshot must be composed from the wire's sibling
+        // "object" field (event.objectSnapshot), not left null from event.geometry. Without this,
+        // CanvasWarningView treats every null snapshot as trusted and the R19 provenance guard
+        // (which checks vehicleCSnapshot.source == "v2x_relayed") is always bypassed.
+        _latestScene.value = event.geometry.copy(vehicleCSnapshot = event.objectSnapshot)
         scheduleAutoClear()
     }
 

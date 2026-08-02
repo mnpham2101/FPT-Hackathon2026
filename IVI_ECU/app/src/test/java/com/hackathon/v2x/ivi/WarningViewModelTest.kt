@@ -144,5 +144,36 @@ class WarningViewModelTest {
 
         assertNull("Scene should be cleared after timeout", viewModel.latestScene.value)
     }
+
+    // ── Test 5 (R19 regression): provenance guard snapshot wired into scene ───
+    //
+    // §4.1 fix: vehicleCSnapshot must be composed from event.objectSnapshot, not left
+    // null from event.geometry. A null snapshot makes CanvasWarningView treat every
+    // ghost-C as trusted and bypasses the R19 provenance guard entirely.
+
+    @Test
+    fun `provenance guard snapshot is wired from objectSnapshot into scene geometry`() = runTest {
+        val event = makeWarningEvent()
+        warningFlow.emit(event)
+        testDispatcher.scheduler.runCurrent()
+
+        val scene = viewModel.latestScene.value
+        assertTrue("Scene must be non-null", scene != null)
+        val snapshot = scene!!.vehicleCSnapshot
+        assertTrue(
+            "vehicleCSnapshot must not be null — null means R19 guard is inert",
+            snapshot != null
+        )
+        assertEquals(
+            "vehicleCSnapshot.source must match objectSnapshot.source",
+            event.objectSnapshot.source,
+            snapshot!!.source
+        )
+        assertEquals(
+            "vehicleCSnapshot.id must match objectSnapshot.id",
+            event.objectSnapshot.id,
+            snapshot.id
+        )
+    }
 }
 
