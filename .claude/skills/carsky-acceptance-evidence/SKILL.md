@@ -11,12 +11,13 @@ Endpoint catalog and auth live in [carsky-rest-api-blueprint.md](../../../requir
 
 ## 1. Check the CI workflow can build the image
 
-Read [.github/workflows/phase0-ci.yml](../../../.github/workflows/phase0-ci.yml) and confirm the job that builds the target image is actually capable of producing it:
+Image lanes live in the workflow named for the phase that created them: `netcheck-image` in [phase0-ci.yml](../../../.github/workflows/phase0-ci.yml), `v2x-ecu-image` and `scenario-player-image` in [phase1-ci.yml](../../../.github/workflows/phase1-ci.yml). Read the one holding the target image's lane and confirm it is actually capable of producing it:
 
 - the job exists for this node's image and its build context points at the right folder;
 - **`PLATFORMS` names exactly one platform** — the project requires single-platform `linux/arm64` images ([phase0-smoke-test-run.md § Standing requirement](../../../plans/doc/phase0-smoke-test-run.md)); a multi-platform list is a defect to fix here, not at deploy time;
 - `--provenance=false --sbom=false` are present, or attestations silently turn the result back into a multi-entry index;
-- the push step's `REGISTRY_HOST`, image tag, and credential secret are set, and the secret exists in the repository.
+- the push step's `REGISTRY_HOST`, image tag, and credential secret are set, and the secret exists in the repository;
+- the lane ends in the [verify-arm64-image](../../../.github/actions/verify-arm64-image/action.yml) step. That step is the strongest registry evidence available without deploying — it re-reads the pushed manifest, rejects an index, requires `linux/arm64`, pulls the image back by digest and starts it under QEMU. **A green lane carrying it means the tag is pull-able; do not re-derive that by hand.** A lane missing it proves only that the image compiled.
 
 If the workflow cannot build the image, say so and stop — later steps have nothing to verify.
 

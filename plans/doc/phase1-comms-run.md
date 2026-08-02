@@ -40,7 +40,7 @@ Both ECU lanes print, mid-push:
 #28 ERROR: failed to parse error response 400: <h2>Our services aren't available right now</h2>… invalid character '<' looking for beginning of value
 ```
 
-This is the **GitHub Actions cache service** returning an HTML outage page to the `type=gha` cache exporter (`> exporting to GitHub Actions Cache:`), not Zot — registry auth and the manifest push both succeed after it. Non-fatal by construction: `--cache-to` carries `ignore-error=true` ([phase0-ci.yml](../../.github/workflows/phase0-ci.yml)) precisely so a cache fault cannot fail a multi-hour emulated build.
+This is the **GitHub Actions cache service** returning an HTML outage page to the `type=gha` cache exporter (`> exporting to GitHub Actions Cache:`), not Zot — registry auth and the manifest push both succeed after it. Non-fatal by construction: `--cache-to` carries `ignore-error=true` ([phase1-ci.yml](../../.github/workflows/phase1-ci.yml)) precisely so a cache fault cannot fail a multi-hour emulated build.
 
 Consequence for the next run: the cache **export** failed while the import succeeded, so a re-run of either lane may pay the full ~20 min emulated Vanetza compile again rather than hitting warm layers.
 
