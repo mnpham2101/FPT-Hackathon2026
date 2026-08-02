@@ -3,7 +3,7 @@ marp: true
 theme: default
 paginate: true
 title: Phase 1 — Task Execution
-description: Planning deck — how Phase 1's comms bring-up was decomposed into 44 subtasks across two node lanes, who or what performed each, the order they ran in, what code landed, and exactly how far the acceptance evidence reaches
+description: Planning deck — the decomposition of Phase 1 comms bring-up into 44 subtasks across two node lanes, the execution responsibility for each, the dependency structure, the delivered code, and the verification status of the acceptance criteria
 deck: Phase 1 — Task Execution · FPT Hackathon 2026
 ---
 
@@ -14,28 +14,28 @@ deck: Phase 1 — Task Execution · FPT Hackathon 2026
 
 # Phase 1 — Task Execution
 
-## Two node lanes, 44 subtasks, and one live Room
+## Comms bring-up: decomposition, execution and verification status
 
 **Milestone 1 · Cooperative Vehicle Awareness — FPT Hackathon 2026**
 
-comms bring-up · 12 task groups · 44 subtasks · 40 closed, 4 left for a person on the platform
+12 task groups · 44 subtasks · 40 closed · 4 outstanding, all manual
 
-The work it organizes is Phase 0's contract freeze: [phase0-task-execution-deck.html](../phase0/phase0-task-execution-deck.html) · [phase0-design-concepts-deck.html](../phase0/phase0-design-concepts-deck.html)
+Preceding phase: [phase0-task-execution-deck.html](../phase0/phase0-task-execution-deck.html) · [phase0-design-concepts-deck.html](../phase0/phase0-design-concepts-deck.html)
 
-Source: [phase1_tasks.md](../../plans/phase1_tasks.md) · [phase1-comms-run.md](../../plans/doc/phase1-comms-run.md) · the two design documents [V2X](../../V2X_ECU/doc/phase1-v2x-ecu-comms-hld.md) and [bench](../../Scenario_Player/doc/phase1-scenario-player-hld.md)
+Sources: [phase1_tasks.md](../../plans/phase1_tasks.md) · [phase1-comms-run.md](../../plans/doc/phase1-comms-run.md) · design documents for the [V2X ECU](../../V2X_ECU/doc/phase1-v2x-ecu-comms-hld.md) and the [bench](../../Scenario_Player/doc/phase1-scenario-player-hld.md)
 
 ---
 
 # Table of contents
 
-1. **Work organization** — track, execution lane, CI lane, and why Phase 1 has three of them
-2. **Work decomposition** — the ID scheme, the shape of the phase, and who performed what
-3. **Task groups** — what each of the twelve delivered
-4. **Code delivered** — the files Phase 1 put in the repository
-5. **Execution order** — lane by lane, one diagram at a time
-6. **Parallel or sequential** — and what forced each
-7. **What it proved** — the nine acceptance boxes, and how far the evidence reaches
-8. **Handoff** — what Phase 2 may assume, and the four tasks left for a person
+1. **Work organization** — track, execution lane and CI lane
+2. **Work decomposition** — identification scheme, phase size, execution responsibility
+3. **Task groups** — the deliverable of each of the twelve
+4. **Code delivered** — the files added to the repository
+5. **Execution order** — dependency structure, lane by lane
+6. **Parallel and sequential work** — and the constraint behind each
+7. **Verification status** — the nine acceptance criteria and the scope of their evidence
+8. **Handoff** — inputs available to Phase 2, and the outstanding work
 
 ---
 
@@ -47,60 +47,59 @@ Source: [phase1_tasks.md](../../plans/phase1_tasks.md) · [phase1-comms-run.md](
 
 ---
 
-# What Phase 1 had to do
+# Phase objective and scope
 
-The bench sends made-up traffic messages; the V2X ECU receives them, decodes them, and hands the result to the ADA ECU as a plain object message. **Receive only** — the car broadcasts nothing in this phase.
+- **Objective.** The bench transmits synthetic traffic messages; the V2X ECU receives, decodes and forwards each one to the ADA ECU as an object message.
+- **Reception only.** The vehicle transmits nothing in this phase.
+- **Entry condition.** Phase 1 could begin only because Phase 0 had frozen the message formats.
+- **Exit condition.** Nine acceptance criteria, each closed by a stated piece of evidence.
+- **Two node folders were developed concurrently:** the V2X ECU in C++ and the bench, named the Scenario Player, in Python. They share no source code — only the frozen message formats and byte-identical copies of the encoder sources.
 
-- **A phase is a stage of work with a written input and a written acceptance check.** Phase 1 could start only because Phase 0 had frozen the message formats; it is finished only when its nine acceptance boxes are ticked.
-- **Two node folders were built at once:** the V2X ECU (C++) and the bench, called the Scenario Player (Python). They share no source code — only the frozen message formats and a byte-for-byte copy of the encoder sources.
-- **Everything the phase produces is either a running program on a node, or a check that proves the program does what was agreed.**
-
-> The bench is test equipment, not a mock: it is a real node on the real network sending real messages. Nothing downstream can tell the difference — which is the point.
+> The bench is sanctioned test equipment, not a mock. It is a node on the production network transmitting real messages; no downstream component can distinguish it from a vehicle.
 
 ---
 
 # Planning terminology
 
-Three different things get called a *lane* or a *track* in this project. They are not interchangeable.
+Three distinct concepts are referred to as a *track* or a *lane*. They are not interchangeable.
 
-| Term               | What it groups                                                                     | Defined in                                        | Example in Phase 1        |
+| Term               | Definition                                                                         | Specified in                                      | Phase 1 example           |
 | ------------------ | ---------------------------------------------------------------------------------- | ------------------------------------------------- | ------------------------- |
-| **Track**          | a workstream of whole phases, run by different people at the same time             | [milestone1.md](../../plans/milestone1.md)        | the comms track = Phase 1 |
-| **Phase**          | one stage with an input list and acceptance criteria                               | [task-planning-conventions.md](../../.claude/rules/task-planning-conventions.md) | Phase 1 |
-| **Execution lane** | subtasks that must run in dependency order, named after the folder they write into | the phase plan's *Execution order & parallelism*  | Lane V = `V2X_ECU/`       |
-| **CI lane**        | one job in the GitHub Actions workflow — it builds, it tests, it passes or fails   | [phase0-ci.yml](../../.github/workflows/phase0-ci.yml) | `v2x-comms-check`    |
+| **Track**          | a workstream spanning whole phases, executed by different people concurrently      | [milestone1.md](../../plans/milestone1.md)        | the comms track = Phase 1 |
+| **Phase**          | one stage, with an input list and acceptance criteria                              | [task-planning-conventions.md](../../.claude/rules/task-planning-conventions.md) | Phase 1 |
+| **Execution lane** | subtasks ordered by dependency, named after the folder they write into             | the phase plan, *Execution order & parallelism*   | Lane V = `V2X_ECU/`       |
+| **CI lane**        | one job in the GitHub Actions workflow; it builds, tests, and passes or fails      | [phase0-ci.yml](../../.github/workflows/phase0-ci.yml) | `v2x-comms-check`    |
 
-- **Lane letters are phase-local and they collide.** Phase 0's Lane D was the bench folder; Phase 1's Lane D is the deploy chain. Always say which phase.
-- **Lane letters are not an order.** Only a stated dependency sequences one lane against another, and a dependency always names an artifact, never a letter.
-- **Only a CI lane actually runs.** A track and an execution lane are planning structure, not programs.
-
----
-
-# Execution lanes in Phase 1
-
-Named after the folder each writes into, so no two lanes touch the same files.
-
-| Lane                     | Writes into           | Waits on                                | What it lands                                                             |
-| ------------------------ | --------------------- | --------------------------------------- | ------------------------------------------------------------------------- |
-| **V**                    | `V2X_ECU/`            | Phase 0's frozen formats                | the receive pipeline, the application, the capture scripts, the image     |
-| **P**                    | `Scenario_Player/`    | Phase 0's formats + the encoder sources | the bench application, its encoder helper, the image                      |
-| **Shared**               | `contracts/`          | nothing — then everything               | one pinned codec version for two builds; the copy-integrity gate          |
-| **CI**                   | `.github/workflows/`  | nothing                                 | four new verification jobs, landed before the code they verify            |
-| **Comms check**          | `tools/comms_check/`  | the event log format                    | the scripted proof that a sent message is received, decoded and forwarded |
-| **D**                    | the deployed Room     | V and P                                 | push the images, deploy, read the logs, swap the scenario, capture traffic |
-
-- **Lanes V and P are logically parallel workstreams.** They were run one after another only because every subtask shares a single working folder on one machine.
+- **Lane letters are local to a phase and do collide.** Phase 0 Lane D is the bench folder; Phase 1 Lane D is the deployment chain.
+- **Lane letters do not express an order.** Only a stated dependency sequences one lane against another, and a dependency always names an artifact.
+- **Only a CI lane executes.** A track and an execution lane are planning structures.
 
 ---
 
-# CI lanes — the verification path, not a safety net
+# Execution lanes
 
-The development machine is Windows with no Docker and no Linux subsystem. Every C++ compile, every container image, every Linux test therefore runs on GitHub Actions.
+Each lane is named after the folder it writes into; no two lanes modify the same files.
 
-- **Ten jobs in one workflow file.** Phase 0 left six; Phase 1 added four: `sp-codec-helper`, `v2x-comms-check`, `v2x-ecu-image`, `scenario-player-image`.
-- **For a C++ subtask, "tests pass" *means* "the lane is green".** There is nowhere else to run them, so the definition of done points at a run URL.
-- **Three runs carry the whole phase:** [8 lanes green](https://github.com/mnpham2101/FPT-Hackathon2026/actions/runs/30697863324) over the phase's code · [10 lanes green](https://github.com/mnpham2101/FPT-Hackathon2026/actions/runs/30698630956) adding both node images, which also pushed them to the platform registry · [10 lanes green](https://github.com/mnpham2101/FPT-Hackathon2026/actions/runs/30700052056) confirming the deliberately-broken-message tests.
-- **The image lanes are slow and were expected to fail.** Compiling the message library for the platform's ARM processor runs under emulation; both images built inside the 6-hour ceiling on the first attempt, roughly 19 and 20 minutes each.
+| Lane            | Writes into          | Depends on                              | Deliverable                                                            |
+| --------------- | -------------------- | --------------------------------------- | ----------------------------------------------------------------------- |
+| **V**           | `V2X_ECU/`           | the Phase 0 message formats             | receive pipeline, application, capture scripts, container image        |
+| **P**           | `Scenario_Player/`   | the message formats and encoder sources | bench application, encoder helper, container image                     |
+| **Shared**      | `contracts/`         | nothing initially; everything at close  | one pinned codec version for two builds; the copy-integrity gate       |
+| **CI**          | `.github/workflows/` | nothing                                 | four verification jobs, delivered before the code they verify          |
+| **Comms check** | `tools/comms_check/` | the event-log format                    | scripted proof that a transmitted message is received and forwarded    |
+| **D**           | the deployed Room    | lanes V and P                           | image push, deployment, log inspection, scenario swap, traffic capture |
+
+- **Lanes V and P are logically parallel.** They were executed consecutively only because all subtasks share one working folder on one machine.
+
+---
+
+# Continuous integration as the verification path
+
+- **The development machine runs Windows without Docker or a Linux subsystem.** Every C++ compilation, container image and Linux test therefore executes on GitHub Actions.
+- **Ten jobs in one workflow file.** Phase 0 established six; Phase 1 added `sp-codec-helper`, `v2x-comms-check`, `v2x-ecu-image` and `scenario-player-image`.
+- **For a C++ subtask, "tests pass" is defined as "the lane is green".** No alternative execution environment exists, so the definition of done cites a run identifier.
+- **Three runs verify the phase:** [8 lanes green](https://github.com/mnpham2101/FPT-Hackathon2026/actions/runs/30697863324) over the phase's code · [10 lanes green](https://github.com/mnpham2101/FPT-Hackathon2026/actions/runs/30698630956) adding both node images, which also pushed them to the platform registry · [10 lanes green](https://github.com/mnpham2101/FPT-Hackathon2026/actions/runs/30700052056) confirming the malformed-message tests.
+- **The image lanes carried the highest schedule risk.** The message library is compiled for the platform's ARM processor under emulation; both images built within the six-hour ceiling at the first attempt, in approximately 19 and 20 minutes.
 
 ---
 
@@ -112,43 +111,42 @@ The development machine is Windows with no Docker and no Linux subsystem. Every 
 
 ---
 
-# The unit of work is a subtask, and its ID says everything
+# Task identification scheme
 
-Every task and subtask carries `X.Y.Z.W`.
+Every task and subtask carries the identifier `X.Y.Z.W`.
 
-| Segment | Reads as               | In `9.1.4.4`                                       |
+| Segment | Meaning                | Value in `9.1.4.4`                                 |
 | ------- | ---------------------- | -------------------------------------------------- |
-| `X`     | the requirement served | the requirement to decode incoming messages safely |
+| `X`     | the requirement served | safe decoding of incoming messages                 |
 | `Y`     | the phase              | 1 — comms bring-up                                 |
 | `Z`     | the task group         | group 1.4 — the receive pipeline                   |
-| `W`     | the subtask            | the fourth: compose the four stages, one commit    |
+| `W`     | the subtask            | the fourth: composition of the four stages         |
 
-**The group number is not the requirement number.** Group 1.5 holds `8.1.5.1`, `6.1.5.2`, `6.1.5.3` and `5.1.5.4` — four different requirements in one group, because they jointly deliver one thing: a V2X ECU that runs, captures its own traffic, and ships as an image.
-
----
-
-# What Phase 1 looked like as a work item
-
-- **12 task groups, 44 subtasks, six lanes.** Lane V 19 · lane P 11 · deploy 5 · comms check 3 · shared pin 2 · CI 2 · ADA sink 1 · plan upkeep 1.
-- **One subtask, one objective, one atomic commit**, a build that passes and unit tests that pass. A subtask with no `**Status:**` line in the plan file has not started.
-- **Every subtask brief is self-contained** — file paths, the message fields it touches, its acceptance check — so the agent implementing it does not need to read the rest of the codebase.
-- **Nothing was hardcoded.** Ports, peers, retry counts, the duplicate-message window, the capture filter and the scenario itself are all configuration the platform injects, which is why the second traffic scenario is a second file rather than a second build.
-
-> 39 of the 44 needed no platform at all. That was deliberate: the deployment was known to be the scarce resource, so everything provable off-platform was made provable off-platform first.
+- **The group number is not the requirement number.** Group 1.5 contains `8.1.5.1`, `6.1.5.2`, `6.1.5.3` and `5.1.5.4` — four requirements in one group, because together they deliver a single outcome: a V2X ECU that runs, captures its own traffic and ships as an image.
 
 ---
 
-# Who — or what — performed the work
+# Decomposition summary
 
-| Performer                     | Count | What it did                                                                                        |
-| ----------------------------- | ----- | ---------------------------------------------------------------------------------------------------|
-| **AI implementation agents**  | 39    | Wrote every line of application code, its tests and its CI jobs; each made its own single commit    |
-| **The cloud platform (CarSky)** | 1   | Planned as an agent-run step: push all three images to the platform registry                       |
-| **A person, in the platform UI** | 4  | Configure the nodes, deploy, read the node logs, swap the scenario, pull the capture into Wireshark |
+- **12 task groups, 44 subtasks, six lanes.** Lane V 19 · lane P 11 · deployment 5 · comms check 3 · shared codec version 2 · CI 2 · ADA listener 1 · plan maintenance 1.
+- **One subtask has one objective, one atomic commit, a passing build and passing unit tests.** A subtask without a recorded status line has not started.
+- **Every subtask brief is self-contained** — file paths, message fields, acceptance criterion — so the implementing agent need not read the wider codebase.
+- **No tunable value is hardcoded.** Ports, peer addresses, retry counts, the duplicate-message window, the capture filter and the scenario itself are configuration injected by the platform.
+- **39 of the 44 subtasks required no platform access.** This was deliberate: deployment was the scarce resource, so all work that could be verified off-platform was scheduled first.
 
-- **The one platform step was executed by CI instead.** The registry key turned out to be present in the repository, so the image lanes pushed the images themselves — the platform agent was never needed, and never was available in any session.
-- **Human effort is unavoidable for the last four**, and not for want of trying: node configuration — image, start command, capabilities, environment variables — is editable **only** in the platform's web UI. Its REST API cannot set it. Reading a node's log window and opening a capture in Wireshark are the same kind of work.
-- **All 44 are tracked identically.** Only the performer differs; the evidence requirement does not.
+---
+
+# Execution responsibility
+
+| Performer                        | Count | Scope                                                                                             |
+| -------------------------------- | ----- | --------------------------------------------------------------------------------------------------|
+| **AI implementation agents**     | 39    | All application code, tests and CI jobs; one atomic commit per subtask                            |
+| **Cloud platform (CarSky)**      | 1     | Planned for the platform agent: push of the three images to the registry                          |
+| **Manual, in the platform UI**   | 4     | Node configuration, deployment, log inspection, scenario swap, capture analysis                   |
+
+- **The platform step was executed by CI.** The registry credential was already present as a repository secret, so the image lanes performed the push themselves; the platform agent was not required and was never available.
+- **Manual execution is unavoidable for the remaining four.** Node configuration — image, start command, capabilities, environment — is editable only in the platform UI; the REST API cannot set it. Log inspection and capture analysis are equally console operations.
+- **All 44 subtasks are tracked identically.** Only the performer differs; the evidence requirement does not.
 
 ---
 
@@ -160,29 +158,29 @@ Every task and subtask carries `X.Y.Z.W`.
 
 ---
 
-# Groups 1.1 – 1.6 — the shared pin, the V2X ECU, the bench
+# Task groups 1.1 – 1.6
 
-| Task group                                       | What it delivers, and which lane it serves                                                                                                                            |
-| ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **1.1** — shared codec pin + copy gate           | One pinned version of the message library, used by both C++ builds, and the integrity gate extended from 36 to 47 tracked copies. **Shared lane**, and it finishes last. |
-| **1.2** — V2X ECU foundation                     | The only piece that reads the environment, the only piece that owns a socket, the event log, and the sender to the ADA node. **Lane V**, and nothing above it knows about transport. |
-| **1.3** — radio interface + stand-in modem       | The four-call radio interface a real modem would implement, and a stand-in that acknowledges each call, injects faults on demand and recovers from them. **Lane V.**   |
-| **1.4** — the receive pipeline                   | Decode, reject anything outside the agreed profile, drop repeats, convert to real-world units, forward. Four independently tested stages, then composed. **Lane V.**   |
-| **1.5** — application, capture, image            | The program itself, the traffic capture running inside its container, the host-side extraction tool, and the deployable image. **Lane V.**                             |
-| **1.6** — the bench application                  | Config loading, the two scenario files, the motion model, the encoder client, the sender, the rate loop and the entrypoint. **Lane P.**                                |
+| Task group                                  | Deliverable and lane                                                                                                                                                            |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **1.1** — shared codec version, copy gate   | One pinned codec version consumed by both C++ builds, and the integrity gate extended from 36 to 47 tracked copies. **Shared lane;** its gate is scheduled last in the phase.    |
+| **1.2** — V2X ECU foundation                | The sole environment reader, the sole socket owner, the event log, and the sender to the ADA node. **Lane V.** No component above these is aware of the transport.               |
+| **1.3** — radio interface, simulated modem  | The four-call radio interface a production modem would implement, and a simulated modem that acknowledges each call, injects faults on request and recovers from them. **Lane V.** |
+| **1.4** — receive pipeline                  | Decode, reject messages outside the agreed profile, discard duplicates, convert to SI units, forward. Four stages tested independently, then composed. **Lane V.**               |
+| **1.5** — application, capture, image       | The application itself, traffic capture inside the container, host-side extraction, and the deployable image. **Lane V.**                                                        |
+| **1.6** — bench application                 | Configuration loading, the two scenario files, the motion model, the encoder client, the transmitter, the rate loop and the entrypoint. **Lane P.**                              |
 
 ---
 
-# Groups 1.7 – 1.12 — the encoder, the lanes, the checks, the deploy
+# Task groups 1.7 – 1.12
 
-| Task group                              | What it delivers, and which lane it serves                                                                                                                             |
-| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **1.7** — the bench's encoder path      | A small C++ helper the Python bench talks to, built from byte-identical copies of the V2X ECU's encoder sources, proven against the six reference messages, plus the bench image. **Lane P.** |
-| **1.8** — two new CI jobs               | The helper build lane and the two node-image lanes. **Landed before their consumers**, skipping themselves until the code they verify exists.                           |
-| **1.9** — the ADA-side listener         | The stand-in listener on the ADA node prints whole message bodies instead of the first 96 characters — one line changed, so the deploy could actually show the payload. |
-| **1.10** — deploy and live verification | Push, configure, deploy, then read the evidence off the running nodes. **Lane D** — one step on CI, four performed by a person.                                         |
-| **1.11** — plan upkeep                  | Reconciled the Phase 0 acceptance record with what Phase 0 actually closed. Docs only.                                                                                  |
-| **1.12** — the bench-to-V2X check       | A sender, a log-chain assertion script, and the CI job that runs the real application between them. It is the only check that exercises the whole program without a deployed Room. |
+| Task group                                | Deliverable and lane                                                                                                                                                              |
+| ----------------------------------------- | -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **1.7** — bench encoding path             | A C++ helper process invoked by the Python bench, built from byte-identical copies of the V2X ECU encoder sources and verified against the six reference messages, plus the bench image. **Lane P.** |
+| **1.8** — two CI jobs                     | The helper build lane and the two node-image lanes. Delivered before their consumers, each guarded to skip until the code it verifies exists.                                       |
+| **1.9** — ADA-side listener               | The listener on the ADA node prints complete message bodies rather than the first 96 characters, so the deployment can display the payload.                                        |
+| **1.10** — deployment and verification    | Push, configure, deploy, then collect evidence from the running nodes. **Lane D** — one step on CI, four performed manually.                                                       |
+| **1.11** — plan maintenance               | Reconciliation of the Phase 0 acceptance record with the state Phase 0 actually reached. Documentation only.                                                                      |
+| **1.12** — bench-to-V2X check             | A transmitter, a log-chain assertion script, and the CI job that runs the application between them. The only check that exercises the complete application without a deployed Room. |
 
 ---
 
@@ -194,31 +192,31 @@ Every task and subtask carries `X.Y.Z.W`.
 
 ---
 
-# The V2X ECU — a receiving program in eleven modules
+# Deliverables — V2X ECU
 
-| File group                                                                              | Delivered by                          | Purpose                                                                                                             |
-| --------------------------------------------------------------------------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `src/config/` · `src/net/` · `src/log/` · `src/forward/`                                | `8.1.2.1` `7.1.2.2` `18.1.2.3` `2.1.2.4` | The foundation: the one environment reader, the one socket owner, the JSON event stream, and the sender to the ADA node |
-| `src/adapter/` · `src/stub/`                                                            | `7.1.3.1` – `7.1.3.4`                 | The frozen four-call radio interface and the stand-in modem behind it, with fault injection and defined recoveries  |
-| `src/pipeline/` — validator, deduper, builder, composition                              | `9.1.4.1` – `9.1.4.4`                 | Decode → check against the profile → drop repeats → convert to metres and m/s → hand on. Each stage tested alone     |
-| `src/main.cpp` · `CMakeLists.txt`                                                       | `8.1.5.1`                             | The application: wires every part together, drives start-up, then serves traffic. No logic of its own                |
-| `tests/` — 11 suites · `tests/fixtures/malformed/` — 10 cases                            | across all groups, `9.1.4.5`          | Including ten deliberately broken messages: six that must be rejected, four that must be tolerated                         |
-| `capture.sh` · `tools/extract_pcap.sh` · `Dockerfile` · `entrypoint.sh`                 | `6.1.5.2` `6.1.5.3` `5.1.5.4`         | Capture running inside the container, extraction on the host, and the deployable image                              |
-| `tools/check_transport_imports.py` · `doc/telux-parity-and-port-plan.md`                | `7.1.3.5` `7.1.3.6`                   | The gate that keeps sockets below the radio interface, and what changes when a real modem replaces the stand-in     |
+| File group                                                                | Delivered by                             | Function                                                                                                          |
+| ------------------------------------------------------------------------- | ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------|
+| `src/config/` · `src/net/` · `src/log/` · `src/forward/`                  | `8.1.2.1` `7.1.2.2` `18.1.2.3` `2.1.2.4` | Foundation: the sole environment reader, the sole socket owner, the JSON event stream, the sender to the ADA node  |
+| `src/adapter/` · `src/stub/`                                              | `7.1.3.1` – `7.1.3.4`                    | The frozen four-call radio interface and the simulated modem behind it, with fault injection and defined recoveries |
+| `src/pipeline/` — validator, deduplicator, builder, composition           | `9.1.4.1` – `9.1.4.4`                    | Decode, validate against the profile, discard duplicates, convert to metres and m/s, forward. Each stage tested independently |
+| `src/main.cpp` · `CMakeLists.txt`                                         | `8.1.5.1`                                | The application: composition and start-up sequence only, with no logic of its own                                 |
+| `tests/` — 11 suites · `tests/fixtures/malformed/` — 10 cases             | all groups, `9.1.4.5`                    | Including the malformed-message set: six that must be rejected, four that must be tolerated                       |
+| `capture.sh` · `tools/extract_pcap.sh` · `Dockerfile` · `entrypoint.sh`   | `6.1.5.2` `6.1.5.3` `5.1.5.4`            | In-container capture, host-side extraction, and the deployable image                                              |
+| `tools/check_transport_imports.py` · `doc/telux-parity-and-port-plan.md`  | `7.1.3.5` `7.1.3.6`                      | The gate confining socket code below the radio interface, and the changes required by a production modem          |
 
 ---
 
-# The bench, the shared pin, and the test equipment
+# Deliverables — bench, shared configuration, test equipment
 
-| File group                                                                    | Delivered by                  | Purpose                                                                                                       |
-| ----------------------------------------------------------------------------- | ----------------------------- | --------------------------------------------------------------------------------------------------------------|
-| `player/config.py` · `scenarios/default.yaml` · `scenarios/c-out-of-range.yaml` | `11.1.6.1` `11.1.6.2`        | Configuration loading, and the two traffic situations as data: C approaching, and C parked out of range       |
-| `player/scenario.py` · `player/generator.py`                                  | `11.1.6.3` `11.1.6.7`         | Where C is at any instant, and the loop that turns that into one message every 100 ms                         |
-| `player/encoder_client.py` · `player/sender.py` · `main.py`                   | `11.1.6.5` `11.1.6.6` `11.1.6.8` | Talking to the encoder helper, putting bytes on the wire, and the entrypoint the platform starts           |
-| `codec_helper/` — `cpm_encode` · `Dockerfile`                                 | `11.1.7.1` `5.1.7.3`          | A C++ encoder built from byte-identical copies of the V2X ECU's sources, and the bench image that carries it   |
-| `tests/` — 10 suites, 116 local tests + the encoder-golden test               | `11.1.6.4` `11.1.7.2`         | Including the proof that the two scenario files produce different message streams, and that the helper's bytes match the reference messages exactly |
-| `contracts/vanetza-pin.cmake` · `contracts/sync-manifest.json`                | `11.1.1.1` `11.1.1.2`         | One pinned library version for both builds; the gate now covers 47 byte-identical copies                      |
-| `tools/comms_check/` · `tools/netcheck/netcheck.py`                           | `6.1.12.1` `9.1.12.2` `2.1.9.1` | Test equipment: the message sender, the log-chain assertion, and the listener that prints whole bodies       |
+| File group                                                                     | Delivered by                     | Function                                                                                                     |
+| ------------------------------------------------------------------------------ | -------------------------------- | ---------------------------------------------------------------------------------------------------------------|
+| `player/config.py` · `scenarios/default.yaml` · `scenarios/c-out-of-range.yaml` | `11.1.6.1` `11.1.6.2`            | Configuration loading, and two traffic situations expressed as data: C approaching, and C stationary out of range |
+| `player/scenario.py` · `player/generator.py`                                   | `11.1.6.3` `11.1.6.7`            | The position of C at a given instant, and the loop that emits one message every 100 ms                       |
+| `player/encoder_client.py` · `player/sender.py` · `main.py`                    | `11.1.6.5` `11.1.6.6` `11.1.6.8` | Communication with the encoder helper, transmission, and the entrypoint the platform starts                  |
+| `codec_helper/` — `cpm_encode` · `Dockerfile`                                  | `11.1.7.1` `5.1.7.3`             | A C++ encoder built from byte-identical copies of the V2X ECU sources, and the bench image carrying it        |
+| `tests/` — 10 suites, 116 local tests, and the encoder verification            | `11.1.6.4` `11.1.7.2`            | Including proof that the two scenario files produce different message streams, and that the helper output matches the reference messages exactly |
+| `contracts/vanetza-pin.cmake` · `contracts/sync-manifest.json`                 | `11.1.1.1` `11.1.1.2`            | One pinned library version for both builds; the gate now covers 47 byte-identical copies                     |
+| `tools/comms_check/` · `tools/netcheck/netcheck.py`                            | `6.1.12.1` `9.1.12.2` `2.1.9.1`  | Test equipment: the transmitter, the log-chain assertion, and the listener printing complete bodies           |
 
 ---
 
@@ -230,43 +228,43 @@ Every task and subtask carries `X.Y.Z.W`.
 
 ---
 
-# Eight independent starting points
+# Execution overview
 
-![h:470 Phase 1 lane overview: eight starting points, two node lanes running side by side, and the deploy chain that can only begin once both images exist](../assets/phase1-exec-overview.svg)
+![h:470 Phase 1 execution structure: eight independent starting points, two node lanes proceeding concurrently, and the deployment chain, which requires both node images](../assets/phase1-exec-overview.svg)
 
-- **Horizontal position is dependency depth** — how far a piece of work sits from the start of the phase — not calendar time.
-
----
-
-# Lane V, part 1 — the foundation and the radio interface
-
-![h:495 Lane V foundation and radio interface: the parallel starts on the left and the four-step radio chain below](../assets/phase1-exec-lane-v-foundation.svg)
+- **Horizontal position denotes dependency depth** — the distance of a unit of work from the start of the phase — not calendar time.
 
 ---
 
-# Lane V, part 2 — the pipeline, the program, the image
+# Lane V (1 of 2) — foundation and radio interface
 
-![h:495 Lane V pipeline and assembly: three parallel stages feeding the composition, then the application and the container image](../assets/phase1-exec-lane-v-pipeline.svg)
-
----
-
-# Lane P — the bench
-
-![h:500 Lane P: the bench application chain, the encoder helper path beneath it, and the image both feed](../assets/phase1-exec-lane-p.svg)
+![h:495 Lane V foundation and radio interface: independent starting points on the left, and the four-step radio chain below](../assets/phase1-exec-lane-v-foundation.svg)
 
 ---
 
-# What landed first, what landed last, and the check in between
+# Lane V (2 of 2) — receive pipeline, application, image
 
-![h:495 CI lanes landed first, the shared pin and its copy gate, and the bench-to-V2X comms check with its CI lane](../assets/phase1-exec-ci-and-checks.svg)
+![h:495 Lane V pipeline and assembly: three independent stages feeding the composition, then the application and the container image](../assets/phase1-exec-lane-v-pipeline.svg)
 
 ---
 
-# Lane D — the five steps that need the live platform
+# Lane P — bench application
 
-![h:430 Lane D: push, deploy, then read the object messages, swap the scenario and pull the capture — colour-coded by how far the evidence reaches](../assets/phase1-exec-lane-d-deploy.svg)
+![h:500 Lane P: the bench application chain, the encoder helper path beneath it, and the image both supply](../assets/phase1-exec-lane-p.svg)
 
-- **The Room was deployed and messages did arrive.** What is still missing is narrower than "the deploy": per-node status badges, a scripted check over a saved log, the second scenario, and a capture file.
+---
+
+# Verification lanes, shared codec version, comms check
+
+![h:495 CI lanes delivered first, the shared codec version and its integrity gate, and the bench-to-V2X check with its CI lane](../assets/phase1-exec-ci-and-checks.svg)
+
+---
+
+# Lane D — deployment and live verification
+
+![h:430 Lane D: push, deploy, then message inspection, scenario swap and capture retrieval, annotated by evidence status](../assets/phase1-exec-lane-d-deploy.svg)
+
+- **The Room was deployed and object messages were received.** The outstanding items are narrower than the deployment itself: per-node status, a scripted check over a saved log, the second scenario, and a capture file.
 
 ---
 
@@ -274,23 +272,23 @@ Every task and subtask carries `X.Y.Z.W`.
 
 ![bg](../assets/bg-navy-motif.png)
 
-# 06 · Parallel or sequential
+# 06 · Parallel and sequential work
 
 ---
 
-# What ran beside what, and what forced the order
+# Dependency structure
 
-| Relationship                        | What it covers                                                        | What forces it                                                                                                              |
+| Relationship                        | Scope                                                                 | Constraint                                                                                                                  |
 | ----------------------------------- | ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------|
-| **Parallel — the two node lanes**   | all of `V2X_ECU/` against all of `Scenario_Player/`                   | Disjoint folders. They meet only at frozen message formats and at byte-identical copies of the encoder sources              |
-| **Parallel — inside the foundation**| the config reader, the socket, the event log                          | Different files, no shared type; only the forwarder needs the socket                                                        |
-| **Parallel — inside the pipeline**  | validator, deduper, builder                                           | None of the three calls another; the composition is what needs all of them                                                  |
-| **Sequential — the radio chain**    | interface → stand-in modem → faults → live receive thread             | Each step compiles against the one before it                                                                                |
-| **Sequential — CI before code**     | the three verification jobs before the subtasks they verify           | A subtask whose acceptance check is "the lane is green" needs the lane to exist on the day it lands                          |
-| **Sequential — last of all**        | the copy-integrity gate, after every new copy exists                  | The gate fails on a missing target, so running it early would prove nothing                                                 |
-| **Sequential — the deploy chain**   | push → configure and deploy → read the logs → swap the scenario       | You cannot deploy an image that was never pushed, or read logs from a node that is not running                              |
+| **Parallel — the two node lanes**   | all of `V2X_ECU/` against all of `Scenario_Player/`                   | Disjoint folders. The lanes meet only at the frozen message formats and the byte-identical encoder copies                   |
+| **Parallel — within the foundation**| configuration reader, socket, event log                               | Distinct files and no shared type; only the forwarder requires the socket                                                   |
+| **Parallel — within the pipeline**  | validator, deduplicator, builder                                      | No stage invokes another; only the composition requires all three                                                           |
+| **Sequential — the radio chain**    | interface, simulated modem, faults, receive thread                    | Each step is the compile-time input of the next                                                                             |
+| **Sequential — CI before code**     | three verification jobs before the subtasks they verify               | A subtask whose acceptance criterion is a green lane requires that lane to exist on the day it lands                        |
+| **Sequential — final step**         | the copy-integrity gate, after every new copy exists                  | The gate fails on a missing target; an earlier run would prove nothing                                                      |
+| **Sequential — deployment chain**   | push, configure and deploy, inspect logs, swap scenario               | An image cannot be deployed before it is pushed, nor logs read from a node that is not running                              |
 
-> At run time everything was executed one subtask at a time: all the agents shared a single working folder. The parallel marks above are the dependency structure — what *could* run at once given more workers.
+> All subtasks were executed one at a time, because every agent shared a single working folder. The parallel entries above state the dependency structure — the work that could proceed concurrently given additional workers.
 
 ---
 
@@ -298,36 +296,34 @@ Every task and subtask carries `X.Y.Z.W`.
 
 ![bg](../assets/bg-navy-motif.png)
 
-# 07 · What it proved
+# 07 · Verification status
 
 ---
 
-# The nine acceptance boxes
+# Acceptance criteria
 
-| Acceptance box                                                     | State      | What the evidence actually is                                              |
-| ------------------------------------------------------------------ | ---------- | ---------------------------------------------------------------------------|
-| No socket code above the radio interface                           | **closed** | The gate runs on every push; the porting notes are committed               |
-| Start-up calls acknowledged; every fault recovers                  | **closed** | Unit tests and the end-to-end CI job — **not** a deployed node             |
-| Reference messages decode; broken ones rejected                    | **closed** | Through the real decoder: 6 rejected, 4 correctly tolerated, no crashes    |
+| Criterion                                                          | Status     | Evidence                                                                   |
+| ------------------------------------------------------------------- | ---------- | ----------------------------------------------------------------------------|
+| No socket code above the radio interface                           | **closed** | The gate executes on every push; the porting notes are committed           |
+| Start-up calls acknowledged; every fault recovers                  | **closed** | Unit tests and the end-to-end CI job; **not** a deployed node              |
+| Reference messages decode; malformed messages rejected             | **closed** | Through the production decoder: 6 rejected, 4 correctly tolerated, no crashes |
 | A bench message is received, decoded and forwarded                 | **closed** | The `v2x-comms-check` job, which fails if any link is removed              |
-| Both images build for the platform, and the Room deploys           | *partly*   | Built, pushed, pulled and run — per-node status badges unconfirmed         |
-| Traffic captured on the bridge network                             | *partly*   | Capture runs and shows both directions; no file pulled off yet             |
-| Different scenarios give different message streams                 | *partly*   | Proven in the model and in the bytes; the live swap is not done            |
-| Object messages at the ADA ECU are not constants                   | *partly*   | Seen live and checked; the scripted check on a saved log is pending        |
-| **Demo:** the capture opened in Wireshark                          | **open**   | Needs a log from a Room that ran long enough to rotate a file              |
+| Both images build for the platform; the Room deploys               | *partial*  | Built, pushed, pulled and executed; per-node status not yet confirmed      |
+| Traffic captured on the bridge network                             | *partial*  | Capture is active and shows both directions; no file has been retrieved    |
+| Different scenarios produce different message streams              | *partial*  | Proven in the model and at byte level; the live swap is outstanding        |
+| Object messages at the ADA ECU are not constant values             | *partial*  | Observed live and verified; the scripted check over a saved log is outstanding |
+| **Demonstration:** the capture opened in Wireshark                 | **open**   | Requires a log from a Room that has run a full rotation period             |
 
 ---
 
-# How far the evidence reaches
+# Scope of the evidence
 
-A green pipeline and a running node prove different things. The plan says which, per box, and so does this deck.
+- **Verified by machine on every push:** the import gate, the fault recoveries, the malformed-message tests, and the complete received–decoded–forwarded chain. These are re-proven at every commit.
+- **Observed once, on a live Room:** object messages at the ADA node with `distance` decreasing by exactly **0.25 m per message** at 10 messages per second, matching the 2.5 m/s closing speed in the scenario file. The derived distance equals `hypot(50.25, 1.2)` to every printed digit, confirming computation from the decoded position rather than transfer of a transmitted value.
+- **Measured incidentally:** the complete decode-to-forward path required **142–151 µs**, consistently, across every sampled message pair.
+- **Not yet evidenced:** every item requiring a saved log export — the scripted log check, the second scenario, and the capture file.
 
-- **Closed by machine, on every push:** the import gate, the fault recoveries, the broken-message tests, and the whole received → decoded → forwarded chain. These re-prove themselves on every commit.
-- **Seen once, on a live Room:** object messages arriving at the ADA node with `distance` falling exactly **0.25 m per message** at 10 messages a second — precisely the 2.5 m/s closing speed in the scenario file. The derived distance matches `hypot(50.25, 1.2)` to every printed digit, so it is genuinely computed from the decoded position rather than copied through.
-- **Measured as a side effect:** the V2X ECU's whole decode-to-forward path took **142–151 µs**, consistently, across every message pair sampled at the capture point.
-- **Not proven at all yet:** anything needing a saved log export — the scripted log check, the second scenario, and the capture file.
-
-> The bench-to-V2X check is not vacuous: deleting the forward event fails it at the forward link, and stripping the decoded payload fails it at the decode link. It was tested for its ability to fail.
+> The bench-to-V2X check is not vacuous. Removal of the forward event fails it at the forward link; removal of the decoded payload fails it at the decode link. Its capacity to fail was tested.
 
 ---
 
@@ -339,31 +335,31 @@ A green pipeline and a running node prove different things. The plan says which,
 
 ---
 
-# What Phase 2 may assume
+# Inputs available to Phase 2
 
-Phase 2 builds the ADA ECU's track store and admission logic on mock input. Everything below is a Phase 1 deliverable it does not have to re-prove.
+Phase 2 implements the ADA ECU track store and admission logic on mock input. The following are Phase 1 deliverables and need not be re-proven.
 
-- **Real object messages arrive at the ADA node.** Their shape, units and field values were checked against the running bench, so Phase 2 can build against a format that has already been observed rather than only agreed.
-- **The platform is a known quantity.** Images build for its processor, push to its registry and run; the node configuration gotchas — the start command is space-separated, not a JSON array — are written down in the run record.
-- **The event stream exists.** Every stage of the receive path emits one JSON line with running counters; the later phases' reconstruction of a whole run starts from this format.
-- **Ten CI jobs verify the tree on every push**, four of them added by this phase, and the copy-integrity gate now covers 47 files.
-- **Test equipment is reusable.** The message sender, the log-chain assertion and the listener that prints whole bodies are all node-independent.
+- **Object messages arrive at the ADA node.** Their structure, units and field values were verified against the running bench, so Phase 2 builds against an observed format rather than an agreed one.
+- **The platform is characterised.** Images build for its processor, push to its registry and execute; the node-configuration deviations — the start command is space-separated, not a JSON array — are recorded in the run record.
+- **The event stream exists.** Every stage of the receive path emits one JSON line with running counters; later phases reconstruct a complete run from this format.
+- **Ten CI jobs verify the tree on every push**, four of them added by this phase, and the copy-integrity gate covers 47 files.
+- **Test equipment is node-independent** and therefore reusable: the transmitter, the log-chain assertion, and the listener printing complete bodies.
 
 ---
 
-# What stays open — four tasks, all for a person
+# Outstanding work
 
-40 of the 44 subtasks are closed. Nothing that remains is agent work, CI work, or new code: every one of these is done by hand in the platform UI, because node configuration and log reading have no API.
+40 of the 44 subtasks are closed. No agent work, CI work or new code remains; all four outstanding items are performed manually in the platform UI.
 
-| Task | What a person has to do |
-| ---- | ------------------------ |
-| `5.1.10.2` | Confirm **per-node** Running badges and a restart count of zero in the Deployment Viewer — not the summary header, which read "Pending — 0/0 nodes ready" while traffic flowed normally |
-| `2.1.10.3` | Capture the start-up call sequence from the node log — it prints once at start and scrolled away — and run the log-chain check over a saved log export |
-| `11.1.10.4` | Point the bench at the second scenario file, redeploy, and compare the two log sets |
-| `6.1.10.5` | Save a log that contains a capture block, run the extraction script, and open the result in Wireshark |
+| Subtask    | Required action                                                                                                                                       |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `5.1.10.2` | Confirm per-node Running status and a restart count of zero in the Deployment Viewer, rather than the summary header, which reported "Pending — 0/0 nodes ready" during normal traffic |
+| `2.1.10.3` | Record the start-up call sequence, which is emitted once at node start, and execute the log-chain check over a saved log export                        |
+| `11.1.10.4`| Reconfigure the bench to the second scenario file, redeploy, and compare the two log sets                                                              |
+| `6.1.10.5` | Save a log containing a capture block, run the extraction script, and open the result in Wireshark                                                     |
 
-- **One deploy session closes all four.** The last three read the same node log, so one restart plus one long enough log download serves all of them — and the capture block only appears once the Room has run a full rotation period.
-- **Two decisions are also a person's, though neither is a task:** whether the phase's retry and duplicate-window defaults stand as chosen, and whether "the team app launches on the display node" belongs to this phase at all — no design document covers it.
+- **One deployment session closes all four.** The final three read the same node log; one restart and one sufficiently long log download serve all of them, provided the Room has completed a full capture rotation period.
+- **Two decisions remain with the owner, neither of them a task:** ratification of the retry and duplicate-window defaults, and whether the display-application clause belongs to this phase, which no design document covers.
 
 ---
 
@@ -372,6 +368,6 @@ Phase 2 builds the ADA ECU's track store and admission logic on mock input. Ever
 
 ![bg](../assets/bg-fpt-tower.jpg)
 
-# Thank you!
+# Thank you
 
 **Phase 1 — Task Execution** · Milestone 1 · FPT Hackathon 2026

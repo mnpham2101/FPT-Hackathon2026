@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Phase 1 — Task Execution</title>
-<meta name="description" content="Planning deck — how Phase 1&#x27;s comms bring-up was decomposed into 44 subtasks across two node lanes, who or what performed each, the order they ran in, what code landed, and exactly how far the acceptance evidence reaches">
+<meta name="description" content="Planning deck — the decomposition of Phase 1 comms bring-up into 44 subtasks across two node lanes, the execution responsibility for each, the dependency structure, the delivered code, and the verification status of the acceptance criteria">
 <style>
   :root {
     --fpt-orange: #F37021;
@@ -184,21 +184,21 @@
     <div class="eyebrow">Milestone 1 · Cooperative Vehicle Awareness — FPT Hackathon 2026</div>
     <h1>Phase 1 — Task Execution</h1>
     <div class="rule"></div>
-    <div class="tagline">Two node lanes, 44 subtasks, and one live Room</div>
-    <div class="meta">comms bring-up · 12 task groups · 44 subtasks · 40 closed, 4 left for a person on the platform<br>The work it organizes is Phase 0's contract freeze: <a href="../phase0/phase0-task-execution-deck.html">phase0-task-execution-deck.html</a> · <a href="../phase0/phase0-design-concepts-deck.html">phase0-design-concepts-deck.html</a><br>Source: <a href="../../plans/phase1_tasks.md">phase1_tasks.md</a> · <a href="../../plans/doc/phase1-comms-run.md">phase1-comms-run.md</a> · the two design documents <a href="../../V2X_ECU/doc/phase1-v2x-ecu-comms-hld.md">V2X</a> and <a href="../../Scenario_Player/doc/phase1-scenario-player-hld.md">bench</a></div>
+    <div class="tagline">Comms bring-up: decomposition, execution and verification status</div>
+    <div class="meta">12 task groups · 44 subtasks · 40 closed · 4 outstanding, all manual<br>Preceding phase: <a href="../phase0/phase0-task-execution-deck.html">phase0-task-execution-deck.html</a> · <a href="../phase0/phase0-design-concepts-deck.html">phase0-design-concepts-deck.html</a><br>Sources: <a href="../../plans/phase1_tasks.md">phase1_tasks.md</a> · <a href="../../plans/doc/phase1-comms-run.md">phase1-comms-run.md</a> · design documents for the <a href="../../V2X_ECU/doc/phase1-v2x-ecu-comms-hld.md">V2X ECU</a> and the <a href="../../Scenario_Player/doc/phase1-scenario-player-hld.md">bench</a></div>
     <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
   </section>
   <section class="slide bg-light content">
     <div class="slide-head"><div class="num">§</div><h2>Table of contents</h2></div>
     <div class="toc">
-      <div class="item"><div class="n">01</div><div><h3>Work organization</h3><p>track, execution lane, CI lane, and why Phase 1 has three of them</p></div></div>
-      <div class="item"><div class="n">02</div><div><h3>Work decomposition</h3><p>the ID scheme, the shape of the phase, and who performed what</p></div></div>
-      <div class="item"><div class="n">03</div><div><h3>Task groups</h3><p>what each of the twelve delivered</p></div></div>
-      <div class="item"><div class="n">04</div><div><h3>Code delivered</h3><p>the files Phase 1 put in the repository</p></div></div>
-      <div class="item"><div class="n">05</div><div><h3>Execution order</h3><p>lane by lane, one diagram at a time</p></div></div>
-      <div class="item"><div class="n">06</div><div><h3>Parallel or sequential</h3><p>and what forced each</p></div></div>
-      <div class="item"><div class="n">07</div><div><h3>What it proved</h3><p>the nine acceptance boxes, and how far the evidence reaches</p></div></div>
-      <div class="item"><div class="n">08</div><div><h3>Handoff</h3><p>what Phase 2 may assume, and the four tasks left for a person</p></div></div>
+      <div class="item"><div class="n">01</div><div><h3>Work organization</h3><p>track, execution lane and CI lane</p></div></div>
+      <div class="item"><div class="n">02</div><div><h3>Work decomposition</h3><p>identification scheme, phase size, execution responsibility</p></div></div>
+      <div class="item"><div class="n">03</div><div><h3>Task groups</h3><p>the deliverable of each of the twelve</p></div></div>
+      <div class="item"><div class="n">04</div><div><h3>Code delivered</h3><p>the files added to the repository</p></div></div>
+      <div class="item"><div class="n">05</div><div><h3>Execution order</h3><p>dependency structure, lane by lane</p></div></div>
+      <div class="item"><div class="n">06</div><div><h3>Parallel and sequential work</h3><p>and the constraint behind each</p></div></div>
+      <div class="item"><div class="n">07</div><div><h3>Verification status</h3><p>the nine acceptance criteria and the scope of their evidence</p></div></div>
+      <div class="item"><div class="n">08</div><div><h3>Handoff</h3><p>inputs available to Phase 2, and the outstanding work</p></div></div>
     </div>
     <div class="footer"><span>Phase 1 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
@@ -209,62 +209,63 @@
     <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">01</div><h2>What Phase 1 had to do</h2></div>
-    <p class="lead">The bench sends made-up traffic messages; the V2X ECU receives them, decodes them, and hands the result to the ADA ECU as a plain object message. <strong>Receive only</strong> — the car broadcasts nothing in this phase.</p>
+    <div class="slide-head"><div class="num">01</div><h2>Phase objective and scope</h2></div>
     <ul class="points">
-      <li><strong>A phase is a stage of work with a written input and a written acceptance check.</strong> Phase 1 could start only because Phase 0 had frozen the message formats; it is finished only when its nine acceptance boxes are ticked.</li>
-      <li><strong>Two node folders were built at once:</strong> the V2X ECU (C++) and the bench, called the Scenario Player (Python). They share no source code — only the frozen message formats and a byte-for-byte copy of the encoder sources.</li>
-      <li><strong>Everything the phase produces is either a running program on a node, or a check that proves the program does what was agreed.</strong></li>
+      <li><strong>Objective.</strong> The bench transmits synthetic traffic messages; the V2X ECU receives, decodes and forwards each one to the ADA ECU as an object message.</li>
+      <li><strong>Reception only.</strong> The vehicle transmits nothing in this phase.</li>
+      <li><strong>Entry condition.</strong> Phase 1 could begin only because Phase 0 had frozen the message formats.</li>
+      <li><strong>Exit condition.</strong> Nine acceptance criteria, each closed by a stated piece of evidence.</li>
+      <li><strong>Two node folders were developed concurrently:</strong> the V2X ECU in C++ and the bench, named the Scenario Player, in Python. They share no source code — only the frozen message formats and byte-identical copies of the encoder sources.</li>
     </ul>
-    <div class="strip">The bench is test equipment, not a mock: it is a real node on the real network sending real messages. Nothing downstream can tell the difference — which is the point.</div>
+    <div class="strip">The bench is sanctioned test equipment, not a mock. It is a node on the production network transmitting real messages; no downstream component can distinguish it from a vehicle.</div>
     <div class="footer"><span>Phase 1 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
     <div class="slide-head"><div class="num">01</div><h2>Planning terminology</h2></div>
-    <p class="lead">Three different things get called a <em>lane</em> or a <em>track</em> in this project. They are not interchangeable.</p>
+    <p class="lead">Three distinct concepts are referred to as a <em>track</em> or a <em>lane</em>. They are not interchangeable.</p>
     <table class="fpt">
-      <thead><tr><th>Term</th><th>What it groups</th><th>Defined in</th><th>Example in Phase 1</th></tr></thead>
+      <thead><tr><th>Term</th><th>Definition</th><th>Specified in</th><th>Phase 1 example</th></tr></thead>
       <tbody>
-        <tr><td><strong>Track</strong></td><td>a workstream of whole phases, run by different people at the same time</td><td><a href="../../plans/milestone1.md">milestone1.md</a></td><td>the comms track = Phase 1</td></tr>
-        <tr><td><strong>Phase</strong></td><td>one stage with an input list and acceptance criteria</td><td><a href="../../.claude/rules/task-planning-conventions.md">task-planning-conventions.md</a></td><td>Phase 1</td></tr>
-        <tr><td><strong>Execution lane</strong></td><td>subtasks that must run in dependency order, named after the folder they write into</td><td>the phase plan's <em>Execution order &amp; parallelism</em></td><td>Lane V = <code>V2X_ECU/</code></td></tr>
-        <tr><td><strong>CI lane</strong></td><td>one job in the GitHub Actions workflow — it builds, it tests, it passes or fails</td><td><a href="../../.github/workflows/phase0-ci.yml">phase0-ci.yml</a></td><td><code>v2x-comms-check</code></td></tr>
+        <tr><td><strong>Track</strong></td><td>a workstream spanning whole phases, executed by different people concurrently</td><td><a href="../../plans/milestone1.md">milestone1.md</a></td><td>the comms track = Phase 1</td></tr>
+        <tr><td><strong>Phase</strong></td><td>one stage, with an input list and acceptance criteria</td><td><a href="../../.claude/rules/task-planning-conventions.md">task-planning-conventions.md</a></td><td>Phase 1</td></tr>
+        <tr><td><strong>Execution lane</strong></td><td>subtasks ordered by dependency, named after the folder they write into</td><td>the phase plan, <em>Execution order &amp; parallelism</em></td><td>Lane V = <code>V2X_ECU/</code></td></tr>
+        <tr><td><strong>CI lane</strong></td><td>one job in the GitHub Actions workflow; it builds, tests, and passes or fails</td><td><a href="../../.github/workflows/phase0-ci.yml">phase0-ci.yml</a></td><td><code>v2x-comms-check</code></td></tr>
       </tbody>
     </table>
     <ul class="points">
-      <li><strong>Lane letters are phase-local and they collide.</strong> Phase 0's Lane D was the bench folder; Phase 1's Lane D is the deploy chain. Always say which phase.</li>
-      <li><strong>Lane letters are not an order.</strong> Only a stated dependency sequences one lane against another, and a dependency always names an artifact, never a letter.</li>
-      <li><strong>Only a CI lane actually runs.</strong> A track and an execution lane are planning structure, not programs.</li>
+      <li><strong>Lane letters are local to a phase and do collide.</strong> Phase 0 Lane D is the bench folder; Phase 1 Lane D is the deployment chain.</li>
+      <li><strong>Lane letters do not express an order.</strong> Only a stated dependency sequences one lane against another, and a dependency always names an artifact.</li>
+      <li><strong>Only a CI lane executes.</strong> A track and an execution lane are planning structures.</li>
     </ul>
     <div class="footer"><span>Phase 1 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">01</div><h2>Execution lanes in Phase 1</h2></div>
-    <p class="lead">Named after the folder each writes into, so no two lanes touch the same files.</p>
+    <div class="slide-head"><div class="num">01</div><h2>Execution lanes</h2></div>
+    <p class="lead">Each lane is named after the folder it writes into; no two lanes modify the same files.</p>
     <table class="fpt">
-      <thead><tr><th>Lane</th><th>Writes into</th><th>Waits on</th><th>What it lands</th></tr></thead>
+      <thead><tr><th>Lane</th><th>Writes into</th><th>Depends on</th><th>Deliverable</th></tr></thead>
       <tbody>
-        <tr><td><strong>V</strong></td><td><code>V2X_ECU/</code></td><td>Phase 0's frozen formats</td><td>the receive pipeline, the application, the capture scripts, the image</td></tr>
-        <tr><td><strong>P</strong></td><td><code>Scenario_Player/</code></td><td>Phase 0's formats + the encoder sources</td><td>the bench application, its encoder helper, the image</td></tr>
-        <tr><td><strong>Shared</strong></td><td><code>contracts/</code></td><td>nothing — then everything</td><td>one pinned codec version for two builds; the copy-integrity gate</td></tr>
-        <tr><td><strong>CI</strong></td><td><code>.github/workflows/</code></td><td>nothing</td><td>four new verification jobs, landed before the code they verify</td></tr>
-        <tr><td><strong>Comms check</strong></td><td><code>tools/comms_check/</code></td><td>the event log format</td><td>the scripted proof that a sent message is received, decoded and forwarded</td></tr>
-        <tr><td><strong>D</strong></td><td>the deployed Room</td><td>V and P</td><td>push the images, deploy, read the logs, swap the scenario, capture traffic</td></tr>
+        <tr><td><strong>V</strong></td><td><code>V2X_ECU/</code></td><td>the Phase 0 message formats</td><td>receive pipeline, application, capture scripts, container image</td></tr>
+        <tr><td><strong>P</strong></td><td><code>Scenario_Player/</code></td><td>the message formats and encoder sources</td><td>bench application, encoder helper, container image</td></tr>
+        <tr><td><strong>Shared</strong></td><td><code>contracts/</code></td><td>nothing initially; everything at close</td><td>one pinned codec version for two builds; the copy-integrity gate</td></tr>
+        <tr><td><strong>CI</strong></td><td><code>.github/workflows/</code></td><td>nothing</td><td>four verification jobs, delivered before the code they verify</td></tr>
+        <tr><td><strong>Comms check</strong></td><td><code>tools/comms_check/</code></td><td>the event-log format</td><td>scripted proof that a transmitted message is received and forwarded</td></tr>
+        <tr><td><strong>D</strong></td><td>the deployed Room</td><td>lanes V and P</td><td>image push, deployment, log inspection, scenario swap, traffic capture</td></tr>
       </tbody>
     </table>
     <ul class="points">
-      <li><strong>Lanes V and P are logically parallel workstreams.</strong> They were run one after another only because every subtask shares a single working folder on one machine.</li>
+      <li><strong>Lanes V and P are logically parallel.</strong> They were executed consecutively only because all subtasks share one working folder on one machine.</li>
     </ul>
     <div class="footer"><span>Phase 1 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">01</div><h2>CI lanes — the verification path, not a safety net</h2></div>
-    <p class="lead">The development machine is Windows with no Docker and no Linux subsystem. Every C++ compile, every container image, every Linux test therefore runs on GitHub Actions.</p>
+    <div class="slide-head"><div class="num">01</div><h2>Continuous integration as the verification path</h2></div>
     <ul class="points">
-      <li><strong>Ten jobs in one workflow file.</strong> Phase 0 left six; Phase 1 added four: <code>sp-codec-helper</code>, <code>v2x-comms-check</code>, <code>v2x-ecu-image</code>, <code>scenario-player-image</code>.</li>
-      <li>**For a C++ subtask, "tests pass" <em>means</em> "the lane is green".** There is nowhere else to run them, so the definition of done points at a run URL.</li>
-      <li><strong>Three runs carry the whole phase:</strong> <a href="https://github.com/mnpham2101/FPT-Hackathon2026/actions/runs/30697863324">8 lanes green</a> over the phase's code · <a href="https://github.com/mnpham2101/FPT-Hackathon2026/actions/runs/30698630956">10 lanes green</a> adding both node images, which also pushed them to the platform registry · <a href="https://github.com/mnpham2101/FPT-Hackathon2026/actions/runs/30700052056">10 lanes green</a> confirming the deliberately-broken-message tests.</li>
-      <li><strong>The image lanes are slow and were expected to fail.</strong> Compiling the message library for the platform's ARM processor runs under emulation; both images built inside the 6-hour ceiling on the first attempt, roughly 19 and 20 minutes each.</li>
+      <li><strong>The development machine runs Windows without Docker or a Linux subsystem.</strong> Every C++ compilation, container image and Linux test therefore executes on GitHub Actions.</li>
+      <li><strong>Ten jobs in one workflow file.</strong> Phase 0 established six; Phase 1 added <code>sp-codec-helper</code>, <code>v2x-comms-check</code>, <code>v2x-ecu-image</code> and <code>scenario-player-image</code>.</li>
+      <li><strong>For a C++ subtask, "tests pass" is defined as "the lane is green".</strong> No alternative execution environment exists, so the definition of done cites a run identifier.</li>
+      <li><strong>Three runs verify the phase:</strong> <a href="https://github.com/mnpham2101/FPT-Hackathon2026/actions/runs/30697863324">8 lanes green</a> over the phase's code · <a href="https://github.com/mnpham2101/FPT-Hackathon2026/actions/runs/30698630956">10 lanes green</a> adding both node images, which also pushed them to the platform registry · <a href="https://github.com/mnpham2101/FPT-Hackathon2026/actions/runs/30700052056">10 lanes green</a> confirming the malformed-message tests.</li>
+      <li><strong>The image lanes carried the highest schedule risk.</strong> The message library is compiled for the platform's ARM processor under emulation; both images built within the six-hour ceiling at the first attempt, in approximately 19 and 20 minutes.</li>
     </ul>
     <div class="footer"><span>Phase 1 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
@@ -275,45 +276,47 @@
     <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">02</div><h2>The unit of work is a subtask, and its ID says everything</h2></div>
-    <p class="lead">Every task and subtask carries <code>X.Y.Z.W</code>.</p>
+    <div class="slide-head"><div class="num">02</div><h2>Task identification scheme</h2></div>
+    <p class="lead">Every task and subtask carries the identifier <code>X.Y.Z.W</code>.</p>
     <table class="fpt">
-      <thead><tr><th>Segment</th><th>Reads as</th><th>In <code>9.1.4.4</code></th></tr></thead>
+      <thead><tr><th>Segment</th><th>Meaning</th><th>Value in <code>9.1.4.4</code></th></tr></thead>
       <tbody>
-        <tr><td><code>X</code></td><td>the requirement served</td><td>the requirement to decode incoming messages safely</td></tr>
+        <tr><td><code>X</code></td><td>the requirement served</td><td>safe decoding of incoming messages</td></tr>
         <tr><td><code>Y</code></td><td>the phase</td><td>1 — comms bring-up</td></tr>
         <tr><td><code>Z</code></td><td>the task group</td><td>group 1.4 — the receive pipeline</td></tr>
-        <tr><td><code>W</code></td><td>the subtask</td><td>the fourth: compose the four stages, one commit</td></tr>
+        <tr><td><code>W</code></td><td>the subtask</td><td>the fourth: composition of the four stages</td></tr>
       </tbody>
     </table>
-    <p class="lead"><strong>The group number is not the requirement number.</strong> Group 1.5 holds <code>8.1.5.1</code>, <code>6.1.5.2</code>, <code>6.1.5.3</code> and <code>5.1.5.4</code> — four different requirements in one group, because they jointly deliver one thing: a V2X ECU that runs, captures its own traffic, and ships as an image.</p>
-    <div class="footer"><span>Phase 1 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
-  </section>
-  <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">02</div><h2>What Phase 1 looked like as a work item</h2></div>
     <ul class="points">
-      <li><strong>12 task groups, 44 subtasks, six lanes.</strong> Lane V 19 · lane P 11 · deploy 5 · comms check 3 · shared pin 2 · CI 2 · ADA sink 1 · plan upkeep 1.</li>
-      <li><strong>One subtask, one objective, one atomic commit</strong>, a build that passes and unit tests that pass. A subtask with no <code>**Status:**</code> line in the plan file has not started.</li>
-      <li><strong>Every subtask brief is self-contained</strong> — file paths, the message fields it touches, its acceptance check — so the agent implementing it does not need to read the rest of the codebase.</li>
-      <li><strong>Nothing was hardcoded.</strong> Ports, peers, retry counts, the duplicate-message window, the capture filter and the scenario itself are all configuration the platform injects, which is why the second traffic scenario is a second file rather than a second build.</li>
+      <li><strong>The group number is not the requirement number.</strong> Group 1.5 contains <code>8.1.5.1</code>, <code>6.1.5.2</code>, <code>6.1.5.3</code> and <code>5.1.5.4</code> — four requirements in one group, because together they deliver a single outcome: a V2X ECU that runs, captures its own traffic and ships as an image.</li>
     </ul>
-    <div class="strip">39 of the 44 needed no platform at all. That was deliberate: the deployment was known to be the scarce resource, so everything provable off-platform was made provable off-platform first.</div>
     <div class="footer"><span>Phase 1 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">02</div><h2>Who — or what — performed the work</h2></div>
+    <div class="slide-head"><div class="num">02</div><h2>Decomposition summary</h2></div>
+    <ul class="points">
+      <li><strong>12 task groups, 44 subtasks, six lanes.</strong> Lane V 19 · lane P 11 · deployment 5 · comms check 3 · shared codec version 2 · CI 2 · ADA listener 1 · plan maintenance 1.</li>
+      <li><strong>One subtask has one objective, one atomic commit, a passing build and passing unit tests.</strong> A subtask without a recorded status line has not started.</li>
+      <li><strong>Every subtask brief is self-contained</strong> — file paths, message fields, acceptance criterion — so the implementing agent need not read the wider codebase.</li>
+      <li><strong>No tunable value is hardcoded.</strong> Ports, peer addresses, retry counts, the duplicate-message window, the capture filter and the scenario itself are configuration injected by the platform.</li>
+      <li><strong>39 of the 44 subtasks required no platform access.</strong> This was deliberate: deployment was the scarce resource, so all work that could be verified off-platform was scheduled first.</li>
+    </ul>
+    <div class="footer"><span>Phase 1 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">02</div><h2>Execution responsibility</h2></div>
     <table class="fpt">
-      <thead><tr><th>Performer</th><th>Count</th><th>What it did</th></tr></thead>
+      <thead><tr><th>Performer</th><th>Count</th><th>Scope</th></tr></thead>
       <tbody>
-        <tr><td><strong>AI implementation agents</strong></td><td>39</td><td>Wrote every line of application code, its tests and its CI jobs; each made its own single commit</td></tr>
-        <tr><td><strong>The cloud platform (CarSky)</strong></td><td>1</td><td>Planned as an agent-run step: push all three images to the platform registry</td></tr>
-        <tr><td><strong>A person, in the platform UI</strong></td><td>4</td><td>Configure the nodes, deploy, read the node logs, swap the scenario, pull the capture into Wireshark</td></tr>
+        <tr><td><strong>AI implementation agents</strong></td><td>39</td><td>All application code, tests and CI jobs; one atomic commit per subtask</td></tr>
+        <tr><td><strong>Cloud platform (CarSky)</strong></td><td>1</td><td>Planned for the platform agent: push of the three images to the registry</td></tr>
+        <tr><td><strong>Manual, in the platform UI</strong></td><td>4</td><td>Node configuration, deployment, log inspection, scenario swap, capture analysis</td></tr>
       </tbody>
     </table>
     <ul class="points">
-      <li><strong>The one platform step was executed by CI instead.</strong> The registry key turned out to be present in the repository, so the image lanes pushed the images themselves — the platform agent was never needed, and never was available in any session.</li>
-      <li><strong>Human effort is unavoidable for the last four</strong>, and not for want of trying: node configuration — image, start command, capabilities, environment variables — is editable <strong>only</strong> in the platform's web UI. Its REST API cannot set it. Reading a node's log window and opening a capture in Wireshark are the same kind of work.</li>
-      <li><strong>All 44 are tracked identically.</strong> Only the performer differs; the evidence requirement does not.</li>
+      <li><strong>The platform step was executed by CI.</strong> The registry credential was already present as a repository secret, so the image lanes performed the push themselves; the platform agent was not required and was never available.</li>
+      <li><strong>Manual execution is unavoidable for the remaining four.</strong> Node configuration — image, start command, capabilities, environment — is editable only in the platform UI; the REST API cannot set it. Log inspection and capture analysis are equally console operations.</li>
+      <li><strong>All 44 subtasks are tracked identically.</strong> Only the performer differs; the evidence requirement does not.</li>
     </ul>
     <div class="footer"><span>Phase 1 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
@@ -324,31 +327,31 @@
     <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">03</div><h2>Groups 1.1 – 1.6 — the shared pin, the V2X ECU, the bench</h2></div>
+    <div class="slide-head"><div class="num">03</div><h2>Task groups 1.1 – 1.6</h2></div>
     <table class="fpt">
-      <thead><tr><th>Task group</th><th>What it delivers, and which lane it serves</th></tr></thead>
+      <thead><tr><th>Task group</th><th>Deliverable and lane</th></tr></thead>
       <tbody>
-        <tr><td><strong>1.1</strong> — shared codec pin + copy gate</td><td>One pinned version of the message library, used by both C++ builds, and the integrity gate extended from 36 to 47 tracked copies. <strong>Shared lane</strong>, and it finishes last.</td></tr>
-        <tr><td><strong>1.2</strong> — V2X ECU foundation</td><td>The only piece that reads the environment, the only piece that owns a socket, the event log, and the sender to the ADA node. <strong>Lane V</strong>, and nothing above it knows about transport.</td></tr>
-        <tr><td><strong>1.3</strong> — radio interface + stand-in modem</td><td>The four-call radio interface a real modem would implement, and a stand-in that acknowledges each call, injects faults on demand and recovers from them. <strong>Lane V.</strong></td></tr>
-        <tr><td><strong>1.4</strong> — the receive pipeline</td><td>Decode, reject anything outside the agreed profile, drop repeats, convert to real-world units, forward. Four independently tested stages, then composed. <strong>Lane V.</strong></td></tr>
-        <tr><td><strong>1.5</strong> — application, capture, image</td><td>The program itself, the traffic capture running inside its container, the host-side extraction tool, and the deployable image. <strong>Lane V.</strong></td></tr>
-        <tr><td><strong>1.6</strong> — the bench application</td><td>Config loading, the two scenario files, the motion model, the encoder client, the sender, the rate loop and the entrypoint. <strong>Lane P.</strong></td></tr>
+        <tr><td><strong>1.1</strong> — shared codec version, copy gate</td><td>One pinned codec version consumed by both C++ builds, and the integrity gate extended from 36 to 47 tracked copies. <strong>Shared lane;</strong> its gate is scheduled last in the phase.</td></tr>
+        <tr><td><strong>1.2</strong> — V2X ECU foundation</td><td>The sole environment reader, the sole socket owner, the event log, and the sender to the ADA node. <strong>Lane V.</strong> No component above these is aware of the transport.</td></tr>
+        <tr><td><strong>1.3</strong> — radio interface, simulated modem</td><td>The four-call radio interface a production modem would implement, and a simulated modem that acknowledges each call, injects faults on request and recovers from them. <strong>Lane V.</strong></td></tr>
+        <tr><td><strong>1.4</strong> — receive pipeline</td><td>Decode, reject messages outside the agreed profile, discard duplicates, convert to SI units, forward. Four stages tested independently, then composed. <strong>Lane V.</strong></td></tr>
+        <tr><td><strong>1.5</strong> — application, capture, image</td><td>The application itself, traffic capture inside the container, host-side extraction, and the deployable image. <strong>Lane V.</strong></td></tr>
+        <tr><td><strong>1.6</strong> — bench application</td><td>Configuration loading, the two scenario files, the motion model, the encoder client, the transmitter, the rate loop and the entrypoint. <strong>Lane P.</strong></td></tr>
       </tbody>
     </table>
     <div class="footer"><span>Phase 1 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">03</div><h2>Groups 1.7 – 1.12 — the encoder, the lanes, the checks, the deploy</h2></div>
+    <div class="slide-head"><div class="num">03</div><h2>Task groups 1.7 – 1.12</h2></div>
     <table class="fpt">
-      <thead><tr><th>Task group</th><th>What it delivers, and which lane it serves</th></tr></thead>
+      <thead><tr><th>Task group</th><th>Deliverable and lane</th></tr></thead>
       <tbody>
-        <tr><td><strong>1.7</strong> — the bench's encoder path</td><td>A small C++ helper the Python bench talks to, built from byte-identical copies of the V2X ECU's encoder sources, proven against the six reference messages, plus the bench image. <strong>Lane P.</strong></td></tr>
-        <tr><td><strong>1.8</strong> — two new CI jobs</td><td>The helper build lane and the two node-image lanes. <strong>Landed before their consumers</strong>, skipping themselves until the code they verify exists.</td></tr>
-        <tr><td><strong>1.9</strong> — the ADA-side listener</td><td>The stand-in listener on the ADA node prints whole message bodies instead of the first 96 characters — one line changed, so the deploy could actually show the payload.</td></tr>
-        <tr><td><strong>1.10</strong> — deploy and live verification</td><td>Push, configure, deploy, then read the evidence off the running nodes. <strong>Lane D</strong> — one step on CI, four performed by a person.</td></tr>
-        <tr><td><strong>1.11</strong> — plan upkeep</td><td>Reconciled the Phase 0 acceptance record with what Phase 0 actually closed. Docs only.</td></tr>
-        <tr><td><strong>1.12</strong> — the bench-to-V2X check</td><td>A sender, a log-chain assertion script, and the CI job that runs the real application between them. It is the only check that exercises the whole program without a deployed Room.</td></tr>
+        <tr><td><strong>1.7</strong> — bench encoding path</td><td>A C++ helper process invoked by the Python bench, built from byte-identical copies of the V2X ECU encoder sources and verified against the six reference messages, plus the bench image. <strong>Lane P.</strong></td></tr>
+        <tr><td><strong>1.8</strong> — two CI jobs</td><td>The helper build lane and the two node-image lanes. Delivered before their consumers, each guarded to skip until the code it verifies exists.</td></tr>
+        <tr><td><strong>1.9</strong> — ADA-side listener</td><td>The listener on the ADA node prints complete message bodies rather than the first 96 characters, so the deployment can display the payload.</td></tr>
+        <tr><td><strong>1.10</strong> — deployment and verification</td><td>Push, configure, deploy, then collect evidence from the running nodes. <strong>Lane D</strong> — one step on CI, four performed manually.</td></tr>
+        <tr><td><strong>1.11</strong> — plan maintenance</td><td>Reconciliation of the Phase 0 acceptance record with the state Phase 0 actually reached. Documentation only.</td></tr>
+        <tr><td><strong>1.12</strong> — bench-to-V2X check</td><td>A transmitter, a log-chain assertion script, and the CI job that runs the application between them. The only check that exercises the complete application without a deployed Room.</td></tr>
       </tbody>
     </table>
     <div class="footer"><span>Phase 1 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
@@ -360,33 +363,33 @@
     <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">04</div><h2>The V2X ECU — a receiving program in eleven modules</h2></div>
+    <div class="slide-head"><div class="num">04</div><h2>Deliverables — V2X ECU</h2></div>
     <table class="fpt">
-      <thead><tr><th>File group</th><th>Delivered by</th><th>Purpose</th></tr></thead>
+      <thead><tr><th>File group</th><th>Delivered by</th><th>Function</th></tr></thead>
       <tbody>
-        <tr><td><code>src/config/</code> · <code>src/net/</code> · <code>src/log/</code> · <code>src/forward/</code></td><td><code>8.1.2.1</code> <code>7.1.2.2</code> <code>18.1.2.3</code> <code>2.1.2.4</code></td><td>The foundation: the one environment reader, the one socket owner, the JSON event stream, and the sender to the ADA node</td></tr>
-        <tr><td><code>src/adapter/</code> · <code>src/stub/</code></td><td><code>7.1.3.1</code> – <code>7.1.3.4</code></td><td>The frozen four-call radio interface and the stand-in modem behind it, with fault injection and defined recoveries</td></tr>
-        <tr><td><code>src/pipeline/</code> — validator, deduper, builder, composition</td><td><code>9.1.4.1</code> – <code>9.1.4.4</code></td><td>Decode → check against the profile → drop repeats → convert to metres and m/s → hand on. Each stage tested alone</td></tr>
-        <tr><td><code>src/main.cpp</code> · <code>CMakeLists.txt</code></td><td><code>8.1.5.1</code></td><td>The application: wires every part together, drives start-up, then serves traffic. No logic of its own</td></tr>
-        <tr><td><code>tests/</code> — 11 suites · <code>tests/fixtures/malformed/</code> — 10 cases</td><td>across all groups, <code>9.1.4.5</code></td><td>Including ten deliberately broken messages: six that must be rejected, four that must be tolerated</td></tr>
-        <tr><td><code>capture.sh</code> · <code>tools/extract_pcap.sh</code> · <code>Dockerfile</code> · <code>entrypoint.sh</code></td><td><code>6.1.5.2</code> <code>6.1.5.3</code> <code>5.1.5.4</code></td><td>Capture running inside the container, extraction on the host, and the deployable image</td></tr>
-        <tr><td><code>tools/check_transport_imports.py</code> · <code>doc/telux-parity-and-port-plan.md</code></td><td><code>7.1.3.5</code> <code>7.1.3.6</code></td><td>The gate that keeps sockets below the radio interface, and what changes when a real modem replaces the stand-in</td></tr>
+        <tr><td><code>src/config/</code> · <code>src/net/</code> · <code>src/log/</code> · <code>src/forward/</code></td><td><code>8.1.2.1</code> <code>7.1.2.2</code> <code>18.1.2.3</code> <code>2.1.2.4</code></td><td>Foundation: the sole environment reader, the sole socket owner, the JSON event stream, the sender to the ADA node</td></tr>
+        <tr><td><code>src/adapter/</code> · <code>src/stub/</code></td><td><code>7.1.3.1</code> – <code>7.1.3.4</code></td><td>The frozen four-call radio interface and the simulated modem behind it, with fault injection and defined recoveries</td></tr>
+        <tr><td><code>src/pipeline/</code> — validator, deduplicator, builder, composition</td><td><code>9.1.4.1</code> – <code>9.1.4.4</code></td><td>Decode, validate against the profile, discard duplicates, convert to metres and m/s, forward. Each stage tested independently</td></tr>
+        <tr><td><code>src/main.cpp</code> · <code>CMakeLists.txt</code></td><td><code>8.1.5.1</code></td><td>The application: composition and start-up sequence only, with no logic of its own</td></tr>
+        <tr><td><code>tests/</code> — 11 suites · <code>tests/fixtures/malformed/</code> — 10 cases</td><td>all groups, <code>9.1.4.5</code></td><td>Including the malformed-message set: six that must be rejected, four that must be tolerated</td></tr>
+        <tr><td><code>capture.sh</code> · <code>tools/extract_pcap.sh</code> · <code>Dockerfile</code> · <code>entrypoint.sh</code></td><td><code>6.1.5.2</code> <code>6.1.5.3</code> <code>5.1.5.4</code></td><td>In-container capture, host-side extraction, and the deployable image</td></tr>
+        <tr><td><code>tools/check_transport_imports.py</code> · <code>doc/telux-parity-and-port-plan.md</code></td><td><code>7.1.3.5</code> <code>7.1.3.6</code></td><td>The gate confining socket code below the radio interface, and the changes required by a production modem</td></tr>
       </tbody>
     </table>
     <div class="footer"><span>Phase 1 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">04</div><h2>The bench, the shared pin, and the test equipment</h2></div>
+    <div class="slide-head"><div class="num">04</div><h2>Deliverables — bench, shared configuration, test equipment</h2></div>
     <table class="fpt">
-      <thead><tr><th>File group</th><th>Delivered by</th><th>Purpose</th></tr></thead>
+      <thead><tr><th>File group</th><th>Delivered by</th><th>Function</th></tr></thead>
       <tbody>
-        <tr><td><code>player/config.py</code> · <code>scenarios/default.yaml</code> · <code>scenarios/c-out-of-range.yaml</code></td><td><code>11.1.6.1</code> <code>11.1.6.2</code></td><td>Configuration loading, and the two traffic situations as data: C approaching, and C parked out of range</td></tr>
-        <tr><td><code>player/scenario.py</code> · <code>player/generator.py</code></td><td><code>11.1.6.3</code> <code>11.1.6.7</code></td><td>Where C is at any instant, and the loop that turns that into one message every 100 ms</td></tr>
-        <tr><td><code>player/encoder_client.py</code> · <code>player/sender.py</code> · <code>main.py</code></td><td><code>11.1.6.5</code> <code>11.1.6.6</code> <code>11.1.6.8</code></td><td>Talking to the encoder helper, putting bytes on the wire, and the entrypoint the platform starts</td></tr>
-        <tr><td><code>codec_helper/</code> — <code>cpm_encode</code> · <code>Dockerfile</code></td><td><code>11.1.7.1</code> <code>5.1.7.3</code></td><td>A C++ encoder built from byte-identical copies of the V2X ECU's sources, and the bench image that carries it</td></tr>
-        <tr><td><code>tests/</code> — 10 suites, 116 local tests + the encoder-golden test</td><td><code>11.1.6.4</code> <code>11.1.7.2</code></td><td>Including the proof that the two scenario files produce different message streams, and that the helper's bytes match the reference messages exactly</td></tr>
+        <tr><td><code>player/config.py</code> · <code>scenarios/default.yaml</code> · <code>scenarios/c-out-of-range.yaml</code></td><td><code>11.1.6.1</code> <code>11.1.6.2</code></td><td>Configuration loading, and two traffic situations expressed as data: C approaching, and C stationary out of range</td></tr>
+        <tr><td><code>player/scenario.py</code> · <code>player/generator.py</code></td><td><code>11.1.6.3</code> <code>11.1.6.7</code></td><td>The position of C at a given instant, and the loop that emits one message every 100 ms</td></tr>
+        <tr><td><code>player/encoder_client.py</code> · <code>player/sender.py</code> · <code>main.py</code></td><td><code>11.1.6.5</code> <code>11.1.6.6</code> <code>11.1.6.8</code></td><td>Communication with the encoder helper, transmission, and the entrypoint the platform starts</td></tr>
+        <tr><td><code>codec_helper/</code> — <code>cpm_encode</code> · <code>Dockerfile</code></td><td><code>11.1.7.1</code> <code>5.1.7.3</code></td><td>A C++ encoder built from byte-identical copies of the V2X ECU sources, and the bench image carrying it</td></tr>
+        <tr><td><code>tests/</code> — 10 suites, 116 local tests, and the encoder verification</td><td><code>11.1.6.4</code> <code>11.1.7.2</code></td><td>Including proof that the two scenario files produce different message streams, and that the helper output matches the reference messages exactly</td></tr>
         <tr><td><code>contracts/vanetza-pin.cmake</code> · <code>contracts/sync-manifest.json</code></td><td><code>11.1.1.1</code> <code>11.1.1.2</code></td><td>One pinned library version for both builds; the gate now covers 47 byte-identical copies</td></tr>
-        <tr><td><code>tools/comms_check/</code> · <code>tools/netcheck/netcheck.py</code></td><td><code>6.1.12.1</code> <code>9.1.12.2</code> <code>2.1.9.1</code></td><td>Test equipment: the message sender, the log-chain assertion, and the listener that prints whole bodies</td></tr>
+        <tr><td><code>tools/comms_check/</code> · <code>tools/netcheck/netcheck.py</code></td><td><code>6.1.12.1</code> <code>9.1.12.2</code> <code>2.1.9.1</code></td><td>Test equipment: the transmitter, the log-chain assertion, and the listener printing complete bodies</td></tr>
       </tbody>
     </table>
     <div class="footer"><span>Phase 1 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
@@ -398,98 +401,97 @@
     <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">05</div><h2>Eight independent starting points</h2></div>
-    <div class="imgbox"><img src="../assets/phase1-exec-overview.svg" style="height:470px" alt="Phase 1 lane overview: eight starting points, two node lanes running side by side, and the deploy chain that can only begin once both images exist"><div class="cap">Phase 1 lane overview: eight starting points, two node lanes running side by side, and the deploy chain that can only begin once both images exist</div></div>
+    <div class="slide-head"><div class="num">05</div><h2>Execution overview</h2></div>
+    <div class="imgbox"><img src="../assets/phase1-exec-overview.svg" style="height:470px" alt="Phase 1 execution structure: eight independent starting points, two node lanes proceeding concurrently, and the deployment chain, which requires both node images"><div class="cap">Phase 1 execution structure: eight independent starting points, two node lanes proceeding concurrently, and the deployment chain, which requires both node images</div></div>
     <ul class="points">
-      <li><strong>Horizontal position is dependency depth</strong> — how far a piece of work sits from the start of the phase — not calendar time.</li>
+      <li><strong>Horizontal position denotes dependency depth</strong> — the distance of a unit of work from the start of the phase — not calendar time.</li>
     </ul>
     <div class="footer"><span>Phase 1 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">05</div><h2>Lane V, part 1 — the foundation and the radio interface</h2></div>
-    <div class="imgbox"><img src="../assets/phase1-exec-lane-v-foundation.svg" style="height:495px" alt="Lane V foundation and radio interface: the parallel starts on the left and the four-step radio chain below"><div class="cap">Lane V foundation and radio interface: the parallel starts on the left and the four-step radio chain below</div></div>
+    <div class="slide-head"><div class="num">05</div><h2>Lane V (1 of 2) — foundation and radio interface</h2></div>
+    <div class="imgbox"><img src="../assets/phase1-exec-lane-v-foundation.svg" style="height:495px" alt="Lane V foundation and radio interface: independent starting points on the left, and the four-step radio chain below"><div class="cap">Lane V foundation and radio interface: independent starting points on the left, and the four-step radio chain below</div></div>
     <div class="footer"><span>Phase 1 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">05</div><h2>Lane V, part 2 — the pipeline, the program, the image</h2></div>
-    <div class="imgbox"><img src="../assets/phase1-exec-lane-v-pipeline.svg" style="height:495px" alt="Lane V pipeline and assembly: three parallel stages feeding the composition, then the application and the container image"><div class="cap">Lane V pipeline and assembly: three parallel stages feeding the composition, then the application and the container image</div></div>
+    <div class="slide-head"><div class="num">05</div><h2>Lane V (2 of 2) — receive pipeline, application, image</h2></div>
+    <div class="imgbox"><img src="../assets/phase1-exec-lane-v-pipeline.svg" style="height:495px" alt="Lane V pipeline and assembly: three independent stages feeding the composition, then the application and the container image"><div class="cap">Lane V pipeline and assembly: three independent stages feeding the composition, then the application and the container image</div></div>
     <div class="footer"><span>Phase 1 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">05</div><h2>Lane P — the bench</h2></div>
-    <div class="imgbox"><img src="../assets/phase1-exec-lane-p.svg" style="height:500px" alt="Lane P: the bench application chain, the encoder helper path beneath it, and the image both feed"><div class="cap">Lane P: the bench application chain, the encoder helper path beneath it, and the image both feed</div></div>
+    <div class="slide-head"><div class="num">05</div><h2>Lane P — bench application</h2></div>
+    <div class="imgbox"><img src="../assets/phase1-exec-lane-p.svg" style="height:500px" alt="Lane P: the bench application chain, the encoder helper path beneath it, and the image both supply"><div class="cap">Lane P: the bench application chain, the encoder helper path beneath it, and the image both supply</div></div>
     <div class="footer"><span>Phase 1 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">05</div><h2>What landed first, what landed last, and the check in between</h2></div>
-    <div class="imgbox"><img src="../assets/phase1-exec-ci-and-checks.svg" style="height:495px" alt="CI lanes landed first, the shared pin and its copy gate, and the bench-to-V2X comms check with its CI lane"><div class="cap">CI lanes landed first, the shared pin and its copy gate, and the bench-to-V2X comms check with its CI lane</div></div>
+    <div class="slide-head"><div class="num">05</div><h2>Verification lanes, shared codec version, comms check</h2></div>
+    <div class="imgbox"><img src="../assets/phase1-exec-ci-and-checks.svg" style="height:495px" alt="CI lanes delivered first, the shared codec version and its integrity gate, and the bench-to-V2X check with its CI lane"><div class="cap">CI lanes delivered first, the shared codec version and its integrity gate, and the bench-to-V2X check with its CI lane</div></div>
     <div class="footer"><span>Phase 1 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">05</div><h2>Lane D — the five steps that need the live platform</h2></div>
-    <div class="imgbox"><img src="../assets/phase1-exec-lane-d-deploy.svg" style="height:430px" alt="Lane D: push, deploy, then read the object messages, swap the scenario and pull the capture — colour-coded by how far the evidence reaches"><div class="cap">Lane D: push, deploy, then read the object messages, swap the scenario and pull the capture — colour-coded by how far the evidence reaches</div></div>
+    <div class="slide-head"><div class="num">05</div><h2>Lane D — deployment and live verification</h2></div>
+    <div class="imgbox"><img src="../assets/phase1-exec-lane-d-deploy.svg" style="height:430px" alt="Lane D: push, deploy, then message inspection, scenario swap and capture retrieval, annotated by evidence status"><div class="cap">Lane D: push, deploy, then message inspection, scenario swap and capture retrieval, annotated by evidence status</div></div>
     <ul class="points">
-      <li><strong>The Room was deployed and messages did arrive.</strong> What is still missing is narrower than "the deploy": per-node status badges, a scripted check over a saved log, the second scenario, and a capture file.</li>
+      <li><strong>The Room was deployed and object messages were received.</strong> The outstanding items are narrower than the deployment itself: per-node status, a scripted check over a saved log, the second scenario, and a capture file.</li>
     </ul>
     <div class="footer"><span>Phase 1 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
     <div class="sec-num">06</div>
-    <h1>Parallel or sequential</h1>
+    <h1>Parallel and sequential work</h1>
     <div class="rule"></div>
     <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">06</div><h2>What ran beside what, and what forced the order</h2></div>
+    <div class="slide-head"><div class="num">06</div><h2>Dependency structure</h2></div>
     <table class="fpt">
-      <thead><tr><th>Relationship</th><th>What it covers</th><th>What forces it</th></tr></thead>
+      <thead><tr><th>Relationship</th><th>Scope</th><th>Constraint</th></tr></thead>
       <tbody>
-        <tr><td><strong>Parallel — the two node lanes</strong></td><td>all of <code>V2X_ECU/</code> against all of <code>Scenario_Player/</code></td><td>Disjoint folders. They meet only at frozen message formats and at byte-identical copies of the encoder sources</td></tr>
-        <tr><td><strong>Parallel — inside the foundation</strong></td><td>the config reader, the socket, the event log</td><td>Different files, no shared type; only the forwarder needs the socket</td></tr>
-        <tr><td><strong>Parallel — inside the pipeline</strong></td><td>validator, deduper, builder</td><td>None of the three calls another; the composition is what needs all of them</td></tr>
-        <tr><td><strong>Sequential — the radio chain</strong></td><td>interface → stand-in modem → faults → live receive thread</td><td>Each step compiles against the one before it</td></tr>
-        <tr><td><strong>Sequential — CI before code</strong></td><td>the three verification jobs before the subtasks they verify</td><td>A subtask whose acceptance check is "the lane is green" needs the lane to exist on the day it lands</td></tr>
-        <tr><td><strong>Sequential — last of all</strong></td><td>the copy-integrity gate, after every new copy exists</td><td>The gate fails on a missing target, so running it early would prove nothing</td></tr>
-        <tr><td><strong>Sequential — the deploy chain</strong></td><td>push → configure and deploy → read the logs → swap the scenario</td><td>You cannot deploy an image that was never pushed, or read logs from a node that is not running</td></tr>
+        <tr><td><strong>Parallel — the two node lanes</strong></td><td>all of <code>V2X_ECU/</code> against all of <code>Scenario_Player/</code></td><td>Disjoint folders. The lanes meet only at the frozen message formats and the byte-identical encoder copies</td></tr>
+        <tr><td><strong>Parallel — within the foundation</strong></td><td>configuration reader, socket, event log</td><td>Distinct files and no shared type; only the forwarder requires the socket</td></tr>
+        <tr><td><strong>Parallel — within the pipeline</strong></td><td>validator, deduplicator, builder</td><td>No stage invokes another; only the composition requires all three</td></tr>
+        <tr><td><strong>Sequential — the radio chain</strong></td><td>interface, simulated modem, faults, receive thread</td><td>Each step is the compile-time input of the next</td></tr>
+        <tr><td><strong>Sequential — CI before code</strong></td><td>three verification jobs before the subtasks they verify</td><td>A subtask whose acceptance criterion is a green lane requires that lane to exist on the day it lands</td></tr>
+        <tr><td><strong>Sequential — final step</strong></td><td>the copy-integrity gate, after every new copy exists</td><td>The gate fails on a missing target; an earlier run would prove nothing</td></tr>
+        <tr><td><strong>Sequential — deployment chain</strong></td><td>push, configure and deploy, inspect logs, swap scenario</td><td>An image cannot be deployed before it is pushed, nor logs read from a node that is not running</td></tr>
       </tbody>
     </table>
-    <div class="strip">At run time everything was executed one subtask at a time: all the agents shared a single working folder. The parallel marks above are the dependency structure — what <em>could</em> run at once given more workers.</div>
+    <div class="strip">All subtasks were executed one at a time, because every agent shared a single working folder. The parallel entries above state the dependency structure — the work that could proceed concurrently given additional workers.</div>
     <div class="footer"><span>Phase 1 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
     <div class="sec-num">07</div>
-    <h1>What it proved</h1>
+    <h1>Verification status</h1>
     <div class="rule"></div>
     <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">07</div><h2>The nine acceptance boxes</h2></div>
+    <div class="slide-head"><div class="num">07</div><h2>Acceptance criteria</h2></div>
     <table class="fpt">
-      <thead><tr><th>Acceptance box</th><th>State</th><th>What the evidence actually is</th></tr></thead>
+      <thead><tr><th>Criterion</th><th>Status</th><th>Evidence</th></tr></thead>
       <tbody>
-        <tr><td>No socket code above the radio interface</td><td><strong>closed</strong></td><td>The gate runs on every push; the porting notes are committed</td></tr>
-        <tr><td>Start-up calls acknowledged; every fault recovers</td><td><strong>closed</strong></td><td>Unit tests and the end-to-end CI job — <strong>not</strong> a deployed node</td></tr>
-        <tr><td>Reference messages decode; broken ones rejected</td><td><strong>closed</strong></td><td>Through the real decoder: 6 rejected, 4 correctly tolerated, no crashes</td></tr>
+        <tr><td>No socket code above the radio interface</td><td><strong>closed</strong></td><td>The gate executes on every push; the porting notes are committed</td></tr>
+        <tr><td>Start-up calls acknowledged; every fault recovers</td><td><strong>closed</strong></td><td>Unit tests and the end-to-end CI job; <strong>not</strong> a deployed node</td></tr>
+        <tr><td>Reference messages decode; malformed messages rejected</td><td><strong>closed</strong></td><td>Through the production decoder: 6 rejected, 4 correctly tolerated, no crashes</td></tr>
         <tr><td>A bench message is received, decoded and forwarded</td><td><strong>closed</strong></td><td>The <code>v2x-comms-check</code> job, which fails if any link is removed</td></tr>
-        <tr><td>Both images build for the platform, and the Room deploys</td><td><em>partly</em></td><td>Built, pushed, pulled and run — per-node status badges unconfirmed</td></tr>
-        <tr><td>Traffic captured on the bridge network</td><td><em>partly</em></td><td>Capture runs and shows both directions; no file pulled off yet</td></tr>
-        <tr><td>Different scenarios give different message streams</td><td><em>partly</em></td><td>Proven in the model and in the bytes; the live swap is not done</td></tr>
-        <tr><td>Object messages at the ADA ECU are not constants</td><td><em>partly</em></td><td>Seen live and checked; the scripted check on a saved log is pending</td></tr>
-        <tr><td><strong>Demo:</strong> the capture opened in Wireshark</td><td><strong>open</strong></td><td>Needs a log from a Room that ran long enough to rotate a file</td></tr>
+        <tr><td>Both images build for the platform; the Room deploys</td><td><em>partial</em></td><td>Built, pushed, pulled and executed; per-node status not yet confirmed</td></tr>
+        <tr><td>Traffic captured on the bridge network</td><td><em>partial</em></td><td>Capture is active and shows both directions; no file has been retrieved</td></tr>
+        <tr><td>Different scenarios produce different message streams</td><td><em>partial</em></td><td>Proven in the model and at byte level; the live swap is outstanding</td></tr>
+        <tr><td>Object messages at the ADA ECU are not constant values</td><td><em>partial</em></td><td>Observed live and verified; the scripted check over a saved log is outstanding</td></tr>
+        <tr><td><strong>Demonstration:</strong> the capture opened in Wireshark</td><td><strong>open</strong></td><td>Requires a log from a Room that has run a full rotation period</td></tr>
       </tbody>
     </table>
     <div class="footer"><span>Phase 1 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">07</div><h2>How far the evidence reaches</h2></div>
-    <p class="lead">A green pipeline and a running node prove different things. The plan says which, per box, and so does this deck.</p>
+    <div class="slide-head"><div class="num">07</div><h2>Scope of the evidence</h2></div>
     <ul class="points">
-      <li><strong>Closed by machine, on every push:</strong> the import gate, the fault recoveries, the broken-message tests, and the whole received → decoded → forwarded chain. These re-prove themselves on every commit.</li>
-      <li><strong>Seen once, on a live Room:</strong> object messages arriving at the ADA node with <code>distance</code> falling exactly <strong>0.25 m per message</strong> at 10 messages a second — precisely the 2.5 m/s closing speed in the scenario file. The derived distance matches <code>hypot(50.25, 1.2)</code> to every printed digit, so it is genuinely computed from the decoded position rather than copied through.</li>
-      <li><strong>Measured as a side effect:</strong> the V2X ECU's whole decode-to-forward path took <strong>142–151 µs</strong>, consistently, across every message pair sampled at the capture point.</li>
-      <li><strong>Not proven at all yet:</strong> anything needing a saved log export — the scripted log check, the second scenario, and the capture file.</li>
+      <li><strong>Verified by machine on every push:</strong> the import gate, the fault recoveries, the malformed-message tests, and the complete received–decoded–forwarded chain. These are re-proven at every commit.</li>
+      <li><strong>Observed once, on a live Room:</strong> object messages at the ADA node with <code>distance</code> decreasing by exactly <strong>0.25 m per message</strong> at 10 messages per second, matching the 2.5 m/s closing speed in the scenario file. The derived distance equals <code>hypot(50.25, 1.2)</code> to every printed digit, confirming computation from the decoded position rather than transfer of a transmitted value.</li>
+      <li><strong>Measured incidentally:</strong> the complete decode-to-forward path required <strong>142–151 µs</strong>, consistently, across every sampled message pair.</li>
+      <li><strong>Not yet evidenced:</strong> every item requiring a saved log export — the scripted log check, the second scenario, and the capture file.</li>
     </ul>
-    <div class="strip">The bench-to-V2X check is not vacuous: deleting the forward event fails it at the forward link, and stripping the decoded payload fails it at the decode link. It was tested for its ability to fail.</div>
+    <div class="strip">The bench-to-V2X check is not vacuous. Removal of the forward event fails it at the forward link; removal of the decoded payload fails it at the decode link. Its capacity to fail was tested.</div>
     <div class="footer"><span>Phase 1 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
@@ -499,37 +501,37 @@
     <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">08</div><h2>What Phase 2 may assume</h2></div>
-    <p class="lead">Phase 2 builds the ADA ECU's track store and admission logic on mock input. Everything below is a Phase 1 deliverable it does not have to re-prove.</p>
+    <div class="slide-head"><div class="num">08</div><h2>Inputs available to Phase 2</h2></div>
+    <p class="lead">Phase 2 implements the ADA ECU track store and admission logic on mock input. The following are Phase 1 deliverables and need not be re-proven.</p>
     <ul class="points">
-      <li><strong>Real object messages arrive at the ADA node.</strong> Their shape, units and field values were checked against the running bench, so Phase 2 can build against a format that has already been observed rather than only agreed.</li>
-      <li><strong>The platform is a known quantity.</strong> Images build for its processor, push to its registry and run; the node configuration gotchas — the start command is space-separated, not a JSON array — are written down in the run record.</li>
-      <li><strong>The event stream exists.</strong> Every stage of the receive path emits one JSON line with running counters; the later phases' reconstruction of a whole run starts from this format.</li>
-      <li><strong>Ten CI jobs verify the tree on every push</strong>, four of them added by this phase, and the copy-integrity gate now covers 47 files.</li>
-      <li><strong>Test equipment is reusable.</strong> The message sender, the log-chain assertion and the listener that prints whole bodies are all node-independent.</li>
+      <li><strong>Object messages arrive at the ADA node.</strong> Their structure, units and field values were verified against the running bench, so Phase 2 builds against an observed format rather than an agreed one.</li>
+      <li><strong>The platform is characterised.</strong> Images build for its processor, push to its registry and execute; the node-configuration deviations — the start command is space-separated, not a JSON array — are recorded in the run record.</li>
+      <li><strong>The event stream exists.</strong> Every stage of the receive path emits one JSON line with running counters; later phases reconstruct a complete run from this format.</li>
+      <li><strong>Ten CI jobs verify the tree on every push</strong>, four of them added by this phase, and the copy-integrity gate covers 47 files.</li>
+      <li><strong>Test equipment is node-independent</strong> and therefore reusable: the transmitter, the log-chain assertion, and the listener printing complete bodies.</li>
     </ul>
     <div class="footer"><span>Phase 1 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">08</div><h2>What stays open — four tasks, all for a person</h2></div>
-    <p class="lead">40 of the 44 subtasks are closed. Nothing that remains is agent work, CI work, or new code: every one of these is done by hand in the platform UI, because node configuration and log reading have no API.</p>
+    <div class="slide-head"><div class="num">08</div><h2>Outstanding work</h2></div>
+    <p class="lead">40 of the 44 subtasks are closed. No agent work, CI work or new code remains; all four outstanding items are performed manually in the platform UI.</p>
     <table class="fpt">
-      <thead><tr><th>Task</th><th>What a person has to do</th></tr></thead>
+      <thead><tr><th>Subtask</th><th>Required action</th></tr></thead>
       <tbody>
-        <tr><td><code>5.1.10.2</code></td><td>Confirm <strong>per-node</strong> Running badges and a restart count of zero in the Deployment Viewer — not the summary header, which read "Pending — 0/0 nodes ready" while traffic flowed normally</td></tr>
-        <tr><td><code>2.1.10.3</code></td><td>Capture the start-up call sequence from the node log — it prints once at start and scrolled away — and run the log-chain check over a saved log export</td></tr>
-        <tr><td><code>11.1.10.4</code></td><td>Point the bench at the second scenario file, redeploy, and compare the two log sets</td></tr>
-        <tr><td><code>6.1.10.5</code></td><td>Save a log that contains a capture block, run the extraction script, and open the result in Wireshark</td></tr>
+        <tr><td><code>5.1.10.2</code></td><td>Confirm per-node Running status and a restart count of zero in the Deployment Viewer, rather than the summary header, which reported "Pending — 0/0 nodes ready" during normal traffic</td></tr>
+        <tr><td><code>2.1.10.3</code></td><td>Record the start-up call sequence, which is emitted once at node start, and execute the log-chain check over a saved log export</td></tr>
+        <tr><td><code>11.1.10.4</code></td><td>Reconfigure the bench to the second scenario file, redeploy, and compare the two log sets</td></tr>
+        <tr><td><code>6.1.10.5</code></td><td>Save a log containing a capture block, run the extraction script, and open the result in Wireshark</td></tr>
       </tbody>
     </table>
     <ul class="points">
-      <li><strong>One deploy session closes all four.</strong> The last three read the same node log, so one restart plus one long enough log download serves all of them — and the capture block only appears once the Room has run a full rotation period.</li>
-      <li><strong>Two decisions are also a person's, though neither is a task:</strong> whether the phase's retry and duplicate-window defaults stand as chosen, and whether "the team app launches on the display node" belongs to this phase at all — no design document covers it.</li>
+      <li><strong>One deployment session closes all four.</strong> The final three read the same node log; one restart and one sufficiently long log download serve all of them, provided the Room has completed a full capture rotation period.</li>
+      <li><strong>Two decisions remain with the owner, neither of them a task:</strong> ratification of the retry and duplicate-window defaults, and whether the display-application clause belongs to this phase, which no design document covers.</li>
     </ul>
     <div class="footer"><span>Phase 1 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide thanks" style="background-image: linear-gradient(rgba(8,12,38,.66), rgba(14,21,64,.86)), url('../assets/bg-fpt-tower.jpg')">
-    <h1>Thank you!</h1>
+    <h1>Thank you</h1>
     <div class="rule"></div>
     <p><strong>Phase 1 — Task Execution</strong> · Milestone 1 · FPT Hackathon 2026</p>
     <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
