@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Phase 0 — Design Concepts</title>
+<meta name="description" content="Design deck — the terminology, the five-node blueprint, the four frozen contracts and their locations, the protocol stack and its libraries, the state in which Phase 0 left the bench and V2X nodes, and the smoke test that closed the phase">
+<style>
+  :root {
+    --fpt-orange: #F37021;
+    --fpt-green: #50B848;
+    --fpt-blue: #034EA2;
+    --fpt-teal: #33B2C1;
+    --fpt-navy: #19226D;
+    --navy-deep: #0E1540;
+    --ink: #080808;
+    --ink-soft: #3d3d46;
+    --paper: #f4f4f6;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; background: #14183a; font-family: "Segoe UI", "Segoe UI Variable", "Helvetica Neue", Arial, sans-serif; }
+
+  .deck { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+
+  .slide {
+    width: 1280px; height: 720px;
+    position: absolute;
+    display: none;
+    flex-direction: column;
+    transform-origin: center center;
+    background: var(--paper);
+    color: var(--ink);
+    box-shadow: 0 18px 60px rgba(0,0,0,.45);
+    overflow: hidden;
+  }
+  .slide.active { display: flex; }
+
+  /* ---------- backgrounds ---------- */
+  .bg-light { background: linear-gradient(135deg, #f6f6f8 0%, #ececef 55%, #e0e1e6 100%); }
+  .bg-light::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720"><g fill="none" stroke-width="2"><g transform="skewX(-16)"><rect x="240" y="60" width="380" height="460" rx="70" stroke="rgba(255,255,255,0.85)"/><rect x="1010" y="210" width="400" height="470" rx="75" stroke="rgba(25,34,109,0.05)"/><rect x="520" y="400" width="330" height="380" rx="60" stroke="rgba(25,34,109,0.06)"/></g><line x1="880" y1="-40" x2="640" y2="780" stroke="rgba(255,255,255,0.9)"/><line x1="1180" y1="-40" x2="940" y2="780" stroke="rgba(25,34,109,0.05)"/></g></svg>');
+    background-size: cover;
+  }
+  .bg-navy { background: linear-gradient(135deg, #10173f 0%, #151d55 45%, var(--fpt-navy) 100%); color: #fff; }
+  .bg-navy::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720"><g fill="none" stroke-width="2"><g transform="skewX(-16)"><rect x="240" y="60" width="380" height="460" rx="70" stroke="rgba(120,180,255,0.20)"/><rect x="1010" y="210" width="400" height="470" rx="75" stroke="rgba(255,255,255,0.10)"/><rect x="520" y="400" width="330" height="380" rx="60" stroke="rgba(120,180,255,0.10)"/></g><line x1="880" y1="-40" x2="640" y2="780" stroke="rgba(120,180,255,0.30)"/><line x1="1180" y1="-40" x2="940" y2="780" stroke="rgba(120,180,255,0.16)"/></g></svg>');
+    background-size: cover;
+  }
+
+  /* cover / divider / thanks carry their photo as an inline background-image */
+  .cover-photo { background-size: cover; background-position: center; color: #fff; }
+  .divider { background-size: cover; background-position: center; color: #fff; justify-content: center; padding: 0 110px; }
+  .divider .sec-num { font-size: 120px; font-weight: 700; color: var(--fpt-orange); line-height: 1; opacity: .95; }
+  .divider h1 { font-size: 56px; font-weight: 700; color: #fff; margin-top: 10px; }
+  .divider .rule { width: 110px; height: 6px; background: var(--fpt-orange); border-radius: 3px; margin-top: 26px; }
+  .thanks { background-size: cover; background-position: center 20%; color: #fff; justify-content: center; align-items: center; text-align: center; }
+  .thanks h1 { font-size: 84px; font-weight: 700; }
+  .thanks .rule { width: 130px; height: 6px; background: var(--fpt-orange); border-radius: 3px; margin: 30px auto; }
+  .thanks p { font-size: 22px; color: #cdd6f7; }
+
+  /* ---------- title / closing text ---------- */
+  .cover { justify-content: center; padding: 0 110px; }
+  .cover .eyebrow { font-size: 20px; letter-spacing: .35em; text-transform: uppercase; color: var(--fpt-orange); font-weight: 600; margin-bottom: 26px; }
+  .cover h1 { font-size: 66px; line-height: 1.08; font-weight: 700; color: #fff; max-width: 900px; }
+  .cover .rule { width: 130px; height: 6px; background: var(--fpt-orange); border-radius: 3px; margin: 30px 0; }
+  .cover .tagline { font-size: 30px; font-weight: 300; color: #dfe6ff; margin-bottom: 14px; }
+  .cover .meta { font-size: 18px; color: #b9c2ea; }
+  .cover .meta a { color: #b9c2ea; }
+  .cover .accents, .divider .accents, .thanks .accents { position: absolute; bottom: 0; left: 0; right: 0; height: 8px; display: flex; }
+  .accents span { flex: 1; }
+
+  /* ---------- content slide chrome ---------- */
+  .content { padding: 44px 64px 58px; position: relative; }
+  .content > * { position: relative; }
+  .slide-head { display: flex; align-items: baseline; gap: 18px; border-bottom: 3px solid transparent; padding-bottom: 12px; margin-bottom: 18px;
+    border-image: linear-gradient(90deg, var(--fpt-orange) 0 90px, rgba(25,34,109,.15) 90px 100%) 1; }
+  .slide-head .num { font-size: 40px; font-weight: 700; color: var(--fpt-orange); line-height: 1; }
+  .slide-head h2 { font-size: 31px; font-weight: 700; color: var(--fpt-navy); line-height: 1.15; }
+  .lead { font-size: 19px; color: var(--ink-soft); margin-bottom: 16px; }
+  .lead:last-of-type { margin-bottom: 0; }
+  .lead strong, .lead b { color: var(--ink); }
+  .content a { color: var(--fpt-blue); }
+
+  .footer { position: absolute; left: 64px; right: 64px; bottom: 18px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #8a8d99; }
+  .footer .page { background: var(--fpt-navy); color: #fff; border-radius: 4px; padding: 2px 10px; font-weight: 600; }
+
+  ul.points { list-style: none; display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
+  ul.points:last-child { margin-bottom: 0; }
+  ul.points li { font-size: 18.5px; line-height: 1.42; color: var(--ink-soft); padding-left: 26px; position: relative; }
+  ul.points li::before { content: ""; position: absolute; left: 0; top: 9px; width: 12px; height: 12px; background: var(--fpt-orange); border-radius: 3px; transform: skewX(-12deg); }
+  ul.points li strong { color: var(--fpt-navy); }
+  ul.points li code, .content code { font-family: "Consolas", "Courier New", monospace; font-size: .92em; background: rgba(25,34,109,.07); border-radius: 4px; padding: 1px 6px; }
+
+  .imgbox { display: flex; flex-direction: column; align-items: center; gap: 8px; margin: 6px 0 14px; }
+  .imgbox img { border-radius: 10px; box-shadow: 0 6px 22px rgba(15,20,60,.16); background: #fff; max-width: 100%; }
+  .imgbox .cap { font-size: 13.5px; color: #8a8d99; font-style: italic; }
+  .imgbox img.flat { box-shadow: none; background: transparent; }
+
+  .cols { display: flex; gap: 34px; align-items: center; }
+
+  /* TOC */
+  .toc { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 26px; margin-top: 8px; }
+  .toc .item { display: flex; gap: 18px; align-items: baseline; background: #fff; border-radius: 10px; padding: 18px 22px; box-shadow: 0 5px 18px rgba(15,20,60,.10); border-left: 6px solid var(--fpt-orange); height: 100%; }
+  .toc .item:nth-child(2) { border-left-color: var(--fpt-green); }
+  .toc .item:nth-child(3) { border-left-color: var(--fpt-blue); }
+  .toc .item:nth-child(4) { border-left-color: var(--fpt-teal); }
+  .toc .item:nth-child(5) { border-left-color: var(--fpt-navy); }
+  .toc .item:nth-child(6) { border-left-color: var(--fpt-orange); }
+  .toc .n { font-size: 34px; font-weight: 700; color: var(--fpt-orange); min-width: 52px; }
+  .toc .item:nth-child(2) .n { color: var(--fpt-green); }
+  .toc .item:nth-child(3) .n { color: var(--fpt-blue); }
+  .toc .item:nth-child(4) .n { color: var(--fpt-teal); }
+  .toc .item:nth-child(5) .n { color: var(--fpt-navy); }
+  .toc h3 { font-size: 21px; color: var(--fpt-navy); margin-bottom: 4px; }
+  .toc p { font-size: 15px; color: var(--ink-soft); line-height: 1.35; }
+
+  /* cards */
+  .cards3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin: 6px 0 18px; }
+  .card { background: #fff; border-radius: 10px; padding: 16px 18px 14px; box-shadow: 0 5px 18px rgba(15,20,60,.10); border-top: 5px solid var(--fpt-orange); }
+  .card.g { border-top-color: var(--fpt-green); }
+  .card.b { border-top-color: var(--fpt-blue); }
+  .card h3 { font-size: 19px; color: var(--fpt-navy); margin-bottom: 6px; }
+  .card p { font-size: 15.5px; line-height: 1.4; color: var(--ink-soft); }
+
+  /* tables */
+  table.fpt { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 5px 18px rgba(15,20,60,.10); margin-bottom: 14px; }
+  table.fpt th { background: var(--fpt-navy); color: #fff; text-align: left; font-size: 16px; padding: 9px 16px; }
+  table.fpt td { font-size: 15.5px; line-height: 1.35; padding: 8.5px 16px; border-bottom: 1px solid #e7e8ee; color: var(--ink-soft); vertical-align: top; }
+  table.fpt tr:last-child td { border-bottom: none; }
+  table.fpt td strong { color: var(--fpt-navy); white-space: nowrap; }
+  .tag { display: inline-block; padding: 1px 9px; border-radius: 4px; color: #fff; font-size: 14px; font-weight: 600; }
+  .tag.o { background: var(--fpt-orange); } .tag.b { background: var(--fpt-blue); } .tag.t { background: var(--fpt-teal); } .tag.g { background: var(--fpt-green); } .tag.n { background: var(--fpt-navy); }
+
+  /* seam cards */
+  .seams { display: flex; flex-direction: column; gap: 13px; margin-bottom: 16px; }
+  .seam { background: #fff; border-radius: 8px; border-left: 6px solid var(--fpt-orange); box-shadow: 0 4px 14px rgba(15,20,60,.09); padding: 12px 18px; display: flex; gap: 16px; align-items: baseline; }
+  .seam.b { border-left-color: var(--fpt-blue); } .seam.t { border-left-color: var(--fpt-teal); }
+  .seam .who { font-weight: 700; color: var(--fpt-navy); font-size: 17.5px; white-space: nowrap; min-width: 200px; }
+  .seam p { font-size: 16px; line-height: 1.4; color: var(--ink-soft); }
+  .strip { background: linear-gradient(90deg, var(--fpt-navy), #2a35a0); color: #dfe6ff; border-radius: 8px; padding: 12px 20px; font-size: 15.5px; line-height: 1.45; margin-bottom: 14px; }
+  .strip strong { color: #fff; }
+  .strip:last-child { margin-bottom: 0; }
+
+  /* chain visual */
+  .chain { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 10px 0 22px; flex-wrap: nowrap; }
+  .chain .link { background: var(--fpt-navy); color: #fff; font-size: 16.5px; font-weight: 600; padding: 9px 20px; border-radius: 7px; transform: skewX(-10deg); box-shadow: 0 4px 12px rgba(15,20,60,.18); }
+  .chain .link > span { display: inline-block; transform: skewX(10deg); }
+  .chain .link.hot { background: var(--fpt-orange); }
+  .chain .arr { color: var(--fpt-orange); font-size: 22px; font-weight: 700; }
+  .chain .link small { display: block; font-size: 12px; font-weight: 400; opacity: .8; transform: skewX(10deg); }
+
+  .badges { display: flex; gap: 10px; justify-content: center; margin: 0 0 20px; flex-wrap: wrap; }
+  .badge { border: 2px solid var(--fpt-orange); color: #b34e0e; background: rgba(243,112,33,.07); font-size: 14.5px; font-weight: 600; padding: 5px 14px; border-radius: 999px; }
+  .badge.g { border-color: var(--fpt-green); color: #2c7a25; background: rgba(80,184,72,.09); }
+
+  /* terminal / log evidence */
+  pre.log { background: var(--navy-deep); color: #cfd6f5; font-family: "Consolas", "Courier New", monospace; font-size: 13.5px; line-height: 1.5; border-radius: 8px; padding: 14px 18px; overflow: hidden; margin-bottom: 14px; }
+  pre.log .ok { color: #7ee787; }
+  pre.log .dim { color: #7f88ad; }
+
+  /* ---------- controls ---------- */
+  .hint { position: fixed; left: 18px; bottom: 12px; color: rgba(255,255,255,.45); font-size: 12.5px; z-index: 50; }
+  .hud { position: fixed; right: 18px; bottom: 14px; z-index: 50; display: flex; gap: 8px; align-items: center; font-family: inherit; }
+  .hud button { background: rgba(255,255,255,.12); color: #fff; border: 1px solid rgba(255,255,255,.25); border-radius: 6px; padding: 5px 12px; font-size: 15px; cursor: pointer; }
+  .hud button:hover { background: var(--fpt-orange); border-color: var(--fpt-orange); }
+  .hud .ctr { color: rgba(255,255,255,.75); font-size: 14px; min-width: 60px; text-align: center; }
+  .progress { position: fixed; left: 0; bottom: 0; height: 4px; background: var(--fpt-orange); width: 0; z-index: 60; transition: width .25s ease; }
+
+  @media print {
+    html, body { background: #fff; height: auto; }
+    .deck { position: static; display: block; }
+    .slide { display: flex !important; position: relative; transform: none !important; box-shadow: none; page-break-after: always; margin: 0 auto; }
+    .hud, .progress, .hint { display: none !important; }
+    @page { size: 13.55in 7.65in; margin: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="deck">
+  <section class="slide cover-photo cover active" style="background-image: linear-gradient(90deg, rgba(8,12,38,.92) 0%, rgba(8,12,38,.72) 40%, rgba(8,12,38,.18) 100%), url('../assets/bg-title-city.jpg')">
+    <div class="eyebrow">Milestone 1 · Cooperative Vehicle Awareness — FPT Hackathon 2026</div>
+    <h1>Phase 0 — Design Concepts</h1>
+    <div class="rule"></div>
+    <div class="tagline">The architecture the contracts describe</div>
+    <div class="meta">Deck A of two — the design. The planning and execution of that design is Deck B: <a href="phase0-task-execution-deck.html">phase0-task-execution-deck.html</a>.<br>Sources: <a href="../../plans/phase0_tasks.md">phase0_tasks.md</a> · <a href="../../plans/milestone1.md">milestone1.md</a> · <a href="../../plans/doc/phase0-contract-freeze-hld.md">phase0-contract-freeze-hld.md</a> · <a href="../../contracts/">contracts/</a></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">§</div><h2>Table of contents</h2></div>
+    <div class="toc">
+      <div class="item"><div class="n">01</div><div><h3>Terminology</h3><p>every defined term, before it is used</p></div></div>
+      <div class="item"><div class="n">02</div><div><h3>The blueprint</h3><p>five nodes, one bridge, three flows</p></div></div>
+      <div class="item"><div class="n">03</div><div><h3>The contracts</h3><p>R1, R2, R3 and R4 in turn, and the location of each</p></div></div>
+      <div class="item"><div class="n">04</div><div><h3>Protocol stack and libraries</h3><p>one transport, two encodings, four third parties</p></div></div>
+      <div class="item"><div class="n">05</div><div><h3>The bench and the V2X node</h3><p>the state Phase 0 left them in</p></div></div>
+      <div class="item"><div class="n">06</div><div><h3>The smoke test</h3><p>its conclusions, and where the full report is held</p></div></div>
+    </div>
+    <p class="lead"><em>Tracks, lanes and task groups — the planning terminology — are the subject of Deck B.</em></p>
+    <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">01</div>
+    <h1>Terminology</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">01</div><h2>Platform terminology</h2></div>
+    <p class="lead">The CarSky platform's own vocabulary. Every later slide uses these terms without restating them.</p>
+    <table class="fpt">
+      <thead><tr><th>Term</th><th>Definition</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Blueprint</strong></td><td>The design of one vehicle: its nodes and their wiring. One blueprint is one vehicle. Nothing executes.</td></tr>
+        <tr><td><strong>Node</strong></td><td>One ECU within a blueprint. Its type determines how it executes: a <strong>Container Node</strong> runs an OCI image; a <strong>Skycraft Node</strong> runs an Android guest.</td></tr>
+        <tr><td><strong>Pin</strong></td><td>A node's connection point. Milestone 1 uses exactly one kind, the <code>ethernet</code> pin, and exactly one per node.</td></tr>
+        <tr><td><strong>Ethernet Bridge</strong></td><td>A node whose sole function is to join the other nodes' pins into one network.</td></tr>
+        <tr><td><strong>Room</strong></td><td>The running instance of a deployed blueprint. The blueprint is the design; the Room is the constructed system.</td></tr>
+        <tr><td><strong>Deployment</strong></td><td>The act of converting a blueprint into a Room. Only a deployment starts a container.</td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>Blueprint to Room is the complete model.</strong> Editing a blueprint changes nothing that is running; only a new deployment applies a change.</li>
+    </ul>
+    <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">01</div><h2>Project terminology</h2></div>
+    <p class="lead">Terms this project defined or narrowed. Each carries a specific meaning here that it does not carry generally.</p>
+    <table class="fpt">
+      <thead><tr><th>Term</th><th>Definition</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Contract</strong></td><td>A frozen, versioned message definition agreed between two nodes — a JSON Schema or an encoding profile, committed to the repository. It is not documentation about code; it is the authority against which code is measured.</td></tr>
+        <tr><td><strong>R-number</strong></td><td>The requirement identifier from the requirements report. <code>R1</code>–<code>R4</code> are the four contracts; <code>R5</code>–<code>R6</code> the platform and network; <code>R7</code> onward, per-node behaviour.</td></tr>
+        <tr><td><strong>Seam</strong></td><td>A boundary positioned so that one side can be replaced without modifying the other — the codec seam, the radio-adapter seam.</td></tr>
+        <tr><td><strong>Frozen</strong></td><td>Changed only by re-freezing across every consumer simultaneously. A contract edited by one node alone is broken, not updated.</td></tr>
+        <tr><td><strong>Ego</strong></td><td>The vehicle the system runs in — vehicle A, whose driver receives the warning.</td></tr>
+        <tr><td><strong>Bench</strong></td><td>Sanctioned test equipment sharing the Room network: here the Scenario Player, which stands in for the modem and the external world.</td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>"Contract" is the load-bearing term in this deck.</strong> Phase 0 produced no running feature; it produced contracts.</li>
+    </ul>
+    <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">01</div><h2>The four contracts</h2></div>
+    <p class="lead">The identifiers labelling every flow on the following section's diagram. Each is given a full slide in section 03.</p>
+    <table class="fpt">
+      <thead><tr><th></th><th>Contract</th><th>Between</th><th>Content</th></tr></thead>
+      <tbody>
+        <tr><td><strong>R1</strong></td><td>CPM profile</td><td>bench → V2X ECU</td><td>The V2X message as it exists on the air</td></tr>
+        <tr><td><strong>R2</strong></td><td><code>v2x_object</code></td><td>V2X ECU → ADA ECU</td><td>One perceived object, passed inward</td></tr>
+        <tr><td><strong>R3</strong></td><td><code>TrackedObject</code></td><td><em>within</em> the ADA ECU</td><td>The structure every tracked object obeys, whatever its origin</td></tr>
+        <tr><td><strong>R4</strong></td><td>ADA → IVI warning</td><td>ADA ECU → IVI ECU</td><td>The warning, and the scene to be displayed for it</td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>Three of the four are messages between nodes; R3 is not.</strong> It is a schema used inside one node, which is why it has no port and no flow of its own.</li>
+      <li><strong>The numbers are not a sequence of steps.</strong> They are identifiers. R1 through R4 happen to fall in flow order, which is a convenience rather than a rule.</li>
+    </ul>
+    <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">01</div><h2>Contract terminology</h2></div>
+    <p class="lead">The terms the contract artifacts themselves carry. They appear in the schemas, in the CI lanes and in Deck B.</p>
+    <table class="fpt">
+      <thead><tr><th>Term</th><th>Definition</th></tr></thead>
+      <tbody>
+        <tr><td><strong>UPER</strong></td><td><em>Unaligned Packed Encoding Rules</em> — the ASN.1 rules that pack one R1 message into 58 bytes. The only non-JSON encoding in Milestone 1.</td></tr>
+        <tr><td><strong>Octet</strong></td><td>One byte. ASN.1 terminology, retained because the profile document uses it.</td></tr>
+        <tr><td><strong>Test vector</strong></td><td>One case: a message content paired with the exact bytes it must encode to — <code>nominal.json</code> with <code>nominal.uper</code>.</td></tr>
+        <tr><td><strong>Golden</strong></td><td>Those bytes are committed and frozen. A test encodes the <code>.json</code> and compares byte for byte against the stored <code>.uper</code>, rather than recomputing the expected result.</td></tr>
+        <tr><td><strong>Corpus</strong></td><td>The complete set of vectors — six here, selected to cover the boundary cases rather than a single nominal path.</td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>The six cases:</strong> <code>nominal</code> · <code>mdt-max</code> and <code>mdt-min</code> (±2047 ms) · <code>conf-unavailable</code> (the 101 sentinel) · <code>gate-boundary</code> (an object at exactly 30 m) · <code>coord-large</code> (near the large-coordinate bound).</li>
+      <li><strong>Their purpose:</strong> the same message is encoded by C++ in the V2X ECU and decoded by a separate helper on the bench. The corpus is the single reference against which both are measured.</li>
+    </ul>
+    <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">02</div>
+    <h1>The blueprint</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">02</div><h2>Five nodes, not four</h2></div>
+    <p class="lead">One blueprint is one vehicle — vehicle A, the ego. Four of its nodes are ECU or bench roles; the fifth is the Ethernet Bridge that joins them into a network.</p>
+    <table class="fpt">
+      <thead><tr><th>Node</th><th>Node type</th><th>Address</th><th>Serves</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Scenario Player (bench)</strong></td><td>Container Node</td><td><code>10.99.0.10</code></td><td>R11</td></tr>
+        <tr><td><strong>V2X ECU</strong></td><td>Container Node</td><td><code>10.99.0.11</code></td><td>R7–R9</td></tr>
+        <tr><td><strong>ADA ECU</strong></td><td>Container Node</td><td><code>10.99.0.12</code></td><td>R12–R15</td></tr>
+        <tr><td><strong>IVI ECU</strong></td><td>Skycraft Node (AAOS guest)</td><td><code>10.99.0.13</code></td><td>R16–R17</td></tr>
+        <tr><td><strong>Ethernet Bridge</strong></td><td>Ethernet Bridge Node</td><td><code>10.99.0.1</code></td><td>R6</td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>The bridge owns no pin of its own.</strong> Each role node declares exactly one <code>ethernet</code> pin wired to it — a star topology on the single subnet <code>10.99.0.0/24</code>.</li>
+      <li><strong>The bench is a node, not a module.</strong> It shares the Room network as test equipment; its code never enters the V2X ECU's folder.</li>
+      <li><strong>Addresses are static by design</strong>, so every UDP target remains deterministic across redeployments. Each address arrives through node configuration, never as a literal in source.</li>
+    </ul>
+    <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">02</div><h2>Every flow labelled by its contract</h2></div>
+    <div class="imgbox"><img src="../assets/m1-blueprint-5-nodes.svg" style="height:450px" alt="Milestone 1 blueprint: five nodes, three contract-labelled UDP flows, one Ethernet Bridge"><div class="cap">Milestone 1 blueprint: five nodes, three contract-labelled UDP flows, one Ethernet Bridge</div></div>
+    <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">02</div><h2>The routing</h2></div>
+    <div class="chain">
+    <div class="link"><span>Scenario Player</span><small>bench</small></div>
+    <div class="arr">→</div>
+    <div class="link hot"><span>V2X ECU</span><small>R1 in · R2 out</small></div>
+    <div class="arr">→</div>
+    <div class="link"><span>ADA ECU</span><small>R3 store · R4 out</small></div>
+    <div class="arr">→</div>
+    <div class="link"><span>IVI ECU</span><small>renders ghost C</small></div>
+    </div>
+    <ul class="points">
+      <li><strong>Every hop is same-subnet UDP.</strong> No routing, no gateway, no broker and no middleware — three ports on one interface, not three pins.</li>
+      <li><strong>One message per datagram</strong>, on ports <code>47100</code> (R1), <code>47200</code> (R2) and <code>47300</code> (R4). A message never spans two datagrams.</li>
+      <li><strong>Every hop is unidirectional</strong> in Milestone 1. Nothing flows back from the IVI toward the bench.</li>
+      <li><strong>R3 has no hop of its own.</strong> It exists within the ADA ECU and reaches the network only when embedded in an R4 message.</li>
+    </ul>
+    <p class="lead"><em>The content of each contract is the subject of the next section.</em></p>
+    <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">03</div>
+    <h1>The contracts</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">03</div><h2>R1 — the CPM profile</h2></div>
+    <p class="lead">The V2X message as it exists on the air. The only contract that is not JSON.</p>
+    <table class="fpt">
+      <thead><tr><th><strong>Defines</strong></th><th>The ETSI CPM fields Milestone 1 uses, with their units and bounds — a <em>profile</em>, narrowing a large standard to the demonstration's requirements</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Standard</strong></td><td>ETSI TS 103 324, release 2</td></tr>
+        <tr><td><strong>Encoding</strong></td><td>ASN.1 UPER — 58 bytes for the nominal case</td></tr>
+        <tr><td><strong>Artifacts</strong></td><td><code>r1-cpm-content.schema.json</code> — the content structure · <code>r1-cpm-profile.md</code> — the field-by-field profile · <code>golden-vectors/</code> — six <code>.json</code> and <code>.uper</code> pairs</td></tr>
+        <tr><td><strong>Copies held in</strong></td><td><code>V2X_ECU/contracts/</code> · <code>Scenario_Player/contracts/</code></td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>Two independent implementations must agree on it</strong> — the V2X ECU's C++ codec and the bench's encoder helper — which is the reason the reference vectors exist.</li>
+      <li><strong>CI generated the vectors, not a person</strong>, and the same run proved regeneration is deterministic: generated twice, with an empty difference.</li>
+    </ul>
+    <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">03</div><h2>R2 — <code>v2x_object</code></h2></div>
+    <p class="lead">What the V2X ECU passes inward once it has decoded the air message.</p>
+    <table class="fpt">
+      <thead><tr><th><strong>Defines</strong></th><th>One perceived-object update: identity, position, kinematics, confidence, and the timestamp at which it was valid</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Direction</strong></td><td>V2X ECU → ADA ECU, UDP <code>47200</code></td></tr>
+        <tr><td><strong>Encoding</strong></td><td>JSON, versioned</td></tr>
+        <tr><td><strong>Artifacts</strong></td><td><code>r2-v2x-object.schema.json</code> · <code>samples/r2-object.json</code></td></tr>
+        <tr><td><strong>Copies held in</strong></td><td><code>V2X_ECU/contracts/</code> · <code>ADA_ECU/contracts/</code></td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong><code>object.distance</code> is derived here and never transmitted.</strong> The air message carries a relative position; the distance is computed on arrival, so the two cannot disagree.</li>
+      <li><strong>One message per object update</strong>, not a batch: a CPM describing three objects becomes three R2 messages.</li>
+    </ul>
+    <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">03</div><h2>R3 — <code>TrackedObject</code></h2></div>
+    <p class="lead">Not a message. The single structure every ego-side object obeys, whatever produced it.</p>
+    <table class="fpt">
+      <thead><tr><th><strong>Defines</strong></th><th>The track record: identity, state, geometry, provenance, and the confidence carried with it</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Direction</strong></td><td>None — internal to the ADA ECU</td></tr>
+        <tr><td><strong>Encoding</strong></td><td>JSON, versioned</td></tr>
+        <tr><td><strong>Artifacts</strong></td><td><code>r3-tracked-object.schema.json</code> · <code>samples/r3-tracked-object.json</code></td></tr>
+        <tr><td><strong>Copies held in</strong></td><td><code>ADA_ECU/contracts/</code> · <code>IVI_ECU/contracts/</code></td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>Its purpose is to remove the distinction between sources.</strong> An object detected by the camera and an object received over the relay become the same kind of record on entry to the store.</li>
+      <li><strong><code>provenance</code> is what survives that flattening.</strong> It records how the object was learned, which is what allows the demonstration to prove that C was never observed directly.</li>
+      <li><strong>The IVI holds a copy</strong> because R3 arrives embedded in every R4 message; the IVI must decode it although it never receives one alone.</li>
+    </ul>
+    <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">03</div><h2>R4 — the ADA to IVI warning</h2></div>
+    <p class="lead">The warning, and everything required to display it. The IVI renders from this message alone.</p>
+    <table class="fpt">
+      <thead><tr><th><strong>Defines</strong></th><th>A versioned warning event: the nature of the risk, the object that raised it, and the composed scene geometry to display</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Direction</strong></td><td>ADA ECU → IVI ECU, UDP <code>47300</code></td></tr>
+        <tr><td><strong>Encoding</strong></td><td>JSON, versioned</td></tr>
+        <tr><td><strong>Artifacts</strong></td><td><code>r4-ada-ivi.schema.json</code> · <code>samples/r4-warning.json</code> · <code>r4-state.json</code> · <code>r4-unknown-warning.json</code></td></tr>
+        <tr><td><strong>Copies held in</strong></td><td><code>ADA_ECU/contracts/</code> · <code>IVI_ECU/contracts/</code></td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>The IVI performs no fusion and holds no world model.</strong> Everything it displays comes from the message in hand, which is what keeps the display verifiable.</li>
+      <li><strong><code>r4-unknown-warning.json</code> is a deliberate sample</strong> — a warning type the IVI does not recognise, so that forward compatibility is tested rather than assumed.</li>
+    </ul>
+    <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">03</div><h2>Where the contracts are held</h2></div>
+    <p class="lead">One authority at the repository root, and a working copy inside each node that consumes it.</p>
+    <table class="fpt">
+      <thead><tr><th>Location</th><th>Holds</th></tr></thead>
+      <tbody>
+        <tr><td><strong><code>contracts/</code></strong></td><td>The frozen originals: all four schemas, the R1 profile, the reference vectors, the samples</td></tr>
+        <tr><td><strong><code>V2X_ECU/contracts/</code></strong></td><td>R1, R2</td></tr>
+        <tr><td><strong><code>ADA_ECU/contracts/</code></strong></td><td>R2, R3, R4</td></tr>
+        <tr><td><strong><code>IVI_ECU/contracts/</code></strong></td><td>R3, R4</td></tr>
+        <tr><td><strong><code>Scenario_Player/contracts/</code></strong></td><td>R1</td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>The copies are not forks.</strong> <code>contracts/sync-manifest.json</code> lists every file that must match, and <code>contracts/check_sync.py</code> fails CI as soon as one diverges.</li>
+      <li><strong>The reason for copying:</strong> each node folder must build independently, with no cross-folder imports. A node reading from a shared directory would breach that rule.</li>
+      <li><strong>A node holds only the contracts it uses.</strong> The bench holds R1 and nothing further, because R1 is the only contract it touches.</li>
+    </ul>
+    <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">04</div>
+    <h1>Protocol stack and libraries</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">04</div><h2>One transport, two encodings, four third parties</h2></div>
+    <div class="imgbox"><img src="../assets/m1-protocol-stack.svg" style="height:505px" alt="Protocol stack: message, encoding and library per contract, over a shared UDP, IPv4 and Ethernet-Bridge base"><div class="cap">Protocol stack: message, encoding and library per contract, over a shared UDP, IPv4 and Ethernet-Bridge base</div></div>
+    <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">04</div><h2>The function of each library</h2></div>
+    <p class="lead">Four third-party dependencies, each performing one function. All are open source and Linux-compatible.</p>
+    <table class="fpt">
+      <thead><tr><th>Library</th><th>Licence</th><th>Serves</th><th>Function</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Vanetza</strong></td><td>LGPLv3</td><td>R1</td><td>ETSI ITS release-2 ASN.1 codec — the only component that handles UPER</td></tr>
+        <tr><td><strong>nlohmann/json</strong></td><td>MIT</td><td>R2, R3, R4</td><td>JSON binding on both C++ nodes, the V2X ECU and the ADA ECU</td></tr>
+        <tr><td><strong>Python standard-library <code>json</code></strong></td><td>PSF</td><td>R1, R3</td><td>The bench's scenario data, and the detector's R3 output stream</td></tr>
+        <tr><td><strong>kotlinx.serialization</strong></td><td>Apache-2.0</td><td>R3, R4</td><td>JSON binding on the IVI, the only Kotlin node</td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>Vanetza sits behind a single codec seam</strong>, so no application code imports it directly; the standard can change without the application changing with it.</li>
+      <li><strong>None of the four is a framework.</strong> Each is a library the code invokes; none owns the program's control flow.</li>
+      <li><strong>The transport requires no library.</strong> UDP sockets are provided by each language's standard library.</li>
+    </ul>
+    <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">05</div>
+    <h1>The bench and the V2X node</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">05</div><h2>Phase 0 built one image for both</h2></div>
+    <p class="lead">Neither node had its production implementation yet. Phase 0 needed only to prove the connection between them, so both executed the same temporary container.</p>
+    <table class="fpt">
+      <thead><tr><th></th><th>Scenario Player (bench)</th><th>V2X ECU</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Phase 0 image</strong></td><td><code>m1-netcheck:latest</code></td><td><code>m1-netcheck:latest</code> — the same image</td></tr>
+        <tr><td><strong>Difference between them</strong></td><td>Environment variables only: <code>ROLE</code>, <code>NEXT_HOP_HOST</code> and <code>NEXT_HOP_PORT</code></td><td>Environment variables only, plus <code>LISTEN_PORT</code>, which is what makes it a relay</td></tr>
+        <tr><td><strong>Phase 0 role</strong></td><td>Source: emits one datagram per second</td><td>Relay: receives, stamps, forwards</td></tr>
+        <tr><td><strong>Contract used</strong></td><td>None</td><td>None</td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>One image, three roles, no code branches.</strong> Whether a node sends, relays or receives is determined entirely by the variables set — the same discipline the production ECUs follow.</li>
+      <li><strong>This is a deliberate placeholder, not a prototype.</strong> No part of <code>netcheck.py</code> becomes production code; it is scaffolding that proved the topology and was then set aside.</li>
+    </ul>
+    <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">05</div><h2>The exchange as Phase 0 executed it</h2></div>
+    <div class="imgbox"><img src="../assets/phase0-netcheck-callflow.svg" style="height:495px" alt="Phase 0 netcheck call flow: the bench sends a stamped ASCII payload over UDP; the V2X node appends its role and forwards"><div class="cap">Phase 0 netcheck call flow: the bench sends a stamped ASCII payload over UDP; the V2X node appends its role and forwards</div></div>
+    <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">05</div><h2>What Phase 1 adds to both nodes</h2></div>
+    <p class="lead">Phase 0 established whether the nodes can communicate. Phase 1 establishes what they say, and is where the production designs arrive.</p>
+    <table class="fpt">
+      <thead><tr><th></th><th>Arriving in Phase 1</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Scenario Player</strong></td><td>Scenario configurations as data, the kinematic model, and the encoder helper that converts a scenario into real R1 bytes</td></tr>
+        <tr><td><strong>V2X ECU</strong></td><td>The radio-adapter seam, the simulated modem behind it, and the receive pipeline: decode, validate, deduplicate, forward as R2</td></tr>
+        <tr><td><strong>Both</strong></td><td>A high-level design, a per-node call flow, and unit tests against the reference vectors</td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>The netcheck image is retired as soon as either production image lands.</strong> Nothing carries forward from it except the confirmation that the network functions.</li>
+      <li><strong>The per-node call flows are already drafted</strong> in each node's <code>doc/</code> folder. They are Phase 1 material and belong to the Phase 1 deck.</li>
+    </ul>
+    <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">06</div>
+    <h1>The smoke test</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">06</div><h2>Proving the network before the ECUs existed</h2></div>
+    <p class="lead">Phase 0's fourth acceptance criterion was closed by a connectivity smoke test on blueprint <code>trial2_minh</code>. Its method, tooling, division of labour and evidence form a deck of their own; this slide states only its conclusions.</p>
+    <ul class="points">
+      <li><strong>All five pass criteria met, 2026-07-31.</strong> Every node running · zero errors · live per-node logs · traffic captured on the network · the chain proven by the payload's accumulated stamps.</li>
+      <li><strong>It closed the final Phase 0 acceptance criterion</strong> — blueprint topology documented and validated — which is what unblocked Phase 1.</li>
+      <li><strong>It established two facts every later image inherits:</strong> the registry host that responds, and the requirement that node images be single-platform <code>linux/arm64</code>.</li>
+      <li><strong>It left two items open</strong> — network maximum-packet-size headroom, and whether the AAOS guest can host a listener. Neither is blocking.</li>
+      <li><strong>Full report:</strong> <a href="phase0-smoke-test-deck.html">phase0-smoke-test-deck.html</a> — method, tested object, testing agent, manual steps and results. None of its content is repeated here.</li>
+    </ul>
+    <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide thanks" style="background-image: linear-gradient(rgba(8,12,38,.66), rgba(14,21,64,.86)), url('../assets/bg-fpt-tower.jpg')">
+    <h1>Thank you</h1>
+    <div class="rule"></div>
+    <p><strong>Phase 0 — Design Concepts</strong> · FPT Hackathon 2026</p>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+</div>
+
+<div class="hint">← → navigate · F fullscreen · print for PDF</div>
+<div class="hud">
+  <button id="prev" aria-label="Previous slide">‹</button>
+  <span class="ctr" id="ctr"></span>
+  <button id="next" aria-label="Next slide">›</button>
+</div>
+<div class="progress" id="prog"></div>
+
+<script>
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  slides.forEach((sl, i) => { const p = sl.querySelector('.page'); if (p) p.textContent = i + 1; });
+  let cur = 0;
+
+  function fit() {
+    const s = Math.min(innerWidth / 1280, innerHeight / 720);
+    slides.forEach(sl => sl.style.transform = `scale(${s})`);
+  }
+  function show(i) {
+    cur = Math.max(0, Math.min(slides.length - 1, i));
+    slides.forEach((sl, k) => sl.classList.toggle('active', k === cur));
+    document.getElementById('ctr').textContent = `${cur + 1} / ${slides.length}`;
+    document.getElementById('prog').style.width = `${(cur + 1) / slides.length * 100}%`;
+    location.hash = cur ? `#${cur + 1}` : '';
+  }
+  addEventListener('resize', fit);
+  addEventListener('keydown', e => {
+    if (['ArrowRight', 'PageDown', ' ', 'Enter'].includes(e.key)) { e.preventDefault(); show(cur + 1); }
+    else if (['ArrowLeft', 'PageUp', 'Backspace'].includes(e.key)) { e.preventDefault(); show(cur - 1); }
+    else if (e.key === 'Home') show(0);
+    else if (e.key === 'End') show(slides.length - 1);
+    else if (e.key.toLowerCase() === 'f') document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+  });
+  document.getElementById('prev').onclick = () => show(cur - 1);
+  document.getElementById('next').onclick = () => show(cur + 1);
+  let tx = null;
+  addEventListener('touchstart', e => tx = e.touches[0].clientX);
+  addEventListener('touchend', e => { if (tx !== null) { const dx = e.changedTouches[0].clientX - tx; if (Math.abs(dx) > 50) show(cur + (dx < 0 ? 1 : -1)); tx = null; } });
+
+  const h = parseInt((location.hash || '').slice(1), 10);
+  fit(); show(isNaN(h) ? 0 : h - 1);
+</script>
+
+</body>
+</html>

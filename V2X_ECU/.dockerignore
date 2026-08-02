@@ -1,0 +1,17 @@
+# Keeps the V2X_ECU/ build context small. The Dockerfile's COPY list is what actually decides
+# what lands in an image - this file only stops useless bytes being uploaded to the builder.
+#
+# Do NOT add tests/ or tools/ here: stage 1 needs them at CONFIGURE time (CMakeLists.txt names
+# their sources in add_executable(), and CMake errors on a missing source file). They are
+# build-stage only and never copied into the runtime stage.
+
+# A local developer build tree - _deps alone holds the whole Vanetza clone plus its object
+# files, i.e. gigabytes of context for nothing.
+build/
+
+# Documentation is never part of the image (node-code-layout.md: doc/ is documentation only).
+doc/
+
+# Python bytecode from the tools/ helper scripts.
+__pycache__/
+*.pyc

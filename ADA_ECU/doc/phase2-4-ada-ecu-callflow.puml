@@ -1,0 +1,104 @@
+@startuml phase2-4-ada-ecu-callflow
+' ADA ECU call flow (Phases 2-4) - source for phase2-4-ada-ecu-hld.md section 7.
+' B detected in video -> R3 JSONL -> store; relayed C -> store; R13 admission -> R14 assessment
+' -> R15 R4 warning -> IVI.
+
+title ADA ECU call flow (Phases 2-4) - R12 detection, R13 admission, R14 assessment, R15 emission
+
+autonumber
+
+actor "Blueprint\n(node config)" as BP
+participant "V2X ECU" as V2XECU
+participant "main\n(composition root)" as MAIN
+participant "detector\n(Python subprocess)" as DET
+participant "DataObserver\nv2x_listener / detector_reader" as OBS
+participant "Data Parser\nr2_parser / r3_parser" as PAR
+participant "Current Input\ntrack_store + admission" as STORE
+participant "CRA\nchained_collision" as CRA
+database "assessment_db" as DB
+participant "Output\nscene_composer + warning_builder + ivi_sender" as OUT
+participant "event_log\n[EVT] JSONL" as LOG
+participant "IVI ECU" as IVI
+
+== Bring-up (Phase 2) ==
+
+BP -> MAIN : env (V2X_LISTEN_PORT, IVI_ECU_*, GATE_*, VIDEO_CLIP_PATH, ...)
+MAIN -> MAIN : config::load() - the only env read
+MAIN -> CRA : registerBuiltinPlugins(registry); enable CRA_ENABLED
+MAIN -> OBS : bind UDP V2X_LISTEN_PORT; start rx thread
+MAIN -> DET : spawn DETECTOR_CMD (stdout pipe)
+MAIN -> LOG : detector_spawn
+note right of MAIN
+  Phase 2 runs the identical wiring with
+  DETECTOR_CMD pointed at a JSONL fixture -
+  no mock branch exists inside src/.
+end note
+
+== Own perception: B in the clip (Phase 3, R12) ==
+
+loop every DETECTOR_FRAME_STRIDE-th frame
+  DET -> DET : frame_source.next() -> inference -> distance -> tracker
+  DET -> OBS : R3 JSONL line (source=own_sensor, id=own:<n>, state=not_tracked)
+  OBS -> PAR : queue -> r3_parser
+  PAR -> STORE : upsert(TrackedObject)
+  STORE -> STORE : admission (R13): gate + confirm_hits
+  STORE -> LOG : own_sensor_ingest, track_transition (on change)
+end
+
+== Relayed perception: C from vehicle B (Phase 4, R2/R13) ==
+
+loop per bench CPM relayed by the V2X ECU
+  V2XECU -> OBS : R2 datagram on V2X_LISTEN_PORT
+  OBS -> PAR : queue -> r2_parser (frozen R2 binding)
+  alt parse or validation failure
+    PAR -> LOG : parse_reject(reason) - counted, never fatal
+  else valid
+    PAR -> STORE : upsert(id=v2x:<stationId>:<objectId>, source=v2x_relayed)
+    STORE -> STORE : admission (R13): d_BC vs GATE_ENTER_M / GATE_EXIT_M
+    STORE -> LOG : r2_ingest, track_transition (on change)
+  end
+end
+
+== Fusion tick: assessment and emission (Phase 4, R14/R15) ==
+
+loop every FUSION_TICK_MS
+  MAIN -> STORE : expire(now) - tracks silent past TRACK_TIMEOUT_MS are erased
+  STORE -> LOG : track_expire, track_transition
+  MAIN -> CRA : assess(RiskContext{store, db, now})
+  CRA -> STORE : nearest own_sensor track (B), tracked v2x_relayed track (C)
+  alt no own-sensor B track and none remembered
+    CRA -> LOG : assess_skipped_b_unknown - d_AC not composable, riskState stays low
+  else B known
+    CRA -> DB : read previous record (riskState, distance, timestamps)
+    CRA -> CRA : d_AC = d_AB + d_BC; closing rate; ttc; band -> low | medium | high
+    CRA -> DB : upsert record (riskState, lastSnapshot, ttc, rationale)
+    alt riskState unchanged, or change younger than RISK_DWELL_MS
+      CRA -> LOG : assessment (heartbeat only)
+    else committed transition
+      CRA -> OUT : RiskFinding{warningType, riskState, trigger}
+      OUT -> OUT : scene_composer -> geometry{ego, vehicleB, vehicleC|null}
+      OUT -> OUT : warning_builder -> R4WarningEvent (frozen binding)
+      OUT -> IVI : UDP to IVI_ECU_HOST:IVI_ECU_PORT
+      OUT -> LOG : risk_transition, r4_tx (payload = the R4 body)
+    end
+  end
+end
+
+== Detector end of clip ==
+
+DET -> OBS : EOF / exit code
+OBS -> LOG : detector_eof
+alt DETECTOR_LOOP true
+  MAIN -> DET : respawn from frame 0 (B stays present for a continuous R19 run)
+else exit non-zero
+  MAIN -> DET : bounded restart, DETECTOR_RESTART_MAX
+  MAIN -> LOG : detector_restart(reason, attempt)
+end
+
+note over LOG
+  The [EVT] stream is the R18 collision-risk event list:
+  track_transition + risk_transition + r4_tx reconstruct
+  a full run offline. Same line shape as the V2X ECU's.
+end note
+
+@enduml

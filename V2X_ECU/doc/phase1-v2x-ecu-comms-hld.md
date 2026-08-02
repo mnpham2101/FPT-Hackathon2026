@@ -9,13 +9,13 @@
 - V2X ECU application: R7 radio adapter seam, R8 modem stub FSM with fault injection, R9 Rx pipeline (decode → validate → dedupe → forward R2), and the start of the R18 JSONL evidence stream.
 - Deployment shape of this node for R5/R6: image layout, entrypoint, blueprint node-config changes, and the R6 **traffic capture** design (tcpdump, per user directive 2026-07-30).
 - Phase 1 interim observation point at the ADA node (its real code is Phase 2) so the "R2 observed at the ADA ECU" acceptance is checkable.
-- **Prerequisite:** the Phase 0 contract layer ([phase0-contract-freeze-hld.md](../../requirements/phase0-contract-freeze-hld.md)) — codec seam `src/codec/`, R2 binding `src/contracts/`, golden vectors, `CMakeLists.txt` baseline. Phase 1 extends that tree; it does not redefine it.
+- **Prerequisite:** the Phase 0 contract layer ([phase0-contract-freeze-hld.md](../../plans/doc/phase0-contract-freeze-hld.md)) — codec seam `src/codec/`, R2 binding `src/contracts/`, golden vectors, `CMakeLists.txt` baseline. Phase 1 extends that tree; it does not redefine it.
 
 ## 2. Sourced research notes
 
 | Note | Adopted |
 |---|---|
-| [scenario-player-v2x-callflow-messages.md](../../Scenario_Player/doc/research_notes/scenario-player-v2x-callflow-messages.md) | §2 call flow (§A bring-up produces no wire traffic; §B is the only live flow; wire is unidirectional) — this HLD's runtime flow is that note made concrete. Conventions F1/F6/F7 (derivations in R9, above the codec seam) and F9 (reject + count) placed per [Phase 0 HLD §4](../../requirements/phase0-contract-freeze-hld.md). |
+| [scenario-player-v2x-callflow-messages.md](../../Scenario_Player/doc/research_notes/scenario-player-v2x-callflow-messages.md) | §2 call flow (§A bring-up produces no wire traffic; §B is the only live flow; wire is unidirectional) — this HLD's runtime flow is that note made concrete. Conventions F1/F6/F7 (derivations in R9, above the codec seam) and F9 (reject + count) placed per [Phase 0 HLD §4](../../plans/doc/phase0-contract-freeze-hld.md). |
 | [baseline-connectivity-smoke-test.md](../../plans/doc/research_notes/baseline-connectivity-smoke-test.md) | Capture technique (`[CAP]`-prefixed tcpdump in-container, `NET_RAW` via flat `capabilities`, `/proc/net/dev` fallback), View-Log-as-retrieval model, and the `tools/netcheck/` image reused as the Phase 1 ADA-side R2 sink (D6). Open items O1–O3 inherited (§11). |
 
 ## 3. Design decisions
@@ -49,6 +49,7 @@
 ### D4 — R18 evidence stream starts here
 
 - `log/event_log.{hpp,cpp}` writes one JSONL line per event: `rx_datagram`, `decode_ok`, `decode_reject`, `validate_reject`, `dedupe_drop`, `r2_forwarded`, `stub_transition`, `fault_injected`, `recovery` — each with monotonic + epoch timestamps and stage counters.
+- **Payload-carrying events** (user directive 2026-08-01; consumed by D7): `decode_ok` embeds the decoded `CpmContent` as JSON, `r2_forwarded` embeds the forwarded R2 JSON body — the `[EVT]` stream alone demonstrates message receive → event raised → CPM deserialized to JSON.
 - Sink: stdout always (CarSky View Log is the live window); additionally to `EVENT_LOG_PATH` when set. Event lines are prefixed `[EVT]` so they interleave cleanly with `[CAP]` capture lines.
 
 ### D5 — R6 traffic capture (user directive 2026-07-30: tcpdump; saved + read by script or Wireshark)
@@ -64,6 +65,14 @@
 
 - ADA's real code is Phase 2; Phase 1 deploys the **`tools/netcheck/` image** (Phase 0 smoke-test equipment, user-endorsed location) on the ADA node as a pure sink: `ROLE=ada-sink, LISTEN_PORT=47200`, no `NEXT_HOP_*` → its `[RX]` log lines show the R2 JSON body — "R2 messages observed at the ADA ECU carrying decoded bench-scenario values".
 - Netcheck implementation note (flagged to the planner, lands with the Phase 0 netcheck subtask): parameterize the body preview length as `BODY_PREVIEW` env (spec'd literal 96 truncates R2 JSON); the sink sets `BODY_PREVIEW=512`.
+
+### D7 — Bench↔V2X comms-check script (user directive 2026-08-01; follows the netcheck / smoke-test procedure)
+
+- **Location `tools/comms_check/`** — repo root, outside the node folders deliberately: cross-node test equipment spanning bench and V2X ECU, the same user-endorsed precedent as `tools/netcheck/`; the placement is mandated by the user directive itself.
+  - `send_cpm.py` — sends the golden-vector `.uper` payloads (`contracts/golden-vectors/`) as one UDP datagram each to a target `host:port`: the bench-side send stand-in for local/CI runs (on-platform, the Scenario Player is the live sender).
+  - `check_v2x_log.py` — asserts the receive evidence from a V2X ECU `[EVT]` stream (CI-captured stdout or a saved View Log export, per the smoke-test View-Log-as-retrieval model): for every sent vector, `rx_datagram` (message received) → `decode_ok` carrying the decoded CpmContent JSON (event raised, deserialization shown) → `r2_forwarded` carrying the R2 JSON; exits non-zero on any missing link.
+- **CI lane `v2x-comms-check`**: build `v2x_ecu`, run it loopback (stub config, UDP sink standing in for ADA), run `send_cpm.py`, pipe the captured stdout through `check_v2x_log.py` — the scripted acceptance that messages sent between bench and V2X ECU are received, raise events, and deserialize to JSON.
+- **On-platform**: the identical `check_v2x_log.py` runs against the saved View Log of the deployed node (bench = live Scenario Player), closing the same acceptance on the Room; wire-level corroboration stays D5's pcap.
 
 ## 4. Folder structure map — file-location designations
 
@@ -164,6 +173,7 @@ V2X_ECU/
 | Golden vectors decode; malformed corpus rejected, zero crashes (R9) | D3 stage 1 + corpus + `test_rx_pipeline_malformed` |
 | R2 at the ADA ECU with decoded bench values (R2) | D3 stage 4 + D6 sink log |
 | **Demo:** Wireshark capture of V2X PDUs at the V2X ECU interface | D5 pcap export + [capture guide](../../requirements/car-sky-guide/traffic-capture-wireshark.md) (dissection caveat noted) |
+| Scripted send/capture between bench and V2X ECU; logs demonstrate receive → event → CPM-to-JSON (user directive 2026-08-01) | D7 script pair + CI lane; D4 payload-carrying events |
 
 ## 11. Open items & flags
 

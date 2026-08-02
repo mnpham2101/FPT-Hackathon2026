@@ -1,0 +1,112 @@
+@startuml phase2-4-ada-ecu-components
+' ADA ECU component map (Phases 2-4) - source for phase2-4-ada-ecu-hld.md section 7.
+' Block names follow requirements/ada-ecu.svg: DataObserver -> Data Parser -> Current Input
+' -> Collision Risk Assessment -> Current TrackedObject/Risk.
+
+title ADA ECU module map (Phases 2-4) - R3, R12-R15, R18
+
+skinparam componentStyle rectangle
+skinparam shadowing false
+skinparam defaultTextAlignment center
+
+cloud "V2X ECU\n(R2 JSON over UDP)" as V2X
+artifact "media/ego-b-occluding-c.mp4\n(baked into the image)" as CLIP
+cloud "IVI ECU\n(R4 JSON over UDP)" as IVI
+
+package "ada-ecu:latest - one image, two processes" {
+
+  package "detector subprocess - Python 3.11 (R12)" as DET {
+    component "frame_source\n(seam: file | synthetic | future video pin)" as FS
+    component "inference\nYOLO11n ONNX / ONNX Runtime CPU" as INF
+    component "distance\npinhole known-width" as DIST
+    component "tracker\ngreedy IoU association" as TRK
+    component "emit\nR3 JSONL on stdout" as EMIT
+    FS -down-> INF
+    INF -down-> DIST
+    DIST -down-> TRK
+    TRK -down-> EMIT
+  }
+
+  package "ada_ecu core - C++17" as CORE {
+
+    package "DataObserver" as OBS {
+      component "v2x_listener" as VL
+      component "detector_reader" as DR
+      component "input_queue" as IQ
+    }
+
+    package "Data Parser" as PAR {
+      component "r2_parser" as R2P
+      component "r3_parser" as R3P
+    }
+
+    package "Current Input" as CUR {
+      component "track_store\nR3 objects, single writer" as TS
+      component "admission\nR13 state machine" as ADM
+    }
+
+    package "Collision Risk Assessment" as CRA {
+      interface "ICollisionRiskAssessment" as ICRA
+      component "registry\n+ builtin_plugins" as REG
+      component "chained_collision\nwarningType nlos_obstruction" as CC
+      database "assessment_db\ncra-assessment-record.schema.json" as DB
+    }
+
+    package "Current TrackedObject / Risk" as OUT {
+      component "scene_composer\nd_AC = d_AB + d_BC" as SC
+      component "warning_builder\nR4WarningEvent binding" as WB
+      component "ivi_sender" as IS
+    }
+
+    component "config\nsole env reader" as CFG
+    component "event_log\n[EVT] JSONL (R18)" as LOG
+    component "udp_socket\nsole socket-API holder" as SOCK
+    component "contracts\nfrozen R2/R3/R4 bindings" as CON
+  }
+}
+
+CLIP -down-> FS
+EMIT -down-> DR : "R3 JSONL (stdout pipe)"
+V2X -down-> VL : "R2 datagram"
+
+VL -down-> IQ
+DR -down-> IQ
+IQ -down-> R2P
+IQ -down-> R3P
+R2P -down-> TS
+R3P -down-> TS
+TS -right-> ADM : "state owner"
+
+ADM -down-> REG : "fusion tick"
+REG -down-> ICRA
+CC .up.|> ICRA
+CC -right-> DB : "reads + writes"
+CC -down-> SC : "RiskFinding on transition"
+SC -down-> WB
+WB -down-> IS
+IS -down-> IVI
+
+VL .left.> SOCK
+IS .left.> SOCK
+R2P .down.> CON
+R3P .down.> CON
+WB .down.> CON
+CORE .down.> CFG
+ADM .right.> LOG
+CC .right.> LOG
+IS .right.> LOG
+
+note bottom of DET
+  Joined to the core ONLY by the process contract:
+  argv + exit codes + R3 JSONL over stdout.
+  No FFI, no RPC (report section 3(d)).
+end note
+
+note bottom of CRA
+  Future plugins (intersection hazard, curve blind spot,
+  priority-vehicle preemption, speed-scaled risk) register
+  through the same interface - one new file plus one line
+  in builtin_plugins.cpp.
+end note
+
+@enduml

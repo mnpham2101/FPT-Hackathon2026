@@ -1,0 +1,40 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="phase1-des-slice" id="phase1-des-slice">
+    <mxGraphModel dx="1400" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="560" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="t1" value="The Phase 1 slice of the blueprint" style="text;html=1;align=left;verticalAlign=middle;fontSize=23.8;fontColor=#19226D;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="24" y="20" width="1152" height="20" as="geometry" /></mxCell>
+        <mxCell id="t2" value="Two nodes implemented, one placeholder, one untouched. All four share the single subnet 10.99.0.0/24." style="text;html=1;align=left;verticalAlign=middle;fontSize=16.8;fontColor=#6b6e7b;fontStyle=0;" vertex="1" parent="1"><mxGeometry x="24" y="42" width="1152" height="20" as="geometry" /></mxCell>
+        <mxCell id="bench" value="Scenario Player
+bench · 10.99.0.10
+implemented this phase" style="rounded=1;arcSize=10;html=1;fillColor=#19226D;strokeColor=none;fontColor=#ffffff;fontSize=16.8;fontStyle=1;whiteSpace=wrap;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="40" y="130" width="250" height="84" as="geometry" /></mxCell>
+        <mxCell id="v2x" value="V2X ECU
+10.99.0.11
+implemented this phase" style="rounded=1;arcSize=10;html=1;fillColor=#19226D;strokeColor=none;fontColor=#ffffff;fontSize=16.8;fontStyle=1;whiteSpace=wrap;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="340" y="130" width="250" height="84" as="geometry" /></mxCell>
+        <mxCell id="ada" value="ADA node
+10.99.0.12
+listener placeholder" style="rounded=1;arcSize=10;html=1;fillColor=#ffffff;strokeColor=#19226D;strokeWidth=2;fontColor=#19226D;fontSize=16.8;fontStyle=1;whiteSpace=wrap;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="640" y="130" width="250" height="84" as="geometry" /></mxCell>
+        <mxCell id="ivi" value="IVI node
+10.99.0.13
+outside this phase" style="rounded=1;arcSize=10;html=1;fillColor=#f4f5f8;strokeColor=#6b6e7b;dashed=1;fontColor=#6b6e7b;fontSize=15.4;fontStyle=0;whiteSpace=wrap;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="940" y="130" width="250" height="84" as="geometry" /></mxCell>
+        <mxCell id="fl3" value="UDP 47100" style="html=1;endArrow=block;endFill=1;strokeColor=#19226D;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="290" y="172" as="sourcePoint" /><mxPoint x="340" y="172" as="targetPoint" /></mxGeometry></mxCell>
+        <mxCell id="fl4" value="UDP 47200" style="html=1;endArrow=block;endFill=1;strokeColor=#19226D;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="590" y="172" as="sourcePoint" /><mxPoint x="640" y="172" as="targetPoint" /></mxGeometry></mxCell>
+        <mxCell id="fl5" value="UDP 47300" style="html=1;endArrow=block;endFill=1;strokeColor=#6b6e7b;dashed=1;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="890" y="172" as="sourcePoint" /><mxPoint x="940" y="172" as="targetPoint" /></mxGeometry></mxCell>
+        <mxCell id="bridge" value="Ethernet Bridge · 10.99.0.1
+one ethernet pin per node, star topology, single flat subnet" style="rounded=1;arcSize=10;html=1;fillColor=#33B2C1;strokeColor=none;fontColor=#ffffff;fontSize=16.8;fontStyle=1;whiteSpace=wrap;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="40" y="268" width="1110" height="56" as="geometry" /></mxCell>
+        <mxCell id="n6" value="What this phase implements::
+the bench generates and transmits messages; the V2X ECU receives,
+decodes and forwards them. The ADA node runs the Phase 0 connectivity
+tool as a listener so that arrival can be observed; its production code
+is Phase 2. The IVI node keeps the supplied artifact and receives nothing." style="rounded=1;arcSize=8;html=1;fillColor=#f2f4f9;strokeColor=#e3e5ea;fontColor=#3d3d46;fontSize=15.4;align=left;whiteSpace=wrap;verticalAlign=top;spacing=8;" vertex="1" parent="1"><mxGeometry x="40" y="350" width="700" height="118" as="geometry" /></mxCell>
+        <mxCell id="lg7" value="" style="rounded=1;arcSize=20;html=1;fillColor=#19226D;strokeColor=none;" vertex="1" parent="1"><mxGeometry x="790" y="359" width="22" height="14" as="geometry" /></mxCell>
+        <mxCell id="lt8" value="implemented in Phase 1" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontColor=#6b6e7b;" vertex="1" parent="1"><mxGeometry x="818" y="356" width="300" height="20" as="geometry" /></mxCell>
+        <mxCell id="lg9" value="" style="rounded=1;arcSize=20;html=1;fillColor=#ffffff;strokeColor=#19226D;" vertex="1" parent="1"><mxGeometry x="790" y="385" width="22" height="14" as="geometry" /></mxCell>
+        <mxCell id="lt10" value="placeholder, retired by Phase 2" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontColor=#6b6e7b;" vertex="1" parent="1"><mxGeometry x="818" y="382" width="300" height="20" as="geometry" /></mxCell>
+        <mxCell id="lg11" value="" style="rounded=1;arcSize=20;html=1;fillColor=#6b6e7b;strokeColor=none;dashed=1;" vertex="1" parent="1"><mxGeometry x="790" y="411" width="22" height="14" as="geometry" /></mxCell>
+        <mxCell id="lt12" value="outside this phase" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontColor=#6b6e7b;" vertex="1" parent="1"><mxGeometry x="818" y="408" width="300" height="20" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

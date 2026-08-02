@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Phase 0 — Baseline Blueprint Smoke Test</title>
+<meta name="description" content="Report deck — connectivity smoke test on the bench and ECU nodes of the trial2_minh blueprint, covering method, tested object, the division of labour between agent and operator, and results">
+<style>
+  :root {
+    --fpt-orange: #F37021;
+    --fpt-green: #50B848;
+    --fpt-blue: #034EA2;
+    --fpt-teal: #33B2C1;
+    --fpt-navy: #19226D;
+    --navy-deep: #0E1540;
+    --ink: #080808;
+    --ink-soft: #3d3d46;
+    --paper: #f4f4f6;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; background: #14183a; font-family: "Segoe UI", "Segoe UI Variable", "Helvetica Neue", Arial, sans-serif; }
+
+  .deck { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+
+  .slide {
+    width: 1280px; height: 720px;
+    position: absolute;
+    display: none;
+    flex-direction: column;
+    transform-origin: center center;
+    background: var(--paper);
+    color: var(--ink);
+    box-shadow: 0 18px 60px rgba(0,0,0,.45);
+    overflow: hidden;
+  }
+  .slide.active { display: flex; }
+
+  /* ---------- backgrounds ---------- */
+  .bg-light { background: linear-gradient(135deg, #f6f6f8 0%, #ececef 55%, #e0e1e6 100%); }
+  .bg-light::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720"><g fill="none" stroke-width="2"><g transform="skewX(-16)"><rect x="240" y="60" width="380" height="460" rx="70" stroke="rgba(255,255,255,0.85)"/><rect x="1010" y="210" width="400" height="470" rx="75" stroke="rgba(25,34,109,0.05)"/><rect x="520" y="400" width="330" height="380" rx="60" stroke="rgba(25,34,109,0.06)"/></g><line x1="880" y1="-40" x2="640" y2="780" stroke="rgba(255,255,255,0.9)"/><line x1="1180" y1="-40" x2="940" y2="780" stroke="rgba(25,34,109,0.05)"/></g></svg>');
+    background-size: cover;
+  }
+  .bg-navy { background: linear-gradient(135deg, #10173f 0%, #151d55 45%, var(--fpt-navy) 100%); color: #fff; }
+  .bg-navy::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720"><g fill="none" stroke-width="2"><g transform="skewX(-16)"><rect x="240" y="60" width="380" height="460" rx="70" stroke="rgba(120,180,255,0.20)"/><rect x="1010" y="210" width="400" height="470" rx="75" stroke="rgba(255,255,255,0.10)"/><rect x="520" y="400" width="330" height="380" rx="60" stroke="rgba(120,180,255,0.10)"/></g><line x1="880" y1="-40" x2="640" y2="780" stroke="rgba(120,180,255,0.30)"/><line x1="1180" y1="-40" x2="940" y2="780" stroke="rgba(120,180,255,0.16)"/></g></svg>');
+    background-size: cover;
+  }
+
+  /* cover / divider / thanks carry their photo as an inline background-image */
+  .cover-photo { background-size: cover; background-position: center; color: #fff; }
+  .divider { background-size: cover; background-position: center; color: #fff; justify-content: center; padding: 0 110px; }
+  .divider .sec-num { font-size: 120px; font-weight: 700; color: var(--fpt-orange); line-height: 1; opacity: .95; }
+  .divider h1 { font-size: 56px; font-weight: 700; color: #fff; margin-top: 10px; }
+  .divider .rule { width: 110px; height: 6px; background: var(--fpt-orange); border-radius: 3px; margin-top: 26px; }
+  .thanks { background-size: cover; background-position: center 20%; color: #fff; justify-content: center; align-items: center; text-align: center; }
+  .thanks h1 { font-size: 84px; font-weight: 700; }
+  .thanks .rule { width: 130px; height: 6px; background: var(--fpt-orange); border-radius: 3px; margin: 30px auto; }
+  .thanks p { font-size: 22px; color: #cdd6f7; }
+
+  /* ---------- title / closing text ---------- */
+  .cover { justify-content: center; padding: 0 110px; }
+  .cover .eyebrow { font-size: 20px; letter-spacing: .35em; text-transform: uppercase; color: var(--fpt-orange); font-weight: 600; margin-bottom: 26px; }
+  .cover h1 { font-size: 66px; line-height: 1.08; font-weight: 700; color: #fff; max-width: 900px; }
+  .cover .rule { width: 130px; height: 6px; background: var(--fpt-orange); border-radius: 3px; margin: 30px 0; }
+  .cover .tagline { font-size: 30px; font-weight: 300; color: #dfe6ff; margin-bottom: 14px; }
+  .cover .meta { font-size: 18px; color: #b9c2ea; }
+  .cover .meta a { color: #b9c2ea; }
+  .cover .accents, .divider .accents, .thanks .accents { position: absolute; bottom: 0; left: 0; right: 0; height: 8px; display: flex; }
+  .accents span { flex: 1; }
+
+  /* ---------- content slide chrome ---------- */
+  .content { padding: 44px 64px 58px; position: relative; }
+  .content > * { position: relative; }
+  .slide-head { display: flex; align-items: baseline; gap: 18px; border-bottom: 3px solid transparent; padding-bottom: 12px; margin-bottom: 18px;
+    border-image: linear-gradient(90deg, var(--fpt-orange) 0 90px, rgba(25,34,109,.15) 90px 100%) 1; }
+  .slide-head .num { font-size: 40px; font-weight: 700; color: var(--fpt-orange); line-height: 1; }
+  .slide-head h2 { font-size: 31px; font-weight: 700; color: var(--fpt-navy); line-height: 1.15; }
+  .lead { font-size: 19px; color: var(--ink-soft); margin-bottom: 16px; }
+  .lead:last-of-type { margin-bottom: 0; }
+  .lead strong, .lead b { color: var(--ink); }
+  .content a { color: var(--fpt-blue); }
+
+  .footer { position: absolute; left: 64px; right: 64px; bottom: 18px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #8a8d99; }
+  .footer .page { background: var(--fpt-navy); color: #fff; border-radius: 4px; padding: 2px 10px; font-weight: 600; }
+
+  ul.points { list-style: none; display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
+  ul.points:last-child { margin-bottom: 0; }
+  ul.points li { font-size: 18.5px; line-height: 1.42; color: var(--ink-soft); padding-left: 26px; position: relative; }
+  ul.points li::before { content: ""; position: absolute; left: 0; top: 9px; width: 12px; height: 12px; background: var(--fpt-orange); border-radius: 3px; transform: skewX(-12deg); }
+  ul.points li strong { color: var(--fpt-navy); }
+  ul.points li code, .content code { font-family: "Consolas", "Courier New", monospace; font-size: .92em; background: rgba(25,34,109,.07); border-radius: 4px; padding: 1px 6px; }
+
+  .imgbox { display: flex; flex-direction: column; align-items: center; gap: 8px; margin: 6px 0 14px; }
+  .imgbox img { border-radius: 10px; box-shadow: 0 6px 22px rgba(15,20,60,.16); background: #fff; max-width: 100%; }
+  .imgbox .cap { font-size: 13.5px; color: #8a8d99; font-style: italic; }
+  .imgbox img.flat { box-shadow: none; background: transparent; }
+
+  .cols { display: flex; gap: 34px; align-items: center; }
+
+  /* TOC */
+  .toc { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 26px; margin-top: 8px; }
+  .toc .item { display: flex; gap: 18px; align-items: baseline; background: #fff; border-radius: 10px; padding: 18px 22px; box-shadow: 0 5px 18px rgba(15,20,60,.10); border-left: 6px solid var(--fpt-orange); height: 100%; }
+  .toc .item:nth-child(2) { border-left-color: var(--fpt-green); }
+  .toc .item:nth-child(3) { border-left-color: var(--fpt-blue); }
+  .toc .item:nth-child(4) { border-left-color: var(--fpt-teal); }
+  .toc .item:nth-child(5) { border-left-color: var(--fpt-navy); }
+  .toc .item:nth-child(6) { border-left-color: var(--fpt-orange); }
+  .toc .n { font-size: 34px; font-weight: 700; color: var(--fpt-orange); min-width: 52px; }
+  .toc .item:nth-child(2) .n { color: var(--fpt-green); }
+  .toc .item:nth-child(3) .n { color: var(--fpt-blue); }
+  .toc .item:nth-child(4) .n { color: var(--fpt-teal); }
+  .toc .item:nth-child(5) .n { color: var(--fpt-navy); }
+  .toc h3 { font-size: 21px; color: var(--fpt-navy); margin-bottom: 4px; }
+  .toc p { font-size: 15px; color: var(--ink-soft); line-height: 1.35; }
+
+  /* cards */
+  .cards3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin: 6px 0 18px; }
+  .card { background: #fff; border-radius: 10px; padding: 16px 18px 14px; box-shadow: 0 5px 18px rgba(15,20,60,.10); border-top: 5px solid var(--fpt-orange); }
+  .card.g { border-top-color: var(--fpt-green); }
+  .card.b { border-top-color: var(--fpt-blue); }
+  .card h3 { font-size: 19px; color: var(--fpt-navy); margin-bottom: 6px; }
+  .card p { font-size: 15.5px; line-height: 1.4; color: var(--ink-soft); }
+
+  /* tables */
+  table.fpt { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 5px 18px rgba(15,20,60,.10); margin-bottom: 14px; }
+  table.fpt th { background: var(--fpt-navy); color: #fff; text-align: left; font-size: 16px; padding: 9px 16px; }
+  table.fpt td { font-size: 15.5px; line-height: 1.35; padding: 8.5px 16px; border-bottom: 1px solid #e7e8ee; color: var(--ink-soft); vertical-align: top; }
+  table.fpt tr:last-child td { border-bottom: none; }
+  table.fpt td strong { color: var(--fpt-navy); white-space: nowrap; }
+  .tag { display: inline-block; padding: 1px 9px; border-radius: 4px; color: #fff; font-size: 14px; font-weight: 600; }
+  .tag.o { background: var(--fpt-orange); } .tag.b { background: var(--fpt-blue); } .tag.t { background: var(--fpt-teal); } .tag.g { background: var(--fpt-green); } .tag.n { background: var(--fpt-navy); }
+
+  /* seam cards */
+  .seams { display: flex; flex-direction: column; gap: 13px; margin-bottom: 16px; }
+  .seam { background: #fff; border-radius: 8px; border-left: 6px solid var(--fpt-orange); box-shadow: 0 4px 14px rgba(15,20,60,.09); padding: 12px 18px; display: flex; gap: 16px; align-items: baseline; }
+  .seam.b { border-left-color: var(--fpt-blue); } .seam.t { border-left-color: var(--fpt-teal); }
+  .seam .who { font-weight: 700; color: var(--fpt-navy); font-size: 17.5px; white-space: nowrap; min-width: 200px; }
+  .seam p { font-size: 16px; line-height: 1.4; color: var(--ink-soft); }
+  .strip { background: linear-gradient(90deg, var(--fpt-navy), #2a35a0); color: #dfe6ff; border-radius: 8px; padding: 12px 20px; font-size: 15.5px; line-height: 1.45; margin-bottom: 14px; }
+  .strip strong { color: #fff; }
+  .strip:last-child { margin-bottom: 0; }
+
+  /* chain visual */
+  .chain { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 10px 0 22px; flex-wrap: nowrap; }
+  .chain .link { background: var(--fpt-navy); color: #fff; font-size: 16.5px; font-weight: 600; padding: 9px 20px; border-radius: 7px; transform: skewX(-10deg); box-shadow: 0 4px 12px rgba(15,20,60,.18); }
+  .chain .link > span { display: inline-block; transform: skewX(10deg); }
+  .chain .link.hot { background: var(--fpt-orange); }
+  .chain .arr { color: var(--fpt-orange); font-size: 22px; font-weight: 700; }
+  .chain .link small { display: block; font-size: 12px; font-weight: 400; opacity: .8; transform: skewX(10deg); }
+
+  .badges { display: flex; gap: 10px; justify-content: center; margin: 0 0 20px; flex-wrap: wrap; }
+  .badge { border: 2px solid var(--fpt-orange); color: #b34e0e; background: rgba(243,112,33,.07); font-size: 14.5px; font-weight: 600; padding: 5px 14px; border-radius: 999px; }
+  .badge.g { border-color: var(--fpt-green); color: #2c7a25; background: rgba(80,184,72,.09); }
+
+  /* terminal / log evidence */
+  pre.log { background: var(--navy-deep); color: #cfd6f5; font-family: "Consolas", "Courier New", monospace; font-size: 13.5px; line-height: 1.5; border-radius: 8px; padding: 14px 18px; overflow: hidden; margin-bottom: 14px; }
+  pre.log .ok { color: #7ee787; }
+  pre.log .dim { color: #7f88ad; }
+
+  /* ---------- controls ---------- */
+  .hint { position: fixed; left: 18px; bottom: 12px; color: rgba(255,255,255,.45); font-size: 12.5px; z-index: 50; }
+  .hud { position: fixed; right: 18px; bottom: 14px; z-index: 50; display: flex; gap: 8px; align-items: center; font-family: inherit; }
+  .hud button { background: rgba(255,255,255,.12); color: #fff; border: 1px solid rgba(255,255,255,.25); border-radius: 6px; padding: 5px 12px; font-size: 15px; cursor: pointer; }
+  .hud button:hover { background: var(--fpt-orange); border-color: var(--fpt-orange); }
+  .hud .ctr { color: rgba(255,255,255,.75); font-size: 14px; min-width: 60px; text-align: center; }
+  .progress { position: fixed; left: 0; bottom: 0; height: 4px; background: var(--fpt-orange); width: 0; z-index: 60; transition: width .25s ease; }
+
+  @media print {
+    html, body { background: #fff; height: auto; }
+    .deck { position: static; display: block; }
+    .slide { display: flex !important; position: relative; transform: none !important; box-shadow: none; page-break-after: always; margin: 0 auto; }
+    .hud, .progress, .hint { display: none !important; }
+    @page { size: 13.55in 7.65in; margin: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="deck">
+  <section class="slide cover-photo cover active" style="background-image: linear-gradient(90deg, rgba(8,12,38,.92) 0%, rgba(8,12,38,.72) 40%, rgba(8,12,38,.18) 100%), url('../assets/bg-title-city.jpg')">
+    <div class="eyebrow">Milestone 1 · Cooperative Vehicle Awareness — FPT Hackathon 2026</div>
+    <h1>Phase 0 — Baseline Blueprint Smoke Test</h1>
+    <div class="rule"></div>
+    <div class="tagline">Proving the network before the ECUs exist</div>
+    <div class="meta">connectivity smoke test · blueprint <code>trial2_minh</code> · 2026-07-31<br>Sources: <a href="../../plans/doc/phase0-smoke-test-run.md">phase0-smoke-test-run.md</a> · <a href="../../plans/doc/research_notes/baseline-connectivity-smoke-test.md">baseline-connectivity-smoke-test.md</a> · <a href="../../plans/doc/phase0-trial2-minh-preflight.md">phase0-trial2-minh-preflight.md</a></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">§</div><h2>Table of contents</h2></div>
+    <div class="toc">
+      <div class="item"><div class="n">01</div><div><h3>Introduction</h3><p>the reason for proving the network before any ECU code exists</p></div></div>
+      <div class="item"><div class="n">02</div><div><h3>Test method</h3><p>the tool, the pipeline, the platform</p></div></div>
+      <div class="item"><div class="n">03</div><div><h3>Tested object</h3><p>what was executed, and how it was configured</p></div></div>
+      <div class="item"><div class="n">04</div><div><h3>Testing agent</h3><p>the agent's scope, and the limit it encountered</p></div></div>
+      <div class="item"><div class="n">05</div><div><h3>Manual steps</h3><p>the five steps requiring an operator</p></div></div>
+      <div class="item"><div class="n">06</div><div><h3>Results</h3><p>pass criteria, evidence, open items</p></div></div>
+    </div>
+    <div class="footer"><span>Phase 0 — Baseline Blueprint Smoke Test</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">01</div>
+    <h1>Introduction</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">01</div><h2>The rationale for a smoke test before any ECU code</h2></div>
+    <ul class="points">
+      <li><strong>Contracts alone are insufficient.</strong> The ECU-to-ECU message schemas were frozen in Phase 0; this test proves the transport beneath them — Ethernet connectivity and IP routing between the ECUs.</li>
+      <li><strong>Prove the topology, not the payload.</strong> One temporary image and three roles (<code>bench</code> → <code>v2x</code> → <code>ada</code>), with no ECU logic, isolates whether a datagram survives the platform from whether the codec is correct.</li>
+      <li><strong>Detect failure early and at low cost.</strong> If the bridge, the pins or the registry do not function, that is better established on a four-file Python tool than on the production V2X ECU image days later.</li>
+      <li><strong>Precondition for Phase 1.</strong> Comms bring-up assumes the blueprint deploys and the nodes reach each other; this test is the proof of that assumption.</li>
+    </ul>
+    <p class="lead"><strong>Objective:</strong> a datagram travels bench <code>10.99.0.10</code> → V2X <code>.11</code> → ADA <code>.12</code> → IVI <code>.13</code>, stamped at every hop, observed solely through each node's <strong>View Log</strong>, with no interactive session and no manual command execution.</p>
+    <div class="footer"><span>Phase 0 — Baseline Blueprint Smoke Test</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">02</div>
+    <h1>Test method</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">02</div><h2>The pipeline — one image, five tools</h2></div>
+    <div class="chain-note">Five tools and one temporary artifact, deployed by the same procedure the production ECU images will use.</div>
+    <table class="fpt">
+      <thead><tr><th>Stage</th><th>Tool</th><th>Function</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Write</strong></td><td>Python (<code>netcheck.py</code> + <code>capture.sh</code> + <code>entrypoint.sh</code>)</td><td>Send, receive and relay over UDP; capture traffic independently of the application</td></tr>
+        <tr><td><strong>Build</strong></td><td>GitHub Actions (<code>phase0-ci.yml</code>, job <code>netcheck-image</code>)</td><td><code>docker buildx build</code>, single-platform <code>linux/arm64</code>, on a host without Docker or WSL</td></tr>
+        <tr><td><strong>Store</strong></td><td>Zot registry (<code>registry.hackathon-2.carsky.io</code>)</td><td>OCI image storage — the registry the production ECU images also push to</td></tr>
+        <tr><td><strong>Deploy</strong></td><td>CarSky platform (Nydus UI and REST)</td><td>Blueprint <code>trial2_minh</code> → Room → three Container nodes pull the same tag</td></tr>
+        <tr><td><strong>Capture</strong></td><td><code>tcpdump</code> within each container</td><td><code>[CAP]</code>-prefixed lines proving the datagram was observed on the network</td></tr>
+      </tbody>
+    </table>
+    <div class="footer"><span>Phase 0 — Baseline Blueprint Smoke Test</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">02</div><h2>The rationale for UDP, GitHub Actions and Zot</h2></div>
+    <ul class="points">
+      <li><strong>ICMP is not used.</strong> <code>ping</code> uses ICMP rather than UDP; this test exercises the UDP path the project itself uses. <code>netcheck.py</code> calls <code>connect()</code> on a UDP socket, which forces a route lookup, transmits nothing, and fails immediately if the peer is unreachable.</li>
+      <li><strong>CI builds because the development host cannot.</strong> Without Docker or WSL locally, every image in this project is built by GitHub Actions; the netcheck image was the first to prove that path end to end, using QEMU and buildx for cross-architecture builds.</li>
+      <li><strong>Single-platform <code>linux/arm64</code> is mandatory.</strong> A multi-platform manifest index is silently rejected: the node remains in <code>Provisioning</code>, reporting <code>waiting to start: trying and failing to pull image</code>. Every image must be built for arm64.</li>
+      <li><strong>Zot is the only registry that responds.</strong> The default host returns 502; <code>registry.hackathon-2.carsky.io</code> serves correctly. This closed open item <strong>O1</strong>, and now applies to every ECU image rather than to this test alone.</li>
+    </ul>
+    <div class="footer"><span>Phase 0 — Baseline Blueprint Smoke Test</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">02</div><h2>Configuration — every parameter supplied by environment</h2></div>
+    <table class="fpt">
+      <thead><tr><th>Variable</th><th>Default</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td><code>ROLE</code></td><td><code>node</code></td><td>Identifies the node in every log line and in the relay stamp appended to forwarded payloads.</td></tr>
+        <tr><td><code>LISTEN_PORT</code></td><td>unset</td><td>UDP port to bind. Set only on relay and sink nodes (V2X, ADA); its absence marks a pure source node.</td></tr>
+        <tr><td><code>NEXT_HOP_HOST</code> / <code>NEXT_HOP_PORT</code></td><td>unset</td><td>Destination address for outgoing traffic. Set on every node except the final sink.</td></tr>
+        <tr><td><code>HZ</code></td><td><code>1</code></td><td>Transmission rate in hertz, kept low so that the log remains readable while traffic stays continuous.</td></tr>
+        <tr><td><code>PAD</code></td><td><code>0</code></td><td>Additional padding bytes appended to the payload, used only for the optional packet-size probe.</td></tr>
+        <tr><td><code>START_DELAY_S</code></td><td><code>20</code></td><td>Delay before the first transmission, allowing downstream nodes to finish starting.</td></tr>
+      </tbody>
+    </table>
+    <p class="lead">No behaviour is compiled into the image: role, addressing and rate are read from the process environment at start-up, consistent with the project's principle that no tunable value is hardcoded.</p>
+    <div class="footer"><span>Phase 0 — Baseline Blueprint Smoke Test</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">02</div><h2>Node configuration — <code>NEXT_HOP_*</code> mirrors the production topology</h2></div>
+    <table class="fpt">
+      <thead><tr><th>Node</th><th>Role</th><th>Environment set</th></tr></thead>
+      <tbody>
+        <tr><td>Bench <code>.10</code></td><td>source</td><td><code>ROLE=bench</code>, <code>NEXT_HOP_HOST=10.99.0.11</code>, <code>NEXT_HOP_PORT=47100</code></td></tr>
+        <tr><td>V2X <code>.11</code></td><td>relay</td><td><code>ROLE=v2x</code>, <code>LISTEN_PORT=47100</code>, <code>NEXT_HOP_HOST=10.99.0.12</code>, <code>NEXT_HOP_PORT=47200</code></td></tr>
+        <tr><td>ADA <code>.12</code></td><td>relay</td><td><code>ROLE=ada</code>, <code>LISTEN_PORT=47200</code>, <code>NEXT_HOP_HOST=10.99.0.13</code>, <code>NEXT_HOP_PORT=47300</code></td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li>The <code>NEXT_HOP_*</code> values duplicate the addresses each node already holds for its production peer — the bench's <code>NEXT_HOP_HOST</code> mirrors its existing <code>V2X_ECU_HOST</code> — so the test exercises the production addressing rather than a parallel set of constants.</li>
+      <li>The ADA node's <code>LISTEN_PORT</code> was added alongside its existing <code>V2X_LISTEN_PORT</code> key rather than replacing it, so that its production configuration remains intact once the smoke-test values are reverted.</li>
+      <li><code>capabilities: [&quot;NET_RAW&quot;]</code> is set identically on all three nodes.</li>
+      <li>Values are entered per node in the Nydus Inspector — the panel that also sets <code>image</code>, <code>command</code> and <code>capabilities</code> — and read by <code>netcheck.py</code> at start-up.</li>
+    </ul>
+    <div class="footer"><span>Phase 0 — Baseline Blueprint Smoke Test</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">02</div><h2>Transmission and reception — the socket calls</h2></div>
+    <pre class="log"># route_check() — reachability without ICMP
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+s.connect((NH, int(NP)))
+
+# receiver() — bind and listen
+rx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+rx.bind((&quot;0.0.0.0&quot;, int(LISTEN)))
+data, src = rx.recvfrom(65535)
+
+# sender() and relay forward — transmit
+tx.sendto(out, (NH, int(NP)))</pre>
+    <ul class="points">
+      <li><code>connect()</code> on a UDP socket performs a kernel route lookup and transmits nothing; an unreachable peer raises an error immediately.</li>
+      <li>The receiver binds to <code>0.0.0.0</code> rather than a named interface, because the bridge interface name is not guaranteed by the platform; <code>recvfrom()</code> blocks until a datagram arrives.</li>
+      <li>A node with both <code>LISTEN_PORT</code> and <code>NEXT_HOP_HOST</code> set — V2X and ADA — relays every received datagram through the same <code>sendto()</code> call the transmission loop uses.</li>
+    </ul>
+    <div class="footer"><span>Phase 0 — Baseline Blueprint Smoke Test</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">02</div><h2>Payload — a stamped string, not an encoded message</h2></div>
+    <ul class="points">
+      <li>The payload is plain ASCII text, <code>f&quot;seq={i}|{ROLE}&quot;.encode()</code>, optionally padded with <code>PAD</code> filler bytes for the packet-size probe. No serialisation format and no codec is involved.</li>
+      <li>Each relay hop appends its own role rather than re-encoding the payload: <code>data + f&quot;|{ROLE}&quot;.encode()</code>. The accumulated <code>|bench|v2x</code> suffix observed at the ADA node is the chain-of-custody evidence for pass criterion C5.</li>
+      <li>The payload is deliberately unencoded, to isolate transport from the message codec. Production CPM traffic is ASN.1 UPER produced through the V2X ECU's Vanetza codec seam — a separate, already frozen contract that this test does not exercise.</li>
+    </ul>
+    <div class="footer"><span>Phase 0 — Baseline Blueprint Smoke Test</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">02</div><h2>Traffic capture — <code>tcpdump</code>, gated by <code>NET_RAW</code></h2></div>
+    <ul class="points">
+      <li><code>capture.sh</code> runs in the background, started by <code>entrypoint.sh</code> independently of the check program, so that a capture failure never blocks the connectivity test.</li>
+      <li>It probes its own privilege first: <code>tcpdump -D</code> succeeds only if the process can enumerate capture-capable interfaces, which requires the <code>CAP_NET_RAW</code> capability the platform grants through the node's <code>capabilities: [&quot;NET_RAW&quot;]</code> configuration field.</li>
+      <li>On success it runs <code>tcpdump -i any -n -l -tttt &quot;${CAPTURE_FILTER:-udp}&quot;</code>, piping every line through <code>sed &#x27;s/^/[CAP] /&#x27;</code> so that packet lines remain distinguishable in the combined log stream.</li>
+      <li>On failure it falls back to polling the <code>/proc/net/dev</code> packet counters, which require no elevated privilege; pass criterion C4 is then met at counter level rather than packet level.</li>
+    </ul>
+    <div class="footer"><span>Phase 0 — Baseline Blueprint Smoke Test</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">02</div><h2>Entry point — <code>entrypoint.sh</code> starts both programs</h2></div>
+    <ul class="points">
+      <li><code>entrypoint.sh</code> is the image's <code>CMD</code> (<code>Dockerfile</code>: <code>CMD [&quot;./entrypoint.sh&quot;]</code>); the container runtime invokes it as the pod starts, with no manual execution, satisfying the self-start requirement of every run subtask.</li>
+      <li>It starts <code>capture.sh</code> first, in the background, so that capture begins before any application traffic exists.</li>
+      <li>It then replaces itself with the check program through <code>exec python3 -u netcheck.py</code>. <code>exec</code> transfers the process identifier to Python rather than spawning a child, so the container lifecycle and its restart count track the check program directly.</li>
+      <li>Every step emits a <code>[BOOT]</code> line, so a log without a <code>[BOOT] … exec python3</code> entry is itself diagnostic: it indicates that the interpreter failed to start.</li>
+    </ul>
+    <div class="footer"><span>Phase 0 — Baseline Blueprint Smoke Test</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">03</div>
+    <h1>Tested object</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">03</div><h2>What was executed</h2></div>
+    <ul class="points">
+      <li><strong>Three CarSky Container nodes</strong>, running one temporary image (<code>m1-netcheck:latest</code>) on all three — bench, V2X and ADA — differing only by environment variables (<code>ROLE</code>, <code>LISTEN_PORT</code>, <code>NEXT_HOP_HOST</code> and <code>NEXT_HOP_PORT</code>), exactly as the production ECU nodes are configured.</li>
+      <li><strong>An <code>arm64</code> machine.</strong> The cluster's runnable evidence is uniformly <code>aarch64</code>; every node pulls a <code>linux/arm64</code> image without exception.</li>
+      <li><strong>The <code>NET_RAW</code> capability</strong>, granted explicitly in each node's configuration, which enabled real <code>tcpdump</code> capture rather than the <code>/proc/net/dev</code> counter fallback. This resolved open item <strong>O2</strong>.</li>
+      <li><strong>The Ethernet-bridge network</strong> — all four <code>ethernet</code> pins (<code>10.99.0.10</code>–<code>.13</code>) wired as a star topology into one <code>eth-bridge</code> node: a single flat domain, <code>10.99.0.0/24</code>, shared by the bench, V2X, ADA and IVI nodes.</li>
+      <li><strong>The IVI node is outside the scope of the container test.</strong> It is a Skycraft (AAOS) node running an Android VM artifact rather than a container image, and therefore cannot execute <code>netcheck.py</code>.</li>
+    </ul>
+    <div class="footer"><span>Phase 0 — Baseline Blueprint Smoke Test</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">04</div>
+    <h1>Testing agent</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">04</div><h2>The agent's scope</h2></div>
+    <ul class="points">
+      <li><strong>Credentials — two, both supplied by the operator.</strong> A CarSky API key (<code>a8k_…</code>) for REST calls covering deployment status, node phases and logs, and a Zot registry key (<code>CARSKY_ZOT_API_KEY</code>, <code>zak_…</code>) held as a GitHub Actions secret for the image push. Neither was assumed or generated; the agent's login procedure halts and requests a key when none is available.</li>
+      <li><strong>Authored the test artifact.</strong> All four <code>tools/netcheck/</code> files (<code>Dockerfile</code>, <code>entrypoint.sh</code>, <code>capture.sh</code>, <code>netcheck.py</code>) and the CI job (<code>.github/workflows/phase0-ci.yml</code>, <code>netcheck-image</code>), committed as subtasks <code>6.0.8.1</code> and <code>5.0.8.2</code>.</li>
+      <li><strong>Verified over REST rather than by inspection.</strong> <code>GET /deployments/{roomId}/status</code>, <code>.../nodes</code> for per-node phase, <code>.../logs/{nodeKey}?container=user|sidecar</code>, <code>.../pods</code>, and <code>GET /devices</code> to resolve the target Room — the same calls the room-diagnostics procedure uses to diagnose a failed deployment.</li>
+    </ul>
+    <div class="footer"><span>Phase 0 — Baseline Blueprint Smoke Test</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">04</div><h2>The limit the agent encountered — the IVI node</h2></div>
+    <ul class="points">
+      <li><strong>No observation channel to the Skycraft node.</strong> Screenshot (<code>GET /vms/{roomId}/{nodeKey}/screenshot</code>), accessibility tree (<code>.../accessibility</code>) and ADB shell (<code>.../shell</code>) all return <strong>502, unavailable on this deployment</strong>.</li>
+      <li><strong>Direct proof of the third hop was unobtainable.</strong> The strongest available check — an ADB shell <code>nc -u -l -p 47300</code> listener on the AAOS guest — requires the shell API this deployment does not serve.</li>
+      <li><strong>An indirect check was used instead.</strong> The ADA node's own <code>[TX] … relayed to 10.99.0.13:47300</code> log line, together with its <code>[CAP]</code> capture entry, proves the datagram left the network addressed to the IVI node: evidence that the packet was transmitted, not that it was received.</li>
+      <li><strong>The gap closes in Phase 5.</strong> Once the IVI node's production listener for ADA messages lands, the third hop gains a direct check and this substitute is withdrawn.</li>
+    </ul>
+    <div class="footer"><span>Phase 0 — Baseline Blueprint Smoke Test</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">05</div>
+    <h1>Manual steps</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">05</div><h2>Five steps requiring an operator</h2></div>
+    <ul class="points">
+      <li><strong>Create and configure the blueprint.</strong> The REST <code>addPin</code> enumeration contains no <code>ETHERNET</code> value, and <code>PATCH /nodes/{id}</code> returns 404, so wiring the four pins and setting each node's <code>image</code>, <code>command</code>, <code>capabilities</code> and environment is possible only in the Nydus UI. Both steps would otherwise have been performed by the agent.</li>
+      <li><strong>Review the test tool.</strong> The netcheck tool and its CI job were reviewed before activation and before any registry push.</li>
+      <li><strong>Create the credentials and supply them on request.</strong> The Zot API key and the CarSky API key are both created by an operator and supplied when the agent requests them; the agent never generates or infers a key.</li>
+      <li><strong>Perform the deployment.</strong> Selecting <strong>New Deployment</strong> in Nydus once node configuration is set (M9). The platform permits only two concurrent deployments, so teardown is also an operator decision.</li>
+      <li><strong>Inspect the logs.</strong> Reading each node's <strong>View Log</strong> against the expected pattern (M10) — the step that supplies the IVI node's only evidence, since the agent's REST path cannot reach that node.</li>
+    </ul>
+    <div class="footer"><span>Phase 0 — Baseline Blueprint Smoke Test</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">06</div>
+    <h1>Results</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">06</div><h2>C5 — the chain, proven by its accumulated stamps</h2></div>
+    <p class="lead">Each hop appends its role to the payload. The accumulated stamp at the ADA node proves the datagram transited every node, rather than merely arriving from an unspecified source.</p>
+    <div class="chainviz">
+    <div class="link">bench<small>seq=287</small></div>
+    <div class="arr">→</div>
+    <div class="link hot">v2x<small>seq=287&#124;bench</small></div>
+    <div class="arr">→</div>
+    <div class="link">ada<small>seq=287&#124;bench&#124;v2x</small></div>
+    </div>
+    <pre class="log">bench  [TX] #285 to 10.99.0.11:47100          len=13
+v2x    [RX] #288 from 10.99.0.10  body=seq=287|bench
+       [TX] #288 relayed to 10.99.0.12:47200  len=17
+ada    [RX] #289 from 10.99.0.11  body=seq=288|bench|v2x
+       [TX] #289 relayed to 10.99.0.13:47300  len=21</pre>
+    <div class="footer"><span>Phase 0 — Baseline Blueprint Smoke Test</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">06</div><h2>Pass criteria — all five met, 2026-07-31</h2></div>
+    <table class="fpt">
+      <thead><tr><th>#</th><th>Check</th><th>Evidence</th></tr></thead>
+      <tbody>
+        <tr><td><strong>C1</strong></td><td>All nodes <code>Running</code></td><td>5 of 5 nodes, restart count 0, stable across a 10-minute window</td></tr>
+        <tr><td><strong>C2</strong></td><td>Zero errors</td><td>0 <code>[ERR]</code> lines across the bench, V2X and ADA nodes</td></tr>
+        <tr><td><strong>C3</strong></td><td>Live per-node log</td><td>100 lines each, streaming</td></tr>
+        <tr><td><strong>C4</strong></td><td>Network capture</td><td>80 / 66 / 66 <code>[CAP]</code> lines on <code>10.99.0.x</code> — real <code>tcpdump</code>, <code>NET_RAW</code> honoured</td></tr>
+        <tr><td><strong>C5</strong></td><td>Chain proven</td><td>The ADA log carries <code>body=seq=288|bench|v2x</code></td></tr>
+      </tbody>
+    </table>
+    <p class="lead"><strong>Deployed as</strong> <code>trial2_minh_netcheck</code> · Room <code>27gs83k3oeju2mbywu1j8</code> · the deployment alone started every program, with no manual execution at any point, meeting the self-start requirement.</p>
+    <div class="footer"><span>Phase 0 — Baseline Blueprint Smoke Test</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">06</div><h2>Open items carried forward</h2></div>
+    <ul class="points">
+      <li><strong>Registry host resolved (O1).</strong> <code>registry.hackathon-2.carsky.io</code> now applies to every ECU image, not to this test alone.</li>
+      <li><strong>Platform tenancy gap.</strong> <code>GET /blueprints</code> returns every owner's blueprints unfiltered, including another team's private topology and inline scripts. Reported to the organisers; unrelated to Milestone 1 delivery.</li>
+      <li><strong>Unreliable REST routes.</strong> <code>restart</code> returns 500 and <code>container-exec</code> returns 503; teardown and redeployment is preferable to either.</li>
+      <li><strong>O3, packet-size headroom.</strong> The optional <code>PAD=1400</code> probe was not executed; it informs the message-size budget later.</li>
+      <li><strong>O4, AAOS <code>nc</code> availability.</strong> Still unknown; the indirect ADA-side check substituted for it in this run.</li>
+    </ul>
+    <p class="lead"><strong>Milestone 1 impact:</strong> the final Phase 0 acceptance criterion — blueprint topology documented and validated — is closed. Phase 1, comms bring-up, is unblocked.</p>
+    <div class="footer"><span>Phase 0 — Baseline Blueprint Smoke Test</span><span class="page"></span></div>
+  </section>
+  <section class="slide thanks" style="background-image: linear-gradient(rgba(8,12,38,.66), rgba(14,21,64,.86)), url('../assets/bg-fpt-tower.jpg')">
+    <h1>Thank you</h1>
+    <div class="rule"></div>
+    <p><strong>Phase 0 Smoke Test — Baseline Blueprint Connectivity</strong> · FPT Hackathon 2026</p>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+</div>
+
+<div class="hint">← → navigate · F fullscreen · print for PDF</div>
+<div class="hud">
+  <button id="prev" aria-label="Previous slide">‹</button>
+  <span class="ctr" id="ctr"></span>
+  <button id="next" aria-label="Next slide">›</button>
+</div>
+<div class="progress" id="prog"></div>
+
+<script>
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  slides.forEach((sl, i) => { const p = sl.querySelector('.page'); if (p) p.textContent = i + 1; });
+  let cur = 0;
+
+  function fit() {
+    const s = Math.min(innerWidth / 1280, innerHeight / 720);
+    slides.forEach(sl => sl.style.transform = `scale(${s})`);
+  }
+  function show(i) {
+    cur = Math.max(0, Math.min(slides.length - 1, i));
+    slides.forEach((sl, k) => sl.classList.toggle('active', k === cur));
+    document.getElementById('ctr').textContent = `${cur + 1} / ${slides.length}`;
+    document.getElementById('prog').style.width = `${(cur + 1) / slides.length * 100}%`;
+    location.hash = cur ? `#${cur + 1}` : '';
+  }
+  addEventListener('resize', fit);
+  addEventListener('keydown', e => {
+    if (['ArrowRight', 'PageDown', ' ', 'Enter'].includes(e.key)) { e.preventDefault(); show(cur + 1); }
+    else if (['ArrowLeft', 'PageUp', 'Backspace'].includes(e.key)) { e.preventDefault(); show(cur - 1); }
+    else if (e.key === 'Home') show(0);
+    else if (e.key === 'End') show(slides.length - 1);
+    else if (e.key.toLowerCase() === 'f') document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+  });
+  document.getElementById('prev').onclick = () => show(cur - 1);
+  document.getElementById('next').onclick = () => show(cur + 1);
+  let tx = null;
+  addEventListener('touchstart', e => tx = e.touches[0].clientX);
+  addEventListener('touchend', e => { if (tx !== null) { const dx = e.changedTouches[0].clientX - tx; if (Math.abs(dx) > 50) show(cur + (dx < 0 ? 1 : -1)); tx = null; } });
+
+  const h = parseInt((location.hash || '').slice(1), 10);
+  fit(); show(isNaN(h) ? 0 : h - 1);
+</script>
+
+</body>
+</html>

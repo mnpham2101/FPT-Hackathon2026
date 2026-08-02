@@ -21,22 +21,17 @@ FetchContent_Declare(googletest
   GIT_REPOSITORY https://github.com/google/googletest.git
   GIT_TAG v1.14.0
 )
-FetchContent_Declare(vanetza
-  GIT_REPOSITORY https://github.com/riebl/vanetza.git
-  GIT_TAG fb6c551030dcc12b924299bf401e35e5fe814713  # tag v26.06
-  EXCLUDE_FROM_ALL
-)
-
-# ASN.1-only: no security/geodesy/RPC backends (HLD section 8 - no GN/BTP full-stack pull-in).
-# Vanetza defaults these options to "was the package found on this machine", which would make the
-# configure step depend on the runner image; forcing them keeps it deterministic.
-set(BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(VANETZA_WITH_GEOGRAPHICLIB OFF CACHE BOOL "" FORCE)
-set(VANETZA_WITH_RPC OFF CACHE BOOL "" FORCE)
-set(VANETZA_WITH_CRYPTOPP OFF CACHE BOOL "" FORCE)
-set(VANETZA_WITH_OPENSSL OFF CACHE BOOL "" FORCE)
+# Vanetza declare + ASN.1-only option forcing live in the shared pin fragment (master:
+# contracts/vanetza-pin.cmake, byte-synced copy here) shared with the Scenario Player
+# codec helper. The fragment declares only; MakeAvailable stays below.
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/vanetza-pin.cmake)
 
 FetchContent_MakeAvailable(nlohmann_json googletest vanetza)
+
+# std::thread needs the platform thread library explicitly on Linux/gcc (the R7 adapter's Rx
+# thread, 7.1.3.4) - Threads::Threads carries -pthread for compile and link.
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
 
 enable_testing()
 include(GoogleTest)
@@ -115,3 +110,192 @@ set_target_properties(gv_tool PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY
 # implementation to encode/decode with.
 v2x_add_test(v2x_cpm_golden_vectors_test tests/codec/test_cpm_golden_vectors.cpp)
 target_link_libraries(v2x_cpm_golden_vectors_test PRIVATE v2x_cpm_codec)
+
+# Env config loader (8.1.2.1) - the app's only env reader (Phase 1 HLD sections 4/6).
+# Transport-blind data-layer code: stdlib only - no nlohmann, no Vanetza, and no socket
+# headers (the tools/check_transport_imports.py gate applies). Static-lib shape mirrors
+# v2x_contracts; the HLD section 6 defaults table lives in src/config/config.cpp alone.
+add_library(v2x_config STATIC
+  src/config/config.cpp
+)
+target_include_directories(v2x_config PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_compile_features(v2x_config PUBLIC cxx_std_17)
+
+v2x_add_test(v2x_config_test tests/config/test_config.cpp)
+target_link_libraries(v2x_config_test PRIVATE v2x_config)
+
+# Sole socket-API holder (7.1.2.2, Phase 1 HLD D1) - src/net/ is the only code
+# allowed to include transport headers, and only udp_socket.cpp does; the header
+# stays POSIX-free so consumers (R7 stub Rx, 2.1.2.4 ADA forwarder) never see
+# them (tools/check_transport_imports.py enforces this). Static-lib shape
+# mirrors v2x_config: stdlib + POSIX only - no nlohmann, no Vanetza.
+add_library(v2x_net STATIC
+  src/net/udp_socket.cpp
+)
+target_include_directories(v2x_net PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_compile_features(v2x_net PUBLIC cxx_std_17)
+
+v2x_add_test(v2x_udp_socket_test tests/net/test_udp_socket.cpp)
+target_link_libraries(v2x_udp_socket_test PRIVATE v2x_net)
+
+# R18 JSONL event-log writer (18.1.2.3, Phase 1 HLD D4) - the [EVT] evidence
+# stream. Links PUBLIC v2x_codec_seam (src/ include path + nlohmann + the
+# CpmContent binding embedded by decode_ok) and v2x_contracts (the R2Message
+# binding embedded by r2_forwarded). Transport-blind: no socket headers
+# (tools/check_transport_imports.py applies).
+add_library(v2x_event_log STATIC
+  src/log/event_log.cpp
+)
+target_link_libraries(v2x_event_log
+  PUBLIC v2x_codec_seam v2x_contracts
+)
+target_compile_features(v2x_event_log PUBLIC cxx_std_17)
+
+v2x_add_test(v2x_event_log_test tests/log/test_event_log.cpp)
+target_link_libraries(v2x_event_log_test PRIVATE v2x_event_log)
+
+# ADA forwarder (2.1.2.4, Phase 1 HLD D1 / D3 stage 4) - the intra-ego R2
+# edge, deliberately NOT under the R7 seam: serializes the Phase 0 R2Message
+# to compact JSON and sends one UDP datagram per message. Links PUBLIC
+# v2x_net (the sole socket holder it consumes - no socket headers here, the
+# transport-import gate applies) and v2x_contracts (the R2 binding in its
+# public signature + nlohmann transitively). Fire-and-forget per HLD D3:
+# no retry/queueing target exists.
+add_library(v2x_forward STATIC
+  src/forward/ada_forwarder.cpp
+)
+target_link_libraries(v2x_forward
+  PUBLIC v2x_net v2x_contracts
+)
+target_compile_features(v2x_forward PUBLIC cxx_std_17)
+
+v2x_add_test(v2x_ada_forwarder_test tests/forward/test_ada_forwarder.cpp)
+target_link_libraries(v2x_ada_forwarder_test PRIVATE v2x_forward)
+
+# R7 radio-adapter seam (7.1.3.1, Phase 1 HLD D2) - the FROZEN interface:
+# RadioConfig, RxCallback, RadioResult and the pure-virtual IRadioAdapter all
+# live header-only in src/adapter/i_radio_adapter.hpp, so an INTERFACE target
+# is the right shape (pattern: v2x_codec_seam; no nlohmann link - the seam
+# includes only <cstdint>/<functional>/<vector>). Deliberately transport-free
+# per HLD D1: the seam mirrors the radio (telux) surface only, and the
+# tools/check_transport_imports.py gate applies. Consumers: 7.1.3.4
+# StubRadioAdapter, 8.1.3.2 modem stub (RadioConfig + result codes).
+add_library(v2x_adapter_seam INTERFACE)
+target_include_directories(v2x_adapter_seam INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_compile_features(v2x_adapter_seam INTERFACE cxx_std_17)
+
+v2x_add_test(v2x_i_radio_adapter_test tests/adapter/test_i_radio_adapter.cpp)
+target_link_libraries(v2x_i_radio_adapter_test PRIVATE v2x_adapter_seam)
+
+# R8 modem stub FSM (8.1.3.2, Phase 1 HLD D2) - pure bring-up logic
+# idle -> initialized -> configured -> rx-subscribed, each call acked with the
+# seam's RadioResult and every outcome (ack or illegal-order rejection)
+# reported to the injectable TransitionObserver (main wires it to
+# EventLog::stubTransition). Constructor takes plain params (FaultPlan +
+# RetryParams), never reads env; plans other than None are stored unused
+# until 8.1.3.3 adds fault injection + recoveries. Transport-blind: no
+# sockets/threads (tools/check_transport_imports.py applies). Links PUBLIC
+# v2x_config (FaultPlan in the constructor signature) and v2x_adapter_seam
+# (RadioConfig/RadioResult in the API).
+add_library(v2x_stub STATIC
+  src/stub/modem_stub.cpp
+)
+target_link_libraries(v2x_stub
+  PUBLIC v2x_config v2x_adapter_seam
+)
+target_compile_features(v2x_stub PUBLIC cxx_std_17)
+
+v2x_add_test(v2x_modem_stub_fsm_test tests/stub/test_modem_stub_fsm.cpp)
+target_link_libraries(v2x_modem_stub_fsm_test PRIVATE v2x_stub)
+
+# R7 seam implementation (7.1.3.4, Phase 1 HLD D2) - the only IRadioAdapter in M1:
+# delegates init/configure/subscribeRx to the R8 stub (which owns the FSM and every
+# D2 fault/recovery) and adds what the pure-logic stub deliberately lacks - the
+# LISTEN_PORT Rx socket and its dedicated Rx thread, both RAII-owned (the destructor
+# joins; nothing is detached). send() returns NotSupported (R10 deferred). Links
+# PUBLIC v2x_adapter_seam (the frozen interface it implements), v2x_stub (ModemStub&
+# in its constructor), v2x_net (std::optional<net::UdpSocket> member - the sole
+# socket holder it consumes, so no socket headers appear here and
+# tools/check_transport_imports.py applies) and Threads::Threads for std::thread.
+add_library(v2x_adapter STATIC
+  src/adapter/stub_radio_adapter.cpp
+)
+target_link_libraries(v2x_adapter
+  PUBLIC v2x_adapter_seam v2x_stub v2x_net Threads::Threads
+)
+target_compile_features(v2x_adapter PUBLIC cxx_std_17)
+
+v2x_add_test(v2x_stub_radio_adapter_test tests/adapter/test_stub_radio_adapter.cpp)
+target_link_libraries(v2x_stub_radio_adapter_test PRIVATE v2x_adapter)
+
+# R9 Rx pipeline (Phase 1 HLD D3) - the stage-2 profile validator (9.1.4.1),
+# the stage-3 deduper (9.1.4.2), the stage-4a R2 builder (9.1.4.3) and the
+# composition root rx_pipeline that wires all four stages behind one
+# onDatagram entry point (9.1.4.4). Links PUBLIC v2x_codec_seam (CpmContent in
+# the stages' public signatures + src/ include path and nlohmann transitively),
+# v2x_contracts (the R2 builder produces R2Message) and v2x_event_log
+# (rx_pipeline.hpp names EventLog& in its constructor, and every stage outcome
+# is emitted through it). Transport-blind: no socket headers - rx_pipeline
+# takes both edges injected (onDatagram in, R2Sink out), so
+# tools/check_transport_imports.py applies to this whole library.
+add_library(v2x_pipeline STATIC
+  src/pipeline/validator.cpp
+  src/pipeline/deduper.cpp
+  src/pipeline/r2_builder.cpp
+  src/pipeline/rx_pipeline.cpp
+)
+target_link_libraries(v2x_pipeline
+  PUBLIC v2x_codec_seam v2x_contracts v2x_event_log
+)
+target_compile_features(v2x_pipeline PUBLIC cxx_std_17)
+
+v2x_add_test(v2x_validator_test tests/pipeline/test_validator.cpp)
+target_link_libraries(v2x_validator_test PRIVATE v2x_pipeline)
+
+v2x_add_test(v2x_deduper_test tests/pipeline/test_deduper.cpp)
+target_link_libraries(v2x_deduper_test PRIVATE v2x_pipeline)
+
+v2x_add_test(v2x_r2_builder_test tests/pipeline/test_r2_builder.cpp)
+target_link_libraries(v2x_r2_builder_test PRIVATE v2x_pipeline)
+
+# Composition test (9.1.4.4): drives onDatagram with a FAKE ICpmCodec scripted
+# from the golden .json fixtures, so it needs no Vanetza link - v2x_pipeline
+# carries the seam, the contracts and the event log PUBLIC-ly. The real decode
+# path is covered by v2x_cpm_golden_vectors_test and 9.1.4.5.
+v2x_add_test(v2x_rx_pipeline_test tests/pipeline/test_rx_pipeline.cpp)
+target_link_libraries(v2x_rx_pipeline_test PRIVATE v2x_pipeline)
+
+# R9 malformed-corpus acceptance test (9.1.4.5): the SAME pipeline driven by the
+# REAL VanetzaCpmCodec over tests/fixtures/malformed/, so it links v2x_cpm_codec
+# in addition to v2x_pipeline - proving the actual ASN.1 decoder rejects garbage
+# instead of crashing is the point of the suite, which a fake codec cannot do.
+v2x_add_test(v2x_rx_pipeline_malformed_test tests/pipeline/test_rx_pipeline_malformed.cpp)
+target_link_libraries(v2x_rx_pipeline_malformed_test PRIVATE v2x_pipeline v2x_cpm_codec)
+
+# The node application (8.1.5.1, Phase 1 HLD section 4) - src/main.cpp is the
+# composition root and the ONLY translation unit in this target: Config ->
+# EventLog -> codec + R9 stages -> RxPipeline (AdaForwarder as sink) -> ModemStub
+# (observer on the D4 events) -> StubRadioAdapter, then the scripted D2 bring-up.
+# Deliberately NOT a v2x_add_test target: it is the shipped entrypoint
+# (entrypoint.sh exec's it), not a gtest binary, so it must not be registered
+# with CTest. Every library it composes is linked explicitly rather than relying
+# on the PUBLIC transitivity between them, so the link list documents the whole
+# chain; Threads::Threads is named because main.cpp itself uses
+# std::this_thread::sleep_for in its signal-poll loop (v2x_adapter also carries
+# it PUBLIC-ly for the Rx thread).
+add_executable(v2x_ecu src/main.cpp)
+target_link_libraries(v2x_ecu PRIVATE
+  v2x_config
+  v2x_event_log
+  v2x_cpm_codec
+  v2x_pipeline
+  v2x_stub
+  v2x_adapter
+  v2x_forward
+  Threads::Threads
+)
+# CI and the D7 comms-check lane invoke the literal path V2X_ECU/build/v2x_ecu,
+# so pin the output dir exactly as gv_tool does rather than rely on no
+# FetchContent subproject having leaked a CMAKE_RUNTIME_OUTPUT_DIRECTORY into
+# the cache.
+set_target_properties(v2x_ecu PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})

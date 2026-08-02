@@ -24,3 +24,5 @@ secrets/
 __pycache__/
 *.pyc
 
+# Raw downloaded footage - the encoded clip is committed, its source is not
+ADA_ECU/media/source/

@@ -1,0 +1,34 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="phase1-des-callflow-bench-v2x" id="phase1-des-callflow-bench-v2x">
+    <mxGraphModel dx="1400" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="660" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="t1" value="Call flow between the bench and the V2X ECU" style="text;html=1;align=left;verticalAlign=middle;fontSize=23.8;fontColor=#19226D;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="24" y="20" width="1152" height="20" as="geometry" /></mxCell>
+        <mxCell id="t2" value="Unidirectional: the bench is the only transmitter. Nothing returns to it." style="text;html=1;align=left;verticalAlign=middle;fontSize=16.8;fontColor=#6b6e7b;fontStyle=0;" vertex="1" parent="1"><mxGeometry x="24" y="42" width="1152" height="20" as="geometry" /></mxCell>
+        <mxCell id="p0" value="Scenario Player
+bench node" style="rounded=1;arcSize=10;html=1;fillColor=#034EA2;strokeColor=none;fontColor=#ffffff;fontSize=16.8;fontStyle=1;whiteSpace=wrap;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="80" y="96" width="260" height="56" as="geometry" /></mxCell>
+        <mxCell id="ll3" value="" style="line;strokeColor=#c9cddb;dashed=1;direction=north;html=1;" vertex="1" parent="1"><mxGeometry x="210" y="152" width="1" height="452" as="geometry" /></mxCell>
+        <mxCell id="p1" value="V2X ECU
+receiving node" style="rounded=1;arcSize=10;html=1;fillColor=#19226D;strokeColor=none;fontColor=#ffffff;fontSize=16.8;fontStyle=1;whiteSpace=wrap;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="490" y="96" width="260" height="56" as="geometry" /></mxCell>
+        <mxCell id="ll4" value="" style="line;strokeColor=#c9cddb;dashed=1;direction=north;html=1;" vertex="1" parent="1"><mxGeometry x="620" y="152" width="1" height="452" as="geometry" /></mxCell>
+        <mxCell id="p2" value="ADA node
+listener" style="rounded=1;arcSize=10;html=1;fillColor=#ffffff;strokeColor=#19226D;strokeWidth=2;fontColor=#19226D;fontSize=16.8;fontStyle=1;whiteSpace=wrap;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="880" y="96" width="260" height="56" as="geometry" /></mxCell>
+        <mxCell id="ll5" value="" style="line;strokeColor=#c9cddb;dashed=1;direction=north;html=1;" vertex="1" parent="1"><mxGeometry x="1010" y="152" width="1" height="452" as="geometry" /></mxCell>
+        <mxCell id="pb6" value="Start-up — inside each node, no traffic on the network" style="rounded=0;html=1;fillColor=#eef1f8;strokeColor=none;align=left;spacingLeft=10;fontSize=16.1;fontStyle=1;fontColor=#19226D;" vertex="1" parent="1"><mxGeometry x="40" y="172" width="1120" height="26" as="geometry" /></mxCell>
+        <mxCell id="sf7" value="load configuration, validate the scenario file" style="html=1;endArrow=block;strokeColor=#034EA2;rounded=1;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="210" y="214" as="sourcePoint" /><mxPoint x="210" y="240" as="targetPoint" /></mxGeometry></mxCell>
+        <mxCell id="sf8" value="start the encoder helper process" style="html=1;endArrow=block;strokeColor=#034EA2;rounded=1;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="210" y="268" as="sourcePoint" /><mxPoint x="210" y="294" as="targetPoint" /></mxGeometry></mxCell>
+        <mxCell id="sf9" value="init · configure · subscribe — each call acknowledged" style="html=1;endArrow=block;strokeColor=#19226D;rounded=1;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="620" y="214" as="sourcePoint" /><mxPoint x="620" y="240" as="targetPoint" /></mxGeometry></mxCell>
+        <mxCell id="sf10" value="bind UDP 47100, start the receive thread" style="html=1;endArrow=block;strokeColor=#19226D;rounded=1;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="620" y="268" as="sourcePoint" /><mxPoint x="620" y="294" as="targetPoint" /></mxGeometry></mxCell>
+        <mxCell id="pb11" value="Live loop — ten messages per second, the only traffic in Phase 1" style="rounded=0;html=1;fillColor=#eef1f8;strokeColor=none;align=left;spacingLeft=10;fontSize=16.1;fontStyle=1;fontColor=#19226D;" vertex="1" parent="1"><mxGeometry x="40" y="320" width="1120" height="26" as="geometry" /></mxCell>
+        <mxCell id="sf12" value="compute the position of C at scenario time t" style="html=1;endArrow=block;strokeColor=#034EA2;rounded=1;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="210" y="360" as="sourcePoint" /><mxPoint x="210" y="386" as="targetPoint" /></mxGeometry></mxCell>
+        <mxCell id="sf13" value="encode to UPER through the helper process" style="html=1;endArrow=block;strokeColor=#034EA2;rounded=1;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="210" y="412" as="sourcePoint" /><mxPoint x="210" y="438" as="targetPoint" /></mxGeometry></mxCell>
+        <mxCell id="fl14" value="one UDP datagram to port 47100" style="html=1;endArrow=block;endFill=1;strokeColor=#034EA2;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="216" y="480" as="sourcePoint" /><mxPoint x="614" y="480" as="targetPoint" /></mxGeometry></mxCell>
+        <mxCell id="sf15" value="decode · validate · deduplicate · build the object message" style="html=1;endArrow=block;strokeColor=#19226D;rounded=1;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="620" y="500" as="sourcePoint" /><mxPoint x="620" y="526" as="targetPoint" /></mxGeometry></mxCell>
+        <mxCell id="fl16" value="one UDP datagram to port 47200" style="html=1;endArrow=block;endFill=1;strokeColor=#19226D;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="626" y="566" as="sourcePoint" /><mxPoint x="1004" y="566" as="targetPoint" /></mxGeometry></mxCell>
+        <mxCell id="n17" value="The bench logs one line per datagram sent; the V2X ECU logs one
+JSON line per stage, and both streams are read from the node log." style="rounded=1;arcSize=8;html=1;fillColor=#f2f4f9;strokeColor=#e3e5ea;fontColor=#3d3d46;fontSize=15.4;align=left;whiteSpace=wrap;verticalAlign=top;spacing=8;" vertex="1" parent="1"><mxGeometry x="40" y="588" width="560" height="56" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

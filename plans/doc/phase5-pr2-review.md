@@ -370,3 +370,4 @@ They are listed here for completeness; do not start them until the UI tasks abov
 - CI lane: `testDebugUnitTest` on every push (group 5.7 — 0 %)
 - In-Room evidence and ADB tunnel verification (group 5.9 — 0 %)
 - `R3Snapshot` required fields — remove Kotlin defaults that silently mask missing fields (§ 4.3)
+

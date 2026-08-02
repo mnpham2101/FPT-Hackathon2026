@@ -9,7 +9,7 @@
 | Note | Adopted |
 |---|---|
 | [scenario-player-v2x-callflow-messages.md](research_notes/scenario-player-v2x-callflow-messages.md) | §2 wire model (bench is the sole talker, unidirectional), §4 M1 CPM profile as the content the generator must produce, F3's ranked codec-path candidates (D1 picks #1), F8 (10 Hz default as `cpm_rate_hz` config), F9 (bench-side bound validation before encode). |
-| [Phase 0 HLD](../../requirements/phase0-contract-freeze-hld.md) | D3 codec seam (`CpmContent` + `ICpmCodec`, wire-native units) as the exact source this bench reuses; D1 sync mechanism (copies + `check_sync.py`) extended to the codec source (D2 below); `player/contracts/cpm_content.py` + golden `.json` fixtures as the Phase 0-designated bench contract layer. |
+| [Phase 0 HLD](../../plans/doc/phase0-contract-freeze-hld.md) | D3 codec seam (`CpmContent` + `ICpmCodec`, wire-native units) as the exact source this bench reuses; D1 sync mechanism (copies + `check_sync.py`) extended to the codec source (D2 below); `player/contracts/cpm_content.py` + golden `.json` fixtures as the Phase 0-designated bench contract layer. |
 
 ## 2. Design decisions
 
@@ -26,8 +26,8 @@ Node folders are self-contained build contexts with no cross-folder reads, so th
 | Master (normative home) | Synced copy here |
 |---|---|
 | `V2X_ECU/src/codec/cpm_codec.hpp` · `vanetza_cpm_codec.{hpp,cpp}` | `codec_helper/src/codec/` |
-| `requirements/contracts/vanetza-pin.cmake` *(new shared fragment: Vanetza git tag + asn1-only target list)* | `V2X_ECU/cmake/` · `codec_helper/cmake/` |
-| `requirements/contracts/golden-vectors/*.uper` | `tests/fixtures/golden/` *(Phase 0 synced `.json` only — the "until the R11 codec path is decided" condition is now resolved, so `.uper` syncs too)* |
+| `contracts/vanetza-pin.cmake` *(new shared fragment: Vanetza git tag + asn1-only target list)* | `V2X_ECU/cmake/` · `codec_helper/cmake/` |
+| `contracts/golden-vectors/*.uper` | `tests/fixtures/golden/` *(Phase 0 synced `.json` only — the "until the R11 codec path is decided" condition is now resolved, so `.uper` syncs too)* |
 
 Drift is caught twice: byte-identity by `check_sync.py`, and wire-truth by `test_encoder_golden.py` — `cpm_encode(golden .json) == golden .uper`, byte-for-byte.
 
@@ -131,5 +131,5 @@ All scenario-content tunables (rate, kinematics, IDs) live in the YAML (D3), nev
 | # | Item | Owner / closes at |
 |---|---|---|
 | 1 | Phase 0 prerequisite: codec seam sources + golden vectors + `sync-manifest.json` must exist before `codec_helper/` and `test_encoder_golden.py` can land; manifest gains the D2 entries (incl. the new `vanetza-pin.cmake`) as a Phase 1 subtask. | project-planner sequencing |
-| 2 | Builder-stage base image / architecture must match the cluster (`--platform`, smoke-test note M3); helper binary is linked against stage-1 libs — stage 2 must carry the matching runtime (or the helper is built static where Vanetza allows: LGPLv3 requires the dynamic-link posture already accepted in the report §4 — keep dynamic, copy `libvanetza_asn1*.so` into stage 2). | implementation subtask |
+| 2 | **Resolved — library skew closed and the arm64 build proven.** Builder and runtime stages share one base image (`python:3.11-slim`, §4 runtime; fallback F1 ratified by the architecture owner 2026-08-01), with the CMake ≥3.28 floor met by a pip `cmake` wheel instead of apt, so `cpm_encode` links against the glibc/libstdc++ it runs on and no stage-1 → stage-2 mismatch is possible; the report §4 LGPLv3 dynamic posture is satisfied by staging `libvanetza_asn1*.so` into the runtime stage. Implemented in [Dockerfile](../Dockerfile). Single-platform `linux/arm64` (`--platform`, smoke-test note M3) is now proven: the `scenario-player-image` lane built the image for `linux/arm64` green in CI run `30698630956`, which also validates F1 in practice — the shared base compiled and linked clean on the first attempt, with no glibc/GLIBCXX skew. | closed — CI run `30698630956` |
 | 3 | `c-out-of-range.yaml` distance value intentionally exceeds `gate_exit` (35 m) — constants stay in the YAML, but the pairing with R13 gate config should be re-checked when Phase 2 freezes gate values. | project-planner (Phase 2 cross-check) |

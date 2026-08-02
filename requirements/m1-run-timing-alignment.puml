@@ -1,0 +1,48 @@
+@startuml
+' Scenario-time alignment over one bench cycle.
+' Values from Scenario_Player/scenarios/default.yaml (cpm_rate_hz 10, duration_s 20, loop true),
+' the Phase 1 run record (60 m start, 2.5 m/s closing), and R13 (gate_enter 30 m, gate_exit 35 m).
+' Horizontal axis is bench scenario time t in seconds.
+
+title One 20 s bench cycle — the 12.0 s lead-in is what absorbs start misalignment
+
+concise "Bench scenario time t [s]" as T
+concise "C reported distance (R2 object.distance)" as D
+concise "B track state (own_sensor, R13)" as B
+concise "C track state (v2x_relayed, R13)" as C
+concise "R4 warning to IVI" as W
+
+@0
+T is "t = 0 — cycle start"
+D is "60 m"
+B is "detector warm-up"
+C is not_tracked
+W is silent
+
+@1
+T is {hidden}
+
+@5
+B is "tracked (B confirmed)"
+
+@10
+D is "35 m — gate_exit level"
+
+@12
+D is "30 m — gate_enter crossed"
+C is tentative
+
+@13
+C is tracked
+W is "warning emitted"
+
+@20
+T is "t = 0 — loop restarts"
+D is "60 m"
+C is not_tracked
+W is silent
+
+highlight 0 to 12 #LightGreen : lead-in — 12.0 s of slack for detector warm-up + B confirmation
+highlight 12 to 20 #Gold : C in gate — 8.0 s of warning window per cycle
+
+@enduml
