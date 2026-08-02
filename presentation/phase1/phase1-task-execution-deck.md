@@ -331,18 +331,6 @@ A green pipeline and a running node prove different things. The plan says which,
 
 ---
 
-# Three places the sources disagree
-
-Flagged, not resolved — reconciling them is a planning decision to take with the owner, not something a deck should quietly fix.
-
-- **The push step is recorded three ways in one file.** `5.1.10.1` is an unticked checkbox, is listed as **done** in the remaining-work table, and its own status line says "partly closed … Closed". The substance is not in doubt — the images are in the registry and every node pulled them — only the bookkeeping is.
-- **The remaining-work table still lists the broken-message tests as awaiting confirmation**, while the same file's open-items table records the confirming run and marks it closed. The later record is the run that actually exists.
-- **The phase's own summary line says 39 of 44 closed**, which was written before the deploy evidence landed. The deploy happened; the run record is the more recent source.
-
-> The plan file also carries a standing hazard worth keeping: all three image tags are mutable, so whichever branch pushes last wins the tag. Identify a deployed image at deploy time, never from an old run log.
-
----
-
 <!-- _class: lead -->
 
 ![bg](../assets/bg-navy-motif.png)

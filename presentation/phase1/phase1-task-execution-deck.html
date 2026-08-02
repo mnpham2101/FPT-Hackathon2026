@@ -492,17 +492,6 @@
     <div class="strip">The bench-to-V2X check is not vacuous: deleting the forward event fails it at the forward link, and stripping the decoded payload fails it at the decode link. It was tested for its ability to fail.</div>
     <div class="footer"><span>Phase 1 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
-  <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">07</div><h2>Three places the sources disagree</h2></div>
-    <p class="lead">Flagged, not resolved — reconciling them is a planning decision to take with the owner, not something a deck should quietly fix.</p>
-    <ul class="points">
-      <li><strong>The push step is recorded three ways in one file.</strong> <code>5.1.10.1</code> is an unticked checkbox, is listed as <strong>done</strong> in the remaining-work table, and its own status line says "partly closed … Closed". The substance is not in doubt — the images are in the registry and every node pulled them — only the bookkeeping is.</li>
-      <li><strong>The remaining-work table still lists the broken-message tests as awaiting confirmation</strong>, while the same file's open-items table records the confirming run and marks it closed. The later record is the run that actually exists.</li>
-      <li><strong>The phase's own summary line says 39 of 44 closed</strong>, which was written before the deploy evidence landed. The deploy happened; the run record is the more recent source.</li>
-    </ul>
-    <div class="strip">The plan file also carries a standing hazard worth keeping: all three image tags are mutable, so whichever branch pushes last wins the tag. Identify a deployed image at deploy time, never from an old run log.</div>
-    <div class="footer"><span>Phase 1 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
-  </section>
   <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
     <div class="sec-num">08</div>
     <h1>Handoff</h1>
