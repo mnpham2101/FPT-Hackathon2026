@@ -1,0 +1,899 @@
+# Phase 5 — IVI HMI (R4, R16, R17): Full Task Breakdown
+
+> **Authority & context:**
+>
+> - **Phase content:** [milestone1.md § Phase 5](milestone1.md#phase-5--ivi-hmi-mock-driven-r16-r17--display-track-parallel-from-the-start) — its five acceptance checkboxes are the phase output.
+> - **Design:** [phase5-ivi-hld.md](../IVI_ECU/doc/phase5-ivi-hld.md) (commit `85387b5`) with [phase5-ivi-components.puml](../IVI_ECU/doc/phase5-ivi-components.puml) and [phase5-ivi-callflow.puml](../IVI_ECU/doc/phase5-ivi-callflow.puml). Every target path below is cited verbatim from its **§3.1 / §3.2** folder map; decisions **D1–D11**, module interfaces **§5**, log shapes **§5.4**, CI **§6.1**, test ladder **§7**, deployment **§8**, the latent defect **§9.2**, open items **§11**.
+> - **Research notes:** [phase5-mini-blueprint.md](../IVI_ECU/doc/research_notes/phase5-mini-blueprint.md) · [phase5-r4-simulator.md](../IVI_ECU/doc/research_notes/phase5-r4-simulator.md) · [phase5-r4-parsing.md](../IVI_ECU/doc/research_notes/phase5-r4-parsing.md) · [phase5-ivi-implementation-notes.md](../IVI_ECU/doc/research_notes/phase5-ivi-implementation-notes.md) — non-authoritative; the HLD wins on conflict.
+> - **Requirements:** [m1-cooperative-awareness.md §2](../requirements/m1-cooperative-awareness.md) R4, R16, R17 (plus R5, R6, R18, R19 where this phase touches them) — referenced by number, never restated.
+> - **Deploy facts:** [node-ivi-ecu.md](../requirements/car-sky-guide/node-ivi-ecu.md) · [carsky-4-node-blueprint.md](../requirements/car-sky-guide/carsky-4-node-blueprint.md) · [deploy-walkthrough-netcheck.md](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md).
+> - **Rules:** [task-planning-conventions.md](../.claude/rules/task-planning-conventions.md) (`X.Y.Z.W`; subtask discipline restated once in § Subtask discipline) · [node-code-layout.md](../.claude/rules/node-code-layout.md).
+>
+> **Task ID legend:** `X.5.Z.W` — X = requirement served · 5 = this phase · Z = task group · W = subtask. IDs are stable; never renumber.
+>
+> **Independence note.** This breakdown was written from the requirements and the HLD alone, from zero, on 2026-08-02. It does not read, reconcile with, or inherit IDs from any earlier Phase 5 task file, and it marks nothing as pre-existing except where the HLD itself designates a file `[C]` (already committed) or `[R]` (relocated verbatim).
+
+## Phase 5 overview
+
+**Objective.** The IVI renders the R17 God View — ego, B, and ghost C — from R4 messages alone, inside the R16 layout, on a launchable APK; and an R4 simulator plus a 3-node mini-blueprint produce the traffic and the in-Room evidence that closes the phase's acceptance boxes.
+
+**Input (must exist before start — all present as of 2026-08-02):**
+
+- R4 frozen in Phase 0: [contracts/r4-ada-ivi.schema.json](../contracts/r4-ada-ivi.schema.json), the four samples under [contracts/samples/](../contracts/samples/), and the committed Kotlin binding + `R4RoundTripTest` / `R4AdditiveVersionTest`.
+- The Phase 5 HLD (`85387b5`) and its four research notes.
+- `IVI_ECU/` as a single-module Gradle project (`:app`) carrying the contract layer (`model/`) and the drawing layer (`ui/view/`), AGP 8.13 / Kotlin 2.2.20 / Compose BOM 2024.09.03 / `minSdk 29`, `targetSdk 33`, `compileSdk 34`.
+- CarSky access with the baseline blueprint `trial2_minh_netcheck`, the `AAOS` artifact (`x9oqgIwzTp1m26SWIQqJt` / `xSU_Q7YJZUxxUgDr4Ugcp`, `0.0.1`, `aarch64`), and `registry.hackathon-2.carsky.io/m1-netcheck:latest` already pushed.
+- GitHub secret `CARSKY_ZOT_API_KEY` and the reusable [verify-arm64-image](../.github/actions/verify-arm64-image) action.
+
+**Output (phase acceptance = the five milestone boxes):**
+
+- [ ] The HMI runs on the AAOS node with the R16 layout; button/app areas switch what the Display area shows.
+- [ ] **(Dev)** A mock R4 warning brings the warning view up showing ego, B, and ghost C at the composed positions.
+- [ ] Ghost C renders from `v2x_relayed` data only; the 2D drawing is delivered (R17 — 3D stays optional).
+- [ ] A newer message with an unknown `warningType` degrades gracefully (R4 additive-version test).
+- [ ] Optional paths, only if built: an ADA message wakes the separate warning app; 3D renders through the view seam.
+
+Per-subtask traceability to these five boxes: § Acceptance traceability.
+
+**Suggested branch (suggestion only — creation, checkout and push are the user's call):** `feat/phase5-ivi-hmi`
+
+**Deadline context.** Hard milestone deadline 2026-08-08; this plan is written 2026-08-02. The critical path to the five boxes is § Critical path — the shortest ordered set of subtasks that closes them; everything else is quality work that can be dropped or deferred without failing a box.
+
+### Execution split legend
+
+| Label | Meaning |
+|---|---|
+| *agent* | implemented by a spawned implementation subagent (default) |
+| *car-sky* | executed by the [[car-sky]] agent (deploy preflight → build/push/deploy/verify); planner keeps the ID and done-tracking |
+| *USER-MANUAL* | Nydus UI / ADB / device steps performed by the user; the plan tracks them, no agent performs them; the evidence-record commit is made by the orchestrating session after the user confirms |
+
+### Subtask discipline (applies to every subtask below)
+
+Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-planning-conventions.md#subtask-discipline-non-negotiable): **single objective · no out-of-scope code · exactly one atomic commit with the stated message · build passes · unit tests pass · the brief is self-contained.** Implementation subagents inherit this as their definition of done.
+
+Two standing constraints every `IVI_ECU/` subtask inherits:
+
+- **No hardcoded tunables** (CLAUDE.md principle 5): ports, buffer sizes, timeouts, cadences and scales come from `BuildConfig` + launch override (D10) or from the simulator's env/scenario file — never a literal in a class.
+- **No module declares its own repositories.** `settings.gradle.kts` sets `RepositoriesMode.FAIL_ON_PROJECT_REPOS`; a module `repositories { }` block fails the build (D8).
+
+**Status tracking:** as execution proceeds each subtask gains a `**Status:**` line appended in that subtask's own atomic commit, recording done/blocked plus verification evidence. A subtask without a status line is not started. Nothing in this file is started.
+
+### Build & verification commands (cited in acceptance below)
+
+All Gradle commands run from `IVI_ECU/` (`gradlew.bat` on the Windows dev host, `./gradlew` on CI/Linux).
+
+| Target | Command |
+|---|---|
+| One module's tests | `./gradlew :contract:test` · `:serializer:test` · `:observer:test` · `:r4-simulator:test` |
+| App unit tests | `./gradlew :app:testDebugUnitTest` |
+| **Full suite (post-5.1)** | `./gradlew :contract:test :serializer:test :observer:test :r4-simulator:test :app:testDebugUnitTest` |
+| APK | `./gradlew assembleDebug` → `app/build/outputs/apk/debug/app-debug.apk` |
+| Lint | `./gradlew lint` |
+| Contract integrity gate | from the repo root: `python contracts/check_sync.py` → exit 0 |
+| Simulator image | `docker buildx build --platform linux/arm64 --provenance=false --sbom=false -f IVI_ECU/r4-simulator/Dockerfile -t m1-r4-sim:latest IVI_ECU/` |
+
+Until subtask `4.5.1.4` lands, the only valid test command is `./gradlew :app:testDebugUnitTest` — the other modules do not exist yet.
+
+---
+
+## Task Group 5.1 — Gradle multi-project foundation & contract relocation (serves R4)
+
+> Turns the single-module project into the five-module graph of HLD **D2**, under one version catalog (**D8**), and moves the committed contract layer into `:contract` (**D1**, **D6**) without touching a line of its source or its tests. This group gates every other code group.
+
+### [ ] `4.5.1.1` — Version catalog `gradle/libs.versions.toml` + root plugin aliases *(agent)*
+
+**Objective:** create the single source of dependency and plugin versions for all five modules (HLD D8).
+
+**Scope:**
+
+- New file `IVI_ECU/gradle/libs.versions.toml` declaring, at the versions already in use (read them from `IVI_ECU/build.gradle.kts` and `IVI_ECU/app/build.gradle.kts`): AGP `8.13.0`, Kotlin `2.2.20`, KSP `2.2.20-2.0.4`, kotlinx-serialization-json `1.9.0`, Compose BOM `2024.09.03`, androidx-core-ktx `1.13.1`, lifecycle-viewmodel-compose `2.8.6`, JUnit `4.13.2`; plus two versions this phase adds: `kotlinx-coroutines` (`1.9.0`, core + test) and `androidx-activity-compose` (`1.9.3`).
+- `[plugins]` aliases for: `android-application`, `kotlin-android`, `kotlin-jvm` (`org.jetbrains.kotlin.jvm`), `kotlin-serialization`, `kotlin-compose`, `ksp`, and `application` is a built-in Gradle plugin (no alias needed, applied by id in `:r4-simulator`).
+- `IVI_ECU/build.gradle.kts`: restate the existing `plugins { … apply false }` block through `alias(libs.plugins.…)`, and **add** `kotlin-jvm` (needed by `:contract`, `:serializer`, `:observer`, `:r4-simulator`). Leave the Hilt line untouched here — `4.5.1.2` removes it.
+- Do not add or remove any module, and do not edit `app/build.gradle.kts` in this subtask.
+
+**Acceptance:** `./gradlew :app:testDebugUnitTest` still green; `./gradlew projects` succeeds; `libs.versions.toml` contains every version listed above and no module declares a version literal that the catalog also declares.
+
+**Dependencies:** none — the first subtask of the phase, and the gate for the whole `IVI_ECU/` tree. **Commit:** `[4.5.1.1] chore: add IVI Gradle version catalog and root plugin aliases`
+
+### [ ] `4.5.1.2` — Move `:app` onto the catalog and drop Hilt *(agent)*
+
+**Objective:** make `app/build.gradle.kts` resolve every plugin and dependency through the catalog, removing the unused Hilt stack (HLD D7).
+
+**Scope:**
+
+- Rewrite `app/build.gradle.kts`'s `plugins { }` and `dependencies { }` blocks to `alias(libs.plugins.…)` / `libs.…` references. Behaviour must not change apart from the removal below.
+- **Remove** `id("com.google.dagger.hilt.android")` from `app/build.gradle.kts` and from `IVI_ECU/build.gradle.kts`, and remove `implementation("com.google.dagger:hilt-android:2.58")` and `ksp("com.google.dagger:hilt-android-compiler:2.58")`. Nothing references Hilt today — there is no `@HiltAndroidApp` class and no `@Inject` site (verify with a repo-wide grep for `dagger` and `Hilt` before committing). D7 replaces it with the hand-written `IviGraph` of `4.5.5.3`.
+- Keep the KSP plugin only if something still uses it; if the grep shows Hilt was its only consumer, remove `id("com.google.devtools.ksp")` from `app/build.gradle.kts` too and say so in the commit body.
+- Do not add the new `buildConfigField`s here — `4.5.4.1` owns those.
+
+**Acceptance:** `./gradlew :app:testDebugUnitTest` and `./gradlew assembleDebug` both green; a repo-wide grep for `hilt`/`dagger` under `IVI_ECU/` returns nothing.
+
+**Dependencies:** after `4.5.1.1`. **Commit:** `[4.5.1.2] refactor: put :app on the version catalog and remove the unused Hilt stack`
+
+### [ ] `4.5.1.3` — Create the `:contract` module skeleton + `R4Contract.kt` *(agent)*
+
+**Objective:** stand up the pure-JVM contract module (HLD D1) with nothing in it yet but its own constants file.
+
+**Scope:**
+
+- `IVI_ECU/settings.gradle.kts`: add `include(":contract")`.
+- New `IVI_ECU/contract/build.gradle.kts`: `alias(libs.plugins.kotlin.jvm)` + `alias(libs.plugins.kotlin.serialization)`; `api(libs.kotlinx.serialization.json)` (**`api`, not `implementation`** — `:app` and `:r4-simulator` use `R4Json` and the `@Serializable` types directly); `testImplementation(libs.junit)`; JVM toolchain 17. **Zero Android dependencies** — this module must compile with no Android SDK present.
+- New `IVI_ECU/contract/src/main/kotlin/com/hackathon/v2x/ivi/model/R4Contract.kt` holding, as an `object R4Contract`: `KNOWN_SCHEMA_VERSION = 1` (the frozen `contracts/samples/r4-warning.json` value), the four sample resource paths as constants (`/contracts/samples/r4-warning.json`, `r4-state.json`, `r4-unknown-warning.json`, `r3-tracked-object.json`), and the M1 warning-registry key list (`R4WarningEvent.WARNING_TYPE_NLOS_OBSTRUCTION` is the only entry — reference it once the models land in `4.5.1.4`; until then declare the string constant `"nlos_obstruction"` here and have `4.5.4.3` consume `R4Contract`).
+- Do not move any file in this subtask.
+
+**Acceptance:** `./gradlew :contract:build` green; `./gradlew :app:testDebugUnitTest` still green; `contract/build.gradle.kts` contains no `com.android.*` plugin and no `repositories { }` block.
+
+**Dependencies:** after `4.5.1.1`. **Commit:** `[4.5.1.3] feat: add the pure-JVM :contract module with R4Contract constants`
+
+### [ ] `4.5.1.4` — Relocate the models, tests and samples into `:contract`; repoint the sync manifest *(agent)*
+
+**Objective:** move the committed contract layer verbatim into `:contract` and keep the contract-integrity gate green in the same commit (HLD D1, D6, §3.2 row 1).
+
+**Scope — a relocation, not a rewrite. No source line may change.**
+
+- `git mv` these three files from `IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/model/` to `IVI_ECU/contract/src/main/kotlin/com/hackathon/v2x/ivi/model/`, **byte-identical**, package `com.hackathon.v2x.ivi.model` unchanged: `R4Message.kt`, `R3Snapshot.kt`, `SceneGeometry.kt`.
+- `git mv` both committed tests from `IVI_ECU/app/src/test/java/com/hackathon/v2x/ivi/model/` to `IVI_ECU/contract/src/test/kotlin/com/hackathon/v2x/ivi/model/`, **byte-identical**: `R4RoundTripTest.kt`, `R4AdditiveVersionTest.kt`. They must pass **unchanged** — do not touch their `getResourceAsStream("/contracts/samples/…")` calls.
+- `git mv` the four sample JSONs from `IVI_ECU/app/src/test/resources/contracts/samples/` to `IVI_ECU/contract/src/main/resources/contracts/samples/` (**main**, not test — D6: the simulator and the dev injector read them off the same classpath): `r3-tracked-object.json`, `r4-warning.json`, `r4-state.json`, `r4-unknown-warning.json`. Because the resource root still contains `contracts/samples/`, the moved tests resolve unchanged.
+- `app/build.gradle.kts`: add `implementation(project(":contract"))`.
+- **Same commit, out-of-folder edit (§3.2 row 1):** in [contracts/sync-manifest.json](../contracts/sync-manifest.json), repoint the four `IVI_ECU/app/src/test/resources/contracts/samples/<f>.json` targets to `IVI_ECU/contract/src/main/resources/contracts/samples/<f>.json`. They sit under the `contracts/samples/r3-tracked-object.json`, `r4-warning.json`, `r4-state.json` and `r4-unknown-warning.json` source entries. **This edit cannot be deferred** — the moment the files move, `check_sync.py` reports four missing targets and `contracts-gate` goes red.
+- `IVI_ECU/contracts/r3-tracked-object.schema.json` and `r4-ada-ivi.schema.json` are **not** touched — their manifest targets are unchanged.
+
+**Acceptance:** `./gradlew :contract:test` green with `R4RoundTripTest` and `R4AdditiveVersionTest` passing (5 test methods total, no source change — verify with `git diff -M --stat` showing pure renames); `./gradlew :app:testDebugUnitTest` and `./gradlew assembleDebug` green; `python contracts/check_sync.py` exits 0.
+
+**Dependencies:** after `4.5.1.3`. **Commit:** `[4.5.1.4] refactor: relocate R4/R3 models, tests and samples into :contract`
+
+### [ ] `4.5.1.5` — ProGuard keep rules for the relocated serializable models *(agent)*
+
+**Objective:** keep the release build's kotlinx-serialization reflection working after the relocation (HLD §3.1, `app/proguard-rules.pro` `[C] +`).
+
+**Scope:** add to `IVI_ECU/app/proguard-rules.pro` the standard kotlinx-serialization keep set scoped to `com.hackathon.v2x.ivi.model.**` — keep the generated `$$serializer` fields/classes, the `Companion.serializer()` methods, and `@kotlinx.serialization.Serializable` annotated classes' `INSTANCE`/`Companion`. Nothing else; do not change `isMinifyEnabled`.
+
+**Acceptance:** `./gradlew :app:assembleRelease` succeeds (unsigned output is fine); the rules name only the `com.hackathon.v2x.ivi.model` package.
+
+**Dependencies:** after `4.5.1.4`. Parallel with groups 5.2–5.6. **Commit:** `[4.5.1.5] chore: add ProGuard keep rules for the relocated serializable models`
+
+---
+
+## Task Group 5.2 — `:serializer` — datagram bytes to a typed R4 result (serves R4; injection point I1)
+
+> HLD **D3** (de-framing is buffer slicing, not header parsing) and **§5.1** (the decode entry point). Pure Kotlin/JVM: **never logs, never throws across the receive loop** — it returns a result and the observer decides what to log.
+
+### [ ] `4.5.2.1` — Module `:serializer` + the decode contract types *(agent)*
+
+**Objective:** declare the module and the types of HLD §5.1, with no implementation behind them.
+
+**Scope:**
+
+- `settings.gradle.kts`: `include(":serializer")`. New `IVI_ECU/serializer/build.gradle.kts`: `alias(libs.plugins.kotlin.jvm)`; `api(project(":contract"))`; `testImplementation(libs.junit)`; toolchain 17; no Android, no repositories block.
+- New `IVI_ECU/serializer/src/main/kotlin/com/hackathon/v2x/ivi/serializer/R4Decoder.kt` containing **exactly** HLD §5.1's declarations:
+
+  ```kotlin
+  interface R4Decoder { fun decode(buffer: ByteArray, offset: Int, length: Int): R4DecodeResult }
+  sealed interface R4DecodeResult {
+      data class Decoded(val message: R4Message, val schemaVersionAhead: Boolean) : R4DecodeResult
+      data class Failed(val reason: DecodeFailure, val detail: String, val preview: String) : R4DecodeResult
+  }
+  enum class DecodeFailure { EMPTY, UNKNOWN_MESSAGE_TYPE, MALFORMED }
+  ```
+
+**Acceptance:** `./gradlew :serializer:build` green; the file's three declarations match the block above field-for-field.
+
+**Dependencies:** after `4.5.1.4`. **Commit:** `[4.5.2.1] feat: add the :serializer module and the R4 decode contract`
+
+### [ ] `4.5.2.2` — `R4Deserializer` implementation + the decode-table test *(agent)*
+
+**Objective:** implement `R4Decoder` so every row of the [parsing note §2](../IVI_ECU/doc/research_notes/phase5-r4-parsing.md) table maps to the right `R4DecodeResult`, and nothing escapes as an exception.
+
+**Scope — two files:**
+
+- `IVI_ECU/serializer/src/main/kotlin/com/hackathon/v2x/ivi/serializer/PayloadPreview.kt` — `fun preview(buffer: ByteArray, offset: Int, length: Int, maxChars: Int): String`: a **bounded, single-line** rendering of the bytes for the log; non-printable bytes escaped, newlines/tabs replaced, truncated with an ellipsis at `maxChars` (default a constant in this file, e.g. 48). Never returns the whole datagram.
+- `IVI_ECU/serializer/src/main/kotlin/com/hackathon/v2x/ivi/serializer/R4Deserializer.kt` — `class R4Deserializer : R4Decoder`:
+  1. Slice `buffer[offset until offset + length]` — **never** the whole backing array (D3 row 1).
+  2. Decode as UTF-8, strip a leading UTF-8 BOM (`EF BB BF`) and surrounding whitespace (D3 row 4).
+  3. Empty/blank after trimming → `Failed(EMPTY, …)`.
+  4. `R4Json.decodeFromString(R4Message.serializer(), text)` inside a `try`/`catch (SerializationException)`.
+  5. Success → `Decoded(message, schemaVersionAhead = message.schemaVersion > R4Contract.KNOWN_SCHEMA_VERSION)`.
+  6. Failure whose message indicates an unresolved polymorphic discriminator → `Failed(UNKNOWN_MESSAGE_TYPE, …)`; every other `SerializationException` (malformed, truncated, wrong field type, missing required field) → `Failed(MALFORMED, …)`. Catch `Throwable` at the outer edge and map to `MALFORMED` rather than letting anything propagate.
+  7. Convenience overloads `decode(bytes: ByteArray)` and `decode(text: String)` for I1 tests (HLD §5.1).
+  - **`isLenient` stays `false`** and no runtime JSON-Schema validation is added (HLD §5.1). `R4Json` is consumed as-is from `:contract`; do not construct a second `Json`.
+- `IVI_ECU/serializer/src/test/kotlin/com/hackathon/v2x/ivi/serializer/R4DeserializerTest.kt` — one test per decode-table row, reading fixtures off the `:contract` classpath (`/contracts/samples/…`): `r4-warning.json` → `Decoded`, warning, `schemaVersionAhead == false`; `r4-state.json` → `Decoded` state; `r4-unknown-warning.json` → `Decoded` **with `warningType == "slippery_road"` preserved verbatim** (D4) and `schemaVersionAhead == true`; `{"type":"telemetry",…}` → `UNKNOWN_MESSAGE_TYPE`; `not-json` → `MALFORMED`; a truncated prefix of `r4-warning.json` → `MALFORMED`; `"distance": "far"` → `MALFORMED`; a warning with `object` removed → `MALFORMED`; empty and all-whitespace input → `EMPTY`. Assert **no test throws** and every `Failed.preview` is non-empty and single-line.
+
+**Acceptance:** `./gradlew :serializer:test` green with every row above covered; a grep of `serializer/src/main` shows no `println`, no logging import, and no `throw`.
+
+**Dependencies:** after `4.5.2.1`. **Commit:** `[4.5.2.2] feat: implement R4Deserializer with the full decode-failure table`
+
+### [ ] `4.5.2.3` — Buffer-slicing test *(agent)*
+
+**Objective:** prove the D3 buffer discipline that the decode-table test cannot reach.
+
+**Scope:** `IVI_ECU/serializer/src/test/kotlin/com/hackathon/v2x/ivi/serializer/BufferSlicingTest.kt`:
+
+- A 2048-byte buffer pre-filled with garbage, the valid `r4-warning.json` bytes written at a **non-zero offset**, decoded with that `offset`/`length` → `Decoded`. This is the "dirty backing array" case: decoding `buffer` whole would fail.
+- The same buffer reused for a second, **shorter** payload → still `Decoded`, proving trailing bytes of the previous message are not appended.
+- A payload prefixed with a UTF-8 BOM → `Decoded`.
+- A payload wrapped in leading/trailing whitespace and a trailing newline → `Decoded`.
+- `length = 0` → `EMPTY`; `offset + length` beyond the array → `MALFORMED`, not an exception.
+
+**Acceptance:** `./gradlew :serializer:test` green; all six cases present.
+
+**Dependencies:** after `4.5.2.2`. **Commit:** `[4.5.2.3] test: cover offset/length slicing, dirty buffers and BOM handling`
+
+---
+
+## Task Group 5.3 — `:observer` — socket, receive loop, back-off, event flow (serves R4, R6; injection point I2)
+
+> HLD **D5** (the loop is plain-JVM code; the service is only its lifecycle host) and **§5.2**. Plain Kotlin/JVM so I2 runs in CI with no device and **no Robolectric**. `:observer` never imports `android.util.Log` — it logs through the `R4Logger` seam.
+
+### [ ] `4.5.3.1` — Module `:observer` + seams, config and event types *(agent)*
+
+**Objective:** declare the module and its four value/seam files, with no loop yet.
+
+**Scope:**
+
+- `settings.gradle.kts`: `include(":observer")`. New `IVI_ECU/observer/build.gradle.kts`: `alias(libs.plugins.kotlin.jvm)`; `api(project(":serializer"))`; `api(libs.kotlinx.coroutines.core)`; `testImplementation(libs.junit)` + `testImplementation(libs.kotlinx.coroutines.test)`; toolchain 17; no Android.
+- `observer/src/main/kotlin/com/hackathon/v2x/ivi/observer/R4DatagramSource.kt` — the seam: `fun bind()`, `fun receive(): Received`, `fun close()`, and `data class Received(val buffer: ByteArray, val offset: Int, val length: Int)`. Interface only; `4.5.3.2` implements it.
+- `.../R4Event.kt` — **exactly** HLD §5.2: `sealed interface R4Event { data class Message(val message: R4Message, val receivedAtMs: Long, val bytes: Int); data class Dropped(val reason: DecodeFailure, val detail: String, val bytes: Int) }`, plus `sealed interface R4LinkState { Bound(port) | Rebinding | Error(detail) }` (the bottom status bar of `4.5.5.6` binds to this).
+- `.../R4ObserverConfig.kt` — `data class R4ObserverConfig(val port: Int, val bufferBytes: Int, val flowBufferEvents: Int, val retryInitialMs: Long, val retryMaxMs: Long)`. **No default values and no literals** — every field is supplied by `IviRuntimeConfig` (`4.5.4.1`).
+- `.../R4Logger.kt` — `fun interface R4Logger { fun log(level: R4LogLevel, line: String) }` plus `object NoopR4Logger : R4Logger` and an `enum class R4LogLevel { INFO, WARN, ERROR }`. `:app` supplies the real implementation in `4.5.5.1`.
+
+**Acceptance:** `./gradlew :observer:build` green; a grep of `observer/src/main` shows zero `android.` / `androidx.` imports.
+
+**Dependencies:** after `4.5.2.1`. **Commit:** `[4.5.3.1] feat: add the :observer module with its datagram seam, events and config`
+
+### [ ] `4.5.3.2` — `JdkDatagramSource` — the real socket, with the setLength rule *(agent)*
+
+**Objective:** implement `R4DatagramSource` over `java.net.DatagramSocket`, owning the one rule that silently truncates every datagram if forgotten.
+
+**Scope:** `observer/src/main/kotlin/com/hackathon/v2x/ivi/observer/JdkDatagramSource.kt`:
+
+- Constructor takes `port` and `bufferBytes` (from `R4ObserverConfig` — no literals).
+- `bind()` binds **`0.0.0.0:<port>`**, never the node address — the bridge assigns it (HLD D5, §8). Allocates one reusable `ByteArray(bufferBytes)` and one reusable `DatagramPacket`.
+- `receive()` calls **`packet.setLength(buffer.size)` before every `socket.receive(packet)`** (D3 row 2 — without it every datagram after the first is truncated to the shortest one seen), then returns `Received(packet.data, packet.offset, packet.length)`.
+- `close()` is idempotent and unblocks a pending `receive()`.
+- Bind failure propagates as an exception for `R4SocketObserver` to turn into `Rebinding` — it is **not** swallowed here.
+- Unit test `observer/src/test/kotlin/.../JdkDatagramSourceTest.kt`: bind on port `0` (ephemeral), send two datagrams from a local `DatagramSocket` — a long one then a **shorter** one — and assert the second `Received.length` equals the second payload's length (the regression this class exists to prevent).
+
+**Acceptance:** `./gradlew :observer:test` green; the `setLength` call is textually inside the `receive()` body, before the `socket.receive(...)` call.
+
+**Dependencies:** after `4.5.3.1`. **Commit:** `[4.5.3.2] feat: add JdkDatagramSource with per-receive packet length reset`
+
+### [ ] `4.5.3.3` — `R4SocketObserver` — receive loop, truncation check, event flow *(agent)*
+
+**Objective:** implement the loop of HLD §5.2 so N datagrams in produce N events out and one bad message never stops the next good one.
+
+**Scope:** `observer/src/main/kotlin/com/hackathon/v2x/ivi/observer/R4SocketObserver.kt` with the §5.2 signature verbatim:
+
+```kotlin
+class R4SocketObserver(
+    private val config: R4ObserverConfig,
+    private val decoder: R4Decoder,
+    private val sourceFactory: () -> R4DatagramSource,
+    private val logger: R4Logger,
+) { val events: SharedFlow<R4Event>; val linkState: StateFlow<R4LinkState>; fun start(scope: CoroutineScope): Job; fun stop() }
+```
+
+- `events` is a `MutableSharedFlow` with `extraBufferCapacity = config.flowBufferEvents` and `BufferOverflow.DROP_OLDEST`; the loop uses **`tryEmit`, never a suspending emit** (D5 back-pressure) — a slow collector must never stall the socket.
+- `start(scope)` launches on `Dispatchers.IO`; on bind success `linkState = Bound(port)` and log `[LINK] state=bound port=<p>` (§5.4).
+- Per datagram: if `length == config.bufferBytes`, log a truncation-suspect WARN and **still attempt the decode** (D3 row 3). Call `decoder.decode(buffer, offset, length)`; `Decoded` → log the `[RX]` line of §5.4 and `tryEmit(R4Event.Message(msg, System.currentTimeMillis(), length))`; `Failed` → log `[DROP] reason=… bytes=… preview="…"` and `tryEmit(R4Event.Dropped(...))`. Log `schemaVersionAhead` **once** per observer lifetime, not per message.
+- The `[RX]` line for a warning carries `warningType=`, `risk=`, `cSource=` (the R3 snapshot's `source`) and `cPos=` — `cSource` on every rendered warning is what backs the R19 claim in text (§5.4).
+- **No accumulate-and-split logic** anywhere (D3 row 5) — UDP preserves message boundaries.
+- `stop()` closes the source and cancels the job; `linkState` is left at its last value.
+- Test `observer/src/test/kotlin/.../R4SocketObserverTest.kt` with a **fake** `R4DatagramSource` (no socket): 5 valid datagrams in → 5 `R4Event.Message` out in order; one malformed among them → 1 `Dropped` and the following good message still arrives; a fake whose `receive()` throws once → the loop does not die (leaves the back-off to `4.5.3.4`); assert nothing was logged through a real Android type by injecting a recording `R4Logger`.
+
+**Acceptance:** `./gradlew :observer:test` green; `tryEmit` is the only emit call in the loop; the `[RX]`/`[DROP]`/`[LINK]` shapes match HLD §5.4 exactly.
+
+**Dependencies:** after `4.5.3.2`. **Commit:** `[4.5.3.3] feat: implement the R4 receive loop with typed events and truncation checks`
+
+### [ ] `4.5.3.4` — Rebind back-off + its test *(agent)*
+
+**Objective:** make a socket error a recoverable, bounded-back-off rebind instead of a dead listener.
+
+**Scope:**
+
+- Extend `R4SocketObserver` (no new production file): on a bind or receive error → log at ERROR, `linkState = Rebinding`, close the source, `delay(d)`, recreate through `sourceFactory()`, retry; `d` starts at `config.retryInitialMs`, doubles to a ceiling of `config.retryMaxMs`, and **resets to `retryInitialMs` on the next successful bind**. `linkState` returns to `Bound`.
+- `observer/src/test/kotlin/.../RetryBackoffTest.kt` using `kotlinx-coroutines-test` virtual time: a source factory that fails the first three binds then succeeds → assert the observed delays are `initial, 2×initial, 4×initial` clamped at `retryMaxMs`, that `linkState` passes `Rebinding → Bound`, and that after a later failure the delay restarts at `retryInitialMs` (reset-on-success).
+
+**Acceptance:** `./gradlew :observer:test` green; no `Thread.sleep` anywhere — the test runs on virtual time.
+
+**Dependencies:** after `4.5.3.3`. **Commit:** `[4.5.3.4] feat: add bounded exponential rebind back-off to the R4 observer`
+
+### [ ] `4.5.3.5` — Loopback socket test (I2) *(agent)*
+
+**Objective:** prove the observer end to end over a **real** `DatagramSocket`, with no device and no Robolectric (HLD §7, I2).
+
+**Scope:** `observer/src/test/kotlin/com/hackathon/v2x/ivi/observer/LoopbackSocketTest.kt`:
+
+- Bind a real `JdkDatagramSource` on an ephemeral port on `127.0.0.1`, wire it into a real `R4SocketObserver` with a real `R4Deserializer`, collect `events`.
+- Send the frozen `r4-warning.json` bytes from a plain `DatagramSocket` → one `R4Event.Message` whose `message` is an `R4WarningEvent` with `objectSnapshot.source == "v2x_relayed"`.
+- Send `r4-unknown-warning.json` → `Message` with `warningType == "slippery_road"` (D4 end to end).
+- Send `not-json` bytes → one `Dropped(MALFORMED, …)`, and a following valid datagram still produces a `Message` — the loop survived.
+- Bounded waits (a few seconds) with a clear timeout failure message; the test must not hang CI.
+
+**Acceptance:** `./gradlew :observer:test` green on a machine with no Android SDK; no Robolectric dependency is added anywhere.
+
+**Dependencies:** after `4.5.3.4`. **Commit:** `[4.5.3.5] test: add the I2 loopback socket test for the R4 observer`
+
+---
+
+## Task Group 5.4 — `:app` data & logic layer — the missing middle (serves R4, R16, R17)
+
+> HLD **§3.1** `app/src/main/java/com/hackathon/v2x/ivi/{config,data,warning,ui}` and **§4** MVC. Everything in this group is plain Kotlin testable by `:app:testDebugUnitTest` with no device. Group 5.5 then hosts it in an Activity and a service.
+
+### [ ] `4.5.4.1` — `IviRuntimeConfig` + the new `BuildConfig` fields (D10) *(agent)*
+
+**Objective:** make every Phase 5 tunable a compile-time default that a launch-time intent extra can override, in one place.
+
+**Scope:**
+
+- `app/build.gradle.kts` `defaultConfig`: add the `buildConfigField`s of HLD D10 beside the committed `WARNING_TIMEOUT_MS`: `R4_UDP_PORT = 47300` (blueprint-frozen — **not** 5004), `R4_SOCKET_BUFFER_BYTES = 2048`, `R4_FLOW_BUFFER_EVENTS = 8`, `R4_RETRY_INITIAL_MS = 500L`, `R4_RETRY_MAX_MS = 5000L`, `SCENE_SCALE_M_PER_PX = 0.5f`.
+- New `app/src/main/java/com/hackathon/v2x/ivi/config/IviRuntimeConfig.kt`: `data class IviRuntimeConfig(port, socketBufferBytes, flowBufferEvents, retryInitialMs, retryMaxMs, warningTimeoutMs, sceneScaleMetersPerPixel)` plus `fun resolve(intent: Intent?): IviRuntimeConfig` — reads the `BuildConfig` defaults and applies the D10 overrides when present: `--ei r4_port`, `--el warning_timeout_ms`, `--ef scene_scale`. Invalid or out-of-range extras (port outside 1–65535, non-positive timeout/scale) are ignored in favour of the default. Add `fun toObserverConfig(): R4ObserverConfig`. **This is the only class that reads `BuildConfig`** — every other class receives resolved values.
+- Test `app/src/test/java/com/hackathon/v2x/ivi/config/IviRuntimeConfigTest.kt`: a null intent yields the defaults; each override key is applied; an out-of-range value falls back; `toObserverConfig()` carries the resolved port and buffer sizes. (Use a plain fake for the extras lookup if `android.content.Intent` is unavailable in a unit test — extract the extras read into an internal `resolve(overrides: Map<String, Any>)` that the intent overload delegates to, and test that.)
+
+**Acceptance:** `./gradlew :app:testDebugUnitTest` green; a grep of `app/src/main` shows `BuildConfig.` referenced only inside `IviRuntimeConfig.kt`; port default is `47300`.
+
+**Dependencies:** after `4.5.3.1` (needs `R4ObserverConfig`). **Commit:** `[4.5.4.1] feat: add IviRuntimeConfig with BuildConfig defaults and launch overrides`
+
+### [ ] `4.5.4.2` — `R4Repository` — the single routing point *(agent)*
+
+**Objective:** collect the observer's events once, on the application scope, and expose them as the app's data layer (HLD §4 Data, §5.3).
+
+**Scope:** `app/src/main/java/com/hackathon/v2x/ivi/data/R4Repository.kt`:
+
+- Constructor takes the `R4SocketObserver` (or, better for testing, its `events` + `linkState` flows) and a `CoroutineScope`.
+- Exposes `warnings: SharedFlow<R4WarningEvent>` (replay 1, so a late collector sees the current warning), `lastState: StateFlow<R4StateMessage?>` with **last-value-wins by `seq`** (a message with a `seq` lower than or equal to the stored one is discarded), `linkState: StateFlow<R4LinkState>` (passthrough), and `droppedCount: StateFlow<Int>`.
+- Exposes `fun inject(event: R4Event)` — the single injection target the dev injector (I3, `4.5.6.7`) uses, so I3 exercises exactly the same downstream path as a real datagram (HLD §5.3).
+- **The repository stores and routes; it never decides what a warning means and never formats anything** (HLD §4).
+- Test `app/src/test/java/com/hackathon/v2x/ivi/data/R4RepositoryTest.kt`: a `Message` carrying a warning appears on `warnings` and does not touch `lastState`; a `Message` carrying a state updates `lastState`; a state with `seq = 41` after `seq = 42` is discarded (LVW); a `Dropped` increments `droppedCount` and emits no warning; `inject()` produces the identical observable result as an event arriving from the flow.
+
+**Acceptance:** `./gradlew :app:testDebugUnitTest` green; `R4Repository.kt` contains no `String.format`, no `warningType` comparison and no UI type.
+
+**Dependencies:** after `4.5.3.1`. Parallel with `4.5.4.1`. **Commit:** `[4.5.4.2] feat: add R4Repository routing warnings, state and link status`
+
+### [ ] `4.5.4.3` — `WarningClassifier` — presentation at the UI edge (D4) *(agent)*
+
+**Objective:** map *known* `warningType` values to their presentation and everything else to a generic warning presentation, without ever rewriting the wire value.
+
+**Scope:** `app/src/main/java/com/hackathon/v2x/ivi/warning/WarningClassifier.kt`:
+
+- Declare `data class WarningPresentation(val title: String, val known: Boolean, val urgency: Urgency)` (or equivalent) in this same file — HLD §3.1 designates no separate file for it.
+- `fun classify(warningType: String): WarningPresentation`: `R4Contract`'s `nlos_obstruction` → the M1 NLOS presentation with `known = true`; **any other value → a generic presentation with `known = false`, and the wire value is carried through unchanged for the log** (D4 — the parser preserved it; this is where classification happens, and nothing here writes `"unknown"` back into the message).
+- `fun normaliseRisk(riskState: String): Urgency`: `low`/`medium`/`high` case-insensitively; **an unknown `riskState` maps to the highest urgency** — this must not contradict the committed `CanvasWarningView.riskColor`, which already treats unknown risk as highest (fail-safe, HLD §9.2).
+- Test `app/src/test/java/com/hackathon/v2x/ivi/warning/WarningClassifierTest.kt`: `nlos_obstruction` → `known = true`; `slippery_road` (the frozen additive fixture's value) → `known = false` and the value is still readable; `"HIGH"`, `"high"`, `"" `, `"catastrophic"` all resolve, with the last two at highest urgency.
+
+**Acceptance:** `./gradlew :app:testDebugUnitTest` green; no branch in this file mutates an `R4WarningEvent`.
+
+**Dependencies:** after `4.5.1.4`. Parallel with `4.5.4.1`/`4.5.4.2`. **Commit:** `[4.5.4.3] feat: add WarningClassifier mapping unknown warning types to a generic presentation`
+
+### [ ] `17.5.4.4` — `WarningViewModel` + `WarningUiState`, **including the R19 snapshot wiring** *(agent)*
+
+**Objective:** turn warnings into `Idle ↔ Active` UI state with an auto-dismiss timeout, and **compose the scene so the renderer's provenance guard is actually armed** (HLD §9.2 — the single most easily-missed wiring detail in the phase).
+
+**Scope — two files:**
+
+- `app/src/main/java/com/hackathon/v2x/ivi/ui/WarningUiState.kt`: `sealed interface WarningUiState { data object Idle; data class Active(val scene: SceneGeometry, val riskState: String, val presentation: WarningPresentation) }`.
+- `app/src/main/java/com/hackathon/v2x/ivi/ui/WarningViewModel.kt`:
+  - Collects `repository.warnings`; on each warning → `Active(...)`, and (re-)arms a `warningTimeoutMs` timer; on expiry → `Idle`. A new warning resets the timer rather than stacking timers.
+  - **The composition step (the defect fix).** `SceneGeometry` arriving in `warning.geometry` has `vehicleCSnapshot = null`, and `CanvasWarningView` treats a `null` snapshot as **trusted** — so passing `warning.geometry` straight through silently disables the R19 source guard. The view-model must build the scene as `warning.geometry.copy(vehicleCSnapshot = warning.objectSnapshot)` (an internal function of this file; HLD §3.1 designates no separate composer file). `riskState` and `presentation` come from `WarningClassifier`.
+  - Holds no drawing code and no socket (HLD §4 UI logic).
+- Test `app/src/test/java/com/hackathon/v2x/ivi/ui/WarningViewModelTest.kt`:
+  - Idle initially; a warning → `Active`; no further warning for `warningTimeoutMs` → `Idle`; a second warning inside the window extends rather than double-fires.
+  - **Guard-armed test (the R19 regression test, name it explicitly):** decode the frozen `/contracts/samples/r4-warning.json`, feed it in, and assert `(state as Active).scene.vehicleCSnapshot?.source == "v2x_relayed"` — i.e. the snapshot is **not null**. Then feed a warning whose `object.source` is `own_sensor` and assert the composed scene carries that snapshot verbatim, so the renderer's guard can trip. A `null` `vehicleCSnapshot` in either case fails the test.
+  - Use virtual time (`kotlinx-coroutines-test`) for the timeout; add `testImplementation(libs.kotlinx.coroutines.test)` to `app/build.gradle.kts` if absent.
+
+**Acceptance:** `./gradlew :app:testDebugUnitTest` green including the named guard-armed test; the timeout value is read from the injected config, never a literal.
+
+**Dependencies:** after `4.5.4.2` and `4.5.4.3`. **Commit:** `[17.5.4.4] feat: add WarningViewModel with timeout and R19 snapshot composition`
+
+### [ ] `16.5.4.5` — Extend `MainViewModel` — wake-on-warning, restore, user override *(agent)*
+
+**Objective:** make a warning force the Display Area to the Warning View and restore the previous view when it clears, without trapping the user (HLD §3.1 `ui/MainViewModel.kt` `[C] +`).
+
+**Scope:** edit the committed `app/src/main/java/com/hackathon/v2x/ivi/ui/MainViewModel.kt`:
+
+- Add `previousMode` capture: on entering `WarningView` because of a warning, remember the mode that was showing.
+- Add `fun onWarningState(state: WarningUiState)` (or an injected flow collect): `Active` → force `WarningView`; `Idle` → restore `previousMode`, **unless** the user deliberately navigated away during the warning, in which case the user's chosen mode stands.
+- Add the user-override flag: the committed `setMode` currently **ignores** every navigation request while `WarningView` is active. Relax it to record a deliberate user navigation as an override and honour it, so `Idle` does not yank the user back. Keep the safety intent — the warning still *comes up* unconditionally.
+- Test `app/src/test/java/com/hackathon/v2x/ivi/ui/MainViewModelTest.kt`: from `HomeView`, a warning forces `WarningView`; on `Idle` the mode returns to `HomeView`; if the user selects `SettingsView` during the warning, `Idle` leaves `SettingsView` in place; a second warning still forces `WarningView` again and clears the override.
+
+**Acceptance:** `./gradlew :app:testDebugUnitTest` green with all four cases; `DisplayMode.kt` is unchanged (HLD §3.1 marks it `[C] unchanged`).
+
+**Dependencies:** after `17.5.4.4`. **Commit:** `[16.5.4.5] feat: add wake-on-warning, previous-mode restore and user override to MainViewModel`
+
+---
+
+## Task Group 5.5 — `:app` shell & UI wiring — the launchable APK (serves R16, R17, R18)
+
+> **The APK has no launcher entry today** — no `<activity>`, no `<service>`, no application class (HLD §9.2, implementation notes §1). This group is what makes something render on the node. Nothing here may mount `WarningBannerOverlay` (**D11**, standing user decision 2026-07-26).
+
+### [ ] `18.5.5.1` — `AndroidR4Logger` — the `IVI_V2X` evidence bridge *(agent)*
+
+**Objective:** implement the `R4Logger` seam over `android.util.Log` on the single `IVI_V2X` tag, so the demo's evidence is one `adb logcat -s IVI_V2X`.
+
+**Scope:** `app/src/main/java/com/hackathon/v2x/ivi/service/AndroidR4Logger.kt` — maps `R4LogLevel.{INFO,WARN,ERROR}` to `Log.i/w/e` on tag `IVI_V2X` (the tag the committed `CanvasWarningView` already uses). It emits the caller's line verbatim; the `[LINK]`/`[RX]`/`[DROP]` shapes of HLD §5.4 are composed in `:observer` (`4.5.3.3`), not here. Add a `fun ui(line: String)` convenience for the `[UI] mode=… cause=…` lines of §5.4, used by `4.5.5.6`.
+
+**Acceptance:** `./gradlew :app:testDebugUnitTest` and `assembleDebug` green; this is the **only** file bridging `:observer` to `android.util.Log` — a grep of `observer/` and `serializer/` for `android.util` returns nothing.
+
+**Dependencies:** after `4.5.3.1`. Parallel with group 5.4. **Commit:** `[18.5.5.1] feat: add AndroidR4Logger bridging the observer seam to the IVI_V2X tag`
+
+### [ ] `4.5.5.2` — `R4ListenerService` — the foreground lifecycle host (D5) *(agent)*
+
+**Objective:** host the observer in a foreground service so reception survives the Display Area switching away and the process stays at foreground priority for the whole recorded run.
+
+**Scope:**
+
+- `app/src/main/java/com/hackathon/v2x/ivi/service/R4ListenerService.kt`: creates a notification channel and calls `startForeground()` **immediately** on start (API 26+/29+ requirement); on start calls `observer.start(applicationScope)`, on destroy calls `observer.stop()`. **The service is a lifecycle host, not the loop** (D5) — no socket code, no decode code lives here.
+- `POST_NOTIFICATIONS` is a runtime permission from API 33: **a denied permission suppresses the notification only and must never be treated as a failure to start** (D5). Guard the notification post, not the service start.
+- `app/src/main/AndroidManifest.xml`: add `<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />` and the `<service android:name=".service.R4ListenerService" android:exported="false" android:foregroundServiceType="connectedDevice" />` declaration. `FOREGROUND_SERVICE` and `INTERNET` are already declared. (At `targetSdk 34` this would additionally need `FOREGROUND_SERVICE_CONNECTED_DEVICE`; the app targets 33 — note it in a manifest comment, do not bump the target.)
+- No unit test is required for the service itself (that is what D5's plain-JVM split avoids); the loop is already covered by `4.5.3.3`–`4.5.3.5`.
+
+**Acceptance:** `./gradlew assembleDebug` green and `./gradlew :app:testDebugUnitTest` still green; the manifest declares the service; the class body contains no `DatagramSocket` and no `decode` call.
+
+**Dependencies:** after `18.5.5.1`. **Commit:** `[4.5.5.2] feat: add R4ListenerService as the foreground host for the R4 observer`
+
+### [ ] `4.5.5.3` — `IviGraph` — the manual composition root (D7) *(agent)*
+
+**Objective:** wire the seven objects of the app by hand, in one place, with no annotation processor.
+
+**Scope:** `app/src/main/java/com/hackathon/v2x/ivi/di/IviGraph.kt`:
+
+- Constructs, in HLD §5.3's order: `IviRuntimeConfig` → `R4ObserverConfig` → `R4Deserializer` → `R4SocketObserver` (with `sourceFactory = { JdkDatagramSource(port, bufferBytes) }` and `logger = AndroidR4Logger`) → `R4Repository` (collecting on the **application** scope, so a service restart cannot lose the last warning) → a single `ViewModelProvider.Factory` producing `MainViewModel` and `WarningViewModel` → the `CanvasWarningView` instance with its `scaleMetersPerPixel` from config.
+- One object, created once, owned by `IviApplication`. Exposes the factory and the renderer; exposes nothing else to the UI.
+- `fun updateConfig(resolved: IviRuntimeConfig)` so `MainActivity`'s launch-time override reaches the graph before the service starts.
+
+**Acceptance:** `./gradlew assembleDebug` green; the file is under ~80 lines and contains no annotation, no reflection and no `object` singleton state beyond what `IviApplication` holds.
+
+**Dependencies:** after `4.5.5.2`, `4.5.4.1`, `4.5.4.2`, `17.5.4.4`. **Commit:** `[4.5.5.3] feat: add IviGraph manual composition root and view-model factory`
+
+### [ ] `16.5.5.4` — `IviApplication` + manifest application entry *(agent)*
+
+**Objective:** give the APK an application class that owns the graph and the application coroutine scope.
+
+**Scope:**
+
+- `app/src/main/java/com/hackathon/v2x/ivi/IviApplication.kt`: `class IviApplication : Application()` creating `IviGraph` in `onCreate` and holding an application `CoroutineScope` (`SupervisorJob() + Dispatchers.Default`). Expose the graph through a property the Activity reads.
+- `app/src/main/AndroidManifest.xml`: add `android:name=".IviApplication"` to the existing `<application>` element. Leave `label`, `networkSecurityConfig` and `supportsRtl` as they are — `network_security_config.xml` governs HTTP stacks only and has no bearing on the raw `DatagramSocket` (D3); it stays for correctness of any future HTTP use.
+
+**Acceptance:** `./gradlew assembleDebug` green; the manifest's `<application>` carries `android:name`.
+
+**Dependencies:** after `4.5.5.3`. **Commit:** `[16.5.5.4] feat: add IviApplication owning the graph and the application scope`
+
+### [ ] `16.5.5.5` — `MainActivity` + the LAUNCHER entry — **the APK becomes startable** *(agent)*
+
+**Objective:** add the launcher Activity that hosts Compose, resolves the launch-time config override, and starts the listener service. This is the subtask that closes "nothing renders on the node today".
+
+**Scope:**
+
+- `app/build.gradle.kts`: add `implementation(libs.androidx.activity.compose)` (catalog alias from `4.5.1.1`). **This dependency is absent today** and `ComponentActivity.setContent` will not resolve without it.
+- `app/src/main/java/com/hackathon/v2x/ivi/MainActivity.kt`: `class MainActivity : ComponentActivity()`; in `onCreate` call `IviRuntimeConfig.resolve(intent)`, hand it to the graph (`updateConfig`), `startForegroundService(Intent(this, R4ListenerService::class.java))`, request `POST_NOTIFICATIONS` on API 33+ **without blocking startup on the answer**, then `setContent { MainScreen(viewModel = viewModel(factory = graph.viewModelFactory)) }`.
+- `app/src/main/AndroidManifest.xml`: add
+
+  ```xml
+  <activity android:name=".MainActivity" android:exported="true"
+            android:theme="@android:style/Theme.DeviceDefault.NoActionBar.Fullscreen">
+      <intent-filter>
+          <action android:name="android.intent.action.MAIN" />
+          <category android:name="android.intent.category.LAUNCHER" />
+      </intent-filter>
+  </activity>
+  ```
+
+  **Use a platform theme, not a new `res/values/themes.xml`** — HLD §3.1 designates no new resource files, and the project has no `res/values/` today. If the platform theme proves unusable on the guest, that is a finding to report, not a licence to invent an unlisted file.
+- Verify the D10 override works: `adb shell am start -n com.hackathon.v2x.ivi/.MainActivity --ei r4_port 47301` reaches `IviRuntimeConfig.resolve`.
+
+**Acceptance:** `./gradlew assembleDebug` green and the built `app-debug.apk` exposes exactly one LAUNCHER activity (`aapt dump badging app-debug.apk | grep launchable-activity`, or the manifest read back from the merged report); `./gradlew :app:testDebugUnitTest` still green.
+
+**Dependencies:** after `16.5.5.4`. **Commit:** `[16.5.5.5] feat: add MainActivity as the launcher entry hosting the R16 screen`
+
+### [ ] `17.5.5.6` — Wire `MainScreen`: mount the view seam and bind the status bar *(agent)*
+
+**Objective:** replace the Warning View placeholder with the real renderer and make the bottom bar tell the truth about the link.
+
+**Scope:** edit the committed `app/src/main/java/com/hackathon/v2x/ivi/ui/screen/MainScreen.kt` (HLD §3.1 `[C] +`):
+
+- `MainScreen` collects `WarningViewModel.uiState` alongside `MainViewModel.currentMode`, and feeds the warning state into `MainViewModel.onWarningState`.
+- `DisplayModeSwitcher`'s `DisplayMode.WarningView` branch renders `warningView.Render(scene, riskState)` through `IviWarningViewSeam` when the state is `Active`, and keeps a neutral idle content when it is `Idle`. Delete `WarningViewPlaceholder`.
+- Bottom status bar: replace the hardcoded `"V2X LINK: STANDBY"` with the live `R4LinkState` — `BOUND :47300` / `REBINDING` / `ERROR` — and the dot colour with it. The mode indicator stays as it is.
+- Emit the `[UI] mode=… cause=…` lines of HLD §5.4 through `AndroidR4Logger.ui(...)` on each mode change (`cause=warning` / `cause=timeout` / `cause=user`).
+- **`WarningBannerOverlay` is NOT mounted** (D11). Do not add it. Do not touch `IviWarningViewSeam.kt` or `SceneCoordinateMapper.kt` (`[C] unchanged`).
+- Keep the two committed `@Preview` functions compiling; add a preview that renders `Active` with the frozen sample geometry if it costs nothing.
+
+**Acceptance:** `./gradlew assembleDebug` and `:app:testDebugUnitTest` green; a grep of `MainScreen.kt` shows no `WarningBannerOverlay` and no literal `"V2X LINK: STANDBY"`.
+
+**Dependencies:** after `16.5.5.5` and `16.5.4.5`. **Commit:** `[17.5.5.6] feat: mount the warning view seam and bind the link status bar`
+
+### [ ] `17.5.5.7` — `CanvasWarningView` configurable scale (D10) *(agent)*
+
+**Objective:** let the God View's zoom come from configuration instead of the library default, without breaking the committed previews.
+
+**Scope:** edit `app/src/main/java/com/hackathon/v2x/ivi/ui/view/CanvasWarningView.kt`: add a **defaulted** constructor parameter `scaleMetersPerPixel: Float = SceneCoordinateMapper.DEFAULT_SCALE_METERS_PER_PIXEL` and pass it into the `SceneCoordinateMapper.mapScene(...)` call. `IviGraph` fills it from `IviRuntimeConfig.sceneScaleMetersPerPixel`. `SceneCoordinateMapper.DEFAULT_SCALE_METERS_PER_PIXEL` **stays** as the library default (D10) — do not delete it. The three committed `@Preview` functions must compile untouched.
+
+**Acceptance:** `./gradlew assembleDebug` green; `git diff` on the previews is empty.
+
+**Dependencies:** after `4.5.5.3`. Parallel with `17.5.5.6`. **Commit:** `[17.5.5.7] feat: make the God View scale configurable through the runtime config`
+
+### [ ] `17.5.5.8` — `SceneCoordinateMapperTest` — cover the committed pure-math layer *(agent)*
+
+**Objective:** test the layer that was built to be testable and never was (implementation notes §1, HLD §3.1).
+
+**Scope:** `app/src/test/java/com/hackathon/v2x/ivi/ui/view/SceneCoordinateMapperTest.kt` — no Android types, no Compose:
+
+- `egoAnchor` is `(w/2, h·0.75)`; ego at `(0,0)` maps exactly onto it.
+- Forward (`x` positive) maps **up** — smaller canvas `y`; right (`y` positive) maps right.
+- A vehicle far outside the canvas is clamped to `EDGE_MARGIN_PX` on both axes, never off-canvas.
+- Scale sensitivity: halving `scaleMetersPerPixel` doubles the pixel displacement for the same metres.
+- `mapScene` with `scene.vehicleC == null` yields `SceneRenderData.vehicleC == null` and does not throw — the "C not yet tracked" path.
+- Radii pass through unmodified.
+
+**Acceptance:** `./gradlew :app:testDebugUnitTest` green with all six cases; the test file imports nothing from `android.*`/`androidx.*`.
+
+**Dependencies:** after `4.5.1.4`. **Fully parallel** with everything else in groups 5.2–5.6. **Commit:** `[17.5.5.8] test: cover SceneCoordinateMapper's ego anchor, clamping and null-C path`
+
+---
+
+## Task Group 5.6 — Test equipment: `:r4-simulator` and the dev injector (serves R4; injection points I3, I4)
+
+> HLD **D9** (build from the frozen samples, validate through `R4Json` before sending) and **§7**. This is sanctioned IVI test equipment inside `IVI_ECU/`, not a mock to eliminate — it cannot reach into `ADA_ECU/` (no cross-node source imports), so it reaches the same models the app parses with by depending on `:contract`.
+
+### [ ] `4.5.6.1` — Module `:r4-simulator` + `SimConfig` *(agent)*
+
+**Objective:** stand up the CLI module and its two configuration sources.
+
+**Scope:**
+
+- `settings.gradle.kts`: `include(":r4-simulator")`. New `IVI_ECU/r4-simulator/build.gradle.kts`: `alias(libs.plugins.kotlin.jvm)`, `alias(libs.plugins.kotlin.serialization)`, `id("application")` with `mainClass = "com.hackathon.v2x.ivi.sim.MainKt"`; `implementation(project(":contract"))`; `testImplementation(libs.junit)`. **Zero dependencies beyond `:contract`** (D9, criterion C4) — no YAML library, no CLI framework, no logging framework.
+- `r4-simulator/src/main/kotlin/com/hackathon/v2x/ivi/sim/SimConfig.kt` — `data class SimConfig(host, port, scenarioPath, rateHz, startDelayS)` with two factories: `fromEnv()` reading **exactly** the mini-blueprint's ADA-node variable names — `IVI_ECU_HOST`, `IVI_ECU_PORT`, `R4_SCENARIO`, `R4_RATE_HZ`, `START_DELAY_S` (HLD §8: the names match the real ADA node so Phase 6 is an image swap with no node-config edit) — and `fromArgs(args)` for host mode. Env wins over the scenario file's own default rate. Missing required values fail loudly with the variable name in the message. No literals: defaults live as named constants in this file.
+- Test `r4-simulator/src/test/kotlin/.../SimConfigTest.kt`: a full env map parses; a missing `IVI_ECU_HOST` fails with a message naming it; `R4_RATE_HZ` overrides the file default; args mode parses `--host/--port/--scenario/--rate`.
+
+**Acceptance:** `./gradlew :r4-simulator:test` green; the module's dependency block names only `:contract` and JUnit.
+
+**Dependencies:** after `4.5.1.4`. **Fully parallel** with groups 5.2–5.5. **Commit:** `[4.5.6.1] feat: add the :r4-simulator module and its env/args configuration`
+
+### [ ] `4.5.6.2` — Scenario model + loader *(agent)*
+
+**Objective:** make scenarios **data, not code** — the same rule R11 imposes on the bench (D9).
+
+**Scope:**
+
+- `r4-simulator/src/main/kotlin/.../Scenario.kt` — `@Serializable` scenario and step models. The shape all three data files and three tests below depend on (freeze it here):
+
+  ```json
+  {
+    "name": "approach",
+    "defaultRateHz": 1.0,
+    "loop": false,
+    "steps": [
+      { "sample": "r4-warning", "overrides": { "riskState": "low", "geometry.vehicleC": null } },
+      { "kind": "raw", "text": "not-json" }
+    ]
+  }
+  ```
+
+  `sample` names one of the frozen `:contract` fixtures (`r4-warning`, `r4-state`, `r4-unknown-warning`); `overrides` is a map of dotted JSON paths to `JsonElement` values (explicit `null` allowed and meaningful); `kind: "raw"` sends `text` as literal bytes and skips validation.
+- `r4-simulator/src/main/kotlin/.../ScenarioLoader.kt` — file path → `Scenario`, with rejection messages that name the file and the offending field. An unknown `sample` name, an unknown `kind`, and an empty `steps` list are all rejections, not silent defaults.
+- Test `r4-simulator/src/test/kotlin/.../ScenarioLoaderTest.kt`: the three committed scenario files of `4.5.6.4` load (this test lands green once `4.5.6.4` does — until then it loads inline fixtures and `4.5.6.4` extends it to the real files); malformed JSON, unknown sample name, unknown kind and empty steps are each rejected with a message naming the cause.
+
+**Acceptance:** `./gradlew :r4-simulator:test` green; no scenario behaviour is expressed as a Kotlin branch on a scenario name.
+
+**Dependencies:** after `4.5.6.1`. **Commit:** `[4.5.6.2] feat: add the scenario model and loader for the R4 simulator`
+
+### [ ] `4.5.6.3` — `SampleLibrary` + `MessageBuilder` — overrides validated through `R4Json` *(agent)*
+
+**Objective:** build every payload from the frozen sample, apply the step's overrides at `JsonElement` level, and prove the app can parse it **before** it goes on the wire (D9).
+
+**Scope:**
+
+- `r4-simulator/src/main/kotlin/.../SampleLibrary.kt` — loads the frozen samples off the **`:contract` classpath** (`/contracts/samples/…`, D6). A sample carried as a literal in this file is a defect: a simulator with its own copy of the schema is a second, unversioned contract.
+- `r4-simulator/src/main/kotlin/.../MessageBuilder.kt`:
+  1. Parse the named sample to a `JsonObject`.
+  2. Apply the step's dotted-path overrides at `JsonElement` level — `riskState`, `warningType`, `schemaVersion`, `object.source`, `object.distance`, `geometry.vehicleC` (including explicit `null`), plus **arbitrary additive junk fields**. Element-level editing is what lets an unknown extra field survive onto the wire; a typed round trip would drop it (the committed `R4AdditiveVersionTest` proves the drop).
+  3. **Decode the result through `:contract`'s `R4Json` before returning it** — a payload the simulator cannot parse is a payload the app cannot parse, and the run must fail loudly at the producer. The **one exception** is a `kind: "raw"` step, which returns its literal bytes unvalidated on purpose (the malformed case).
+  4. Return UTF-8 bytes.
+- Test `r4-simulator/src/test/kotlin/.../MessageBuilderTest.kt`: every built payload from every non-raw step decodes through `R4Json`; a `geometry.vehicleC: null` override produces JSON `null` (not an absent key); an added junk field is present in the emitted bytes **and** the payload still decodes; a `raw` step's bytes are returned untouched and are *not* validated; an override that makes the payload invalid (e.g. `object.distance: "far"`) fails the build with a message naming the step.
+
+**Acceptance:** `./gradlew :r4-simulator:test` green; a grep of `r4-simulator/src/main` finds no `{"schemaVersion"` literal.
+
+**Dependencies:** after `4.5.6.2`. **Commit:** `[4.5.6.3] feat: build simulator payloads from the frozen samples with validated overrides`
+
+### [ ] `4.5.6.4` — The three scenario data files + the stream-difference test *(agent)*
+
+**Objective:** commit the scenarios the acceptance boxes need, as data files, and prove different files produce observably different streams.
+
+**Scope — three files under `IVI_ECU/r4-simulator/scenarios/` (HLD §3.1):**
+
+- `approach.json` — C approaching: `riskState` low → medium → high, `geometry.vehicleC` closing over the steps, and a **first step with `geometry.vehicleC: null`** (C not yet tracked — the renderer's null-C path). This is the scenario the in-Room evidence run uses.
+- `degrade.json` — the degradation cases in one file: a step with an unknown `warningType` + `schemaVersion: 2` + a junk field (the R4 additive-version case); a step with `object.source: "own_sensor"` (trips the renderer's provenance guard); and a `kind: "raw"` step of non-JSON bytes (the receive loop must survive and keep listening).
+- `state-stream.json` — the optional R15 path: periodic `state` messages with ascending `seq`.
+- Test `r4-simulator/src/test/kotlin/.../ScenariosDifferTest.kt`: all three files load through `ScenarioLoader`; the byte streams produced by `approach.json` and `degrade.json` differ **observably** (assert on decoded field values — `riskState` progression, `warningType`, `object.source` — not just on byte inequality); and extend `ScenarioLoaderTest` to load the three real files.
+
+**Acceptance:** `./gradlew :r4-simulator:test` green; the three files exist at the designated paths; no new Kotlin branch keys off a scenario name.
+
+**Dependencies:** after `4.5.6.3`. **Commit:** `[4.5.6.4] feat: add the approach, degrade and state-stream scenario files`
+
+### [ ] `4.5.6.5` — `UdpSender` + `Main` — the two run modes and the `[TX]` log *(agent)*
+
+**Objective:** make the simulator runnable, in host mode from a laptop and in-Room from a container entrypoint.
+
+**Scope:**
+
+- `r4-simulator/src/main/kotlin/.../UdpSender.kt` — a `DatagramSocket` sending to `host:port`; one send per step; errors logged and counted, never fatal to the loop.
+- `r4-simulator/src/main/kotlin/.../Main.kt` — resolves `SimConfig` (args present → host mode; otherwise env → in-Room mode), waits `START_DELAY_S` (the AAOS guest boots slower than a container), loads the scenario, then walks the steps at the resolved rate, logging one line per send: `[TX] step=<i> type=<t> bytes=<n> → <host>:<port> risk=<r> warningType=<w>`. On `loop: true` it repeats the step list. Exits non-zero if the scenario fails to load or a non-raw payload fails validation — the run must fail loudly at the producer (D9).
+- No test beyond what exists — `Main` is glue; the behaviour is covered by `4.5.6.2`–`4.5.6.4`.
+
+**Acceptance:** `./gradlew :r4-simulator:installDist` produces a runnable distribution; running it in host mode against a local `nc -ul <port>` (or the `4.5.3.5` loopback listener) emits `[TX]` lines and the datagrams arrive; `./gradlew :r4-simulator:test` still green.
+
+**Dependencies:** after `4.5.6.4`. **Commit:** `[4.5.6.5] feat: add the R4 simulator UDP sender and its host/in-Room entrypoint`
+
+### [ ] `5.5.6.6` — Simulator `Dockerfile` + `entrypoint.sh` *(agent)*
+
+**Objective:** package the simulator as the single-platform arm64 image the mini-blueprint's ADA node pulls.
+
+**Scope:**
+
+- `IVI_ECU/r4-simulator/Dockerfile` — multi-stage: **build stage on `$BUILDPLATFORM`** (JVM bytecode is architecture-neutral, so no QEMU-emulated Gradle), runtime stage `linux/arm64` on a JRE 17 base. **Build context is `IVI_ECU/`** — it needs the Gradle wrapper, `settings.gradle.kts`, the catalog, `:contract` and `:r4-simulator`. This is a deliberate, HLD-flagged deviation from "own `Dockerfile` at the folder root" ([node-code-layout.md](../.claude/rules/node-code-layout.md)); self-containment is preserved because the build reads nothing outside `IVI_ECU/`. Copy the `scenarios/` folder into the image; workdir `/app`.
+- `IVI_ECU/r4-simulator/entrypoint.sh` — sleeps `START_DELAY_S` then runs the distribution; the blueprint node config's `command` is `["./entrypoint.sh"]` — **relative, not `/entrypoint.sh`** (walkthrough §4 mistake #5: it resolves against the image workdir `/app`). LF line endings; `chmod +x`.
+- `docker build` on this Windows dev host is unavailable — verification transfers to the CI lane `5.5.7.3`, exactly as Phase 0's `6.0.8.1` transferred to `5.0.8.2`.
+
+**Acceptance:** `sh -n r4-simulator/entrypoint.sh` passes; the Dockerfile declares `FROM --platform=$BUILDPLATFORM` on the build stage only and copies `scenarios/` into `/app/scenarios/`; image build verified by `5.5.7.3`.
+
+**Dependencies:** after `4.5.6.5`. **Commit:** `[5.5.6.6] feat: add the R4 simulator Dockerfile and entrypoint`
+
+### [ ] `4.5.6.7` — `DevInjectorReceiver` — injection point I3, debug build only *(agent)*
+
+**Objective:** let an `adb broadcast` push one frozen sample onto the same flow the socket feeds, so UI work is unblocked while the ADB/network route is still unproven.
+
+**Scope:**
+
+- `app/src/debug/java/com/hackathon/v2x/ivi/debug/DevInjectorReceiver.kt` — a `BroadcastReceiver` for `com.hackathon.v2x.ivi.DEV_INJECT` reading `--es sample <name>`, loading that frozen sample from the `:contract` classpath, decoding it through `R4Deserializer`, and calling `R4Repository.inject(...)`. Because it joins **downstream of the socket and upstream of everything else**, it exercises parse → repository → view-model → Compose exactly as a real datagram does (HLD §5.3, §7).
+- Register it in a **`app/src/debug/AndroidManifest.xml`** — the debug source set only. **It must be absent from the release build**: a release path that can fabricate a warning would undermine the R19 claim that C came only from relayed data (HLD §7).
+- Manual invocation, recorded in the commit body: `adb shell am broadcast -a com.hackathon.v2x.ivi.DEV_INJECT --es sample r4-warning`.
+
+**Acceptance:** `./gradlew assembleDebug` and `assembleRelease` both green, and the **release** merged manifest contains no `DEV_INJECT` receiver (check `app/build/intermediates/merged_manifests/release/AndroidManifest.xml`); `:app:testDebugUnitTest` still green.
+
+**Dependencies:** after `16.5.5.5` and `4.5.4.2`. **Commit:** `[4.5.6.7] feat: add the debug-only dev injector for I3 UI testing`
+
+---
+
+## Task Group 5.7 — CI lanes (serves R4, R5, R16) — HLD §3.2 rows 2–3, §6.1
+
+> **Where a lane goes is decided by its origin phase**, per [phase0-ci.yml](../.github/workflows/phase0-ci.yml)'s own header rule: `ivi-unit-tests` originated in Phase 0 and is maintained there even when a Phase 5 subtask edits it; the two new lanes originate here and get their own `phase5-ci.yml`.
+
+### [ ] `16.5.7.1` — New `phase5-ci.yml` with the `ivi-assemble` lane *(agent)*
+
+**Objective:** build the APK and run lint on every push, and publish `app-debug.apk` as a run artifact so the ADB install steps have a build to fetch.
+
+**Scope:** new `.github/workflows/phase5-ci.yml`, named `phase5-ci`, with the same `on:` triggers and `concurrency` block as `phase0-ci.yml` (so all lanes still run on every push; the split changes where a lane is maintained, never whether it executes). One job:
+
+- `ivi-assemble` — `actions/checkout@v4`, `actions/setup-java@v4` (temurin 17, `cache: gradle`), `working-directory: IVI_ECU`, `chmod +x gradlew`, `./gradlew assembleDebug lint --no-daemon`, then `actions/upload-artifact@v4` publishing `IVI_ECU/app/build/outputs/apk/debug/app-debug.apk` as `app-debug-apk`.
+- Add `android-actions/setup-android` only if the runner image's SDK/licence state turns out insufficient (HLD §6.1) — try without it first and record which was needed.
+- If `lint` fails on **pre-existing** findings, do not fix them in this subtask: set `lint { abortOnError = false }` in `app/build.gradle.kts` with a comment naming the findings, and record them in the commit body. Scope creep into lint fixes is out of scope here.
+
+**Acceptance:** the lane runs green on the branch and the `app-debug-apk` artifact is downloadable from the run; record the run ID in the status line.
+
+**Dependencies:** none beyond a pushable branch — **land this early, in parallel with group 5.1**, so an APK artifact exists for group 5.8. **Commit:** `[16.5.7.1] ci: add phase5-ci with the ivi-assemble lane`
+
+### [ ] `4.5.7.2` — Extend `ivi-unit-tests` to all five modules *(agent)*
+
+**Objective:** stop new modules' tests from passing locally and never running in CI (HLD §6.1 — the invocation that must change).
+
+**Scope:** in [.github/workflows/phase0-ci.yml](../.github/workflows/phase0-ci.yml), the `ivi-unit-tests` job's run step becomes exactly:
+
+```yaml
+./gradlew :contract:test :serializer:test :observer:test :r4-simulator:test :app:testDebugUnitTest --no-daemon
+```
+
+Nothing else in that file changes. Add a one-line comment recording that this Phase 0-origin lane was extended by Phase 5 subtask `4.5.7.2`, matching the file's existing convention for `7.1.3.5` and `11.1.1.1`.
+
+**Acceptance:** the `ivi-unit-tests` lane runs green with all five module test tasks executing (visible in the run log); record the run ID.
+
+**Dependencies:** **sequential after `4.5.6.4`** — every one of the five Gradle projects must exist and have tests, or the lane fails on a missing project. **Commit:** `[4.5.7.2] ci: run all five IVI Gradle modules' tests in ivi-unit-tests`
+
+### [ ] `5.5.7.3` — `r4-sim-image` lane — arm64 build, push and verify *(agent)*
+
+**Objective:** publish `m1-r4-sim:latest` to the CarSky Zot registry as a single-platform arm64 image the ADA node can pull.
+
+**Scope:** add a second job to `.github/workflows/phase5-ci.yml`, modelled on `phase0-ci.yml`'s `netcheck-image` job (copy its structure, do not re-invent it):
+
+- `REGISTRY_HOST: registry.hackathon-2.carsky.io` (the `hackathon-2` host — `registry.carsky.io` 502s, walkthrough §4 mistake #2), `IMAGE: m1-r4-sim:latest`, `PLATFORMS: linux/arm64`.
+- `docker/setup-qemu-action@v3` + `docker/setup-buildx-action@v3`, then `docker buildx build --platform linux/arm64 --provenance=false --sbom=false -f IVI_ECU/r4-simulator/Dockerfile -t $REGISTRY_HOST/$IMAGE --push --metadata-file … IVI_ECU/` — **the cluster rejects manifest indexes**, so `--provenance=false --sbom=false` and a single platform are mandatory, not stylistic.
+- Login with `secrets.CARSKY_ZOT_API_KEY` / `vars.CARSKY_REGISTRY_USER || 'kis@hackathon.fpt.com'`; skip the push with a notice when the secret is absent, exactly as `netcheck-image` does.
+- Verify with the existing [`./.github/actions/verify-arm64-image`](../.github/actions/verify-arm64-image) action, passing the digest from the `--metadata-file`.
+
+**Acceptance:** the lane pushes and the verification step confirms the tag is pullable and single-platform `linux/arm64`; record the run ID and the pushed digest.
+
+**Dependencies:** after `5.5.6.6`. **Commit:** `[5.5.7.3] ci: add the r4-sim-image build/push/verify lane`
+
+---
+
+## Task Group 5.8 — Retire the deployment unknowns early (serves R5, R16) — HLD §11 items 1–2
+
+> **This group is the phase's biggest schedule risk and must start on day one, fully parallel with all code work.** The ADB route to the Skycraft guest is unverified on this deployment and the platform's REST VM-shell route answers 502. If the guest is unreachable, **every in-Room criterion falls back to emulator evidence** — and finding that out on the last day costs the phase. The probe deliberately uses **today's APK**, so it does not wait for a single line of Phase 5 code.
+
+### [ ] `5.5.8.1` — Author `phase5-mini-blueprint-deploy.md` *(agent — docs)*
+
+**Objective:** promote the mini-blueprint procedure from the research note into the sanctioned deployment home (HLD §3.2 row 5), so the user's Nydus work has a written procedure.
+
+**Scope:** new `requirements/car-sky-guide/phase5-mini-blueprint-deploy.md` carrying, from [phase5-mini-blueprint.md](../IVI_ECU/doc/research_notes/phase5-mini-blueprint.md) §2–§5:
+
+- The 3-node composition (Ethernet Bridge `10.99.0.1` / `10.99.0.0/24` `bridgeMode: "linux"`; ADA Container Node `10.99.0.12`; IVI Skycraft Node `10.99.0.13`) and why it is reduced.
+- **The clone-then-delete creation route**, and why it is the only one: neither the REST API nor Nydus "Import from File" can create `ethernet` pins or bridge edges. Clone `trial2_minh_netcheck` → rename `trial3_minh_ivi` → delete the Bench and V2X nodes → **verify the two surviving edges by reading the config back** (`GET /api/v1/blueprints/{id}`), expecting one `ETHERNET`/`OUTPUT` pin per role node at `.12`/`.13`, both wired to the bridge's single `INPUT` pin.
+- **Leave the IVI node's `image` block alone** — artifact `AAOS`, `x9oqgIwzTp1m26SWIQqJt` / `xSU_Q7YJZUxxUgDr4Ugcp`, `0.0.1`, `aarch64`; without it the deploy is rejected with `skycraft requires 'image' config with VM image artifact details`.
+- The two ADA-node configurations this phase uses: **(a) probe config** — the existing `m1-netcheck:latest` with `NEXT_HOP_HOST=10.99.0.13`, `NEXT_HOP_PORT=47300`, used before the simulator image exists; **(b) evidence config** — the §4 simulator block verbatim (`registry.hackathon-2.carsky.io/m1-r4-sim:latest`, `command: ["./entrypoint.sh"]` *relative*, `capabilities: ["NET_RAW"]`, env `IVI_ECU_HOST=10.99.0.13`, `IVI_ECU_PORT=47300`, `R4_SCENARIO=/app/scenarios/approach.json`, `R4_RATE_HZ=1`, `START_DELAY_S=20`).
+- The §5 verification ladder as a table, and the teardown note (2 concurrent Rooms — tear this one down before the comms track needs a second).
+- Follow [markdown-writing-style](../.claude/skills/markdown-writing-style/SKILL.md); reference requirement numbers, do not restate requirements. **The stale plan's `deployment/phase5-ivi-deploy.md` is void** — a repo-root `deployment/` folder is not a sanctioned location and nothing is written there (HLD §3.2).
+
+**Acceptance:** file committed at the designated path; both ADA-node configs and the verification ladder present; every platform limit above stated. Doc-only — no build/test target.
+
+**Dependencies:** none — **starts immediately**, in parallel with `4.5.1.1`. **Commit:** `[5.5.8.1] docs: add the Phase 5 mini-blueprint deployment procedure`
+
+### [ ] `5.5.8.2` — USER-MANUAL: create and deploy the mini-blueprint (probe config)
+
+**Objective:** the user creates `trial3_minh_ivi` by clone-then-delete and deploys it with the probe ADA config, so a Room with a Running IVI node exists to test ADB against.
+
+**Scope:** follow `phase5-mini-blueprint-deploy.md` (`5.5.8.1`) §clone-then-delete and its **probe config (a)**: clone `trial2_minh_netcheck`, rename, delete the Bench and V2X nodes, read the config back to confirm the two surviving `ethernet` pins and edges, set the ADA node to `m1-netcheck:latest` with `NEXT_HOP_HOST=10.99.0.13` / `NEXT_HOP_PORT=47300`, leave the IVI `image` block untouched, **New Deployment** → wait for 3/3 `Running`, restart count 0.
+
+No agent performs these steps; the plan tracks them. Beware walkthrough §4 mistake #8 — **always edit the original blueprint, never the `-deploy` snapshot**.
+
+**Acceptance:** 3/3 nodes `Running` with restart count 0, recorded in a new `plans/doc/phase5-ivi-run.md` created by this subtask (the Phase 0 `phase0-smoke-test-run.md` pattern). Evidence commit made by the orchestrating session after the user confirms.
+
+**Dependencies:** after `5.5.8.1`. **Commit:** `[5.5.8.2] docs: record the Phase 5 mini-blueprint deployment and node-Running evidence`
+
+### [ ] `16.5.8.3` — USER-MANUAL: prove the ADB route and read the guest API level
+
+**Objective:** answer HLD open items **#1** (ADB reach) and **#2** (AAOS guest Android version) before the APK is finished, because both invalidate the in-Room evidence plan if negative.
+
+**Scope:** with the Room from `5.5.8.2` Running, the user obtains `<skycraft-adb-endpoint>` from the **Rework device panel** or the **CarSky Gateway ADB tunnel** ([node-ivi-ecu.md § Post-deploy](../requirements/car-sky-guide/node-ivi-ecu.md)) — the REST VM-shell route is **known-502** and must not be attempted as the primary path — then runs, recording each command's exact output:
+
+1. `adb connect <skycraft-adb-endpoint>` and `adb devices` → the guest is listed as `device`.
+2. `adb shell getprop ro.build.version.sdk` → **open item #2**: a value below `29` means the APK (`minSdk 29`) is rejected outright and the phase's in-Room plan changes.
+3. `adb shell getprop ro.build.version.release` and `adb shell pm list features | grep automotive` — the APK declares `<uses-feature android:name="android.hardware.type.automotive" android:required="true" />`, so a guest without that feature refuses the install.
+4. `adb install -r <apk>` using **today's APK** (`./gradlew assembleDebug` locally, or the `app-debug-apk` artifact from lane `16.5.7.1`). Today's APK has no launcher activity — that is expected and irrelevant: this step proves the **route**, not the app.
+5. `adb logcat -s IVI_V2X` runs and streams (the filter the whole demo's evidence depends on).
+
+**If step 1 or 4 fails**, that is the finding: record it, and every in-Room criterion in group 5.9 degrades to **AAOS emulator** evidence (I3/I4 on an *automotive* system image — a phone image rejects the APK on the `automotive` feature). Escalate to the orchestrating session rather than retrying blind.
+
+**Acceptance:** the outputs of steps 1–5 (or the exact failure) recorded in `plans/doc/phase5-ivi-run.md`; open items #1 and #2 marked closed-positive or closed-negative with the fallback decision written down. Evidence commit by the orchestrating session after the user confirms.
+
+**Dependencies:** after `5.5.8.2`. **This is the phase's earliest schedule risk — run it before group 5.5 finishes, not after.** **Commit:** `[16.5.8.3] docs: record the proven ADB route and AAOS guest API level`
+
+### [ ] `16.5.8.4` — Extend `node-ivi-ecu.md` with the proven route *(agent — docs)*
+
+**Objective:** write the now-known ADB facts into the per-node deploy guide, their sanctioned home (HLD §3.2 row 4).
+
+**Scope:** extend [requirements/car-sky-guide/node-ivi-ecu.md](../requirements/car-sky-guide/node-ivi-ecu.md) § Post-deploy with, verbatim from `16.5.8.3`'s recorded outputs: the endpoint source that actually worked and the `adb connect` form; the guest's API level and automotive-feature answer; the install command (`adb install -r app-debug.apk`); the **launch command with the D10 override** (`adb shell am start -n com.hackathon.v2x.ivi/.MainActivity --ei r4_port 47301`); and the evidence filter `adb logcat -s IVI_V2X`. If the route failed, record that instead, plus the emulator fallback. Do not restate the blueprint procedure — that lives in `phase5-mini-blueprint-deploy.md`.
+
+**Acceptance:** the guide's § Post-deploy carries the proven (or failed) route, the launch-override command and the logcat filter; no invented values — every line traces to `16.5.8.3`'s record. Doc-only.
+
+**Dependencies:** after `16.5.8.3` and `16.5.5.5` (the launch-override command must exist before it is documented as working). **Commit:** `[16.5.8.4] docs: record the proven ADB route and launch override in the IVI node guide`
+
+---
+
+## Task Group 5.9 — In-Room R4 evidence run (serves R5, R6, R16, R17, R4)
+
+> The verification ladder of [phase5-mini-blueprint.md §5](../IVI_ECU/doc/research_notes/phase5-mini-blueprint.md), which is what closes four of the five milestone boxes with in-Room evidence. **Reuse the `trial3_minh_ivi` Room from group 5.8** — reconfigure the ADA node in place rather than creating a second Room (2-deployment budget, HLD §11 item 5). If `16.5.8.3` came back negative, every subtask below runs on an AAOS emulator instead, and each records that it did.
+
+### [ ] `5.5.9.1` — USER-MANUAL: swap the ADA node to the simulator image and redeploy
+
+**Objective:** put the R4 simulator on the wire toward `10.99.0.13:47300`.
+
+**Scope:** on `trial3_minh_ivi` (**the original blueprint, not the `-deploy` snapshot**), replace the ADA node's config with the **evidence config (b)** of `phase5-mini-blueprint-deploy.md` — image `registry.hackathon-2.carsky.io/m1-r4-sim:latest`, `command: ["./entrypoint.sh"]`, `capabilities: ["NET_RAW"]`, env `IVI_ECU_HOST=10.99.0.13`, `IVI_ECU_PORT=47300`, `R4_SCENARIO=/app/scenarios/approach.json`, `R4_RATE_HZ=1`, `START_DELAY_S=20`. Redeploy; wait for Running; open the ADA node's **View Log**.
+
+**Acceptance:** ADA node `Running` with restart count 0, and its View Log shows `[TX] … → 10.99.0.13:47300` lines at ~1 Hz; with `NET_RAW` honoured, a `[CAP]` line corroborates the datagram on the wire (R6). Recorded in `plans/doc/phase5-ivi-run.md`. Evidence commit by the orchestrating session.
+
+**Dependencies:** after `5.5.7.3` (the image must be pushed and verified) and `5.5.8.2`. **Commit:** `[5.5.9.1] docs: record the R4 simulator running on the mini-blueprint ADA node`
+
+### [ ] `16.5.9.2` — USER-MANUAL: install and launch the Phase 5 APK → the R16 layout on the node
+
+**Objective:** close milestone box 1 — *the HMI runs on the AAOS node with the R16 layout; button/app areas switch what the Display area shows.*
+
+**Scope:** using the route proven in `16.5.8.3`: `adb install -r app-debug.apk` (the Phase 5 build from lane `16.5.7.1`), then `adb shell am start -n com.hackathon.v2x.ivi/.MainActivity` (add `--ei r4_port <p>` only if the port differs). Confirm on screen: the central Display Area flanked by the two button bars and the bottom status bar; tapping **Home / Apps / Settings** switches what the Display Area shows; the bottom bar's V2X LINK indicator reads **BOUND :47300** (proving the socket bound and the status bar is live, not the old hardcoded `STANDBY`). Capture a screenshot.
+
+**Acceptance:** screenshot showing the R16 layout with the link indicator bound; a second screenshot showing a different Display Area mode after a side-button tap; `adb logcat -s IVI_V2X` shows `[LINK] state=bound port=47300` and `[UI] mode=… cause=user`. Recorded in `plans/doc/phase5-ivi-run.md`.
+
+**Dependencies:** after `5.5.9.1`, `17.5.5.6` and `16.5.8.3`. **Commit:** `[16.5.9.2] docs: record the R16 layout running on the AAOS node`
+
+### [ ] `17.5.9.3` — USER-MANUAL: `approach.json` → God View with ego, B and ghost C
+
+**Objective:** close milestone boxes 2 and 3 — *a mock R4 warning brings the warning view up showing ego, B and ghost C at the composed positions*, and *ghost C renders from `v2x_relayed` data only; the 2D drawing is delivered.*
+
+**Scope:** with `approach.json` running on the ADA node, observe on the IVI:
+
+- The Display Area switches to the Warning View **by itself** (wake-on-warning, `16.5.4.5`) — no user tap.
+- The God View draws ego, B and a dashed ghost C with its risk glow and `[V2X]` badge, at the composed positions; the first step's `geometry.vehicleC: null` renders without C and without a crash or placeholder; risk progresses low → medium → high and the glow colour follows.
+- `adb logcat -s IVI_V2X` shows one `[RX] type=warning … cSource=v2x_relayed` line per rendered warning — **this is the R19 claim in text**: the recording shows ghost C, and the log proves every frame of it came from `v2x_relayed`.
+- Let the stream stop and confirm the view times out to Idle and restores the previous mode.
+- Capture a **screen recording** of the warning coming up, plus the logcat excerpt.
+
+**Acceptance:** recording + logcat excerpt showing ghost C rendered and `cSource=v2x_relayed` on every warning; the null-C first step and the timeout-restore both observed. Recorded in `plans/doc/phase5-ivi-run.md`.
+
+**Dependencies:** after `16.5.9.2`. **Commit:** `[17.5.9.3] docs: record the God View in-Room evidence with v2x_relayed provenance`
+
+### [ ] `4.5.9.4` — USER-MANUAL: `degrade.json` → graceful degradation, guard trip, loop survival, teardown
+
+**Objective:** close milestone box 4 — *a newer message with an unknown `warningType` degrades gracefully* — and exercise the two defensive paths, then release the Room.
+
+**Scope:** set the ADA node's `R4_SCENARIO=/app/scenarios/degrade.json`, redeploy (or restart the node), and observe:
+
+- **Unknown `warningType` + `schemaVersion: 2` + junk field:** the app renders a generic warning rather than crashing; logcat shows the wire value preserved (`warningType=slippery_road`, **not** rewritten to `unknown` — D4), and the schema-version-ahead notice logged once.
+- **`object.source: "own_sensor"`:** the renderer's provenance guard trips — a yellow `[?] UNKNOWN SOURCE` marker instead of ghost C, and an ERROR line on `IVI_V2X`. This is the guard `17.5.4.4` armed; if it does **not** trip, the R19 wiring is broken and that is a blocking finding.
+- **Raw non-JSON step:** logcat shows `[DROP] reason=malformed … preview="…"` and the **next** valid warning still renders — one bad producer message must not stop the app.
+- **Teardown:** Deployment Viewer → **Delete Deployment** (2 concurrent Rooms; the comms track needs the slot). The blueprint `trial3_minh_ivi` is kept and redeployable.
+
+**Acceptance:** logcat excerpt and screenshots for all three cases, and the teardown confirmed, recorded in `plans/doc/phase5-ivi-run.md`. This subtask's record closes the phase's evidence trail.
+
+**Dependencies:** after `17.5.9.3`. **Commit:** `[4.5.9.4] docs: record graceful degradation, guard trip and loop survival evidence`
+
+---
+
+## Execution order & parallelism
+
+Dependencies are real (files, Gradle project graph, contract artifacts, deployed Rooms) — not default assumptions. **Independent start points, all four available on day one:** `4.5.1.1` (code), `5.5.8.1` (deploy doc), `16.5.7.1` (CI lane), `17.5.5.8` (mapper test — needs only `4.5.1.4`).
+
+```
+Lane A  foundation:   4.5.1.1 ─► 4.5.1.2 ─► 4.5.1.3 ─► 4.5.1.4 ─► 4.5.1.5
+                                                          │  (gate for lanes B–F)
+Lane B  :serializer:  4.5.2.1 ─► 4.5.2.2 ─► 4.5.2.3
+Lane C  :observer:    4.5.3.1 ─► 4.5.3.2 ─► 4.5.3.3 ─► 4.5.3.4 ─► 4.5.3.5
+                      (4.5.3.1 needs 4.5.2.1 only — starts before lane B ends)
+Lane D  app logic:    { 4.5.4.1 ∥ 4.5.4.2 ∥ 4.5.4.3 } ─► 17.5.4.4 ─► 16.5.4.5
+                      (4.5.4.1/4.5.4.2 need 4.5.3.1; 4.5.4.3 needs only 4.5.1.4)
+Lane E  app shell:    18.5.5.1 ─► 4.5.5.2 ─► 4.5.5.3 ─► 16.5.5.4 ─► 16.5.5.5 ─► 17.5.5.6
+                      (4.5.5.3 also needs lane D through 17.5.4.4; 17.5.5.6 also needs 16.5.4.5)
+                      17.5.5.7 (after 4.5.5.3, ∥ 17.5.5.6)     17.5.5.8 (∥ everything, after 4.5.1.4)
+Lane F  test equip:   4.5.6.1 ─► 4.5.6.2 ─► 4.5.6.3 ─► 4.5.6.4 ─► 4.5.6.5 ─► 5.5.6.6
+                      (needs only 4.5.1.4 — fully parallel with lanes B–E)
+                      4.5.6.7 dev injector (after 16.5.5.5 + 4.5.4.2)
+Lane G  CI:           16.5.7.1 (day one, ∥ everything)   4.5.7.2 (after 4.5.6.4)   5.5.7.3 (after 5.5.6.6)
+Lane H  unknowns:     5.5.8.1 ─► 5.5.8.2 (USER) ─► 16.5.8.3 (USER) ─► 16.5.8.4
+                      (fully parallel with lanes A–G; 16.5.8.4 also needs 16.5.5.5)
+Lane I  evidence:     5.5.9.1 (USER) ─► 16.5.9.2 (USER) ─► 17.5.9.3 (USER) ─► 4.5.9.4 (USER)
+                      (5.5.9.1 needs 5.5.7.3 + 5.5.8.2; 16.5.9.2 needs 17.5.5.6 + 16.5.8.3)
+```
+
+- **Parallel:** lanes B, D-partial, F, G and H against each other once `4.5.1.4` has landed; `4.5.4.1 ∥ 4.5.4.2 ∥ 4.5.4.3` inside lane D; `17.5.5.7 ∥ 17.5.5.6`; `17.5.5.8` against everything. Lane H is parallel with **all** code work by design — it must not wait for it.
+- **Sequential:** every arrow above. Lane A is strictly sequential and gates everything (a Gradle module graph cannot be built out of order). Lane I is strictly sequential and last — each step's evidence depends on the previous step's Room state.
+- **Spawn order:** hand `4.5.1.1`, `5.5.8.1` and `16.5.7.1` to subagents simultaneously at kickoff. Lane H's USER steps go to the user as soon as `5.5.8.1` lands. Lane I's four USER steps run only after `5.5.7.3` has pushed a verified image.
+
+### Critical path
+
+Six days to the deadline. The shortest ordered set that closes all five acceptance boxes:
+
+`4.5.1.1 → 4.5.1.2 → 4.5.1.3 → 4.5.1.4 → 4.5.2.1 → 4.5.2.2 → 4.5.3.1 → 4.5.3.2 → 4.5.3.3 → 4.5.4.1 → 4.5.4.2 → 4.5.4.3 → 17.5.4.4 → 16.5.4.5 → 18.5.5.1 → 4.5.5.2 → 4.5.5.3 → 16.5.5.4 → 16.5.5.5 → 17.5.5.6 → (lane F through 5.5.6.6) → 5.5.7.3 → 5.5.9.1 → 16.5.9.2 → 17.5.9.3 → 4.5.9.4`
+
+with **lane H (`5.5.8.1` → `16.5.8.3`) running alongside from day one** — it does not sit on the critical path but it decides whether the path's last four steps are in-Room or on an emulator.
+
+**Droppable without failing a box, in this order if time runs short:** `4.5.1.5` (ProGuard rules — release build is not an acceptance target), `17.5.5.7` (config-driven scale — the library default is correct), `4.5.6.7` (dev injector — only needed if the ADB/UI route is awkward), `4.5.2.3` and `4.5.3.5` (extra test depth, not extra behaviour), `state-stream.json` inside `4.5.6.4` (the periodic `state` message is optional on the producer side and no box depends on it).
+
+## Acceptance traceability
+
+Every Phase 5 acceptance criterion in [milestone1.md](milestone1.md#phase-5--ivi-hmi-mock-driven-r16-r17--display-track-parallel-from-the-start) maps to at least one subtask.
+
+| Milestone Phase 5 box | Closed by |
+|---|---|
+| The HMI runs on the AAOS node with the R16 layout; button/app areas switch the Display area | `16.5.5.4` · `16.5.5.5` (the launcher entry the APK lacks today) · `17.5.5.6` · `16.5.4.5` · deployed and observed by `5.5.8.2` · `16.5.8.3` · `16.5.9.2` |
+| **(Dev)** A mock R4 warning brings the warning view up with ego, B and ghost C at the composed positions | `4.5.2.2` · `4.5.3.3` · `4.5.4.2` · `17.5.4.4` · `16.5.4.5` · `17.5.5.6` · simulator `4.5.6.3`/`4.5.6.4` (`approach.json`) · dev path `4.5.6.7` (I3) · observed by `17.5.9.3` (I4) |
+| Ghost C renders from `v2x_relayed` data only; the 2D drawing is delivered | **`17.5.4.4`** (the §9.2 snapshot wiring that arms the committed guard — without it the guard silently disables) · `17.5.5.6` · `17.5.5.7` · `17.5.5.8` · `4.5.3.3` (`cSource=` on every `[RX]`) · `degrade.json` guard-trip step in `4.5.6.4` · observed by `17.5.9.3` and `4.5.9.4` |
+| A newer message with an unknown `warningType` degrades gracefully | `4.5.1.4` (the committed `R4AdditiveVersionTest` relocated and still green) · `4.5.2.2` (decode preserves the value, D4) · `4.5.4.3` (`WarningClassifier` generic presentation) · `4.5.6.4` (`degrade.json`) · observed by `4.5.9.4` |
+| Optional paths, only if built | **Not built in M1** — declared, not attempted. `SceneViewWarning3D.kt`'s location is designated by HLD §3.1 and nothing depends on it; multi-process wake-on-warning stays reachable because `4.5.5.2` chose the foreground service (D5). Recorded as "not built" in `plans/doc/phase5-ivi-run.md` by `4.5.9.4`. |
+
+## Open items carried, not decided (no Phase 5 subtask may close them by assumption)
+
+| # | Item | Owner / closes at |
+|---|---|---|
+| 1 | **ADB reach to the Skycraft guest** (REST VM-shell route known-502) | `16.5.8.3`, scheduled day one. Negative ⇒ group 5.9 degrades to AAOS-emulator evidence |
+| 2 | **AAOS guest Android version** vs `minSdk 29`, and the `automotive` feature | `16.5.8.3`, same probe |
+| 3 | Simulator `Dockerfile` at `r4-simulator/`, not the node-folder root | HLD-flagged deviation with rationale; self-containment preserved. Revisit only if `IVI_ECU/` gains a root image |
+| 4 | Coroutines version skew between `:observer` and what AndroidX resolves in `:app` | Mitigated by the catalog (`4.5.1.1`); a skew shows as a runtime `NoSuchMethodError`, not a build failure — watch for it at `16.5.9.2` |
+| 5 | Deployment budget: 2 concurrent Rooms | `4.5.9.4` tears the Phase 5 Room down; coordinate with the comms track before `5.5.8.2` deploys |
+| 6 | MTU headroom (Phase 0 open item O3) | Non-issue for this hop — an R4 warning is ~450 B against a 2048 B buffer — but still formally open |
+
+## Deliberately not in this phase
+
+- **3D (`SceneViewWarning3D`) and multi-process wake-on-warning** — optional, not committed M1 deliverables (D11). A location is designated; no subtask attempts them.
+- **`WarningBannerOverlay` mounted in the Display Area** — forbidden by the standing user decision of 2026-07-26 (D11). The God-View canvas must render unobstructed.
+- **Robolectric, a coverage threshold, and LeakCanary** — none has a basis in R4/R16/R17 acceptance; the boxes are behavioural, and D2's plain-JVM split is what removes the need for Robolectric (HLD §6, §9.1).
+- **Runtime JSON-Schema validation on the device** — the typed decode already enforces required fields and types; the schema is enforced in the round-trip tests on both sides (HLD §5.1).
+- **Real ADA data.** Phase 5 is mock-driven by definition; the simulator honours the real ADA node's env var *names* so Phase 6 is an image swap with no node-config edit (HLD §8).
+
+---
+
+*Created 2026-08-02 by project-planner from the Phase 5 HLD (`85387b5`), its four research notes, and [milestone1.md § Phase 5](milestone1.md#phase-5--ivi-hmi-mock-driven-r16-r17--display-track-parallel-from-the-start). 9 task groups, 44 subtasks: 38 agent-implemented, 6 user-manual. Nothing started.*
