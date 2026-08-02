@@ -8,7 +8,7 @@ Phase 3 replaces the Phase 2 mock own-sensor input with a Python detector subpro
 - `placeholder` backend remains for deterministic CI and smoke tests.
 - `yolo-onnx` backend runs real YOLO ONNX inference with ONNX Runtime CPU.
 - The detector filters COCO vehicle classes: `car`, `motorcycle`, `bus`, `truck`.
-- The selected vehicle B is the largest vehicle bounding box in the sampled frame.
+- Vehicle B selection rejects implausible full-frame boxes, then scores vehicle area weighted by ego-lane center proximity.
 - Distance is estimated from bounding-box width with `VEHICLE_WIDTH_M` and `CAMERA_FOCAL_PX`.
 - Output contract is R3 JSONL with `source = "own_sensor"` and id `own:B`.
 
@@ -40,7 +40,7 @@ phase3 demo video detector: pass (5 R3 objects)
 
 ## ML Detector Setup
 
-Download the local YOLOv8n ONNX model:
+Download the pretrained YOLO11n ONNX model:
 
 ```sh
 python ADA_ECU/tools/download_yolo_model.py
@@ -49,10 +49,10 @@ python ADA_ECU/tools/download_yolo_model.py
 The model is saved to:
 
 ```sh
-ADA_ECU/models/yolov8n.onnx
+ADA_ECU/models/yolo11n.onnx
 ```
 
-`ADA_ECU/models/*.onnx` is ignored by git because the model is a binary runtime artifact.
+The pretrained `yolo11n.onnx` artifact is committed so CI and CarSky image builds are offline-reproducible.
 
 ## ML Detector Run
 
@@ -60,7 +60,7 @@ ADA_ECU/models/yolov8n.onnx
 python ADA_ECU/tools/video_detector.py \
   --video ADA_ECU/media/ego-b-occluding-c.mp4 \
   --backend yolo-onnx \
-  --model ADA_ECU/models/yolov8n.onnx \
+  --model ADA_ECU/models/yolo11n.onnx \
   --every-n-frames 20 \
   --limit 5 \
   --confidence 0.20 \
@@ -80,6 +80,22 @@ Observed local result on `ADA_ECU/media/ego-b-occluding-c.mp4`:
 ```text
 phase3 ML video detector: pass (5 R3 objects)
 ```
+
+## Full-clip R12 Evidence
+
+The acceptance runner processes all 200 frames at a stride of four, writes 50
+sampled-frame R3 objects to `/tmp/ada_phase3_yolo11n.jsonl`, and reports
+coverage, effective inference rate, warm-up, distance range/trend, and 30 m
+gate crossings:
+
+```sh
+python ADA_ECU/tools/benchmark_video_detector.py
+python ADA_ECU/tools/check_zero_c.py /tmp/ada_phase3_yolo11n.jsonl
+```
+
+The calibrated defaults are `VEHICLE_WIDTH_M=1.8` and
+`CAMERA_FOCAL_PX=2000`. They affect only monocular distance estimation; the
+R13 admission gates remain unchanged.
 
 Example ML evidence:
 
@@ -112,4 +128,4 @@ Expected R4 evidence:
 ## Status
 
 - Phase 3 video decode, ML inference, R3 emission, and Phase 4 ingestion are verified locally.
-- Distance is an estimate based on camera assumptions; precise calibration remains future tuning.
+- Distance remains a monocular estimate; its constants are calibrated for the committed M1 clip.

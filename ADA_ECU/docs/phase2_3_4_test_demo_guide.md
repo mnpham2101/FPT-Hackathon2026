@@ -68,13 +68,20 @@ Expected result:
 phase3 ML video detector: pass (5 R3 objects)
 ```
 
+For full Phase 3 acceptance evidence:
+
+```sh
+python ADA_ECU/tools/benchmark_video_detector.py
+python ADA_ECU/tools/check_zero_c.py /tmp/ada_phase3_yolo11n.jsonl
+```
+
 To see the raw ML R3 JSONL:
 
 ```sh
 python ADA_ECU/tools/video_detector.py \
   --video ADA_ECU/media/ego-b-occluding-c.mp4 \
   --backend yolo-onnx \
-  --model ADA_ECU/models/yolov8n.onnx \
+  --model ADA_ECU/models/yolo11n.onnx \
   --every-n-frames 20 \
   --limit 5 \
   --confidence 0.20 \
@@ -91,7 +98,7 @@ Save the ML video detector output:
 python ADA_ECU/tools/video_detector.py \
   --video ADA_ECU/media/ego-b-occluding-c.mp4 \
   --backend yolo-onnx \
-  --model ADA_ECU/models/yolov8n.onnx \
+  --model ADA_ECU/models/yolo11n.onnx \
   --every-n-frames 20 \
   --limit 5 \
   --confidence 0.20 > /tmp/r3_own_sensor.jsonl

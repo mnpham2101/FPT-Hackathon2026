@@ -315,7 +315,7 @@ Every value is env-injected by the blueprint or falls through to `src/config/con
 | `VIDEO_CLIP_PATH` · `DETECTOR_FRAME_STRIDE` | `/app/media/ego-b-occluding-c.mp4` · `4` | research note §4 |
 | `MODEL_PATH` | `/app/models/yolo11n.onnx` | ONNX session |
 | `CONF_THRESHOLD` · `IOU_THRESHOLD` · `TRACK_IOU_MIN` | `0.35` · `0.45` · `0.3` *(proposal)* | detection and association |
-| `VEHICLE_WIDTH_M` · `CAMERA_HFOV_DEG` | `1.8` · `60` *(proposal)* | pinhole distance inputs (D6) |
+| `VEHICLE_WIDTH_M` · `CAMERA_FOCAL_PX` | `1.8` · `2000` *(calibrated on the M1 clip)* | pinhole distance inputs (D6) |
 | `CRA_ENABLED` | `nlos_obstruction` | active plugin list (D4) |
 | `RISK_NEAR_M` · `RISK_CRITICAL_M` | `25` · `15` *(proposal)* | `medium` / `high` range thresholds (D5) |
 | `RISK_TTC_WARN_S` · `RISK_TTC_CRITICAL_S` | `6` · `3` *(proposal)* | TTC thresholds (D5) |

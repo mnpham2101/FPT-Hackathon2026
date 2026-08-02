@@ -152,6 +152,52 @@ Current result:
 
 ### Latest Local Verification With Project Video
 
+#### YOLO11n full-clip acceptance run
+
+The runtime model is pretrained `yolo11n.onnx`; no training or fine-tuning is
+used. On 2026-08-03, the complete 10-second, 200-frame project clip was run at
+a stride of four with calibrated `CAMERA_FOCAL_PX=2000`:
+
+| KPI | Result | Verdict |
+|---|---:|---|
+| Sampled frames / R3 detections | 50 / 50 | Pass |
+| Detection coverage | 100% | Pass (at least 90%) |
+| Effective inference rate | 20.395 Hz | Pass (at least 5 Hz) |
+| Model/video warm-up | 0.2234 s | Pass |
+| First to last B distance | 31.674 to 7.249 m | Approaching |
+| Observed distance range | 7.154 to 39.247 m | Covers demo gate region |
+| 30 m gate crossings | 1 | Pass |
+| Non-increasing raw steps | 87.76% | Minor bbox jitter; overall trend decreases |
+| Zero-C structural check | 50 objects examined | Pass |
+
+The evidence JSONL was then ingested by the ADA C++ runtime with the R2 sample.
+R4 contained tracked `own:B` at 7.249 m and tracked `v2x:1201:7` at 25.4 m,
+with composed `vehicleC.x=32.649`.
+
+The same full-clip benchmark inside the `linux/arm64` image produced 50/50
+detections at 17.543 Hz with 0.2949 s warm-up and one 30 m gate crossing.
+
+#### Linux/ARM64 container verification
+
+The combined C++ and Python image was built for the CarSky target architecture:
+
+```sh
+docker buildx build --platform linux/arm64 --provenance=false --sbom=false \
+  --load -t m1-ada-ecu:latest ADA_ECU
+```
+
+Evidence recorded on 2026-08-03:
+
+- Build-stage CTest passed `14/14`.
+- The C++ mock runtime emitted R4 with `trackedObjects` containing `own:B`
+  (`own_sensor`) and `v2x:1201:7` (`v2x_relayed`).
+- YOLO ONNX decoded the packaged demo video inside the ARM64 image and emitted
+  five R3 `own:B` objects at timestamps 0, 1000, 2000, 3000, and 4000 ms.
+- Native `aarch64` wheels resolved for OpenCV, NumPy, and ONNX Runtime.
+
+The ONNX Runtime `Unknown CPU vendor` warning under Docker Desktop
+virtualization was informational; inference completed successfully.
+
 Date: 2026-08-02.
 
 Video used:
@@ -191,7 +237,7 @@ python ADA_ECU/tools/download_yolo_model.py
 Observed result:
 
 ```text
-downloaded model: ADA_ECU/models/yolov8n.onnx (12851049 bytes)
+downloaded model: ADA_ECU/models/yolo11n.onnx (pretrained artifact)
 ```
 
 Phase 3 ML detector smoke:
@@ -209,11 +255,11 @@ phase3 ML video detector: pass (5 R3 objects)
 Observed ML bbox evidence:
 
 ```json
-{"event":"ml_detection","frame":0,"timestampMs":0,"class":"car","confidence":0.271,"bbox":[1.2,338.1,181.0,455.7],"distance":9.01}
-{"event":"ml_detection","frame":20,"timestampMs":1000,"class":"truck","confidence":0.718,"bbox":[675.0,361.6,779.1,461.5],"distance":15.559}
-{"event":"ml_detection","frame":40,"timestampMs":2000,"class":"truck","confidence":0.648,"bbox":[707.5,341.6,826.4,450.6],"distance":13.624}
-{"event":"ml_detection","frame":60,"timestampMs":3000,"class":"bus","confidence":0.664,"bbox":[735.3,328.2,866.1,448.8],"distance":12.381}
-{"event":"ml_detection","frame":80,"timestampMs":4000,"class":"bus","confidence":0.885,"bbox":[703.1,325.7,849.0,454.5],"distance":11.104}
+{"event":"ml_detection","frame":0,"timestampMs":0,"class":"car","confidence":0.752,"bbox":[649.0,416.9,762.7,498.3],"distance":31.674}
+{"event":"ml_detection","frame":20,"timestampMs":1000,"class":"truck","confidence":0.706,"bbox":[685.5,362.4,777.2,463.2],"distance":39.247}
+{"event":"ml_detection","frame":40,"timestampMs":2000,"class":"bus","confidence":0.685,"bbox":[708.9,341.8,826.5,450.5],"distance":30.612}
+{"event":"ml_detection","frame":60,"timestampMs":3000,"class":"bus","confidence":0.91,"bbox":[736.7,328.3,867.9,451.1],"distance":27.448}
+{"event":"ml_detection","frame":80,"timestampMs":4000,"class":"bus","confidence":0.867,"bbox":[704.2,325.0,849.2,456.8],"distance":24.82}
 ```
 
 ML video-to-R3 command:
@@ -222,7 +268,7 @@ ML video-to-R3 command:
 python ADA_ECU/tools/video_detector.py \
   --video ADA_ECU/media/ego-b-occluding-c.mp4 \
   --backend yolo-onnx \
-  --model ADA_ECU/models/yolov8n.onnx \
+  --model ADA_ECU/models/yolo11n.onnx \
   --every-n-frames 20 \
   --limit 5 \
   --confidence 0.20 \

@@ -12,7 +12,7 @@ import sys
 def main() -> int:
     repo_root = pathlib.Path(__file__).resolve().parents[2]
     video_path = repo_root / "ADA_ECU/media/ego-b-occluding-c.mp4"
-    model_path = repo_root / "ADA_ECU/models/yolov8n.onnx"
+    model_path = repo_root / "ADA_ECU/models/yolo11n.onnx"
     detector_path = repo_root / "ADA_ECU/tools/video_detector.py"
 
     if not model_path.exists():

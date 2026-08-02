@@ -1,4 +1,5 @@
 #include <cassert>
+#include <filesystem>
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -41,7 +42,8 @@ int main() {
     assert(first_own->id == "own:B");
 
     ada::TrackStore store(config);
-    ada::EventLogger logger("/private/tmp/ada_core_tests.jsonl");
+    const auto event_log_path = std::filesystem::temp_directory_path() / "ada_core_tests.jsonl";
+    ada::EventLogger logger(event_log_path.string());
     const auto ingest = ada::ingest_own_sensor_jsonl_file(std::string(ADA_TESTDATA_DIR) + "/r3_own_sensor.jsonl", store, logger);
     assert(ingest.accepted == 2);
     assert(ingest.rejected == 0);

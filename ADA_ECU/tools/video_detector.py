@@ -3,7 +3,7 @@
 
 This process is the ADA detector subprocess seam. It reads video frames with
 OpenCV and emits R3 TrackedObject JSONL on stdout. `placeholder` remains for
-deterministic CI/smoke tests; `yolo-onnx` runs a YOLOv8/YOLO11-style ONNX model
+deterministic CI/smoke tests; `yolo-onnx` runs a YOLO11-style ONNX model
 with ONNX Runtime and emits vehicle detections from real video frames.
 """
 
@@ -73,7 +73,7 @@ class PlaceholderVehicleBackend:
 
 
 class YoloOnnxVehicleBackend:
-    """YOLOv8/YOLO11 ONNX vehicle detector that emits the best vehicle as B."""
+    """YOLO11 ONNX vehicle detector that emits the ego-lane occluder as B."""
 
     vehicle_class_ids = {2, 3, 5, 7}  # COCO: car, motorcycle, bus, truck
     coco_names = {
@@ -128,10 +128,23 @@ class YoloOnnxVehicleBackend:
         if not detections:
             return []
 
-        # Vehicle B is the visible occluder in ego view. For the demo clip and
-        # near-lane driving scenes, the largest vehicle bbox is a deterministic
-        # proxy for the occluding vehicle.
-        vehicle_b = max(detections, key=lambda item: (item.area, item.score))
+        # B is the dominant vehicle near the ego lane center. Weighting area by
+        # center proximity avoids selecting a close adjacent-lane vehicle while
+        # still rejecting tiny far-away detections near the vanishing point.
+        plausible = [
+            item
+            for item in detections
+            if item.width <= frame.width * 0.80 and item.height > 0 and item.width / item.height <= 3.5
+        ]
+        candidates = plausible or detections
+        half_width = max(frame.width / 2.0, 1.0)
+        vehicle_b = max(
+            candidates,
+            key=lambda item: (
+                item.area * max(0.05, 1.0 - abs(item.center_x - half_width) / half_width),
+                item.score,
+            ),
+        )
         distance_m = self._distance_m(vehicle_b.width)
         lateral_m = self._lateral_m(vehicle_b.center_x, frame.width, distance_m)
         confidence = round(vehicle_b.score, 3)
@@ -195,7 +208,7 @@ class YoloOnnxVehicleBackend:
         preds = np.squeeze(output)
         if preds.ndim != 2:
             return []
-        # YOLOv8/YOLO11 exports commonly produce (84, N); transpose to (N, 84).
+        # YOLO11 exports commonly produce (84, N); transpose to (N, 84).
         if preds.shape[0] < preds.shape[1] and preds.shape[0] <= 256:
             preds = preds.T
 
@@ -355,12 +368,12 @@ def parse_args() -> argparse.Namespace:
     mode.add_argument("--video", help="input video file decoded by OpenCV")
     mode.add_argument("--synthetic", type=int, metavar="COUNT", help="emit COUNT synthetic frame detections without OpenCV")
     parser.add_argument("--backend", choices=["placeholder", "yolo-onnx"], default="placeholder", help="detection backend to run")
-    parser.add_argument("--model", default=os.getenv("MODEL_PATH", "ADA_ECU/models/yolov8n.onnx"), help="YOLO ONNX model path")
+    parser.add_argument("--model", default=os.getenv("MODEL_PATH", "ADA_ECU/models/yolo11n.onnx"), help="YOLO11 ONNX model path")
     parser.add_argument("--confidence", type=float, default=float(os.getenv("CONF_THRESHOLD", "0.25")), help="YOLO confidence threshold")
     parser.add_argument("--iou", type=float, default=float(os.getenv("IOU_THRESHOLD", "0.45")), help="YOLO NMS IoU threshold")
     parser.add_argument("--input-size", type=int, default=int(os.getenv("MODEL_INPUT_SIZE", "640")), help="YOLO square input size")
     parser.add_argument("--vehicle-width-m", type=float, default=float(os.getenv("VEHICLE_WIDTH_M", "1.8")), help="nominal vehicle width for distance estimate")
-    parser.add_argument("--focal-px", type=float, default=float(os.getenv("CAMERA_FOCAL_PX", "900")), help="camera focal length in pixels for distance/lateral estimate")
+    parser.add_argument("--focal-px", type=float, default=float(os.getenv("CAMERA_FOCAL_PX", "2000")), help="camera focal length in pixels for distance/lateral estimate")
     parser.add_argument("--log-detections", action="store_true", help="write ML detection bbox evidence to stderr")
     parser.add_argument("--every-n-frames", type=int, default=5, help="sample one frame every N frames in video mode")
     parser.add_argument("--limit", type=int, help="maximum detections to emit")

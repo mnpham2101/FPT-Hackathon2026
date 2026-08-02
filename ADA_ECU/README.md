@@ -100,11 +100,49 @@ python ADA_ECU/tools/smoke_ml_video_detector.py
 python ADA_ECU/tools/video_detector.py \
   --video ADA_ECU/media/ego-b-occluding-c.mp4 \
   --backend yolo-onnx \
-  --model ADA_ECU/models/yolov8n.onnx \
+  --model ADA_ECU/models/yolo11n.onnx \
   --every-n-frames 20 \
   --limit 5 \
   --confidence 0.20 \
   --log-detections
+```
+
+Run the complete R12 evidence check over every fourth frame of the full clip:
+
+```sh
+python ADA_ECU/tools/benchmark_video_detector.py
+python ADA_ECU/tools/check_zero_c.py /tmp/ada_phase3_yolo11n.jsonl
+```
+
+## Linux/ARM64 container
+
+The CarSky image contains the ADA C++ runtime, Python ML dependencies, detector,
+demo video, and the committed pretrained YOLO11n ONNX model. The download helper
+is retained for refreshing or restoring that artifact:
+
+```sh
+python ADA_ECU/tools/download_yolo_model.py
+docker buildx build --platform linux/arm64 --provenance=false --sbom=false \
+  --load -t m1-ada-ecu:latest ADA_ECU
+```
+
+Verify the C++ runtime:
+
+```sh
+docker run --rm --platform linux/arm64 m1-ada-ecu:latest \
+  --config /app/config/ada-ecu.conf --mock \
+  --own-sensor-sample /app/testdata/r3_own_sensor.jsonl \
+  --r2-sample /app/testdata/r2_v2x_object.sample.json
+```
+
+Verify real ML detection from the packaged video:
+
+```sh
+docker run --rm --platform linux/arm64 --entrypoint python \
+  m1-ada-ecu:latest /app/detector/tools/video_detector.py \
+  --video /app/media/ego-b-occluding-c.mp4 \
+  --backend yolo-onnx --model /app/models/yolo11n.onnx \
+  --every-n-frames 20 --limit 5 --confidence 0.20 --log-detections
 ```
 
 ## CarSky deployment overrides

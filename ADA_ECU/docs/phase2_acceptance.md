@@ -75,7 +75,7 @@ docker buildx build --platform linux/arm64 -t ADA_ECU:phase2 ADA_ECU
 | CRA database schema committed | Deferred | Current implementation uses in-memory `TrackStore`; no persistent database selected for Phase 2 scaffold |
 | Video-input proposal sent to FPT-Mentor | Not code | Requires team/user action outside code |
 | Build + CI round-trip tests green on frozen contracts | Partial | CMake/CTest local pass; CI not configured yet |
-| Linux/ARM container build pass | Blocked locally | Docker daemon unavailable on this machine/session; run the README `docker buildx` command once Docker Desktop/CLI is stable |
+| Linux/ARM container build pass | Pass | Buildx `linux/arm64` image loaded successfully; 14/14 CTest pass in build stage |
 
 ## Not Phase 3 Yet
 

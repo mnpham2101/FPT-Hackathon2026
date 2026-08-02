@@ -9,13 +9,13 @@ import sys
 import urllib.request
 
 
-DEFAULT_URL = "https://github.com/ultralytics/assets/releases/download/v8.4.0/yolov8n.onnx"
+DEFAULT_URL = "https://github.com/ultralytics/assets/releases/download/v8.4.0/yolo11n.onnx"
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Download YOLOv8n ONNX model for ADA Phase 3.")
+    parser = argparse.ArgumentParser(description="Download pretrained YOLO11n ONNX model for ADA Phase 3.")
     parser.add_argument("--url", default=DEFAULT_URL)
-    parser.add_argument("--output", default="ADA_ECU/models/yolov8n.onnx")
+    parser.add_argument("--output", default="ADA_ECU/models/yolo11n.onnx")
     args = parser.parse_args()
 
     output = pathlib.Path(args.output)
