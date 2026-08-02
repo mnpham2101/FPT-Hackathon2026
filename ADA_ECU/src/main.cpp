@@ -85,6 +85,8 @@ int main(int argc, char** argv) {
     int max_r2 = 1;
     std::string r2_sample_path = "ADA_ECU/testdata/r2_v2x_object.sample.json";
     std::string mock_distances_csv;
+    std::int64_t mock_received_ms = -1;
+    int mock_start_delay_ms = 0;
     std::string own_sensor_sample_path = "ADA_ECU/testdata/r3_own_sensor.jsonl";
 
     for (int i = 1; i < argc; ++i) {
@@ -103,6 +105,10 @@ int main(int argc, char** argv) {
             mock = true;
             receive_r2 = true;
             mock_distances_csv = argv[++i];
+        } else if (arg == "--mock-received-ms" && i + 1 < argc) {
+            mock_received_ms = std::stoll(argv[++i]);
+        } else if (arg == "--mock-start-delay-ms" && i + 1 < argc) {
+            mock_start_delay_ms = std::stoi(argv[++i]);
         } else if (arg == "--own-sensor-sample" && i + 1 < argc) {
             own_sensor_sample_path = argv[++i];
         } else if (arg == "--max-r2" && i + 1 < argc) {
@@ -134,15 +140,19 @@ int main(int argc, char** argv) {
     }
 
     if (mock) {
+        if (mock_start_delay_ms > 0) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(mock_start_delay_ms));
+        }
         const auto sample = read_file(r2_sample_path);
         const auto distances = mock_distances_csv.empty() ? std::vector<double>{} : parse_distances(mock_distances_csv);
         if (!distances.empty()) {
             max_r2 = static_cast<int>(distances.size());
         }
 
-        const auto now = std::chrono::duration_cast<std::chrono::milliseconds>(
-                             std::chrono::system_clock::now().time_since_epoch())
-                             .count();
+        const auto wall_now = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                  std::chrono::system_clock::now().time_since_epoch())
+                                  .count();
+        const auto now = mock_received_ms >= 0 ? mock_received_ms : wall_now;
         if (distances.empty()) {
             const auto r2_ingest = ada::ingest_r2_payload(sample, now, store, logger);
             if (!r2_ingest.accepted) {

@@ -1,4 +1,4 @@
 # Phase 3 detector runtime dependencies.
 opencv-python-headless>=4.10,<5
 numpy>=1.26,<3
-
+onnxruntime>=1.18,<2

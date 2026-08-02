@@ -86,10 +86,25 @@ source ADA_ECU/.venv/bin/activate
 python ADA_ECU/tools/video_detector.py --video ADA_ECU/media/ego-b-occluding-c.mp4 --backend placeholder --every-n-frames 30 --limit 5
 ```
 
-Run the detector smoke test:
+Run the placeholder detector smoke test:
 
 ```sh
 python ADA_ECU/tools/smoke_video_detector.py
+```
+
+Run real ML vehicle detection:
+
+```sh
+python ADA_ECU/tools/download_yolo_model.py
+python ADA_ECU/tools/smoke_ml_video_detector.py
+python ADA_ECU/tools/video_detector.py \
+  --video ADA_ECU/media/ego-b-occluding-c.mp4 \
+  --backend yolo-onnx \
+  --model ADA_ECU/models/yolov8n.onnx \
+  --every-n-frames 20 \
+  --limit 5 \
+  --confidence 0.20 \
+  --log-detections
 ```
 
 ## CarSky deployment overrides

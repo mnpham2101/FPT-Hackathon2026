@@ -38,7 +38,7 @@ python -m pip install -r ADA_ECU/requirements.txt
 
 ## 3. Prove video can emit object detections
 
-Run the smoke check against the committed demo clip:
+Run the deterministic placeholder smoke check against the committed demo clip:
 
 ```sh
 python ADA_ECU/tools/smoke_demo_video_detector.py
@@ -50,30 +50,51 @@ Expected result:
 phase3 demo video detector: pass (5 R3 objects)
 ```
 
-To see the raw R3 JSONL:
+Download the YOLO ONNX model for ML detection:
+
+```sh
+python ADA_ECU/tools/download_yolo_model.py
+```
+
+Run the ML smoke check:
+
+```sh
+python ADA_ECU/tools/smoke_ml_video_detector.py
+```
+
+Expected result:
+
+```text
+phase3 ML video detector: pass (5 R3 objects)
+```
+
+To see the raw ML R3 JSONL:
 
 ```sh
 python ADA_ECU/tools/video_detector.py \
   --video ADA_ECU/media/ego-b-occluding-c.mp4 \
-  --backend placeholder \
-  --every-n-frames 30 \
-  --limit 5
+  --backend yolo-onnx \
+  --model ADA_ECU/models/yolov8n.onnx \
+  --every-n-frames 20 \
+  --limit 5 \
+  --confidence 0.20 \
+  --log-detections
 ```
 
-Current Phase 3 backend is `placeholder`, so this proves the real video decode
-and ADA detector contract. YOLO/ONNX can replace only the backend later without
-changing the R3 contract consumed by ADA.
+`--log-detections` writes ML bbox evidence to stderr. stdout remains R3 JSONL.
 
 ## 4. Prove video R3 can drive ADA Phase 4 output
 
-Save the video detector output:
+Save the ML video detector output:
 
 ```sh
 python ADA_ECU/tools/video_detector.py \
   --video ADA_ECU/media/ego-b-occluding-c.mp4 \
-  --backend placeholder \
-  --every-n-frames 30 \
-  --limit 5 > /tmp/r3_own_sensor.jsonl
+  --backend yolo-onnx \
+  --model ADA_ECU/models/yolov8n.onnx \
+  --every-n-frames 20 \
+  --limit 5 \
+  --confidence 0.20 > /tmp/r3_own_sensor.jsonl
 ```
 
 Run ADA with mock V2X C plus the video-derived B sample:
@@ -112,3 +133,34 @@ ADA_ECU/build-runtime/ada_ecu \
 ```
 
 The realtime path to IVI is UDP JSON R4.
+
+## 6. Deterministic timeline demo for review
+
+Use this when the reviewer asks for the exact story:
+
+- `t=1.00s`: video/R3 has vehicle B.
+- `t=1.01s`: V2X/R2 has vehicle C.
+- `t=1.02s`: ADA sends R4 to IVI with both vehicles.
+
+Run:
+
+```sh
+python ADA_ECU/tools/demo_timeline_ivi.py
+```
+
+Expected output shape:
+
+```text
+t=1.00s video: vehicle B detected from R3 own_sensor sample
+t=1.01s v2x: vehicle C received from R2 v2x sample
+t=1.02s ada: sending R4 to IVI UDP 127.0.0.1:<port>
+t=1.02s ivi: received R4 warning with vehicleB and vehicleC
+{"schemaVersion":1,"type":"warning",...}
+```
+
+The final R4 JSON must contain:
+
+- `trackedObjects[].id == "own:B"` with `timestamps.measured == 1000`
+- `trackedObjects[].id == "v2x:1201:7"` with timestamp `1010`
+- `geometry.vehicleB`
+- `geometry.vehicleC`

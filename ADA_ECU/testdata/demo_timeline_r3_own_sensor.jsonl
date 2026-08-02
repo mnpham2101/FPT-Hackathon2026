@@ -1,0 +1,1 @@
+{"id":"own:B","class":"vehicle","source":"own_sensor","position":{"x":18.0,"y":0.0,"confidence":0.90},"distance":18.0,"speed":0.0,"confidence":0.90,"state":"tracked","timestamps":{"measured":1000,"received":1000,"lastUpdated":1000}}

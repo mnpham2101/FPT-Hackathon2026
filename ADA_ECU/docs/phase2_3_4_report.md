@@ -70,16 +70,18 @@ Implemented:
 
 - Python OpenCV-based detector seam at `tools/video_detector.py`.
 - Synthetic mode for deterministic development without video assets.
-- Placeholder backend for real video decode before YOLO integration.
+- Placeholder backend for deterministic smoke tests.
+- YOLO ONNX backend for real ML vehicle detection from video frames.
+- Bounding-box evidence logging with class, confidence, bbox, and distance estimate.
 - R3 JSONL output compatible with ADA ingest.
 - Smoke test for the detector path.
 
 Current behavior:
 
-- Emits `own:B`.
+- Emits `own:B` from either placeholder or ML-selected vehicle B.
 - Uses `source = "own_sensor"`.
 - Emits distance/position fields needed by Phase 4 fusion.
-- Supports `--video`, `--synthetic`, `--backend placeholder`, `--every-n-frames`, and `--limit`.
+- Supports `--video`, `--synthetic`, `--backend placeholder`, `--backend yolo-onnx`, `--model`, `--confidence`, `--every-n-frames`, and `--limit`.
 
 Example:
 
@@ -144,8 +146,159 @@ Current result:
 | C++ build | Pass |
 | ADA unit tests | Pass |
 | Python tool syntax | Pass |
-| Phase 3 detector smoke through ADA venv | Pass |
+| Phase 3 placeholder detector smoke through ADA venv | Pass |
+| Phase 3 ML detector smoke on project video | Pass |
 | ADA mock R2/R3/R4 loopback | Pass with sandbox escalation for UDP bind |
+
+### Latest Local Verification With Project Video
+
+Date: 2026-08-02.
+
+Video used:
+
+```sh
+ADA_ECU/media/ego-b-occluding-c.mp4
+```
+
+Video metadata:
+
+| Field | Value |
+|---|---|
+| Container/codec | MP4 / H.264 |
+| Resolution | 1280x720 |
+| Frame rate | 20 fps |
+| Duration | 10 seconds |
+| Size | ~5.0 MB |
+
+Phase 3 placeholder video detector smoke:
+
+```sh
+python ADA_ECU/tools/smoke_demo_video_detector.py
+```
+
+Observed result:
+
+```text
+phase3 demo video detector: pass (5 R3 objects)
+```
+
+ML model setup:
+
+```sh
+python ADA_ECU/tools/download_yolo_model.py
+```
+
+Observed result:
+
+```text
+downloaded model: ADA_ECU/models/yolov8n.onnx (12851049 bytes)
+```
+
+Phase 3 ML detector smoke:
+
+```sh
+python ADA_ECU/tools/smoke_ml_video_detector.py
+```
+
+Observed result:
+
+```text
+phase3 ML video detector: pass (5 R3 objects)
+```
+
+Observed ML bbox evidence:
+
+```json
+{"event":"ml_detection","frame":0,"timestampMs":0,"class":"car","confidence":0.271,"bbox":[1.2,338.1,181.0,455.7],"distance":9.01}
+{"event":"ml_detection","frame":20,"timestampMs":1000,"class":"truck","confidence":0.718,"bbox":[675.0,361.6,779.1,461.5],"distance":15.559}
+{"event":"ml_detection","frame":40,"timestampMs":2000,"class":"truck","confidence":0.648,"bbox":[707.5,341.6,826.4,450.6],"distance":13.624}
+{"event":"ml_detection","frame":60,"timestampMs":3000,"class":"bus","confidence":0.664,"bbox":[735.3,328.2,866.1,448.8],"distance":12.381}
+{"event":"ml_detection","frame":80,"timestampMs":4000,"class":"bus","confidence":0.885,"bbox":[703.1,325.7,849.0,454.5],"distance":11.104}
+```
+
+ML video-to-R3 command:
+
+```sh
+python ADA_ECU/tools/video_detector.py \
+  --video ADA_ECU/media/ego-b-occluding-c.mp4 \
+  --backend yolo-onnx \
+  --model ADA_ECU/models/yolov8n.onnx \
+  --every-n-frames 20 \
+  --limit 5 \
+  --confidence 0.20 \
+  --log-detections > /tmp/ada_r3_ml_from_project_video.jsonl
+```
+
+Observed R3 output count:
+
+```text
+5 /tmp/ada_r3_ml_from_project_video.jsonl
+```
+
+Observed R3 evidence:
+
+```json
+{"id":"own:B","class":"vehicle","source":"own_sensor","position":{"x":9.01,"y":-5.496,"confidence":0.271},"distance":9.01,"speed":0.0,"confidence":0.271,"state":"tentative","timestamps":{"measured":0,"received":0,"lastUpdated":0}}
+{"id":"own:B","class":"vehicle","source":"own_sensor","position":{"x":15.559,"y":1.505,"confidence":0.718},"distance":15.559,"speed":0.0,"confidence":0.718,"state":"tentative","timestamps":{"measured":1000,"received":1000,"lastUpdated":1000}}
+{"id":"own:B","class":"vehicle","source":"own_sensor","position":{"x":13.624,"y":1.922,"confidence":0.648},"distance":13.624,"speed":0.0,"confidence":0.648,"state":"tentative","timestamps":{"measured":2000,"received":2000,"lastUpdated":2000}}
+{"id":"own:B","class":"vehicle","source":"own_sensor","position":{"x":12.381,"y":2.21,"confidence":0.664},"distance":12.381,"speed":0.0,"confidence":0.664,"state":"tentative","timestamps":{"measured":3000,"received":3000,"lastUpdated":3000}}
+{"id":"own:B","class":"vehicle","source":"own_sensor","position":{"x":11.104,"y":1.679,"confidence":0.885},"distance":11.104,"speed":0.0,"confidence":0.885,"state":"tentative","timestamps":{"measured":4000,"received":4000,"lastUpdated":4000}}
+```
+
+Phase 4 fusion command using video-derived B plus mock V2X C:
+
+```sh
+ADA_ECU/build-runtime/ada_ecu \
+  --config ADA_ECU/config/ada-ecu.conf \
+  --mock \
+  --own-sensor-sample /tmp/ada_r3_ml_from_project_video.jsonl
+```
+
+Observed R4 evidence:
+
+```json
+{
+  "schemaVersion": 1,
+  "type": "warning",
+  "warningType": "nlos_obstruction",
+  "riskState": "high",
+  "trackedObjects": [
+    {
+      "id": "own:B",
+      "class": "vehicle",
+      "source": "own_sensor",
+      "position": { "x": 11.104, "y": 1.679, "confidence": 0.885 },
+      "distance": 11.104,
+      "speed": 0,
+      "confidence": 0.885,
+      "state": "tracked",
+      "timestamps": { "measured": 4000, "received": 4000, "lastUpdated": 4000 }
+    },
+    {
+      "id": "v2x:1201:7",
+      "class": "vehicle",
+      "source": "v2x_relayed",
+      "position": { "x": 25, "y": 1.2, "confidence": 0.9 },
+      "distance": 25.4,
+      "speed": 15.2,
+      "confidence": 0.95,
+      "state": "tracked"
+    }
+  ],
+  "geometry": {
+    "ego": { "x": 0, "y": 0 },
+    "vehicleB": { "x": 11.104, "y": 1.679 },
+    "vehicleC": { "x": 36.504, "y": 2.879 }
+  }
+}
+```
+
+Interpretation:
+
+- Phase 3 proves the committed project video can be decoded and detected with YOLO ONNX into R3 `own_sensor` objects.
+- Phase 4 proves ADA can fuse ML-derived vehicle B with mock V2X vehicle C.
+- The emitted R4 contains both `trackedObjects` entries (`own:B`, `v2x:1201:7`) and composed `geometry.vehicleB` / `geometry.vehicleC`.
+- Distance is a bounding-box estimate, not calibrated ground truth.
 
 ## Open Integration Notes for Other Owners
 
