@@ -103,6 +103,10 @@ class R4ListenerService : Service() {
         DatagramSocket(BuildConfig.R4_UDP_PORT).use { socket ->
             Log.i(TAG, "UDP socket open on port ${BuildConfig.R4_UDP_PORT}")
             while (true) {
+                // Reset length each iteration — without this, one short datagram permanently
+                // shrinks the receive window and every later longer message is silently truncated
+                // (§4.2 fix, subtask 4.5.3.2).
+                packet.setLength(buffer.size)
                 socket.receive(packet)
                 val bytes = packet.data.copyOf(packet.length)
                 deserializer.deserialize(bytes)
