@@ -1,0 +1,43 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="phase1-des-protocol-stack" id="phase1-des-protocol-stack">
+    <mxGraphModel dx="1400" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="620" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="t1" value="Protocol stack — one transport, two encodings, two flows" style="text;html=1;align=left;verticalAlign=middle;fontSize=23.8;fontColor=#19226D;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="24" y="20" width="1152" height="20" as="geometry" /></mxCell>
+        <mxCell id="t2" value="Everything below the encoding row is shared by both flows. Only the air message leaves JSON behind." style="text;html=1;align=left;verticalAlign=middle;fontSize=16.8;fontColor=#6b6e7b;fontStyle=0;" vertex="1" parent="1"><mxGeometry x="24" y="42" width="1152" height="20" as="geometry" /></mxCell>
+        <mxCell id="t3" value="Message" style="text;html=1;align=left;verticalAlign=middle;fontSize=16.1;fontColor=#19226D;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="234" y="184" width="1200" height="20" as="geometry" /></mxCell>
+        <mxCell id="t4" value="what is carried" style="text;html=1;align=left;verticalAlign=middle;fontSize=14;fontColor=#6b6e7b;fontStyle=0;" vertex="1" parent="1"><mxGeometry x="234" y="200" width="1200" height="20" as="geometry" /></mxCell>
+        <mxCell id="t5" value="Encoding" style="text;html=1;align=left;verticalAlign=middle;fontSize=16.1;fontColor=#19226D;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="234" y="268" width="1200" height="20" as="geometry" /></mxCell>
+        <mxCell id="t6" value="bytes on the wire" style="text;html=1;align=left;verticalAlign=middle;fontSize=14;fontColor=#6b6e7b;fontStyle=0;" vertex="1" parent="1"><mxGeometry x="234" y="284" width="1200" height="20" as="geometry" /></mxCell>
+        <mxCell id="t7" value="Library" style="text;html=1;align=left;verticalAlign=middle;fontSize=16.1;fontColor=#19226D;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="234" y="352" width="1200" height="20" as="geometry" /></mxCell>
+        <mxCell id="t8" value="third party" style="text;html=1;align=left;verticalAlign=middle;fontSize=14;fontColor=#6b6e7b;fontStyle=0;" vertex="1" parent="1"><mxGeometry x="234" y="368" width="1200" height="20" as="geometry" /></mxCell>
+        <mxCell id="t9" value="Transport" style="text;html=1;align=left;verticalAlign=middle;fontSize=16.1;fontColor=#19226D;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="234" y="436" width="1200" height="20" as="geometry" /></mxCell>
+        <mxCell id="t10" value="Network" style="text;html=1;align=left;verticalAlign=middle;fontSize=16.1;fontColor=#19226D;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="234" y="498" width="1200" height="20" as="geometry" /></mxCell>
+        <mxCell id="t11" value="Link" style="text;html=1;align=left;verticalAlign=middle;fontSize=16.1;fontColor=#19226D;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="234" y="560" width="1200" height="20" as="geometry" /></mxCell>
+        <mxCell id="h1" value="bench → V2X ECU
+UDP 47100" style="rounded=1;arcSize=10;html=1;fillColor=#F37021;strokeColor=none;fontColor=#ffffff;fontSize=16.8;fontStyle=1;whiteSpace=wrap;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="250" y="96" width="430" height="56" as="geometry" /></mxCell>
+        <mxCell id="h2" value="V2X ECU → ADA node
+UDP 47200" style="rounded=1;arcSize=10;html=1;fillColor=#034EA2;strokeColor=none;fontColor=#ffffff;fontSize=16.8;fontStyle=1;whiteSpace=wrap;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="720" y="96" width="430" height="56" as="geometry" /></mxCell>
+        <mxCell id="m1" value="the air message
+ETSI CPM, TS 103 324 release 2" style="rounded=1;arcSize=10;html=1;fillColor=#ffffff;strokeColor=#19226D;strokeWidth=2;fontColor=#19226D;fontSize=16.8;fontStyle=1;whiteSpace=wrap;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="250" y="168" width="430" height="72" as="geometry" /></mxCell>
+        <mxCell id="m2" value="the object message
+one perceived-object update" style="rounded=1;arcSize=10;html=1;fillColor=#ffffff;strokeColor=#19226D;strokeWidth=2;fontColor=#19226D;fontSize=16.8;fontStyle=1;whiteSpace=wrap;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="720" y="168" width="430" height="72" as="geometry" /></mxCell>
+        <mxCell id="e1" value="ASN.1 UPER
+binary, 58 bytes nominal" style="rounded=1;arcSize=10;html=1;fillColor=#ffffff;strokeColor=#19226D;strokeWidth=2;fontColor=#19226D;fontSize=16.8;fontStyle=1;whiteSpace=wrap;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="250" y="252" width="430" height="72" as="geometry" /></mxCell>
+        <mxCell id="e2" value="JSON
+UTF-8 text, versioned, one schema" style="rounded=1;arcSize=10;html=1;fillColor=#ffffff;strokeColor=#19226D;strokeWidth=2;fontColor=#19226D;fontSize=16.8;fontStyle=1;whiteSpace=wrap;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="720" y="252" width="430" height="72" as="geometry" /></mxCell>
+        <mxCell id="g1" value="Vanetza
+ITS release-2 codec, LGPLv3, behind one codec seam" style="rounded=1;arcSize=10;html=1;fillColor=#f4f5f8;strokeColor=#6b6e7b;dashed=1;fontColor=#6b6e7b;fontSize=15.4;fontStyle=0;whiteSpace=wrap;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="250" y="336" width="430" height="72" as="geometry" /></mxCell>
+        <mxCell id="g2" value="nlohmann/json
+MIT, on the C++ side" style="rounded=1;arcSize=10;html=1;fillColor=#f4f5f8;strokeColor=#6b6e7b;dashed=1;fontColor=#6b6e7b;fontSize=15.4;fontStyle=0;whiteSpace=wrap;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="720" y="336" width="430" height="72" as="geometry" /></mxCell>
+        <mxCell id="t" value="UDP
+one message per datagram · no broker and no middleware" style="rounded=1;arcSize=10;html=1;fillColor=#19226D;strokeColor=none;fontColor=#ffffff;fontSize=16.8;fontStyle=1;whiteSpace=wrap;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="250" y="420" width="900" height="56" as="geometry" /></mxCell>
+        <mxCell id="n" value="IPv4
+static addresses 10.99.0.10 to .13 · one subnet, so no routing" style="rounded=1;arcSize=10;html=1;fillColor=#19226D;strokeColor=none;fontColor=#ffffff;fontSize=16.8;fontStyle=1;whiteSpace=wrap;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="250" y="482" width="900" height="56" as="geometry" /></mxCell>
+        <mxCell id="l" value="CarSky Ethernet Bridge
+one layer-2 segment, 10.99.0.0/24" style="rounded=1;arcSize=10;html=1;fillColor=#19226D;strokeColor=none;fontColor=#ffffff;fontSize=16.8;fontStyle=1;whiteSpace=wrap;verticalAlign=middle;" vertex="1" parent="1"><mxGeometry x="250" y="544" width="900" height="56" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

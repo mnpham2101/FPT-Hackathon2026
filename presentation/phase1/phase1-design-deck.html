@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Phase 1 — Design Concepts</title>
+<meta name="description" content="Design deck — the terminology, the Phase 1 slice of the blueprint, the two messages this phase carries, the protocol stack and its libraries, the call flow between the bench and the V2X ECU, and what Phase 2 inherits">
+<style>
+  :root {
+    --fpt-orange: #F37021;
+    --fpt-green: #50B848;
+    --fpt-blue: #034EA2;
+    --fpt-teal: #33B2C1;
+    --fpt-navy: #19226D;
+    --navy-deep: #0E1540;
+    --ink: #080808;
+    --ink-soft: #3d3d46;
+    --paper: #f4f4f6;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; background: #14183a; font-family: "Segoe UI", "Segoe UI Variable", "Helvetica Neue", Arial, sans-serif; }
+
+  .deck { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+
+  .slide {
+    width: 1280px; height: 720px;
+    position: absolute;
+    display: none;
+    flex-direction: column;
+    transform-origin: center center;
+    background: var(--paper);
+    color: var(--ink);
+    box-shadow: 0 18px 60px rgba(0,0,0,.45);
+    overflow: hidden;
+  }
+  .slide.active { display: flex; }
+
+  /* ---------- backgrounds ---------- */
+  .bg-light { background: linear-gradient(135deg, #f6f6f8 0%, #ececef 55%, #e0e1e6 100%); }
+  .bg-light::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720"><g fill="none" stroke-width="2"><g transform="skewX(-16)"><rect x="240" y="60" width="380" height="460" rx="70" stroke="rgba(255,255,255,0.85)"/><rect x="1010" y="210" width="400" height="470" rx="75" stroke="rgba(25,34,109,0.05)"/><rect x="520" y="400" width="330" height="380" rx="60" stroke="rgba(25,34,109,0.06)"/></g><line x1="880" y1="-40" x2="640" y2="780" stroke="rgba(255,255,255,0.9)"/><line x1="1180" y1="-40" x2="940" y2="780" stroke="rgba(25,34,109,0.05)"/></g></svg>');
+    background-size: cover;
+  }
+  .bg-navy { background: linear-gradient(135deg, #10173f 0%, #151d55 45%, var(--fpt-navy) 100%); color: #fff; }
+  .bg-navy::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720"><g fill="none" stroke-width="2"><g transform="skewX(-16)"><rect x="240" y="60" width="380" height="460" rx="70" stroke="rgba(120,180,255,0.20)"/><rect x="1010" y="210" width="400" height="470" rx="75" stroke="rgba(255,255,255,0.10)"/><rect x="520" y="400" width="330" height="380" rx="60" stroke="rgba(120,180,255,0.10)"/></g><line x1="880" y1="-40" x2="640" y2="780" stroke="rgba(120,180,255,0.30)"/><line x1="1180" y1="-40" x2="940" y2="780" stroke="rgba(120,180,255,0.16)"/></g></svg>');
+    background-size: cover;
+  }
+
+  /* cover / divider / thanks carry their photo as an inline background-image */
+  .cover-photo { background-size: cover; background-position: center; color: #fff; }
+  .divider { background-size: cover; background-position: center; color: #fff; justify-content: center; padding: 0 110px; }
+  .divider .sec-num { font-size: 120px; font-weight: 700; color: var(--fpt-orange); line-height: 1; opacity: .95; }
+  .divider h1 { font-size: 56px; font-weight: 700; color: #fff; margin-top: 10px; }
+  .divider .rule { width: 110px; height: 6px; background: var(--fpt-orange); border-radius: 3px; margin-top: 26px; }
+  .thanks { background-size: cover; background-position: center 20%; color: #fff; justify-content: center; align-items: center; text-align: center; }
+  .thanks h1 { font-size: 84px; font-weight: 700; }
+  .thanks .rule { width: 130px; height: 6px; background: var(--fpt-orange); border-radius: 3px; margin: 30px auto; }
+  .thanks p { font-size: 22px; color: #cdd6f7; }
+
+  /* ---------- title / closing text ---------- */
+  .cover { justify-content: center; padding: 0 110px; }
+  .cover .eyebrow { font-size: 20px; letter-spacing: .35em; text-transform: uppercase; color: var(--fpt-orange); font-weight: 600; margin-bottom: 26px; }
+  .cover h1 { font-size: 66px; line-height: 1.08; font-weight: 700; color: #fff; max-width: 900px; }
+  .cover .rule { width: 130px; height: 6px; background: var(--fpt-orange); border-radius: 3px; margin: 30px 0; }
+  .cover .tagline { font-size: 30px; font-weight: 300; color: #dfe6ff; margin-bottom: 14px; }
+  .cover .meta { font-size: 18px; color: #b9c2ea; }
+  .cover .meta a { color: #b9c2ea; }
+  .cover .accents, .divider .accents, .thanks .accents { position: absolute; bottom: 0; left: 0; right: 0; height: 8px; display: flex; }
+  .accents span { flex: 1; }
+
+  /* ---------- content slide chrome ---------- */
+  .content { padding: 44px 64px 58px; position: relative; }
+  .content > * { position: relative; }
+  .slide-head { display: flex; align-items: baseline; gap: 18px; border-bottom: 3px solid transparent; padding-bottom: 12px; margin-bottom: 18px;
+    border-image: linear-gradient(90deg, var(--fpt-orange) 0 90px, rgba(25,34,109,.15) 90px 100%) 1; }
+  .slide-head .num { font-size: 40px; font-weight: 700; color: var(--fpt-orange); line-height: 1; }
+  .slide-head h2 { font-size: 31px; font-weight: 700; color: var(--fpt-navy); line-height: 1.15; }
+  .lead { font-size: 19px; color: var(--ink-soft); margin-bottom: 16px; }
+  .lead:last-of-type { margin-bottom: 0; }
+  .lead strong, .lead b { color: var(--ink); }
+  .content a { color: var(--fpt-blue); }
+
+  .footer { position: absolute; left: 64px; right: 64px; bottom: 18px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #8a8d99; }
+  .footer .page { background: var(--fpt-navy); color: #fff; border-radius: 4px; padding: 2px 10px; font-weight: 600; }
+
+  ul.points { list-style: none; display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
+  ul.points:last-child { margin-bottom: 0; }
+  ul.points li { font-size: 18.5px; line-height: 1.42; color: var(--ink-soft); padding-left: 26px; position: relative; }
+  ul.points li::before { content: ""; position: absolute; left: 0; top: 9px; width: 12px; height: 12px; background: var(--fpt-orange); border-radius: 3px; transform: skewX(-12deg); }
+  ul.points li strong { color: var(--fpt-navy); }
+  ul.points li code, .content code { font-family: "Consolas", "Courier New", monospace; font-size: .92em; background: rgba(25,34,109,.07); border-radius: 4px; padding: 1px 6px; }
+
+  .imgbox { display: flex; flex-direction: column; align-items: center; gap: 8px; margin: 6px 0 14px; }
+  .imgbox img { border-radius: 10px; box-shadow: 0 6px 22px rgba(15,20,60,.16); background: #fff; max-width: 100%; }
+  .imgbox .cap { font-size: 13.5px; color: #8a8d99; font-style: italic; }
+  .imgbox img.flat { box-shadow: none; background: transparent; }
+
+  .cols { display: flex; gap: 34px; align-items: center; }
+
+  /* TOC */
+  .toc { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 26px; margin-top: 8px; }
+  .toc .item { display: flex; gap: 18px; align-items: baseline; background: #fff; border-radius: 10px; padding: 18px 22px; box-shadow: 0 5px 18px rgba(15,20,60,.10); border-left: 6px solid var(--fpt-orange); height: 100%; }
+  .toc .item:nth-child(2) { border-left-color: var(--fpt-green); }
+  .toc .item:nth-child(3) { border-left-color: var(--fpt-blue); }
+  .toc .item:nth-child(4) { border-left-color: var(--fpt-teal); }
+  .toc .item:nth-child(5) { border-left-color: var(--fpt-navy); }
+  .toc .item:nth-child(6) { border-left-color: var(--fpt-orange); }
+  .toc .n { font-size: 34px; font-weight: 700; color: var(--fpt-orange); min-width: 52px; }
+  .toc .item:nth-child(2) .n { color: var(--fpt-green); }
+  .toc .item:nth-child(3) .n { color: var(--fpt-blue); }
+  .toc .item:nth-child(4) .n { color: var(--fpt-teal); }
+  .toc .item:nth-child(5) .n { color: var(--fpt-navy); }
+  .toc h3 { font-size: 21px; color: var(--fpt-navy); margin-bottom: 4px; }
+  .toc p { font-size: 15px; color: var(--ink-soft); line-height: 1.35; }
+
+  /* cards */
+  .cards3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin: 6px 0 18px; }
+  .card { background: #fff; border-radius: 10px; padding: 16px 18px 14px; box-shadow: 0 5px 18px rgba(15,20,60,.10); border-top: 5px solid var(--fpt-orange); }
+  .card.g { border-top-color: var(--fpt-green); }
+  .card.b { border-top-color: var(--fpt-blue); }
+  .card h3 { font-size: 19px; color: var(--fpt-navy); margin-bottom: 6px; }
+  .card p { font-size: 15.5px; line-height: 1.4; color: var(--ink-soft); }
+
+  /* tables */
+  table.fpt { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 5px 18px rgba(15,20,60,.10); margin-bottom: 14px; }
+  table.fpt th { background: var(--fpt-navy); color: #fff; text-align: left; font-size: 16px; padding: 9px 16px; }
+  table.fpt td { font-size: 15.5px; line-height: 1.35; padding: 8.5px 16px; border-bottom: 1px solid #e7e8ee; color: var(--ink-soft); vertical-align: top; }
+  table.fpt tr:last-child td { border-bottom: none; }
+  table.fpt td strong { color: var(--fpt-navy); white-space: nowrap; }
+  .tag { display: inline-block; padding: 1px 9px; border-radius: 4px; color: #fff; font-size: 14px; font-weight: 600; }
+  .tag.o { background: var(--fpt-orange); } .tag.b { background: var(--fpt-blue); } .tag.t { background: var(--fpt-teal); } .tag.g { background: var(--fpt-green); } .tag.n { background: var(--fpt-navy); }
+
+  /* seam cards */
+  .seams { display: flex; flex-direction: column; gap: 13px; margin-bottom: 16px; }
+  .seam { background: #fff; border-radius: 8px; border-left: 6px solid var(--fpt-orange); box-shadow: 0 4px 14px rgba(15,20,60,.09); padding: 12px 18px; display: flex; gap: 16px; align-items: baseline; }
+  .seam.b { border-left-color: var(--fpt-blue); } .seam.t { border-left-color: var(--fpt-teal); }
+  .seam .who { font-weight: 700; color: var(--fpt-navy); font-size: 17.5px; white-space: nowrap; min-width: 200px; }
+  .seam p { font-size: 16px; line-height: 1.4; color: var(--ink-soft); }
+  .strip { background: linear-gradient(90deg, var(--fpt-navy), #2a35a0); color: #dfe6ff; border-radius: 8px; padding: 12px 20px; font-size: 15.5px; line-height: 1.45; margin-bottom: 14px; }
+  .strip strong { color: #fff; }
+  .strip:last-child { margin-bottom: 0; }
+
+  /* chain visual */
+  .chain { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 10px 0 22px; flex-wrap: nowrap; }
+  .chain .link { background: var(--fpt-navy); color: #fff; font-size: 16.5px; font-weight: 600; padding: 9px 20px; border-radius: 7px; transform: skewX(-10deg); box-shadow: 0 4px 12px rgba(15,20,60,.18); }
+  .chain .link > span { display: inline-block; transform: skewX(10deg); }
+  .chain .link.hot { background: var(--fpt-orange); }
+  .chain .arr { color: var(--fpt-orange); font-size: 22px; font-weight: 700; }
+  .chain .link small { display: block; font-size: 12px; font-weight: 400; opacity: .8; transform: skewX(10deg); }
+
+  .badges { display: flex; gap: 10px; justify-content: center; margin: 0 0 20px; flex-wrap: wrap; }
+  .badge { border: 2px solid var(--fpt-orange); color: #b34e0e; background: rgba(243,112,33,.07); font-size: 14.5px; font-weight: 600; padding: 5px 14px; border-radius: 999px; }
+  .badge.g { border-color: var(--fpt-green); color: #2c7a25; background: rgba(80,184,72,.09); }
+
+  /* terminal / log evidence */
+  pre.log { background: var(--navy-deep); color: #cfd6f5; font-family: "Consolas", "Courier New", monospace; font-size: 13.5px; line-height: 1.5; border-radius: 8px; padding: 14px 18px; overflow: hidden; margin-bottom: 14px; }
+  pre.log .ok { color: #7ee787; }
+  pre.log .dim { color: #7f88ad; }
+
+  /* ---------- controls ---------- */
+  .hint { position: fixed; left: 18px; bottom: 12px; color: rgba(255,255,255,.45); font-size: 12.5px; z-index: 50; }
+  .hud { position: fixed; right: 18px; bottom: 14px; z-index: 50; display: flex; gap: 8px; align-items: center; font-family: inherit; }
+  .hud button { background: rgba(255,255,255,.12); color: #fff; border: 1px solid rgba(255,255,255,.25); border-radius: 6px; padding: 5px 12px; font-size: 15px; cursor: pointer; }
+  .hud button:hover { background: var(--fpt-orange); border-color: var(--fpt-orange); }
+  .hud .ctr { color: rgba(255,255,255,.75); font-size: 14px; min-width: 60px; text-align: center; }
+  .progress { position: fixed; left: 0; bottom: 0; height: 4px; background: var(--fpt-orange); width: 0; z-index: 60; transition: width .25s ease; }
+
+  @media print {
+    html, body { background: #fff; height: auto; }
+    .deck { position: static; display: block; }
+    .slide { display: flex !important; position: relative; transform: none !important; box-shadow: none; page-break-after: always; margin: 0 auto; }
+    .hud, .progress, .hint { display: none !important; }
+    @page { size: 13.55in 7.65in; margin: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="deck">
+  <section class="slide cover-photo cover active" style="background-image: linear-gradient(90deg, rgba(8,12,38,.92) 0%, rgba(8,12,38,.72) 40%, rgba(8,12,38,.18) 100%), url('../assets/bg-title-city.jpg')">
+    <div class="eyebrow">Milestone 1 · Cooperative Vehicle Awareness — FPT Hackathon 2026</div>
+    <h1>Phase 1 — Design Concepts</h1>
+    <div class="rule"></div>
+    <div class="tagline">The Scenario Player constructs the message; the V2X ECU receives it</div>
+    <div class="meta">Node designs in detail: <a href="phase1-design-v2x-ecu-deck.html">V2X ECU</a> · <a href="phase1-design-scenario-player-deck.html">Scenario Player</a><br>Planning and execution of this design: <a href="phase1-task-execution-deck.html">phase1-task-execution-deck.html</a>. Preceding phase: <a href="../phase0/phase0-design-concepts-deck.html">phase0-design-concepts-deck.html</a>.<br>Sources: <a href="../../V2X_ECU/doc/phase1-v2x-ecu-comms-hld.md">V2X ECU HLD</a> · <a href="../../Scenario_Player/doc/phase1-scenario-player-hld.md">Scenario Player HLD</a> · <a href="../../contracts/r1-cpm-profile.md">r1-cpm-profile.md</a> · <a href="../../contracts/">contracts/</a></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">§</div><h2>Table of contents</h2></div>
+    <div class="toc">
+      <div class="item"><div class="n">01</div><div><h3>Terminology</h3><p>every term this deck uses, defined before use</p></div></div>
+      <div class="item"><div class="n">02</div><div><h3>The blueprint</h3><p>the whole topology, then the slice Phase 1 implements</p></div></div>
+      <div class="item"><div class="n">03</div><div><h3>The messages</h3><p>the air message and the object message, and where each is defined</p></div></div>
+      <div class="item"><div class="n">04</div><div><h3>Protocol stack and call flow</h3><p>the layers, the libraries, and the exchange itself</p></div></div>
+      <div class="item"><div class="n">05</div><div><h3>The nodes</h3><p>what each became this phase, with a deck for each</p></div></div>
+      <div class="item"><div class="n">06</div><div><h3>Handoff</h3><p>what Phase 2 inherits</p></div></div>
+    </div>
+    <div class="footer"><span>Phase 1 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">01</div>
+    <h1>Terminology</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">01</div><h2>Platform terminology</h2></div>
+    <p class="lead">The CarSky platform's vocabulary. Every later slide uses these terms without restating them.</p>
+    <table class="fpt">
+      <thead><tr><th>Term</th><th>Definition</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Blueprint</strong></td><td>The design of one vehicle: its nodes and their wiring. One blueprint is one vehicle. Nothing executes.</td></tr>
+        <tr><td><strong>Node</strong></td><td>One ECU within a blueprint. A <strong>Container Node</strong> runs an OCI image; a <strong>Skycraft Node</strong> runs an Android guest.</td></tr>
+        <tr><td><strong>Pin</strong></td><td>A node's connection point. Milestone 1 uses one kind, the <code>ethernet</code> pin, and one per node.</td></tr>
+        <tr><td><strong>Ethernet Bridge</strong></td><td>A node whose sole function is to join the other nodes' pins into one network.</td></tr>
+        <tr><td><strong>Room</strong></td><td>The running instance of a deployed blueprint.</td></tr>
+        <tr><td><strong>Deployment</strong></td><td>The act of converting a blueprint into a Room. Only a deployment starts a container.</td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>Editing a blueprint changes nothing that is running.</strong> Only a new deployment applies a change, which is why every configuration change in this phase is followed by a redeployment.</li>
+    </ul>
+    <div class="footer"><span>Phase 1 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">01</div><h2>Project terminology</h2></div>
+    <p class="lead">Terms this project defined or narrowed.</p>
+    <table class="fpt">
+      <thead><tr><th>Term</th><th>Definition</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Contract</strong></td><td>A frozen, versioned message definition agreed between two nodes, committed to the repository. It is the authority against which code is measured.</td></tr>
+        <tr><td><strong>Frozen</strong></td><td>Changed only by re-freezing across every consumer simultaneously.</td></tr>
+        <tr><td><strong>Seam</strong></td><td>A boundary positioned so that one side can be replaced without modifying the other — here, the codec seam and the radio interface.</td></tr>
+        <tr><td><strong>Bench</strong></td><td>Sanctioned test equipment sharing the Room network: the Scenario Player, which stands in for the modem and the external world.</td></tr>
+        <tr><td><strong>Ego</strong></td><td>The vehicle the system runs in — vehicle A, whose driver receives the warning.</td></tr>
+        <tr><td><strong>Reference message</strong></td><td>One committed pair: a message content in readable form, with the exact bytes it must encode to. Six exist.</td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>The bench is not a mock.</strong> It is a node on the production network transmitting real messages; no downstream component can distinguish it from a vehicle.</li>
+    </ul>
+    <div class="footer"><span>Phase 1 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">01</div><h2>The two messages this phase carries</h2></div>
+    <p class="lead">Both were frozen in Phase 0. Phase 1 is the first phase to produce and consume them.</p>
+    <table class="fpt">
+      <thead><tr><th></th><th>Message</th><th>Between</th><th>Content</th></tr></thead>
+      <tbody>
+        <tr><td><strong>R1</strong></td><td>the air message — a CPM profile</td><td>bench → V2X ECU</td><td>One perceived object as it exists on the air, encoded to bytes</td></tr>
+        <tr><td><strong>R2</strong></td><td>the object message</td><td>V2X ECU → ADA ECU</td><td>The same object decoded into SI units, as JSON</td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>R1 and R2 are identifiers, not names.</strong> This deck calls them the air message and the object message; the identifiers appear because the repository and the schemas use them.</li>
+      <li><strong>A third message exists but is not carried this phase.</strong> The warning message from the ADA node to the display is Phase 5 work.</li>
+    </ul>
+    <div class="footer"><span>Phase 1 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">02</div>
+    <h1>The blueprint</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">02</div><h2>The whole topology</h2></div>
+    <div class="imgbox"><img src="../assets/m1-blueprint-5-nodes.svg" style="height:480px" alt="Milestone 1 blueprint: five nodes, three contract-labelled UDP flows, one Ethernet Bridge"><div class="cap">Milestone 1 blueprint: five nodes, three contract-labelled UDP flows, one Ethernet Bridge</div></div>
+    <div class="footer"><span>Phase 1 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">02</div><h2>The slice Phase 1 implements</h2></div>
+    <div class="imgbox"><img src="../assets/phase1-des-slice.svg" style="height:495px" alt="The Phase 1 slice: bench and V2X ECU implemented, the ADA node running a listener placeholder, the display node untouched"><div class="cap">The Phase 1 slice: bench and V2X ECU implemented, the ADA node running a listener placeholder, the display node untouched</div></div>
+    <div class="footer"><span>Phase 1 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">03</div>
+    <h1>The messages</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">03</div><h2>The air message</h2></div>
+    <p class="lead">The V2X message as it exists on the air. The only message in the milestone that is not JSON.</p>
+    <table class="fpt">
+      <thead><tr><th><strong>Defines</strong></th><th>The ETSI CPM fields Milestone 1 uses, with their units and bounds — a profile narrowing a large standard to what the demonstration requires</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Standard</strong></td><td>ETSI TS 103 324 v2.1.1, release 2</td></tr>
+        <tr><td><strong>Direction</strong></td><td>bench → V2X ECU, UDP <code>47100</code></td></tr>
+        <tr><td><strong>Encoding</strong></td><td>ASN.1 UPER — 58 bytes for the nominal case, one message per datagram</td></tr>
+        <tr><td><strong>Artifacts</strong></td><td><code>r1-cpm-content.schema.json</code> · <code>r1-cpm-profile.md</code> · <code>golden-vectors/</code> — six content and byte pairs</td></tr>
+        <tr><td><strong>Copies held in</strong></td><td><code>V2X_ECU/contracts/</code> · <code>Scenario_Player/contracts/</code></td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>Two independent implementations must agree on it:</strong> the encoder inside the bench and the decoder inside the V2X ECU. The reference messages exist for exactly that reason, and Phase 1 verifies the encoder against them byte for byte.</li>
+    </ul>
+    <div class="footer"><span>Phase 1 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">03</div><h2>The structure of the air message</h2></div>
+    <div class="imgbox"><img src="../assets/phase1-des-cpm-structure.svg" style="height:500px" alt="The message structure: header and payload, two containers, one perceived object, with the fields the object carries and the wire format"><div class="cap">The message structure: header and payload, two containers, one perceived object, with the fields the object carries and the wire format</div></div>
+    <div class="footer"><span>Phase 1 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">03</div><h2>The object message</h2></div>
+    <p class="lead">What the V2X ECU forwards inward once it has decoded the air message.</p>
+    <table class="fpt">
+      <thead><tr><th><strong>Defines</strong></th><th>One perceived-object update: identity, position, kinematics, confidence, and the time at which it was valid</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Direction</strong></td><td>V2X ECU → ADA ECU, UDP <code>47200</code></td></tr>
+        <tr><td><strong>Encoding</strong></td><td>JSON, versioned, one datagram per object update</td></tr>
+        <tr><td><strong>Artifacts</strong></td><td><code>r2-v2x-object.schema.json</code> · <code>samples/r2-object.json</code></td></tr>
+        <tr><td><strong>Copies held in</strong></td><td><code>V2X_ECU/contracts/</code> · <code>ADA_ECU/contracts/</code></td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>Distance is derived, never transmitted.</strong> The air message carries a relative x and y offset; the V2X ECU computes the distance on arrival, so the transmitted position and the derived distance cannot disagree.</li>
+      <li><strong>Units change at this boundary.</strong> The air message uses 0.01 m and 0.1 degree integers; the object message uses metres, metres per second and degrees.</li>
+      <li><strong>One message per object update</strong>, not a batch.</li>
+    </ul>
+    <div class="footer"><span>Phase 1 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">03</div><h2>Where the contracts are held</h2></div>
+    <p class="lead">One authority at the repository root, and a working copy inside each node that consumes it.</p>
+    <table class="fpt">
+      <thead><tr><th>Location</th><th>Holds</th></tr></thead>
+      <tbody>
+        <tr><td><strong><code>contracts/</code></strong></td><td>The frozen originals: the schemas, the profile document, the six reference messages, the samples</td></tr>
+        <tr><td><strong><code>V2X_ECU/contracts/</code></strong></td><td>the air message, the object message</td></tr>
+        <tr><td><strong><code>Scenario_Player/contracts/</code></strong></td><td>the air message</td></tr>
+        <tr><td><strong><code>ADA_ECU/contracts/</code></strong></td><td>the object message, and the two later contracts</td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>The copies are not forks.</strong> <code>contracts/sync-manifest.json</code> lists every file that must match and <code>contracts/check_sync.py</code> fails the build as soon as one diverges. Phase 1 extended it from 36 to <strong>47 tracked copies</strong>.</li>
+      <li><strong>Phase 1 added a new kind of tracked copy.</strong> Beyond schemas, the manifest now covers the pinned codec version and the codec sources themselves, because the bench compiles the same encoder the V2X ECU decodes with.</li>
+    </ul>
+    <div class="footer"><span>Phase 1 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">04</div>
+    <h1>Protocol stack and call flow</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">04</div><h2>The protocol stack</h2></div>
+    <div class="imgbox"><img src="../assets/phase1-des-protocol-stack.svg" style="height:500px" alt="Protocol stack for the two Phase 1 flows: message, encoding and library per flow, over a shared UDP, IPv4 and Ethernet-Bridge base"><div class="cap">Protocol stack for the two Phase 1 flows: message, encoding and library per flow, over a shared UDP, IPv4 and Ethernet-Bridge base</div></div>
+    <div class="footer"><span>Phase 1 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">04</div><h2>The exchange between the bench and the V2X ECU</h2></div>
+    <div class="imgbox"><img src="../assets/phase1-des-callflow-bench-v2x.svg" style="height:500px" alt="Call flow: start-up inside each node produces no network traffic; the live loop transmits ten messages per second in one direction"><div class="cap">Call flow: start-up inside each node produces no network traffic; the live loop transmits ten messages per second in one direction</div></div>
+    <div class="footer"><span>Phase 1 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">04</div><h2>The libraries this phase uses</h2></div>
+    <p class="lead">Three third-party dependencies. All are open source and Linux-compatible.</p>
+    <table class="fpt">
+      <thead><tr><th>Library</th><th>Licence</th><th>Serves</th><th>Function</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Vanetza</strong></td><td>LGPLv3</td><td>the air message</td><td>ETSI ITS release-2 ASN.1 codec — the only component that handles UPER. Linked dynamically, ASN.1 targets only</td></tr>
+        <tr><td><strong>nlohmann/json</strong></td><td>MIT</td><td>the object message</td><td>JSON binding inside the V2X ECU</td></tr>
+        <tr><td><strong>PyYAML</strong></td><td>MIT</td><td>scenario configuration</td><td>Parses the bench's scenario files</td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>One codec, two build contexts.</strong> The bench and the V2X ECU compile the same Vanetza version, pinned once in <code>contracts/vanetza-pin.cmake</code> and copied byte-identically into both builds.</li>
+      <li><strong>None of the three is a framework.</strong> Each is a library the code invokes; none owns the program's control flow.</li>
+      <li><strong>The transport requires no library.</strong> UDP sockets come from the C++ and Python standard libraries.</li>
+    </ul>
+    <div class="footer"><span>Phase 1 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">05</div>
+    <h1>The nodes</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">05</div><h2>What each node became this phase</h2></div>
+    <table class="fpt">
+      <thead><tr><th>Node</th><th>State after Phase 1</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Scenario Player</strong></td><td>A complete bench application: configuration loading, a kinematic model, an encoder helper process, and a transmission loop at ten messages per second. Detailed in <a href="phase1-design-scenario-player-deck.html">its own deck</a>.</td></tr>
+        <tr><td><strong>V2X ECU</strong></td><td>A complete receiving application: the radio interface and its simulated modem, the four-stage receive pipeline, the object-message forwarder, the event log, and in-container traffic capture. Detailed in <a href="phase1-design-v2x-ecu-deck.html">its own deck</a>.</td></tr>
+        <tr><td><strong>ADA node</strong></td><td>Runs the Phase 0 connectivity tool as a listener, so that arriving object messages can be read. <strong>A placeholder</strong>, retired when Phase 2 implements the node.</td></tr>
+        <tr><td><strong>IVI node</strong></td><td>Unchanged. It keeps the supplied artifact and receives no traffic in this phase.</td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>The radio is simulated, and is labelled as such.</strong> The interface mirrors a production modem's four calls; behind it, a state machine acknowledges each call and injects faults on request. Replacing it with a real modem changes nothing above the interface.</li>
+    </ul>
+    <div class="footer"><span>Phase 1 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">05</div><h2>The test equipment the design depends on</h2></div>
+    <p class="lead">Scaffolding, not production code, but part of the design because the phase's evidence depends on it.</p>
+    <ul class="points">
+      <li><strong>A message transmitter and a log-chain assertion</strong>, held in <code>tools/comms_check/</code>. The transmitter sends the six reference messages; the assertion confirms that every received message produced an arrival event, a decode event carrying the decoded content, and a forwarding event carrying the object message. It fails if any link is missing.</li>
+      <li><strong>In-container traffic capture</strong> on the V2X ECU. That node's interface sees both live flows, so it is the single capture point. Capture writes readable lines to the node log and exports rotating capture files through the log as encoded blocks, because the platform offers no file download.</li>
+      <li><strong>A listener on the ADA node</strong>, which prints complete message bodies so that the decoded values are visible before the ADA node has any code of its own.</li>
+    </ul>
+    <div class="strip">Captured traffic displays as UDP data rather than an ITS protocol tree: the wire format carries no GeoNetworking or BTP envelope, so the evidence is payload-byte correlation.</div>
+    <div class="footer"><span>Phase 1 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">06</div>
+    <h1>Handoff</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">06</div><h2>What Phase 2 inherits</h2></div>
+    <p class="lead">Phase 2 implements the ADA node's track store and admission logic. The following are Phase 1 deliverables it need not re-establish.</p>
+    <ul class="points">
+      <li><strong>An observed message format.</strong> Object messages arrive at the ADA node with real decoded values; Phase 2 builds against a format that has been seen on a running system, not only agreed on paper.</li>
+      <li><strong>The derivations are already performed.</strong> Distance, SI units, confidence conversion and sender speed are computed in the V2X ECU, so the ADA node receives finished values.</li>
+      <li><strong>An evidence stream.</strong> Every stage of the receive path emits one JSON line with running counters — the format later phases use to reconstruct a complete run.</li>
+      <li><strong>A characterised platform.</strong> Both node images build for the platform's processor, push to its registry and run; the node-configuration deviations are recorded in the run record.</li>
+      <li><strong>Reusable test equipment</strong>, none of it node-specific: the message transmitter, the log-chain assertion, and the listener.</li>
+    </ul>
+    <div class="footer"><span>Phase 1 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">06</div><h2>What does not carry forward, and what is still open</h2></div>
+    <ul class="points">
+      <li><strong>The listener on the ADA node is a placeholder.</strong> It is Phase 0 connectivity equipment, and Phase 2 replaces it entirely. No part of it becomes production code.</li>
+      <li><strong>The vehicle does not transmit.</strong> Transmission was moved out of the milestone; the radio interface declares the call, and nothing invokes it.</li>
+      <li><strong>Three configuration defaults are proposals.</strong> The retry ceiling, the retry backoff and the duplicate-message window are externalised as configuration, but the values themselves await ratification.</li>
+      <li><strong>One acceptance clause has no owner.</strong> Whether the display node's application must launch in this phase is not covered by either design document.</li>
+    </ul>
+    <div class="strip">A design is not an implementation. Everything above is designed and implemented; what remains outstanding is deployment evidence, which the <a href="phase1-task-execution-deck.html">task-execution deck</a> records.</div>
+    <div class="footer"><span>Phase 1 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide thanks" style="background-image: linear-gradient(rgba(8,12,38,.66), rgba(14,21,64,.86)), url('../assets/bg-fpt-tower.jpg')">
+    <h1>Thank you</h1>
+    <div class="rule"></div>
+    <p><strong>Phase 1 — Design Concepts</strong> · Milestone 1 · FPT Hackathon 2026</p>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+</div>
+
+<div class="hint">← → navigate · F fullscreen · print for PDF</div>
+<div class="hud">
+  <button id="prev" aria-label="Previous slide">‹</button>
+  <span class="ctr" id="ctr"></span>
+  <button id="next" aria-label="Next slide">›</button>
+</div>
+<div class="progress" id="prog"></div>
+
+<script>
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  slides.forEach((sl, i) => { const p = sl.querySelector('.page'); if (p) p.textContent = i + 1; });
+  let cur = 0;
+
+  function fit() {
+    const s = Math.min(innerWidth / 1280, innerHeight / 720);
+    slides.forEach(sl => sl.style.transform = `scale(${s})`);
+  }
+  function show(i) {
+    cur = Math.max(0, Math.min(slides.length - 1, i));
+    slides.forEach((sl, k) => sl.classList.toggle('active', k === cur));
+    document.getElementById('ctr').textContent = `${cur + 1} / ${slides.length}`;
+    document.getElementById('prog').style.width = `${(cur + 1) / slides.length * 100}%`;
+    location.hash = cur ? `#${cur + 1}` : '';
+  }
+  addEventListener('resize', fit);
+  addEventListener('keydown', e => {
+    if (['ArrowRight', 'PageDown', ' ', 'Enter'].includes(e.key)) { e.preventDefault(); show(cur + 1); }
+    else if (['ArrowLeft', 'PageUp', 'Backspace'].includes(e.key)) { e.preventDefault(); show(cur - 1); }
+    else if (e.key === 'Home') show(0);
+    else if (e.key === 'End') show(slides.length - 1);
+    else if (e.key.toLowerCase() === 'f') document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+  });
+  document.getElementById('prev').onclick = () => show(cur - 1);
+  document.getElementById('next').onclick = () => show(cur + 1);
+  let tx = null;
+  addEventListener('touchstart', e => tx = e.touches[0].clientX);
+  addEventListener('touchend', e => { if (tx !== null) { const dx = e.changedTouches[0].clientX - tx; if (Math.abs(dx) > 50) show(cur + (dx < 0 ? 1 : -1)); tx = null; } });
+
+  const h = parseInt((location.hash || '').slice(1), 10);
+  fit(); show(isNaN(h) ? 0 : h - 1);
+</script>
+
+</body>
+</html>
