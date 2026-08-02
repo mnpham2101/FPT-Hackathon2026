@@ -1,4 +1,4 @@
-@startuml
+@startuml video-source-environment
 title R12 video input — environment model (M1, CarSky Room)
 
 skinparam componentStyle rectangle
@@ -36,5 +36,26 @@ note right of ADA
   the platform publishes no camera or
   dashcam content onto it.
 end note
+
+legend bottom
+  <b>Legend — every R-number is a requirement ID from the report §2. There is no separate "message" numbering.</b>
+  <b>R1–R6</b> are the //contract// requirements: the deliverable //is// a schema or a topology, which is why
+  "an R2 message" or "an R3 object" reads like a message name — it is shorthand for the artifact
+  that requirement defines. <b>R7–R19</b> are //behavioural// requirements: the deliverable is running code.
+  ====
+  |= ID |= Kind |= Deliverable |= On this diagram |
+  | R1 | contract | ETSI CPM profile (ASN.1 UPER) | bench → V2X ECU over the bridge |
+  | R2 | contract | V2X ECU → ADA object message (JSON/UDP) | V2X ECU → ADA ECU |
+  | R3 | contract | <b>TrackedObject</b> schema — one shape for every ego object, tagged `own_sensor` or `v2x_relayed` | detector stdout → ADA core |
+  | R12 | behaviour | object detection from video | the detector subprocess |
+  | R13 | behaviour | track store + admission state machine | inside ADA core |
+  | R14 | behaviour | Collision Risk Assessment abstraction | inside ADA core |
+  | R15 | behaviour | warning output to the IVI | inside ADA core |
+  ====
+  <b>CarSky words.</b> **Container Node** = a deployable OCI image · **pin** = a node's typed connection point,
+  wired like-to-like only · **`video` pin** = iceoryx2 shared-memory RGBA transport, a pipe with no content
+  behind it. <b>ego / B / C.</b> ego = vehicle A, the warned car · B = the visible occluder A's camera detects ·
+  C = the occluded car A can never see directly.
+endlegend
 
 @enduml

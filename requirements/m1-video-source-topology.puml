@@ -1,0 +1,89 @@
+@startuml m1-video-source-topology
+title M1 blueprint with the video path — recommended (solid) vs rejected (dashed)
+
+skinparam componentStyle rectangle
+skinparam shadowing false
+skinparam defaultTextAlignment center
+skinparam ArrowFontSize 11
+
+package "Build time — repo to registry" {
+  artifact "ADA_ECU/media/ego-b-occluding-c.mp4\nMP4 / H.264, 720p20, <= 60 MB\nuser-supplied, committed" as CLIP
+  artifact "ADA_ECU/Dockerfile\nCOPY media/ /app/media/  (own early layer)" as ADADF
+  artifact "registry.hackathon-2.carsky.io/m1-ada-ecu:latest\nsingle-platform linux/arm64" as REG
+  artifact "IVI_ECU app APK\nMedia3 player + DASHCAM_MEDIA_URI\n(OPTIONAL — deferred scope)" as APK
+}
+
+package "CarSky Room — runtime" {
+  node "Bench Scenario Player\nContainer Node · 10.99.0.10" as BENCH
+  node "V2X ECU\nContainer Node · 10.99.0.11" as V2X
+  node "Ethernet Bridge\neth-bridge · 10.99.0.0/24" as BR
+
+  node "ADA ECU — Container Node · 10.99.0.12" as ADA {
+    file "/app/media/ego-b-occluding-c.mp4" as ADAFILE
+    component "detector (Python)\nOpenCV decode -> YOLO11n ONNX CPU" as DET
+    component "core (C++17)\nR3 store · R13 · R14 · R15" as CORE
+    component "static clip server (python http.server)\nOPTIONAL — only if the dashcam view is accepted" as HTTPD
+  }
+
+  node "IVI ECU — Skycraft Node · 10.99.0.13" as IVI {
+    component "R4 ingest + warning view\nR16 / R17 — committed M1 scope" as WARN
+    component "dashcam surface (Media3)\nOPTIONAL — deferred scope" as DASH
+  }
+}
+
+CLIP --> ADADF
+ADADF --> REG : docker buildx --platform linux/arm64 + push
+REG --> ADAFILE : node pulls the image at deploy
+ADAFILE --> DET : VIDEO_CLIP_PATH (blueprint env)
+DET --> CORE : R3 TrackedObject JSONL on stdout
+ADAFILE --> HTTPD
+
+BENCH --> BR : ethernet · UDP 47100 · R1 CPM
+BR --> V2X
+V2X --> BR : ethernet · UDP 47200 · R2 JSON
+BR --> ADA
+CORE --> BR : ethernet · UDP 47300 · R4 JSON
+BR --> WARN
+
+CLIP ..> APK : same file, only if the local-copy variant is chosen
+APK ..> DASH : adb install
+HTTPD ..> BR : OPTIONAL · TCP 8080 · progressive MP4 over HTTP
+BR ..> DASH
+
+BENCH ..> ADA : REJECTED — video pin\nRGBA over iceoryx2, 70 MB/s at 720p20, no C++ helper
+BENCH ..> IVI : REJECTED — video pin into the AAOS guest\nundocumented: no wiring example, no camera HAL
+
+note bottom of BR
+  R6 topology is unchanged by the recommendation:
+  one ethernet pin per role node, star into the bridge.
+  No VIDEO pin and no new edge is created.
+end note
+
+legend bottom
+  <b>Legend — every R-number is a requirement ID from the report §2. There is no separate "message" numbering.</b>
+  <b>R1–R6</b> are the //contract// requirements: each one's deliverable //is// a schema or a topology, which is why
+  "the R2 message", "an R3 object", "the R4 warning" reads like a message name — it is shorthand for the
+  artifact that requirement defines. <b>R7–R19</b> are //behavioural// requirements: the deliverable is running code.
+  ====
+  |= ID |= Kind |= Deliverable |= On this diagram |
+  | R1 | contract | ETSI CPM profile (ASN.1 UPER) | bench → V2X ECU, UDP 47100 |
+  | R2 | contract | V2X ECU → ADA object message (JSON) | V2X ECU → ADA ECU, UDP 47200 |
+  | R3 | contract | <b>TrackedObject</b> schema — one shape for every ego object, `source = own_sensor` or `v2x_relayed` | detector → core, JSONL on stdout |
+  | R4 | contract | ADA → IVI warning + state message (JSON) | ADA ECU → IVI ECU, UDP 47300 |
+  | R5 | contract | node deployment — every ECU is one node of one blueprint | the Room, and the registry pull |
+  | R6 | contract | Ethernet Bridge + one `ethernet` pin per node | the star into `eth-bridge` |
+  | R12 | behaviour | object detection from video (YOLO11n ONNX, CPU) | the detector component |
+  | R13 | behaviour | track store + admission state machine (30 m gate, hysteresis) | inside ADA core |
+  | R14 | behaviour | Collision Risk Assessment abstraction + NLOS plugin | inside ADA core |
+  | R15 | behaviour | warning output to the IVI — what //emits// an R4 message | ADA core → bridge |
+  | R16 | behaviour | HMI layout on the AAOS node | IVI display area |
+  | R17 | behaviour | warning view — God view of ego, B, ghost C | IVI warning component |
+  ====
+  <b>Vehicles.</b> **ego** = vehicle A, the warned car, always the frame origin (0, 0) · **B** = the visible occluder
+  ahead, detected by A's own camera (R12) · **C** = the occluded car A can never see, known only through the relay.
+  <b>CarSky words.</b> **Room** = the environment a deployed blueprint creates · **node** = one deployable unit
+  (Container Node = OCI image; Skycraft Node = the AAOS guest) · **pin** = a node's typed connection point,
+  wired like-to-like only.
+endlegend
+
+@enduml
