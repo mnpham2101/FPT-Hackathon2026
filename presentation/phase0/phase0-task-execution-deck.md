@@ -112,8 +112,8 @@ Every lane in both phases. A lane is named after the folder it writes into, so n
 
 The development host has neither Docker nor a Linux subsystem. Every Linux build, C++ compilation and Gradle run therefore executes on GitHub Actions; CI is the verification path rather than a supplementary check.
 
-- **Ten jobs in one workflow file:** `contracts-gate` · `python-tests` · `ada-core-build` · `v2x-core-build` · `v2x-comms-check` · `sp-codec-helper` · `ivi-unit-tests` · `netcheck-image` · `v2x-ecu-image` · `scenario-player-image`.
-- **The file `phase0-ci.yml` defines every job.** Phase 1 added four jobs to it rather than establishing a second workflow.
+- **Ten jobs across two workflow files:** `contracts-gate` · `python-tests` · `ada-core-build` · `v2x-core-build` · `v2x-comms-check` · `sp-codec-helper` · `ivi-unit-tests` · `netcheck-image` · `v2x-ecu-image` · `scenario-player-image`.
+- **A job lives in the file named for the phase that created it.** `phase0-ci.yml` holds the six defined here; `phase1-ci.yml` holds the four Phase 1 added. Both run on every push, so the split is a matter of maintenance, not of coverage.
 
 ---
 

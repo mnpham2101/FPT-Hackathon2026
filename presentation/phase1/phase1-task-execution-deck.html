@@ -229,7 +229,7 @@
         <tr><td><strong>Track</strong></td><td>a workstream spanning whole phases, executed by different people concurrently</td><td><a href="../../plans/milestone1.md">milestone1.md</a></td><td>the comms track = Phase 1</td></tr>
         <tr><td><strong>Phase</strong></td><td>one stage, with an input list and acceptance criteria</td><td><a href="../../.claude/rules/task-planning-conventions.md">task-planning-conventions.md</a></td><td>Phase 1</td></tr>
         <tr><td><strong>Execution lane</strong></td><td>subtasks ordered by dependency, named after the folder they write into</td><td>the phase plan, <em>Execution order &amp; parallelism</em></td><td>Lane V = <code>V2X_ECU/</code></td></tr>
-        <tr><td><strong>CI lane</strong></td><td>one job in the GitHub Actions workflow; it builds, tests, and passes or fails</td><td><a href="../../.github/workflows/phase0-ci.yml">phase0-ci.yml</a></td><td><code>v2x-comms-check</code></td></tr>
+        <tr><td><strong>CI lane</strong></td><td>one job in the GitHub Actions workflow; it builds, tests, and passes or fails</td><td><a href="../../.github/workflows/phase1-ci.yml">phase1-ci.yml</a></td><td><code>v2x-comms-check</code></td></tr>
       </tbody>
     </table>
     <ul class="points">
@@ -262,7 +262,7 @@
     <div class="slide-head"><div class="num">01</div><h2>Continuous integration as the verification path</h2></div>
     <ul class="points">
       <li><strong>The development machine runs Windows without Docker or a Linux subsystem.</strong> Every C++ compilation, container image and Linux test therefore executes on GitHub Actions.</li>
-      <li><strong>Ten jobs in one workflow file.</strong> Phase 0 established six; Phase 1 added <code>sp-codec-helper</code>, <code>v2x-comms-check</code>, <code>v2x-ecu-image</code> and <code>scenario-player-image</code>.</li>
+      <li><strong>Ten jobs across two workflow files.</strong> Phase 0 established six in <code>phase0-ci.yml</code>; Phase 1 added <code>sp-codec-helper</code>, <code>v2x-comms-check</code>, <code>v2x-ecu-image</code> and <code>scenario-player-image</code> in <code>phase1-ci.yml</code>. Both run on every push, so the split is a matter of maintenance, not of coverage.</li>
       <li><strong>For a C++ subtask, "tests pass" is defined as "the lane is green".</strong> No alternative execution environment exists, so the definition of done cites a run identifier.</li>
       <li><strong>Three runs verify the phase:</strong> <a href="https://github.com/mnpham2101/FPT-Hackathon2026/actions/runs/30697863324">8 lanes green</a> over the phase's code · <a href="https://github.com/mnpham2101/FPT-Hackathon2026/actions/runs/30698630956">10 lanes green</a> adding both node images, which also pushed them to the platform registry · <a href="https://github.com/mnpham2101/FPT-Hackathon2026/actions/runs/30700052056">10 lanes green</a> confirming the malformed-message tests.</li>
       <li><strong>The image lanes carried the highest schedule risk.</strong> The message library is compiled for the platform's ARM processor under emulation; both images built within the six-hour ceiling at the first attempt, in approximately 19 and 20 minutes.</li>

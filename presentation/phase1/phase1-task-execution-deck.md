@@ -68,7 +68,7 @@ Three distinct concepts are referred to as a *track* or a *lane*. They are not i
 | **Track**          | a workstream spanning whole phases, executed by different people concurrently      | [milestone1.md](../../plans/milestone1.md)        | the comms track = Phase 1 |
 | **Phase**          | one stage, with an input list and acceptance criteria                              | [task-planning-conventions.md](../../.claude/rules/task-planning-conventions.md) | Phase 1 |
 | **Execution lane** | subtasks ordered by dependency, named after the folder they write into             | the phase plan, *Execution order & parallelism*   | Lane V = `V2X_ECU/`       |
-| **CI lane**        | one job in the GitHub Actions workflow; it builds, tests, and passes or fails      | [phase0-ci.yml](../../.github/workflows/phase0-ci.yml) | `v2x-comms-check`    |
+| **CI lane**        | one job in the GitHub Actions workflow; it builds, tests, and passes or fails      | [phase1-ci.yml](../../.github/workflows/phase1-ci.yml) | `v2x-comms-check`    |
 
 - **Lane letters are local to a phase and do collide.** Phase 0 Lane D is the bench folder; Phase 1 Lane D is the deployment chain.
 - **Lane letters do not express an order.** Only a stated dependency sequences one lane against another, and a dependency always names an artifact.
@@ -96,7 +96,7 @@ Each lane is named after the folder it writes into; no two lanes modify the same
 # Continuous integration as the verification path
 
 - **The development machine runs Windows without Docker or a Linux subsystem.** Every C++ compilation, container image and Linux test therefore executes on GitHub Actions.
-- **Ten jobs in one workflow file.** Phase 0 established six; Phase 1 added `sp-codec-helper`, `v2x-comms-check`, `v2x-ecu-image` and `scenario-player-image`.
+- **Ten jobs across two workflow files.** Phase 0 established six in `phase0-ci.yml`; Phase 1 added `sp-codec-helper`, `v2x-comms-check`, `v2x-ecu-image` and `scenario-player-image` in `phase1-ci.yml`. Both run on every push, so the split is a matter of maintenance, not of coverage.
 - **For a C++ subtask, "tests pass" is defined as "the lane is green".** No alternative execution environment exists, so the definition of done cites a run identifier.
 - **Three runs verify the phase:** [8 lanes green](https://github.com/mnpham2101/FPT-Hackathon2026/actions/runs/30697863324) over the phase's code · [10 lanes green](https://github.com/mnpham2101/FPT-Hackathon2026/actions/runs/30698630956) adding both node images, which also pushed them to the platform registry · [10 lanes green](https://github.com/mnpham2101/FPT-Hackathon2026/actions/runs/30700052056) confirming the malformed-message tests.
 - **The image lanes carried the highest schedule risk.** The message library is compiled for the platform's ARM processor under emulation; both images built within the six-hour ceiling at the first attempt, in approximately 19 and 20 minutes.

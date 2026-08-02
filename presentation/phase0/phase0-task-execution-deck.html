@@ -276,8 +276,8 @@
     <div class="slide-head"><div class="num">01</div><h2>Continuous integration as the verification path</h2></div>
     <p class="lead">The development host has neither Docker nor a Linux subsystem. Every Linux build, C++ compilation and Gradle run therefore executes on GitHub Actions; CI is the verification path rather than a supplementary check.</p>
     <ul class="points">
-      <li><strong>Ten jobs in one workflow file:</strong> <code>contracts-gate</code> · <code>python-tests</code> · <code>ada-core-build</code> · <code>v2x-core-build</code> · <code>v2x-comms-check</code> · <code>sp-codec-helper</code> · <code>ivi-unit-tests</code> · <code>netcheck-image</code> · <code>v2x-ecu-image</code> · <code>scenario-player-image</code>.</li>
-      <li><strong>The file <code>phase0-ci.yml</code> defines every job.</strong> Phase 1 added four jobs to it rather than establishing a second workflow.</li>
+      <li><strong>Ten jobs across two workflow files:</strong> <code>contracts-gate</code> · <code>python-tests</code> · <code>ada-core-build</code> · <code>v2x-core-build</code> · <code>v2x-comms-check</code> · <code>sp-codec-helper</code> · <code>ivi-unit-tests</code> · <code>netcheck-image</code> · <code>v2x-ecu-image</code> · <code>scenario-player-image</code>.</li>
+      <li><strong>A job lives in the file named for the phase that created it.</strong> <code>phase0-ci.yml</code> holds the six defined here; <code>phase1-ci.yml</code> holds the four Phase 1 added. Both run on every push, so the split is a matter of maintenance, not of coverage.</li>
     </ul>
     <div class="footer"><span>Phase 0 — Task Execution · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
