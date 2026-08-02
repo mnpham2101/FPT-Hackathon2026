@@ -30,6 +30,14 @@ on:
   pull_request:
     branches: [main]
 
+# Superseded runs are cancelled rather than left to finish - see the fuller note in phase1-ci.yml.
+# Cheaper here (netcheck-image is a ~40 s build), but it keeps the two files behaving alike and
+# stops a queue of redundant v2x-core-build compiles. Safe for the one-shot golden-vector publish
+# step below: it is guarded on contracts/golden-vectors/ being absent, which it no longer is.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   contracts-gate:
     runs-on: ubuntu-latest
@@ -204,15 +212,23 @@ jobs:
         # repeated key in $GITHUB_OUTPUT resolves to.
         run: |
           PUSHED=false
+          DIGEST=""
           if [ -z "$ZOT_KEY" ]; then
             echo "::notice::CARSKY_ZOT_API_KEY secret not set - image built but NOT pushed (M4 pending)"
           else
             echo "$ZOT_KEY" | docker login "$REGISTRY_HOST" -u "$REGISTRY_USER" --password-stdin
-            docker buildx build --platform "$PLATFORMS" --provenance=false --sbom=false -t "$REGISTRY_HOST/$IMAGE" --push tools/netcheck/
-            echo "::notice::pushed $REGISTRY_HOST/$IMAGE ($PLATFORMS)"
+            # --metadata-file: buildx writes the digest it actually pushed, which is what the
+            # verification below must check. Resolving the tag there instead would verify whatever
+            # :latest points to at that moment - a different run's image, if one raced us.
+            docker buildx build --platform "$PLATFORMS" --provenance=false --sbom=false -t "$REGISTRY_HOST/$IMAGE" --push --metadata-file "$RUNNER_TEMP/netcheck-push.json" tools/netcheck/
+            DIGEST=$(jq -r '."containerimage.digest" // empty' "$RUNNER_TEMP/netcheck-push.json")
+            echo "::notice::pushed $REGISTRY_HOST/$IMAGE ($PLATFORMS) digest=${DIGEST:-unreported}"
             PUSHED=true
           fi
-          echo "pushed=$PUSHED" >> "$GITHUB_OUTPUT"
+          {
+            echo "pushed=$PUSHED"
+            echo "digest=$DIGEST"
+          } >> "$GITHUB_OUTPUT"
       # Proves the pushed tag is what a Container node can pull and start, rather than trusting the
       # build log - the check that would have caught the 2026-07-31 Provisioning hang before the
       # deploy. Gated on the push actually happening: with no secret there is nothing to verify.
@@ -224,3 +240,4 @@ jobs:
           image: ${{ env.IMAGE }}
           username: ${{ vars.CARSKY_REGISTRY_USER || 'kis@hackathon.fpt.com' }}
           password: ${{ secrets.CARSKY_ZOT_API_KEY }}
+          digest: ${{ steps.push.outputs.digest }}

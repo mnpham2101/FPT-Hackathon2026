@@ -44,6 +44,17 @@ inputs:
   password:
     description: The zak_ API key (pass the CARSKY_ZOT_API_KEY secret)
     required: true
+  digest:
+    description: >-
+      The digest THIS run pushed, from `docker buildx build --metadata-file` (.["containerimage.digest"]).
+      Strongly preferred. Every image tag in this project is mutable and every branch push re-pushes
+      it, so a concurrent run can move :latest between this run's push and this step - and then
+      resolving the tag here would verify SOMEONE ELSE'S image while reporting success for ours.
+      Given a digest, the checks below run against exactly that manifest and the tag is only
+      reported on. Omit it to fall back to resolving the tag, which is correct only when nothing
+      else can be pushing.
+    required: false
+    default: ""
 
 outputs:
   digest:
@@ -66,6 +77,7 @@ runs:
         IMAGE: ${{ inputs.image }}
         REGISTRY_USER: ${{ inputs.username }}
         REGISTRY_PASS: ${{ inputs.password }}
+        EXPECTED_DIGEST: ${{ inputs.digest }}
       run: |
         set -euo pipefail
 
@@ -80,22 +92,33 @@ runs:
         # exists to catch.
         ACCEPT='application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json'
 
-        echo "[VERIFY] GET ${BASE}/manifests/${TAG}"
+        # WHAT IS VERIFIED: the digest this run pushed, when the caller supplied one. Anything else
+        # would be a different image under a contended tag. The tag is still fetched afterwards,
+        # but only to report on.
+        if [ -n "$EXPECTED_DIGEST" ]; then
+          SUBJECT="$EXPECTED_DIGEST"
+          echo "[VERIFY] verifying the digest this run pushed: ${EXPECTED_DIGEST}"
+        else
+          SUBJECT="$TAG"
+          echo "::warning::no digest supplied - falling back to resolving ${IMAGE}. Under concurrent pushes this can verify another run's image."
+        fi
+
+        echo "[VERIFY] GET ${BASE}/manifests/${SUBJECT}"
         # Status captured rather than -f'd, so a 401/404 can be reported as the specific thing it
-        # means (bad credential / tag absent) instead of a bare curl exit code.
+        # means (bad credential / absent) instead of a bare curl exit code.
         HTTP="$(curl -sS -u "${REGISTRY_USER}:${REGISTRY_PASS}" -H "Accept: ${ACCEPT}" \
                      -D "${WORK}/headers" -o "${WORK}/manifest.json" -w '%{http_code}' \
-                     "${BASE}/manifests/${TAG}")"
+                     "${BASE}/manifests/${SUBJECT}")"
         case "$HTTP" in
           200) ;;
           401|403)
-            echo "::error::registry rejected the credential (HTTP ${HTTP}) for ${REGISTRY_HOST}/${IMAGE} - a node using this account could not pull either"
+            echo "::error::registry rejected the credential (HTTP ${HTTP}) for ${REGISTRY_HOST}/${REPO} - a node using this account could not pull either"
             exit 1 ;;
           404)
-            echo "::error::${REGISTRY_HOST}/${IMAGE} does not exist in the registry (HTTP 404) - the push reported success but the tag is not resolvable"
+            echo "::error::${REGISTRY_HOST}/${REPO}:${SUBJECT} does not exist in the registry (HTTP 404) - the push reported success but the manifest is not resolvable"
             exit 1 ;;
           *)
-            echo "::error::registry returned HTTP ${HTTP} for ${REGISTRY_HOST}/${IMAGE}"
+            echo "::error::registry returned HTTP ${HTTP} for ${REGISTRY_HOST}/${REPO}:${SUBJECT}"
             cat "${WORK}/manifest.json" || true
             exit 1 ;;
         esac
@@ -110,6 +133,12 @@ runs:
         if [ -z "$DIGEST" ]; then
           DIGEST="sha256:$(sha256sum "${WORK}/manifest.json" | cut -d' ' -f1)"
           echo "[VERIFY] registry sent no Docker-Content-Digest header - computed ${DIGEST} from the body"
+        fi
+        # A content-addressed fetch that comes back as different content is the registry
+        # contradicting itself; never continue past it.
+        if [ -n "$EXPECTED_DIGEST" ] && [ "$DIGEST" != "$EXPECTED_DIGEST" ]; then
+          echo "::error::asked the registry for ${EXPECTED_DIGEST} and it returned ${DIGEST}"
+          exit 1
         fi
         echo "[VERIFY] content-type: ${CONTENT_TYPE}"
         echo "[VERIFY] digest:       ${DIGEST}"
@@ -154,6 +183,23 @@ runs:
         if [ "$LAYERS" -lt 1 ]; then
           echo "::error::${IMAGE} has ${LAYERS} layers"
           exit 1
+        fi
+
+        # Where the TAG points, reported separately from what was verified. A node deploys by tag,
+        # so this is the number to compare against at deploy time. It is a notice and not a failure
+        # on purpose: another run winning a mutable tag is the documented standing hazard of this
+        # project, not a defect in the image just verified.
+        if [ -n "$EXPECTED_DIGEST" ]; then
+          TAG_DIGEST="$(curl -sS -u "${REGISTRY_USER}:${REGISTRY_PASS}" -H "Accept: ${ACCEPT}" \
+                             -o /dev/null -D - "${BASE}/manifests/${TAG}" \
+                        | tr -d '\r' | awk 'tolower($1)=="docker-content-digest:"{print $2}' | tail -1)"
+          if [ -z "$TAG_DIGEST" ]; then
+            echo "[VERIFY] could not read the current digest of :${TAG}"
+          elif [ "$TAG_DIGEST" = "$DIGEST" ]; then
+            echo "[VERIFY] :${TAG} points at the image verified here"
+          else
+            echo "::notice::${IMAGE} now points at ${TAG_DIGEST}, not the ${DIGEST} this run pushed - a concurrent push won the mutable tag. The image verified below is still this run's; identify the deployed image from the registry at deploy time."
+          fi
         fi
 
         {

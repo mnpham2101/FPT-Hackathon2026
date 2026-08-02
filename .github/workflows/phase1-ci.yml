@@ -29,6 +29,15 @@ on:
   pull_request:
     branches: [main]
 
+# Superseded runs are cancelled rather than left to finish. Without this, three pushes inside three
+# minutes start three FULL sets of the emulated arm64 image builds - observed 2026-08-02, eight
+# concurrent ~20-minute builds across four runs - and they then race to overwrite the same two
+# mutable :latest tags in the registry, so the tag ends up holding whichever run finished last
+# rather than the newest commit. Per ref, so main and a feature branch never cancel each other.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   # D7 (V2X HLD §3) CI-side acceptance: a bench-sent CPM is received, raises events, deserializes to
   # JSON and is forwarded as R2. No landed-file guard on purpose - V2X_ECU/src/main.cpp and
@@ -425,6 +434,7 @@ jobs:
         run: |
           set -euo pipefail
           PUSHED=false
+          DIGEST=""
           if [ ! -f "${CONTEXT}Dockerfile" ]; then
             echo "::notice::${CONTEXT}Dockerfile not landed yet (5.1.5.4) - nothing to push"
           elif [ -z "$ZOT_KEY" ]; then
@@ -436,6 +446,9 @@ jobs:
             # re-resolves the graph and uploads - minutes instead of a second full emulated Vanetza
             # compile. A different (or missing) scope here is the difference between ~6 minutes and
             # ~6 hours.
+            # --metadata-file: buildx reports the digest it actually pushed. That digest, not the
+            # mutable tag, is what the verification step checks - the tag can be overwritten by a
+            # concurrent run between this step and that one.
             docker buildx build \
               --platform "$PLATFORMS" \
               --provenance=false --sbom=false \
@@ -443,11 +456,16 @@ jobs:
               --cache-to "type=gha,mode=max,scope=$CACHE_SCOPE,ignore-error=true" \
               -t "$REGISTRY_HOST/$IMAGE" \
               --push \
+              --metadata-file "$RUNNER_TEMP/push-metadata.json" \
               "$CONTEXT"
-            echo "::notice::pushed $REGISTRY_HOST/$IMAGE ($PLATFORMS)"
+            DIGEST=$(jq -r '."containerimage.digest" // empty' "$RUNNER_TEMP/push-metadata.json")
+            echo "::notice::pushed $REGISTRY_HOST/$IMAGE ($PLATFORMS) digest=${DIGEST:-unreported}"
             PUSHED=true
           fi
-          echo "pushed=$PUSHED" >> "$GITHUB_OUTPUT"
+          {
+            echo "pushed=$PUSHED"
+            echo "digest=$DIGEST"
+          } >> "$GITHUB_OUTPUT"
       - name: Verify the pushed image is pullable and single-platform arm64
         id: verify
         if: steps.push.outputs.pushed == 'true'
@@ -457,6 +475,7 @@ jobs:
           image: ${{ env.IMAGE }}
           username: ${{ vars.CARSKY_REGISTRY_USER || 'kis@hackathon.fpt.com' }}
           password: ${{ secrets.CARSKY_ZOT_API_KEY }}
+          digest: ${{ steps.push.outputs.digest }}
       # The claim the deploy actually rests on: the registry copy, pulled back and run under the
       # node's own command, brings the application up on aarch64. This is where an emulation-only
       # fault would surface - a Vanetza .so that did not get staged into the runtime stage for this
@@ -580,10 +599,11 @@ jobs:
         env:
           ZOT_KEY: ${{ secrets.CARSKY_ZOT_API_KEY }}
           REGISTRY_USER: ${{ vars.CARSKY_REGISTRY_USER || 'kis@hackathon.fpt.com' }}
-        # Single unconditional `pushed` write at the end - see v2x-ecu-image's push step.
+        # Single unconditional `pushed`/`digest` write at the end - see v2x-ecu-image's push step.
         run: |
           set -euo pipefail
           PUSHED=false
+          DIGEST=""
           if [ ! -f "${CONTEXT}Dockerfile" ]; then
             echo "::notice::${CONTEXT}Dockerfile not landed yet (5.1.7.3) - nothing to push"
           elif [ -z "$ZOT_KEY" ]; then
@@ -591,7 +611,8 @@ jobs:
           else
             echo "$ZOT_KEY" | docker login "$REGISTRY_HOST" -u "$REGISTRY_USER" --password-stdin
             # Same cache scope as this job's build step, for the same reason as v2x-ecu-image: the
-            # push build must be a cache hit, not a second emulated compile.
+            # push build must be a cache hit, not a second emulated compile. --metadata-file for the
+            # same reason too: the verification checks the pushed digest, not the mutable tag.
             docker buildx build \
               --platform "$PLATFORMS" \
               --provenance=false --sbom=false \
@@ -599,11 +620,16 @@ jobs:
               --cache-to "type=gha,mode=max,scope=$CACHE_SCOPE,ignore-error=true" \
               -t "$REGISTRY_HOST/$IMAGE" \
               --push \
+              --metadata-file "$RUNNER_TEMP/push-metadata.json" \
               "$CONTEXT"
-            echo "::notice::pushed $REGISTRY_HOST/$IMAGE ($PLATFORMS)"
+            DIGEST=$(jq -r '."containerimage.digest" // empty' "$RUNNER_TEMP/push-metadata.json")
+            echo "::notice::pushed $REGISTRY_HOST/$IMAGE ($PLATFORMS) digest=${DIGEST:-unreported}"
             PUSHED=true
           fi
-          echo "pushed=$PUSHED" >> "$GITHUB_OUTPUT"
+          {
+            echo "pushed=$PUSHED"
+            echo "digest=$DIGEST"
+          } >> "$GITHUB_OUTPUT"
       - name: Verify the pushed image is pullable and single-platform arm64
         id: verify
         if: steps.push.outputs.pushed == 'true'
@@ -613,6 +639,7 @@ jobs:
           image: ${{ env.IMAGE }}
           username: ${{ vars.CARSKY_REGISTRY_USER || 'kis@hackathon.fpt.com' }}
           password: ${{ secrets.CARSKY_ZOT_API_KEY }}
+          digest: ${{ steps.push.outputs.digest }}
       # Stronger than the V2X ECU smoke, because the bench's whole job is producible in isolation:
       # a [TX] line proves the Python app started, read its scenario YAML, spawned the aarch64
       # cpm_encode helper, got real UPER bytes back from Vanetza, and sent them. That is the entire
