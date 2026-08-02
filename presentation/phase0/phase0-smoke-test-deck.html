@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Phase 0 — Baseline Blueprint Smoke Test</title>
-<meta name="description" content="Report deck — connectivity smoke test on the bench and ECU nodes of the trial2_minh blueprint, method, tested object, AI/human division of labor, and results">
+<meta name="description" content="Report deck — connectivity smoke test on the bench and ECU nodes of the trial2_minh blueprint, covering method, tested object, the division of labour between agent and operator, and results">
 <style>
   :root {
     --fpt-orange: #F37021;
@@ -184,18 +184,18 @@
     <div class="eyebrow">Milestone 1 · Cooperative Vehicle Awareness — FPT Hackathon 2026</div>
     <h1>Phase 0 — Baseline Blueprint Smoke Test</h1>
     <div class="rule"></div>
-    <div class="tagline">Proving the wire before the ECUs exist</div>
-    <div class="meta">connectivity smoke test · blueprint <code>trial2_minh</code> · 2026-07-31<br>Source: <a href="../../plans/doc/phase0-smoke-test-run.md">phase0-smoke-test-run.md</a> · <a href="../../plans/doc/research_notes/baseline-connectivity-smoke-test.md">baseline-connectivity-smoke-test.md</a> · <a href="../../plans/doc/phase0-trial2-minh-preflight.md">phase0-trial2-minh-preflight.md</a></div>
+    <div class="tagline">Proving the network before the ECUs exist</div>
+    <div class="meta">connectivity smoke test · blueprint <code>trial2_minh</code> · 2026-07-31<br>Sources: <a href="../../plans/doc/phase0-smoke-test-run.md">phase0-smoke-test-run.md</a> · <a href="../../plans/doc/research_notes/baseline-connectivity-smoke-test.md">baseline-connectivity-smoke-test.md</a> · <a href="../../plans/doc/phase0-trial2-minh-preflight.md">phase0-trial2-minh-preflight.md</a></div>
     <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
   </section>
   <section class="slide bg-light content">
     <div class="slide-head"><div class="num">§</div><h2>Table of contents</h2></div>
     <div class="toc">
-      <div class="item"><div class="n">01</div><div><h3>Introduction</h3><p>why prove the wire before any ECU code exists</p></div></div>
+      <div class="item"><div class="n">01</div><div><h3>Introduction</h3><p>the reason for proving the network before any ECU code exists</p></div></div>
       <div class="item"><div class="n">02</div><div><h3>Test method</h3><p>the tool, the pipeline, the platform</p></div></div>
-      <div class="item"><div class="n">03</div><div><h3>Tested object</h3><p>what actually ran, and how it was wired</p></div></div>
-      <div class="item"><div class="n">04</div><div><h3>Testing agent</h3><p>what the AI did, and where it hit a wall</p></div></div>
-      <div class="item"><div class="n">05</div><div><h3>Human in the loop</h3><p>the five steps only a person could do</p></div></div>
+      <div class="item"><div class="n">03</div><div><h3>Tested object</h3><p>what was executed, and how it was configured</p></div></div>
+      <div class="item"><div class="n">04</div><div><h3>Testing agent</h3><p>the agent's scope, and the limit it encountered</p></div></div>
+      <div class="item"><div class="n">05</div><div><h3>Manual steps</h3><p>the five steps requiring an operator</p></div></div>
       <div class="item"><div class="n">06</div><div><h3>Results</h3><p>pass criteria, evidence, open items</p></div></div>
     </div>
     <div class="footer"><span>Phase 0 — Baseline Blueprint Smoke Test</span><span class="page"></span></div>
@@ -207,14 +207,14 @@
     <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">01</div><h2>Why a smoke test before any ECU code</h2></div>
+    <div class="slide-head"><div class="num">01</div><h2>The rationale for a smoke test before any ECU code</h2></div>
     <ul class="points">
-      <li><strong>Contract-first, but contracts aren't enough.</strong> The ECU-to-ECU message schemas were frozen in Phase 0 — this test proves the <em>transport</em> underneath them: Ethernet connectivity and IP routing between the ECUs.</li>
-      <li><strong>Prove the topology, not the payload.</strong> One throwaway image, three roles (<code>bench</code> → <code>v2x</code> → <code>ada</code>), no ECU logic — isolates "does a datagram survive the platform" from "is our codec correct".</li>
-      <li><strong>Fail cheap, fail early.</strong> If the bridge, the pins, or the registry don't work, better to find out on a 4-file Python script than on the real V2X_ECU image days later.</li>
-      <li><strong>Gate for Phase 1.</strong> Comms bring-up assumes the blueprint deploys and nodes reach each other — this test is that assumption's proof.</li>
+      <li><strong>Contracts alone are insufficient.</strong> The ECU-to-ECU message schemas were frozen in Phase 0; this test proves the transport beneath them — Ethernet connectivity and IP routing between the ECUs.</li>
+      <li><strong>Prove the topology, not the payload.</strong> One temporary image and three roles (<code>bench</code> → <code>v2x</code> → <code>ada</code>), with no ECU logic, isolates whether a datagram survives the platform from whether the codec is correct.</li>
+      <li><strong>Detect failure early and at low cost.</strong> If the bridge, the pins or the registry do not function, that is better established on a four-file Python tool than on the production V2X ECU image days later.</li>
+      <li><strong>Precondition for Phase 1.</strong> Comms bring-up assumes the blueprint deploys and the nodes reach each other; this test is the proof of that assumption.</li>
     </ul>
-    <p class="lead"><strong>Objective:</strong> a datagram travels bench <code>10.99.0.10</code> → V2X <code>.11</code> → ADA <code>.12</code> → IVI <code>.13</code>, stamped by every hop, observed purely from each node's <strong>View Log</strong> — no interactive session, no manual exec.</p>
+    <p class="lead"><strong>Objective:</strong> a datagram travels bench <code>10.99.0.10</code> → V2X <code>.11</code> → ADA <code>.12</code> → IVI <code>.13</code>, stamped at every hop, observed solely through each node's <strong>View Log</strong>, with no interactive session and no manual command execution.</p>
     <div class="footer"><span>Phase 0 — Baseline Blueprint Smoke Test</span><span class="page"></span></div>
   </section>
   <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
@@ -225,49 +225,49 @@
   </section>
   <section class="slide bg-light content">
     <div class="slide-head"><div class="num">02</div><h2>The pipeline — one image, five tools</h2></div>
-    <div class="chain-note">Five tools, one throwaway artifact, deployed the same way the real ECU images will be.</div>
+    <div class="chain-note">Five tools and one temporary artifact, deployed by the same procedure the production ECU images will use.</div>
     <table class="fpt">
-      <thead><tr><th>Stage</th><th>Tool</th><th>Job</th></tr></thead>
+      <thead><tr><th>Stage</th><th>Tool</th><th>Function</th></tr></thead>
       <tbody>
-        <tr><td><strong>Write</strong></td><td>Python (<code>netcheck.py</code> + <code>capture.sh</code> + <code>entrypoint.sh</code>)</td><td>Send / receive / relay over UDP; capture traffic on the wire independently of the app</td></tr>
-        <tr><td><strong>Build</strong></td><td>GitHub Actions (<code>phase0-ci.yml</code>, job <code>netcheck-image</code>)</td><td><code>docker buildx build</code>, single-platform <code>linux/arm64</code>, on a dev host with no Docker/WSL</td></tr>
-        <tr><td><strong>Store</strong></td><td>Zot registry (<code>registry.hackathon-2.carsky.io</code>)</td><td>OCI image storage — the same registry the real ECU images push to</td></tr>
-        <tr><td><strong>Deploy</strong></td><td>CarSky platform (Nydus UI + REST)</td><td>Blueprint <code>trial2_minh</code> → Room → three Container nodes pull the same tag</td></tr>
-        <tr><td><strong>Capture</strong></td><td><code>tcpdump</code> inside each container</td><td><code>[CAP]</code>-prefixed lines proving the datagram was seen on the wire</td></tr>
+        <tr><td><strong>Write</strong></td><td>Python (<code>netcheck.py</code> + <code>capture.sh</code> + <code>entrypoint.sh</code>)</td><td>Send, receive and relay over UDP; capture traffic independently of the application</td></tr>
+        <tr><td><strong>Build</strong></td><td>GitHub Actions (<code>phase0-ci.yml</code>, job <code>netcheck-image</code>)</td><td><code>docker buildx build</code>, single-platform <code>linux/arm64</code>, on a host without Docker or WSL</td></tr>
+        <tr><td><strong>Store</strong></td><td>Zot registry (<code>registry.hackathon-2.carsky.io</code>)</td><td>OCI image storage — the registry the production ECU images also push to</td></tr>
+        <tr><td><strong>Deploy</strong></td><td>CarSky platform (Nydus UI and REST)</td><td>Blueprint <code>trial2_minh</code> → Room → three Container nodes pull the same tag</td></tr>
+        <tr><td><strong>Capture</strong></td><td><code>tcpdump</code> within each container</td><td><code>[CAP]</code>-prefixed lines proving the datagram was observed on the network</td></tr>
       </tbody>
     </table>
     <div class="footer"><span>Phase 0 — Baseline Blueprint Smoke Test</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">02</div><h2>Why not <code>ping</code>, why GitHub Actions, why Zot</h2></div>
+    <div class="slide-head"><div class="num">02</div><h2>The rationale for UDP, GitHub Actions and Zot</h2></div>
     <ul class="points">
-      <li><strong>No ICMP reliance.</strong> <code>ping</code> uses ICMP, not UDP — we test the actual UDP protocol path that the real project uses instead. <code>netcheck.py</code> calls <code>connect()</code> on a UDP socket — forces a route lookup, sends nothing, fails loudly if unreachable.</li>
-      <li><strong>CI builds because the dev host can't.</strong> No Docker/WSL locally — every image in this project builds via GitHub Actions; the netcheck image is the first to prove that path end-to-end (QEMU + buildx for cross-arch).</li>
-      <li><strong>Single-platform <code>linux/arm64</code>.</strong> A multi-platform manifest index is silently rejected — the node sits in <code>Provisioning</code>, <code>waiting to start: trying and failing to pull image</code>. Every image must be built for arm64.</li>
-      <li><strong>Zot is the only registry that answers.</strong> The default host returns 502; <code>registry.hackathon-2.carsky.io</code> serves correctly — this closed open item <strong>O1</strong>, and now applies to every ECU image, not just this test.</li>
+      <li><strong>ICMP is not used.</strong> <code>ping</code> uses ICMP rather than UDP; this test exercises the UDP path the project itself uses. <code>netcheck.py</code> calls <code>connect()</code> on a UDP socket, which forces a route lookup, transmits nothing, and fails immediately if the peer is unreachable.</li>
+      <li><strong>CI builds because the development host cannot.</strong> Without Docker or WSL locally, every image in this project is built by GitHub Actions; the netcheck image was the first to prove that path end to end, using QEMU and buildx for cross-architecture builds.</li>
+      <li><strong>Single-platform <code>linux/arm64</code> is mandatory.</strong> A multi-platform manifest index is silently rejected: the node remains in <code>Provisioning</code>, reporting <code>waiting to start: trying and failing to pull image</code>. Every image must be built for arm64.</li>
+      <li><strong>Zot is the only registry that responds.</strong> The default host returns 502; <code>registry.hackathon-2.carsky.io</code> serves correctly. This closed open item <strong>O1</strong>, and now applies to every ECU image rather than to this test alone.</li>
     </ul>
     <div class="footer"><span>Phase 0 — Baseline Blueprint Smoke Test</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">02</div><h2>Script configuration — every parameter arrives by environment</h2></div>
+    <div class="slide-head"><div class="num">02</div><h2>Configuration — every parameter supplied by environment</h2></div>
     <table class="fpt">
       <thead><tr><th>Variable</th><th>Default</th><th>Meaning</th></tr></thead>
       <tbody>
         <tr><td><code>ROLE</code></td><td><code>node</code></td><td>Identifies the node in every log line and in the relay stamp appended to forwarded payloads.</td></tr>
         <tr><td><code>LISTEN_PORT</code></td><td>unset</td><td>UDP port to bind. Set only on relay and sink nodes (V2X, ADA); its absence marks a pure source node.</td></tr>
         <tr><td><code>NEXT_HOP_HOST</code> / <code>NEXT_HOP_PORT</code></td><td>unset</td><td>Destination address for outgoing traffic. Set on every node except the final sink.</td></tr>
-        <tr><td><code>HZ</code></td><td><code>1</code></td><td>Send rate in hertz, kept low so the log remains readable while traffic stays continuous.</td></tr>
-        <tr><td><code>PAD</code></td><td><code>0</code></td><td>Extra padding bytes appended to the payload, used only for the optional MTU probe.</td></tr>
-        <tr><td><code>START_DELAY_S</code></td><td><code>20</code></td><td>Delay before the first send, giving downstream nodes time to finish booting before traffic starts.</td></tr>
+        <tr><td><code>HZ</code></td><td><code>1</code></td><td>Transmission rate in hertz, kept low so that the log remains readable while traffic stays continuous.</td></tr>
+        <tr><td><code>PAD</code></td><td><code>0</code></td><td>Additional padding bytes appended to the payload, used only for the optional packet-size probe.</td></tr>
+        <tr><td><code>START_DELAY_S</code></td><td><code>20</code></td><td>Delay before the first transmission, allowing downstream nodes to finish starting.</td></tr>
       </tbody>
     </table>
-    <p class="lead">No behavior is compiled into the image: role, addressing, and rate are all read from the process environment at start-up, consistent with the project's no-hardcoded-tunables principle.</p>
+    <p class="lead">No behaviour is compiled into the image: role, addressing and rate are read from the process environment at start-up, consistent with the project's principle that no tunable value is hardcoded.</p>
     <div class="footer"><span>Phase 0 — Baseline Blueprint Smoke Test</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">02</div><h2>Node mapping — <code>NEXT_HOP_*</code> mirrors the real topology</h2></div>
+    <div class="slide-head"><div class="num">02</div><h2>Node configuration — <code>NEXT_HOP_*</code> mirrors the production topology</h2></div>
     <table class="fpt">
-      <thead><tr><th>Node</th><th>Role</th><th>Env set</th></tr></thead>
+      <thead><tr><th>Node</th><th>Role</th><th>Environment set</th></tr></thead>
       <tbody>
         <tr><td>Bench <code>.10</code></td><td>source</td><td><code>ROLE=bench</code>, <code>NEXT_HOP_HOST=10.99.0.11</code>, <code>NEXT_HOP_PORT=47100</code></td></tr>
         <tr><td>V2X <code>.11</code></td><td>relay</td><td><code>ROLE=v2x</code>, <code>LISTEN_PORT=47100</code>, <code>NEXT_HOP_HOST=10.99.0.12</code>, <code>NEXT_HOP_PORT=47200</code></td></tr>
@@ -275,15 +275,15 @@
       </tbody>
     </table>
     <ul class="points">
-      <li>The <code>NEXT_HOP_*</code> values are copies of the addresses each node already carries for its production peer — for example, the bench's <code>NEXT_HOP_HOST</code> mirrors its existing <code>V2X_ECU_HOST</code> — so the test exercises the real addressing rather than a parallel set of constants.</li>
-      <li>ADA's <code>LISTEN_PORT</code> is added alongside its existing <code>V2X_LISTEN_PORT</code> key rather than renamed, so the node's real configuration remains intact once the smoke-test values are reverted.</li>
+      <li>The <code>NEXT_HOP_*</code> values duplicate the addresses each node already holds for its production peer — the bench's <code>NEXT_HOP_HOST</code> mirrors its existing <code>V2X_ECU_HOST</code> — so the test exercises the production addressing rather than a parallel set of constants.</li>
+      <li>The ADA node's <code>LISTEN_PORT</code> was added alongside its existing <code>V2X_LISTEN_PORT</code> key rather than replacing it, so that its production configuration remains intact once the smoke-test values are reverted.</li>
       <li><code>capabilities: [&quot;NET_RAW&quot;]</code> is set identically on all three nodes.</li>
-      <li>Values are entered per node in the Nydus Inspector — the same panel that sets <code>image</code>, <code>command</code>, and <code>capabilities</code> — and read by <code>netcheck.py</code> at start-up.</li>
+      <li>Values are entered per node in the Nydus Inspector — the panel that also sets <code>image</code>, <code>command</code> and <code>capabilities</code> — and read by <code>netcheck.py</code> at start-up.</li>
     </ul>
     <div class="footer"><span>Phase 0 — Baseline Blueprint Smoke Test</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">02</div><h2>Sending and receiving — the socket calls</h2></div>
+    <div class="slide-head"><div class="num">02</div><h2>Transmission and reception — the socket calls</h2></div>
     <pre class="log"># route_check() — reachability without ICMP
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 s.connect((NH, int(NP)))
@@ -296,38 +296,38 @@ data, src = rx.recvfrom(65535)
 # sender() and relay forward — transmit
 tx.sendto(out, (NH, int(NP)))</pre>
     <ul class="points">
-      <li><code>connect()</code> on a UDP socket performs a kernel route lookup and transmits nothing; an unreachable peer raises immediately.</li>
-      <li>The receiver binds to <code>0.0.0.0</code>, never a named interface, since the bridge NIC's name is not guaranteed by the platform; <code>recvfrom()</code> blocks until a datagram arrives.</li>
-      <li>A node with both <code>LISTEN_PORT</code> and <code>NEXT_HOP_HOST</code> set — V2X and ADA — relays every received datagram onward through the same <code>sendto()</code> call the sender loop uses.</li>
+      <li><code>connect()</code> on a UDP socket performs a kernel route lookup and transmits nothing; an unreachable peer raises an error immediately.</li>
+      <li>The receiver binds to <code>0.0.0.0</code> rather than a named interface, because the bridge interface name is not guaranteed by the platform; <code>recvfrom()</code> blocks until a datagram arrives.</li>
+      <li>A node with both <code>LISTEN_PORT</code> and <code>NEXT_HOP_HOST</code> set — V2X and ADA — relays every received datagram through the same <code>sendto()</code> call the transmission loop uses.</li>
     </ul>
     <div class="footer"><span>Phase 0 — Baseline Blueprint Smoke Test</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">02</div><h2>Payload — a stamped string, not an encoded CPM</h2></div>
+    <div class="slide-head"><div class="num">02</div><h2>Payload — a stamped string, not an encoded message</h2></div>
     <ul class="points">
-      <li>The payload is plain ASCII text — <code>f&quot;seq={i}|{ROLE}&quot;.encode()</code>, optionally padded with <code>PAD</code> filler bytes for the MTU probe. No serialization format and no codec are involved.</li>
-      <li>Each relay hop appends its own role to the payload rather than re-encoding it: <code>data + f&quot;|{ROLE}&quot;.encode()</code>. The accumulated <code>|bench|v2x</code> suffix observed at ADA is the chain-of-custody evidence behind pass criterion C5.</li>
-      <li>The payload is deliberately unencoded: this test isolates transport from the message codec. Real CPM traffic is ASN.1 UPER, produced through the V2X ECU's Vanetza codec seam — a separate, already-frozen contract this test does not exercise.</li>
+      <li>The payload is plain ASCII text, <code>f&quot;seq={i}|{ROLE}&quot;.encode()</code>, optionally padded with <code>PAD</code> filler bytes for the packet-size probe. No serialisation format and no codec is involved.</li>
+      <li>Each relay hop appends its own role rather than re-encoding the payload: <code>data + f&quot;|{ROLE}&quot;.encode()</code>. The accumulated <code>|bench|v2x</code> suffix observed at the ADA node is the chain-of-custody evidence for pass criterion C5.</li>
+      <li>The payload is deliberately unencoded, to isolate transport from the message codec. Production CPM traffic is ASN.1 UPER produced through the V2X ECU's Vanetza codec seam — a separate, already frozen contract that this test does not exercise.</li>
     </ul>
     <div class="footer"><span>Phase 0 — Baseline Blueprint Smoke Test</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">02</div><h2>Traffic capture — <code>tcpdump</code> gated by <code>NET_RAW</code></h2></div>
+    <div class="slide-head"><div class="num">02</div><h2>Traffic capture — <code>tcpdump</code>, gated by <code>NET_RAW</code></h2></div>
     <ul class="points">
-      <li><code>capture.sh</code> runs in the background, started by <code>entrypoint.sh</code> independently of the check program, so a capture failure never blocks the connectivity test.</li>
-      <li>It probes its own privilege first: <code>tcpdump -D</code> succeeds only if the process can enumerate capture-capable interfaces, which requires the <code>CAP_NET_RAW</code> capability the platform grants through the node's <code>capabilities: [&quot;NET_RAW&quot;]</code> config field.</li>
-      <li>On success it runs <code>tcpdump -i any -n -l -tttt &quot;${CAPTURE_FILTER:-udp}&quot;</code>, piping every line through <code>sed &#x27;s/^/[CAP] /&#x27;</code> so packet lines are distinguishable in the mixed log stream.</li>
-      <li>On failure it falls back to polling <code>/proc/net/dev</code> packet counters, which need no elevated privilege — pass criterion C4 is then met at counter level instead of packet level.</li>
+      <li><code>capture.sh</code> runs in the background, started by <code>entrypoint.sh</code> independently of the check program, so that a capture failure never blocks the connectivity test.</li>
+      <li>It probes its own privilege first: <code>tcpdump -D</code> succeeds only if the process can enumerate capture-capable interfaces, which requires the <code>CAP_NET_RAW</code> capability the platform grants through the node's <code>capabilities: [&quot;NET_RAW&quot;]</code> configuration field.</li>
+      <li>On success it runs <code>tcpdump -i any -n -l -tttt &quot;${CAPTURE_FILTER:-udp}&quot;</code>, piping every line through <code>sed &#x27;s/^/[CAP] /&#x27;</code> so that packet lines remain distinguishable in the combined log stream.</li>
+      <li>On failure it falls back to polling the <code>/proc/net/dev</code> packet counters, which require no elevated privilege; pass criterion C4 is then met at counter level rather than packet level.</li>
     </ul>
     <div class="footer"><span>Phase 0 — Baseline Blueprint Smoke Test</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
     <div class="slide-head"><div class="num">02</div><h2>Entry point — <code>entrypoint.sh</code> starts both programs</h2></div>
     <ul class="points">
-      <li><code>entrypoint.sh</code> is the image's <code>CMD</code> (<code>Dockerfile</code>: <code>CMD [&quot;./entrypoint.sh&quot;]</code>); the container runtime invokes it the instant the pod starts — no manual exec, satisfying the self-run guarantee every run subtask requires.</li>
-      <li>It starts <code>capture.sh</code> first, in the background (<code>&amp;</code>), so wire capture begins before any application traffic exists.</li>
-      <li>It then replaces itself with the check program via <code>exec python3 -u netcheck.py</code>: <code>exec</code> hands the process's PID to Python rather than spawning a child, so the container's lifecycle — and its restart count — tracks the check program directly.</li>
-      <li>Every step logs a <code>[BOOT]</code> line first, so a log with no <code>[BOOT] … exec python3</code> entry is itself diagnostic: it means the interpreter failed to start.</li>
+      <li><code>entrypoint.sh</code> is the image's <code>CMD</code> (<code>Dockerfile</code>: <code>CMD [&quot;./entrypoint.sh&quot;]</code>); the container runtime invokes it as the pod starts, with no manual execution, satisfying the self-start requirement of every run subtask.</li>
+      <li>It starts <code>capture.sh</code> first, in the background, so that capture begins before any application traffic exists.</li>
+      <li>It then replaces itself with the check program through <code>exec python3 -u netcheck.py</code>. <code>exec</code> transfers the process identifier to Python rather than spawning a child, so the container lifecycle and its restart count track the check program directly.</li>
+      <li>Every step emits a <code>[BOOT]</code> line, so a log without a <code>[BOOT] … exec python3</code> entry is itself diagnostic: it indicates that the interpreter failed to start.</li>
     </ul>
     <div class="footer"><span>Phase 0 — Baseline Blueprint Smoke Test</span><span class="page"></span></div>
   </section>
@@ -338,13 +338,13 @@ tx.sendto(out, (NH, int(NP)))</pre>
     <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">03</div><h2>What actually ran</h2></div>
+    <div class="slide-head"><div class="num">03</div><h2>What was executed</h2></div>
     <ul class="points">
-      <li><strong>Three CarSky Container nodes</strong>, one throwaway image (<code>m1-netcheck:latest</code>) on all three — bench, V2X, ADA — differing only by env vars (<code>ROLE</code>, <code>LISTEN_PORT</code>, <code>NEXT_HOP_HOST/PORT</code>), exactly how the real ECU nodes are configured.</li>
-      <li><strong><code>arm64</code> machine.</strong> The cluster's runnable evidence is uniformly <code>aarch64</code> — every node pulls a <code>linux/arm64</code> image, no exceptions.</li>
-      <li><strong><code>NET_RAW</code> capability</strong>, granted explicitly in each node's config — real <code>tcpdump</code> capture, not the <code>/proc/net/dev</code> counter fallback (this answered open item <strong>O2</strong>).</li>
-      <li><strong>Ethernet-bridge network</strong> — all four <code>ethernet</code> pins (<code>10.99.0.10</code>–<code>.13</code>) wired as a <strong>star/spoke topology</strong> into one hub <code>eth-bridge</code> node: a <strong>single flat domain</strong>, <code>10.99.0.0/24</code>, shared by bench, V2X, ADA, and IVI.</li>
-      <li><strong>The IVI node is out of scope for the container test</strong> — it's a Skycraft (AAOS) node running an Android VM artifact, not a container image, so it cannot run <code>netcheck.py</code> at all.</li>
+      <li><strong>Three CarSky Container nodes</strong>, running one temporary image (<code>m1-netcheck:latest</code>) on all three — bench, V2X and ADA — differing only by environment variables (<code>ROLE</code>, <code>LISTEN_PORT</code>, <code>NEXT_HOP_HOST</code> and <code>NEXT_HOP_PORT</code>), exactly as the production ECU nodes are configured.</li>
+      <li><strong>An <code>arm64</code> machine.</strong> The cluster's runnable evidence is uniformly <code>aarch64</code>; every node pulls a <code>linux/arm64</code> image without exception.</li>
+      <li><strong>The <code>NET_RAW</code> capability</strong>, granted explicitly in each node's configuration, which enabled real <code>tcpdump</code> capture rather than the <code>/proc/net/dev</code> counter fallback. This resolved open item <strong>O2</strong>.</li>
+      <li><strong>The Ethernet-bridge network</strong> — all four <code>ethernet</code> pins (<code>10.99.0.10</code>–<code>.13</code>) wired as a star topology into one <code>eth-bridge</code> node: a single flat domain, <code>10.99.0.0/24</code>, shared by the bench, V2X, ADA and IVI nodes.</li>
+      <li><strong>The IVI node is outside the scope of the container test.</strong> It is a Skycraft (AAOS) node running an Android VM artifact rather than a container image, and therefore cannot execute <code>netcheck.py</code>.</li>
     </ul>
     <div class="footer"><span>Phase 0 — Baseline Blueprint Smoke Test</span><span class="page"></span></div>
   </section>
@@ -355,38 +355,38 @@ tx.sendto(out, (NH, int(NP)))</pre>
     <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">04</div><h2>What the AI did</h2></div>
+    <div class="slide-head"><div class="num">04</div><h2>The agent's scope</h2></div>
     <ul class="points">
-      <li><strong>Credentials — two, both prompted from the human.</strong> A CarSky API key (<code>a8k_…</code>) for REST calls (deploy status, node phases, logs), and a Zot registry key (<code>CARSKY_ZOT_API_KEY</code>, <code>zak_…</code>) as a GitHub Actions secret for the image push. Neither was assumed or guessed — the agent's login procedure stops and asks when no key is on hand.</li>
-      <li><strong>Wrote the test artifact.</strong> All four <code>tools/netcheck/</code> files (<code>Dockerfile</code>, <code>entrypoint.sh</code>, <code>capture.sh</code>, <code>netcheck.py</code>), the CI job (<code>.github/workflows/phase0-ci.yml</code>, <code>netcheck-image</code>), and pushed both as normal commits (<code>6.0.8.1</code>, <code>5.0.8.2</code>).</li>
-      <li><strong>Verified over REST, not by eye.</strong> <code>GET /deployments/{roomId}/status</code>, <code>.../nodes</code> (per-node phase), <code>.../logs/{nodeKey}?container=user|sidecar</code>, <code>.../pods</code>, and <code>GET /devices</code> to resolve the target Room — the same calls [[carsky-room-diagnostics]] uses to diagnose a stuck deploy.</li>
+      <li><strong>Credentials — two, both supplied by the operator.</strong> A CarSky API key (<code>a8k_…</code>) for REST calls covering deployment status, node phases and logs, and a Zot registry key (<code>CARSKY_ZOT_API_KEY</code>, <code>zak_…</code>) held as a GitHub Actions secret for the image push. Neither was assumed or generated; the agent's login procedure halts and requests a key when none is available.</li>
+      <li><strong>Authored the test artifact.</strong> All four <code>tools/netcheck/</code> files (<code>Dockerfile</code>, <code>entrypoint.sh</code>, <code>capture.sh</code>, <code>netcheck.py</code>) and the CI job (<code>.github/workflows/phase0-ci.yml</code>, <code>netcheck-image</code>), committed as subtasks <code>6.0.8.1</code> and <code>5.0.8.2</code>.</li>
+      <li><strong>Verified over REST rather than by inspection.</strong> <code>GET /deployments/{roomId}/status</code>, <code>.../nodes</code> for per-node phase, <code>.../logs/{nodeKey}?container=user|sidecar</code>, <code>.../pods</code>, and <code>GET /devices</code> to resolve the target Room — the same calls the room-diagnostics procedure uses to diagnose a failed deployment.</li>
     </ul>
     <div class="footer"><span>Phase 0 — Baseline Blueprint Smoke Test</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">04</div><h2>Where the AI hit a wall — the IVI</h2></div>
+    <div class="slide-head"><div class="num">04</div><h2>The limit the agent encountered — the IVI node</h2></div>
     <ul class="points">
-      <li><strong>No eyes on the Skycraft node.</strong> Screenshot (<code>GET /vms/{roomId}/{nodeKey}/screenshot</code>), UI-tree (<code>.../accessibility</code>), and ADB shell (<code>.../shell</code>) all return <strong>502 — unavailable on this deployment</strong>.</li>
-      <li><strong>Direct hop-3 proof was out of reach.</strong> The strongest check — an ADB shell <code>nc -u -l -p 47300</code> listener on the AAOS guest — needs the shell API this deployment doesn't serve.</li>
-      <li><strong>Indirect check instead.</strong> ADA's own <code>[TX] … relayed to 10.99.0.13:47300</code> log line plus its <code>[CAP]</code> tcpdump entry prove the datagram left the bridge for the IVI's address — proof the packet was <em>sent</em>, not that it was <em>received</em>.</li>
-      <li><strong>The gap closes later, not now.</strong> Once the IVI's real listener for ADA messages lands in Phase 5, hop 3 gets a direct check and this workaround retires.</li>
+      <li><strong>No observation channel to the Skycraft node.</strong> Screenshot (<code>GET /vms/{roomId}/{nodeKey}/screenshot</code>), accessibility tree (<code>.../accessibility</code>) and ADB shell (<code>.../shell</code>) all return <strong>502, unavailable on this deployment</strong>.</li>
+      <li><strong>Direct proof of the third hop was unobtainable.</strong> The strongest available check — an ADB shell <code>nc -u -l -p 47300</code> listener on the AAOS guest — requires the shell API this deployment does not serve.</li>
+      <li><strong>An indirect check was used instead.</strong> The ADA node's own <code>[TX] … relayed to 10.99.0.13:47300</code> log line, together with its <code>[CAP]</code> capture entry, proves the datagram left the network addressed to the IVI node: evidence that the packet was transmitted, not that it was received.</li>
+      <li><strong>The gap closes in Phase 5.</strong> Once the IVI node's production listener for ADA messages lands, the third hop gains a direct check and this substitute is withdrawn.</li>
     </ul>
     <div class="footer"><span>Phase 0 — Baseline Blueprint Smoke Test</span><span class="page"></span></div>
   </section>
   <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
     <div class="sec-num">05</div>
-    <h1>Human in the loop</h1>
+    <h1>Manual steps</h1>
     <div class="rule"></div>
     <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">05</div><h2>Five steps only a person could do</h2></div>
+    <div class="slide-head"><div class="num">05</div><h2>Five steps requiring an operator</h2></div>
     <ul class="points">
-      <li><strong>Create &amp; configure the blueprint</strong> — the REST <code>addPin</code> enum has no <code>ETHERNET</code>, and <code>PATCH /nodes/{id}</code> 404s, so wiring the four pins and setting each node's <code>image</code>/<code>command</code>/<code>capabilities</code>/<code>env</code> is UI-only in Nydus. <em>Both would have been AI's job if that gap didn't exist.</em></li>
-      <li><strong>Check the test script</strong> — reviewed the netcheck tool and CI job before they went live, ahead of any registry push.</li>
-      <li><strong>Create the key, hand it to the AI when prompted</strong> — the Zot API key and the CarSky API key are both minted by a human and handed over on request; the agent never generates or guesses them.</li>
-      <li><strong>Manual deployment</strong> — click <strong>New Deployment</strong> in Nydus once node config is set (M9); the platform allows only 2 concurrent deployments, so teardown is a human call too.</li>
-      <li><strong>Manual log check</strong> — read each node's <strong>View Log</strong> against the expected pattern (M10) — the step that supplies the IVI's only evidence, since the AI's REST path can't reach that node.</li>
+      <li><strong>Create and configure the blueprint.</strong> The REST <code>addPin</code> enumeration contains no <code>ETHERNET</code> value, and <code>PATCH /nodes/{id}</code> returns 404, so wiring the four pins and setting each node's <code>image</code>, <code>command</code>, <code>capabilities</code> and environment is possible only in the Nydus UI. Both steps would otherwise have been performed by the agent.</li>
+      <li><strong>Review the test tool.</strong> The netcheck tool and its CI job were reviewed before activation and before any registry push.</li>
+      <li><strong>Create the credentials and supply them on request.</strong> The Zot API key and the CarSky API key are both created by an operator and supplied when the agent requests them; the agent never generates or infers a key.</li>
+      <li><strong>Perform the deployment.</strong> Selecting <strong>New Deployment</strong> in Nydus once node configuration is set (M9). The platform permits only two concurrent deployments, so teardown is also an operator decision.</li>
+      <li><strong>Inspect the logs.</strong> Reading each node's <strong>View Log</strong> against the expected pattern (M10) — the step that supplies the IVI node's only evidence, since the agent's REST path cannot reach that node.</li>
     </ul>
     <div class="footer"><span>Phase 0 — Baseline Blueprint Smoke Test</span><span class="page"></span></div>
   </section>
@@ -397,8 +397,8 @@ tx.sendto(out, (NH, int(NP)))</pre>
     <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">06</div><h2>C5 — the chain, proven by its own stamps</h2></div>
-    <p class="lead">Each hop appends its role to the payload — the accumulated stamp at ADA is the proof the datagram <strong>transited every node</strong>, not just arrived from somewhere.</p>
+    <div class="slide-head"><div class="num">06</div><h2>C5 — the chain, proven by its accumulated stamps</h2></div>
+    <p class="lead">Each hop appends its role to the payload. The accumulated stamp at the ADA node proves the datagram transited every node, rather than merely arriving from an unspecified source.</p>
     <div class="chainviz">
     <div class="link">bench<small>seq=287</small></div>
     <div class="arr">→</div>
@@ -418,30 +418,30 @@ ada    [RX] #289 from 10.99.0.11  body=seq=288|bench|v2x
     <table class="fpt">
       <thead><tr><th>#</th><th>Check</th><th>Evidence</th></tr></thead>
       <tbody>
-        <tr><td><strong>C1</strong></td><td>All nodes <code>Running</code></td><td>5/5 nodes, restart count 0, stable across a 10-minute window</td></tr>
-        <tr><td><strong>C2</strong></td><td>Zero errors</td><td>0 <code>[ERR]</code> lines across bench / V2X / ADA</td></tr>
+        <tr><td><strong>C1</strong></td><td>All nodes <code>Running</code></td><td>5 of 5 nodes, restart count 0, stable across a 10-minute window</td></tr>
+        <tr><td><strong>C2</strong></td><td>Zero errors</td><td>0 <code>[ERR]</code> lines across the bench, V2X and ADA nodes</td></tr>
         <tr><td><strong>C3</strong></td><td>Live per-node log</td><td>100 lines each, streaming</td></tr>
-        <tr><td><strong>C4</strong></td><td>Wire capture</td><td>80 / 66 / 66 <code>[CAP]</code> lines on <code>10.99.0.x</code> — real <code>tcpdump</code>, <code>NET_RAW</code> honored</td></tr>
-        <tr><td><strong>C5</strong></td><td>Chain proven</td><td>ADA log carries <code>body=seq=288|bench|v2x</code></td></tr>
+        <tr><td><strong>C4</strong></td><td>Network capture</td><td>80 / 66 / 66 <code>[CAP]</code> lines on <code>10.99.0.x</code> — real <code>tcpdump</code>, <code>NET_RAW</code> honoured</td></tr>
+        <tr><td><strong>C5</strong></td><td>Chain proven</td><td>The ADA log carries <code>body=seq=288|bench|v2x</code></td></tr>
       </tbody>
     </table>
-    <p class="lead"><strong>Deployed as</strong> <code>trial2_minh_netcheck</code> · Room <code>27gs83k3oeju2mbywu1j8</code> · deploy alone started every script — <strong>no manual exec used anywhere</strong>, meeting the self-run guarantee.</p>
+    <p class="lead"><strong>Deployed as</strong> <code>trial2_minh_netcheck</code> · Room <code>27gs83k3oeju2mbywu1j8</code> · the deployment alone started every program, with no manual execution at any point, meeting the self-start requirement.</p>
     <div class="footer"><span>Phase 0 — Baseline Blueprint Smoke Test</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
     <div class="slide-head"><div class="num">06</div><h2>Open items carried forward</h2></div>
     <ul class="points">
-      <li><strong>Registry host resolved (O1)</strong> — <code>registry.hackathon-2.carsky.io</code> is now standing for every ECU image, not just this test.</li>
-      <li><strong>Platform tenancy gap</strong> — <code>GET /blueprints</code> returns every owner's blueprints unfiltered, including another team's private topology and inline scripts. Reported to BTC; unrelated to M1 delivery.</li>
-      <li><strong>Unreliable REST routes</strong> — <code>restart</code> returns 500, <code>container-exec</code> returns 503; prefer teardown + redeploy over either.</li>
-      <li><strong>O3 (MTU headroom)</strong> — optional <code>PAD=1400</code> probe not run; feeds the CPM message size budget later.</li>
-      <li><strong>O4 (AAOS <code>nc</code> availability)</strong> — still unknown; the indirect ADA-side check stood in for it this run.</li>
+      <li><strong>Registry host resolved (O1).</strong> <code>registry.hackathon-2.carsky.io</code> now applies to every ECU image, not to this test alone.</li>
+      <li><strong>Platform tenancy gap.</strong> <code>GET /blueprints</code> returns every owner's blueprints unfiltered, including another team's private topology and inline scripts. Reported to the organisers; unrelated to Milestone 1 delivery.</li>
+      <li><strong>Unreliable REST routes.</strong> <code>restart</code> returns 500 and <code>container-exec</code> returns 503; teardown and redeployment is preferable to either.</li>
+      <li><strong>O3, packet-size headroom.</strong> The optional <code>PAD=1400</code> probe was not executed; it informs the message-size budget later.</li>
+      <li><strong>O4, AAOS <code>nc</code> availability.</strong> Still unknown; the indirect ADA-side check substituted for it in this run.</li>
     </ul>
-    <p class="lead"><strong>Milestone-1 impact:</strong> Phase 0's last acceptance box — blueprint topology documented + validated — is now closed. Phase 1 (comms bring-up) is unblocked.</p>
+    <p class="lead"><strong>Milestone 1 impact:</strong> the final Phase 0 acceptance criterion — blueprint topology documented and validated — is closed. Phase 1, comms bring-up, is unblocked.</p>
     <div class="footer"><span>Phase 0 — Baseline Blueprint Smoke Test</span><span class="page"></span></div>
   </section>
   <section class="slide thanks" style="background-image: linear-gradient(rgba(8,12,38,.66), rgba(14,21,64,.86)), url('../assets/bg-fpt-tower.jpg')">
-    <h1>Thank you!</h1>
+    <h1>Thank you</h1>
     <div class="rule"></div>
     <p><strong>Phase 0 Smoke Test — Baseline Blueprint Connectivity</strong> · FPT Hackathon 2026</p>
     <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
