@@ -18,7 +18,7 @@ deck: Phase 1 — Task Execution · FPT Hackathon 2026
 
 **Milestone 1 · Cooperative Vehicle Awareness — FPT Hackathon 2026**
 
-comms bring-up · 12 task groups · 44 subtasks · 39 closed by machine, 5 needing the platform
+comms bring-up · 12 task groups · 44 subtasks · 40 closed, 4 left for a person on the platform
 
 The work it organizes is Phase 0's contract freeze: [phase0-task-execution-deck.html](../phase0/phase0-task-execution-deck.html) · [phase0-design-concepts-deck.html](../phase0/phase0-design-concepts-deck.html)
 
@@ -35,7 +35,7 @@ Source: [phase1_tasks.md](../../plans/phase1_tasks.md) · [phase1-comms-run.md](
 5. **Execution order** — lane by lane, one diagram at a time
 6. **Parallel or sequential** — and what forced each
 7. **What it proved** — the nine acceptance boxes, and how far the evidence reaches
-8. **Handoff** — what Phase 2 may assume, and what stays open
+8. **Handoff** — what Phase 2 may assume, and the four tasks left for a person
 
 ---
 
@@ -351,14 +351,19 @@ Phase 2 builds the ADA ECU's track store and admission logic on mock input. Ever
 
 ---
 
-# What stays open
+# What stays open — four tasks, all for a person
 
-- **Five subtasks need the live platform.** One deploy session with a long enough log download closes four of them: the status badges, the scripted log check, the scenario swap and the capture file.
-- **One requirement was moved out of the milestone.** The car does not transmit; the radio interface still declares the send call, and nothing calls it.
-- **Two decisions are still the user's.** Whether the phase's retry and duplicate-window defaults are ratified as chosen, and whether the "team app launches on the display node" clause belongs to this phase at all — no design document covers it, and the deployment keeps the supplied artifact.
-- **Two documentation corrections are owned elsewhere.** The node guides still print the old registry hostname, and the network's maximum-packet-size probe from Phase 0 was never run — harmless here, since a message is 58 bytes.
+40 of the 44 subtasks are closed. Nothing that remains is agent work, CI work, or new code: every one of these is done by hand in the platform UI, because node configuration and log reading have no API.
 
-> None of the open items blocks Phase 2. All of them are written down where the next person will look for them.
+| Task | What a person has to do |
+| ---- | ------------------------ |
+| `5.1.10.2` | Confirm **per-node** Running badges and a restart count of zero in the Deployment Viewer — not the summary header, which read "Pending — 0/0 nodes ready" while traffic flowed normally |
+| `2.1.10.3` | Capture the start-up call sequence from the node log — it prints once at start and scrolled away — and run the log-chain check over a saved log export |
+| `11.1.10.4` | Point the bench at the second scenario file, redeploy, and compare the two log sets |
+| `6.1.10.5` | Save a log that contains a capture block, run the extraction script, and open the result in Wireshark |
+
+- **One deploy session closes all four.** The last three read the same node log, so one restart plus one long enough log download serves all of them — and the capture block only appears once the Room has run a full rotation period.
+- **Two decisions are also a person's, though neither is a task:** whether the phase's retry and duplicate-window defaults stand as chosen, and whether "the team app launches on the display node" belongs to this phase at all — no design document covers it.
 
 ---
 
