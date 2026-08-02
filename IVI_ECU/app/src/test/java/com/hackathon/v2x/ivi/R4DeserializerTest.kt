@@ -89,10 +89,15 @@ class R4DeserializerTest {
         assertEquals(0.0f, state.vehicles.ego.x)
     }
 
-    // ── Test 3: Unknown warningType → "unknown", no exception ────────────────
+    // ── Test 3: Unknown warningType preserved (wire value survives intact) ────
+    //
+    // §4.4 fix: the old code rewrote unknown warningType to "unknown" at parse time,
+    // destroying the log's only evidence of which type arrived. The frozen contract
+    // (and R4AdditiveVersionTest) require the wire value to reach the consumer unchanged.
+    // Classification belongs at the UI edge, not the deserializer.
 
     @Test
-    fun `unknown warningType is degraded to 'unknown' without exception`() {
+    fun `unknown warningType is passed through intact without exception`() {
         val json = """
             {
               "schemaVersion": 1,
@@ -119,7 +124,8 @@ class R4DeserializerTest {
 
         assertTrue("Should succeed even with unknown warningType", result.isSuccess)
         val event = result.getOrThrow() as R4WarningEvent
-        assertEquals(R4WarningEvent.UNKNOWN_WARNING_TYPE, event.warningType)
+        // Wire value must survive intact — UI layer classifies, not the deserializer.
+        assertEquals("future_unknown_type", event.warningType)
     }
 
     // ── Test 4: Malformed JSON → Result.failure, no crash ────────────────────

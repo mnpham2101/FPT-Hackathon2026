@@ -55,14 +55,13 @@ class R4Deserializer {
             return Result.failure(MalformedR4PayloadException(e.message ?: "parse error", bytes))
         }
 
-        // Additive-version safety: unknown warningType degrades gracefully, never throws.
-        val safeEvent = if (event.warningType.isBlank() || !isKnownWarningType(event.warningType)) {
-            safeLogW(TAG, "Unknown warningType='${event.warningType}' — degrading to '${R4WarningEvent.UNKNOWN_WARNING_TYPE}'")
-            event.copy(warningType = R4WarningEvent.UNKNOWN_WARNING_TYPE)
-        } else {
-            event
+        // §4.4 fix: do NOT rewrite the warningType here. The frozen contract requires the wire
+        // value to survive intact to the consumer (R4AdditiveVersionTest asserts this). Unknown
+        // types degrade gracefully at the UI edge, not at parse time. Only log — never overwrite.
+        if (event.warningType.isBlank() || !isKnownWarningType(event.warningType)) {
+            safeLogW(TAG, "Unknown warningType='${event.warningType}' — passing through for UI-layer classification")
         }
-        return Result.success(safeEvent)
+        return Result.success(event)
     }
 
     private fun parseStateMessage(raw: String): Result<R4Message> =
