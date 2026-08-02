@@ -57,6 +57,7 @@ Two standing constraints every `IVI_ECU/` subtask inherits:
 
 - **No hardcoded tunables** (CLAUDE.md principle 5): ports, buffer sizes, timeouts, cadences and scales come from `BuildConfig` + launch override (D10) or from the simulator's env/scenario file — never a literal in a class.
 - **No module declares its own repositories.** `settings.gradle.kts` sets `RepositoriesMode.FAIL_ON_PROJECT_REPOS`; a module `repositories { }` block fails the build (D8).
+- **No `android.util.Log` call on a unit-tested path in `:app`.** The stubbed Android jar throws `RuntimeException("Stub!")` from every `Log` method, so a logging line inside tested logic fails the test for a reason unrelated to the logic — PR #2 hit exactly this and spent a fix commit on it. D2 already keeps `Log` out of `:serializer`/`:observer`; in `:app`, log through `AndroidR4Logger` (`18.5.5.1`) and inject a recording logger in tests. `testOptions { unitTests { isReturnDefaultValues = true } }` is the fallback, not the first move — it silences the symptom for the whole module.
 
 **Status tracking:** as execution proceeds each subtask gains a `**Status:**` line appended in that subtask's own atomic commit, recording done/blocked plus verification evidence. A subtask without a status line is not started. Nothing in this file is started.
 
@@ -80,7 +81,14 @@ Until subtask `4.5.1.4` lands, the only valid test command is `./gradlew :app:te
 
 ## Prior work — the unmerged Phase 5 branch is a salvage source, not an authority
 
-An earlier Phase 5 implementation exists on **`origin/feat/phase5-ivi-hmi-complete`** (tip `1e36cdc`, 2026-08-01, ~2 000 lines, never merged; `feat/phase5-ivi-hmi-dev` is its ancestor). Nothing on `main` carries it, so this plan's "nothing is started" is accurate for the trunk — but no subagent should retype from scratch what is already written and reviewable.
+Two unmerged branches carry an earlier Phase 5 implementation. Nothing on `main` carries either, so this plan's "nothing is started" is accurate for the trunk — but no subagent should retype from scratch what is already written and reviewable.
+
+| Branch | What it is | Contains |
+|---|---|---|
+| **`feat/phase5-ivi-hmi-dev`** = **PR #2** (tip `f7f2f55`) | The open pull request | The R4 data layer only — deserializer, listener service, repository, `WarningViewModel` — plus the Python mock sender and a **2-node test blueprint** (`requirements/blueprint-2node-task51-test.{json,md}`, `plans/doc/task51-2node-blueprint-answer.md`) |
+| **`feat/phase5-ivi-hmi-complete`** (tip `1e36cdc`, 2026-08-01) | A strict superset of PR #2 | Everything above **plus** `MainActivity`, `IviApplication`, `AppModule`, the wired `MainScreen`, wake-on-warning in `MainViewModel`, five more test files, and a deployment doc |
+
+**Review the superset, not the PR**, whenever the two differ — `-complete` is where each file reached its latest state. Analysis of both: [phase5-pr2-review.md](doc/phase5-pr2-review.md).
 
 **The rule for every code subtask below:** read the corresponding file on that branch first (`git show origin/feat/phase5-ivi-hmi-complete:IVI_ECU/<path>`), lift what meets the brief, and write the rest. The brief is the specification; the branch is prior art with no authority. **Do not merge or cherry-pick the branch wholesale** — it predates the mini-blueprint, the module split, and the port freeze, and it carries the defects below.
 
@@ -95,6 +103,7 @@ An earlier Phase 5 implementation exists on **`origin/feat/phase5-ivi-hmi-comple
 | `mock-sender/mock_r4_sender.py` | group 5.6 | **No.** Python, writes its own payloads (D9 forbids), targets `10.88.0.12:5004` — both wrong — and its `state` message shape (`vehicles.ego.position/speed`, key `B`) does not match the frozen R4 schema at all |
 | test files | groups 5.2–5.5 | Case lists are a useful checklist. They test the branch's behaviour, including the two defects above, so no assertion transfers unread |
 | `deployment/phase5-ivi-deploy.md`, `phase5_completion_report.md` | `16.5.8.4`, `5.5.8.1` | Content is useful (a real Skycraft device id, the logcat filters). The **location is not sanctioned** — a repo-root/node-root `deployment/` folder is not in [node-code-layout.md](../.claude/rules/node-code-layout.md); the material lands in `requirements/car-sky-guide/` |
+| PR #2's `blueprint-2node-task51-test.json` + guide | `5.5.8.1`, `5.5.8.2` | **Do not import it.** Its Skycraft node has no `image` artifact block (deploy rejected outright), its bridge `config` is `null` (no `bridgeMode`/`subnet`, so its `10.88.0.x` addresses have no network), and it targets `registry.carsky.io` (502s). Its *ideas* are already adopted: the reduced topology, the display-config fields (`5.5.8.1`) and the approach/leave scenario shape (`4.5.6.4`) |
 
 Two branch-wide constants are wrong against the frozen topology and must not survive into any subtask: the UDP port is **`47300`**, not `5004`, and the IVI address is **`10.99.0.13`**, not `10.88.0.12`.
 
@@ -639,7 +648,7 @@ Then assert: `null` snapshot → trusted (the dev/mock-scene path); `source = "v
 
 **Scope — three files under `IVI_ECU/r4-simulator/scenarios/` (HLD §3.1):**
 
-- `approach.json` — C approaching: `riskState` low → medium → high, `geometry.vehicleC` closing over the steps, and a **first step with `geometry.vehicleC: null`** (C not yet tracked — the renderer's null-C path). This is the scenario the in-Room evidence run uses.
+- `approach.json` — the full lifecycle in one file, because the timeout/restore path is otherwise only reachable by waiting for a stream to stop: a **first step with `geometry.vehicleC: null`** (C not yet tracked — the renderer's null-C path), then C approaching with `riskState` low → medium → high and `geometry.vehicleC` closing, then **C leaving** — distance opening back out with risk falling to `low` — and finally silence for longer than `WARNING_TIMEOUT_MS` so the view times out and the previous mode is restored while the scenario is still running. (The approach/leave shape is taken from PR #2's mock sender, which had it right.) This is the scenario the in-Room evidence run uses.
 - `degrade.json` — the degradation cases in one file: a step with an unknown `warningType` + `schemaVersion: 2` + a junk field (the R4 additive-version case); a step with `object.source: "own_sensor"` (trips the renderer's provenance guard); and a `kind: "raw"` step of non-JSON bytes (the receive loop must survive and keep listening).
 - `state-stream.json` — the optional R15 path: periodic `state` messages with ascending `seq`.
 - Test `r4-simulator/src/test/kotlin/.../ScenariosDifferTest.kt`: all three files load through `ScenarioLoader`; the byte streams produced by `approach.json` and `degrade.json` differ **observably** (assert on decoded field values — `riskState` progression, `warningType`, `object.source` — not just on byte inequality); and extend `ScenarioLoaderTest` to load the three real files.
@@ -755,7 +764,8 @@ Nothing else in that file changes. Add a one-line comment recording that this Ph
 
 - The 3-node composition (Ethernet Bridge `10.99.0.1` / `10.99.0.0/24` `bridgeMode: "linux"`; ADA Container Node `10.99.0.12`; IVI Skycraft Node `10.99.0.13`) and why it is reduced.
 - **The clone-then-delete creation route**, and why it is the only one: neither the REST API nor Nydus "Import from File" can create `ethernet` pins or bridge edges. Clone `trial2_minh_netcheck` → rename `trial3_minh_ivi` → delete the Bench and V2X nodes → **verify the two surviving edges by reading the config back** (`GET /api/v1/blueprints/{id}`), expecting one `ETHERNET`/`OUTPUT` pin per role node at `.12`/`.13`, both wired to the bridge's single `INPUT` pin.
-- **Leave the IVI node's `image` block alone** — artifact `AAOS`, `x9oqgIwzTp1m26SWIQqJt` / `xSU_Q7YJZUxxUgDr4Ugcp`, `0.0.1`, `aarch64`; without it the deploy is rejected with `skycraft requires 'image' config with VM image artifact details`.
+- **Leave the IVI node's `image` block alone** — artifact `AAOS`, `x9oqgIwzTp1m26SWIQqJt` / `xSU_Q7YJZUxxUgDr4Ugcp`, `0.0.1`, `aarch64`; without it the deploy is rejected with `skycraft requires 'image' config with VM image artifact details`. This is the single most common way a hand-authored Skycraft node fails — PR #2's blueprint JSON omits it.
+- **The Skycraft node's other config fields**, which no repo document currently records: PR #2's blueprint JSON carries `prefix`, `gpuBackend: "virglrenderer"`, `displayWidth: 1280`, `displayHeight: 720` on the IVI node. The display size matters — it is the resolution the committed R16 previews are drawn for — and `prefix` is the part prefix the netcheck walkthrough warns not to change. **Read these back off the live baseline node** (`GET /api/v1/blueprints/{id}`) and record the *actual* values rather than copying PR #2's, which are unverified against a real export.
 - The two ADA-node configurations this phase uses: **(a) probe config** — the existing `m1-netcheck:latest` with `NEXT_HOP_HOST=10.99.0.13`, `NEXT_HOP_PORT=47300`, used before the simulator image exists; **(b) evidence config** — the §4 simulator block verbatim (`registry.hackathon-2.carsky.io/m1-r4-sim:latest`, `command: ["./entrypoint.sh"]` *relative*, `capabilities: ["NET_RAW"]`, env `IVI_ECU_HOST=10.99.0.13`, `IVI_ECU_PORT=47300`, `R4_SCENARIO=/app/scenarios/approach.json`, `R4_RATE_HZ=1`, `START_DELAY_S=20`).
 - The §5 verification ladder as a table, and the teardown note (2 concurrent Rooms — tear this one down before the comms track needs a second).
 - Follow [markdown-writing-style](../.claude/skills/markdown-writing-style/SKILL.md); reference requirement numbers, do not restate requirements. **The stale plan's `deployment/phase5-ivi-deploy.md` is void** — a repo-root `deployment/` folder is not a sanctioned location and nothing is written there (HLD §3.2).
@@ -788,7 +798,9 @@ No agent performs these steps; the plan tracks them. Beware walkthrough §4 mist
 4. `adb install -r <apk>` using **today's APK** (`./gradlew assembleDebug` locally, or the `app-debug-apk` artifact from lane `16.5.7.1`). Today's APK has no launcher activity — that is expected and irrelevant: this step proves the **route**, not the app.
 5. `adb logcat -s IVI_V2X` runs and streams (the filter the whole demo's evidence depends on).
 
-**If step 1 or 4 fails**, that is the finding: record it, and every in-Room criterion in group 5.9 degrades to **AAOS emulator** evidence (I3/I4 on an *automotive* system image — a phone image rejects the APK on the `automotive` feature). Escalate to the orchestrating session rather than retrying blind.
+6. **Probe the two REST evidence routes as well**, and record which answer: `GET /api/v1/vms/{roomId}/{iviNodeKey}/screenshot` and `POST /api/v1/vms/{roomId}/{iviNodeKey}/shell`. Both were 502 on the Phase 0 deployment, and PR #2's guide assumes both work — so this is a cheap check of an assumption two documents now rest on. A working `screenshot` endpoint is a **second, independent evidence route** for group 5.9 that does not depend on ADB at all; if ADB is dead and screenshot lives, the phase still produces visual evidence.
+
+**If step 1 or 4 fails**, that is the finding: record it, and every in-Room criterion in group 5.9 degrades to **AAOS emulator** evidence (I3/I4 on an *automotive* system image — a phone image rejects the APK on the `automotive` feature), unless step 6 found the screenshot route alive. Escalate to the orchestrating session rather than retrying blind.
 
 **Acceptance:** the outputs of steps 1–5 (or the exact failure) recorded in `plans/doc/phase5-ivi-run.md`; open items #1 and #2 marked closed-positive or closed-negative with the fallback decision written down. Evidence commit by the orchestrating session after the user confirms.
 
