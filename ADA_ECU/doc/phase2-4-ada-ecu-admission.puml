@@ -1,0 +1,39 @@
+@startuml phase2-4-ada-ecu-admission
+' R13 track admission state machine - PlantUML form of
+' requirements/vehicleC_track_admission_state_machine.png, made unambiguous for implementation.
+' One machine, both sources (own_sensor and v2x_relayed); see phase2-4-ada-ecu-hld.md D3.
+
+title R13 admission state machine - one machine, both perception sources
+
+state "not_tracked" as NT : absent from the store\n(no entry, not an entry with state=not_tracked)
+state "tentative" as TE : in the store, confirming\nhits counter 1..CONFIRM_HITS-1
+state "tracked" as TR : in the store, published to the CRA
+
+[*] --> NT
+
+NT --> TE : update with distance <= GATE_ENTER_M\n(create entry, hits = 1)
+TE --> TE : update with distance <= GATE_ENTER_M\n(hits += 1)
+TE --> TR : hits >= CONFIRM_HITS
+TR --> TR : update with distance <= GATE_EXIT_M\n(refresh lastUpdated)
+
+TE --> NT : update with distance > GATE_ENTER_M\n(lost / out of range - erase, hits = 0)
+TE --> NT : now - lastUpdated > TRACK_TIMEOUT_MS\n(messages stopped - erase, hits = 0)
+TR --> NT : update with distance > GATE_EXIT_M\n(hysteresis drop - erase, hits = 0)
+TR --> NT : now - lastUpdated > TRACK_TIMEOUT_MS\n(messages stopped - erase, hits = 0)
+
+note right of NT
+  Definitions (HLD D3):
+  * update = one admission-relevant observation for a track id:
+      v2x_relayed -> one R2 message (object.distance)
+      own_sensor  -> one detector JSONL line (distance)
+  * GATE_ENTER_M (30 m) admits and holds while tentative;
+    GATE_EXIT_M (35 m) holds only once tracked - the hysteresis band.
+  * TRACK_TIMEOUT_MS is wall-clock, not a message count:
+    the two sources run at independently configured cadences,
+    and "messages stopped" cannot be counted from messages that never arrive.
+  * The store is the sole writer of `state`; the `state` field on
+    incoming detector / R2-derived objects is ignored.
+  * Every edge writes one track_transition event to the R18 [EVT] stream.
+end note
+
+@enduml
