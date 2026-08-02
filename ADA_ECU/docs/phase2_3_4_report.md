@@ -39,7 +39,7 @@ TrackStore
 
 Implemented:
 
-- C++17 ADA runtime scaffold in `ada-ecu/`.
+- C++17 ADA runtime scaffold in `ADA_ECU/`.
 - Config loader for gate and network tunables.
 - R2/R3/R4 local schemas and sample payloads.
 - R3 `TrackStore` with source-aware object state.
@@ -84,7 +84,7 @@ Current behavior:
 Example:
 
 ```sh
-python ada-ecu/tools/video_detector.py --synthetic 2
+python ADA_ECU/tools/video_detector.py --synthetic 2
 ```
 
 ## Phase 4 — Fusion and Warning Runtime
@@ -130,11 +130,11 @@ R4 example shape:
 Commands run for the ADA scope:
 
 ```sh
-cmake --build ada-ecu/build
-ctest --test-dir ada-ecu/build --output-on-failure
-python3 -m py_compile ada-ecu/tools/mock_ivi_receiver.py ada-ecu/tools/mock_v2x_sender.py ada-ecu/tools/video_detector.py ada-ecu/tools/smoke_video_detector.py
-ada-ecu/.venv/bin/python ada-ecu/tools/smoke_video_detector.py
-ada-ecu/build/ada_ecu --config ada-ecu/config/ada-ecu.conf --mock
+cmake --build ADA_ECU/build
+ctest --test-dir ADA_ECU/build --output-on-failure
+python3 -m py_compile ADA_ECU/tools/mock_ivi_receiver.py ADA_ECU/tools/mock_v2x_sender.py ADA_ECU/tools/video_detector.py ADA_ECU/tools/smoke_video_detector.py
+ADA_ECU/.venv/bin/python ADA_ECU/tools/smoke_video_detector.py
+ADA_ECU/build/ada_ecu --config ADA_ECU/config/ada-ecu.conf --mock
 ```
 
 Current result:

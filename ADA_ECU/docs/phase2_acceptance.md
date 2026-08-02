@@ -26,15 +26,15 @@ Phase 2 objective: stand up the ADA skeleton, R3 track store, and R13 admission 
 Local CMake:
 
 ```sh
-cmake -S ada-ecu -B ada-ecu/build
-cmake --build ada-ecu/build
-ctest --test-dir ada-ecu/build --output-on-failure
+cmake -S ADA_ECU -B ADA_ECU/build
+cmake --build ADA_ECU/build
+ctest --test-dir ADA_ECU/build --output-on-failure
 ```
 
 Phase 2 mock smoke:
 
 ```sh
-ada-ecu/build/ada_ecu --config ada-ecu/config/ada-ecu.conf --mock
+ADA_ECU/build/ada_ecu --config ADA_ECU/config/ada-ecu.conf --mock
 ```
 
 Expected smoke output: one R4 `warning` JSON with `warningType = "nlos_obstruction"` and triggering object `source = "v2x_relayed"`.
@@ -42,8 +42,8 @@ Expected smoke output: one R4 `warning` JSON with `warningType = "nlos_obstructi
 ADA → IVI R4 UDP smoke:
 
 ```sh
-python3 ada-ecu/tools/mock_ivi_receiver.py --host 127.0.0.1 --port 46004
-ada-ecu/build/ada_ecu --config ada-ecu/config/ada-ecu.conf --mock
+python3 ADA_ECU/tools/mock_ivi_receiver.py --host 127.0.0.1 --port 46004
+ADA_ECU/build/ada_ecu --config ADA_ECU/config/ada-ecu.conf --mock
 ```
 
 Expected IVI receiver output: one R4 warning with `geometry.vehicleB`, `geometry.vehicleC`, and debug `trackedObjects` containing `own:B` and `v2x:1201:7`.
@@ -51,14 +51,14 @@ Expected IVI receiver output: one R4 warning with `geometry.vehicleB`, `geometry
 External V2X mock sender smoke:
 
 ```sh
-ada-ecu/build/ada_ecu --config ada-ecu/config/ada-ecu.conf --listen-once
-python3 ada-ecu/tools/mock_v2x_sender.py --host 127.0.0.1 --port 46002
+ADA_ECU/build/ada_ecu --config ADA_ECU/config/ada-ecu.conf --listen-once
+python3 ADA_ECU/tools/mock_v2x_sender.py --host 127.0.0.1 --port 46002
 ```
 
 Linux/ARM image build:
 
 ```sh
-docker buildx build --platform linux/arm64 -t ada-ecu:phase2 ada-ecu
+docker buildx build --platform linux/arm64 -t ADA_ECU:phase2 ADA_ECU
 ```
 
 ## Phase 2 Acceptance Mapping

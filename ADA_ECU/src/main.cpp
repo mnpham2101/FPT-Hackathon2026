@@ -1,4 +1,5 @@
 #include <chrono>
+#include <exception>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -62,22 +63,29 @@ void emit_risk_event_if_needed(
 
     const auto warning = ada::build_r4_warning_json(*risk_event, store);
     logger.write("risk_event", warning);
-    r4_sender.send(warning);
-    logger.write("r4_tx", "{\"host\":\"" + config.ivi_host + "\",\"port\":" + std::to_string(config.ivi_port) + "}");
+    try {
+        r4_sender.send(warning);
+        logger.write("r4_tx", "{\"host\":\"" + config.ivi_host + "\",\"port\":" + std::to_string(config.ivi_port) + "}");
+    } catch (const std::exception& exc) {
+        logger.write(
+            "r4_tx_failed",
+            "{\"host\":\"" + config.ivi_host + "\",\"port\":" + std::to_string(config.ivi_port) +
+                ",\"reason\":\"" + exc.what() + "\"}");
+    }
     std::cout << warning << "\n";
 }
 
 }  // namespace
 
 int main(int argc, char** argv) {
-    std::string config_path = "ada-ecu/config/ada-ecu.conf";
+    std::string config_path = "ADA_ECU/config/ada-ecu.conf";
     bool mock = false;
     bool listen_once = false;
     bool receive_r2 = false;
     int max_r2 = 1;
-    std::string r2_sample_path = "ada-ecu/testdata/r2_v2x_object.sample.json";
+    std::string r2_sample_path = "ADA_ECU/testdata/r2_v2x_object.sample.json";
     std::string mock_distances_csv;
-    std::string own_sensor_sample_path = "ada-ecu/testdata/r3_own_sensor.jsonl";
+    std::string own_sensor_sample_path = "ADA_ECU/testdata/r3_own_sensor.jsonl";
 
     for (int i = 1; i < argc; ++i) {
         const std::string arg = argv[i];
@@ -125,27 +133,48 @@ int main(int argc, char** argv) {
         return 4;
     }
 
-    ada::UdpR2Receiver receiver(config.ada_listen_host, config.ada_listen_port);
     if (mock) {
         const auto sample = read_file(r2_sample_path);
         const auto distances = mock_distances_csv.empty() ? std::vector<double>{} : parse_distances(mock_distances_csv);
         if (!distances.empty()) {
             max_r2 = static_cast<int>(distances.size());
         }
-        std::thread sender([&config, sample, distances]() {
-            std::this_thread::sleep_for(std::chrono::milliseconds(50));
-            if (distances.empty()) {
-                ada::send_udp_datagram("127.0.0.1", config.ada_listen_port, sample);
-                return;
+
+        const auto now = std::chrono::duration_cast<std::chrono::milliseconds>(
+                             std::chrono::system_clock::now().time_since_epoch())
+                             .count();
+        if (distances.empty()) {
+            const auto r2_ingest = ada::ingest_r2_payload(sample, now, store, logger);
+            if (!r2_ingest.accepted) {
+                std::cerr << "R2 ingest failed: " << r2_ingest.reason << "\n";
+                return 2;
             }
+            emit_risk_event_if_needed(risk, store, logger, r4_sender, config);
+        } else {
+            int sample_index = 0;
             for (const auto distance : distances) {
-                ada::send_udp_datagram("127.0.0.1", config.ada_listen_port, r2_with_distance(sample, distance));
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                const auto r2_ingest = ada::ingest_r2_payload(
+                    r2_with_distance(sample, distance), now + sample_index * 100, store, logger);
+                if (!r2_ingest.accepted) {
+                    std::cerr << "R2 ingest failed: " << r2_ingest.reason << "\n";
+                    return 2;
+                }
+                emit_risk_event_if_needed(risk, store, logger, r4_sender, config);
+                ++sample_index;
             }
-        });
-        sender.detach();
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(config.miss_limit_ms + config.r2_receive_timeout_ms));
+            const auto wall_now = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                      std::chrono::system_clock::now().time_since_epoch())
+                                      .count();
+            store.expire_source(ada::Source::V2xRelayed, wall_now);
+            logger.write("track_expire_tick", "{\"now\":" + std::to_string(wall_now) + "}");
+            emit_risk_event_if_needed(risk, store, logger, r4_sender, config);
+        }
+        return 0;
     }
 
+    ada::UdpR2Receiver receiver(config.ada_listen_host, config.ada_listen_port);
     int processed = 0;
     auto last_expire_check = std::chrono::steady_clock::now();
     while (processed < max_r2) {
@@ -174,16 +203,6 @@ int main(int argc, char** argv) {
         }
         ++processed;
 
-        emit_risk_event_if_needed(risk, store, logger, r4_sender, config);
-    }
-
-    if (mock && !mock_distances_csv.empty()) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(config.miss_limit_ms + config.r2_receive_timeout_ms));
-        const auto wall_now = std::chrono::duration_cast<std::chrono::milliseconds>(
-                                  std::chrono::system_clock::now().time_since_epoch())
-                                  .count();
-        store.expire_source(ada::Source::V2xRelayed, wall_now);
-        logger.write("track_expire_tick", "{\"now\":" + std::to_string(wall_now) + "}");
         emit_risk_event_if_needed(risk, store, logger, r4_sender, config);
     }
 

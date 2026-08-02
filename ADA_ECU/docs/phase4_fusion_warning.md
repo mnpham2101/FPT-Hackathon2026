@@ -17,20 +17,20 @@ Phase 4 consumes live R2 traffic, updates the R3 store, runs NLOS risk assessmen
 Terminal 1 — IVI receiver:
 
 ```sh
-python3 ada-ecu/tools/mock_ivi_receiver.py --host 127.0.0.1 --port 46004 --timeout 10 --count 2
+python3 ADA_ECU/tools/mock_ivi_receiver.py --host 127.0.0.1 --port 46004 --timeout 10 --count 2
 ```
 
 Terminal 2 — ADA runtime with internal mock R2 sequence:
 
 ```sh
-ada-ecu/build/ada_ecu --config ada-ecu/config/ada-ecu.conf --mock-distances 40,25,24,36
+ADA_ECU/build/ada_ecu --config ADA_ECU/config/ada-ecu.conf --mock-distances 40,25,24,36
 ```
 
 ## Multi-Packet Smoke — External Mock V2X
 
 ```sh
-ada-ecu/build/ada_ecu --config ada-ecu/config/ada-ecu.conf --max-r2 4
-python3 ada-ecu/tools/mock_v2x_sender.py --host 127.0.0.1 --port 46002 --distances 40,25,24,36
+ADA_ECU/build/ada_ecu --config ADA_ECU/config/ada-ecu.conf --max-r2 4
+python3 ADA_ECU/tools/mock_v2x_sender.py --host 127.0.0.1 --port 46002 --distances 40,25,24,36
 ```
 
 Expected behavior:
@@ -47,6 +47,6 @@ Expected behavior:
 This emits one high-risk warning when C enters the gate, then emits one low-risk transition after `miss_limit_ms` because no more R2 messages arrive:
 
 ```sh
-python3 ada-ecu/tools/mock_ivi_receiver.py --host 127.0.0.1 --port 46004 --timeout 10 --count 2
-ada-ecu/build/ada_ecu --config ada-ecu/config/ada-ecu.conf --mock-distances 25
+python3 ADA_ECU/tools/mock_ivi_receiver.py --host 127.0.0.1 --port 46004 --timeout 10 --count 2
+ADA_ECU/build/ada_ecu --config ADA_ECU/config/ada-ecu.conf --mock-distances 25
 ```

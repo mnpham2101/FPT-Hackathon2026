@@ -1,12 +1,103 @@
 # ADA_ECU — ADA ECU node (R3, R12–R15)
 
-Ego's perception and fusion node: detects B from the provided video clips, maintains the R3 track store with the R13 admission state machine, runs the R14 Collision Risk Assessment abstraction with the M1 NLOS plugin, and emits R4 warnings to the IVI. Focus goal is a structured, low-latency architecture — not detection performance.
+ADA is the ego-side perception and fusion node:
 
-- **Requirements:** R3, R12–R15 — [m1-cooperative-awareness.md](../requirements/m1-cooperative-awareness.md) §2.
-- **Node/deploy guide:** [node-ada-ecu.md](../requirements/car-sky-guide/node-ada-ecu.md) — image tag, blueprint config, env vars, pins, verification.
-- **Layout & build rules:** [node-code-layout.md](../.claude/rules/node-code-layout.md) — C++17 core + Python 3.11 detector subprocess, `docker build -t ada-ecu:latest ADA_ECU/`.
-- **Plan:** Phase 2 (skeleton, store, state machine) → Phases 3 ∥ 4 (detection · fusion) of [milestone1.md](../plans/milestone1.md).
+- Phase 2: R3 `TrackedObject` store, R13 admission gate, config, evidence logs, and mock inputs.
+- Phase 3: Python detector subprocess emits R3 JSONL with `source = "own_sensor"`.
+- Phase 4: R2 V2X object input becomes `source = "v2x_relayed"` tracks, then the CRA emits R4 warnings for IVI.
 
-Two processes, one image: the C++17 core (store, CRA, emission, logging) and the Python detector join **only** through argv + exit codes + R3 JSONL over stdout — no FFI, no RPC (report §3(d)/(g)). The R13 gate constants (`GATE_ENTER_M`, `GATE_EXIT_M`) come from env, never literals ([CLAUDE.md](../CLAUDE.md) governing principle 5). The provided video clip(s) are `COPY`d into the image at build time — no live video pin in M1.
+The folder name is intentionally `ADA_ECU/`, matching the project node layout. Older lowercase `ada-ecu/` content has been migrated here.
 
-Empty until Phase 2 — structure is [project-architecture](../.claude/agents/project-architecture.md)'s to create via its HLD.
+## Contracts and runtime
+
+| Area | Files |
+|---|---|
+| Frozen shared contracts | `contracts/`, `src/contracts/`, `tests/contracts/` |
+| Runtime core | `include/ada/`, `src/*.cpp` |
+| Runtime config | `config/ada-ecu.conf` |
+| Detector | `tools/video_detector.py`, `requirements.txt` |
+| Runtime docs | `docs/` |
+| Test data | `testdata/`, `tests/track_store_tests.cpp` |
+
+## Build
+
+Install local dependencies:
+
+```sh
+brew install cmake nlohmann-json
+```
+
+Runtime-only build, useful when network access for FetchContent is unavailable:
+
+```sh
+cmake -S ADA_ECU -B ADA_ECU/build-runtime -DADA_BUILD_CONTRACT_TESTS=OFF
+cmake --build ADA_ECU/build-runtime
+ctest --test-dir ADA_ECU/build-runtime --output-on-failure
+```
+
+Full contract + runtime build:
+
+```sh
+cmake -S ADA_ECU -B ADA_ECU/build
+cmake --build ADA_ECU/build
+ctest --test-dir ADA_ECU/build --output-on-failure
+```
+
+Install detector dependencies in a virtual environment:
+
+```sh
+python3 -m venv ADA_ECU/.venv
+source ADA_ECU/.venv/bin/activate
+python -m pip install -r ADA_ECU/requirements.txt
+```
+
+## Run mock/demo
+
+```sh
+ADA_ECU/build-runtime/ada_ecu --config ADA_ECU/config/ada-ecu.conf --mock
+```
+
+External mock V2X sender:
+
+```sh
+ADA_ECU/build-runtime/ada_ecu --config ADA_ECU/config/ada-ecu.conf --listen-once
+python3 ADA_ECU/tools/mock_v2x_sender.py --host 127.0.0.1 --port 46002
+```
+
+ADA → IVI R4 UDP smoke:
+
+```sh
+python3 ADA_ECU/tools/mock_ivi_receiver.py --host 127.0.0.1 --port 46004
+ADA_ECU/build-runtime/ada_ecu --config ADA_ECU/config/ada-ecu.conf --mock
+```
+
+## Video detector proof
+
+The repo now contains a team-provided demo clip:
+
+```txt
+ADA_ECU/media/ego-b-occluding-c.mp4
+```
+
+Run placeholder video detection:
+
+```sh
+source ADA_ECU/.venv/bin/activate
+python ADA_ECU/tools/video_detector.py --video ADA_ECU/media/ego-b-occluding-c.mp4 --backend placeholder --every-n-frames 30 --limit 5
+```
+
+Run the detector smoke test:
+
+```sh
+python ADA_ECU/tools/smoke_video_detector.py
+```
+
+## CarSky deployment overrides
+
+Local defaults stay developer-friendly. Deployment should override ports through env:
+
+```sh
+V2X_LISTEN_PORT=47200
+IVI_HOST=10.99.0.13
+IVI_PORT=47300
+```

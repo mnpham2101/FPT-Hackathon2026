@@ -17,7 +17,7 @@ def main() -> int:
     make_video = subprocess.run(
         [
             sys.executable,
-            str(repo_root / "ada-ecu/tools/make_sample_video.py"),
+            str(repo_root / "ADA_ECU/tools/make_sample_video.py"),
             "--output",
             str(video_path),
         ],
@@ -32,7 +32,7 @@ def main() -> int:
     detector = subprocess.run(
         [
             sys.executable,
-            str(repo_root / "ada-ecu/tools/video_detector.py"),
+            str(repo_root / "ADA_ECU/tools/video_detector.py"),
             "--video",
             str(video_path),
             "--every-n-frames",

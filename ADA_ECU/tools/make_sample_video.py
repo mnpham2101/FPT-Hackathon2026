@@ -23,7 +23,7 @@ def main() -> int:
         import cv2  # type: ignore
         import numpy as np
     except ModuleNotFoundError:
-        print("OpenCV/numpy not installed. Run: python3 -m pip install -r ada-ecu/requirements.txt", file=sys.stderr)
+        print("OpenCV/numpy not installed. Run: python3 -m pip install -r ADA_ECU/requirements.txt", file=sys.stderr)
         return 1
 
     args = parse_args()

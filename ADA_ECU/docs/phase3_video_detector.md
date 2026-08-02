@@ -12,20 +12,20 @@ Phase 3 replaces the Phase 2 mock own-sensor input with a Python detector subpro
 ## Install
 
 ```sh
-python3 -m pip install -r ada-ecu/requirements.txt
+python3 -m pip install -r ADA_ECU/requirements.txt
 ```
 
 ## Smoke Without OpenCV
 
 ```sh
-python3 ada-ecu/tools/video_detector.py --synthetic 2
+python3 ADA_ECU/tools/video_detector.py --synthetic 2
 ```
 
 ## Run On A Video
 
 ```sh
-python3 ada-ecu/tools/video_detector.py --video path/to/ego_video.mp4 --backend placeholder --every-n-frames 5 --limit 20 > /tmp/r3_own_sensor.jsonl
-ada-ecu/build/ada_ecu --config ada-ecu/config/ada-ecu.conf --mock --own-sensor-sample /tmp/r3_own_sensor.jsonl
+python3 ADA_ECU/tools/video_detector.py --video path/to/ego_video.mp4 --backend placeholder --every-n-frames 5 --limit 20 > /tmp/r3_own_sensor.jsonl
+ADA_ECU/build/ada_ecu --config ADA_ECU/config/ada-ecu.conf --mock --own-sensor-sample /tmp/r3_own_sensor.jsonl
 ```
 
 ## Smoke Video Path
@@ -33,7 +33,7 @@ ada-ecu/build/ada_ecu --config ada-ecu/config/ada-ecu.conf --mock --own-sensor-s
 Generate a tiny synthetic video and validate the detector JSONL contract:
 
 ```sh
-python3 ada-ecu/tools/smoke_video_detector.py
+python3 ADA_ECU/tools/smoke_video_detector.py
 ```
 
 ## Next Step

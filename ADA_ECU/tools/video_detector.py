@@ -77,7 +77,7 @@ def video_samples(video_path: str, every_n_frames: int, limit: int | None) -> It
     try:
         import cv2  # type: ignore
     except ModuleNotFoundError as exc:
-        raise RuntimeError("OpenCV is not installed. Install with: python3 -m pip install -r ada-ecu/requirements.txt") from exc
+        raise RuntimeError("OpenCV is not installed. Install with: python3 -m pip install -r ADA_ECU/requirements.txt") from exc
 
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():

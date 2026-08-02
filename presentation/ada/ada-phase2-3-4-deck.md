@@ -116,8 +116,8 @@ Contract and track-store scaffold
 
 | Check | Evidence |
 |---|---|
-| C++ build | `cmake --build ada-ecu/build` |
-| Unit tests | `ctest --test-dir ada-ecu/build --output-on-failure` |
+| C++ build | `cmake --build ADA_ECU/build-runtime` |
+| Unit tests | `ctest --test-dir ADA_ECU/build-runtime --output-on-failure` |
 | R4 smoke | `ada_ecu --mock` |
 | Logs | `own_sensor_rx`, `r2_rx`, `track_transition`, `risk_event`, `r4_tx` |
 
@@ -140,7 +140,7 @@ Video detector skeleton
 - Smoke test for detector path.
 
 ```sh
-python ada-ecu/tools/video_detector.py --synthetic 2
+python ADA_ECU/tools/video_detector.py --synthetic 2
 ```
 
 ---
