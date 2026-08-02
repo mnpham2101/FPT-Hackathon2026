@@ -22,7 +22,7 @@ import org.junit.Before
 import org.junit.Test
 
 /**
- * Wake-on-warning auto-switch tests for [MainViewModel] (subtask 16.5.2.4).
+ * Wake-on-warning tests: Standby → Warning → Standby (Lead-simplified HMI).
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class MainViewModelTest {
@@ -62,6 +62,43 @@ class MainViewModelTest {
                 ),
             ),
         )
+
+    @Test
+    fun defaultMode_isStandbyView() {
+        assertEquals(DisplayMode.StandbyView, viewModel.currentMode.value)
+    }
+
+    @Test
+    fun standbyToActive_autoSwitchesToWarningView_andRecordsStandby() = runTest {
+        assertEquals(DisplayMode.StandbyView, viewModel.currentMode.value)
+
+        viewModel.currentMode.test {
+            assertEquals(DisplayMode.StandbyView, awaitItem())
+
+            warningState.value = makeActiveWarning()
+            advanceUntilIdle()
+
+            assertEquals(DisplayMode.WarningView, awaitItem())
+            assertEquals(DisplayMode.StandbyView, viewModel.previousMode)
+            assertFalse(viewModel.userOverrodeDuringWarning)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun standbyToWarning_thenIdle_restoresStandby() = runTest {
+        assertEquals(DisplayMode.StandbyView, viewModel.currentMode.value)
+
+        warningState.value = makeActiveWarning()
+        advanceUntilIdle()
+        assertEquals(DisplayMode.WarningView, viewModel.currentMode.value)
+        assertEquals(DisplayMode.StandbyView, viewModel.previousMode)
+
+        warningState.value = WarningUiState.Idle
+        advanceUntilIdle()
+
+        assertEquals(DisplayMode.StandbyView, viewModel.currentMode.value)
+    }
 
     @Test
     fun idleToActive_autoSwitchesToWarningView_andRecordsPreviousMode() = runTest {

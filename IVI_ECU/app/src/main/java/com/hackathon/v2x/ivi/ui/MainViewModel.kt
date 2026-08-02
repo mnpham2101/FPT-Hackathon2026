@@ -10,24 +10,22 @@ import kotlinx.coroutines.launch
 /**
  * Display Area view switcher with wake-on-warning (16.5.2.3 / 16.5.2.4).
  *
- * Collects [uiWarningState] (from [WarningViewModel] when wired):
- * - Idle/Error → Active: force [DisplayMode.WarningView], remember [previousMode]
+ * Default mode is [DisplayMode.StandbyView]. Collects [uiWarningState]:
+ * - Idle → Active: force [DisplayMode.WarningView], remember [previousMode]
  * - Active → Idle: restore [previousMode] unless the user overrode during the warning
  *
- * Constructor takes the warning [StateFlow] directly so unit tests can drive it
- * without a full [WarningViewModel]/ Hilt will pass
- * `warningViewModel.uiWarningState` at integration (16.5.4.1).
+ * Typical demo path: Standby → Warning (God View) → Standby.
  */
 class MainViewModel @JvmOverloads constructor(
     private val uiWarningState: StateFlow<WarningUiState> =
         MutableStateFlow(WarningUiState.Idle),
 ) : ViewModel() {
 
-    private val _currentMode = MutableStateFlow<DisplayMode>(DisplayMode.HomeView)
+    private val _currentMode = MutableStateFlow<DisplayMode>(DisplayMode.StandbyView)
     val currentMode: StateFlow<DisplayMode> = _currentMode.asStateFlow()
 
     /** Mode shown before a warning forced WarningView. Visible to tests. */
-    var previousMode: DisplayMode = DisplayMode.HomeView
+    var previousMode: DisplayMode = DisplayMode.StandbyView
         private set
 
     /**

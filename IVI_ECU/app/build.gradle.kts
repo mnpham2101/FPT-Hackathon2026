@@ -1,5 +1,7 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -25,8 +27,15 @@ android {
 
         // R4 warning auto-dismiss timeout (4.5.1.4 / 17.5.3.5) — externalized, no literals in source.
         buildConfigField("long", "WARNING_TIMEOUT_MS", "10000L")
-        // R4 UDP listener port (4.5.1.3) — externalized, never hardcode 5004 in source.
-        buildConfigField("int", "R4_UDP_PORT", "5004")
+        // R4 UDP port — default 5004 (mock / 2-node). Override via IVI_ECU/local.properties:
+        //   r4.udp.port=47300
+        // for production / mini-ADA Rooms (Lead F2). Never hardcode the port in Kotlin.
+        val localProps = Properties().apply {
+            val f = rootProject.file("local.properties")
+            if (f.exists()) f.inputStream().use { load(it) }
+        }
+        val r4UdpPort = localProps.getProperty("r4.udp.port", "5004")
+        buildConfigField("int", "R4_UDP_PORT", r4UdpPort)
     }
 
     buildTypes {
@@ -99,6 +108,9 @@ dependencies {
     compileOnly("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
     compileOnly("io.mockk:mockk:1.13.13")
     compileOnly("app.cash.turbine:turbine:1.2.0")
+    compileOnly("com.google.dagger:hilt-android-testing:2.58")
+    compileOnly("org.robolectric:robolectric:4.13")
+    compileOnly("androidx.test:core:1.6.1")
     testImplementation("junit:junit:4.13.2")
     testImplementation("androidx.test.ext:junit:1.2.1")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")

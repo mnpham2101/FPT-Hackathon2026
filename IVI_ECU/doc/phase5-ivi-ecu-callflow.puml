@@ -1,0 +1,59 @@
+@startuml phase5-ivi-ecu-callflow
+title Phase 5 — IVI R4 ingest → observer → HMI (R4 consumer, R16, R17)\nADA or mock-sender → UDP JSON → parse → SharedFlow → ViewModels → Compose
+
+actor "ADA ECU\n(nlohmann/json)\nor mock-sender\n(Python)" as Producer
+participant "R6 Ethernet Bridge" as Bridge
+box "IVI Skycraft AAOS (Kotlin)" #F8F8F8
+  participant "R4ListenerService\n(UDP adapter,\nDispatchers.IO)" as Svc
+  participant "R4Deserializer\n(kotlinx.serialization)" as Deser
+  participant "R4Repository\n(observer)" as Repo
+  participant "WarningViewModel\n/ MainViewModel\n(UI logic)" as VM
+  participant "MainScreen +\nIviWarningViewSeam\n→ CanvasWarningView\n(R16/R17 UI)" as UI
+end box
+
+== Boot ==
+Svc -> Svc : bind DatagramSocket\n(BuildConfig.R4_UDP_PORT:\n5004 mock / 47300 production)
+Svc -> Repo : attachToService(r4EventFlow)
+VM -> Repo : collect warningEvents /\ncurrentState / errors
+
+== Warning path (type=warning) ==
+Producer -> Bridge : UDP datagram\n(raw UTF-8 JSON bytes;\nno M1 app Ethernet header)
+Bridge -> Svc : datagram to IVI pin IP:port
+Svc -> Svc : ByteArray[0..length)\n→ UTF-8 string (IO thread)
+Svc -> Deser : deserialize(json)
+alt known warningType (e.g. nlos_obstruction)
+  Deser --> Svc : R4WarningEvent\n(object + geometry + riskState)
+  Svc -> Repo : emit on SharedFlow
+  Repo -> VM : warningEvents
+  VM -> VM : map to WarningUiState;\nwake Warning View (R16)
+  VM -> UI : StateFlow update
+  UI -> UI : Render via IviWarningViewSeam\nego / B / ghost C (R17);\nguard if object.source != v2x_relayed
+else unknown warningType (additive-version)
+  Deser --> Svc : R4WarningEvent\n(degraded / unknown type;\nno throw)
+  Svc -> Repo : emit
+  Repo -> VM : warningEvents
+  VM -> UI : generic banner;\nprocess stays alive
+end
+
+== State path (type=state, optional R15) ==
+Producer -> Bridge : UDP JSON type=state
+Bridge -> Svc : datagram
+Svc -> Deser : deserialize
+Deser --> Svc : R4StateMessage (seq)
+Svc -> Repo : emit
+Repo -> Repo : last-value-wins\non currentState by seq
+Repo -> VM : currentState
+VM -> UI : scene refresh if Idle /\nDisplay Area allows
+
+== Malformed / empty payload ==
+Producer -> Svc : bad bytes / empty
+Svc -> Deser : deserialize
+Deser --> Svc : failure (no crash)
+Svc -> Repo : R4ServiceError (optional)
+Repo -> VM : error path / logcat
+VM -> UI : no forced wake;\nprior mode retained
+
+== Auto-clear ==
+VM -> VM : WARNING_TIMEOUT_MS\n(BuildConfig) elapses
+VM -> UI : restore prior DisplayMode\nunless user overrode
+@enduml
