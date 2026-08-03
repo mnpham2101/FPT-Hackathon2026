@@ -74,7 +74,7 @@ Plus, new from the update and carrying no milestone box: media layer ≤ 60 MB w
 
 ### Phase 4 — ADA: obscured-object fusion, risk, warning (R13–R15)
 
-**Full decomposition:** [phase4_tasks.md](phase4_tasks.md) — **11 task groups, 46 subtasks** (24 agent incl. 1 optional, 7 [[car-sky]], 11 user-manual, 4 of the agent set gated on user ratification). Groups 4.9–4.11 were added 2026-08-03 as stage 2 of [walkthrough-driven-delivery.md](../.claude/rules/walkthrough-driven-delivery.md) over [deploy-ada-ecu-walkthrough.md](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md); the 2026-08-02 video/dashcam update touched none of this phase.
+**Full decomposition:** [phase4_tasks.md](phase4_tasks.md) — **11 task groups, 46 subtasks** (26 agent incl. 1 optional and the 4 gated on user ratification, 9 [[car-sky]], 11 user-manual). Groups 4.9–4.11 were added 2026-08-03 as stage 2 of [walkthrough-driven-delivery.md](../.claude/rules/walkthrough-driven-delivery.md) over [deploy-ada-ecu-walkthrough.md](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md); the 2026-08-02 video/dashcam update touched none of this phase.
 
 **Input.** Phase 2 complete, with the CRA seam frozen; a live or mocked R2 source (`tools/mock_v2x_sender.py`, or the deployed Phase 1 chain for live evidence). **Phase 3 is not an input** — the detector's own-sensor B track is interchangeable with the Phase 2 fixture everywhere except the live deployed runs in groups 4.10–4.11 and 4.6, which need the real detector because half of § Output rests on a `tracked` `own_sensor` B.
 
