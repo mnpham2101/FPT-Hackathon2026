@@ -1,6 +1,6 @@
 # Deploying a Blueprint on CarSky — End-to-End Walkthrough
 
-Worked example: the **netcheck** connectivity test ([tools/netcheck/](../../tools/netcheck/)), from source file to running Room. Every step **M1–M12** of [baseline-connectivity-smoke-test.md](../../plans/doc/research_notes/baseline-connectivity-smoke-test.md) is covered here in order — several are performed by an agent rather than by hand, and [§5](#5-work-division-between-ai-and-human) states which; that note owns the test's *design* (why each check exists, pass criteria C1–C5), this guide owns the *doing*.
+Worked example: the **netcheck** connectivity test ([tools/netcheck/](../../tools/netcheck/)), from source file to running Room. Every step **M1–M12** of [baseline-connectivity-smoke-test.md](../../plans/doc/research_notes/baseline-connectivity-smoke-test.md) is covered here in order — several are performed by an agent rather than by hand, and [§5](#5-work-division-between-ai-and-human) states which; that note owns the test's *design* (why each check exists, and the [pass criteria C1–C5](../../plans/doc/research_notes/baseline-connectivity-smoke-test.md#2-pass-criteria) every later mention refers to), this guide owns the *doing*.
 
 Use it as the template for deploying any container node — the ECU images follow the identical path with different images and env.
 
@@ -306,7 +306,7 @@ Five notes on the rows above:
 
 ## 6. Expected outputs and acceptance
 
-One output: the node logs read at M10. They carry all five pass criteria.
+One output: the node logs read at M10. They carry all five pass criteria **C1–C5**, defined in [baseline-connectivity-smoke-test.md § 2](../../plans/doc/research_notes/baseline-connectivity-smoke-test.md#2-pass-criteria) — restated below only as what to accept.
 
 | Output | Retrieved at | Accepted when |
 |---|---|---|
@@ -342,6 +342,6 @@ Every row below cost real time on the first run (2026-07-31). They are ordered b
 | GitHub secret | `CARSKY_ZOT_API_KEY` (`zak_…`) |
 | Node addresses | bench `.10` · V2X `.11` · ADA `.12` · IVI `.13` on `10.99.0.0/24` |
 | Ports | bench→V2X `47100` · V2X→ADA `47200` · ADA→IVI `47300` |
-| Pass criteria | C1 Running · C2 no `[ERR]` · C3 live log · C4 `[CAP]` capture · C5 accumulated stamps |
+| Pass criteria ([defined here](../../plans/doc/research_notes/baseline-connectivity-smoke-test.md#2-pass-criteria)) | C1 Running · C2 no `[ERR]` · C3 live log · C4 `[CAP]` capture · C5 accumulated stamps |
 
 *Screenshots referenced above live in `requirements/car-sky-guide/images/`; capture them from Nydus when exporting this guide to slides.*
