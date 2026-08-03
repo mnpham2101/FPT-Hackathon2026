@@ -1,6 +1,6 @@
-# IVI ECU — component architecture
+# IVI ECU — high-level design (R4, R16, R17)
 
-> Component-level design of the IVI node (R4, R16, R17): every component this node runs, its role, input and output, where it lives on disk, and how the components connect. Frozen contract: [contracts/r4-ada-ivi.schema.json](../../contracts/r4-ada-ivi.schema.json). Build, install and verification procedure: [deploy-ivi-hmi-walkthrough.md](../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md). Node facts — VM artifact, pin, address: [node-ivi-ecu.md](../../requirements/car-sky-guide/node-ivi-ecu.md).
+> **The IVI node's HLD, and the sole design authority for `IVI_ECU/`.** Every component this node runs, its role, input and output, where it lives on disk, and how the components connect. Frozen contract: [contracts/r4-ada-ivi.schema.json](../../contracts/r4-ada-ivi.schema.json). Build, install and verification procedure: [deploy-ivi-hmi-walkthrough.md](../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md). Node facts — VM artifact, pin, address: [node-ivi-ecu.md](../../requirements/car-sky-guide/node-ivi-ecu.md).
 >
 > Diagrams: [ivi-ecu-module-architecture.svg](research_notes/ivi-ecu-module-architecture.svg) (component map) · [phase5-ivi-callflow.puml](phase5-ivi-callflow.puml) (sequence) · [phase5-ivi-components.puml](phase5-ivi-components.puml) (module map).
 
@@ -9,11 +9,12 @@
 `IVI_ECU/` only — the consumer side of R4 and everything downstream of it, up to the rendered God View and the log lines that evidence it.
 
 - **In scope:** the five Gradle modules of this folder, the components inside them, the seams between them, the node's one network endpoint, and the test equipment that exercises the node on its own.
-- **Out of scope:** how the R4 message is produced — this node depends on the `ADA-ECU` interface, never on a particular producer; the deploy/install/verify procedure, which the walkthrough owns; the task decomposition, which the plan owns.
+- **Out of scope:** how the R4 message is produced — this node depends on the `ADA-ECU` interface, never on a particular producer; the deploy/install/verify procedure, which the walkthrough owns; the task and subtask decomposition, which the plan owns.
 
-**This document is binding for work inside `IVI_ECU/`.** It fixes the component set and each component's single responsibility, the module graph and its direction, the target path of every deliverable, the seams and their interfaces, the configuration keys and their defaults, and the shape of the evidence log lines.
+**This document is the design authority for work inside `IVI_ECU/`, and no other design document governs this node.** It fixes the component set and each component's single responsibility, the module graph and its direction, the target path of every deliverable, the seams and their interfaces, the configuration keys and their defaults, and the shape of the evidence log lines.
 
-- **Planning cites it, and does not restate it.** A task or subtask brief links the section that governs its step; the definitions stay here, so a change lands in one place.
+- **Task planning decomposes from this document and the requirements report, and from nothing else.** [[project-planner]] builds the IVI task tree from these two inputs — requirement numbers and acceptance from [m1-cooperative-awareness.md](../../requirements/m1-cooperative-awareness.md) (R4, R16, R17), everything structural from here: which component a subtask creates, the path it lands at, the interface it must satisfy, and the log line or rendered scene that closes it. Deployment and verification subtasks come from the walkthrough, per [walkthrough-driven-delivery.md](../../.claude/rules/walkthrough-driven-delivery.md).
+- **Plans cite, and do not restate.** A subtask brief links the section that governs its step; the definitions stay here, so a change lands in one place.
 - **Implementation does not extend it silently.** A component, module, file location or configuration key not designated here is not created ad hoc — the design changes first.
 - **What overrides it:** [m1-cooperative-awareness.md](../../requirements/m1-cooperative-awareness.md) (R4, R16, R17 and the §3 tech stack), the frozen R4/R3 contracts, and — for the build/deploy/verify procedure — the walkthrough. On conflict, the CLAUDE.md authority order decides.
 
