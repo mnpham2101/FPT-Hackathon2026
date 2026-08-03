@@ -42,7 +42,7 @@ Nothing may be used before it is defined, and a planner must be able to reach an
 | 10 | **The contract** | always | The node's message schema — direction, transport, encoding, normative schema file, node copy, freeze status, and a field table per message kind |
 | 11 | **Tech stack, build and CI** | always | Languages, libraries and versions traced to the report; the build commands; the CI lanes |
 | 12 | **Test strategy** | always | The configurations that exercise the node, and the expected observables with the component that produces each |
-| 13 | **Design decisions** | always | `D1…Dn`, each a titled decision with its rationale and its rejected alternative |
+| 13 | **Design decisions** | always | A link to the node's decision record, `doc/<node-slug>-design-decisions.md`, and one line naming what D1…Dn cover |
 
 A header blockquote precedes §1: what the document is, the frozen contract, the procedure documents beside it, and the diagram sources.
 
@@ -54,7 +54,7 @@ A header blockquote precedes §1: what the document is, the frozen contract, the
 - **§6 gives each component one responsibility.** Role, input, output, in a table. Work that fits no row belongs to a component the design has not defined yet — a design change, not an implementer's judgement call.
 - **§10 names which message set the contract is, and its direction.** Say it explicitly — "the message set from ADA-ECU" — and point at the normative schema file plus the node's byte-synced copy. A contract section that describes a format without naming producer and consumer leaves the reader guessing who sends it. A node that both consumes and produces gets one subsection per direction.
 - **§12's observables are the acceptance evidence.** Log lines and rendered output, each traced to the component that produces it. Where more than one configuration exists (mock producer versus real), state that the expected output is identical in both, so a difference is a finding about the other node.
-- **§13 is binding, not advisory.** A decision is revisited by changing the section, never by an implementation that departs from it.
+- **§13 is a pointer; the decisions live in a companion file.** `<Node_Folder>/doc/<node-slug>-design-decisions.md` holds `D1…Dn`, each a titled decision with its rationale and its rejected alternative — worked example: [ivi-ecu-design-decisions.md](../../IVI_ECU/doc/ivi-ecu-design-decisions.md). The HLD cites decisions by number wherever they bind a component, and keeps §13 to the link plus one line of coverage. Decisions are binding: one is revisited by changing its entry, never by an implementation that departs from it.
 
 ## Diagrams
 
@@ -64,6 +64,12 @@ A header blockquote precedes §1: what the document is, the frozen contract, the
 
 ## Writing rules
 
+An HLD is read under context pressure, by a planner writing briefs and by an implementer about to write code. Every extra clause costs both. [markdown-writing-style](../skills/markdown-writing-style/SKILL.md) applies in full; these are what it means here, and [ivi-ecu-hld.md](../../IVI_ECU/doc/ivi-ecu-hld.md) is the style reference as well as the structural one.
+
+- **One claim per sentence.** Split a sentence carrying two facts joined by "and", "which" or an em-dash aside. Long compound sentences are the main defect this rule exists to catch.
+- **Tables carry the facts; prose carries only what a table cannot.** A component's role, input and output belong in its row. A lead-in of one or two sentences per section is the budget.
+- **Say a fact once, in the section that owns it, and cite `§n` elsewhere.** Two statements of one fact become two answers the moment either is edited. A mapping table restating what a tree and a component table already show is deleted, not maintained.
+- **No filler openers.** Cut "It is worth noting", "Note that", "In other words", and any sentence that restates the one before it.
 - **Current state only — no history.** No committed-versus-missing tables, no decision dates, no "now", "already", "until X exists", "must change". Describe the design, not its progress. Design rationale is not history: "rejected alternative X because Y" belongs in §13; "we used to do X" belongs nowhere.
 - **Reference, never repeat.** Requirement definitions stay in the report, procedures stay in the walkthrough, platform facts stay in the node reference — cited by section.
 - **No slang, no hedging.** "an interface rather than a concrete producer", not "an interface, not a box".
