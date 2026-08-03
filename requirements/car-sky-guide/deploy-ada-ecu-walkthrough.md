@@ -64,7 +64,7 @@ The ADA ECU's own software must exist before the procedure is run. Each row is p
 | The Python detector | Reads the baked-in clip, emits one tracked-object JSON line per detection on stdout, and never mints a relayed source or a `v2x:` track id |
 | `ADA_ECU/models/yolo11n.onnx` | The committed detection model the detector loads |
 | `ADA_ECU/media/ego-b-occluding-c.mp4` | The clip ego's detector runs on, containing vehicle B and never vehicle C |
-| `ADA_ECU/entrypoint.sh` and `capture.sh` | Start the capture alongside the core, so the node's own log carries `[CAP]` lines. Optional in the isolated Room — [§5.4](#54-traffic-evidence-and-wireshark-scope) takes its traffic evidence on the sink node instead. Not optional on the full blueprint — [§5.6](#56-the-full-blueprint-route) |
+| `ADA_ECU/entrypoint.sh` and `capture.sh` | Start the capture alongside the core, so the node's own log carries `[CAP]` lines. **Required, not optional:** the node's `command` is `./entrypoint.sh`, so an image without it dies at start |
 
 ### 1.4 Blueprints
 
@@ -207,11 +207,11 @@ Four nodes. Every address and port is the value the full blueprint uses, so the 
 Two notes on the ADA node's block:
 
 - The env set above is the subset this Room needs. The node's full configuration surface, with defaults and meanings, is in [the node's design document](../../ADA_ECU/doc/phase2-4-ada-ecu-hld.md); the node's own config block is owned by [node-ada-ecu.md § Blueprint node config](node-ada-ecu.md#blueprint-node-config).
-- `command: ["./entrypoint.sh"]` and `capabilities: ["NET_RAW"]` assume the image ships the capture entrypoint. **Confirm both against [node-ada-ecu.md](node-ada-ecu.md) before deploying**; if the delivered image has no `entrypoint.sh`, leave `command` empty so the image's own default runs, and drop `capabilities`. The checks of [§5](#5-run-the-checks) still pass in this Room — the traffic evidence is taken on the sink node.
+- **`command: ["./entrypoint.sh"]` and `capabilities: ["NET_RAW"]` are unconditional** — they are part of the ADA ECU node config in every blueprint, isolated or full, and [node-ada-ecu.md § Blueprint node config](node-ada-ecu.md#blueprint-node-config) is the authority for both. There is no variant that omits them: the image must ship `entrypoint.sh` and `capture.sh` ([§1.3](#13-deliverable-prerequisites)), and a node whose image lacks them dies at start rather than falling back.
 
 ### 2.3 The bench image — one image, two roles
 
-**One image, `m1-ada-bench:latest`, serving both bench nodes**, with the role picked by the `ROLE` environment variable. One image means one build, one push, one tag to keep straight — the pattern [tools/netcheck/](../../tools/netcheck/) already uses for three roles.
+**One image, `m1-ada-bench:latest`, serving both bench nodes**, with the role picked by the `ROLE` environment variable. One image means one build, one push, one tag to keep straight — the pattern [tools/netcheck/](../../tools/netcheck/) already uses for three roles. Two images reach this Room in total: this one and `m1-ada-ecu:latest`.
 
 The image is Alpine plus `python3` and `tcpdump`. Its entrypoint starts `capture.sh` in the background and the role script in the foreground, so the pod's lifetime is the role script's lifetime and a deploy alone produces evidence. No shell session is ever needed.
 
@@ -400,7 +400,7 @@ Click a node, edit in the Inspector, click empty canvas to commit. Set and confi
 | ADA ECU | `registry.hackathon-2.carsky.io/m1-ada-ecu:latest` | — |
 | IVI Sink (mock) | `registry.hackathon-2.carsky.io/m1-ada-bench:latest` | `ROLE=ivi_mock` |
 
-This step stays a hand edit even when [§4.1](#41-create-the-blueprint) created the nodes with config attached: **the API has no update route**, so every correction after creation is an Inspector edit.
+All three nodes take `command: ["./entrypoint.sh"]` and `capabilities: ["NET_RAW"]`. This step stays a hand edit even when [§4.1](#41-create-the-blueprint) created the nodes with config attached: **the API has no update route**, so every correction after creation is an Inspector edit.
 
 Four values decide whether anything works at all, and each fails in a way that looks like something else:
 
@@ -586,13 +586,13 @@ Expected on the sink:
 
 ### 5.4 Traffic evidence and Wireshark scope
 
-**In scope here: the `[CAP]` lines in the sink node's log.** The bench image runs `tcpdump` alongside the sink, so each warning datagram appears as one text line naming source address, destination address, port and byte length. That line, paired with the `[RX]` line beside it, is this procedure's traffic evidence, and it is what [§5.3](#53-check-3--the-warning-reaches-the-ivi-stand-in-carrying-both-vehicles) accepts.
+**In scope here: the `[CAP]` lines in the node logs.** Every container node runs `tcpdump` alongside its program, so each datagram appears as one text line naming source address, destination address, port and byte length. The sink's `[CAP]` line, paired with the `[RX]` line beside it, is this procedure's traffic evidence, and it is what [§5.3](#53-check-3--the-warning-reaches-the-ivi-stand-in-carrying-both-vehicles) accepts; the ADA node's own capture is the same datagram seen at the sending end.
 
 **Out of scope here: producing a `.pcap` file.** This procedure writes no capture file and yields nothing to open in Wireshark. The route that does — a rotating `tcpdump -w` whose closed files leave the node base64-encoded in the log, and the host-side script that decodes them — is described in [traffic-capture-wireshark.md](traffic-capture-wireshark.md). Use it when a `.pcap` is wanted as supporting evidence; it is not a pass criterion of any check above.
 
 If a `.pcap` is produced, the warning payload is plain JSON and reads directly in Wireshark's packet-bytes pane. Filter `udp.port == 47300`.
 
-The `[CAP]` capture needs `NET_RAW` on the sink node. Without it, `capture.sh` falls back to packet counters and the wire evidence weakens to "bytes moved on this interface" — the `[RX]` line still stands, and the `[CAP]` criterion of [§5.3](#53-check-3--the-warning-reaches-the-ivi-stand-in-carrying-both-vehicles) does not.
+Every `[CAP]` line depends on the platform actually granting the `NET_RAW` the node config requests. Where it is not granted, `capture.sh` falls back to packet counters and the wire evidence weakens to "bytes moved on this interface" — the `[RX]` line still stands, and the `[CAP]` criterion of [§5.3](#53-check-3--the-warning-reaches-the-ivi-stand-in-carrying-both-vehicles) does not.
 
 ### 5.5 Retune when no warning is emitted
 
@@ -623,7 +623,7 @@ For full-chain work, the 5-node blueprint replaces both bench containers with th
 - **The ADA node is not reconfigured.** Its image, `command`, `capabilities`, env, address and port are the values of [§2.2](#22-the-blueprint-definition-and-where-it-lives) unchanged — that is why the isolated blueprint uses the full blueprint's addresses. Switching between the two touches the neighbours only.
 - **Checks 1 and 2 are unchanged**, and read the same ADA log lines. What changes is where the relayed traffic originates: the real V2X ECU, driven by the bench scenario, in place of the emitter — so `STATION_ID`, `OBJECT_ID` and the distance profile come from that scenario rather than from node env, and [§5.5](#55-retune-when-no-warning-is-emitted)'s `MIN_DISTANCE_M` lever is not available.
 - **Check 3 has no sink log.** The Android node runs no container and produces none of the `[RX]`, `[CHECK]`, `[SUMMARY]` or `[CAP]` lines. Consumer-side evidence moves to the guest's own log, and that route belongs to [deploy-ivi-hmi-walkthrough.md § Verify the HMI and the logging](deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging).
-- **The ADA node's own capture stops being optional.** With no sink to capture on, the `[CAP]` evidence for the outgoing warning can only come from this node — so its `entrypoint.sh`, `capture.sh` and `capabilities: ["NET_RAW"]` are required rather than nice to have ([§1.3](#13-deliverable-prerequisites)).
+- **The ADA node's own capture becomes the only wire evidence** for the outgoing warning, because there is no sink node to capture on. Its `[CAP]` lines carry the whole traffic claim on this blueprint.
 - **Room budget:** the full blueprint is one deployment like any other, and only two run at once.
 
 ### 5.7 Tear down
@@ -644,7 +644,8 @@ Save all three log files before deleting — the log route returns nothing once 
 | A container node stuck in `Provisioning` | The image could not be pulled | [§3.3](#33-confirm-the-run-passed-and-the-images-landed), then the node's `image` field. [carsky-room-diagnostics](../../.claude/skills/carsky-room-diagnostics/SKILL.md) |
 | `validate` returns 422 `Node "…" has no pins` | The pins are not drawn yet | [§4.2](#42-wire-the-ethernet-pins) |
 | Log call returns 500 listing two container names | `container` was omitted from the query | Add `?container=user` |
-| A bench node's restart count climbs | `ROLE` is misspelled, or `command` is an absolute path | `v2x_mock` / `ivi_mock` exactly; `./entrypoint.sh`, not `/entrypoint.sh` |
+| A node's restart count climbs, no `[BOOT]` line | The image ships no `entrypoint.sh`, or `command` is an absolute path | The image must carry it ([§1.3](#13-deliverable-prerequisites)); use `./entrypoint.sh`, not `/entrypoint.sh` |
+| A bench node's restart count climbs after `[BOOT]` | `ROLE` is misspelled | `v2x_mock` / `ivi_mock` exactly |
 | Bench logs `[TX]`, ADA log is empty | Wrong target address or port | One digit in `TARGET_HOST` is the usual cause |
 | ADA log shows `parse_reject` on every datagram | The emitter's message shape has drifted from the contract | Fix the emitter against [r2-v2x-object.schema.json](../../ADA_ECU/contracts/r2-v2x-object.schema.json) |
 | `detector_spawn` present, no `own_sensor_ingest` | The detector started and produced nothing | Check `VIDEO_CLIP_PATH` and `MODEL_PATH` resolve inside the image |
@@ -653,7 +654,7 @@ Save all three log files before deleting — the log route returns nothing once 
 | Both tracks `tracked`, no `r4_tx` | The risk level never changed | [§5.5](#55-retune-when-no-warning-is-emitted) |
 | `r4_tx` present, sink silent | The datagram is not reaching the sink | Check `IVI_ECU_HOST` / `IVI_ECU_PORT` against the sink's `LISTEN_PORT`; read the sink's `[CAP]` lines |
 | Sink reports `rejected` climbing | Datagrams that are not valid JSON are arriving on `47300` | Another sender is on that port, or the ADA node is emitting malformed output — read one rejected payload |
-| No `[CAP]` lines anywhere, `[CAP] no NET_RAW` instead | The node has no `NET_RAW` capability | Add `"capabilities": ["NET_RAW"]` to that node and redeploy |
+| `[CAP] no NET_RAW` in place of capture lines | The node's config is missing `capabilities`, or the platform did not grant it | Confirm `"capabilities": ["NET_RAW"]` in the read-back of [§4.4](#44-read-the-stored-config-back); if it is there, the platform refused it — item 12 of [§8.1](#81-confirm-before-relying-on-these) |
 | Edits to the blueprint have no effect on the next deploy | The `<name>-deploy` snapshot was edited | Edit the original blueprint |
 
 ---
@@ -719,7 +720,7 @@ On the full blueprint, outputs 1 and 2 are accepted identically and output 3 is 
 
 ### 8.1 Confirm before relying on these
 
-Every point below can make a step fail without this guide being wrong. Confirm each at the step named before scheduling work that depends on it.
+Every point below can make a step fail without this guide being wrong. Confirm each at the step named before scheduling work that depends on it. Numbers are stable: a point that stops needing confirmation stays in place, marked settled, rather than renumbering the rest.
 
 | # | Point | Where it bites |
 |---|---|---|
@@ -729,12 +730,12 @@ Every point below can make a step fail without this guide being wrong. Confirm e
 | 4 | The `[EVT]` event names and payload fields the checks grep for. They are what the node's design specifies, not what a run has produced | [§5.1](#51-check-1--the-relayed-message-is-received-and-raises-its-event), [§5.2](#52-check-2--both-vehicles-are-in-the-track-store) |
 | 5 | The bench image, its two roles, its env names and its log-line shapes — specified in [§2.3](#23-the-bench-image--one-image-two-roles), not yet written | [§3.1](#31-write-the-bench-scripts), [§5.3](#53-check-3--the-warning-reaches-the-ivi-stand-in-carrying-both-vehicles) |
 | 6 | `linux/arm64` wheel availability for the detector's Python dependencies. A missing wheel means a source build under the runner's emulation, which can exhaust the job timeout or fail outright | [§3.2](#32-build-and-push-the-images-on-ci) |
-| 7 | The ADA node's `command` and `capabilities` values against [node-ada-ecu.md](node-ada-ecu.md). If that reference names a different `command` and no capabilities, resolve the discrepancy with its owner before deploying | [§2.2](#22-the-blueprint-definition-and-where-it-lives), [§4.3](#43-configure-each-nodes-image) |
+| 7 | **Settled — nothing to confirm.** The ADA node's `command` is `["./entrypoint.sh"]` and its `capabilities` are `["NET_RAW"]`, unconditionally, and [node-ada-ecu.md § Blueprint node config](node-ada-ecu.md#blueprint-node-config) states both. Whether the platform honours the capability at run time is item 12 | — |
 | 8 | The blueprint file at `requirements/car-sky-guide/blueprint-ada-isolated.json`, which has not been created | [§2.2](#22-the-blueprint-definition-and-where-it-lives) |
 | 9 | That a four-node blueprint created over `/batch` accepts hand-drawn pins afterwards and then validates. Adding nodes over the API is a proven route; this particular blueprint has not been built by it | [§4.1](#41-create-the-blueprint), [§4.2](#42-wire-the-ethernet-pins) |
 | 10 | That the relayed profile defaults produce a risk-level change against the clip's actual ego-to-B range. They may not, in which case no warning is emitted and [§5.5](#55-retune-when-no-warning-is-emitted) is on the critical path rather than a fallback | [§5.2](#52-check-2--both-vehicles-are-in-the-track-store), [§5.5](#55-retune-when-no-warning-is-emitted) |
 | 11 | The detector's frame rate on the Room's CPU allocation. If it falls far below the configured stride, ego's own track may expire between updates and the composed geometry disappears | [§5.2](#52-check-2--both-vehicles-are-in-the-track-store) |
-| 12 | That `NET_RAW` is granted on this deployment. Without it the `[CAP]` criterion of [§5.3](#53-check-3--the-warning-reaches-the-ivi-stand-in-carrying-both-vehicles) cannot be met by any route in this document | [§5.4](#54-traffic-evidence-and-wireshark-scope) |
+| 12 | **That the platform grants `NET_RAW` at run time.** Every node requests it unconditionally, but no deployment has yet shown a `[CAP]` line proving the request was honoured. Where it is refused, the `[CAP]` criterion of [§5.3](#53-check-3--the-warning-reaches-the-ivi-stand-in-carrying-both-vehicles) cannot be met by any route in this document | [§5.4](#54-traffic-evidence-and-wireshark-scope) |
 | 13 | A free Room slot. Two deployments run at once across the whole account, and this Room holds one for its full duration | [§4.5](#45-deploy) |
 
 ---
@@ -750,6 +751,7 @@ Every point below can make a step fail without this guide being wrong. Confirm e
 | Blueprint definition | `requirements/car-sky-guide/blueprint-ada-isolated.json` |
 | Node addresses | V2X bench `.11` · ADA `.12` · IVI sink `.13`, on `10.99.0.0/24` with the bridge at `.1` |
 | Ports | bench → ADA `47200` · ADA → sink `47300` |
+| Every container node | `command: ["./entrypoint.sh"]` · `capabilities: ["NET_RAW"]` |
 | Role values | `ROLE=v2x_mock` on `.11` · `ROLE=ivi_mock` on `.13` |
 | Log route | `GET /api/v1/deployments/{roomId}/logs/{nodeKey}?container=user` — `container` is mandatory |
 | Event names greped | `r2_ingest` · `own_sensor_ingest` · `track_transition` · `parse_reject` · `assessment` · `risk_transition` · `r4_tx` |
