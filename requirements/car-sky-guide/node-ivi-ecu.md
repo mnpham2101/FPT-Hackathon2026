@@ -4,6 +4,7 @@
 - **Virtualization level:** Full vECU — developed fully; the VM artifact itself ships in the starter pack (report §1 node table)
 - **Focus goal:** God view of the 3 vehicles, every instance displayed
 - **Part of:** [carsky-4-node-blueprint.md](carsky-4-node-blueprint.md)
+- **Bring-up procedure:** [ivi-hmi-walkthrough.md](ivi-hmi-walkthrough.md) — Gradle build → export → ADB install → deploy → screen → verified God View. This file owns the node's *facts* (artifact IDs, config, pin shape); the walkthrough owns the *doing*.
 
 ## Responsibility
 
@@ -43,6 +44,8 @@ Only if that artifact is ever missing: **Artifacts → New Artifact**, category 
 }
 ```
 
+The Inspector's other CONFIGURATION fields — **Display Width/Height/DPI**, **GPU Backend**, **Part Prefix** — are per-node-instance values this guide does not fix. The Part Prefix names the node's parts (`<prefix>-screen`, `<prefix>-logcat`, `<prefix>-adb`) that the Devices-panel widgets select by, so read the live values off the node before using them ([ivi-hmi-walkthrough.md §3.4](ivi-hmi-walkthrough.md)).
+
 ## Pins
 
 Skycraft Node available pin kinds: `vhal`, `kuksa`, `ethernet`, `video`, `usb` ([full table](carsky-4-node-blueprint.md#pin-kinds-by-node-type)).
@@ -80,9 +83,13 @@ adb install app-debug.apk
 
 Use Rework's device panel or the CarSky Gateway ADB tunnel to get `<skycraft-adb-endpoint>` (ADB is exposed on a fixed port per Skycraft pod).
 
+**The route is unproven on this deployment.** The candidate endpoint sources, the guest properties that gate the install (`minSdk 29`, the `automotive` feature), the launch command with its port override, and the emulator fallback are enumerated in [ivi-hmi-walkthrough.md §4–§5](ivi-hmi-walkthrough.md).
+
 ## Verification (feeds R16, R17 acceptance)
 
 - HMI runs on the AAOS node with the report's layout (central Display area + button/app areas); button/app areas switch what the Display area shows.
 - An R4 warning message brings the warning view up in the Display area.
 - Warning view shows ego, B, and ghost C at composed positions; **ghost C sourced only from `v2x_relayed` data**; 2D drawing delivered.
 - A newer message with an unknown `warningType` degrades gracefully (R4 additive-version test).
+
+How to produce each observation — what to feed the app, and what a correct versus incorrect result looks like — is the verification ladder in [ivi-hmi-walkthrough.md §6](ivi-hmi-walkthrough.md).
