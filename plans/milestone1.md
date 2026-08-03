@@ -168,6 +168,7 @@ The baseline blueprint deployed as `trial2_minh_netcheck` with all nodes `Runnin
 - CRA abstraction + the M1 NLOS plugin registered through it, reading/writing the Phase 2 database schema (R14).
 - Scene composition (ego, B, ghost C — `d_AC = d_AB + d_BC`, lateral offsets component-wise) and edge-triggered R4 warning emission on risk transitions (R15); the periodic awareness state only if time permits (optional).
 - ADA-side JSONL event logs (track transitions, risk events) completing the R18 collision-risk event list.
+- **Isolated-Room bring-up before the full chain** — the ADA node exercised alone against a bench emitter standing in for the V2X ECU and a bench sink standing in for the IVI, both from one `tools/ada-bench/` image, over the same addresses and ports the full blueprint uses. Procedure: [deploy-ada-ecu-walkthrough.md](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md); decomposition: [phase4_tasks.md](phase4_tasks.md) groups 4.9–4.11. It closes no acceptance box below on its own — the boxes are worded against live bench scenarios, which means the real Scenario Player — and exists to retire every ADA-side unknown before a full-chain Room is booked.
 
 **Acceptance Criteria.**
 - [ ] With bench scenarios live, C's track appears with `source = v2x_relayed` only and follows the full R13 lifecycle.
