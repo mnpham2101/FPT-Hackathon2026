@@ -1,6 +1,6 @@
 # Deploying a Blueprint on CarSky — End-to-End Walkthrough
 
-Worked example: the **netcheck** connectivity test ([tools/netcheck/](../../tools/netcheck/)), from source file to running Room. Every manual step **M1–M12** of [baseline-connectivity-smoke-test.md](../../plans/doc/research_notes/baseline-connectivity-smoke-test.md) is covered here in order; that note owns the test's *design* (why each check exists, pass criteria C1–C5), this guide owns the *doing*.
+Worked example: the **netcheck** connectivity test ([tools/netcheck/](../../tools/netcheck/)), from source file to running Room. Every step **M1–M12** of [baseline-connectivity-smoke-test.md](../../plans/doc/research_notes/baseline-connectivity-smoke-test.md) is covered here in order — several are performed by an agent rather than by hand, and [§4](#4-work-division-between-ai-and-human) states which; that note owns the test's *design* (why each check exists, pass criteria C1–C5), this guide owns the *doing*.
 
 Use it as the template for deploying any container node — the ECU images follow the identical path with different images and env.
 
@@ -152,19 +152,19 @@ Clicking empty canvas shows the **blueprint** Inspector — the panel that owns 
 | Public / Owner | Private by default; owner is the CarSky account (the same identity used for the registry) |
 | **Delete Blueprint** | Only after its deployments are deleted (M12) |
 
-### M6 — Check the wiring ⚠️
+### M6 — Check the wiring
 
 Confirm each of the four role nodes has one `ethernet` pin wired to the Ethernet Bridge, with addresses `10.99.0.10` (bench), `.11` (V2X), `.12` (ADA), `.13` (IVI).
 
 > **Warning — do not add nodes or pins here.** The REST API cannot create `ETHERNET` pins, and a JSON import silently drops them. If a clone lost its pins, re-draw the four edges by hand on the canvas. On our blueprint the wiring is already correct: nothing to do.
 
-### M7 — Configure the three container nodes 🔑
+### M7 — Configure the three container nodes
 
 **The most important step.** Click a node, edit in the Inspector, click the canvas to commit.
 
 ![Nydus Inspector — V2X ECU node configuration](images/nydus-inspector-v2x-ecu.png)
 
-> Capture that screenshot **only after the values are verified correct** (§4). The first run's screenshot showed `NEXT_HOP_HOST = 10.99.0.2` and `ROLE = V2X` — both wrong — and would teach the mistakes it was meant to prevent.
+> Capture that screenshot **only after the values are verified correct** (§5). The first run's screenshot showed `NEXT_HOP_HOST = 10.99.0.2` and `ROLE = V2X` — both wrong — and would teach the mistakes it was meant to prevent.
 
 **Common to all three nodes:**
 
@@ -254,7 +254,43 @@ Set `PAD=1400` on the bench node and redeploy. If large datagrams do not arrive 
 
 ---
 
-## 4. Mistakes already made — check these first
+## 4. Work division between AI and human
+
+The split is not a preference — it follows from what an agent can reach. An agent runs CLI tools and authenticated REST calls; it cannot use the Nydus canvas, a browser download, or its own eyes. The `M` labels are step names, not the assignment.
+
+| Action | AI / Human | Description |
+|---|---|---|
+| [M1 — Write the application code](#m1--write-the-application-code) | Neither | A development deliverable; the four source files exist before the procedure starts |
+| [M2 — Store the registry credential](#m2--store-the-registry-credential-as-a-github-secret) | Human | GitHub repository settings; the key is pasted once and never echoed |
+| [M3 + M4 — Trigger the build and push](#m3--m4--build-and-push-automatic) | AI | Push a commit; the `netcheck-image` job runs on every push |
+| [M4 — Confirm the run passed](#m3--m4--build-and-push-automatic) | Human | Actions web UI; an agent session holds no GitHub token |
+| [M4 — Confirm the image reached the registry](#m3--m4--build-and-push-automatic) | AI | Registry catalog and tag list over `curl` |
+| [M5 — Choose the blueprint](#m5--choose-the-blueprint) | Human | Nydus blueprint list and Inspector; edit the original, never the snapshot |
+| [M6 — Check the wiring](#m6--check-the-wiring) | AI | `GET /api/v1/blueprints/{id}` returns every pin, edge and address |
+| [M6 — Draw a missing pin or edge](#m6--check-the-wiring) | Human | Nydus canvas; REST cannot create `ETHERNET` pins |
+| [M7 — Configure the three container nodes](#m7--configure-the-three-container-nodes) | Human | Node Inspector; no REST route updates an existing node's config |
+| [M7 — Read the stored config back](#m7--configure-the-three-container-nodes) | AI | The same blueprint read-back returns image, command, env and capabilities |
+| [M8 — Confirm the IVI node's VM artifact](#m8--leave-the-ivi-node-alone) | AI | Also in that read-back; its absence gets the deploy rejected outright |
+| [M8 — Attach a missing VM artifact](#m8--leave-the-ivi-node-alone) | Human | Node Inspector, from the artifact store |
+| [M9 — Deploy](#m9--deploy--criterion-c1) | Human | **New Deployment** dialog; picking the Device is a human call |
+| [M9 — Poll node phases until Running](#m9--deploy--criterion-c1) | AI | `GET /api/v1/deployments/{roomId}/nodes`; also yields each `nodeKey` |
+| [M10 — Read every node's log](#m10--read-the-logs--criteria-c2c5) | AI | Logs route with `container=user`; C2–C5 are all text |
+| [M10 — Record the hop-3 evidence](#checking-ivi-rx-traffic-hop-3) | AI | The ADA node's `[TX]` and `[CAP]` lines, and which method was used |
+| [M11 — Set `PAD` and redeploy](#m11--optional-mtu-headroom) | Human | A bench node config edit, then a fresh deployment |
+| [M11 — Read the logs for the ceiling](#m11--optional-mtu-headroom) | AI | Compare arrivals across `PAD` values on the same logs route |
+| [M12 — Tear down](#m12--tear-down) | Human | **Delete Deployment**; releases one of the two Room slots |
+
+Five notes on the rows above:
+
+- **M1 belongs to neither column.** The deploying agent writes no product code, and no human writes it at bring-up time — the sources are a development deliverable this procedure consumes.
+- **M7 has no agent route.** `/batch` adds nodes, pins and edges; no update or delete op exists anywhere in the API, so an existing node's config is edited in the UI and only read back over REST.
+- **Confirming the run flips to AI** on a machine with an authenticated `gh` CLI. Without it, the Actions web UI is the only route.
+- **Deploy and teardown have REST calls and stay Human anyway.** Each consumes or releases one of the two Room slots, and that call is the user's.
+- **Every AI row needs a credential supplied at run time** — the CarSky API key for the REST rows, the registry account and key for the registry check. An agent stores neither.
+
+---
+
+## 5. Mistakes already made — check these first
 
 Every row below cost real time on the first run (2026-07-31). They are ordered by how expensive they were.
 
@@ -271,7 +307,7 @@ Every row below cost real time on the first run (2026-07-31). They are ordered b
 
 **Before deploying, verify by reading the config back** rather than trusting the Inspector's truncated fields — `GET /api/v1/blueprints/{id}` returns each node's stored `config` exactly, and catches #2, #3, #4 and #5 in one look.
 
-## 5. Quick reference
+## 6. Quick reference
 
 | Thing | Value |
 |---|---|
