@@ -18,17 +18,19 @@ Python; the shared R1 codec (Vanetza-based encoder) — report §3(c).
 ## Build & push the image
 
 ```
-docker login registry.carsky.io -u <your_carsky_username>
-docker tag scenario-player:latest registry.carsky.io/m1-scenario-player:latest
-docker push registry.carsky.io/m1-scenario-player:latest
+docker login registry.hackathon-2.carsky.io -u <your_carsky_username>
+docker tag scenario-player:latest registry.hackathon-2.carsky.io/m1-scenario-player:latest
+docker push registry.hackathon-2.carsky.io/m1-scenario-player:latest
 ```
+
+- **Registry host is `registry.hackathon-2.carsky.io`** — the host that actually serves Zot; `registry.carsky.io` does not ([zot-registry-api-key.md § Registry host caveat](zot-registry-api-key.md#registry-host-caveat-open-item-o1)). The same host must appear in the login, the tag and the `image` field below; a mismatch is the "push succeeded, node cannot pull" failure.
 
 ## Blueprint node config
 
 ```json
 {
   "container": {
-    "image": "registry.carsky.io/m1-scenario-player:latest",
+    "image": "registry.hackathon-2.carsky.io/m1-scenario-player:latest",
     "command": ["python", "main.py"],
     "env": {
       "SCENARIO_CONFIG": "/app/scenarios/default.yaml",
