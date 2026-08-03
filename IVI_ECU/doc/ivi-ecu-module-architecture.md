@@ -172,6 +172,23 @@ Neither reaches a release build: the injector is excluded by source set, and the
 
 No layer is collapsed: the receive loop cannot reach a Composable and a Composable cannot reach a socket. The only path between them is `R4Event → R4Repository → WarningUiState`.
 
+## Call flow
+
+The components above, ordered in time. Diagram source: [phase5-ivi-callflow.puml](phase5-ivi-callflow.puml) — a UML sequence diagram whose participants are exactly the components tabulated here, each labelled with the module it lives in. Its fidelity is what this node actually runs today: the producer is the `r4-simulator`, and the real ADA ECU replaces it without changing anything to its right, because both realize the same `ADA-ECU` interface.
+
+Six sequences, each a separate `==` block in the source:
+
+| Sequence | What crosses which component |
+|---|---|
+| **Startup** | `R4ListenerService` goes foreground and starts `R4SocketObserver` on the application scope; the observer has `JdkDatagramSource` bind `0.0.0.0:<port>` and sets link state to Bound; `R4Repository` begins collecting events, and the screen collects `currentMode` and the warning state |
+| **Nominal warning** | datagram → `JdkDatagramSource` (packet length reset before every receive) → `Received` → `R4SocketObserver` (truncation check, `[RX]` line) → `R4Deserializer` (slice, BOM/UTF-8, `R4Json`) → `Decoded` → `R4Event.Message` → `R4Repository` → `WarningViewModel` (classify, `Active`, arm the timeout) → `MainViewModel` (save `previousMode`, switch to WarningView) → `MainScreen` → `IviWarningViewSeam.Render` → `SceneCoordinateMapper`, then the provenance guard decides ghost C or the `[? UNKNOWN SOURCE]` marker |
+| **Malformed or unknown-type datagram** | the same path as far as `R4Deserializer`, which returns `Failed(reason, detail, preview)` instead of throwing; the observer logs `[DROP]` and emits `R4Event.Dropped`, the loop continues, and only the status bar reflects it |
+| **Socket error → rebind** | `JdkDatagramSource` surfaces a `SocketException`; `R4SocketObserver` sets link state to Rebinding, closes and rebinds on a bounded exponential back-off, then returns to Bound and resets the delay |
+| **Silence → timeout → restore** | `WarningViewModel`'s `WARNING_TIMEOUT_MS` elapses with no new warning and returns to `Idle`; `MainViewModel` restores `previousMode`, unless the user overrode the mode while the warning was up |
+| **Dev injector** | `DevInjectorReceiver` joins at `R4Repository` — downstream of the socket, upstream of everything else — so an injected sample takes the identical path from there on, with no network involved |
+
+Two properties of the flow are worth reading off it directly: nothing but `JdkDatagramSource` touches the network, and every branch that can fail — truncation, malformed bytes, unknown `warningType`, a dead socket — rejoins the same downstream path rather than ending the receive loop.
+
 ## A design property worth flagging: the guard fails open
 
 `SceneGeometry.vehicleCSnapshot` is nullable, and the guard treats a `null` snapshot as trusted. The guard therefore protects the render only when whatever composes the scene copies the R4 message's `object` snapshot into that field. A `SceneGeometry` built from the message's `geometry` alone carries no snapshot, draws ghost C unchallenged, and silently voids the R19 provenance claim — so every composer of a scene for the renderer must populate `vehicleCSnapshot`.
