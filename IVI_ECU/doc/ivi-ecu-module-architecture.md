@@ -1,112 +1,111 @@
-# IVI ECU — module architecture
+# IVI ECU — component architecture
 
-Module map of the IVI node (R4, R16, R17) and, per module, its role, input and output. It describes **what is in `IVI_ECU/` today** and what is designed but unwritten; the design decisions behind it are [phase5-ivi-hld.md](phase5-ivi-hld.md), and the build/install/verify procedure is [deploy-ivi-hmi-walkthrough.md](../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md). Node facts — VM artifact, pin, address — are [node-ivi-ecu.md](../../requirements/car-sky-guide/node-ivi-ecu.md).
+Component map of the IVI node (R4, R16, R17) and, per component, its role, input and output. Design decisions behind it: [phase5-ivi-hld.md](phase5-ivi-hld.md). Build, install and verification procedure: [deploy-ivi-hmi-walkthrough.md](../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md). Node facts — VM artifact, pin, address: [node-ivi-ecu.md](../../requirements/car-sky-guide/node-ivi-ecu.md).
 
-The module set below is sized to the walkthrough's deliverable list (§1.3), its verification ladder (§4.8, V1–V5) and its acceptance table (§6): every observable those name has an owner here.
+![IVI ECU component architecture](research_notes/ivi-ecu-module-architecture.svg)
 
-![IVI ECU module architecture](research_notes/ivi-ecu-module-architecture.svg)
+Source: [research_notes/ivi-ecu-module-architecture.svg](research_notes/ivi-ecu-module-architecture.svg).
 
-Diagram source: [research_notes/ivi-ecu-module-architecture.drawio](research_notes/ivi-ecu-module-architecture.drawio) — edit the `.drawio` and re-export the `.svg` beside it; the two are one artifact.
+The diagram is a UML component diagram: fill colour is the component's role, `«use»` dependencies are dashed with an open arrowhead, realization is dashed with a hollow triangle, and each seam is drawn as a provided interface meeting a required one at an assembly connector. Paths below are relative to `IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/` unless shown otherwise.
 
-**State** in the tables below: `built` = in the tree · `partial` = present but incomplete, with the gap named · `specified` = designed, no source yet. Paths are relative to `IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/` unless shown otherwise.
+## Platform and boundary
 
-## The boundary
+| Component | Role | Input | Output |
+|---|---|---|---|
+| **AAOS guest on the Skycraft node** | the Android Automotive OS runtime the APK is installed into and runs on | the APK, installed over ADB; touch and key events from the Screen widget | `java.net` datagram sockets, the Compose/SurfaceFlinger display surface, the logcat buffer, and the ADB surface that installs and launches the app |
+| **ADA ECU node** (`10.99.0.12`) | the R4 producer | its composed scene | one R4 warning JSON datagram per event, to `10.99.0.13:47300` |
+| **Screen widget** | the visual observation surface | the guest's display output | a recording or screenshot of the God View |
+| **Guest logcat** | the text observation surface | the `IVI_V2X` tag | `adb logcat -s IVI_V2X`, or the Log widget in the Devices panel |
 
-The app is one process inside the AAOS guest. Everything in this table is outside it.
+## Business logic
 
-| Module | Role | Input | Output | State |
-|---|---|---|---|---|
-| **AAOS guest on the Skycraft node** | the platform the APK is installed into — Android runtime, `java.net` sockets, the Compose/SurfaceFlinger display, logcat, ADB. Not our code | the APK, over ADB | the runtime services every module below uses | platform |
-| **ADA ECU node** (`10.99.0.12`) | the R4 producer | its composed scene | one R4 warning JSON datagram per event → `10.99.0.13:47300` | external |
-| **`IVI_ECU/r4-simulator/`** → `m1-r4-sim:latest` | test equipment standing in for the ADA ECU; runs on the ADA node, never in the APK | a scenario file plus the frozen samples | R4 datagrams at `R4_RATE_HZ`, and `[TX]` lines in the node log | specified |
-| **Screen widget** | the visual observable — acceptance proof 4 | the guest framebuffer | recording or screenshot | external |
-| **Guest logcat** | the text observable — acceptance proofs 1–3 | the `IVI_V2X` tag | `adb logcat -s IVI_V2X`, or the Log widget | external |
+Plain-JVM components, free of Android types, so the receive path is exercisable without a device.
 
-What AAOS is, and every route by which an Android app reaches a Skycraft node, is [research_notes/skycraft-android-deployment-methods.md](research_notes/skycraft-android-deployment-methods.md) — not repeated here.
+| Component | Role | Input | Output |
+|---|---|---|---|
+| `observer/JdkDatagramSource` | the only holder of a socket; binds `0.0.0.0:47300` — never the node address — and resets packet length before every receive | UDP datagrams arriving on the port | `Received(buffer, offset, length)`, through the provided `R4DatagramSource` interface |
+| `observer/R4SocketObserver` | the receive loop — truncation check, rebind back-off, and a bounded flow with `DROP_OLDEST` so a slow collector cannot stall the socket | `Received`, plus the decoder's result | `R4Event.Message` / `R4Event.Dropped`, `R4LinkState`, and the `[LINK]`, `[RX]` and `[DROP]` log lines |
+| `serializer/R4Deserializer` | the parser: slice → BOM/UTF-8 → `R4Json`. Returns a result rather than throwing, so one bad datagram cannot stop the next good one | `buffer, offset, length` | `R4DecodeResult.Decoded` (carrying `schemaVersionAhead`) or `.Failed(reason, detail, preview)` |
+| `warning/WarningClassifier` | maps the wire `warningType` to a presentation; an unrecognised value maps to the generic warning presentation and is never rewritten on the way through | `R4WarningEvent` | the presentation the Warning View renders |
 
-## Business logic — ingress
-
-Plain-JVM modules, free of Android types, so the receive path is testable without a device.
-
-| Module | Role | Input | Output | State |
-|---|---|---|---|---|
-| `observer/JdkDatagramSource` | the only socket holder: binds `0.0.0.0:47300` (never the node address), resets packet length before every receive | UDP datagrams from the bridge | `Received(buffer, offset, length)` | specified |
-| `observer/R4SocketObserver` | the receive loop — truncation check, rebind back-off, bounded flow with `DROP_OLDEST` | `Received` plus the decoder's result | `R4Event.Message` / `R4Event.Dropped`, `R4LinkState`; the `[LINK]`, `[RX]` and `[DROP]` lines | specified |
-| `serializer/R4Deserializer` | the parser: slice → BOM/UTF-8 → `R4Json`; never throws, so one bad datagram cannot stop the next good one | `buffer, offset, length` | `R4DecodeResult.Decoded` (with `schemaVersionAhead`) or `.Failed(reason, detail, preview)` → a `[DROP]` | specified |
-| `warning/WarningClassifier` | maps the wire `warningType` to a presentation; an unknown value degrades to a generic warning and is **never rewritten** on the way through | `R4WarningEvent` | the presentation the Warning View uses | specified |
-
-Graceful degradation is split deliberately: the parser preserves the wire value and flags a schema version ahead of ours, the classifier decides what that renders as. Neither crashes on either input — the V5 rows of the walkthrough's ladder.
+Graceful degradation is split deliberately across the last two: the parser preserves the wire value and flags a schema version ahead of this one, and the classifier decides what an unrecognised value looks like. Neither treats it as an error.
 
 ## Data
 
-| Module | Role | Input | Output | State |
-|---|---|---|---|---|
-| `model/R4Message.kt`, `R3Snapshot.kt`, `SceneGeometry.kt` (+ `R4Json`) | the typed binding of the R4 message set and the R3 snapshot it carries, including the `source` provenance field and the nullable `vehicleC` | decoded JSON | `R4WarningEvent` / `R4StateMessage` and their `SceneGeometry` | built |
-| `IVI_ECU/contracts/*.schema.json` | this node's byte-synced copy of the R4 and R3 schemas | — | the field list the model and its round-trip tests bind against | built |
-| `data/R4Repository` | the event raiser — routes events into app state and is the single injection target for the dev injector | `R4Event`, injected samples | last warning, last `state` (last-value-wins by `seq`), link state | specified |
-
-The models live under `app/` today; the HLD relocates them verbatim into a pure-JVM `:contract` submodule so the simulator can share them. That is a move, not a rewrite.
-
-`SceneGeometry.vehicleCSnapshot` is what arms the provenance guard. Whatever composes the scene must copy the message's `object` snapshot into it — a `null` snapshot is treated as trusted, so omitting the copy silently disables the guard.
+| Component | Role | Input | Output |
+|---|---|---|---|
+| `model/` — `R4Message`, `R3Snapshot`, `SceneGeometry`, `VehiclePosition`, `R4Json` | the typed binding of the R4 message set and the R3 snapshot it carries, including the `source` provenance field and the nullable `vehicleC` | decoded JSON | `R4WarningEvent` / `R4StateMessage`, and the `SceneGeometry` the renderer draws |
+| `data/R4Repository` | the event raiser — routes received events into app state, and is the single injection target the dev injector writes to | `R4Event`, injected samples | last warning, last `state` (last-value-wins by `seq`), link state |
 
 ## UI logic
 
-| Module | Role | Input | Output | State |
-|---|---|---|---|---|
-| `ui/WarningViewModel` | Idle ↔ Active; `WARNING_TIMEOUT_MS` with no further message returns the Display Area to Idle | the warning presentation and its scene | `WarningUiState` | specified |
-| `ui/MainViewModel` + `ui/DisplayMode` | which view the Display Area shows — Warning / Home / Apps / Settings — and whether the change was `cause=warning` or `cause=user` | mode requests from the button areas, warning state | `currentMode`, and the `[UI]` line | partial — the switcher and the warning lock are built; wake-on-warning, previous-mode restore and the `cause=` distinction are not |
-| `config/IviRuntimeConfig` + `BuildConfig` | resolves port, timeout and scene scale once, from compiled defaults merged with launch-time intent extras (`--ei r4_port`) — no literals anywhere else | `BuildConfig`, the launch `Intent` | the resolved values every other module is constructed with | partial — `WARNING_TIMEOUT_MS` exists; the port field and the intent merge do not |
+| Component | Role | Input | Output |
+|---|---|---|---|
+| `ui/WarningViewModel` | the warning lifecycle: Idle ↔ Active, with `WARNING_TIMEOUT_MS` of silence returning the Display Area to Idle | the warning presentation and its scene | `WarningUiState` |
+| `ui/MainViewModel` + `ui/DisplayMode` | which view the Display Area shows — Warning / Home / Apps / Settings — and whether the change came from a message (`cause=warning`) or a tap (`cause=user`) | mode requests from the button areas, warning state | `currentMode`, and the `[UI]` log line |
 
-## UI — the rendering layer
+## UI / front-end
 
-| Module | Role | Input | Output | State |
-|---|---|---|---|---|
-| `ui/screen/MainScreen` | the R16 layout: central Display Area, Home/Apps/Settings button areas, mode labels, bottom status bar | `DisplayMode`, `WarningUiState` | the composed screen | partial — layout and the mode switcher are built; the Warning View slot is a placeholder and `V2X LINK` is a hardcoded string, not the observer's link state |
-| `ui/view/IviWarningViewSeam` | the R17 render seam — the 2D renderer is committed, an optional 3D one swaps in behind the same interface with no consumer change | `SceneGeometry`, `riskState` | a drawn scene | built |
-| `ui/view/CanvasWarningView` + `ui/view/SceneCoordinateMapper` | the God View: ego and B solid with heading markers, ghost C dashed with a pulsing risk glow and the `[V2X]` badge, connector labels, and a `null` `vehicleC` rendered without C and without a crash. The mapper is pure math, no Android types | `SceneGeometry`, `riskState` | Compose Canvas draw calls | built |
-| the **provenance guard**, inside `CanvasWarningView` | ghost C is drawn only when its snapshot `source` is `v2x_relayed`; anything else draws the yellow `[? UNKNOWN SOURCE]` marker and logs at ERROR. This is the mechanical form of the R19 claim | `SceneGeometry.vehicleCSnapshot` | ghost C, or the marker plus an ERROR line | built |
-| `ui/view/WarningBannerOverlay` | built and **deliberately left unmounted** — the God-View canvas must render unobstructed (standing decision) | — | — | built, unmounted |
+| Component | Role | Input | Output |
+|---|---|---|---|
+| `ui/screen/MainScreen` | the R16 layout: central Display Area, Home / Apps / Settings button areas, mode labels and bottom status bar; hosts the Warning View slot | `DisplayMode`, `WarningUiState`, `R4LinkState` | the composed screen |
+| `ui/view/IviWarningViewSeam` | the R17 render seam — the contract `Render(scene, riskState)` that decouples the app from the rendering engine, so an optional 3D renderer swaps in with no consumer change | — | the interface both renderers realize |
+| `ui/view/CanvasWarningView` + `ui/view/SceneCoordinateMapper` | the God View: ego and B solid with heading markers, ghost C dashed with a pulsing risk glow and the `[V2X]` badge, connector labels, and a `null` `vehicleC` rendered without C. The mapper is pure math, free of Android types | `SceneGeometry`, `riskState` | Compose Canvas draw calls |
+| the **provenance guard**, nested inside `CanvasWarningView` | ghost C is drawn only when its snapshot `source` is `v2x_relayed`; any other value draws the yellow `[? UNKNOWN SOURCE]` marker and logs at ERROR. This is the mechanical form of the R19 claim | `SceneGeometry.vehicleCSnapshot` | ghost C, or the marker and an ERROR line |
+| `ui/view/WarningBannerOverlay` | the risk banner, kept out of the Display Area by standing decision so the God-View canvas renders unobstructed | `riskState` | a banner, mounted nowhere |
 
-## Host, lifecycle and Android adapters
+## Host and lifecycle
 
-| Module | Role | Input | Output | State |
-|---|---|---|---|---|
-| `MainActivity` | the launcher entry `am start -n com.hackathon.v2x.ivi/.MainActivity` starts; hosts Compose and resolves launch-time config | the launch `Intent` | the running screen | specified |
-| `IviApplication` + `di/IviGraph` | the composition root — one hand-written object graph, one application scope, no annotation processor | — | every module above, wired | specified |
-| `service/R4ListenerService` | foreground host that keeps the receive loop alive while the Display Area shows something else | start/stop | the observer's lifetime and process priority | specified |
-| `service/AndroidR4Logger` | the **only** bridge from the plain-JVM modules to `android.util.Log`, on the single tag `IVI_V2X`: `[LINK]`, `[RX]`, `[DROP]`, `[UI]` | log calls from every layer | one greppable `key=value` line per event | partial — only the guard's ERROR line exists today |
-| `debug/DevInjectorReceiver` | debug-build-only broadcast entry that puts a frozen sample onto the repository's flow, exercising the whole UI path with no network. Excluded from release by source set, so no release build can fabricate a warning | `am broadcast -a com.hackathon.v2x.ivi.DEV_INJECT --es sample …` | one injected message | specified |
-| `app/src/main/AndroidManifest.xml` | declares the launcher activity, the service, the `automotive` feature and the permissions | — | an installable, **launchable** APK | partial — declares the feature and permissions but neither `<activity>` nor `<service>`, so the APK installs and cannot be started |
+| Component | Role | Input | Output |
+|---|---|---|---|
+| `MainActivity` + `IviApplication` + `di/IviGraph` | the process entry and composition root: one launcher activity, one hand-written object graph, one application scope | the launch `Intent`, `BuildConfig` defaults | the running screen, and every component above wired together |
+| `service/R4ListenerService` | the foreground host that keeps the receive loop alive while the Display Area shows something else | start / stop | the observer's lifetime, and the process's foreground priority |
+| `service/AndroidR4Logger` | the only bridge from the plain-JVM components to `android.util.Log`, on the single tag `IVI_V2X`; realizes the `R4Logger` interface those components require | log calls from every layer | one greppable `key=value` line per event: `[LINK]`, `[RX]`, `[DROP]`, `[UI]` |
 
-## MVC separation
+## Test equipment
 
-| Layer | Modules |
+Never part of the release APK.
+
+| Component | Role | Input | Output |
+|---|---|---|---|
+| `IVI_ECU/r4-simulator/` → `m1-r4-sim:latest` | stands in for the ADA ECU; runs on the ADA node | a scenario file and the frozen contract samples | R4 datagrams at `R4_RATE_HZ` to `10.99.0.13:47300`, and `[TX]` lines in the node log |
+| `debug/DevInjectorReceiver` | exercises the whole UI path with no network; confined to the debug source set so no release build can fabricate a warning | `am broadcast -a com.hackathon.v2x.ivi.DEV_INJECT --es sample …` | one sample message onto the repository's flow |
+
+## Configuration and descriptors
+
+Files, not components — neither data, business logic, UI logic nor front-end.
+
+| Artifact | Role |
 |---|---|
-| **Data** | the contract models and the byte-synced schemas; `data/R4Repository` — stores and routes, never decides what a warning means and never formats |
-| **Business logic** | `observer/`, `serializer/`, `warning/WarningClassifier`, `ui/view/SceneCoordinateMapper` — all free of Android UI types, all unit-testable without a device |
-| **UI logic** | `ui/WarningViewModel`, `ui/MainViewModel`, `config/IviRuntimeConfig` — no drawing code, no socket |
-| **UI** | `ui/screen/MainScreen`, and the renderer behind `IviWarningViewSeam` — never touches a message type, only `WarningUiState` |
+| `app/src/main/AndroidManifest.xml` | declares the launcher activity, the listener service, the `automotive` feature and the permissions |
+| `IVI_ECU/contracts/*.schema.json` | this node's byte-synced copy of the R4 and R3 schemas — the field list the model and its round-trip tests bind against |
+| `BuildConfig` / `config/IviRuntimeConfig` | port, timeout and scene-scale defaults, merged once with launch-time intent extras (`--ei r4_port`) so no other component carries a literal |
+| `r4-simulator/scenarios/*.json` | scenario data; a new case is a new file, never a new code branch |
+
+## Interfaces, ports and the layer rule
+
+- **`udp :47300`** is a port on `JdkDatagramSource` — the app's one external network endpoint. Nothing else in the app opens a socket.
+- **`R4DatagramSource`** and **`R4Decoder`** are the seams that make the receive loop testable: the loop requires them; a fake or the real implementation provides them.
+- **`R4Logger`** is the seam that keeps the plain-JVM components free of Android — they require it, `AndroidR4Logger` provides it.
+- **`IviWarningViewSeam`** is realized by `CanvasWarningView` and used by `MainScreen`, which never touches a message type — only `WarningUiState`.
 
 No layer is collapsed: the receive loop cannot reach a Composable and a Composable cannot reach a socket. The only path between them is `R4Event → R4Repository → WarningUiState`.
 
-## Which module closes which acceptance observable
+## A design property worth flagging: the guard fails open
+
+`SceneGeometry.vehicleCSnapshot` is nullable, and the guard treats a `null` snapshot as trusted. The guard therefore protects the render only when whatever composes the scene copies the R4 message's `object` snapshot into that field. A `SceneGeometry` built from the message's `geometry` alone carries no snapshot, draws ghost C unchallenged, and silently voids the R19 provenance claim — so every composer of a scene for the renderer must populate `vehicleCSnapshot`.
+
+## Which component produces which acceptance observable
 
 Per [deploy-ivi-hmi-walkthrough.md §6](../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#6-expected-outputs-and-acceptance):
 
 | Observable | Produced by |
 |---|---|
+| `[LINK] state=bound port=47300`, and the status bar's link indicator | `R4SocketObserver`'s link state, through `AndroidR4Logger` and `MainScreen` |
 | `[RX] type=warning bytes=… from=…` | `JdkDatagramSource` → `R4SocketObserver` → `AndroidR4Logger` |
 | `warningType=`, `risk=`, `cSource=`, `cPos=` on that line | `R4Deserializer` decoding into the contract model; the fields are read off the parsed message |
-| `[UI] mode=WarningView cause=warning` | `R4Repository` → `WarningViewModel` → `MainViewModel` |
-| the God View drawn in the Display Area | `MainScreen` → `IviWarningViewSeam` → `CanvasWarningView` |
-| `cause=user` on a button tap, and the timeout back to Idle | `MainViewModel`; `WarningViewModel`'s `WARNING_TIMEOUT_MS` |
-| `[? UNKNOWN SOURCE]` on an `own_sensor` message | the provenance guard |
-| `[LINK] state=bound port=47300` and the status bar | `R4SocketObserver`'s link state, bound into `MainScreen`'s bottom bar |
 | `[DROP] reason=malformed …`, with the next valid message still rendering | `R4Deserializer` returning a result instead of throwing |
-
-## What this means for the node today
-
-- **6 modules are built** — the contract layer and the whole drawing layer, including the provenance guard. They are the two hardest pieces and they are done.
-- **5 are partial**, each with a named gap above.
-- **11 are specified only**: the entire ingress path, the repository, the warning view-model, the host and lifecycle classes, the dev injector, and the simulator.
-- The gap is the middle of the app plus the Activity that hosts it. Until the manifest declares a launcher activity, nothing renders on the node at all — the APK installs and cannot be started, which is why the walkthrough's `aapt` launcher check exists.
+| `[UI] mode=WarningView cause=warning` | `R4Repository` → `WarningViewModel` → `MainViewModel` |
+| `cause=user` on a button tap, and `cause=timeout` back to Idle | `MainViewModel`; `WarningViewModel`'s `WARNING_TIMEOUT_MS` |
+| the God View drawn in the Display Area | `MainScreen` → `IviWarningViewSeam` → `CanvasWarningView` |
+| `[? UNKNOWN SOURCE]` on an `own_sensor` message | the provenance guard |
