@@ -342,7 +342,7 @@ No module spans two layers.
 
 ## 9. Deployment shape (R5/R6)
 
-- Image `ada-ecu:latest` → `registry.carsky.io/m1-ada-ecu:latest`, built from `ADA_ECU/` alone (self-contained context), per [node-ada-ecu.md](../../requirements/car-sky-guide/node-ada-ecu.md) with the D9 changes to `command` and `capabilities` plus the §6 env rows.
+- Image `ada-ecu:latest` → `registry.hackathon-2.carsky.io/m1-ada-ecu:latest`, built from `ADA_ECU/` alone (self-contained context), per [node-ada-ecu.md](../../requirements/car-sky-guide/node-ada-ecu.md) with the D9 changes to `command` and `capabilities` plus the §6 env rows. `registry.hackathon-2.carsky.io` is the host that actually serves Zot; `registry.carsky.io` does not ([zot-registry-api-key.md § Registry host caveat](../../requirements/car-sky-guide/zot-registry-api-key.md#registry-host-caveat-open-item-o1)). The `docker login`, the image tag and the blueprint `image` field must all name that one host — a mismatch is the "push succeeded, node cannot pull" failure.
 - Pins unchanged: exactly one `ethernet` `OUTPUT` pin at `10.99.0.12` into the bridge. No `video` pin — the clip is baked in (research note §1).
 - Execution split for the planner: image build/push and node-config values are [[car-sky]]-executable; blueprint edits and deploy/verify clicks stay user Nydus UI steps.
 

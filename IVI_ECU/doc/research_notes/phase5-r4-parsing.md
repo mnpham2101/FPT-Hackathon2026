@@ -49,11 +49,10 @@ Design points:
 
 ## 3. Unknown `warningType` — preserve the value, classify at the edge
 
-This is the one place where an existing task description and the committed test disagree, and the test is right.
+Replacing the wire value with `"unknown"` at parse time is the tempting reading, and the committed test rules it out.
 
 - The frozen contract says: *"Unknown values must degrade gracefully at the consumer"* — it does not say the value is replaced.
 - The committed additive-version test asserts the opposite of replacement: `r4-unknown-warning.json` carries `warningType: "slippery_road"` and [R4AdditiveVersionTest](../../app/src/test/java/com/hackathon/v2x/ivi/model/R4AdditiveVersionTest.kt) asserts the parsed value **is** `"slippery_road"`, merely not equal to the M1 `nlos_obstruction` constant.
-- [plans/phase5_tasks.md](../../../plans/phase5_tasks.md) subtask `4.5.1.2` instead specifies *"Unknown `warningType` → parsed as `warningType = "unknown"`"*.
 
 **Recommended:** the parser preserves the wire value verbatim; a separate classification step maps *known* types to their presentation and everything else to a generic warning presentation. Rewriting the field at parse time destroys information the log needs (which unknown type arrived), breaks the committed round-trip equality, and pushes a UI concern into the data layer. The user-visible behaviour the acceptance box asks for — a newer message degrades gracefully instead of crashing — is delivered either way.
 

@@ -75,7 +75,7 @@ Consequences that are the point of the split:
 
 The parser puts the wire value into `warningType` and stops. A separate `WarningClassifier` in `:app` maps *known* types to their presentation and everything else to a generic warning presentation.
 
-**This overrides [plans/phase5_tasks.md](../../plans/phase5_tasks.md) subtask 4.5.1.2** ("Unknown `warningType` → parsed as `warningType = "unknown"`"). The committed [R4AdditiveVersionTest](../app/src/test/java/com/hackathon/v2x/ivi/model/R4AdditiveVersionTest.kt) asserts the opposite — `assertEquals("slippery_road", warning.warningType)` — and the frozen schema says unknown values *degrade gracefully*, not that they are replaced. Rewriting the field at parse time would destroy the information the log needs, break the committed round-trip equality, and push a UI concern into the data layer. The user-visible acceptance ("a newer message degrades gracefully instead of crashing") is met either way.
+**The parser must never rewrite an unknown `warningType` to `"unknown"`.** The committed [R4AdditiveVersionTest](../app/src/test/java/com/hackathon/v2x/ivi/model/R4AdditiveVersionTest.kt) asserts the opposite — `assertEquals("slippery_road", warning.warningType)` — and the frozen schema says unknown values *degrade gracefully*, not that they are replaced. Rewriting the field at parse time would destroy the information the log needs, break the committed round-trip equality, and push a UI concern into the data layer. The user-visible acceptance ("a newer message degrades gracefully instead of crashing") is met either way.
 
 A `schemaVersion` above `R4Contract.KNOWN_SCHEMA_VERSION` is not a gate either: decode succeeds and `R4DecodeResult.Decoded.schemaVersionAhead` is set so the observer logs it once.
 
@@ -410,18 +410,18 @@ I3 exists because the AAOS guest may be hard to reach over the network before th
 
 ## 9. Contradictions found, and how they are resolved
 
-### 9.1 The stale Phase 5 task file
+### 9.1 Four values that are easy to get wrong
 
-[plans/phase5_tasks.md](../../plans/phase5_tasks.md) (last updated 2026-07-24) predates the frozen contract, the mini-blueprint and this design. Four of its statements are wrong against committed artifacts and are superseded here:
+Each has a plausible-looking alternative that contradicts a committed artifact. The right-hand column is what settles it:
 
-| Stale statement | Correct value | Authority |
+| Value | This design | Authority |
 |---|---|---|
-| `4.5.1.2`: unknown `warningType` → `"unknown"` | Value preserved verbatim; classified at the UI edge | Committed `R4AdditiveVersionTest`; D4 |
-| `4.5.1.3`: `BuildConfig.R4_UDP_PORT` default `5004` | `47300` | Blueprint/R6 topology, node guide |
-| `4.5.1.5`: `:mock-sender` module writing its own messages | `:r4-simulator`, payloads built from the frozen samples | D9 |
-| `16.5.2.5`: `deployment/phase5-ivi-deploy.md` | `requirements/car-sky-guide/` (§3.2) | node-code-layout.md |
+| An unknown `warningType` | Preserved verbatim; classified at the UI edge, never rewritten to `"unknown"` | Committed `R4AdditiveVersionTest`; D4 |
+| `BuildConfig.R4_UDP_PORT` default | `47300`, not `5004` | Blueprint/R6 topology, node guide |
+| The message producer | `:r4-simulator`, payloads built from the frozen samples — not a module writing its own | D9 |
+| Where deployment notes land | `requirements/car-sky-guide/` (§3.2), not a node-root `deployment/` folder | node-code-layout.md |
 
-Also noted, not adopted: `17.5.4.2`'s "code coverage ≥ 80 %" and `16.5.4.1`'s LeakCanary requirement have no basis in R4/R16/R17 acceptance and add tooling for it; the acceptance boxes are behavioural.
+Two tooling requirements are deliberately **not** adopted: a code-coverage threshold and LeakCanary. Neither has a basis in R4/R16/R17 acceptance, whose boxes are behavioural.
 
 ### 9.2 Against the committed code
 

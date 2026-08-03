@@ -210,7 +210,7 @@ Traceable to the report §3 (per-track stacks) and per-requirement tech-stack li
 | 2 | Smoke-test open items **O1–O4** (registry host · `capabilities` honored · bridge MTU → feeds the CPM size budget · AAOS `nc`) | the note's M-steps; O3 feeds `coord-large`/size checks |
 | 3 | **Report erratum flag (not absorbed):** R2 sample `distance: 25.4` ≠ `hypot(25.0, 1.2) = 25.03` (F7). Profile doc + samples use the derived value; report patch is researcher's. | project-researcher |
 | 4 | **Report erratum flag:** R2 `sender.speed` has no CPM r2 source field (F1) — schema marks it nullable + derived; report wording patch is researcher's. | project-researcher |
-| 5 | **Coordination:** the IVI R4 binding + tests overlap existing phase5 subtasks `4.5.1.1`/`4.5.1.2` ([phase5_tasks.md](../phase5_tasks.md)). Planner reconciles ownership — no duplicate decomposition. | project-planner |
+| 5 | **Coordination:** the IVI R4 binding + tests overlap Phase 5's IVI contract layer. Planner reconciles ownership — no duplicate decomposition; the split is [phase0_tasks.md § IVI reconciliation](../phase0_tasks.md#ivi-reconciliation-with-phase5-hld-11-item-5--resolved-here). | project-planner |
 
 ## 12. Phase 0 acceptance traceability
 

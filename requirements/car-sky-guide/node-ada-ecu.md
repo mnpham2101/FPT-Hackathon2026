@@ -21,10 +21,14 @@ C++17 core (store, CRA, emission, logging) + Python 3.11 detector subprocess; YO
 
 ```
 docker buildx build --platform linux/arm64 --provenance=false --sbom=false \
-  -t registry.hackathon-2.carsky.io/m1-ada-ecu:<commit> --load ADA_ECU
+  --load -t registry.hackathon-2.carsky.io/m1-ada-ecu:<release-tag> ADA_ECU
 docker login registry.hackathon-2.carsky.io -u <your_carsky_username>
-docker push registry.hackathon-2.carsky.io/m1-ada-ecu:<commit>
+docker push registry.hackathon-2.carsky.io/m1-ada-ecu:<release-tag>
 ```
+
+- **Registry host is `registry.hackathon-2.carsky.io`** — the host that actually serves Zot; `registry.carsky.io` does not ([zot-registry-api-key.md § Registry host caveat](zot-registry-api-key.md#registry-host-caveat-open-item-o1)). The same host must appear in the login, the tag and the `image` field below; a mismatch is the "push succeeded, node cannot pull" failure.
+- **Single-platform `linux/arm64`, attestations off** — a Container Node rejects a multi-platform manifest index and hangs in `Provisioning` ([ADA HLD D9](../../ADA_ECU/doc/phase2-4-ada-ecu-hld.md)).
+- The image is built and pushed by CI, not by hand; that procedure is [deploy-ada-ecu-walkthrough.md §3](deploy-ada-ecu-walkthrough.md#3-build-the-images-on-ci).
 
 The provided video clip(s) ship inside the image (`COPY` at build time) — no live video pin is used in M1 (per report §1, live camera bring-up is out of scope).
 
@@ -33,8 +37,9 @@ The provided video clip(s) ship inside the image (`COPY` at build time) — no l
 ```json
 {
   "container": {
-    "image": "registry.hackathon-2.carsky.io/m1-ada-ecu:<commit>",
-    "command": ["--config", "/app/config/ada-ecu.conf"],
+    "image": "registry.hackathon-2.carsky.io/m1-ada-ecu:<release-tag>",
+    "command": [],
+    "args": ["--config", "/app/config/ada-ecu.conf"],
     "capabilities": ["NET_RAW"],
     "env": {
       "V2X_LISTEN_HOST": "0.0.0.0",
@@ -59,9 +64,25 @@ The provided video clip(s) ship inside the image (`COPY` at build time) — no l
 }
 ```
 
-`V2X_LISTEN_HOST`/`V2X_LISTEN_PORT` bind the R2 receiver; `IVI_HOST`/`IVI_PORT` target the IVI ECU's static address for R4 emission. `TRACK_TIMEOUT_MS` and `CONFIRM_HITS` control R13 lifecycle, while `EVENT_LOG_PATH` selects the container-local evidence file. `GATE_ENTER_M`/`GATE_EXIT_M` are the R13 admission-gate constants — externalized configuration, never literals in code (CLAUDE.md governing principle 5; [milestone1.md](../../plans/milestone1.md) §4).
+The verified CarSky Inspector configuration leaves **Command** blank and puts
+`--config /app/config/ada-ecu.conf` in **Args**. This preserves the image's
+Docker `ENTRYPOINT ["/app/entrypoint.sh"]` and passes the config path to it:
 
-Canonical environment names always override their legacy aliases, independent of config-file order. Compatibility aliases remain accepted for existing local scripts: `MISS_LIMIT_MS` → `TRACK_TIMEOUT_MS`, `TENTATIVE_HITS` → `CONFIRM_HITS`, `LOG_PATH` → `EVENT_LOG_PATH`, `ADA_LISTEN_HOST`/`ADA_LISTEN_PORT` → `V2X_LISTEN_HOST`/`V2X_LISTEN_PORT`, and `IVI_ECU_HOST`/`IVI_ECU_PORT` → `IVI_HOST`/`IVI_PORT`.
+- It launches `capture.sh` in the background (the ADA→IVI traffic evidence R15/R19 needs, which the V2X ECU's capture point cannot see) and then `exec`s the node binary.
+- The `exec` is load-bearing: the app becomes PID 1 and receives the platform's SIGTERM directly, which is what makes the clean-shutdown path run and keeps the app's exit code as the container's. Behind a non-exec parent shell the signal lands on the shell and the app is killed on the grace-period timeout instead.
+- Do not set Command to the bare binary; that bypasses capture startup.
+
+`capabilities: ["NET_RAW"]` (flat in `config`, verified shape per [blueprint-KIS.json](../development-platform-doc/blueprint-KIS.json)) is **always part of this node's config, never conditional**: without it `tcpdump` cannot open a capture handle, `capture.sh` degrades to a `/proc/net/dev` packet counter, and the node's traffic evidence weakens to "bytes moved on this interface". Capture procedure and pcap retrieval: [traffic-capture-wireshark.md](traffic-capture-wireshark.md).
+
+`ADA_ECU/entrypoint.sh`, `capture.sh`, and `Dockerfile` are implemented and
+were exercised in the published ARM64 image recorded in the ADA report.
+
+`V2X_LISTEN_HOST`/`V2X_LISTEN_PORT` receive R2 JSON from the V2X ECU;
+`IVI_HOST`/`IVI_PORT` target IVI for R4. Canonical names override the retained
+legacy aliases. `GATE_ENTER_M`/`GATE_EXIT_M` and the risk values remain
+externalized configuration. The short CarSky acceptance run used deploy-only
+overrides `RISK_NEAR_M=60` and `RISK_DWELL_MS=0`; source defaults remain 50 m
+and 300 ms.
 
 ## Pins
 
@@ -92,16 +113,11 @@ This pin's edge targets the Ethernet Bridge node's single `ETHERNET`/`INPUT` pin
 
 ## Verification (feeds R12–R15, R18 acceptance)
 
+What this node must be observed doing. **How** it is deployed and checked — the isolated Room, its bench stand-ins, the log route and the pass criteria — is [deploy-ada-ecu-walkthrough.md](deploy-ada-ecu-walkthrough.md); that procedure is not repeated here.
+
+- The observable surface is the node's own stdout: one `[EVT]`-prefixed JSON line per event (`r2_ingest`, `own_sensor_ingest`, `track_transition`, `parse_reject`, `assessment`, `risk_transition`, `r4_tx`), plus the `[CAP]` lines `capture.sh` emits.
 - Detection log over the provided clip with per-frame objects and distance estimates; **zero detections labeled C**.
 - R13 state transitions observable in logs, matching the admission state-machine diagram.
 - The NLOS plugin registers through the CRA interface (R14).
 - At least one R4 warning event per scenario run, carrying risk state and composed geometry, observed at the IVI ECU (R15).
 - JSONL event logs reconstruct a full run offline (R18).
-
-After one scenario, save the ADA View Log. Each completed rotating capture is automatically emitted
-between `[PCAP-BEGIN ...]` and `[PCAP-END]` markers.
-Validate the event chain with `python3 ADA_ECU/tools/check_evt_log.py <event-log>`. To transport a
-single capture through text-only CarSky logs, run
-`ADA_ECU/tools/extract_pcap.sh <saved-view-log.txt> <output.pcap>`. The script checks the SHA-256
-before accepting the file. In Wireshark, filter `udp.port == 47300` and inspect the R4 payload for
-tracked `own:B` and `v2x:1201:7` objects.

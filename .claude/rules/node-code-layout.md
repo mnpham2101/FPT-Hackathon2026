@@ -4,7 +4,7 @@ Where implementation code lives, and how each node's artifact is built. Authorit
 
 ## One top-level folder per R5 node
 
-The repo has exactly four code folders — one per node in the R5 blueprint ([carsky-4-node-blueprint.md](../../requirements/car-sky-guide/carsky-4-node-blueprint.md)). No implementation code lives outside them.
+The repo has exactly four **node** code folders — one per node in the R5 blueprint ([carsky-4-node-blueprint.md](../../requirements/car-sky-guide/carsky-4-node-blueprint.md)). No product code lives outside them; the one sanctioned category outside is test equipment, in `tools/` (§ `tools/` below).
 
 | Folder | CarSky node | Requirements | Language / runtime (report §3(d)) | Artifact | Node guide |
 |---|---|---|---|---|---|
@@ -15,6 +15,25 @@ The repo has exactly four code folders — one per node in the R5 blueprint ([ca
 
 - **Bench ≠ V2X ECU.** The Scenario Player is a separate node with its own folder and its own image — it is sanctioned test equipment sharing the Room network (CLAUDE.md governing principle 2), not a module of `V2X_ECU/`. R11 code never lands in `V2X_ECU/`.
 - Cross-cutting requirements (R2, R5, R6, R18, R19) touch more than one folder — list every folder touched, never just the first match.
+
+## `tools/` — test equipment and ECU mocks
+
+Not every container in this repo is a node. **Diagnostic tools, simulators, and containers that mock another ECU** — so a node can be exercised alone in a reduced mini-blueprint — live at `tools/<name>/`, one folder per tool, outside the four node folders.
+
+| Folder | What it is | Artifact |
+|---|---|---|
+| [tools/netcheck/](../../tools/netcheck/) | Baseline connectivity check; deploys as three Container nodes, role selected by `ROLE` | OCI image `m1-netcheck:latest` |
+| [tools/comms_check/](../../tools/comms_check/) | Golden-vector UDP sender and `[EVT]`-stream assertion for the V2X comms chain; runs locally and in CI | Python scripts, never deployed |
+| `tools/ada-bench/` | The V2X emitter and IVI sink standing in for those nodes in the isolated ADA Room, two roles selected by `ROLE` ([deploy-ada-ecu-walkthrough.md §2.3](../../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#23-the-bench-image--one-image-two-roles)) | OCI image `m1-ada-bench:latest` |
+
+The boundary — this carves out test equipment, it does not weaken the product-code rule above:
+
+- **Test equipment only.** A container that *replaces* a node in a reduced blueprint belongs here; a node's own real image never does. `tools/` is not a second home for product code that was awkward to place in a node folder.
+- **A mock of node X does not live in X's folder.** It must be able to change without rebuilding the thing it tests, and must never ship inside the real image — so the four node folders stay one folder → one node → one image.
+- **These are not R5 nodes.** They may deploy as Container nodes, but they stand in for nodes rather than being them: no row in the node table above, no requirement number of their own, and no place in the full blueprint.
+- **The Scenario Player stays a node folder.** Being test equipment is not what puts a folder here — *replacing a node* is. The bench is a node of the R5 blueprint with its own address and pin (R11), so it keeps [Scenario_Player/](../../Scenario_Player/).
+- **Same build rules.** A `tools/<name>/` that builds an image is self-contained under § Build rules exactly as a node folder is: own `Dockerfile` at the folder root, own dependency manifest, own tests, no cross-folder source imports, no hardcoded tunables (role, peer addresses, ports and cadences come from env). A host-side tool that builds no image still obeys everything but the `Dockerfile` line.
+- **Mirrored contracts are copied, never forked.** A tool that speaks R1–R4 takes its field list from the owning node's `contracts/` copy; a drifted copy makes the tool pass messages the real consumer rejects.
 
 ## Per-folder `doc/`
 
@@ -27,6 +46,8 @@ Each work folder — the four node folders above plus [plans/](../../plans/) —
 - Documents follow [markdown-writing-style](../skills/markdown-writing-style/SKILL.md); reference the report's requirement numbers instead of restating requirements.
 
 ## Build rules (all container nodes)
+
+These apply unchanged to any image-building `tools/<name>/` folder — read "node folder" as "build folder" there.
 
 - Each node folder is **self-contained and independently buildable**: its own `Dockerfile` at the folder root, its own dependency manifest, its own tests. Build from the repo root, e.g. `docker build -t scenario-player:latest Scenario_Player/`.
 - Local image tag → registry tag → blueprint `image` field: the tag/push commands and the node's blueprint config are in that node's guide, not restated here.
@@ -43,6 +64,6 @@ Each work folder — the four node folders above plus [plans/](../../plans/) —
 
 ## How to apply
 
-- [[project-architecture]] resolves the target folder(s) against the table above before any HLD, and creates the folder's structure inside it — never at the repo root; the HLD and its diagrams go in that folder's `doc/`.
+- [[project-architecture]] resolves the target folder(s) against the table above before any HLD, and creates the folder's structure inside it — never at the repo root; the HLD and its diagrams go in that folder's `doc/`. A deliverable that is test equipment rather than node code goes to `tools/<name>/`, with the design that places it there recording why.
 - [[project-planner]] cites paths from these folders in every subtask brief, and pairs each node's feature tasks with its deployment tasks from that node's guide; a brief that depends on a design decision points at the `doc/` document that records it.
-- Implementation subagents write only inside the node folder their subtask names, and read its `doc/` before making design-affecting choices.
+- Implementation subagents write only inside the folder their subtask names — a node folder, or the `tools/<name>/` a test-equipment subtask names — and read its `doc/` before making design-affecting choices.

@@ -19,17 +19,19 @@ C++17; Vanetza ITS2 ASN.1 codec (LGPLv3, dynamic linking) behind the R7 adapter 
 ## Build & push the image
 
 ```
-docker login registry.carsky.io -u <your_carsky_username>
-docker tag v2x-ecu:latest registry.carsky.io/m1-v2x-ecu:latest
-docker push registry.carsky.io/m1-v2x-ecu:latest
+docker login registry.hackathon-2.carsky.io -u <your_carsky_username>
+docker tag v2x-ecu:latest registry.hackathon-2.carsky.io/m1-v2x-ecu:latest
+docker push registry.hackathon-2.carsky.io/m1-v2x-ecu:latest
 ```
+
+- **Registry host is `registry.hackathon-2.carsky.io`** — the host that actually serves Zot; `registry.carsky.io` does not ([zot-registry-api-key.md § Registry host caveat](zot-registry-api-key.md#registry-host-caveat-open-item-o1)). The same host must appear in the login, the tag and the `image` field below; a mismatch is the "push succeeded, node cannot pull" failure.
 
 ## Blueprint node config
 
 ```json
 {
   "container": {
-    "image": "registry.carsky.io/m1-v2x-ecu:latest",
+    "image": "registry.hackathon-2.carsky.io/m1-v2x-ecu:latest",
     "command": ["./entrypoint.sh"],
     "capabilities": ["NET_RAW"],
     "env": {
