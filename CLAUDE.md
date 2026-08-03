@@ -22,6 +22,7 @@ All other markdown under [requirements/](requirements/) predating 2026-07-23 is 
 3. **Scope discipline.** §1 of the report + its §4 decision record are the hard boundary. BTC's P1 chain is the committed demo; P2/P3 layers are additive and timeboxed, never gating. Flag, don't silently absorb, anything that needs a deferred item or an unratified decision.
 4. **Atomic, traceable work.** Every task/subtask maps to a requirement via task ID `X.Y.Z.W`, has a single objective, one atomic commit, and passes build + unit tests before "done". Full rule: [.claude/rules/task-planning-conventions.md](.claude/rules/task-planning-conventions.md).
 5. **No hardcoded tunables.** Gate constants, thresholds, cadences, scenario parameters — externalized configuration, never literals (report KPIs enforce this by lint).
+6. **Read on demand.** A referenced document is read when the task actually needs it, not because a spec names it. Plan a phase with no deployment work and the deploy guides stay unread; write a report and the walkthrough format is irrelevant. Specs list what is *available*; the prompt and the work decide what is *opened*.
 
 ## Roles (non-overlapping)
 
@@ -29,9 +30,12 @@ Working order: **project-researcher → project-architecture → project-planner
 
 | Agent | Owns | Does not do |
 |---|---|---|
-| [project-researcher](.claude/agents/project-researcher.md) | Requirements, feasibility, tech-stack selection | Architecture, task breakdown, code |
-| [project-architecture](.claude/agents/project-architecture.md) | HLD, folder structure, dependency/toolchain config, subagent definitions | Requirements research, task decomposition, implementation |
+| [project-researcher](.claude/agents/project-researcher.md) | Requirements, feasibility, tech-stack selection, the `*-walkthrough.md` human procedures | Architecture, task breakdown, code |
+| [project-architecture](.claude/agents/project-architecture.md) | HLD, folder structure, dependency/toolchain config, subagent definitions, the platform/node reference files | Requirements research, task decomposition, implementation |
 | [project-planner](.claude/agents/project-planner.md) | Phase/task/subtask plans with `X.Y.Z.W` IDs, subagent spawning, completion tracking | Requirements research, architecture, direct implementation |
+| [car-sky](.claude/agents/car-sky.md) | Executing deploys on the platform, Room diagnostics, acceptance evidence | Authoring any document, product code |
+
+Two agents write into [requirements/car-sky-guide/](requirements/car-sky-guide/) and the split is by artifact, not by folder: architecture owns the **reference** files (`node-*.md`, blueprint and REST references — what the platform and each node *are*); researcher owns `*-walkthrough.md` (the procedure a human *follows*).
 
 ## Repository layout
 
@@ -40,7 +44,7 @@ Working order: **project-researcher → project-architecture → project-planner
 - [plans/](plans/) — implementation plans; [milestone1.md](plans/milestone1.md) is the active plan: project-planner decomposes all tasks/subtasks from its phases (the `Y` segment of task IDs) and phase acceptance criteria.
 - [.claude/rules/](.claude/rules/) — standing process rules (task planning, report format, requirement quality, solution selection, HLD format).
 - [.claude/skills/](.claude/skills/) — reusable procedures (requirement analysis, HLD, environment research, walkthrough authoring, markdown style).
-- [.claude/agents/](.claude/agents/) — the three agent specs. [.claude/prompts/](.claude/prompts/) — saved prompts + debate scratchpads. [.claude/references/](.claude/references/) — cached external evidence.
+- [.claude/agents/](.claude/agents/) — the four agent specs. [.claude/prompts/](.claude/prompts/) — saved prompts + debate scratchpads. `.claude/references/` — cached external evidence, created when the first cache file lands.
 - **`doc/` inside each work folder** — [plans/doc/](plans/doc/) and the four node folders' `doc/` ([Scenario_Player/doc/](Scenario_Player/doc/), `V2X_ECU/doc/`, `ADA_ECU/doc/`, `IVI_ECU/doc/`) hold report-style documents on that folder's design and rationale (HLDs, design notes, `doc/research_notes/` findings and diagrams). Agents read the target folder's `doc/` as context before working in it, and add their design/rationale write-ups there — rules in [.claude/rules/node-code-layout.md](.claude/rules/node-code-layout.md#per-folder-doc).
 
 ## Commit & task discipline

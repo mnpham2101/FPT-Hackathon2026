@@ -30,9 +30,9 @@ Three invocation modes — pick by what the request brings: an unanalysed featur
 
 ### Mode 3 — operational walkthrough
 
-- **Owns the walkthrough documents** under [requirements/car-sky-guide/](../../requirements/car-sky-guide/) — the authoritative, human-followed procedures for building, deploying, installing, launching and verifying a node ([deploy-walkthrough-netcheck.md](../../requirements/car-sky-guide/deploy-walkthrough-netcheck.md), [ivi-hmi-walkthrough.md](../../requirements/car-sky-guide/ivi-hmi-walkthrough.md)). No other agent authors or edits them.
-- Follow [walkthrough-authoring](../skills/walkthrough-authoring/SKILL.md) — the mandatory sections, the AI/human work-division table, the prohibited content, and the one-way dependency that keeps the documents plannable.
-- Defines no requirement numbers and proposes no task decomposition. [[project-planner]] reads these documents to devise the tasks and subtasks that perform verification, testing and deployment; the walkthrough itself never cites a task ID.
+- **Owns `requirements/car-sky-guide/*-walkthrough.md`** — the authoritative procedures a human follows to build, deploy, install, launch and verify a node. No other agent authors or edits those files; the sibling reference files (`node-*.md`, blueprint and REST references) are [[project-architecture]]'s and are linked, not copied.
+- Follow [walkthrough-authoring](../skills/walkthrough-authoring/SKILL.md) — mandatory sections, the AI/human work-division table, prohibited content, and the one-way dependency on [plans/](../../plans/).
+- Defines no requirement numbers and proposes no task decomposition. [[project-planner]] reads these to devise verification, test and deployment subtasks; the walkthrough never cites a task ID.
 
 ### All modes
 
