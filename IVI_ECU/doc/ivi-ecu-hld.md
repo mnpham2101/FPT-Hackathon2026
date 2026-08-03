@@ -164,7 +164,7 @@ Graceful degradation is split deliberately across the last two: the parser prese
 
 | Component | Role | Input | Output |
 |---|---|---|---|
-| `ui/screen/MainScreen` | the R16 layout: central Display Area, Home / Apps / Settings button areas, mode labels and bottom status bar; hosts the Warning View slot | `DisplayMode`, `WarningUiState`, `R4LinkState` | the composed screen |
+| `ui/screen/MainScreen` | the R16 layout, as its figure [ivi-ecu.svg](../../requirements/ivi-ecu.svg) fixes it: central Display Area, Home / Apps / Settings button areas, mode labels and bottom status bar; hosts the Warning View slot | `DisplayMode`, `WarningUiState`, `R4LinkState` | the composed screen |
 | `ui/view/IviWarningViewSeam` | the R17 render seam — the contract `Render(scene, riskState)` that decouples the app from the rendering engine, so an optional 3D renderer swaps in with no consumer change | — | the interface both renderers realize |
 | `ui/view/CanvasWarningView` | the God View as R17 fixes it: a dark canvas, a lane-marked road converging toward the top, and the three vehicles as car-shaped silhouettes in one lane with ego nearest the viewer — ego and B solid, ghost C dashed and translucent on a pulsing ground glow coloured by the risk state, and a `null` `vehicleC` rendered without C. **The scene alone is the warning:** no legend, no distance labels, no text overlay, no banner. The `[V2X]` badge and the A→B / A→C distance callouts belong to R17's annotated explanatory figure, not to this renderer | `SceneGeometry`, `riskState` | Compose Canvas draw calls |
 | `ui/view/SceneCoordinateMapper` | scene metres → canvas coordinates for that view: the camera is slightly inclined rather than overhead, so the mapping is an oblique projection — depth compresses toward the top and each vehicle shows a shallow rear face — not a uniform top-down scale. Pure math, free of Android types | `SceneGeometry`, the base scale from config | screen-space geometry for the draw calls |
@@ -263,7 +263,7 @@ No dependency outside this table enters the node without a design change. Traces
 | Contract binding | kotlinx.serialization-json | report R4 tech stack ("kotlinx.serialization (IVI side)"), D1 |
 | Transport | `java.net.DatagramSocket`, UDP + versioned JSON | report §3(f), R6 |
 | Concurrency | kotlinx-coroutines-core (`SharedFlow`/`StateFlow`) | D5 back-pressure policy |
-| Build | Gradle multi-project, AGP 8.13, JDK 17, version catalog | D2, D8 |
+| Build | Gradle multi-project, AGP 8.13, JDK 17, version catalog; `minSdk 29` / `targetSdk 33` | D2, D8 |
 | Tests | JUnit4 (+ kotlinx-coroutines-test in `:observer`); **no Robolectric** | D2 — the loop is plain JVM |
 | Simulator image | multi-stage Docker; single-platform `linux/arm64`, `--provenance=false --sbom=false` | the cluster rejects manifest indexes |
 
@@ -299,7 +299,7 @@ Expected observables, per [deploy-ivi-hmi-walkthrough.md §6](../../requirements
 | the God View drawn in the Display Area | `MainScreen` → `IviWarningViewSeam` → `CanvasWarningView` |
 | `[? UNKNOWN SOURCE]` on an `own_sensor` message | the provenance guard |
 
-Below both configurations sits the plain-JVM unit layer: `:contract`, `:serializer` and `:observer` are tested with a fake source or a loopback socket, so the receive path is proven without a Room, and the dev injector reaches the real UI with no network at all.
+Below both configurations sits the plain-JVM unit layer: `:contract`, `:serializer` and `:observer` are tested with a fake source or a loopback socket, so the receive path is proven without a Room, and the dev injector reaches the real UI with no network at all. Two of those tests are R4's own acceptance rather than this node's convenience — the **round-trip** test over every frozen sample, which is what makes this side of the contract match the producer's, and the **additive-version** test, where a message carrying a newer `schemaVersion`, an unknown `warningType` and an unknown extra field decodes and degrades instead of failing.
 
 ## 13. Design decisions
 
@@ -389,6 +389,9 @@ Unlike a container node, whose env comes from the blueprint at deploy time, an i
 - **Ghost C renders only from `v2x_relayed`** — the renderer's source guard is the mechanical form of the R19 claim and stays exercised by a test.
 - **3D (`SceneViewWarning3D`) and multi-process wake-on-warning are optional**, not M1 deliverables; nothing else depends on either.
 - **The periodic `state` message is optional on the producer side**; the consumer parses it (last-value-wins by `seq`) and no acceptance criterion depends on it.
+- **This node renders relative geometry only** — no map and no GNSS injection. Positions arrive in the ego frame and are drawn in it; nothing here consumes a coordinate reference system.
+- **No JavaScript and no WebSocket anywhere in this node**, as in the rest of the ego software path. The transport is the UDP socket of §8 and nothing else.
+- **Displaying the ego video clip in the Display Area is deferred from M1.** The Display Area serves the Warning View and the Home / Apps / Settings modes; a video feed is a later milestone's addition, not an omission to fill in.
 
 ### D12 — The provenance guard fails open, so every scene composer must fill the snapshot
 
