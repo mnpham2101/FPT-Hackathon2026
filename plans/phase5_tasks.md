@@ -8,6 +8,8 @@
 >
 > **Five IDs collide across the two files** — `4.5.1.1`–`4.5.1.5` name entirely different subtasks in each. Per [task-planning-conventions.md](../.claude/rules/task-planning-conventions.md#task-id-scheme), IDs are never renumbered, so this file is kept intact for history and **nothing here is implemented or committed against**. Read it only as a cross-check.
 >
+> **`16.5.2.5`'s deployment doc is void.** The APK's build → export → deploy → install → launch → verification procedure lives in [ivi-hmi-walkthrough.md](../requirements/car-sky-guide/ivi-hmi-walkthrough.md), which is authoritative for it; `deployment/phase5-ivi-deploy.md` is not a sanctioned location and nothing is written there.
+>
 > Cross-node execution view: [ada-ivi-plan.md](ada-ivi-plan.md).
 
 > **Authority & Context:**

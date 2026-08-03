@@ -4,6 +4,7 @@
 - **Virtualization level:** Full vECU — developed fully; the VM artifact itself ships in the starter pack (report §1 node table)
 - **Focus goal:** God view of the 3 vehicles, every instance displayed
 - **Part of:** [carsky-4-node-blueprint.md](carsky-4-node-blueprint.md)
+- **Bring-up procedure:** [ivi-hmi-walkthrough.md](ivi-hmi-walkthrough.md) — local or CI build → download the CI artifact → deploy → ADB install → screen → verified God View. This file owns the node's *facts* (artifact IDs, config, pin shape); the walkthrough is **authoritative** for the *doing*.
 
 ## Responsibility
 
@@ -17,7 +18,7 @@ Kotlin, Jetpack Compose, AndroidX; Compose Canvas for 2D (SceneView/Filament for
 
 ## Prepare the VM artifact (once per team, not per deploy)
 
-**Already done on this deployment — reuse it, do not upload a new one.** The platform carries one `ANDROID_IMAGE` artifact named **AAOS** (confirmed live 2026-07-31) with both required file roles (`image`, `host_package`):
+**Already done on this deployment — reuse it, do not upload a new one.** The platform carries one `ANDROID_IMAGE` artifact named **AAOS** with both required file roles (`image`, `host_package`):
 
 | Field | Value |
 |---|---|
@@ -42,6 +43,8 @@ Only if that artifact is ever missing: **Artifacts → New Artifact**, category 
   }
 }
 ```
+
+The Inspector's other CONFIGURATION fields — **Display Width/Height/DPI**, **GPU Backend**, **Part Prefix** — are per-node-instance values this guide does not fix. The Part Prefix names the node's parts (`<prefix>-screen`, `<prefix>-logcat`, `<prefix>-adb`) that the Devices-panel widgets select by, so read the live values off the node before using them ([ivi-hmi-walkthrough.md §4.2](ivi-hmi-walkthrough.md#42-configure-the-blueprint-and-its-ivi-node)).
 
 ## Pins
 
@@ -71,14 +74,16 @@ Skycraft Node available pin kinds: `vhal`, `kuksa`, `ethernet`, `video`, `usb` (
 
 ## Post-deploy: install the team APK
 
-The APK is not baked into the VM image — install it after the node reaches Running, via ADB:
+**Nothing on this node pulls the APK.** The VM image is the starter-pack AAOS artifact above; the team APK is installed by hand into the running guest, after the node reaches Running — there is no registry hop and no artifact-store hop for it ([ivi-hmi-walkthrough.md §4.1](ivi-hmi-walkthrough.md#41-how-the-apk-reaches-the-ivi-ecu-node)).
 
 ```
 adb connect <skycraft-adb-endpoint>
-adb install app-debug.apk
+adb install -r app-debug.apk
 ```
 
 Use Rework's device panel or the CarSky Gateway ADB tunnel to get `<skycraft-adb-endpoint>` (ADB is exposed on a fixed port per Skycraft pod).
+
+**The route is unproven on this deployment.** The candidate endpoint sources ([§4.4](ivi-hmi-walkthrough.md#44-get-an-adb-endpoint)), the guest properties that gate the install — `minSdk 29`, the `automotive` feature — ([§4.5](ivi-hmi-walkthrough.md#45-connect-and-check-the-guest)), the install itself ([§4.6](ivi-hmi-walkthrough.md#46-install-the-apk)), the launch command with its port override ([§4.7](ivi-hmi-walkthrough.md#47-open-the-screen-and-launch-the-app)), and the emulator fallback (§4.10, unavailable on an ARM64 Windows host — §2.2) are enumerated in [ivi-hmi-walkthrough.md](ivi-hmi-walkthrough.md).
 
 ## Verification (feeds R16, R17 acceptance)
 
@@ -86,3 +91,5 @@ Use Rework's device panel or the CarSky Gateway ADB tunnel to get `<skycraft-adb
 - An R4 warning message brings the warning view up in the Display area.
 - Warning view shows ego, B, and ghost C at composed positions; **ghost C sourced only from `v2x_relayed` data**; 2D drawing delivered.
 - A newer message with an unknown `warningType` degrades gracefully (R4 additive-version test).
+
+How to produce each observation — what to feed the app, and what a correct versus incorrect result looks like — is the verification ladder in [ivi-hmi-walkthrough.md §4.8](ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging).
