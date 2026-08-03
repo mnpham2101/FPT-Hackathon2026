@@ -15,7 +15,7 @@ import referencing
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from contracts.tracked_object import from_dict, from_jsonl, to_jsonl  # noqa: E402
+from contracts.tracked_object import from_dict, from_jsonl, to_jsonl
 
 ADA = Path(__file__).resolve().parents[2]
 SAMPLES = ADA / "tests" / "fixtures" / "samples"

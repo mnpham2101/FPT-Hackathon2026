@@ -14,6 +14,10 @@ Phase 4 consumes live R2 traffic, updates the R3 store, runs NLOS risk assessmen
 - CRA is selected through `CRA_ENABLED`; the built-in registry currently exposes
   `nlos_obstruction`. It classifies low/medium/high at configurable near/critical thresholds and
   applies `RISK_DWELL_MS` before a transition.
+- Risk uses composed ego distance `d_AC = d_AB + d_BC`, not the relayed B→C distance. The default
+  bands are high at ≤30 m and medium at ≤50 m. A positive closing rate also produces TTC evidence.
+- The fusion tick runs on receive timeouts as well as R2 arrivals, so a 300 ms dwell commits without
+  requiring another network packet.
 - Event JSONL contains assessment, track transition, risk transition, complete attempted R4 body,
   and whether UDP transmission succeeded.
 
@@ -43,7 +47,7 @@ Expected behavior:
 | R2 distance | Track/risk behavior |
 |---:|---|
 | 40 m | C outside gate, no warning |
-| 25 m | C enters near zone, R4 `riskState = medium` |
+| 25 m | With B at 12 m, composed C is 37 m: R4 `riskState = medium` |
 | 24 m | C stays in gate, no duplicate R4 |
 | 36 m | C exits near zone, R4 `riskState = low` |
 
@@ -71,6 +75,15 @@ body containing both objects and `geometry.vehicleB`. `payload.sent` distinguish
 from successful Ethernet delivery. The CarSky acceptance additionally requires a capture at IVI;
 see `requirements/car-sky-guide/node-ada-ecu.md`.
 
-Local acceptance on 2026-08-03 passed with 10 events, one risk transition, and one complete R4
-transmission record. The ARM64 container smoke reported `sent=true`; its R4 carried tracked
-`own:B`, tracked `v2x:1201:7`, and composed B/C geometry.
+R4 is serialized through the shared C++ contract binding. The checker can validate every body:
+
+```sh
+python ADA_ECU/tools/check_evt_log.py \
+  --r4-schema ADA_ECU/contracts/r4-ada-ivi.schema.json \
+  /tmp/ada-phase4-events.jsonl
+```
+
+The hardened local UDP acceptance passed with 28 events and the full
+`medium → high → low` sequence: three risk transitions and three successfully delivered R4
+datagrams. Its messages carried tracked `own:B`, tracked `v2x:1201:7`, and composed B/C geometry;
+the out-of-range negative control emitted zero R4.

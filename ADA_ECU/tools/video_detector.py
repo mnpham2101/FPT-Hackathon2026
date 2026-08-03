@@ -14,8 +14,9 @@ import json
 import os
 import sys
 import time
+from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
-from typing import Iterable, Iterator, Protocol
+from typing import ClassVar, Protocol
 
 
 @dataclass(frozen=True)
@@ -76,8 +77,13 @@ class PlaceholderVehicleBackend:
 class YoloOnnxVehicleBackend:
     """YOLO11 ONNX vehicle detector that emits the ego-lane occluder as B."""
 
-    vehicle_class_ids = {2, 3, 5, 7}  # COCO: car, motorcycle, bus, truck
-    coco_names = {
+    vehicle_class_ids: ClassVar[set[int]] = {
+        2,
+        3,
+        5,
+        7,
+    }  # COCO: car, motorcycle, bus, truck
+    coco_names: ClassVar[dict[int, str]] = {
         2: "car",
         3: "motorcycle",
         5: "bus",
@@ -103,10 +109,14 @@ class YoloOnnxVehicleBackend:
             import numpy as np  # type: ignore
             import onnxruntime as ort  # type: ignore
         except ModuleNotFoundError as exc:
-            raise RuntimeError("YOLO backend dependencies are missing. Install with: python3 -m pip install -r ADA_ECU/requirements.txt") from exc
+            raise RuntimeError(
+                "YOLO backend dependencies are missing. Install with: python3 -m pip install -r ADA_ECU/requirements.txt"
+            ) from exc
 
         self.np = np
-        self.session = ort.InferenceSession(model_path, providers=["CPUExecutionProvider"])
+        self.session = ort.InferenceSession(
+            model_path, providers=["CPUExecutionProvider"]
+        )
         self.input_name = self.session.get_inputs()[0].name
         shape = self.session.get_inputs()[0].shape
         if len(shape) == 4 and isinstance(shape[2], int) and isinstance(shape[3], int):
@@ -127,7 +137,9 @@ class YoloOnnxVehicleBackend:
 
         tensor, scale, pad_x, pad_y = self._preprocess(frame.image)
         outputs = self.session.run(None, {self.input_name: tensor})
-        detections = self._postprocess(outputs[0], frame.width, frame.height, scale, pad_x, pad_y)
+        detections = self._postprocess(
+            outputs[0], frame.width, frame.height, scale, pad_x, pad_y
+        )
         if not detections:
             return []
 
@@ -137,14 +149,17 @@ class YoloOnnxVehicleBackend:
         plausible = [
             item
             for item in detections
-            if item.width <= frame.width * 0.80 and item.height > 0 and item.width / item.height <= 3.5
+            if item.width <= frame.width * 0.80
+            and item.height > 0
+            and item.width / item.height <= 3.5
         ]
         candidates = plausible or detections
         half_width = max(frame.width / 2.0, 1.0)
         vehicle_b = max(
             candidates,
             key=lambda item: (
-                item.area * max(0.05, 1.0 - abs(item.center_x - half_width) / half_width),
+                item.area
+                * max(0.05, 1.0 - abs(item.center_x - half_width) / half_width),
                 item.score,
             ),
         )
@@ -188,10 +203,13 @@ class YoloOnnxVehicleBackend:
 
     def _speed_mps(self, distance_m: float, timestamp_ms: int) -> float:
         speed_mps = 0.0
-        if self.previous_distance_m is not None and self.previous_timestamp_ms is not None:
+        if (
+            self.previous_distance_m is not None
+            and self.previous_timestamp_ms is not None
+        ):
             elapsed_s = (timestamp_ms - self.previous_timestamp_ms) / 1000.0
             if elapsed_s > 0:
-                speed_mps = (distance_m - self.previous_distance_m) / elapsed_s
+                speed_mps = abs(distance_m - self.previous_distance_m) / elapsed_s
         self.previous_distance_m = distance_m
         self.previous_timestamp_ms = timestamp_ms
         return speed_mps
@@ -202,14 +220,16 @@ class YoloOnnxVehicleBackend:
         np = self.np
         original_h, original_w = image.shape[:2]
         scale = min(self.input_size / original_w, self.input_size / original_h)
-        resized_w = int(round(original_w * scale))
-        resized_h = int(round(original_h * scale))
-        resized = cv2.resize(image, (resized_w, resized_h), interpolation=cv2.INTER_LINEAR)
+        resized_w = round(original_w * scale)
+        resized_h = round(original_h * scale)
+        resized = cv2.resize(
+            image, (resized_w, resized_h), interpolation=cv2.INTER_LINEAR
+        )
 
         pad_x = (self.input_size - resized_w) / 2.0
         pad_y = (self.input_size - resized_h) / 2.0
-        left = int(round(pad_x))
-        top = int(round(pad_y))
+        left = round(pad_x)
+        top = round(pad_y)
         canvas = np.full((self.input_size, self.input_size, 3), 114, dtype=np.uint8)
         canvas[top : top + resized_h, left : left + resized_w] = resized
 
@@ -218,7 +238,15 @@ class YoloOnnxVehicleBackend:
         tensor = np.transpose(tensor, (2, 0, 1))[None, ...]
         return tensor, scale, float(left), float(top)
 
-    def _postprocess(self, output: object, width: int, height: int, scale: float, pad_x: float, pad_y: float) -> list[Detection]:
+    def _postprocess(
+        self,
+        output: object,
+        width: int,
+        height: int,
+        scale: float,
+        pad_x: float,
+        pad_y: float,
+    ) -> list[Detection]:
         np = self.np
         preds = np.squeeze(output)
         if preds.ndim != 2:
@@ -234,7 +262,10 @@ class YoloOnnxVehicleBackend:
             class_scores = row[4:]
             class_id = int(np.argmax(class_scores))
             score = float(class_scores[class_id])
-            if class_id not in self.vehicle_class_ids or score < self.confidence_threshold:
+            if (
+                class_id not in self.vehicle_class_ids
+                or score < self.confidence_threshold
+            ):
                 continue
 
             cx, cy, box_w, box_h = [float(value) for value in row[:4]]
@@ -248,7 +279,9 @@ class YoloOnnxVehicleBackend:
             y2 = min(max(y2, 0.0), float(height))
             if x2 <= x1 or y2 <= y1:
                 continue
-            candidates.append(Detection(class_id, self.coco_names[class_id], score, x1, y1, x2, y2))
+            candidates.append(
+                Detection(class_id, self.coco_names[class_id], score, x1, y1, x2, y2)
+            )
 
         return self._nms(candidates)
 
@@ -258,7 +291,11 @@ class YoloOnnxVehicleBackend:
         while remaining:
             current = remaining.pop(0)
             selected.append(current)
-            remaining = [item for item in remaining if self._iou(current, item) < self.iou_threshold]
+            remaining = [
+                item
+                for item in remaining
+                if self._iou(current, item) < self.iou_threshold
+            ]
         return selected
 
     @staticmethod
@@ -337,11 +374,19 @@ def synthetic_samples(count: int, start_ms: int) -> Iterator[FrameInput]:
         )
 
 
-def video_samples(video_path: str, every_n_frames: int, limit: int | None) -> Iterator[FrameInput]:
+def video_samples(
+    video_path: str,
+    every_n_frames: int,
+    limit: int | None,
+    realtime: bool = False,
+    loop: bool = False,
+) -> Iterator[FrameInput]:
     try:
         import cv2  # type: ignore
     except ModuleNotFoundError as exc:
-        raise RuntimeError("OpenCV is not installed. Install with: python3 -m pip install -r ADA_ECU/requirements.txt") from exc
+        raise RuntimeError(
+            "OpenCV is not installed. Install with: python3 -m pip install -r ADA_ECU/requirements.txt"
+        ) from exc
 
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
@@ -353,16 +398,27 @@ def video_samples(video_path: str, every_n_frames: int, limit: int | None) -> It
 
     emitted = 0
     frame_index = 0
+    loop_start = time.monotonic()
     try:
         while True:
             ok, frame = cap.read()
             if not ok:
-                break
+                if not loop:
+                    break
+                cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                frame_index = 0
+                loop_start = time.monotonic()
+                continue
             if frame_index % every_n_frames == 0:
+                timestamp_ms = int(frame_index * 1000 / fps)
+                if realtime:
+                    delay_s = loop_start + timestamp_ms / 1000.0 - time.monotonic()
+                    if delay_s > 0:
+                        time.sleep(delay_s)
                 height, width = frame.shape[:2]
                 yield FrameInput(
                     frame_index=frame_index,
-                    timestamp_ms=int(frame_index * 1000 / fps),
+                    timestamp_ms=timestamp_ms,
                     width=int(width),
                     height=int(height),
                     image=frame,
@@ -385,20 +441,78 @@ def emit_jsonl(samples: Iterable[FrameInput], backend: DetectionBackend) -> int:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Emit R3 own-sensor detections from a video file as JSONL.")
+    parser = argparse.ArgumentParser(
+        description="Emit R3 own-sensor detections from a video file as JSONL."
+    )
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--video", help="input video file decoded by OpenCV")
-    mode.add_argument("--synthetic", type=int, metavar="COUNT", help="emit COUNT synthetic frame detections without OpenCV")
-    parser.add_argument("--backend", choices=["placeholder", "yolo-onnx"], default="placeholder", help="detection backend to run")
-    parser.add_argument("--model", default=os.getenv("MODEL_PATH", "ADA_ECU/models/yolo11n.onnx"), help="YOLO11 ONNX model path")
-    parser.add_argument("--confidence", type=float, default=float(os.getenv("CONF_THRESHOLD", "0.25")), help="YOLO confidence threshold")
-    parser.add_argument("--iou", type=float, default=float(os.getenv("IOU_THRESHOLD", "0.45")), help="YOLO NMS IoU threshold")
-    parser.add_argument("--input-size", type=int, default=int(os.getenv("MODEL_INPUT_SIZE", "640")), help="YOLO square input size")
-    parser.add_argument("--vehicle-width-m", type=float, default=float(os.getenv("VEHICLE_WIDTH_M", "1.8")), help="nominal vehicle width for distance estimate")
-    parser.add_argument("--focal-px", type=float, default=float(os.getenv("CAMERA_FOCAL_PX", "2000")), help="camera focal length in pixels for distance/lateral estimate")
-    parser.add_argument("--log-detections", action="store_true", help="write ML detection bbox evidence to stderr")
-    parser.add_argument("--every-n-frames", type=int, default=5, help="sample one frame every N frames in video mode")
+    mode.add_argument(
+        "--synthetic",
+        type=int,
+        metavar="COUNT",
+        help="emit COUNT synthetic frame detections without OpenCV",
+    )
+    parser.add_argument(
+        "--backend",
+        choices=["placeholder", "yolo-onnx"],
+        default="placeholder",
+        help="detection backend to run",
+    )
+    parser.add_argument(
+        "--model",
+        default=os.getenv("MODEL_PATH", "ADA_ECU/models/yolo11n.onnx"),
+        help="YOLO11 ONNX model path",
+    )
+    parser.add_argument(
+        "--confidence",
+        type=float,
+        default=float(os.getenv("CONF_THRESHOLD", "0.25")),
+        help="YOLO confidence threshold",
+    )
+    parser.add_argument(
+        "--iou",
+        type=float,
+        default=float(os.getenv("IOU_THRESHOLD", "0.45")),
+        help="YOLO NMS IoU threshold",
+    )
+    parser.add_argument(
+        "--input-size",
+        type=int,
+        default=int(os.getenv("MODEL_INPUT_SIZE", "640")),
+        help="YOLO square input size",
+    )
+    parser.add_argument(
+        "--vehicle-width-m",
+        type=float,
+        default=float(os.getenv("VEHICLE_WIDTH_M", "1.8")),
+        help="nominal vehicle width for distance estimate",
+    )
+    parser.add_argument(
+        "--focal-px",
+        type=float,
+        default=float(os.getenv("CAMERA_FOCAL_PX", "2000")),
+        help="camera focal length in pixels for distance/lateral estimate",
+    )
+    parser.add_argument(
+        "--log-detections",
+        action="store_true",
+        help="write ML detection bbox evidence to stderr",
+    )
+    parser.add_argument(
+        "--every-n-frames",
+        type=int,
+        default=5,
+        help="sample one frame every N frames in video mode",
+    )
     parser.add_argument("--limit", type=int, help="maximum detections to emit")
+    parser.add_argument(
+        "--realtime",
+        action="store_true",
+        help="pace sampled frames using clip timestamps",
+    )
+    parser.add_argument(
+        "--loop", action="store_true", help="restart the clip after its final frame"
+    )
     return parser.parse_args()
 
 
@@ -420,10 +534,25 @@ def main() -> int:
     try:
         backend = make_backend(args)
         if args.synthetic is not None:
-            count = min(args.synthetic, args.limit) if args.limit is not None else args.synthetic
-            emitted = emit_jsonl(synthetic_samples(count, int(time.time() * 1000)), backend)
+            count = (
+                min(args.synthetic, args.limit)
+                if args.limit is not None
+                else args.synthetic
+            )
+            emitted = emit_jsonl(
+                synthetic_samples(count, int(time.time() * 1000)), backend
+            )
         else:
-            emitted = emit_jsonl(video_samples(args.video, args.every_n_frames, args.limit), backend)
+            emitted = emit_jsonl(
+                video_samples(
+                    args.video,
+                    args.every_n_frames,
+                    args.limit,
+                    args.realtime,
+                    args.loop,
+                ),
+                backend,
+            )
     except RuntimeError as exc:
         print(str(exc), file=sys.stderr)
         return 1

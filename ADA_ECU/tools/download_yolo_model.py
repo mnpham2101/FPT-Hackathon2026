@@ -8,12 +8,15 @@ import pathlib
 import sys
 import urllib.request
 
-
-DEFAULT_URL = "https://github.com/ultralytics/assets/releases/download/v8.4.0/yolo11n.onnx"
+DEFAULT_URL = (
+    "https://github.com/ultralytics/assets/releases/download/v8.4.0/yolo11n.onnx"
+)
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Download pretrained YOLO11n ONNX model for ADA Phase 3.")
+    parser = argparse.ArgumentParser(
+        description="Download pretrained YOLO11n ONNX model for ADA Phase 3."
+    )
     parser.add_argument("--url", default=DEFAULT_URL)
     parser.add_argument("--output", default="ADA_ECU/models/yolo11n.onnx")
     args = parser.parse_args()
@@ -32,7 +35,10 @@ def main() -> int:
         return 1
 
     if output.stat().st_size < 1_000_000:
-        print(f"downloaded file is too small to be a YOLO model: {output.stat().st_size} bytes", file=sys.stderr)
+        print(
+            f"downloaded file is too small to be a YOLO model: {output.stat().st_size} bytes",
+            file=sys.stderr,
+        )
         return 2
     print(f"downloaded model: {output} ({output.stat().st_size} bytes)")
     return 0

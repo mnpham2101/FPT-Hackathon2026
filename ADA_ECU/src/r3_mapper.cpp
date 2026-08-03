@@ -82,5 +82,22 @@ std::optional<TrackedObject> tracked_object_from_r3_json(const std::string& json
     }
 }
 
-}  // namespace ada
+std::string tracked_object_to_r3_json(const TrackedObject& object) {
+    return Json{
+        {"id", object.id},
+        {"class", object.object_class},
+        {"source", to_string(object.source)},
+        {"position",
+         {{"x", object.position.x_m}, {"y", object.position.y_m}, {"confidence", object.position.confidence}}},
+        {"distance", object.distance_m},
+        {"speed", object.speed_mps},
+        {"confidence", object.confidence},
+        {"state", to_string(object.state)},
+        {"timestamps",
+         {{"measured", object.timestamps.measured_ms},
+          {"received", object.timestamps.received_ms},
+          {"lastUpdated", object.timestamps.last_updated_ms}}},
+    }.dump();
+}
 
+}  // namespace ada

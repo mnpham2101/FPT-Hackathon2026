@@ -338,9 +338,9 @@ The user's requirement: *the TrackedObjects of vehicle B and vehicle C are sent 
 
 > Planned in full so the cost is visible, and **blocked** so no dependent work starts by accident. This group changes a **frozen contract** and therefore requires a re-freeze across every consumer (CLAUDE.md governing principle 1). The planner's recommendation is **not** to run it — see § Phase 4 output acceptance. If the user ratifies it, all four subtasks run as one wave **before** Phase 5's IVI binding work, and `18.4.3.3`/`15.4.6.5` are amended to assert B's full object on the wire.
 >
-> **User ratification:** *(not given — group is not started)*
+> **User ratification:** given in the ADA implementation session; `trackedObjects` is optional and additive. IVI source integration remains owned by Phase 5.
 
-### [ ] `4.4.7.1` — Add `trackedObjects` to `contracts/r4-ada-ivi.schema.json` and re-sync *(agent — gated)*
+### [x] `4.4.7.1` — Add `trackedObjects` to `contracts/r4-ada-ivi.schema.json` and re-sync *(agent — gated)*
 
 **Objective:** the contract change itself, additive and optional.
 
@@ -350,7 +350,7 @@ The user's requirement: *the TrackedObjects of vehicle B and vehicle C are sent 
 
 **Dependencies:** user ratification. **Commit:** `[4.4.7.1] feat: add the optional trackedObjects array to R4`
 
-### [ ] `4.4.7.2` — ADA binding + emitter + round-trip tests *(agent — gated)*
+### [x] `4.4.7.2` — ADA binding + emitter + round-trip tests *(agent — gated)*
 
 **Objective:** the producer side of the re-freeze.
 
@@ -370,7 +370,7 @@ The user's requirement: *the TrackedObjects of vehicle B and vehicle C are sent 
 
 **Dependencies:** after `4.4.7.1`. **Commit:** `[4.4.7.3] feat: decode trackedObjects in the IVI R4 binding`
 
-### [ ] `4.4.7.4` — Amend the evidence checks to assert B on the wire *(agent — gated)*
+### [x] `4.4.7.4` — Amend the evidence checks to assert B on the wire *(agent — gated)*
 
 **Objective:** make the new field actually load-bearing for acceptance, rather than shipping an unused array.
 

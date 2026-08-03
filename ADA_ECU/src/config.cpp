@@ -129,6 +129,20 @@ AdaConfig load_config(const std::string& path) {
     apply_env_double("RISK_CRITICAL_M", config.risk_critical_m);
     apply_env_int64("RISK_DWELL_MS", config.risk_dwell_ms);
 
+    if (config.gate_enter_m < 0.0 || config.gate_exit_m <= config.gate_enter_m) {
+        throw std::runtime_error("GATE_EXIT_M must be greater than GATE_ENTER_M >= 0");
+    }
+    if (config.risk_critical_m < 0.0 || config.risk_near_m <= config.risk_critical_m) {
+        throw std::runtime_error("RISK_NEAR_M must be greater than RISK_CRITICAL_M >= 0");
+    }
+    if (config.risk_dwell_ms < 0 || config.miss_limit_ms <= 0 || config.r2_receive_timeout_ms <= 0) {
+        throw std::runtime_error("ADA timeout and dwell configuration is invalid");
+    }
+    if (config.ada_listen_port < 1 || config.ada_listen_port > 65535 || config.ivi_port < 1 ||
+        config.ivi_port > 65535) {
+        throw std::runtime_error("ADA UDP port must be in range 1..65535");
+    }
+
     return config;
 }
 

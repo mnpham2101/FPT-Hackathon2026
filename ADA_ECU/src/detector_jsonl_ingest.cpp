@@ -23,9 +23,7 @@ bool ingest_own_sensor_jsonl_line(const std::string& line, TrackStore& store, Ev
             "\",\"previous\":\"" + std::string(to_string(update.previous)) + "\",\"state\":\"" +
             std::string(to_string(update.current)) + "\",\"distance\":" + std::to_string(object->distance_m) +
             ",\"changed\":" + (update.changed ? "true" : "false") +
-            ",\"object\":{\"id\":\"" + object->id + "\",\"source\":\"" +
-            std::string(to_string(object->source)) + "\",\"state\":\"" +
-            std::string(to_string(stored ? stored->state : update.current)) + "\"}}");
+            ",\"object\":" + tracked_object_to_r3_json(stored ? *stored : *object) + "}");
     return true;
 }
 

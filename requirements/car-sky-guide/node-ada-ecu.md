@@ -33,17 +33,19 @@ The provided video clip(s) ship inside the image (`COPY` at build time) — no l
 ```json
 {
   "container": {
-    "image": "registry.carsky.io/m1-ada-ecu:latest",
+    "image": "registry.hackathon-2.carsky.io/m1-ada-ecu:<commit>",
     "command": ["--config", "/app/config/ada-ecu.conf"],
+    "capabilities": ["NET_RAW"],
     "env": {
       "V2X_LISTEN_PORT": "47200",
       "IVI_HOST": "10.99.0.13",
       "IVI_PORT": "47300",
       "DETECTOR_ENABLED": "true",
-      "DETECTOR_CMD": "python3 /app/detector/tools/video_detector.py --video /app/media/ego-b-occluding-c.mp4 --backend yolo-onnx --model /app/models/yolo11n.onnx --every-n-frames 4 --confidence 0.20",
+      "DETECTOR_RESTART_MAX": "3",
+      "DETECTOR_CMD": "python3 /app/detector/tools/video_detector.py --video /app/media/ego-b-occluding-c.mp4 --backend yolo-onnx --model /app/models/yolo11n.onnx --every-n-frames 4 --confidence 0.20 --realtime --loop",
       "CRA_ENABLED": "nlos_obstruction",
-      "RISK_NEAR_M": "30",
-      "RISK_CRITICAL_M": "15",
+      "RISK_NEAR_M": "50",
+      "RISK_CRITICAL_M": "30",
       "RISK_DWELL_MS": "300",
       "ENABLE_PCAP": "true",
       "GATE_ENTER_M": "30",
@@ -90,10 +92,10 @@ This pin's edge targets the Ethernet Bridge node's single `ETHERNET`/`INPUT` pin
 - At least one R4 warning event per scenario run, carrying risk state and composed geometry, observed at the IVI ECU (R15).
 - JSONL event logs reconstruct a full run offline (R18).
 
-After one scenario, save the ADA event log and the rotating capture directory from the container.
+After one scenario, save the ADA View Log. Each completed rotating capture is automatically emitted
+between `[PCAP-BEGIN ...]` and `[PCAP-END]` markers.
 Validate the event chain with `python3 ADA_ECU/tools/check_evt_log.py <event-log>`. To transport a
-single capture through text-only CarSky logs, run `/app/capture.sh --export-one <capture.pcap>` in
-the node, save the emitted `[CAP]` line locally, then run
-`ADA_ECU/tools/extract_pcap.sh <capture-line.txt> <output.pcap>`. The script checks the SHA-256
+single capture through text-only CarSky logs, run
+`ADA_ECU/tools/extract_pcap.sh <saved-view-log.txt> <output.pcap>`. The script checks the SHA-256
 before accepting the file. In Wireshark, filter `udp.port == 47300` and inspect the R4 payload for
 tracked `own:B` and `v2x:1201:7` objects.

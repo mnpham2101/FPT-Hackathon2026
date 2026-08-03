@@ -13,8 +13,13 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=46002)
-    parser.add_argument("--sample", default="ADA_ECU/testdata/r2_v2x_object.sample.json")
-    parser.add_argument("--distances", help="comma-separated object.distance sequence to send, e.g. 40,25,24,36")
+    parser.add_argument(
+        "--sample", default="ADA_ECU/testdata/r2_v2x_object.sample.json"
+    )
+    parser.add_argument(
+        "--distances",
+        help="comma-separated object.distance sequence to send, e.g. 40,25,24,36",
+    )
     parser.add_argument("--interval-ms", type=int, default=100)
     args = parser.parse_args()
 

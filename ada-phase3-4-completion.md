@@ -17,3 +17,12 @@ Close the remaining ADA runtime, evidence, CI, and CarSky acceptance gaps withou
 
 ## Notes
 The user ratified additive `trackedObjects`. IVI Kotlin source remains owned by Phase 5; this wave produces a concrete integration request instead of editing it.
+
+## Pre-CarSky hardening
+- [x] CRA uses composed A→C distance and TTC evidence.
+- [x] A periodic fusion tick makes 300 ms dwell effective.
+- [x] R4 serialization uses the shared binding; EVT stores full B/C R3 objects.
+- [x] CI runs real UDP R2/R4 loopback plus an out-of-range negative control.
+- [x] Detector supports real-time looping and own-sensor expiry/re-admission.
+- [x] PCAP rotation is exported through View Log with verified extraction.
+- [x] CarSky registry, ARM64, `NET_RAW`, ports, detector and risk configuration are documented.

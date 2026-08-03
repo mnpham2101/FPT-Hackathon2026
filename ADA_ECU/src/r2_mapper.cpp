@@ -47,7 +47,9 @@ std::optional<TrackedObject> tracked_object_from_r2_json(const std::string& json
         object.distance_m = r2_object.at("distance").get<double>();
         object.speed_mps = r2_object.value("speed", 0.0);
         object.confidence = r2_object.value("confidence", 0.0);
-        object.timestamps = {received_ms, message.value("rxTime", received_ms), received_ms};
+        const auto r2_received_ms = message.value("rxTime", received_ms);
+        const auto measured_ms = r2_received_ms + r2_object.value("timeOfMeasurement", 0LL);
+        object.timestamps = {measured_ms, received_ms, received_ms};
         return object;
     } catch (const Json::exception&) {
         return std::nullopt;

@@ -13,6 +13,8 @@ Phase 3 replaces the Phase 2 mock own-sensor input with a Python detector subpro
 - Output contract is R3 JSONL with `source = "own_sensor"` and id `own:B`.
 - ADA can own the detector lifecycle with `DETECTOR_ENABLED=true` and consume its stdout while
   receiving R2 UDP traffic in the same runtime.
+- CarSky uses `--realtime --loop`: frames follow clip time instead of being exhausted immediately,
+  and the saved clip repeats so the own-sensor B track remains fresh throughout the scenario.
 - `measured` is video time, `received`/`lastUpdated` are wall-clock time, and signed speed is
   computed from consecutive distance estimates. The C++ track store owns tentative/tracked state.
 
@@ -140,7 +142,7 @@ file:
 
 ```sh
 DETECTOR_ENABLED=true \
-DETECTOR_CMD="python3 ADA_ECU/tools/video_detector.py --video ADA_ECU/media/ego-b-occluding-c.mp4 --backend yolo-onnx --model ADA_ECU/models/yolo11n.onnx --every-n-frames 4 --confidence 0.20" \
+DETECTOR_CMD="python3 ADA_ECU/tools/video_detector.py --video ADA_ECU/media/ego-b-occluding-c.mp4 --backend yolo-onnx --model ADA_ECU/models/yolo11n.onnx --every-n-frames 4 --confidence 0.20 --realtime --loop" \
 ADA_ECU/build/ada_ecu --config ADA_ECU/config/ada-ecu.conf --max-r2 1
 ```
 

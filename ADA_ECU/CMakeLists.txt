@@ -30,6 +30,7 @@ add_library(ada_core
   src/r3_mapper.cpp
   src/risk_assessor.cpp
   src/risk_registry.cpp
+  src/scene_composer.cpp
   src/track_store.cpp
   src/udp_r2_receiver.cpp
   src/udp_r4_sender.cpp
@@ -56,6 +57,8 @@ add_library(ada_contracts STATIC
 target_include_directories(ada_contracts PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(ada_contracts PUBLIC nlohmann_json::nlohmann_json)
 target_compile_features(ada_contracts PUBLIC cxx_std_17)
+target_include_directories(ada_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(ada_core PUBLIC ada_contracts)
 
 if(ADA_BUILD_CONTRACT_TESTS)
   FetchContent_Declare(googletest

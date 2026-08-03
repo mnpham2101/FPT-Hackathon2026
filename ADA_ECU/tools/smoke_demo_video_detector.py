@@ -45,9 +45,14 @@ def main() -> int:
         print(result.stderr, file=sys.stderr)
         return result.returncode
 
-    detections = [json.loads(line) for line in result.stdout.splitlines() if line.strip()]
+    detections = [
+        json.loads(line) for line in result.stdout.splitlines() if line.strip()
+    ]
     if not detections:
-        print("expected at least one R3 detection from demo video, got none", file=sys.stderr)
+        print(
+            "expected at least one R3 detection from demo video, got none",
+            file=sys.stderr,
+        )
         return 10
 
     for detection in detections:

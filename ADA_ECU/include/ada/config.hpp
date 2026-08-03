@@ -20,8 +20,8 @@ struct AdaConfig {
     std::string detector_cmd;
     int detector_restart_max = 0;
     std::string cra_enabled = "nlos_obstruction";
-    double risk_near_m = 30.0;
-    double risk_critical_m = 15.0;
+    double risk_near_m = 50.0;
+    double risk_critical_m = 30.0;
     std::int64_t risk_dwell_ms = 300;
 };
 

@@ -174,7 +174,7 @@ The baseline blueprint deployed as `trial2_minh_netcheck` with all nodes `Runnin
 - [ ] The NLOS plugin registers through the CRA interface; the abstraction + database schema are the committed artifacts (R14).
 - [ ] At least one R4 warning event per scenario run, carrying the risk state and the composed geometry (R15).
 - [ ] The event list reconstructs a full run offline (R18).
-- [ ] **Output check:** with a scenario run live, **(a)** the ADA `[EVT]` log shows a `tracked` `own_sensor` TrackedObject for **B** and a `tracked` `v2x_relayed` TrackedObject for **C**, both with full R3 fields, plus at least one `r4_tx` carrying the emitted R4 body; **and (b)** a pcap of ADA→IVI UDP traffic decodes to the same R4 body — C's full R3 TrackedObject in `object`, B's position in `geometry.vehicleB` — correlated to the log by timestamp and length. The frozen R4 carries no full TrackedObject for B; that half is proven from the log, not the wire ([phase4_tasks.md § Phase 4 output acceptance](phase4_tasks.md#phase-4-output-acceptance--what-b-and-c-reach-the-ivi-means-precisely)).
+- [ ] **Output check:** with a scenario run live, **(a)** the ADA `[EVT]` log shows full tracked R3 objects for own-sensor **B** and V2X-relayed **C**, plus a successfully sent `r4_tx`; and **(b)** ADA→IVI pcap decodes to the same R4 body with both objects in the ratified additive `trackedObjects`, composed geometry, matching timestamp and byte length.
 - [ ] **Demo:** ADA logs — collision-risk event list; optional annotated video export with per-event risk labels (§1 demo table).
 
 ### Phase 5 — IVI HMI, mock-driven (R16, R17) — display track, parallel from the start

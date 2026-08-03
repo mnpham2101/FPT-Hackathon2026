@@ -49,9 +49,14 @@ def main() -> int:
         print(result.stderr, file=sys.stderr)
         return result.returncode
 
-    detections = [json.loads(line) for line in result.stdout.splitlines() if line.strip()]
+    detections = [
+        json.loads(line) for line in result.stdout.splitlines() if line.strip()
+    ]
     if not detections:
-        print("expected at least one ML R3 detection from demo video, got none", file=sys.stderr)
+        print(
+            "expected at least one ML R3 detection from demo video, got none",
+            file=sys.stderr,
+        )
         return 10
 
     for detection in detections:
@@ -65,10 +70,16 @@ def main() -> int:
             print(f"unexpected class: {detection.get('class')}", file=sys.stderr)
             return 13
         if float(detection.get("confidence", 0)) <= 0.0:
-            print(f"invalid model confidence: {detection.get('confidence')}", file=sys.stderr)
+            print(
+                f"invalid model confidence: {detection.get('confidence')}",
+                file=sys.stderr,
+            )
             return 14
         if float(detection.get("distance", -1)) <= 0:
-            print(f"invalid distance estimate: {detection.get('distance')}", file=sys.stderr)
+            print(
+                f"invalid distance estimate: {detection.get('distance')}",
+                file=sys.stderr,
+            )
             return 15
 
     print(result.stderr, file=sys.stderr, end="")

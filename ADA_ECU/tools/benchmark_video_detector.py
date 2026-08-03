@@ -10,13 +10,16 @@ import pathlib
 import subprocess
 import sys
 import time
+from itertools import pairwise
 
 
 def video_frame_count(video_path: pathlib.Path) -> int:
     try:
         import cv2  # type: ignore
     except ModuleNotFoundError as exc:
-        raise RuntimeError("OpenCV is required; install ADA_ECU/requirements.txt") from exc
+        raise RuntimeError(
+            "OpenCV is required; install ADA_ECU/requirements.txt"
+        ) from exc
     capture = cv2.VideoCapture(str(video_path))
     if not capture.isOpened():
         raise RuntimeError(f"cannot open video: {video_path}")
@@ -28,10 +31,22 @@ def video_frame_count(video_path: pathlib.Path) -> int:
 
 def main() -> int:
     repo_root = pathlib.Path(__file__).resolve().parents[2]
-    parser = argparse.ArgumentParser(description="Measure full-clip YOLO11n R12 acceptance KPIs.")
-    parser.add_argument("--video", type=pathlib.Path, default=repo_root / "ADA_ECU/media/ego-b-occluding-c.mp4")
-    parser.add_argument("--model", type=pathlib.Path, default=repo_root / "ADA_ECU/models/yolo11n.onnx")
-    parser.add_argument("--output", type=pathlib.Path, default=pathlib.Path("/tmp/ada_phase3_yolo11n.jsonl"))
+    parser = argparse.ArgumentParser(
+        description="Measure full-clip YOLO11n R12 acceptance KPIs."
+    )
+    parser.add_argument(
+        "--video",
+        type=pathlib.Path,
+        default=repo_root / "ADA_ECU/media/ego-b-occluding-c.mp4",
+    )
+    parser.add_argument(
+        "--model", type=pathlib.Path, default=repo_root / "ADA_ECU/models/yolo11n.onnx"
+    )
+    parser.add_argument(
+        "--output",
+        type=pathlib.Path,
+        default=pathlib.Path("/tmp/ada_phase3_yolo11n.jsonl"),
+    )
     parser.add_argument("--every-n-frames", type=int, default=4)
     parser.add_argument("--confidence", type=float, default=0.20)
     parser.add_argument("--focal-px", type=float, default=2000.0)
@@ -63,7 +78,9 @@ def main() -> int:
     ]
 
     started = time.perf_counter()
-    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1)
+    process = subprocess.Popen(
+        command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1
+    )
     assert process.stdout is not None
     rows: list[dict] = []
     first_detection_s: float | None = None
@@ -81,11 +98,13 @@ def main() -> int:
         return return_code
 
     distances = [float(row["distance"]) for row in rows]
-    non_increasing_steps = sum(current <= previous for previous, current in zip(distances, distances[1:]))
+    non_increasing_steps = sum(
+        current <= previous for previous, current in pairwise(distances)
+    )
     transitions = max(len(distances) - 1, 0)
     gate_crossings = sum(
         (previous >= args.gate_m) != (current >= args.gate_m)
-        for previous, current in zip(distances, distances[1:])
+        for previous, current in pairwise(distances)
     )
     result = {
         "model": args.model.name,
@@ -96,12 +115,16 @@ def main() -> int:
         "coverage": round(len(rows) / sampled_frames, 4) if sampled_frames else 0.0,
         "elapsedSeconds": round(elapsed_s, 4),
         "effectiveHz": round(sampled_frames / elapsed_s, 3) if elapsed_s else 0.0,
-        "warmupSeconds": round(first_detection_s, 4) if first_detection_s is not None else None,
+        "warmupSeconds": round(first_detection_s, 4)
+        if first_detection_s is not None
+        else None,
         "distanceFirstM": distances[0] if distances else None,
         "distanceLastM": distances[-1] if distances else None,
         "distanceMinM": min(distances) if distances else None,
         "distanceMaxM": max(distances) if distances else None,
-        "nonIncreasingStepRatio": round(non_increasing_steps / transitions, 4) if transitions else None,
+        "nonIncreasingStepRatio": round(non_increasing_steps / transitions, 4)
+        if transitions
+        else None,
         "gateM": args.gate_m,
         "gateCrossings": gate_crossings,
         "evidence": str(args.output),
@@ -115,10 +138,16 @@ def main() -> int:
         print("KPI failed: effective inference rate is below 5 Hz", file=sys.stderr)
         return 11
     if distances and distances[-1] >= distances[0]:
-        print("KPI failed: distance trend does not approach ego from first to last detection", file=sys.stderr)
+        print(
+            "KPI failed: distance trend does not approach ego from first to last detection",
+            file=sys.stderr,
+        )
         return 12
     if gate_crossings != 1:
-        print(f"KPI failed: expected one {args.gate_m:g} m gate crossing, got {gate_crossings}", file=sys.stderr)
+        print(
+            f"KPI failed: expected one {args.gate_m:g} m gate crossing, got {gate_crossings}",
+            file=sys.stderr,
+        )
         return 13
     return 0
 

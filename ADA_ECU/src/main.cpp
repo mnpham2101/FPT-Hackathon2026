@@ -15,6 +15,7 @@
 #include "ada/detector_jsonl_ingest.hpp"
 #include "ada/detector_process.hpp"
 #include "ada/event_logger.hpp"
+#include "ada/r3_mapper.hpp"
 #include "ada/risk_assessor.hpp"
 #include "ada/risk_registry.hpp"
 #include "ada/track_store.hpp"
@@ -69,12 +70,16 @@ void emit_risk_event_if_needed(
     }
 
     const auto warning = ada::build_r4_warning_json(*risk_event, store);
-    logger.write(
-        "assessment",
-        "{\"timestampMs\":" + std::to_string(now_ms) + ",\"plugin\":\"nlos_obstruction\",\"trackId\":\"" +
-            risk_event->object.id + "\",\"distance\":" + std::to_string(risk_event->distance_m) +
-            ",\"riskState\":\"" + std::string(ada::to_string(risk_event->state)) +
-            "\",\"rationale\":\"" + risk_event->rationale + "\"}");
+    nlohmann::json assessment{
+        {"timestampMs", now_ms},
+        {"plugin", "nlos_obstruction"},
+        {"trackId", risk_event->object.id},
+        {"distanceAC", risk_event->distance_m},
+        {"riskState", ada::to_string(risk_event->state)},
+        {"rationale", risk_event->rationale},
+    };
+    assessment["ttc"] = risk_event->ttc_s ? nlohmann::json(*risk_event->ttc_s) : nlohmann::json(nullptr);
+    logger.write("assessment", assessment.dump());
     logger.write(
         "risk_transition",
         "{\"riskState\":\"" + std::string(ada::to_string(risk_event->state)) + "\",\"trackId\":\"" +
@@ -97,6 +102,19 @@ void emit_risk_event_if_needed(
     std::cout << warning << "\n";
 }
 
+void settle_mock_dwell(
+    ada::CollisionRiskAssessor& risk,
+    const ada::TrackStore& store,
+    ada::EventLogger& logger,
+    const ada::UdpR4Sender& r4_sender,
+    const ada::AdaConfig& config) {
+    if (config.risk_dwell_ms <= 0) {
+        return;
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(config.risk_dwell_ms));
+    emit_risk_event_if_needed(risk, store, logger, r4_sender, config);
+}
+
 int drain_detector(ada::DetectorProcess& detector, ada::TrackStore& store, ada::EventLogger& logger) {
     int accepted = 0;
     while (const auto line = detector.poll_line()) {
@@ -105,6 +123,16 @@ int drain_detector(ada::DetectorProcess& detector, ada::TrackStore& store, ada::
         }
     }
     return accepted;
+}
+
+void log_expired_tracks(const std::vector<ada::TrackedObject>& expired, ada::EventLogger& logger) {
+    for (const auto& object : expired) {
+        logger.write(
+            "track_transition",
+            "{\"id\":\"" + object.id + "\",\"source\":\"" + ada::to_string(object.source) +
+                "\",\"previous\":\"tracked\",\"state\":\"not_tracked\",\"changed\":true,\"object\":" +
+                ada::tracked_object_to_r3_json(object) + "}");
+    }
 }
 
 }  // namespace
@@ -204,6 +232,7 @@ int main(int argc, char** argv) {
                 return 2;
             }
             emit_risk_event_if_needed(*risk, store, logger, r4_sender, config);
+            settle_mock_dwell(*risk, store, logger, r4_sender, config);
         } else {
             int sample_index = 0;
             for (const auto distance : distances) {
@@ -214,6 +243,7 @@ int main(int argc, char** argv) {
                     return 2;
                 }
                 emit_risk_event_if_needed(*risk, store, logger, r4_sender, config);
+                settle_mock_dwell(*risk, store, logger, r4_sender, config);
                 ++sample_index;
             }
 
@@ -221,7 +251,8 @@ int main(int argc, char** argv) {
             const auto wall_now = std::chrono::duration_cast<std::chrono::milliseconds>(
                                       std::chrono::system_clock::now().time_since_epoch())
                                       .count();
-            store.expire_source(ada::Source::V2xRelayed, wall_now);
+            const auto expired = store.expire_source(ada::Source::V2xRelayed, wall_now);
+            log_expired_tracks(expired, logger);
             logger.write("track_expire_tick", "{\"now\":" + std::to_string(wall_now) + "}");
             emit_risk_event_if_needed(*risk, store, logger, r4_sender, config);
         }
@@ -243,6 +274,7 @@ int main(int argc, char** argv) {
     ada::UdpR2Receiver receiver(config.ada_listen_host, config.ada_listen_port);
     int processed = 0;
     auto last_expire_check = std::chrono::steady_clock::now();
+    auto last_r2_receive = last_expire_check;
     while (max_r2 < 0 || processed < max_r2) {
         if (detector) {
             drain_detector(*detector, store, logger);
@@ -266,15 +298,17 @@ int main(int argc, char** argv) {
             }
             const auto now = std::chrono::steady_clock::now();
             const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_expire_check).count();
-            if (elapsed >= config.miss_limit_ms) {
+            if (elapsed >= config.r2_receive_timeout_ms) {
                 const auto wall_now = std::chrono::duration_cast<std::chrono::milliseconds>(
                                           std::chrono::system_clock::now().time_since_epoch())
                                           .count();
-                store.expire_source(ada::Source::V2xRelayed, wall_now);
+                const auto expired = store.expire(wall_now);
+                log_expired_tracks(expired, logger);
                 logger.write("track_expire_tick", "{\"now\":" + std::to_string(wall_now) + "}");
                 emit_risk_event_if_needed(*risk, store, logger, r4_sender, config);
                 last_expire_check = now;
-                if (max_r2 > 0 && processed > 0) {
+                const auto idle_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_r2_receive).count();
+                if (max_r2 > 0 && processed > 0 && idle_ms >= config.miss_limit_ms) {
                     return 0;
                 }
             }
@@ -285,6 +319,7 @@ int main(int argc, char** argv) {
             return 2;
         }
         ++processed;
+        last_r2_receive = std::chrono::steady_clock::now();
 
         emit_risk_event_if_needed(*risk, store, logger, r4_sender, config);
     }

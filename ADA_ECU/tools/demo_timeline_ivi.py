@@ -46,17 +46,23 @@ def validate_r4(message: dict) -> None:
     b = next(obj for obj in tracked if obj.get("id") == "own:B")
     c = next(obj for obj in tracked if obj.get("id") == "v2x:1201:7")
     if b.get("timestamps", {}).get("measured") != 1000:
-        raise RuntimeError(f"vehicle B measured timestamp must be 1000ms, got {b.get('timestamps')}")
+        raise RuntimeError(
+            f"vehicle B measured timestamp must be 1000ms, got {b.get('timestamps')}"
+        )
     c_timestamps = c.get("timestamps", {})
     if c_timestamps.get("measured") != 1010 or c_timestamps.get("received") != 1010:
         raise RuntimeError(f"vehicle C timestamp must be 1010ms, got {c_timestamps}")
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Demo t=1.00 B, t=1.01 C, t=1.02 ADA->IVI R4 fusion.")
+    parser = argparse.ArgumentParser(
+        description="Demo t=1.00 B, t=1.01 C, t=1.02 ADA->IVI R4 fusion."
+    )
     parser.add_argument("--build-dir", default="ADA_ECU/build-runtime")
     parser.add_argument("--config", default="ADA_ECU/config/ada-ecu.conf")
-    parser.add_argument("--r3", default="ADA_ECU/testdata/demo_timeline_r3_own_sensor.jsonl")
+    parser.add_argument(
+        "--r3", default="ADA_ECU/testdata/demo_timeline_r3_own_sensor.jsonl"
+    )
     parser.add_argument("--r2", default="ADA_ECU/testdata/demo_timeline_r2_v2x_c.json")
     args = parser.parse_args()
 
@@ -71,6 +77,7 @@ def main() -> int:
     env = os.environ.copy()
     env["IVI_HOST"] = "127.0.0.1"
     env["IVI_PORT"] = str(ivi_port)
+    env["RISK_DWELL_MS"] = "0"
     ada = subprocess.Popen(
         [
             str(ada_bin),
@@ -104,12 +111,14 @@ def main() -> int:
         payload, _ = sock.recvfrom(65535)
         r4 = json.loads(payload.decode("utf-8"))
         validate_r4(r4)
-        stdout, stderr = ada.communicate(timeout=3.0)
+        _stdout, stderr = ada.communicate(timeout=3.0)
         if ada.returncode != 0:
             print(stderr, file=sys.stderr)
             return ada.returncode or 1
         elapsed_s = time.monotonic() - start
-        print(f"t=1.02s ivi: received R4 warning with vehicleB and vehicleC (wall-clock {elapsed_s:.2f}s)")
+        print(
+            f"t=1.02s ivi: received R4 warning with vehicleB and vehicleC (wall-clock {elapsed_s:.2f}s)"
+        )
         print(json.dumps(r4, separators=(",", ":")))
         return 0
     except (TimeoutError, RuntimeError, json.JSONDecodeError) as exc:

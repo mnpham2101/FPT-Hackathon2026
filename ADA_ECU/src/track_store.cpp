@@ -13,17 +13,22 @@ TrackUpdateResult TrackStore::upsert(const TrackedObject& object) {
     return apply_v2x_relayed(object);
 }
 
-void TrackStore::expire(std::int64_t now_ms) {
+std::vector<TrackedObject> TrackStore::expire(std::int64_t now_ms) {
+    std::vector<TrackedObject> expired;
     for (auto& item : tracks_) {
         auto& track = item.second;
         if (track.state != TrackState::NotTracked &&
             now_ms - track.timestamps.last_updated_ms > config_.miss_limit_ms) {
             track.state = TrackState::NotTracked;
+            tentative_hits_[item.first] = 0;
+            expired.push_back(track);
         }
     }
+    return expired;
 }
 
-void TrackStore::expire_source(Source source, std::int64_t now_ms) {
+std::vector<TrackedObject> TrackStore::expire_source(Source source, std::int64_t now_ms) {
+    std::vector<TrackedObject> expired;
     for (auto& item : tracks_) {
         auto& track = item.second;
         if (track.source != source) {
@@ -32,8 +37,11 @@ void TrackStore::expire_source(Source source, std::int64_t now_ms) {
         if (track.state != TrackState::NotTracked &&
             now_ms - track.timestamps.last_updated_ms > config_.miss_limit_ms) {
             track.state = TrackState::NotTracked;
+            tentative_hits_[item.first] = 0;
+            expired.push_back(track);
         }
     }
+    return expired;
 }
 
 std::optional<TrackedObject> TrackStore::get(const std::string& id) const {

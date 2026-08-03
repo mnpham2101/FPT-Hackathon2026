@@ -21,25 +21,66 @@ jobs:
         run: cmake -S ADA_ECU -B ADA_ECU/build -DCMAKE_BUILD_TYPE=Release
       - name: Unit and contract tests
         run: |
+          python -m pip install 'jsonschema>=4.23,<5'
           cmake --build ADA_ECU/build -j "$(nproc)"
           ctest --test-dir ADA_ECU/build --output-on-failure
           python contracts/check_sync.py
           python -m unittest discover -s ADA_ECU/tools/tests -p 'test_*.py'
-      - name: Produce and validate B+C-to-R4 evidence
-        env:
-          LOG_PATH: ${{ runner.temp }}/phase4-events.jsonl
+      - name: Live detector seam, UDP R2, and UDP R4 loopback
         run: |
-          ADA_ECU/build/ada_ecu \
-            --config ADA_ECU/config/ada-ecu.conf \
-            --mock \
-            --own-sensor-sample ADA_ECU/testdata/r3_own_sensor.jsonl
-          python ADA_ECU/tools/check_evt_log.py "$LOG_PATH"
-          python ADA_ECU/tools/event_report.py "$LOG_PATH" > "$RUNNER_TEMP/phase4-report.tsv"
+          python ADA_ECU/tools/mock_ivi_receiver.py \
+            --host 127.0.0.1 --port 46104 --timeout 5 --count 3 --expect-min 3 \
+            --output "$RUNNER_TEMP/phase4-r4.jsonl" &
+          IVI_PID=$!
+          LOG_PATH="$RUNNER_TEMP/phase4-events.jsonl" \
+          ADA_LISTEN_PORT=46102 IVI_HOST=127.0.0.1 IVI_PORT=46104 \
+          DETECTOR_ENABLED=true DETECTOR_CMD="cat ADA_ECU/testdata/r3_own_sensor.jsonl" \
+          RISK_NEAR_M=50 RISK_CRITICAL_M=30 RISK_DWELL_MS=0 \
+            ADA_ECU/build/ada_ecu --config ADA_ECU/config/ada-ecu.conf --max-r2 4 &
+          ADA_PID=$!
+          sleep 1
+          python ADA_ECU/tools/mock_v2x_sender.py \
+            --host 127.0.0.1 --port 46102 --distances 60,25,10,36 --interval-ms 100
+          wait "$ADA_PID"
+          wait "$IVI_PID"
+          python ADA_ECU/tools/check_evt_log.py \
+            --r4-schema ADA_ECU/contracts/r4-ada-ivi.schema.json \
+            "$RUNNER_TEMP/phase4-events.jsonl"
+          python ADA_ECU/tools/event_report.py --summary \
+            "$RUNNER_TEMP/phase4-events.jsonl" > "$RUNNER_TEMP/phase4-report.tsv"
+      - name: Out-of-range negative control
+        run: |
+          python ADA_ECU/tools/mock_ivi_receiver.py \
+            --host 127.0.0.1 --port 46204 --timeout 3 --count 1 --expect-min 0 &
+          IVI_PID=$!
+          LOG_PATH="$RUNNER_TEMP/phase4-negative-events.jsonl" \
+          ADA_LISTEN_PORT=46202 IVI_HOST=127.0.0.1 IVI_PORT=46204 \
+          DETECTOR_ENABLED=true DETECTOR_CMD="cat ADA_ECU/testdata/r3_own_sensor.jsonl" \
+          RISK_NEAR_M=50 RISK_CRITICAL_M=30 RISK_DWELL_MS=0 \
+            ADA_ECU/build/ada_ecu --config ADA_ECU/config/ada-ecu.conf --max-r2 2 &
+          ADA_PID=$!
+          sleep 1
+          python ADA_ECU/tools/mock_v2x_sender.py \
+            --host 127.0.0.1 --port 46202 --distances 60,55 --interval-ms 100
+          wait "$ADA_PID"
+          wait "$IVI_PID"
+          if grep -q '"event":"r4_tx"' "$RUNNER_TEMP/phase4-negative-events.jsonl"; then
+            echo "out-of-range run unexpectedly emitted R4" >&2
+            exit 1
+          fi
       - name: Validate capture tooling
-        run: sh -n ADA_ECU/capture.sh ADA_ECU/entrypoint.sh ADA_ECU/tools/extract_pcap.sh
+        run: |
+          sh -n ADA_ECU/capture.sh ADA_ECU/entrypoint.sh ADA_ECU/tools/extract_pcap.sh
+          ADA_ECU/capture.sh --export-one ADA_ECU/testdata/r2_v2x_object.sample.json \
+            > "$RUNNER_TEMP/pcap-export.log"
+          ADA_ECU/tools/extract_pcap.sh \
+            "$RUNNER_TEMP/pcap-export.log" "$RUNNER_TEMP/pcap-roundtrip.pcap"
+          cmp ADA_ECU/testdata/r2_v2x_object.sample.json "$RUNNER_TEMP/pcap-roundtrip.pcap"
       - uses: actions/upload-artifact@v4
         with:
           name: phase4-fusion-evidence
           path: |
             ${{ runner.temp }}/phase4-events.jsonl
             ${{ runner.temp }}/phase4-report.tsv
+            ${{ runner.temp }}/phase4-r4.jsonl
+            ${{ runner.temp }}/phase4-negative-events.jsonl

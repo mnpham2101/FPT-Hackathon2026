@@ -4,6 +4,8 @@
 #include <sstream>
 #include <string>
 
+#include <nlohmann/json.hpp>
+
 #include "ada/detector_jsonl_ingest.hpp"
 #include "ada/event_logger.hpp"
 #include "ada/r2_mapper.hpp"
@@ -64,10 +66,11 @@ int main() {
     assert(r2_ingest.track_id == "v2x:1201:7");
     assert(store.get("v2x:1201:7")->state == ada::TrackState::Tracked);
 
-    ada::NlosRiskAssessor risk(30.0, 15.0, 0);
+    ada::NlosRiskAssessor risk(50.0, 30.0, 0);
     const auto event = risk.assess(store, 1020);
     assert(event);
     assert(event->state == ada::RiskState::Medium);
+    assert(event->distance_m == 37.4);
     const auto warning = ada::build_r4_warning_json(*event, store);
     assert(warning.find("\"type\":\"warning\"") != std::string::npos);
     assert(warning.find("\"warningType\":\"nlos_obstruction\"") != std::string::npos);
@@ -118,6 +121,24 @@ int main() {
     assert(timeout_clear_warning.find("\"id\":\"own:B\"") != std::string::npos);
     assert(timeout_clear_warning.find("\"riskState\":\"low\"") != std::string::npos);
     assert(timeout_clear_warning.find("\"vehicleB\":{\"x\":12") != std::string::npos);
+    const auto timeout_clear_json = nlohmann::json::parse(timeout_clear_warning);
+    assert(timeout_clear_json["geometry"]["vehicleC"].is_null());
+
+    ada::TrackStore dwell_store(config);
+    dwell_store.upsert(*first_own);
+    dwell_store.upsert(*second_own);
+    dwell_store.upsert(*relayed);
+    ada::NlosRiskAssessor dwell_risk(50.0, 30.0, 300);
+    assert(!dwell_risk.assess(dwell_store, 2000));
+    assert(!dwell_risk.assess(dwell_store, 2200));
+    const auto dwell_event = dwell_risk.assess(dwell_store, 2301);
+    assert(dwell_event);
+    assert(dwell_event->state == ada::RiskState::Medium);
+
+    ada::TrackStore no_b_store(config);
+    no_b_store.upsert(*relayed);
+    ada::NlosRiskAssessor no_b_risk(50.0, 30.0, 0);
+    assert(!no_b_risk.assess(no_b_store, 3000));
 
     return 0;
 }

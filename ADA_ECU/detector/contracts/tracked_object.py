@@ -9,7 +9,7 @@ design (additive evolution). Stdlib only; Python 3.11-compatible.
 
 import json
 from dataclasses import dataclass
-from typing import Any, Dict
+from typing import Any
 
 
 @dataclass
@@ -44,7 +44,7 @@ class TrackedObject:
     timestamps: Timestamps
 
 
-def to_dict(obj: TrackedObject) -> Dict[str, Any]:
+def to_dict(obj: TrackedObject) -> dict[str, Any]:
     """Serialize to a dict using the exact R3 wire keys (``object_class`` -> ``"class"``)."""
     return {
         "id": obj.id,
@@ -63,7 +63,7 @@ def to_dict(obj: TrackedObject) -> Dict[str, Any]:
     }
 
 
-def from_dict(d: Dict[str, Any]) -> TrackedObject:
+def from_dict(d: dict[str, Any]) -> TrackedObject:
     """Build a TrackedObject from a wire dict; unknown extra keys are ignored by design."""
     position = d["position"]
     timestamps = d["timestamps"]

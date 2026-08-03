@@ -23,7 +23,10 @@ def main() -> int:
         import cv2  # type: ignore
         import numpy as np
     except ModuleNotFoundError:
-        print("OpenCV/numpy not installed. Run: python3 -m pip install -r ADA_ECU/requirements.txt", file=sys.stderr)
+        print(
+            "OpenCV/numpy not installed. Run: python3 -m pip install -r ADA_ECU/requirements.txt",
+            file=sys.stderr,
+        )
         return 1
 
     args = parse_args()
@@ -48,9 +51,21 @@ def main() -> int:
         car_w, car_h = 80, 36
         car_x = int(args.width * 0.45 + frame_index * 4)
         car_y = int(args.height * 0.48)
-        cv2.rectangle(frame, (car_x, car_y), (car_x + car_w, car_y + car_h), (240, 240, 240), -1)
-        cv2.rectangle(frame, (car_x, car_y), (car_x + car_w, car_y + car_h), (40, 180, 255), 2)
-        cv2.putText(frame, "B", (car_x + 30, car_y + 25), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 0), 2)
+        cv2.rectangle(
+            frame, (car_x, car_y), (car_x + car_w, car_y + car_h), (240, 240, 240), -1
+        )
+        cv2.rectangle(
+            frame, (car_x, car_y), (car_x + car_w, car_y + car_h), (40, 180, 255), 2
+        )
+        cv2.putText(
+            frame,
+            "B",
+            (car_x + 30, car_y + 25),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.8,
+            (0, 0, 0),
+            2,
+        )
         writer.write(frame)
 
     writer.release()
@@ -60,4 +75,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
-

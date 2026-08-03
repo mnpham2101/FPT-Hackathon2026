@@ -3,6 +3,7 @@
 #include <chrono>
 
 #include "ada/r2_mapper.hpp"
+#include "ada/r3_mapper.hpp"
 
 namespace ada {
 namespace {
@@ -24,12 +25,14 @@ V2xR2IngestResult ingest_r2_payload(const std::string& payload, std::int64_t rec
     }
 
     const auto result = store.upsert(*object);
+    const auto stored = store.get(object->id);
     logger.write(
         "track_transition",
         "{\"id\":\"" + object->id + "\",\"source\":\"" + std::string(to_string(object->source)) +
             "\",\"state\":\"" + std::string(to_string(result.current)) + "\",\"distance\":" +
             std::to_string(object->distance_m) + ",\"position\":{\"x\":" + std::to_string(object->position.x_m) +
-            ",\"y\":" + std::to_string(object->position.y_m) + "}}");
+            ",\"y\":" + std::to_string(object->position.y_m) + "},\"object\":" +
+            tracked_object_to_r3_json(stored ? *stored : *object) + "}");
     return {true, false, object->id, "accepted"};
 }
 

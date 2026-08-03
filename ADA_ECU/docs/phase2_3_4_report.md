@@ -91,6 +91,25 @@ python ADA_ECU/tools/video_detector.py --synthetic 2
 
 ## Phase 4 — Fusion and Warning Runtime
 
+### Final hardening before CarSky
+
+- CRA evaluates the composed ego-to-C distance `d_AC = d_AB + d_BC`; configured bands are
+  high at ≤30 m and medium at ≤50 m, with TTC recorded when closing.
+- A periodic fusion tick commits the configured 300 ms dwell without requiring another R2 packet.
+- The saved-video detector runs with real-time pacing and looping in CarSky so B remains fresh.
+- R4 is serialized through the shared contract binding and carries ratified additive
+  `trackedObjects` for B and C.
+- Full R3 snapshots, assessment values, transition records, delivery status, and the complete R4
+  body are preserved in the EVT log.
+- Phase 4 CI exercises the detector seam, live R2 UDP, live R4 UDP receiver, schema validation,
+  `medium → high → low`, and an out-of-range zero-R4 negative control.
+- Rotating ADA→IVI captures are exported through CarSky View Log with SHA-256-protected PCAP
+  markers.
+
+Final local evidence (2026-08-03): 28 EVT records, three risk transitions, three successfully
+delivered R4 datagrams, and zero R4 in the out-of-range negative run. Docker `linux/arm64` built
+successfully and all 14 C++/contract tests passed inside the image.
+
 Implemented:
 
 - UDP R2 receiver for live/mock V2X input.

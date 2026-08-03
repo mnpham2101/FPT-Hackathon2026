@@ -28,14 +28,22 @@ def load_c_positions(path: pathlib.Path | None) -> dict[int, TimedPosition]:
                 continue
             body = json.loads(raw_line)
             timestamp_ms = int(body["timestampMs"])
-            positions[timestamp_ms] = TimedPosition(timestamp_ms, float(body["x"]), float(body["y"]))
+            positions[timestamp_ms] = TimedPosition(
+                timestamp_ms, float(body["x"]), float(body["y"])
+            )
     return positions
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Fail if own-sensor R3 evidence claims vehicle C or relayed data.")
+    parser = argparse.ArgumentParser(
+        description="Fail if own-sensor R3 evidence claims vehicle C or relayed data."
+    )
     parser.add_argument("r3_log", type=pathlib.Path)
-    parser.add_argument("--vehicle-c-log", type=pathlib.Path, help="optional JSONL rows: timestampMs, x, y in ego coordinates")
+    parser.add_argument(
+        "--vehicle-c-log",
+        type=pathlib.Path,
+        help="optional JSONL rows: timestampMs, x, y in ego coordinates",
+    )
     parser.add_argument("--radius-m", type=float, default=5.0)
     args = parser.parse_args()
 
@@ -59,17 +67,26 @@ def main() -> int:
                 body = json.loads(raw_line)
                 examined += 1
                 if body.get("source") != "own_sensor":
-                    print(f"rule 1 failed at line {line_number}: detector source is not own_sensor", file=sys.stderr)
+                    print(
+                        f"rule 1 failed at line {line_number}: detector source is not own_sensor",
+                        file=sys.stderr,
+                    )
                     return 1
                 if str(body.get("id", "")).startswith("v2x:"):
-                    print(f"rule 2 failed at line {line_number}: detector minted a v2x id", file=sys.stderr)
+                    print(
+                        f"rule 2 failed at line {line_number}: detector minted a v2x id",
+                        file=sys.stderr,
+                    )
                     return 1
 
                 measured = int(body.get("timestamps", {}).get("measured", -1))
                 vehicle_c = c_positions.get(measured)
                 if vehicle_c is not None:
                     position = body.get("position", {})
-                    separation = math.hypot(float(position["x"]) - vehicle_c.x, float(position["y"]) - vehicle_c.y)
+                    separation = math.hypot(
+                        float(position["x"]) - vehicle_c.x,
+                        float(position["y"]) - vehicle_c.y,
+                    )
                     spatial_checks += 1
                     if separation <= args.radius_m:
                         print(

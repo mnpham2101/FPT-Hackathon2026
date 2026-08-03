@@ -15,17 +15,19 @@ def main() -> int:
     parser.add_argument("--port", type=int, default=46004)
     parser.add_argument("--timeout", type=float, default=5.0)
     parser.add_argument("--count", type=int, default=1)
+    parser.add_argument("--expect-min", type=int, default=1)
+    parser.add_argument("--output", type=argparse.FileType("w"))
     args = parser.parse_args()
 
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
         sock.bind((args.host, args.port))
         sock.settimeout(args.timeout)
+        received = 0
         for _ in range(args.count):
             try:
                 payload, sender = sock.recvfrom(65535)
             except TimeoutError:
-                print(f"timed out waiting for R4 UDP on {args.host}:{args.port}", file=sys.stderr)
-                return 1
+                break
 
             message = json.loads(payload.decode("utf-8"))
             if message.get("type") != "warning":
@@ -41,11 +43,29 @@ def main() -> int:
             if "vehicleB" not in geometry or "vehicleC" not in geometry:
                 print("R4 warning missing vehicleB/vehicleC geometry", file=sys.stderr)
                 return 5
-            if not any(obj.get("id") == "own:B" for obj in message.get("trackedObjects", [])):
+            if not any(
+                obj.get("id") == "own:B" for obj in message.get("trackedObjects", [])
+            ):
                 print("R4 warning missing own:B tracked object", file=sys.stderr)
                 return 6
 
-            print(json.dumps({"sender": sender[0], "port": sender[1], "r4": message}, separators=(",", ":")))
+            line = json.dumps(message, separators=(",", ":"))
+            if args.output:
+                args.output.write(line + "\n")
+                args.output.flush()
+            print(
+                json.dumps(
+                    {"sender": sender[0], "port": sender[1], "r4": message},
+                    separators=(",", ":"),
+                )
+            )
+            received += 1
+    if received < args.expect_min:
+        print(
+            f"expected at least {args.expect_min} R4 messages, got {received}",
+            file=sys.stderr,
+        )
+        return 7
     return 0
 
 

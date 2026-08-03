@@ -1,55 +1,58 @@
 #include "ada/warning_builder.hpp"
 
-#include <sstream>
+#include <nlohmann/json.hpp>
+
+#include "contracts/r4_message.hpp"
 
 namespace ada {
 namespace {
 
-std::string tracked_object_json(const TrackedObject& object) {
-    std::ostringstream out;
-    out << "{\"id\":\"" << object.id << "\","
-        << "\"class\":\"" << object.object_class << "\","
-        << "\"source\":\"" << to_string(object.source) << "\","
-        << "\"position\":{\"x\":" << object.position.x_m << ",\"y\":" << object.position.y_m
-        << ",\"confidence\":" << object.position.confidence << "},"
-        << "\"distance\":" << object.distance_m << ","
-        << "\"speed\":" << object.speed_mps << ","
-        << "\"confidence\":" << object.confidence << ","
-        << "\"state\":\"" << to_string(object.state) << "\","
-        << "\"timestamps\":{"
-        << "\"measured\":" << object.timestamps.measured_ms << ","
-        << "\"received\":" << object.timestamps.received_ms << ","
-        << "\"lastUpdated\":" << object.timestamps.last_updated_ms << "}}";
-    return out.str();
+contracts::TrackedObject contract_object(const TrackedObject& object) {
+    return {
+        object.id,
+        object.object_class,
+        object.source == Source::OwnSensor ? contracts::Source::own_sensor : contracts::Source::v2x_relayed,
+        {object.position.x_m, object.position.y_m},
+        object.distance_m,
+        object.speed_mps,
+        object.confidence,
+        object.state == TrackState::Tracked
+            ? contracts::TrackState::tracked
+            : object.state == TrackState::Tentative ? contracts::TrackState::tentative
+                                                    : contracts::TrackState::not_tracked,
+        {object.timestamps.measured_ms, object.timestamps.received_ms, object.timestamps.last_updated_ms},
+    };
 }
 
 }  // namespace
 
 std::string build_r4_warning_json(const RiskEvent& event, const TrackStore& store) {
-    const auto own_b = store.nearest(Source::OwnSensor);
-    const auto d_ab = own_b ? own_b->distance_m : 0.0;
-    const auto d_bc = event.object.distance_m;
-    const auto c_x = d_ab + d_bc;
-    const auto b_y = own_b ? own_b->position.y_m : 0.0;
-    const auto c_y = b_y + event.object.position.y_m;
-
-    std::ostringstream out;
-    out << "{\"schemaVersion\":1,"
-        << "\"type\":\"warning\","
-        << "\"warningType\":\"nlos_obstruction\","
-        << "\"riskState\":\"" << to_string(event.state) << "\","
-        << "\"object\":" << tracked_object_json(event.object) << ","
-        << "\"trackedObjects\":[";
-    if (own_b) {
-        out << tracked_object_json(*own_b) << ",";
+    std::vector<contracts::TrackedObject> tracked;
+    for (const auto& object : store.all()) {
+        if (object.state == TrackState::Tracked) {
+            tracked.push_back(contract_object(object));
+        }
     }
-    out << tracked_object_json(event.object) << "],"
-        << "\"geometry\":{"
-        << "\"ego\":{\"x\":0,\"y\":0},"
-        << "\"vehicleB\":{\"x\":" << d_ab << ",\"y\":" << b_y << "},"
-        << "\"vehicleC\":{\"x\":" << c_x << ",\"y\":" << c_y << "}"
-        << "}}";
-    return out.str();
+    if (!event.has_current_c) {
+        tracked.push_back(contract_object(event.object));
+    }
+
+    contracts::R4WarningEvent warning{
+        1,
+        "warning",
+        "nlos_obstruction",
+        to_string(event.state),
+        contract_object(event.object),
+        tracked,
+        {
+            {event.geometry.ego.x_m, event.geometry.ego.y_m},
+            {event.geometry.vehicle_b.x_m, event.geometry.vehicle_b.y_m},
+            event.geometry.vehicle_c
+                ? std::optional<contracts::Vec2>{{event.geometry.vehicle_c->x_m, event.geometry.vehicle_c->y_m}}
+                : std::nullopt,
+        },
+    };
+    return nlohmann::json(warning).dump();
 }
 
 }  // namespace ada
