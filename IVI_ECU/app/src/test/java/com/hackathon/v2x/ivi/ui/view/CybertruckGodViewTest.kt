@@ -17,21 +17,14 @@ class CybertruckGodViewTest {
     @Test
     fun cyberBackground_isNearBlackSteel() {
         // #0A0C10 — cold near-black, NOT pure black
-        assertNotEquals(0xFF000000.toInt(), CyberBackground.value.toInt())
-        // Alpha channel must be fully opaque
-        assertEquals(0xFF.toLong(), (CyberBackground.value shr 56 and 0xFF))
+        assertNotEquals(Color.Black, CyberBackground)
+        assertEquals(Color(0xFF0A0C10), CyberBackground)
     }
 
     @Test
     fun cyberEgo_isHighContrastWhiteSteel() {
         // EGO colour is bright white-steel (#E8ECF0), visible on dark bg
-        val red   = (CyberEgo.value shr 48 and 0xFF).toInt()
-        val green = (CyberEgo.value shr 40 and 0xFF).toInt()
-        val blue  = (CyberEgo.value shr 32 and 0xFF).toInt()
-        // All channels must be high (> 200) for near-white
-        assert(red   > 200) { "EGO red channel too dark: $red"   }
-        assert(green > 200) { "EGO green channel too dark: $green" }
-        assert(blue  > 200) { "EGO blue channel too dark: $blue"  }
+        assertEquals(Color(0xFFE8ECF0), CyberEgo)
     }
 
     @Test
