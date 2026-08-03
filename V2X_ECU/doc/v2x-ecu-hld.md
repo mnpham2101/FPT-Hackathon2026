@@ -2,7 +2,7 @@
 
 > **The V2X node's HLD, and the sole design authority for `V2X_ECU/`.** Every component this node runs, its role, input and output, where it lives, and how the components connect. Decision record: [v2x-ecu-design-decisions.md](v2x-ecu-design-decisions.md) (D1–D8). Frozen contracts: [r1-cpm-profile.md](../../contracts/r1-cpm-profile.md) inbound, [r2-v2x-object.schema.json](../../contracts/r2-v2x-object.schema.json) outbound. Capture retrieval: [traffic-capture-wireshark.md](../../requirements/car-sky-guide/traffic-capture-wireshark.md). Node facts: [node-v2x-ecu.md](../../requirements/car-sky-guide/node-v2x-ecu.md). Hardware port: [telux-parity-and-port-plan.md](telux-parity-and-port-plan.md).
 >
-> Diagrams: [v2x-ecu-components.puml](v2x-ecu-components.puml) (components) · [phase1-v2x-ecu-callflow.puml](phase1-v2x-ecu-callflow.puml) (sequence).
+> Diagrams: [v2x-ecu-module-architecture.svg](research_notes/v2x-ecu-module-architecture.svg) (components, paired with its `.drawio`) · [v2x-ecu-components.puml](v2x-ecu-components.puml) (module graph) · [phase1-v2x-ecu-callflow.puml](phase1-v2x-ecu-callflow.puml) (sequence) · [phase1-des-protocol-stack.svg](../../presentation/assets/phase1-des-protocol-stack.svg) (the stack, §8).
 
 ## 1. Scope and authority
 
@@ -48,9 +48,11 @@ Non-authoritative scratch; on any conflict the CLAUDE.md authority order wins.
 
 ## 3. The component architecture
 
-Source: [v2x-ecu-components.puml](v2x-ecu-components.puml).
+![V2X ECU component architecture](research_notes/v2x-ecu-module-architecture.svg)
 
-A UML component diagram. The `v2x_ecu` package is the C++ process the blueprint starts; `capture.sh` is the shell process the entrypoint starts beside it. A `«use»` dependency is dashed with an open arrowhead; realization is dashed with a hollow triangle; a seam is a provided interface meeting a required one. Component names below are the short `dir/file` form — §4 resolves each to its path.
+Source: [research_notes/v2x-ecu-module-architecture.svg](research_notes/v2x-ecu-module-architecture.svg), paired with its [`.drawio`](research_notes/v2x-ecu-module-architecture.drawio). The module graph alone is [v2x-ecu-components.puml](v2x-ecu-components.puml).
+
+A UML component diagram. Fill colour is the component's role; `«use»` dependencies are dashed with an open arrowhead; realization is dashed with a hollow triangle; a seam is a provided interface meeting a required one. The `v2x_ecu` package is the C++ process the blueprint starts; `capture.sh` is the shell process the entrypoint starts beside it. Component names below are the short `dir/file` form — §4 resolves each to its path.
 
 ### MVC separation
 
@@ -236,6 +238,24 @@ Scaffolding for exercising this node alone. None of it ships in the node image.
 - **`udp → 10.99.0.12:47200`** — the egress on the forwarder's unbound send socket; the kernel picks the source port. Nothing else in the node opens a socket.
 
 No layer is collapsed, and the rule is mechanical rather than cultural: **no file under `src/` outside `src/net/` may include a transport header**, and `tools/check_transport_imports.py` fails CI when one does. The pipeline cannot reach a socket, the socket cannot reach a decode, and the codec sees nothing but octets.
+
+### Protocol stack
+
+![The protocol stack carrying the two messages this node translates](../../presentation/assets/phase1-des-protocol-stack.svg)
+
+Source: [phase1-des-protocol-stack.svg](../../presentation/assets/phase1-des-protocol-stack.svg).
+
+Both flows share every layer below the encoding row, and this node is where the left column becomes the right one. Which component owns each layer:
+
+| Layer | Owned here by |
+|---|---|
+| Message | `codec/cpm_codec`'s `CpmContent` inbound (§10.1); `contracts/r2_message`'s `R2Message` outbound (§10.2) |
+| Encoding | `codec/vanetza_cpm_codec` behind `ICpmCodec`; the nlohmann binding inside `R2Message` |
+| Transport, network, link | `net/udp_socket` alone — the layer rule above is what keeps it there |
+
+- **No GeoNetworking and no BTP sit between the encoding and the transport row** (F5). That stack ships in the modem and is out of scope project-wide, which is why Wireshark's ITS dissector reads the R1 payload as opaque UDP data (D5).
+- **A hardware port replaces the bottom of the left column and nothing above it.** Everything over `IRadioAdapter` is transport-blind, so the swap touches the adapter's own files ([telux-parity-and-port-plan.md](telux-parity-and-port-plan.md)).
+- **Both flows cross this node's one interface**, which is what makes it the single capture point for R6 (D5).
 
 ## 9. Call flow
 

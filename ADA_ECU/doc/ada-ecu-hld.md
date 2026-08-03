@@ -2,7 +2,7 @@
 
 > **The ADA node's HLD, and the sole design authority for `ADA_ECU/`.** Every component this node runs, its role, input and output, where it lives, and how the components connect. Decision record: [ada-ecu-design-decisions.md](ada-ecu-design-decisions.md) (D1–D10). Frozen contracts: [r2-v2x-object.schema.json](../../contracts/r2-v2x-object.schema.json) in, [r3-tracked-object.schema.json](../../contracts/r3-tracked-object.schema.json) as the store's object model, [r4-ada-ivi.schema.json](../../contracts/r4-ada-ivi.schema.json) out. Deploy and verify: [deploy-ada-ecu-walkthrough.md](../../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md). Node facts: [node-ada-ecu.md](../../requirements/car-sky-guide/node-ada-ecu.md).
 >
-> Diagrams: [phase2-4-ada-ecu-components.puml](phase2-4-ada-ecu-components.puml) (components) · [phase2-4-ada-ecu-callflow.puml](phase2-4-ada-ecu-callflow.puml) (sequence) · [phase2-4-ada-ecu-admission.puml](phase2-4-ada-ecu-admission.puml) (the R13 state machine).
+> Diagrams: [ada-ecu-module-architecture.svg](research_notes/ada-ecu-module-architecture.svg) (components, paired with its `.drawio`) · [phase2-4-ada-ecu-components.puml](phase2-4-ada-ecu-components.puml) (module graph) · [phase2-4-ada-ecu-callflow.puml](phase2-4-ada-ecu-callflow.puml) (sequence) · [phase2-4-ada-ecu-admission.puml](phase2-4-ada-ecu-admission.puml) (the R13 state machine).
 
 ## 1. Scope and authority
 
@@ -48,9 +48,11 @@ Non-authoritative scratch; on any conflict the CLAUDE.md authority order wins.
 
 ## 3. The component architecture
 
-Source: [phase2-4-ada-ecu-components.puml](phase2-4-ada-ecu-components.puml).
+![ADA ECU component architecture](research_notes/ada-ecu-module-architecture.svg)
 
-A UML component diagram. The two packages inside the image are the processes of D2: the C++17 `ada_ecu` core and the Python `detector` subprocess. The core's inner packages carry [ada-ecu.svg](../../requirements/ada-ecu.svg)'s block names — DataObserver, Data Parser, Current Input, Collision Risk Assessment, Current TrackedObject/Risk. A `«use»` dependency is dashed with an open arrowhead; realization is dashed with a hollow triangle; a seam is a provided interface meeting a required one. Component names below are the short `package/module` form — §4 resolves each to its path.
+Source: [research_notes/ada-ecu-module-architecture.svg](research_notes/ada-ecu-module-architecture.svg), paired with its [`.drawio`](research_notes/ada-ecu-module-architecture.drawio). The module graph alone is [phase2-4-ada-ecu-components.puml](phase2-4-ada-ecu-components.puml).
+
+A UML component diagram. Fill colour is the component's role; `«use»` dependencies are dashed with an open arrowhead; realization is dashed with a hollow triangle; a seam is a provided interface meeting a required one. The two packages inside the image are the processes of D2: the C++17 `ada_ecu` core and the Python `detector` subprocess. The core's inner packages carry [ada-ecu.svg](../../requirements/ada-ecu.svg)'s block names — DataObserver, Data Parser, Current Input, Collision Risk Assessment, Current TrackedObject/Risk. Component names below are the short `package/module` form — §4 resolves each to its path.
 
 ### MVC separation
 

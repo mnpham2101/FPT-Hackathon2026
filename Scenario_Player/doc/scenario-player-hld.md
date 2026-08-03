@@ -2,7 +2,7 @@
 
 > **The bench node's HLD, and the sole design authority for `Scenario_Player/`.** Every component this node runs, its role, input and output, where it lives, and how the components connect. Decision record: [scenario-player-design-decisions.md](scenario-player-design-decisions.md) (D1–D6). Frozen contract: [r1-cpm-profile.md](../../contracts/r1-cpm-profile.md) with [r1-cpm-content.schema.json](../../contracts/r1-cpm-content.schema.json). Node facts: [node-scenario-player.md](../../requirements/car-sky-guide/node-scenario-player.md).
 >
-> Diagrams: [scenario-player-components.puml](scenario-player-components.puml) (components) · [phase1-scenario-player-callflow.puml](phase1-scenario-player-callflow.puml) (sequence).
+> Diagrams: [scenario-player-module-architecture.svg](research_notes/scenario-player-module-architecture.svg) (components, paired with its `.drawio`) · [scenario-player-components.puml](scenario-player-components.puml) (module graph) · [phase1-scenario-player-callflow.puml](phase1-scenario-player-callflow.puml) (sequence).
 
 ## 1. Scope and authority
 
@@ -44,9 +44,11 @@ Non-authoritative scratch; on any conflict the CLAUDE.md authority order wins.
 
 ## 3. The component architecture
 
-Source: [scenario-player-components.puml](scenario-player-components.puml).
+![Scenario Player component architecture](research_notes/scenario-player-module-architecture.svg)
 
-A UML component diagram. The `player` package is the Python process the blueprint starts; `cpm_encode` is the C++ helper it spawns. A `«use»` dependency is dashed with an open arrowhead; realization is dashed with a hollow triangle; a seam is a provided interface meeting a required one. Component names below are the short `package/module` form — §4 resolves each to its path.
+Source: [research_notes/scenario-player-module-architecture.svg](research_notes/scenario-player-module-architecture.svg), paired with its [`.drawio`](research_notes/scenario-player-module-architecture.drawio). The module graph alone is [scenario-player-components.puml](scenario-player-components.puml).
+
+A UML component diagram. Fill colour is the component's role; `«use»` dependencies are dashed with an open arrowhead; realization is dashed with a hollow triangle; a seam is a provided interface meeting a required one. The `player` package is the Python process the blueprint starts; `cpm_encode` is the C++ helper it spawns. Component names below are the short `package/module` form — §4 resolves each to its path.
 
 ### MVC separation
 
@@ -198,6 +200,8 @@ No layer is collapsed: the scenario model cannot reach the socket, the sender ca
 ## 9. Call flow
 
 [phase1-scenario-player-callflow.puml](phase1-scenario-player-callflow.puml) — PlantUML sequence: config load, helper spawn, then the rate loop sample → encode → send → `[TX]`, with the encode-error, helper-restart and scenario-loop branches.
+
+> **Note, not a requirement.** The ego clip runs 10 s and B does not hold the ego lane until about its 3rd second, so the relayed C stream is wanted from roughly the 5th second of playback — plus whatever the ADA node spends booting and opening the clip. `start_delay_s` is where that offset goes (D5); no value is fixed here.
 
 ## 10. The contract — R1, the message set this node produces
 
