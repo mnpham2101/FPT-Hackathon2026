@@ -759,7 +759,7 @@ Nothing else in that file changes. Add a one-line comment recording that this Ph
 
 ## Task Group 5.8 — Retire the deployment unknowns early (serves R5, R16) — HLD §11 items 1–2
 
-> **Route alternative, added 2026-08-03.** Group 5.10 plans an **agent-authored, REST-imported** mini-blueprint (`5.5.10.1`–`6.5.10.4`) as the alternative to `5.5.8.2`'s clone-then-delete creation — run one or the other, never both. Those two subtasks are **blocked** on stage-1 gap **G1** ([§4.11](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#411-the-mini-blueprint-route) currently forbids importing a hand-authored blueprint), so until it closes **this group's clone route is the only planned one**. Group 5.10 also splits the AI rows `5.5.8.2` absorbs — the config read-back and the poll to `Running` — out to [[car-sky]] as `6.5.10.4` and `5.5.10.6`.
+> **Route alternative, added 2026-08-03 and settled by the user the same day.** Group 5.10 plans a **reference-JSON** build (`5.5.10.1` → `6.5.10.3` → `6.5.10.4`) as the alternative to `5.5.8.2`'s clone-then-delete creation — run one or the other, never both. An agent authors the blueprint as a JSON file, **nobody imports it**, the human builds the blueprint on the canvas transcribing from it, and [[car-sky]] diffs the result back against it. `6.5.10.3` explicitly keeps clone-then-delete as one of its two build routes, so the two are close cousins: the difference is that `5.5.8.2` has no machine-readable target and no diff gate. Group 5.10 also splits the AI rows `5.5.8.2` absorbs — the config read-back and the poll to `Running` — out to [[car-sky]] as `6.5.10.4` and `5.5.10.6`.
 >
 > **This group is the phase's biggest schedule risk and must start on day one, fully parallel with all code work.** The ADB route to the Skycraft guest is unverified on this deployment and the platform's REST VM-shell route answers 502. If the guest is unreachable, **every in-Room criterion falls back to emulator evidence** — and finding that out on the last day costs the phase. The probe deliberately uses **today's APK**, so it does not wait for a single line of Phase 5 code.
 
@@ -870,12 +870,14 @@ Capture the evidence per [§4.9](../requirements/car-sky-guide/deploy-ivi-hmi-wa
 
 ---
 
-## Task Group 5.10 — Mini-blueprint by REST import, and the AI/Human split groups 5.8–5.9 absorb (serves R4, R5, R6, R16, R17, R18)
+## Task Group 5.10 — Mini-blueprint from a reference JSON, and the AI/Human split groups 5.8–5.9 absorb (serves R4, R5, R6, R16, R17, R18)
 
-> **Added 2026-08-03**, from the seven-step chain the user specified for the IVI verification run: an **agent-authored, REST-imported** mini-blueprint instead of a hand-cloned one, with each step's executor named. Two things follow, and they are different in kind:
+> **Added 2026-08-03**, from the seven-step chain the user specified for the IVI verification run; **route settled by the user the same day** after the first draft planned a REST import. Two things follow, and they are different in kind:
 >
-> - **`5.5.10.1`–`6.5.10.4` are the import-route alternative to `5.5.8.2`'s clone-then-delete creation — run one or the other, never both.** They are **blocked** on stage-1 gap **G1** below; until it closes, `5.5.8.2`'s clone route is the only planned one and this file's critical path is unchanged.
-> - **`5.5.10.5`–`16.5.10.8` are additive, and unblocked.** They split the AI rows that groups 5.8 and 5.9 currently absorb into *USER-MANUAL* subtasks out to [[car-sky]]; those subtasks stay as the record-keeping and human-judgement half. Phase 5 had **zero** *car-sky*-labelled subtasks before this group, though [deploy-ivi-hmi-walkthrough.md §5](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#5-work-division-between-ai-and-human) assigns eight rows to AI.
+> - **`5.5.10.1` · `6.5.10.3` · `6.5.10.4` are the reference-JSON alternative to `5.5.8.2`'s clone-then-delete creation — run one or the other, never both.** An agent authors the blueprint as a JSON file, **nobody imports it**, the human builds the blueprint in the Nydus UI transcribing from that file, and [[car-sky]] diffs the result back against it. `5.5.10.2` (REST import) is **retired** — see it in place below.
+> - **`5.5.10.5`–`16.5.10.8` are additive.** They split the AI rows that groups 5.8 and 5.9 absorb into *USER-MANUAL* subtasks out to [[car-sky]]; those subtasks stay as the record-keeping and human-judgement half. Phase 5 had **zero** *car-sky*-labelled subtasks before this group, though [deploy-ivi-hmi-walkthrough.md §5](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#5-work-division-between-ai-and-human) assigns eight rows to AI.
+>
+> **Why the JSON is not a deploy input.** [deploy-ada-ecu-walkthrough.md §2.2](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#22-the-blueprint-definition-and-where-it-lives) already frames a committed blueprint JSON as "a record of intent, not an import route", and [§4.11](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#411-the-mini-blueprint-route) says plainly **do not import**. This group takes both at their word: the file's job is to be *transcribed from* and *diffed against*, never `POST`ed. That is why the route needs no new platform sanction — every call it makes is a read.
 >
 > Stage 2 of [walkthrough-driven-delivery.md](../.claude/rules/walkthrough-driven-delivery.md): every subtask below cites the walkthrough section that governs its step and takes its acceptance from [§6 Expected outputs and acceptance](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#6-expected-outputs-and-acceptance). The executor of each row is fixed by [§5](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#5-work-division-between-ai-and-human), not by this plan. Container-node rows the IVI walkthrough does not carry come from its companion [deploy-walkthrough-netcheck.md](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md).
 
@@ -883,77 +885,83 @@ Capture the evidence per [§4.9](../requirements/car-sky-guide/deploy-ivi-hmi-wa
 
 | # | Chain step | Executor | Subtask |
 |---|---|---|---|
-| 1 | Author the mini-blueprint and import it over REST | *agent*, then *car-sky* | `5.5.10.1` · `5.5.10.2` — new, **blocked on G1** |
-| 2 | Wire and configure the `ethernet` pin | *USER-MANUAL*, confirmed by *car-sky* | `6.5.10.3` · `6.5.10.4` — new |
+| 1 | Author the mini-blueprint JSON as the transcription reference | *agent* | `5.5.10.1` — new (`5.5.10.2`, the import, is retired) |
+| 2 | Build the blueprint by hand from that JSON: nodes, configs, `ethernet` pins | *USER-MANUAL*, gated by *car-sky* | `6.5.10.3` · `6.5.10.4` — new |
 | 3 | Write the mock-ADA container, push it, CI builds and exports to Zot | *agent* | Covered by `4.5.6.1`–`4.5.6.5`, `5.5.6.6`, `5.5.7.3`; the registry-side confirmation is new `5.5.10.5` |
 | 4 | Configure the ADA node with the simulator image | *USER-MANUAL* | Covered by `5.5.9.1` |
 | 5 | Deploy the blueprint | *USER-MANUAL*, polled by *car-sky* | Deploy covered by `5.5.9.1`; the poll-to-`Running` AI row is new `5.5.10.6` |
 | 6 | Verify via logs | *car-sky* | `18.5.10.7` — new |
 | 7 | Verify the warning screen on the device | *USER-MANUAL* | `16.5.10.8` — new as its own step; previously absorbed into `17.5.9.3` |
 
-**Gap G1 — stage 1 is missing for the import route.** [§4.11](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#411-the-mini-blueprint-route) states "**Do not import** a hand-authored blueprint JSON", for two reasons: an import arrives without its `ethernet` pins, and typically without the Skycraft `image` block. The user's route answers the first (step 2 draws the pins by hand) and intends to answer the second (the authored JSON carries the block). Neither answer is in the walkthrough, the route has no row in its §5 work-division table, and **whether an import preserves a `skycraft` node's `image` config on this deployment is asserted nowhere** — it belongs in [§6.1 Confirm before relying on these](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#61-confirm-before-relying-on-these). The rejection is not one document's opinion: [deploy-ada-ecu-walkthrough.md §2.2](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#22-the-blueprint-definition-and-where-it-lives) independently calls its own blueprint JSON "a record of intent, not an import route", and its [§4.1](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#41-create-the-blueprint) prescribes clone-then-edit for the same reason. **[[project-researcher]] owns that procedure — `5.5.10.1` and `5.5.10.2` may not fill the gap by writing the steps into their own briefs.**
+**Gap G1 — the reference-JSON route has no walkthrough section, and nothing in it is unproven.** Authoring a blueprint JSON, transcribing it by hand on the canvas, and verifying by REST read-back uses only routes the existing documents already establish: [§4.2](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#42-configure-the-blueprint-and-its-ivi-node)'s canvas edit and read-back, [netcheck M6](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#m6--check-the-wiring)'s wiring rule, and the ADA walkthrough's record-of-intent framing. What is missing is a section naming the three steps as one procedure and a row in the §5 work-division table. **This is a stage-1 documentation edit, not a blocker** — it needs no [§6.1 Confirm before relying on these](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#61-confirm-before-relying-on-these) entry, because no step in it is unexercised. [[project-researcher]] owns the section; no subtask below may write the procedure into its own brief.
 
 **Gap G2 — the IVI walkthrough's §5 table has no row for the simulator image's build, push or registry confirmation.** It names Zot only to say Zot is not on the APK path. `5.5.10.5` therefore borrows the container-node rows of [netcheck §5](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#5-work-division-between-ai-and-human) and the commands of [deploy-ada-ecu-walkthrough.md §3.3](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#33-confirm-both-images-reached-the-registry). Non-blocking — the borrowed rows are sufficient — but the ADA feed's provenance is currently split across three documents, which is [[project-researcher]]'s to fold back.
 
-### [ ] `5.5.10.1` — Author the 3-node mini-blueprint import JSON *(agent)* — **blocked on G1**
+### [ ] `5.5.10.1` — Author the 3-node mini-blueprint reference JSON *(agent)*
 
-**Objective:** produce one importable blueprint JSON describing the IVI mini topology, with full flat node config and no pins or edges.
+**Objective:** produce the machine-readable statement of what the mini-blueprint must contain — the human's transcription source at `6.5.10.3`, and the expectation `6.5.10.4` diffs the live blueprint against.
+
+**This file is never imported.** It is a record of intent in the sense [deploy-ada-ecu-walkthrough.md §2.2](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#22-the-blueprint-definition-and-where-it-lives) already uses, and [§4.11](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#411-the-mini-blueprint-route)'s "do not import" stands: an import arrives without its `ethernet` pins and gets the deploy rejected. Nothing in this group `POST`s it anywhere.
 
 **Scope:** new file `requirements/car-sky-guide/blueprint-m1-ivi-mini.json`, shaped like the existing `blueprint-m1-cooperative-awareness.json` beside it.
 
 - Three nodes, composition per [§4.11](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#411-the-mini-blueprint-route): `eth-bridge` (`bridgeMode: "linux"`, `subnet: 10.99.0.0/24`, address `10.99.0.1`), an ADA `container` node at `10.99.0.12`, an IVI `skycraft` node at `10.99.0.13`.
-- **Node config is flat** — `image`, `command`, `env`, `capabilities` sit directly in `config`, not wrapped in a `container` object ([carsky-rest-api-blueprint.md § Node config is flat](../requirements/car-sky-guide/carsky-rest-api-blueprint.md)).
-- The IVI node's `config` carries the Skycraft `image` block **verbatim** from [node-ivi-ecu.md § Blueprint node config](../requirements/car-sky-guide/node-ivi-ecu.md#blueprint-node-config) — all four fields. Its absence gets the whole deploy rejected outright with the message quoted there.
+- **Node config is flat** — `image`, `command`, `env`, `capabilities` sit directly in `config`, not wrapped in a `container` object ([carsky-rest-api-blueprint.md § Node config is flat](../requirements/car-sky-guide/carsky-rest-api-blueprint.md)). Flat is also what `6.5.10.4`'s read-back returns, so the file and the diff speak the same shape.
+- The IVI node's `config` carries the Skycraft `image` block **verbatim** from [node-ivi-ecu.md § Blueprint node config](../requirements/car-sky-guide/node-ivi-ecu.md#blueprint-node-config) — all four fields. Its absence gets the whole deploy rejected outright with the message quoted there, so it is the single most important field to transcribe correctly.
 - The ADA node carries the **probe** feed of [§4.8](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging) rung V2 — `registry.hackathon-2.carsky.io/m1-netcheck:latest`, `NEXT_HOP_HOST=10.99.0.13`, `NEXT_HOP_PORT=47300`, `capabilities: ["NET_RAW"]`. The simulator image arrives later by the human node edit of `5.5.9.1`; §4.11 fixes the ADA node as the only node ever reconfigured.
-- `pins` and `edges` are **empty arrays**. REST import silently drops `ETHERNET` pins ([§1.4](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#14-blueprints); [carsky-rest-api-blueprint.md § Key finding](../requirements/car-sky-guide/carsky-rest-api-blueprint.md#key-finding-what-rest-can-and-cannot-do)), so declaring them would only look like they exist. `6.5.10.3` draws them.
-- **No procedure text.** This subtask ships a machine-readable artifact, not a walkthrough section — the steps for using it are researcher-owned (G1).
+- **`pins` and `edges` are declared, not empty** — one `ETHERNET` / `OUTPUT` pin per non-bridge node at its address, each edged to the bridge's single `INPUT` pin, in the shape [node-ivi-ecu.md § Pins](../requirements/car-sky-guide/node-ivi-ecu.md#pins) fixes. The earlier draft left them empty because an import would have dropped them; nothing imports this file, so the pins belong in it — they are exactly what `6.5.10.3` transcribes and `6.5.10.4` diffs. Omit only the platform-assigned `id`s.
+- A one-paragraph header comment field (or a sibling `description`) stating the file is a transcription reference and must not be imported. **No procedure text** — the steps for using it are researcher-owned (G1).
 
-**Acceptance:** the file parses as JSON; every one of the four `image` fields matches node-ivi-ecu.md § Blueprint node config character for character; the three addresses match §4.11's topology; `pins` and `edges` are empty.
+**Acceptance:** the file parses as JSON; every one of the four Skycraft `image` fields matches node-ivi-ecu.md § Blueprint node config character for character; the three addresses and the `47300` port match §4.11's topology; each non-bridge node carries one `ETHERNET`/`OUTPUT` pin and one edge to the bridge; the not-an-import statement is present.
 
-**Dependencies:** **G1 closed** — do not start otherwise. **Commit:** `[5.5.10.1] docs: add the 3-node IVI mini-blueprint import JSON`
+**Dependencies:** none — starts immediately, in parallel with all code work. **Commit:** `[5.5.10.1] docs: add the 3-node IVI mini-blueprint reference JSON`
 
-### [ ] `5.5.10.2` — Import the mini-blueprint over REST and read the stored topology back *(car-sky)* — **blocked on G1**
+### [~] `5.5.10.2` — RETIRED: import the mini-blueprint over REST *(was car-sky)*
 
-**Objective:** create the mini-blueprint on `hackathon-2.carsky.io` from `5.5.10.1`'s file, and record exactly what the import kept and dropped.
+**Retired 2026-08-03, before any work was done, by the user's route decision.** This subtask would have `POST`ed `5.5.10.1`'s file to `/api/v1/blueprints/import`. The user settled the question the other way: **nobody imports the JSON** — the human builds the blueprint in the Nydus UI, transcribing from the file, which is what `6.5.10.3` now covers, and `6.5.10.4` verifies by read-back.
 
-**Scope:** `POST /api/v1/blueprints/import` then `GET /api/v1/blueprints/{id}` ([carsky-rest-api-blueprint.md § API reference](../requirements/car-sky-guide/carsky-rest-api-blueprint.md)). Reading the stored config back — rather than trusting the Inspector's truncated fields — is the AI row of [§4.2](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#42-configure-the-blueprint-and-its-ivi-node). Record per node: `nodeType`, the full stored `config`, and the surviving `pins`/`edges`.
+The import route was the weaker one on its merits as well: [§4.11](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#411-the-mini-blueprint-route) forbids it, an import silently drops `ETHERNET` pins ([carsky-rest-api-blueprint.md § Key finding](../requirements/car-sky-guide/carsky-rest-api-blueprint.md#key-finding-what-rest-can-and-cannot-do)), and whether it preserves a `skycraft` node's `image` block was unproven — a question the chosen route never has to ask.
 
-**The one fact this subtask exists to settle, which no document currently asserts:** whether the import preserves a `skycraft` node's `image` config block on this deployment. Record the answer either way. Negative means the human sets it in the Inspector before deploying (§4.2's `image` row), and the finding goes back to [[project-researcher]] for the walkthrough and to [[project-architecture]] for the node reference — not into this file.
+**The ID is retired, not reused.** Per [task-planning-conventions.md § Task ID scheme](../.claude/rules/task-planning-conventions.md#task-id-scheme), IDs are assigned once and stay stable; `5.5.10.2` names this rejected approach permanently and is never reassigned to other work. No commit belongs to it.
 
-**Acceptance:** the new blueprint's id, the read-back showing three nodes with their stored config, and an explicit yes/no on the Skycraft `image` block and on any surviving pin — all in `plans/doc/phase5-ivi-run.md`.
+### [ ] `6.5.10.3` — Build the mini-blueprint by hand from the reference JSON *(USER-MANUAL)*
 
-**Dependencies:** after `5.5.10.1`; **G1 closed**. **Commit:** `[5.5.10.2] docs: record the REST import of the IVI mini-blueprint and its read-back`
+**Objective:** produce the live `trial3_minh_ivi` blueprint — three nodes, their configs, and the three `ethernet` pins — transcribed from `5.5.10.1`'s JSON.
 
-### [ ] `6.5.10.3` — Wire the three `ethernet` pins on the Nydus canvas *(USER-MANUAL)*
+**Scope:** the whole canvas build, not only the pins. Every value comes from `requirements/car-sky-guide/blueprint-m1-ivi-mini.json`; nothing is invented at the keyboard, and where the JSON and memory disagree the JSON wins (`6.5.10.4` is what proves which was typed).
 
-**Objective:** give the imported blueprint the R6 network that REST cannot create.
+- **Create the three nodes** and set each one's config: the bridge's `bridgeMode` and `subnet`, the ADA container's image, relative `command`, env set and `NET_RAW`, and the IVI Skycraft node's four-field `image` block — [§4.2](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#42-configure-the-blueprint-and-its-ivi-node) names that block's absence as the rejection that kills a deploy outright.
+- **Draw and wire the three `ethernet` pins**, same-type only, per §4.2 and [netcheck M6](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#m6--check-the-wiring): every non-bridge node's pin is `OUTPUT` into the bridge's single `INPUT` pin, regardless of which way the data flows. Addresses ADA `10.99.0.12`, IVI `10.99.0.13`.
+- **Two build routes, the user's choice — the JSON is the reference either way.** Build the three nodes from scratch on an empty canvas; or clone the baseline `trial2_minh_netcheck` and delete the Bench and V2X nodes, then edit the survivors down to match the JSON. The clone route types far fewer fields and keeps its pins (cloning is the only route that preserves them, §4.11), so it is the lower-drift option and is the same mechanism `5.5.8.2` uses; from-scratch is cleaner but re-types every field. Record which route was taken.
+- **Record the node's Part Prefix and Display Width/Height/DPI/GPU Backend** while in the Inspector — §4.7's Screen, Log and ADB widgets select parts by that prefix, and the display size must not be assumed. (Under the `5.5.8.2` route the same reading is that subtask's; whichever route ran, it is read once.)
 
-**Scope:** the pin-drawing half of [§4.2](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#42-configure-the-blueprint-and-its-ivi-node) — draw each missing pin on the canvas and wire it to the Ethernet Bridge, same-type only. The pin's shape, `direction` and address are [node-ivi-ecu.md § Pins](../requirements/car-sky-guide/node-ivi-ecu.md#pins); the wiring rule and the address set are [netcheck M6](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#m6--check-the-wiring). Every non-bridge node's pin is `OUTPUT` into the bridge's single `INPUT` pin, regardless of which way the data flows. Addresses: ADA `10.99.0.12`, IVI `10.99.0.13`.
+Both [§5](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#5-work-division-between-ai-and-human) ("Configure the blueprint and its pins") and [netcheck §5](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#5-work-division-between-ai-and-human) ("M7 — Configure the container nodes", "M6 — Draw a missing pin or edge") assign this to Human: the REST `pinType` enum has no `ETHERNET` member and no REST route updates an existing node's config. No agent performs it; the plan tracks it.
 
-While in the same canvas session, per §4.2: confirm the IVI node's Skycraft `image` block is present and set it from [node-ivi-ecu.md § Blueprint node config](../requirements/car-sky-guide/node-ivi-ecu.md#blueprint-node-config) if `5.5.10.2` found it dropped, and **record the node's Part Prefix and Display Width/Height/DPI/GPU Backend** — §4.7's Screen, Log and ADB widgets select parts by that prefix, and the display size must not be assumed. (Under the clone route the same reading is `5.5.8.2`'s; whichever route ran, it is read once.)
+**This subtask is what `5.5.10.2` and `5.5.8.2` both collapse into** — one human canvas session that creates and configures everything, with a machine-readable source to work from and a machine-checked gate behind it.
 
-Both [§5](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#5-work-division-between-ai-and-human) ("Configure the blueprint and its pins") and [netcheck §5](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#5-work-division-between-ai-and-human) ("M6 — Draw a missing pin or edge") assign this to Human: the REST `pinType` enum has no `ETHERNET` member. No agent performs it; the plan tracks it.
+**Acceptance:** `6.5.10.4`'s diff comes back clean; the build route taken and the measured Skycraft display fields are recorded in `plans/doc/phase5-ivi-run.md`. Evidence commit by the orchestrating session after the user confirms.
 
-**Acceptance:** `6.5.10.4`'s read-back confirms the pins and edges; the measured Skycraft display fields are recorded in `plans/doc/phase5-ivi-run.md`. Evidence commit by the orchestrating session after the user confirms.
+**Dependencies:** after `5.5.10.1`. **Commit:** `[6.5.10.3] docs: record the hand-built mini-blueprint and its transcription source`
 
-**Dependencies:** after `5.5.10.2`. **Commit:** `[6.5.10.3] docs: record the hand-wired ethernet pins on the imported mini-blueprint`
+### [ ] `6.5.10.4` — Diff the live blueprint field-for-field against the reference JSON *(car-sky)*
 
-### [ ] `6.5.10.4` — Confirm the wired topology and node config by read-back *(car-sky)*
+**Objective:** gate the hand-built blueprint against `5.5.10.1`'s file before a Room slot is spent on it. **Hand-transcription is where drift enters, and this diff is the whole reason the reference-JSON route is trustworthy** — without it the JSON is decoration and a mistyped octet costs a deploy cycle to find.
 
-**Objective:** prove from stored state, not from the Inspector, that the blueprint is deployable before a Room slot is spent on it.
+**Scope:** `GET /api/v1/blueprints/{id}` — read-only, the AI read-back row of [§4.2](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#42-configure-the-blueprint-and-its-ivi-node), plus the "M6 — Check the wiring" and "M8 — Confirm the IVI node's VM artifact" AI rows of [netcheck §5](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#5-work-division-between-ai-and-human). §4.2 is explicit that the read-back, not the Inspector's truncated fields, is what counts.
 
-**Scope:** `GET /api/v1/blueprints/{id}` — the AI read-back row of [§4.2](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#42-configure-the-blueprint-and-its-ivi-node), and the "M6 — Check the wiring" and "M8 — Confirm the IVI node's VM artifact" AI rows of [netcheck §5](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#5-work-division-between-ai-and-human). Assert every one of:
+Compare the returned topology **field for field** against `requirements/car-sky-guide/blueprint-m1-ivi-mini.json`, ignoring only the platform-assigned `id`s and node positions. Every one of these is a diff line, not a judgement call:
 
-- one `ETHERNET` / `OUTPUT` pin on the ADA node at `10.99.0.12` and one on the IVI node at `10.99.0.13`, each edged to the bridge's `INPUT` pin;
-- the bridge node's config carrying `bridgeMode` and `subnet` — without them the `10.99.0.x` addresses have no network;
-- the IVI node's config carrying all four Skycraft `image` fields;
-- the ADA node's config carrying its probe image, relative `command`, env set and `NET_RAW`.
+- each node's `nodeType` and its whole `config`;
+- the ADA node's image reference, relative `command`, every env key and value — `NEXT_HOP_HOST`, `NEXT_HOP_PORT=47300` above all, since a wrong port produces a silent no-traffic run — and `NET_RAW`;
+- the IVI node's four Skycraft `image` fields;
+- the bridge's `bridgeMode` and `subnet` — without them the `10.99.0.x` addresses have no network;
+- one `ETHERNET`/`OUTPUT` pin per non-bridge node at `10.99.0.12` and `10.99.0.13`, each edged to the bridge's `INPUT` pin.
 
-`POST /api/v1/blueprints/{id}/validate` is a cheap second confirmation — it returns 422 `Node "…" has no pins` until `6.5.10.3` has landed, so a pass independently proves the wiring.
+`POST /api/v1/blueprints/{id}/validate` is a cheap second confirmation — it returns 422 `Node "…" has no pins` until the pins are drawn, so a pass independently proves the wiring.
 
-**Acceptance:** the read-back excerpt in `plans/doc/phase5-ivi-run.md` with every assertion above met, or the exact mismatch named and handed back to `6.5.10.3` rather than worked around.
+**Acceptance:** a clean diff, recorded in `plans/doc/phase5-ivi-run.md` together with the read-back excerpt — or every mismatching field named and handed back to `6.5.10.3` for a canvas fix, then re-run. A deploy does not start on a dirty diff.
 
-**Dependencies:** after `6.5.10.3`. **Commit:** `[6.5.10.4] docs: record the mini-blueprint topology read-back and validation`
+**Dependencies:** after `6.5.10.3` (and `5.5.10.1`, whose file is the comparison target). **Commit:** `[6.5.10.4] docs: record the mini-blueprint read-back diffed against the reference JSON`
 
 ### [ ] `5.5.10.5` — Confirm `m1-r4-sim:latest` reached the Zot registry *(car-sky)* — **cites G2's borrowed rows**
 
@@ -977,7 +985,7 @@ Deploy the **original** blueprint, never the `<name>-deploy` snapshot the first 
 
 **Acceptance:** 3/3 nodes `Running` with restart count 0, and the three `nodeKey` values recorded in `plans/doc/phase5-ivi-run.md`. This is the precondition every [§6](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#6-expected-outputs-and-acceptance) proof rests on, and it replaces reading node badges off the Deployment Viewer by eye.
 
-**Dependencies:** after the user's deploy — `5.5.8.2` on the clone route, or `6.5.10.4` on the import route. **Commit:** `[5.5.10.6] docs: record the mini-blueprint Room reaching Running`
+**Dependencies:** after the user's deploy — `5.5.8.2` on the clone route, or `6.5.10.4` on the reference-JSON route. **Commit:** `[5.5.10.6] docs: record the mini-blueprint Room reaching Running`
 
 ### [ ] `18.5.10.7` — Read the two log surfaces and produce proofs 1–3 *(car-sky)*
 
@@ -1033,16 +1041,17 @@ Lane H  unknowns:     5.5.8.2 (USER) ─► 16.5.8.3 (USER) ─► 16.5.8.4
                       (fully parallel with lanes A–G; 16.5.8.4 also needs 16.5.5.5)
 Lane I  evidence:     5.5.9.1 (USER) ─► 16.5.9.2 (USER) ─► 17.5.9.3 (USER) ─► 4.5.9.4 (USER)
                       (5.5.9.1 needs 5.5.7.3 + 5.5.8.2; 16.5.9.2 needs 17.5.5.6 + 16.5.8.3)
-Lane J  split/import: 5.5.10.5 (car-sky, after 5.5.7.3, ∥ everything)
+Lane J  blueprint:    5.5.10.1 ─► 6.5.10.3 (USER) ─► 6.5.10.4
+                      (the reference-JSON route; replaces 5.5.8.2, does not add to it.
+                       5.5.10.1 starts day one, ∥ everything. 5.5.10.2 retired, not run)
+Lane J' split rows:   5.5.10.5 (car-sky, after 5.5.7.3, ∥ everything)
                       5.5.10.6 ─► 18.5.10.7 ─► 16.5.10.8   (car-sky, car-sky, USER)
                       (5.5.10.6 after the user's deploy; 18.5.10.7 also needs 5.5.9.1 + 16.5.9.2 + 16.5.8.3)
-                      5.5.10.1 ─► 5.5.10.2 ─► 6.5.10.3 (USER) ─► 6.5.10.4   ── BLOCKED on G1
-                      (the import route; replaces 5.5.8.2 if and only if G1 closes)
 ```
 
 - **Parallel:** lanes B, D-partial, F, G and H against each other once `4.5.1.4` has landed; `4.5.4.1 ∥ 4.5.4.2 ∥ 4.5.4.3` inside lane D; `17.5.5.7 ∥ 17.5.5.6`; `17.5.5.8` against everything. Lane H is parallel with **all** code work by design — it must not wait for it. `5.5.10.5` is parallel with everything after `5.5.7.3`.
-- **Sequential:** every arrow above. Lane A is strictly sequential and gates everything (a Gradle module graph cannot be built out of order). Lanes I and J are strictly sequential and last — each step's evidence depends on the previous step's Room state.
-- **Lane J interleaves with lane I rather than following it.** `5.5.10.6` runs at the same Room event as lane I's deploy; `18.5.10.7` supplies the text half of `17.5.9.3`'s record and `16.5.10.8` the visual half. Its blocked import branch is an **alternative to `5.5.8.2`**, not an addition to it.
+- **Sequential:** every arrow above. Lane A is strictly sequential and gates everything (a Gradle module graph cannot be built out of order). Lanes I and J' are strictly sequential and last — each step's evidence depends on the previous step's Room state.
+- **Lane J is an alternative to lane H's `5.5.8.2`, not an addition.** It starts at day one alongside it: `5.5.10.1` is an authoring task needing no platform access, so the JSON can exist before the user decides which build route to take. Lane J' interleaves with lane I — `5.5.10.6` runs at the same Room event as lane I's deploy, `18.5.10.7` supplies the text half of `17.5.9.3`'s record and `16.5.10.8` the visual half.
 - **Spawn order:** hand `4.5.1.1` and `16.5.7.1` to subagents simultaneously at kickoff. Lane H's USER steps go to the user at kickoff too — `5.5.8.2` waits on nothing. Lane I's four USER steps run only after `5.5.7.3` has pushed a verified image. Lane J's *car-sky* subtasks are spawned to [[car-sky]] at the Room events they attach to.
 
 ### Critical path
@@ -1053,7 +1062,7 @@ Six days to the deadline. The shortest ordered set that closes all five acceptan
 
 with **lane H (`5.5.8.2` → `16.5.8.3`) running alongside from day one** — it does not sit on the critical path but it decides whether the path's last four steps are in-Room or on an emulator.
 
-**Group 5.10 does not change this path.** Its import branch is blocked on G1 and is an alternative to `5.5.8.2`, which is already on the path by the clone route; its four unblocked subtasks attach to Room events the path already contains, and `5.5.10.5` runs parallel to everything. If G1 closes and the user takes the import route, `5.5.8.2` drops out and `5.5.10.1 → 5.5.10.2 → 6.5.10.3 → 6.5.10.4` takes its place at the same point — four steps where there was one, which is the cost of the route, not of the phase.
+**Group 5.10 does not change this path.** Its blueprint branch is an alternative to `5.5.8.2`, which sits off the critical path in lane H either way; its split-out subtasks attach to Room events the path already contains, and `5.5.10.5` runs parallel to everything. On the reference-JSON route `5.5.8.2` drops out and `5.5.10.1 → 6.5.10.3 → 6.5.10.4` takes its place — one authoring task that costs no platform time, the same single canvas session, and one read-only diff before the deploy. The diff is the only added step, and it is cheaper than the deploy cycle a mistyped field would otherwise cost.
 
 **Droppable without failing a box, in this order if time runs short:** `4.5.1.5` (ProGuard rules — release build is not an acceptance target), `17.5.5.7` (config-driven scale — the library default is correct), `4.5.6.7` (dev injector — only needed if the ADB/UI route is awkward), `4.5.2.3` and `4.5.3.5` (extra test depth, not extra behaviour), `state-stream.json` inside `4.5.6.4` (the periodic `state` message is optional on the producer side and no box depends on it).
 
@@ -1063,7 +1072,7 @@ Every Phase 5 acceptance criterion in [milestone1.md](milestone1.md#phase-5--ivi
 
 | Milestone Phase 5 box | Closed by |
 |---|---|
-| The HMI runs on the AAOS node with the R16 layout; button/app areas switch the Display area | `16.5.5.4` · `16.5.5.5` (the launcher entry the APK lacks today) · `17.5.5.6` · `16.5.4.5` · deployed and observed by `5.5.8.2` (or `5.5.10.1`–`6.5.10.4` on the import route) · `5.5.10.6` (Room `Running`, recorded not eyeballed) · `16.5.8.3` · `16.5.9.2` |
+| The HMI runs on the AAOS node with the R16 layout; button/app areas switch the Display area | `16.5.5.4` · `16.5.5.5` (the launcher entry the APK lacks today) · `17.5.5.6` · `16.5.4.5` · deployed and observed by `5.5.8.2` (or `5.5.10.1` → `6.5.10.3` → `6.5.10.4` on the reference-JSON route, whose diff gate is what proves the topology matches intent) · `5.5.10.6` (Room `Running`, recorded not eyeballed) · `16.5.8.3` · `16.5.9.2` |
 | **(Dev)** A mock R4 warning brings the warning view up with ego, B and ghost C at the composed positions | `4.5.2.2` · `4.5.3.3` · `4.5.4.2` · `17.5.4.4` · `16.5.4.5` · `17.5.5.6` · simulator `4.5.6.3`/`4.5.6.4` (`approach.json`) · image confirmed on the registry by `5.5.10.5` · dev path `4.5.6.7` (I3) · observed by `17.5.9.3` (I4), with its text half `18.5.10.7` and its visual half `16.5.10.8` |
 | Ghost C renders from `v2x_relayed` data only; the 2D drawing is delivered | **`17.5.4.4`** (the §9.2 snapshot wiring that arms the committed guard — without it the guard silently disables) · **`17.5.5.9`** (the guard itself under test) · `17.5.5.6` · `17.5.5.7` · `17.5.5.8` · `4.5.3.3` (`cSource=` on every `[RX]`) · `degrade.json` guard-trip step in `4.5.6.4` · observed by `17.5.9.3` and `4.5.9.4`; `cSource=v2x_relayed` on every warning evidenced in text by `18.5.10.7` and on screen by `16.5.10.8` |
 | A newer message with an unknown `warningType` degrades gracefully | `4.5.1.4` (the committed `R4AdditiveVersionTest` relocated and still green) · `4.5.2.2` (decode preserves the value, D4) · `4.5.4.3` (`WarningClassifier` generic presentation) · `4.5.6.4` (`degrade.json`) · observed by `4.5.9.4` |
@@ -1080,7 +1089,7 @@ Every Phase 5 acceptance criterion in [milestone1.md](milestone1.md#phase-5--ivi
 | 5 | Deployment budget: 2 concurrent Rooms | `4.5.9.4` tears the Phase 5 Room down; coordinate with the comms track before `5.5.8.2` deploys |
 | 6 | MTU headroom (Phase 0 open item O3) | Non-issue for this hop — an R4 warning is ~450 B against a 2048 B buffer — but still formally open |
 | 7 | **AAOS boot-to-listener time sets the bench `start_delay_s` floor** — a number no other phase can produce ([m1-run-timing-and-event-triggering.md §9 item 5](../requirements/m1-run-timing-and-event-triggering.md)). Measured at `16.5.9.2`; consumed by the bench key `start_delay_s`, which §6.1 defines and no phase currently schedules ([phase1_tasks.md § Open items item 10](phase1_tasks.md#open-items--flags-no-phase-1-subtask-may-silently-close-them)). **No startup handshake is coming** — §4.2 rules readiness as R5's Deployment-Viewer check plus that delay, so nothing in this phase should be designed around a barrier the topology has no reverse path for | `16.5.9.2`, then **user** / Phase 6 |
-| 8 | **G1 — the REST-import route has no stage 1.** [§4.11](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#411-the-mini-blueprint-route) forbids importing a hand-authored blueprint, [deploy-ada-ecu-walkthrough.md §2.2](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#22-the-blueprint-definition-and-where-it-lives) independently rejects it, and whether an import preserves a `skycraft` node's `image` config on this deployment is asserted nowhere | [[project-researcher]], per [walkthrough-driven-delivery.md](../.claude/rules/walkthrough-driven-delivery.md). Blocks `5.5.10.1` and `5.5.10.2`; until closed, `5.5.8.2`'s clone route stands |
+| 8 | **G1 — the reference-JSON route has no walkthrough section.** Author a mini-blueprint JSON, transcribe it by hand in the UI, verify by REST read-back: three steps whose every route the existing documents already establish, named nowhere as one procedure and absent from the §5 work-division table. The REST-import variant was **rejected by the user on 2026-08-03** and is not what G1 asks for | [[project-researcher]], per [walkthrough-driven-delivery.md](../.claude/rules/walkthrough-driven-delivery.md). **Non-blocking** — a documentation edit, with no [§6.1](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#61-confirm-before-relying-on-these) entry needed, since nothing in the route is unproven |
 | 9 | **G2 — the IVI walkthrough's §5 table has no row for the simulator image's build, push or registry confirmation.** `5.5.10.5` borrows [netcheck §5](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#5-work-division-between-ai-and-human) and [deploy-ada-ecu-walkthrough.md §3.3](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#33-confirm-both-images-reached-the-registry) instead, so the ADA feed's provenance spans three documents | [[project-researcher]]. Non-blocking — the borrowed rows suffice |
 
 ## Deliberately not in this phase
@@ -1100,4 +1109,4 @@ Carried by [phase5_tasks.md](phase5_tasks.md) and deliberately not carried here,
 
 ---
 
-*Created 2026-08-02 by project-planner from the Phase 5 HLD (`85387b5`), its four research notes, and [milestone1.md § Phase 5](milestone1.md#phase-5--ivi-hmi-mock-driven-r16-r17--display-track-parallel-from-the-start); gap-checked the same day against [phase5_tasks.md](phase5_tasks.md). Group 5.10 added 2026-08-03 from the user's seven-step verification chain, per stage 2 of [walkthrough-driven-delivery.md](../.claude/rules/walkthrough-driven-delivery.md). 10 task groups, 52 subtasks: 39 agent-implemented, 5 car-sky, 8 user-manual — of which `5.5.10.1` and `5.5.10.2` are blocked on gap G1. Nothing started except `16.5.7.1`.*
+*Created 2026-08-02 by project-planner from the Phase 5 HLD (`85387b5`), its four research notes, and [milestone1.md § Phase 5](milestone1.md#phase-5--ivi-hmi-mock-driven-r16-r17--display-track-parallel-from-the-start); gap-checked the same day against [phase5_tasks.md](phase5_tasks.md). Group 5.10 added 2026-08-03 from the user's seven-step verification chain, per stage 2 of [walkthrough-driven-delivery.md](../.claude/rules/walkthrough-driven-delivery.md); its blueprint route settled the same day as author-then-transcribe, retiring `5.5.10.2`. 10 task groups, 52 subtask IDs — **51 active**, 39 agent-implemented, 4 car-sky, 8 user-manual, plus `5.5.10.2` retired in place and never reused. Nothing blocked. Nothing started except `16.5.7.1`.*
