@@ -22,7 +22,7 @@ deck: Phase 1 — Task Execution · FPT Hackathon 2026
 
 Preceding phase: [phase0-task-execution-deck.html](../phase0/phase0-task-execution-deck.html) · [phase0-design-concepts-deck.html](../phase0/phase0-design-concepts-deck.html)
 
-Sources: [phase1_tasks.md](../../plans/phase1_tasks.md) · [phase1-comms-run.md](../../plans/doc/phase1-comms-run.md) · design documents for the [V2X ECU](../../V2X_ECU/doc/phase1-v2x-ecu-comms-hld.md) and the [bench](../../Scenario_Player/doc/scenario-player-hld.md)
+Sources: [phase1_tasks.md](../../plans/phase1_tasks.md) · [phase1-comms-run.md](../../plans/doc/phase1-comms-run.md) · design documents for the [V2X ECU](../../V2X_ECU/doc/v2x-ecu-hld.md) and the [bench](../../Scenario_Player/doc/scenario-player-hld.md)
 
 ---
 

@@ -1,6 +1,6 @@
 # Traffic Capture & Wireshark Retrieval (R6 / R19 evidence)
 
-How bridge traffic is captured on a CarSky Container node and turned into a `.pcap` the user opens in Wireshark. Design rationale: [V2X ECU Phase 1 HLD D5](../../V2X_ECU/doc/phase1-v2x-ecu-comms-hld.md); capture technique origin: [baseline-connectivity-smoke-test.md](../../plans/doc/research_notes/baseline-connectivity-smoke-test.md). User directive 2026-07-30: capture via tcpdump; saved traffic read by tool/script or analyzed in Wireshark.
+How bridge traffic is captured on a CarSky Container node and turned into a `.pcap` the user opens in Wireshark. Design rationale: [V2X ECU decision D5](../../V2X_ECU/doc/v2x-ecu-design-decisions.md#d5--r6-traffic-capture-runs-in-the-container-and-exports-through-the-log); capture technique origin: [baseline-connectivity-smoke-test.md](../../plans/doc/research_notes/baseline-connectivity-smoke-test.md). User directive 2026-07-30: capture via tcpdump; saved traffic read by tool/script or analyzed in Wireshark.
 
 ## How capture works in the node
 

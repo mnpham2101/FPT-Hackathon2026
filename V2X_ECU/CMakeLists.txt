@@ -111,7 +111,7 @@ set_target_properties(gv_tool PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY
 v2x_add_test(v2x_cpm_golden_vectors_test tests/codec/test_cpm_golden_vectors.cpp)
 target_link_libraries(v2x_cpm_golden_vectors_test PRIVATE v2x_cpm_codec)
 
-# Env config loader (8.1.2.1) - the app's only env reader (Phase 1 HLD sections 4/6).
+# Env config loader (8.1.2.1) - the app's only env reader (HLD sections 4/6).
 # Transport-blind data-layer code: stdlib only - no nlohmann, no Vanetza, and no socket
 # headers (the tools/check_transport_imports.py gate applies). Static-lib shape mirrors
 # v2x_contracts; the HLD section 6 defaults table lives in src/config/config.cpp alone.
@@ -124,7 +124,7 @@ target_compile_features(v2x_config PUBLIC cxx_std_17)
 v2x_add_test(v2x_config_test tests/config/test_config.cpp)
 target_link_libraries(v2x_config_test PRIVATE v2x_config)
 
-# Sole socket-API holder (7.1.2.2, Phase 1 HLD D1) - src/net/ is the only code
+# Sole socket-API holder (7.1.2.2, HLD decision D1) - src/net/ is the only code
 # allowed to include transport headers, and only udp_socket.cpp does; the header
 # stays POSIX-free so consumers (R7 stub Rx, 2.1.2.4 ADA forwarder) never see
 # them (tools/check_transport_imports.py enforces this). Static-lib shape
@@ -138,7 +138,7 @@ target_compile_features(v2x_net PUBLIC cxx_std_17)
 v2x_add_test(v2x_udp_socket_test tests/net/test_udp_socket.cpp)
 target_link_libraries(v2x_udp_socket_test PRIVATE v2x_net)
 
-# R18 JSONL event-log writer (18.1.2.3, Phase 1 HLD D4) - the [EVT] evidence
+# R18 JSONL event-log writer (18.1.2.3, HLD decision D4) - the [EVT] evidence
 # stream. Links PUBLIC v2x_codec_seam (src/ include path + nlohmann + the
 # CpmContent binding embedded by decode_ok) and v2x_contracts (the R2Message
 # binding embedded by r2_forwarded). Transport-blind: no socket headers
@@ -154,7 +154,7 @@ target_compile_features(v2x_event_log PUBLIC cxx_std_17)
 v2x_add_test(v2x_event_log_test tests/log/test_event_log.cpp)
 target_link_libraries(v2x_event_log_test PRIVATE v2x_event_log)
 
-# ADA forwarder (2.1.2.4, Phase 1 HLD D1 / D3 stage 4) - the intra-ego R2
+# ADA forwarder (2.1.2.4, HLD decision D1 / D3 stage 4) - the intra-ego R2
 # edge, deliberately NOT under the R7 seam: serializes the Phase 0 R2Message
 # to compact JSON and sends one UDP datagram per message. Links PUBLIC
 # v2x_net (the sole socket holder it consumes - no socket headers here, the
@@ -172,7 +172,7 @@ target_compile_features(v2x_forward PUBLIC cxx_std_17)
 v2x_add_test(v2x_ada_forwarder_test tests/forward/test_ada_forwarder.cpp)
 target_link_libraries(v2x_ada_forwarder_test PRIVATE v2x_forward)
 
-# R7 radio-adapter seam (7.1.3.1, Phase 1 HLD D2) - the FROZEN interface:
+# R7 radio-adapter seam (7.1.3.1, HLD decision D2) - the FROZEN interface:
 # RadioConfig, RxCallback, RadioResult and the pure-virtual IRadioAdapter all
 # live header-only in src/adapter/i_radio_adapter.hpp, so an INTERFACE target
 # is the right shape (pattern: v2x_codec_seam; no nlohmann link - the seam
@@ -187,7 +187,7 @@ target_compile_features(v2x_adapter_seam INTERFACE cxx_std_17)
 v2x_add_test(v2x_i_radio_adapter_test tests/adapter/test_i_radio_adapter.cpp)
 target_link_libraries(v2x_i_radio_adapter_test PRIVATE v2x_adapter_seam)
 
-# R8 modem stub FSM (8.1.3.2, Phase 1 HLD D2) - pure bring-up logic
+# R8 modem stub FSM (8.1.3.2, HLD decision D2) - pure bring-up logic
 # idle -> initialized -> configured -> rx-subscribed, each call acked with the
 # seam's RadioResult and every outcome (ack or illegal-order rejection)
 # reported to the injectable TransitionObserver (main wires it to
@@ -208,7 +208,7 @@ target_compile_features(v2x_stub PUBLIC cxx_std_17)
 v2x_add_test(v2x_modem_stub_fsm_test tests/stub/test_modem_stub_fsm.cpp)
 target_link_libraries(v2x_modem_stub_fsm_test PRIVATE v2x_stub)
 
-# R7 seam implementation (7.1.3.4, Phase 1 HLD D2) - the only IRadioAdapter in M1:
+# R7 seam implementation (7.1.3.4, HLD decision D2) - the only IRadioAdapter in M1:
 # delegates init/configure/subscribeRx to the R8 stub (which owns the FSM and every
 # D2 fault/recovery) and adds what the pure-logic stub deliberately lacks - the
 # LISTEN_PORT Rx socket and its dedicated Rx thread, both RAII-owned (the destructor
@@ -228,7 +228,7 @@ target_compile_features(v2x_adapter PUBLIC cxx_std_17)
 v2x_add_test(v2x_stub_radio_adapter_test tests/adapter/test_stub_radio_adapter.cpp)
 target_link_libraries(v2x_stub_radio_adapter_test PRIVATE v2x_adapter)
 
-# R9 Rx pipeline (Phase 1 HLD D3) - the stage-2 profile validator (9.1.4.1),
+# R9 Rx pipeline (HLD decision D3) - the stage-2 profile validator (9.1.4.1),
 # the stage-3 deduper (9.1.4.2), the stage-4a R2 builder (9.1.4.3) and the
 # composition root rx_pipeline that wires all four stages behind one
 # onDatagram entry point (9.1.4.4). Links PUBLIC v2x_codec_seam (CpmContent in
@@ -272,7 +272,7 @@ target_link_libraries(v2x_rx_pipeline_test PRIVATE v2x_pipeline)
 v2x_add_test(v2x_rx_pipeline_malformed_test tests/pipeline/test_rx_pipeline_malformed.cpp)
 target_link_libraries(v2x_rx_pipeline_malformed_test PRIVATE v2x_pipeline v2x_cpm_codec)
 
-# The node application (8.1.5.1, Phase 1 HLD section 4) - src/main.cpp is the
+# The node application (8.1.5.1, the node HLD section 4) - src/main.cpp is the
 # composition root and the ONLY translation unit in this target: Config ->
 # EventLog -> codec + R9 stages -> RxPipeline (AdaForwarder as sink) -> ModemStub
 # (observer on the D4 events) -> StubRadioAdapter, then the scripted D2 bring-up.

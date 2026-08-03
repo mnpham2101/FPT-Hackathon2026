@@ -22,7 +22,7 @@ Node designs in detail: [V2X ECU](phase1-design-v2x-ecu-deck.html) · [Scenario 
 
 Planning and execution of this design: [phase1-task-execution-deck.html](phase1-task-execution-deck.html). Preceding phase: [phase0-design-concepts-deck.html](../phase0/phase0-design-concepts-deck.html).
 
-Sources: [V2X ECU HLD](../../V2X_ECU/doc/phase1-v2x-ecu-comms-hld.md) · [Scenario Player HLD](../../Scenario_Player/doc/scenario-player-hld.md) · [r1-cpm-profile.md](../../contracts/r1-cpm-profile.md) · [contracts/](../../contracts/)
+Sources: [V2X ECU HLD](../../V2X_ECU/doc/v2x-ecu-hld.md) · [Scenario Player HLD](../../Scenario_Player/doc/scenario-player-hld.md) · [r1-cpm-profile.md](../../contracts/r1-cpm-profile.md) · [contracts/](../../contracts/)
 
 ---
 

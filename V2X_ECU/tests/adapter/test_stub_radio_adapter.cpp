@@ -1,5 +1,5 @@
 // Tests for the 7.1.3.4 R7 seam implementation
-// (src/adapter/stub_radio_adapter.{hpp,cpp}, Phase 1 HLD D2):
+// (src/adapter/stub_radio_adapter.{hpp,cpp}, HLD decision D2):
 // (a) happy path — init/configure/subscribeRx all Ok and a loopback datagram
 //     sent to the configured port reaches the subscribed callback with
 //     byte-identical payload, (b) send() returns NotSupported and logs the R10

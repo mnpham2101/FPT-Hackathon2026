@@ -2,7 +2,7 @@
 #define V2X_ECU_PIPELINE_RX_PIPELINE_HPP
 
 // V2X_ECU/src/pipeline/rx_pipeline.hpp — the R9 Rx pipeline composition root
-// (subtask 9.1.4.4; Phase 1 HLD §3 D3): one datagram in, at most one R2 message
+// (subtask 9.1.4.4; HLD decision D3): one datagram in, at most one R2 message
 // out, every stage outcome on the R18 evidence stream.
 //
 //   bytes → ICpmCodec::decode → Validator → Deduper → R2Builder → R2Sink

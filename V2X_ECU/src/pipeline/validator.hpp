@@ -2,7 +2,7 @@
 #define V2X_ECU_PIPELINE_VALIDATOR_HPP
 
 // V2X_ECU/src/pipeline/validator.hpp — stage 2 of the R9 Rx pipeline (Phase 1
-// HLD §3 D3): mandatory-field presence + profile-range validation of a decoded
+// HLD decision D3): mandatory-field presence + profile-range validation of a decoded
 // CpmContent per contracts/r1-cpm-profile.md, incl. F9.
 //
 // Mandatory-field presence is enforced structurally: every schema-required

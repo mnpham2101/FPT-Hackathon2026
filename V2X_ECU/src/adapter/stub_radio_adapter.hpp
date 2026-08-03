@@ -2,7 +2,7 @@
 #define V2X_ECU_ADAPTER_STUB_RADIO_ADAPTER_HPP
 
 // V2X_ECU/src/adapter/stub_radio_adapter.hpp — the R7 seam implementation over
-// the R8 modem stub (subtask 7.1.3.4, Phase 1 HLD D2): the only IRadioAdapter
+// the R8 modem stub (subtask 7.1.3.4, HLD decision D2): the only IRadioAdapter
 // in M1. It owns exactly two things the pure-logic stub deliberately does not:
 // the LISTEN_PORT UDP socket and the dedicated Rx thread that delivers each
 // datagram to the subscribed callback.

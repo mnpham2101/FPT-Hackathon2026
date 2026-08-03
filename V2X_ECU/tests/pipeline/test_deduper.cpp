@@ -1,5 +1,5 @@
 // Deduper test (subtask 9.1.4.2) — stage 3 of the R9 Rx pipeline (Phase 1
-// HLD §3 D3): duplicate drop over (stationId, objectId,
+// HLD decision D3): duplicate drop over (stationId, objectId,
 // referenceTime + measurementDeltaTime) within a sliding window.
 //
 // The clock is a mutable int64 captured by a lambda, so every window edge is

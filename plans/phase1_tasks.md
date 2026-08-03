@@ -2,7 +2,7 @@
 
 > **Authority & context:**
 > - **Phase content:** [milestone1.md § Phase 1](milestone1.md#phase-1--comms-bring-up-v2x-ecu--scenario-player-r5r9-r11--r10-moved-to-the-future-plan) — its eight acceptance checkboxes are the phase output.
-> - **Design (V2X ECU):** [phase1-v2x-ecu-comms-hld.md](../V2X_ECU/doc/phase1-v2x-ecu-comms-hld.md) (commits `3d0c655` + `f823d08` + `dda1566`) — decisions D1–D7 (D4 amended: payload-carrying events; D7: bench↔V2X comms check), §4 folder map, §6 env table, §9 deployment shape. Every V2X_ECU path below is cited from its §4; the D7 script pair lives at repo-root `tools/comms_check/` (user-mandated location, netcheck precedent).
+> - **Design (V2X ECU):** [v2x-ecu-hld.md](../V2X_ECU/doc/v2x-ecu-hld.md) — §4 folder structure, §6 components and env table, §11 build and CI, and the [decision record](../V2X_ECU/doc/v2x-ecu-design-decisions.md) D1–D8 (D4 payload-carrying events; D7 the bench↔V2X comms check). Every V2X_ECU path below is cited from its §4; the D7 script pair lives at repo-root `tools/comms_check/` (user-mandated location, netcheck precedent).
 > - **Design (Scenario Player):** [scenario-player-hld.md](../Scenario_Player/doc/scenario-player-hld.md) — §4 folder structure, §6 components and configuration, and the [decision record](../Scenario_Player/doc/scenario-player-design-decisions.md) D1–D6. Every Scenario_Player path below is cited from its §4.
 > - **Requirements:** [m1-cooperative-awareness.md §2](../requirements/m1-cooperative-awareness.md) R2, R5–R9, R11, R18 — referenced by number, never restated. **R10 is deferred**: the R7 seam declares `send`, nothing calls it, no subtask implements it.
 > - **Phase 0 baseline (do not re-plan):** [phase0_tasks.md](phase0_tasks.md) § Output — contracts frozen, codec seam + R2 binding + golden vectors + `check_sync.py` landed, smoke test C1–C5 green on `trial2_minh`, CI lanes live.
@@ -129,7 +129,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 ## Task Group 1.2 — V2X ECU foundation: config, socket, event log, forwarder (serves R8, R7, R18, R2)
 
-> The transport-blind foundation modules of [V2X HLD §4](../V2X_ECU/doc/phase1-v2x-ecu-comms-hld.md#4-folder-structure-map--file-location-designations). All paths inside `V2X_ECU/`; build/test = V2X row of § Per-node build commands (CI `v2x-core-build`). Test-file paths here beyond the HLD's list are planner-designated per the HLD's `tests/<module>/` pattern (§ Open items item 5).
+> The transport-blind foundation modules of [V2X HLD §4](../V2X_ECU/doc/v2x-ecu-hld.md#4-folder-structure). All paths inside `V2X_ECU/`; build/test = V2X row of § Per-node build commands (CI `v2x-core-build`). Test-file paths here beyond the HLD's list are planner-designated per the HLD's `tests/<module>/` pattern (§ Open items item 5).
 
 ### [x] `8.1.2.1` — Env config loader `src/config/config.{hpp,cpp}` *(agent)*
 
@@ -137,7 +137,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Scope:**
 
-- Fields + defaults exactly per [HLD §6](../V2X_ECU/doc/phase1-v2x-ecu-comms-hld.md#6-configuration-no-hardcoded-tunables--every-value-env-injected-by-the-blueprint): `LISTEN_PORT` (47100), `ADA_ECU_HOST`/`ADA_ECU_PORT` (10.99.0.12/47200), `FAULT_PLAN` (`none·init_fail·configure_reject·subscription_drop`, default `none`), `INIT_RETRY_MAX` (3), `RETRY_BACKOFF_MS` (500), `DEDUPE_WINDOW_MS` (1500), `EVENT_LOG_PATH` (empty = stdout only). The three *(proposal)* defaults proceed as proposed — user ratification stays open (§ Open items item 1). `CAPTURE_*`/`PCAP_DIR` are consumed by `capture.sh` directly, not by this loader.
+- Fields + defaults exactly per [HLD §6](../V2X_ECU/doc/v2x-ecu-hld.md#6-internal-components): `LISTEN_PORT` (47100), `ADA_ECU_HOST`/`ADA_ECU_PORT` (10.99.0.12/47200), `FAULT_PLAN` (`none·init_fail·configure_reject·subscription_drop`, default `none`), `INIT_RETRY_MAX` (3), `RETRY_BACKOFF_MS` (500), `DEDUPE_WINDOW_MS` (1500), `EVENT_LOG_PATH` (empty = stdout only). The three *(proposal)* defaults proceed as proposed — user ratification stays open (§ Open items item 1). `CAPTURE_*`/`PCAP_DIR` are consumed by `capture.sh` directly, not by this loader.
 - Validation: ports 1–65535, non-empty host, `FAULT_PLAN` enum, non-negative retry ceiling, positive backoff/window; invalid value → descriptive error (exception), caller exits non-zero. Env read via an injectable getter so tests never mutate process env.
 - Test `tests/config/test_config.cpp`: defaults when unset; each override parsed; each rejection case.
 

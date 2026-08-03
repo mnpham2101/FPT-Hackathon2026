@@ -1,5 +1,5 @@
 #!/bin/sh
-# entrypoint.sh - V2X ECU container entrypoint (HLD sections 4/9; blueprint
+# entrypoint.sh - V2X ECU container entrypoint (HLD sections 4/11; blueprint
 # `command: ["./entrypoint.sh"]` per requirements/car-sky-guide/node-v2x-ecu.md).
 #
 # Two processes, one container:

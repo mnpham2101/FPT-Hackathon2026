@@ -2,7 +2,7 @@
 #define V2X_ECU_ADAPTER_I_RADIO_ADAPTER_HPP
 
 // V2X_ECU/src/adapter/i_radio_adapter.hpp — the FROZEN R7 radio-adapter seam
-// (subtask 7.1.3.1, Phase 1 HLD D2). Freeze discipline: later subtasks may
+// (subtask 7.1.3.1, HLD decision D2). Freeze discipline: later subtasks may
 // NOT alter this interface text without re-freezing across every consumer.
 //
 // Shape: init() · configure(RadioConfig) · subscribeRx(RxCallback) ·

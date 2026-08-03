@@ -1,7 +1,7 @@
 #ifndef V2X_ECU_FORWARD_ADA_FORWARDER_HPP
 #define V2X_ECU_FORWARD_ADA_FORWARDER_HPP
 
-// V2X_ECU/src/forward/ada_forwarder.hpp — the intra-ego R2 edge (Phase 1 HLD
+// V2X_ECU/src/forward/ada_forwarder.hpp — the intra-ego R2 edge (the node HLD
 // D1, D3 stage 4). Deliberately NOT under the R7 seam: the seam mirrors the
 // radio (telux) surface only, while this link stays UDP on real hardware.
 // Serializes the Phase 0 v2x::contracts::R2Message to compact JSON and sends

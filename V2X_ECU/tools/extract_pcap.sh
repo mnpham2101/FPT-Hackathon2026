@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # extract_pcap.sh - host-side "saved View Log in -> .pcap files out" extractor.
 #
-# The automatic retrieval path of HLD D5
-# (V2X_ECU/doc/phase1-v2x-ecu-comms-hld.md); user procedure and the manual
+# The automatic retrieval path of decision D5
+# (V2X_ECU/doc/v2x-ecu-design-decisions.md); user procedure and the manual
 # grep/base64 fallback live in
 # requirements/car-sky-guide/traffic-capture-wireshark.md.
 #
