@@ -759,6 +759,8 @@ Nothing else in that file changes. Add a one-line comment recording that this Ph
 
 ## Task Group 5.8 — Retire the deployment unknowns early (serves R5, R16) — HLD §11 items 1–2
 
+> **Route alternative, added 2026-08-03.** [milestone1.md § Task group 5.10](milestone1.md#task-group-510--the-mini-blueprint-import-route-and-its-aihuman-split) plans an **agent-authored, REST-imported** mini-blueprint (`5.5.10.1`–`6.5.10.4`) as the alternative to `5.5.8.2`'s clone-then-delete creation — run one or the other, never both — and splits the AI rows this group and group 5.9 absorb into *USER-MANUAL* subtasks (`5.5.10.5`–`16.5.10.8`) out to [[car-sky]]. That group's `5.5.10.1`/`5.5.10.2` are **blocked** on a stage-1 gap: [§4.11](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#411-the-mini-blueprint-route) currently forbids importing a hand-authored blueprint. Until the gap closes, this group's clone route is the only planned one.
+>
 > **This group is the phase's biggest schedule risk and must start on day one, fully parallel with all code work.** The ADB route to the Skycraft guest is unverified on this deployment and the platform's REST VM-shell route answers 502. If the guest is unreachable, **every in-Room criterion falls back to emulator evidence** — and finding that out on the last day costs the phase. The probe deliberately uses **today's APK**, so it does not wait for a single line of Phase 5 code.
 
 ### [ ] `5.5.8.2` — USER-MANUAL: create and deploy the mini-blueprint (probe config)
