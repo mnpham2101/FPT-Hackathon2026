@@ -65,6 +65,6 @@ class CanvasWarningViewTest {
     @Test
     fun riskStateHigh_mapsToFailSafeRed() {
         // #FF1A1A — committed high-risk glow from 17.5.3.4.
-        assertEquals(Color(0xFFFF1A1A).toArgb(), riskColor("high").toArgb())
+        assertEquals(Color(0xFFFF1A1A), riskColor("high"))
     }
 }
