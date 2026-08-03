@@ -155,9 +155,10 @@ Graceful degradation is split deliberately across the last two: the parser prese
 |---|---|---|---|
 | `ui/screen/MainScreen` | the R16 layout: central Display Area, Home / Apps / Settings button areas, mode labels and bottom status bar; hosts the Warning View slot | `DisplayMode`, `WarningUiState`, `R4LinkState` | the composed screen |
 | `ui/view/IviWarningViewSeam` | the R17 render seam — the contract `Render(scene, riskState)` that decouples the app from the rendering engine, so an optional 3D renderer swaps in with no consumer change | — | the interface both renderers realize |
-| `ui/view/CanvasWarningView` + `ui/view/SceneCoordinateMapper` | the God View: ego and B solid with heading markers, ghost C dashed with a pulsing risk glow and the `[V2X]` badge, connector labels, and a `null` `vehicleC` rendered without C. The mapper is pure math, free of Android types | `SceneGeometry`, `riskState` | Compose Canvas draw calls |
+| `ui/view/CanvasWarningView` | the God View as R17 fixes it: a dark canvas, a lane-marked road converging toward the top, and the three vehicles as car-shaped silhouettes in one lane with ego nearest the viewer — ego and B solid, ghost C dashed and translucent on a pulsing ground glow coloured by the risk state, and a `null` `vehicleC` rendered without C. **The scene alone is the warning:** no legend, no distance labels, no text overlay, no banner. The `[V2X]` badge and the A→B / A→C distance callouts belong to R17's annotated explanatory figure, not to this renderer | `SceneGeometry`, `riskState` | Compose Canvas draw calls |
+| `ui/view/SceneCoordinateMapper` | scene metres → canvas coordinates for that view: the camera is slightly inclined rather than overhead, so the mapping is an oblique projection — depth compresses toward the top and each vehicle shows a shallow rear face — not a uniform top-down scale. Pure math, free of Android types | `SceneGeometry`, the base scale from config | screen-space geometry for the draw calls |
 | the **provenance guard**, nested inside `CanvasWarningView` | ghost C is drawn only when its snapshot `source` is `v2x_relayed`; any other value draws the yellow `[? UNKNOWN SOURCE]` marker and logs at ERROR. This is the mechanical form of the R19 claim | `SceneGeometry.vehicleCSnapshot` | ghost C, or the marker and an ERROR line |
-| `ui/view/WarningBannerOverlay` | the risk banner, kept out of the Display Area by standing decision so the God-View canvas renders unobstructed | `riskState` | a banner, mounted nowhere |
+| `ui/view/WarningBannerOverlay` | the risk banner, kept out of the Display Area by standing decision and by R17's "no banner" so the God-View canvas renders unobstructed | `riskState` | a banner, mounted nowhere |
 
 ### Host and lifecycle
 
@@ -335,9 +336,11 @@ Unlike a container node, whose env comes from the blueprint at deploy time, an i
 | `WARNING_TIMEOUT_MS` | `10000` | `WarningViewModel` auto-dismiss | `--el warning_timeout_ms` |
 | `SCENE_SCALE_M_PER_PX` | `0.5` | `CanvasWarningView` → `SceneCoordinateMapper` | `--ef scene_scale` |
 
+`SCENE_SCALE_M_PER_PX` is the projection's **base** scale, not a uniform metres-per-pixel: R17's inclined camera compresses depth toward the top of the canvas, so the effective scale varies with distance and the mapper derives it from this one value.
+
 ### D11 — Standing decisions binding on this design
 
-- **`WarningBannerOverlay` is built but not mounted in the Display Area** (standing user decision, 2026-07-26) — the God-View canvas is the deliverable and must render unobstructed.
+- **`WarningBannerOverlay` is built but not mounted in the Display Area** (standing user decision, 2026-07-26) — the God-View canvas is the deliverable and must render unobstructed. R17's visual target now requires the same thing independently: no banner, no legend, no text overlay, the scene alone.
 - **Ghost C renders only from `v2x_relayed`** — the renderer's source guard is the mechanical form of the R19 claim and stays exercised by a test.
 - **3D (`SceneViewWarning3D`) and multi-process wake-on-warning are optional**, not committed M1 deliverables; nothing else depends on either.
 - **The periodic `state` message is optional on the producer side**; the consumer parses it (last-value-wins by `seq`) and no acceptance box depends on it.
