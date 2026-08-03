@@ -228,7 +228,7 @@ private fun DisplayModeSwitcher(
                     latestScene = latestScene,
                     warningViewSeam = warningViewSeam,
                 )
-                DisplayMode.HomeView -> ViewPlaceholder("Home View Placeholder")
+                DisplayMode.HomeView -> HomeScreen()
                 DisplayMode.AppsView -> ViewPlaceholder("Apps View Placeholder")
                 DisplayMode.SettingsView -> ViewPlaceholder("Settings View Placeholder")
             }
