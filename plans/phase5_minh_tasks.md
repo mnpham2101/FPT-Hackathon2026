@@ -103,8 +103,8 @@ Two unmerged branches carry an earlier Phase 5 implementation. Nothing on `main`
 | `ui/screen/MainScreen.kt` | `17.5.5.6` | Yes — seam mounting and `collectAsStateWithLifecycle` are sound, and it correctly does **not** mount the banner. The status bar is still hardcoded |
 | `mock-sender/mock_r4_sender.py` | group 5.6 | **No.** Python, writes its own payloads (D9 forbids), targets `10.88.0.12:5004` — both wrong — and its `state` message shape (`vehicles.ego.position/speed`, key `B`) does not match the frozen R4 schema at all |
 | test files | groups 5.2–5.5 | Case lists are a useful checklist. They test the branch's behaviour, including the two defects above, so no assertion transfers unread |
-| `deployment/phase5-ivi-deploy.md`, `phase5_completion_report.md` | `16.5.8.4`, `5.5.8.1` | Content is useful (a real Skycraft device id, the logcat filters). The **location is not sanctioned** — a repo-root/node-root `deployment/` folder is not in [node-code-layout.md](../.claude/rules/node-code-layout.md); the material lands in `requirements/car-sky-guide/` |
-| PR #2's `blueprint-2node-task51-test.json` + guide | `5.5.8.1`, `5.5.8.2` | **Do not import it.** Its Skycraft node has no `image` artifact block (deploy rejected outright), its bridge `config` is `null` (no `bridgeMode`/`subnet`, so its `10.88.0.x` addresses have no network), and it targets `registry.carsky.io` (502s). Its *ideas* are already adopted: the reduced topology, the display-config fields (`5.5.8.1`) and the approach/leave scenario shape (`4.5.6.4`) |
+| `deployment/phase5-ivi-deploy.md`, `phase5_completion_report.md` | `16.5.8.4` | Content is useful (a real Skycraft device id, the logcat filters). The **location is not sanctioned** — a repo-root/node-root `deployment/` folder is not in [node-code-layout.md](../.claude/rules/node-code-layout.md); the material lands in `requirements/car-sky-guide/` |
+| PR #2's `blueprint-2node-task51-test.json` + guide | `5.5.8.2` | **Do not import it.** Its Skycraft node has no `image` artifact block (deploy rejected outright), its bridge `config` is `null` (no `bridgeMode`/`subnet`, so its `10.88.0.x` addresses have no network), and it targets `registry.carsky.io` (502s). Its *ideas* are already adopted: the reduced topology, the display-config fields (`5.5.8.2`) and the approach/leave scenario shape (`4.5.6.4`) |
 
 Two branch-wide constants are wrong against the frozen topology and must not survive into any subtask: the UDP port is **`47300`**, not `5004`, and the IVI address is **`10.99.0.13`**, not `10.88.0.12`.
 
@@ -761,37 +761,22 @@ Nothing else in that file changes. Add a one-line comment recording that this Ph
 
 > **This group is the phase's biggest schedule risk and must start on day one, fully parallel with all code work.** The ADB route to the Skycraft guest is unverified on this deployment and the platform's REST VM-shell route answers 502. If the guest is unreachable, **every in-Room criterion falls back to emulator evidence** — and finding that out on the last day costs the phase. The probe deliberately uses **today's APK**, so it does not wait for a single line of Phase 5 code.
 
-### [ ] `5.5.8.1` — Author `phase5-mini-blueprint-deploy.md` *(agent — docs)*
-
-**Objective:** promote the mini-blueprint procedure from the research note into the sanctioned deployment home (HLD §3.2 row 5), so the user's Nydus work has a written procedure.
-
-**Authority — read before writing a line.** [ivi-hmi-walkthrough.md §4.11](../requirements/car-sky-guide/ivi-hmi-walkthrough.md#411-the-mini-blueprint-route) now owns the mini-blueprint route: its composition, the clone-then-delete rule, the do-not-import rule, and "the ADA node is the only node that is reconfigured". [§4.2](../requirements/car-sky-guide/ivi-hmi-walkthrough.md#42-configure-the-blueprint-and-its-ivi-node) owns the node configuration and the read-back, [§4.3](../requirements/car-sky-guide/ivi-hmi-walkthrough.md#43-deploy-the-blueprint) the deploy, [§4.8](../requirements/car-sky-guide/ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging) the two ADA feeds and the verification ladder. **Write only what those sections do not already carry, and link them for the rest — a second copy of the procedure is the drift this subtask must not create.** If nothing phase-specific survives that check, report that back instead of writing the file.
-
-**Scope:** new `requirements/car-sky-guide/phase5-mini-blueprint-deploy.md` carrying, from [phase5-mini-blueprint.md](../IVI_ECU/doc/research_notes/phase5-mini-blueprint.md) §2–§5:
-
-- The 3-node composition (Ethernet Bridge `10.99.0.1` / `10.99.0.0/24` `bridgeMode: "linux"`; ADA Container Node `10.99.0.12`; IVI Skycraft Node `10.99.0.13`) and why it is reduced.
-- **The clone-then-delete creation route**, and why it is the only one: neither the REST API nor Nydus "Import from File" can create `ethernet` pins or bridge edges. Clone `trial2_minh_netcheck` → rename `trial3_minh_ivi` → delete the Bench and V2X nodes → **verify the two surviving edges by reading the config back** (`GET /api/v1/blueprints/{id}`), expecting one `ETHERNET`/`OUTPUT` pin per role node at `.12`/`.13`, both wired to the bridge's single `INPUT` pin.
-- **Leave the IVI node's `image` block alone** — artifact `AAOS`, `x9oqgIwzTp1m26SWIQqJt` / `xSU_Q7YJZUxxUgDr4Ugcp`, `0.0.1`, `aarch64`; without it the deploy is rejected with `skycraft requires 'image' config with VM image artifact details`. This is the single most common way a hand-authored Skycraft node fails — PR #2's blueprint JSON omits it.
-- **The Skycraft node's other config fields.** [§4.2](../requirements/car-sky-guide/ivi-hmi-walkthrough.md#42-configure-the-blueprint-and-its-ivi-node) already says to record the Part Prefix, Display Width/Height/DPI and GPU Backend during the read-back, and that 1280×720 must not be assumed. What this document adds is the *measured* values for `trial3_minh_ivi`: **read them back off the live baseline node** (`GET /api/v1/blueprints/{id}`) rather than copying PR #2's `prefix` / `gpuBackend: "virglrenderer"` / `displayWidth: 1280` / `displayHeight: 720`, which are unverified against a real export. The display size matters — it is the resolution the committed R16 previews are drawn for.
-- The two ADA-node feeds this phase uses are fixed by [§4.8](../requirements/car-sky-guide/ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging): the **probe** config of rung **V2** (`m1-netcheck:latest`, used before the simulator image exists) and the **evidence** config of rung **V4** (`m1-r4-sim:latest`). Cite those rungs; do not retype the env blocks. The only phase-local additions are the `registry.hackathon-2.carsky.io/` prefix on the image reference and `capabilities: ["NET_RAW"]` for the `[CAP]` corroboration of R6.
-- The verification ladder is [§4.8](../requirements/car-sky-guide/ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging) rungs V1–V5 and teardown is [§4.12](../requirements/car-sky-guide/ivi-hmi-walkthrough.md#412-tear-down) — link both. Record here only the phase-local fact that the 2-concurrent-Room budget is shared with the comms track.
-- Follow [markdown-writing-style](../.claude/skills/markdown-writing-style/SKILL.md); reference requirement numbers, do not restate requirements. **The stale plan's `deployment/phase5-ivi-deploy.md` is void** — a repo-root `deployment/` folder is not a sanctioned location and nothing is written there (HLD §3.2).
-
-**Acceptance:** file committed at the designated path; both ADA-node feeds and the verification ladder **referenced** at their walkthrough sections rather than re-tabled; every platform limit above stated; no step of §4.2, §4.3, §4.8 or §4.11 reproduced. Doc-only — no build/test target.
-
-**Dependencies:** none — **starts immediately**, in parallel with `4.5.1.1`. **Commit:** `[5.5.8.1] docs: add the Phase 5 mini-blueprint deployment procedure`
-
 ### [ ] `5.5.8.2` — USER-MANUAL: create and deploy the mini-blueprint (probe config)
 
 **Objective:** the user creates `trial3_minh_ivi` by clone-then-delete and deploys it with the probe ADA config, so a Room with a Running IVI node exists to test ADB against.
 
-**Scope:** the procedure is [ivi-hmi-walkthrough.md §4.11](../requirements/car-sky-guide/ivi-hmi-walkthrough.md#411-the-mini-blueprint-route) for the clone-then-delete creation route, [§4.2](../requirements/car-sky-guide/ivi-hmi-walkthrough.md#42-configure-the-blueprint-and-its-ivi-node) for the IVI node's `image` block, its `ethernet` pin and the config read-back, and [§4.3](../requirements/car-sky-guide/ivi-hmi-walkthrough.md#43-deploy-the-blueprint) for the deploy and the wait for `Running`. This subtask supplies only the phase's own values: clone `trial2_minh_netcheck` → `trial3_minh_ivi`, delete the Bench and V2X nodes, and set the ADA node to the **probe** feed of [§4.8](../requirements/car-sky-guide/ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging) rung **V2** — `m1-netcheck:latest`, `NEXT_HOP_HOST=10.99.0.13`, `NEXT_HOP_PORT=47300`.
+**Scope:** the procedure is [ivi-hmi-walkthrough.md §4.11](../requirements/car-sky-guide/ivi-hmi-walkthrough.md#411-the-mini-blueprint-route) for the clone-then-delete creation route, [§4.2](../requirements/car-sky-guide/ivi-hmi-walkthrough.md#42-configure-the-blueprint-and-its-ivi-node) for the IVI node's `image` block, its `ethernet` pin and the config read-back, and [§4.3](../requirements/car-sky-guide/ivi-hmi-walkthrough.md#43-deploy-the-blueprint) for the deploy and the wait for `Running`. This subtask supplies only the phase's own values:
+
+- Clone `trial2_minh_netcheck` → `trial3_minh_ivi`, delete the Bench and V2X nodes. The surviving topology is Ethernet Bridge `10.99.0.1` (`10.99.0.0/24`, `bridgeMode: "linux"`), ADA Container Node `10.99.0.12`, IVI Skycraft Node `10.99.0.13`.
+- Set the ADA node to the **probe** feed of [§4.8](../requirements/car-sky-guide/ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging) rung **V2** — `m1-netcheck:latest`, `NEXT_HOP_HOST=10.99.0.13`, `NEXT_HOP_PORT=47300` — prefixing the image with `registry.hackathon-2.carsky.io/` and setting `capabilities: ["NET_RAW"]` for the `[CAP]` corroboration of R6.
+- During §4.2's read-back, record the IVI node's measured Part Prefix, Display Width/Height/DPI and GPU Backend into the run record. Read them off the live node; PR #2's `virglrenderer` / `1280×720` are unverified. The display size is the resolution the committed R16 previews are drawn for.
+- The 2-concurrent-Room budget is shared with the comms track.
 
 No agent performs these steps; the plan tracks them. [§4.3](../requirements/car-sky-guide/ivi-hmi-walkthrough.md#43-deploy-the-blueprint) carries the rule that costs the most time when broken — **always edit the original blueprint, never the `<name>-deploy` snapshot**.
 
-**Acceptance:** 3/3 nodes `Running` with restart count 0, recorded in a new `plans/doc/phase5-ivi-run.md` created by this subtask (the Phase 0 `phase0-smoke-test-run.md` pattern). Evidence commit made by the orchestrating session after the user confirms.
+**Acceptance:** 3/3 nodes `Running` with restart count 0, and the measured Skycraft display fields recorded, in a new `plans/doc/phase5-ivi-run.md` created by this subtask (the Phase 0 `phase0-smoke-test-run.md` pattern). Evidence commit made by the orchestrating session after the user confirms.
 
-**Dependencies:** after `5.5.8.1`. **Commit:** `[5.5.8.2] docs: record the Phase 5 mini-blueprint deployment and node-Running evidence`
+**Dependencies:** none — **starts immediately**, in parallel with `4.5.1.1`. **Commit:** `[5.5.8.2] docs: record the Phase 5 mini-blueprint deployment and node-Running evidence`
 
 ### [ ] `16.5.8.3` — USER-MANUAL: prove the ADB route and read the guest API level
 
@@ -883,7 +868,7 @@ Capture the evidence per [§4.9](../requirements/car-sky-guide/ivi-hmi-walkthrou
 
 ## Execution order & parallelism
 
-Dependencies are real (files, Gradle project graph, contract artifacts, deployed Rooms) — not default assumptions. **Independent start points, all four available on day one:** `4.5.1.1` (code), `5.5.8.1` (deploy doc), `16.5.7.1` (CI lane), `17.5.5.8` (mapper test — needs only `4.5.1.4`).
+Dependencies are real (files, Gradle project graph, contract artifacts, deployed Rooms) — not default assumptions. **Independent start points, all four available on day one:** `4.5.1.1` (code), `5.5.8.2` (mini-blueprint, USER), `16.5.7.1` (CI lane), `17.5.5.8` (mapper test — needs only `4.5.1.4`).
 
 ```
 Lane A  foundation:   4.5.1.1 ─► 4.5.1.2 ─► 4.5.1.3 ─► 4.5.1.4 ─► 4.5.1.5
@@ -900,7 +885,7 @@ Lane F  test equip:   4.5.6.1 ─► 4.5.6.2 ─► 4.5.6.3 ─► 4.5.6.4 ─�
                       (needs only 4.5.1.4 — fully parallel with lanes B–E)
                       4.5.6.7 dev injector (after 16.5.5.5 + 4.5.4.2)
 Lane G  CI:           16.5.7.1 (day one, ∥ everything)   4.5.7.2 (after 4.5.6.4)   5.5.7.3 (after 5.5.6.6)
-Lane H  unknowns:     5.5.8.1 ─► 5.5.8.2 (USER) ─► 16.5.8.3 (USER) ─► 16.5.8.4
+Lane H  unknowns:     5.5.8.2 (USER) ─► 16.5.8.3 (USER) ─► 16.5.8.4
                       (fully parallel with lanes A–G; 16.5.8.4 also needs 16.5.5.5)
 Lane I  evidence:     5.5.9.1 (USER) ─► 16.5.9.2 (USER) ─► 17.5.9.3 (USER) ─► 4.5.9.4 (USER)
                       (5.5.9.1 needs 5.5.7.3 + 5.5.8.2; 16.5.9.2 needs 17.5.5.6 + 16.5.8.3)
@@ -908,7 +893,7 @@ Lane I  evidence:     5.5.9.1 (USER) ─► 16.5.9.2 (USER) ─► 17.5.9.3 (USE
 
 - **Parallel:** lanes B, D-partial, F, G and H against each other once `4.5.1.4` has landed; `4.5.4.1 ∥ 4.5.4.2 ∥ 4.5.4.3` inside lane D; `17.5.5.7 ∥ 17.5.5.6`; `17.5.5.8` against everything. Lane H is parallel with **all** code work by design — it must not wait for it.
 - **Sequential:** every arrow above. Lane A is strictly sequential and gates everything (a Gradle module graph cannot be built out of order). Lane I is strictly sequential and last — each step's evidence depends on the previous step's Room state.
-- **Spawn order:** hand `4.5.1.1`, `5.5.8.1` and `16.5.7.1` to subagents simultaneously at kickoff. Lane H's USER steps go to the user as soon as `5.5.8.1` lands. Lane I's four USER steps run only after `5.5.7.3` has pushed a verified image.
+- **Spawn order:** hand `4.5.1.1` and `16.5.7.1` to subagents simultaneously at kickoff. Lane H's USER steps go to the user at kickoff too — `5.5.8.2` waits on nothing. Lane I's four USER steps run only after `5.5.7.3` has pushed a verified image.
 
 ### Critical path
 
@@ -916,7 +901,7 @@ Six days to the deadline. The shortest ordered set that closes all five acceptan
 
 `4.5.1.1 → 4.5.1.2 → 4.5.1.3 → 4.5.1.4 → 4.5.2.1 → 4.5.2.2 → 4.5.3.1 → 4.5.3.2 → 4.5.3.3 → 4.5.4.1 → 4.5.4.2 → 4.5.4.3 → 17.5.4.4 → 16.5.4.5 → 18.5.5.1 → 4.5.5.2 → 4.5.5.3 → 16.5.5.4 → 16.5.5.5 → 17.5.5.6 → (lane F through 5.5.6.6) → 5.5.7.3 → 5.5.9.1 → 16.5.9.2 → 17.5.9.3 → 4.5.9.4`
 
-with **lane H (`5.5.8.1` → `16.5.8.3`) running alongside from day one** — it does not sit on the critical path but it decides whether the path's last four steps are in-Room or on an emulator.
+with **lane H (`5.5.8.2` → `16.5.8.3`) running alongside from day one** — it does not sit on the critical path but it decides whether the path's last four steps are in-Room or on an emulator.
 
 **Droppable without failing a box, in this order if time runs short:** `4.5.1.5` (ProGuard rules — release build is not an acceptance target), `17.5.5.7` (config-driven scale — the library default is correct), `4.5.6.7` (dev injector — only needed if the ADB/UI route is awkward), `4.5.2.3` and `4.5.3.5` (extra test depth, not extra behaviour), `state-stream.json` inside `4.5.6.4` (the periodic `state` message is optional on the producer side and no box depends on it).
 
@@ -961,4 +946,4 @@ Carried by [phase5_tasks.md](phase5_tasks.md) and deliberately not carried here,
 
 ---
 
-*Created 2026-08-02 by project-planner from the Phase 5 HLD (`85387b5`), its four research notes, and [milestone1.md § Phase 5](milestone1.md#phase-5--ivi-hmi-mock-driven-r16-r17--display-track-parallel-from-the-start); gap-checked the same day against [phase5_tasks.md](phase5_tasks.md). 9 task groups, 45 subtasks: 39 agent-implemented, 6 user-manual. Nothing started.*
+*Created 2026-08-02 by project-planner from the Phase 5 HLD (`85387b5`), its four research notes, and [milestone1.md § Phase 5](milestone1.md#phase-5--ivi-hmi-mock-driven-r16-r17--display-track-parallel-from-the-start); gap-checked the same day against [phase5_tasks.md](phase5_tasks.md). 9 task groups, 44 subtasks: 38 agent-implemented, 6 user-manual. Nothing started.*

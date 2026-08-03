@@ -100,7 +100,7 @@ Plus, new from the update and carrying no milestone box: media layer ≤ 60 MB w
 - A newer message with an unknown `warningType` degrades gracefully.
 - Optional paths only if built: wake-on-warning across processes; 3D through the view seam.
 
-**Task groups and IDs.** 5.1 `4.5.1.1`–`4.5.1.5` — 5.2 `4.5.2.1`–`4.5.2.3` — 5.3 `4.5.3.1`–`4.5.3.5` — 5.4 `4.5.4.1`–`4.5.4.3` · `17.5.4.4` · `16.5.4.5` — 5.5 `18.5.5.1` · `4.5.5.2` · `4.5.5.3` · `16.5.5.4` · `16.5.5.5` · `17.5.5.6`–`17.5.5.9` — 5.6 `4.5.6.1`–`4.5.6.5` · `5.5.6.6` · `4.5.6.7` — 5.7 `16.5.7.1` · `4.5.7.2` · `5.5.7.3` — **5.8 (retire the deployment unknowns)** `5.5.8.1` · `5.5.8.2` · `16.5.8.3` · `16.5.8.4` — **5.9 (in-Room R4 evidence run)** `5.5.9.1` · `16.5.9.2` · `17.5.9.3` · `4.5.9.4`.
+**Task groups and IDs.** 5.1 `4.5.1.1`–`4.5.1.5` — 5.2 `4.5.2.1`–`4.5.2.3` — 5.3 `4.5.3.1`–`4.5.3.5` — 5.4 `4.5.4.1`–`4.5.4.3` · `17.5.4.4` · `16.5.4.5` — 5.5 `18.5.5.1` · `4.5.5.2` · `4.5.5.3` · `16.5.5.4` · `16.5.5.5` · `17.5.5.6`–`17.5.5.9` — 5.6 `4.5.6.1`–`4.5.6.5` · `5.5.6.6` · `4.5.6.7` — 5.7 `16.5.7.1` · `4.5.7.2` · `5.5.7.3` — **5.8 (retire the deployment unknowns)** `5.5.8.2` · `16.5.8.3` · `16.5.8.4` — **5.9 (in-Room R4 evidence run)** `5.5.9.1` · `16.5.9.2` · `17.5.9.3` · `4.5.9.4`.
 
 **Suggested branch:** `feat/phase5-ivi-hmi`.
 
@@ -134,9 +134,9 @@ Only four subtasks sit behind the clip; the other 15 do not. That is the substan
 
 ### Within IVI
 
-Lane A (`4.5.1.1` → `4.5.1.4`) is strictly sequential and gates lanes B–F; lane I (the in-Room evidence run) is strictly sequential and last. Four independent day-one start points: `4.5.1.1` (code), `5.5.8.1` (deploy doc), `16.5.7.1` (CI lane), `17.5.5.8` (mapper test). Full graph and the 26-step critical path: [phase5_minh_tasks.md § Execution order & parallelism](phase5_minh_tasks.md#execution-order--parallelism).
+Lane A (`4.5.1.1` → `4.5.1.4`) is strictly sequential and gates lanes B–F; lane I (the in-Room evidence run) is strictly sequential and last. Four independent day-one start points: `4.5.1.1` (code), `5.5.8.2` (mini-blueprint, USER), `16.5.7.1` (CI lane), `17.5.5.8` (mapper test). Full graph and the 26-step critical path: [phase5_minh_tasks.md § Execution order & parallelism](phase5_minh_tasks.md#execution-order--parallelism).
 
-**Lane H is the one to start on day one regardless of anything else** — `5.5.8.1` → `5.5.8.2` → `16.5.8.3` probes whether ADB reaches the Skycraft guest and what Android version it runs. A negative answer degrades the whole of group 5.9 to emulator evidence, and that is not something to discover in the last two days.
+**Lane H is the one to start on day one regardless of anything else** — `5.5.8.2` → `16.5.8.3` probes whether ADB reaches the Skycraft guest and what Android version it runs. A negative answer degrades the whole of group 5.9 to emulator evidence, and that is not something to discover in the last two days.
 
 ## 5. Deferred and excluded — read before picking up any task
 

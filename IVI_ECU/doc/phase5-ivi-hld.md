@@ -280,7 +280,7 @@ IVI_ECU/
 | [.github/workflows/phase0-ci.yml](../../.github/workflows/phase0-ci.yml) | `ivi-unit-tests` job: extend the Gradle invocation (§6) | The lane originated in Phase 0, and that file's own rule is that a lane is maintained where it was created |
 | `.github/workflows/phase5-ci.yml` | **New:** `ivi-assemble` (APK + lint) and `r4-sim-image` (arm64 build/push) | Same rule, other direction: lanes originating in Phase 5 get their own phase file |
 | [requirements/car-sky-guide/node-ivi-ecu.md](../../requirements/car-sky-guide/node-ivi-ecu.md) | Extend § Post-deploy with the proven ADB route, the launch-override command, and the logcat filter | Per-node deploy steps live in the car-sky guide, per [node-code-layout.md](../../.claude/rules/node-code-layout.md) |
-| `requirements/car-sky-guide/phase5-mini-blueprint-deploy.md` | **New:** clone-then-delete procedure, ADA-node simulator config, verification ladder — promoted from the research note | Same: deployment procedure, not node design |
+| [requirements/car-sky-guide/ivi-hmi-walkthrough.md](../../requirements/car-sky-guide/ivi-hmi-walkthrough.md) | Authoritative for the build → deploy → install → launch → verify procedure, including the mini-blueprint route, both ADA feeds and the verification ladder | Same: deployment procedure, not node design. One document, referenced by the plan's subtasks rather than copied into a second one |
 
 **The stale plan's `deployment/phase5-ivi-deploy.md` is void** — a repo-root `deployment/` folder is not a sanctioned location. Nothing is written there.
 
