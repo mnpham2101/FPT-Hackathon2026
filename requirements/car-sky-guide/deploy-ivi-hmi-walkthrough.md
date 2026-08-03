@@ -51,10 +51,12 @@ Three platforms appear anywhere near this guide. **Only two of them are on the p
 | Platform | Needed for the APK? | What you need | Used at |
 |---|---|---|---|
 | **GitHub Actions** | **Yes**, for the CI route | A GitHub account with read access to this repository. Optionally the [`gh` CLI](https://cli.github.com/), authenticated with `gh auth login` — it replaces every browser step in §3 | §3.2, §3.3 |
-| **CarSky** | **Yes** | **Keycloak login** (email + password) for the Nydus and Devices web UIs, **and** a CarSky **API key** (`a8k_…`) for the REST calls | §4.2, §4.3, §4.4, §4.7 |
+| **CarSky** | **Yes** | **Keycloak login** (email + password) for the Nydus and Devices web UIs, **and** a CarSky **API key** (`a8k_…`) for the REST calls | §4.2, §4.3, §4.7 |
 | **Zot registry** | **No** | Nothing. No `zak_…` key is used anywhere in this guide | — |
 
 Where the two CarSky credentials come from, and how to verify one: [carsky-deploy-preflight](../../.claude/skills/carsky-deploy-preflight/SKILL.md).
+
+**The ADB tunnel needs a third thing: the organizers' `reach-backend` CLI**, plus a gateway URL and a key to pass it. Obtain all three from the organizers before §4.4 — this project does not build the CLI, and no value for it is derivable from anything in this repository (§6.1).
 
 **Zot is not in the path for an APK.** The registry holds **container images**, which is what a *Container* node pulls at deploy time. The IVI node is a **Skycraft** node: it takes its VM image from the CarSky **artifact store** ([node-ivi-ecu.md § Prepare the VM artifact](node-ivi-ecu.md#prepare-the-vm-artifact-once-per-team-not-per-deploy)), and it pulls nothing else. Nothing in §1–§6 runs `docker login`, `docker push`, or tags an image.
 
@@ -315,7 +317,7 @@ By hand, over ADB, from a machine holding the file:
 
 1. **Build the APK** — locally (§2) or on CI (§3) — so a machine you control holds `app-debug.apk`.
 2. **Deploy the blueprint** (§4.2, §4.3) and wait for the Skycraft node to reach `Running`. The guest must exist before anything can be installed into it.
-3. **Obtain an ADB endpoint** to that guest (§4.4) and **install the APK over it** (§4.6).
+3. **Open the ADB tunnel** to that guest (§4.4), **connect to it** (§4.5), and **install the APK over it** (§4.6).
 
 Every rebuild repeats steps 1 and 3 only — the Room stays up, and `adb install -r` replaces the app in place.
 
@@ -347,15 +349,13 @@ curl -H "Authorization: Bearer $KEY" $CS/api/v1/blueprints/{id}
 
 Expect one `ETHERNET` / `OUTPUT` pin on the IVI node at the address [node-ivi-ecu.md § Pins](node-ivi-ecu.md#pins) fixes, wired to the bridge's single `INPUT` pin.
 
-**Record the Skycraft display config while you are in that read-back.** The Inspector's CONFIGURATION group on a Skycraft node carries fields no other node type has, and §4.7 needs two of them:
+**Write down the Skycraft display config from that same read-back** — the Inspector's CONFIGURATION group on a Skycraft node carries fields no other node type has, and **do not assume 1280×720**:
 
 | Field | Why you need it |
 |---|---|
-| **Part Prefix** | Auto-names every "part" of the node — `<prefix>-screen`, `<prefix>-audio`, `<prefix>-logcat`, `<prefix>-adb`. §4.4 and §4.7 select parts by these names |
+| **Part Prefix** | Auto-names every "part" of the node — `<prefix>-screen`, `<prefix>-audio`, `<prefix>-logcat`, `<prefix>-adb`. §4.7 needs it only if a widget asks which part to use |
 | **Display Width / Height / DPI** | The virtual screen resolution the Screen widget shows. The screen previews in [MainScreen.kt](../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/ui/screen/MainScreen.kt) are drawn for 1280×720 |
 | **GPU Backend** | The virtual graphics driver given to the VM |
-
-Read the values off the read-back and write them down before you need them — **do not assume 1280×720**.
 
 ### 4.3 Deploy the blueprint
 
@@ -376,32 +376,29 @@ Each entry carries `{displayName, name, nodeType, phase, message}`. `name` is th
 
 ### 4.4 Get an ADB endpoint
 
-**Run this step early, against whatever APK you have.** Its outcome decides whether the evidence can be gathered in-Room or only on a device.
+**Run this as soon as the node is Running** — until ADB reaches the guest, nothing below it can be done in-Room.
 
-The platform states the shape of the answer plainly: *"The Skycraft pod exposes ADB on a fixed port; use Rework's device panel or CarSky Gateway ADB tunnel to connect."* Three candidate routes follow from that, strongest first. **Record which one actually worked.**
+The Skycraft pod exposes ADB behind the CarSky gateway, and `reach-backend` — the CLI the organizers provide — forwards a local port to it. Three values must be in hand first, and none of them comes from this repository:
 
-| # | Route | What it gives |
-|---|---|---|
-| 1 | `GET /api/v1/deployments/{roomId}/adb-tunnel` — *"Get ADB tunnel command info for Skycraft node."* Then `adb connect localhost:<port>` and use local `adb` normally | A local `adb` against the guest — the only route that transfers a file, so the only one that satisfies §4.6 on its own |
-| 2 | Devices panel → the device the deployment created → **Connect** → `+` → **ADB** widget, with the ADB part set to `<prefix>-adb` | An in-browser shell (prompt `trout_arm64:/ $`) for commands and logs. It exposes **no file transfer**, so it cannot take a local `.apk` unless the file is already reachable from the guest |
-| 3 | `POST /api/v1/deployments/{roomId}/adb-exec/{nodeKey}` — *"Run one-shot ADB command."* | One-shot commands, with the same file-transfer limitation as #2 |
+- **The `reach-backend` binary** — the organizers' tunnel CLI. This project neither builds nor ships it.
+- **`YOUR_GATEWAY_URL`** — the gateway the tunnel dials.
+- **`a8k_YOUR_DERIVED_TOKEN`** — the token the CLI authenticates with. It carries the same `a8k_` shape as the CarSky API key of §1.2; whether it *is* that key is unconfirmed (§6.1).
 
-Two routes that are **not** available, so nobody spends time on them:
-
-- The MCP tunnel tool `vm_tunnel_open` needs CarSky's own MCP server package, which this repo does not carry ([carsky-rest-api-blueprint.md](carsky-rest-api-blueprint.md)).
-- `POST /api/v1/vms/{roomId}/{nodeKey}/shell` answers 502 on this deployment — it must not be the primary plan.
-
-Probe the 502 pair anyway while you are here — `…/shell` and `…/screenshot`. A live `screenshot` route is a **second evidence path** for §4.9 that does not depend on ADB at all, and it is a cheap check:
+Start the tunnel:
 
 ```bash
-curl -s -o /dev/null -w '%{http_code}\n' -H "Authorization: Bearer $KEY" \
-  $CS/api/v1/vms/{roomId}/{nodeKey}/screenshot
+reach-backend adb \
+  --gateway https://YOUR_GATEWAY_URL \
+  --key a8k_YOUR_DERIVED_TOKEN \
+  --port 5555
 ```
+
+The CLI opens a local TCP server on port **5555** of your localhost. Leave it running and open a second terminal for §4.5 — closing this one drops the tunnel.
 
 ### 4.5 Connect and check the guest
 
 ```bash
-adb connect <skycraft-adb-endpoint>
+adb connect localhost:5555
 adb devices
 ```
 
@@ -409,10 +406,10 @@ Expected:
 
 ```
 List of devices attached
-<endpoint>   device
+localhost:5555   device
 ```
 
-`offline` or an empty list means the endpoint is wrong or the tunnel is not up — go to §4.10 rather than retrying blind.
+`offline` or an empty list means the tunnel is not serving — go to §4.10 rather than retrying blind.
 
 Two guest properties decide whether the APK can be installed at all, and both are unknown until you read them:
 
@@ -452,17 +449,12 @@ The display is a **widget in the Devices panel**, not something in the Deploymen
 1. **Devices** on the DockBar. The deployment auto-creates its device; the platform marks such an entry `🚀 Started pack-deploy`. Do not delete it by hand — stop the deployment instead.
 2. **Connect** (the button reads **Switch** if another device session is already open). The dot beside the name must be green.
 3. `+` → **Screen** from the widget catalog.
-4. In the widget's Inspector, set the parts from the node's Part Prefix (§4.2):
-   - **Video Part** → `<prefix>-screen`
-   - **Touch Part** / **Keyboard Part** → the corresponding parts, or clicks in the browser never reach the guest
-   - **Recorder Part** → set it when you want the run recorded; the clip appears under **Videos** after recording stops, downloadable as `.mp4`
-5. Add two more widgets now — they are what §4.8 reads:
-   - **Log**, source part `<prefix>-logcat` — the guest's logcat in the browser
-   - **ADB**, part `<prefix>-adb` — a shell beside the screen
 
 Expected: the AAOS screen streaming live in the Stage, and clicking on it acting like a touch.
 
-**Black screen?** Per the platform's own FAQ: check that **Video Part** names the part the node actually publishes (same prefix as its Part Prefix); if the part is right, **Disconnect** then **Connect** to re-establish the WebRTC session. If the stream is up but the guest looks asleep, wake it with `adb shell input keyevent KEYCODE_WAKEUP`.
+Add two more widgets beside it — **Log**, the guest's logcat in the browser, and **ADB**, a shell in the browser; §4.8 reads the first. If a widget asks which part to use, take the name from the node's Part Prefix (§4.2). Set the Screen widget's **Recorder Part** before a run that must be recorded (§4.9).
+
+**Black screen?** **Disconnect**, then **Connect**, to re-establish the session. If the stream is up but the guest looks asleep, wake it with `adb shell input keyevent KEYCODE_WAKEUP`.
 
 Then launch:
 
@@ -499,7 +491,7 @@ Every link has its own observable, and they come from **two different log surfac
 | Surface | How to read it | Carries |
 |---|---|---|
 | **CarSky node log** (the ADA container) | Deployment Viewer → the ADA node → **View Log**; or `GET /api/v1/deployments/{roomId}/logs/{nodeKey}?container=user` — **`container` is mandatory**, omitting it returns 500 | The producer's `[TX]` lines, and `[CAP]` tcpdump lines when the node has `NET_RAW` |
-| **Guest logcat** (the IVI app) | The **Log** widget on part `<prefix>-logcat`, or `adb logcat -s IVI_V2X` | Everything the app does: `[LINK]`, `[RX]`, `[DROP]`, `[UI]` |
+| **Guest logcat** (the IVI app) | The **Log** widget, or `adb logcat -s IVI_V2X` | Everything the app does: `[LINK]`, `[RX]`, `[DROP]`, `[UI]` |
 
 Work up the ladder — each rung needs less to exist than the one below it, so start at the highest rung your build supports.
 
@@ -555,7 +547,7 @@ Switch the ADA node to `R4_SCENARIO=/app/scenarios/degrade.json`.
 ### 4.9 Capture the evidence
 
 - **Screen recording:** set **Recorder Part** on the Screen widget *before* the run; the clip lands under **Videos** and downloads as `.mp4`. Videos record at the screen's native resolution, so files are large.
-- **Screenshots:** from the Screen widget. If the REST route `GET /api/v1/vms/{roomId}/{nodeKey}/screenshot` answered in §4.4, it is a second, scriptable evidence path.
+- **Screenshots:** from the Screen widget. `GET /api/v1/vms/{roomId}/{nodeKey}/screenshot` is a scriptable alternative where it answers (§6.1).
 - **Guest log excerpt:** `adb logcat -s IVI_V2X` — the `[RX] … cSource=v2x_relayed` lines are what back the recording in text.
 - **Producer log excerpt:** the ADA node's `[TX]` lines, from **View Log** or the logs route.
 - Record every result in the phase's run record, as [phase0-smoke-test-run.md](../../plans/doc/phase0-smoke-test-run.md) does for the smoke test.
@@ -565,7 +557,8 @@ Switch the ADA node to `R4_SCENARIO=/app/scenarios/degrade.json`.
 | Symptom | Meaning | Action |
 |---|---|---|
 | Deploy rejected: `skycraft requires 'image' config with VM image artifact details` | The IVI node has no `image` block | [node-ivi-ecu.md § Blueprint node config](node-ivi-ecu.md#blueprint-node-config); §4.2 |
-| `failed to connect` / device `offline` | The endpoint or tunnel is wrong | Try the next route in §4.4; do not retry the same one |
+| `reach-backend: command not found` | The organizers' tunnel CLI is not installed on this machine | Obtain and install it — §1.2, §4.4 |
+| The tunnel exits instead of serving, or `adb connect` answers `failed to connect` | Wrong gateway URL or key, port 5555 already taken, or the tunnel's terminal was closed | Re-check the three values of §4.4 and restart the tunnel; free port 5555, or pass a different `--port` and connect to that port |
 | `INSTALL_FAILED_OLDER_SDK` | Guest below API 29 (§4.5) | Blocking finding — escalate; the in-Room plan changes |
 | `INSTALL_FAILED_MISSING_SHARED_LIBRARY`, or a feature error naming `automotive` | Not an automotive system image | Same — escalate |
 | `INSTALL_FAILED_UPDATE_INCOMPATIBLE` | An older build with a different signature is installed | `adb uninstall com.hackathon.v2x.ivi`, then install again |
@@ -574,13 +567,12 @@ Switch the ADA node to `R4_SCENARIO=/app/scenarios/degrade.json`.
 | App starts, then the screen returns to the launcher | Crash on start | Read `adb logcat` **unfiltered** before filtering by tag |
 | `V2X LINK: STANDBY` never changes | The status bar is not bound to the listener's link state | Bind it to the listener (§1.3) |
 | Node stuck in `Provisioning` | Almost always an image that cannot be pulled | Only affects container nodes; check the ADA node's image field. [carsky-room-diagnostics](../../.claude/skills/carsky-room-diagnostics/SKILL.md) |
-| No route to the guest works at all | ADB to the guest is unreachable on this deployment | Fall back to a **physical Android 10+ device** over USB for §4.7–§4.8 and **record that the evidence is device evidence, not in-Room evidence**. On an x86_64 host an Android Automotive emulator is an alternative; on ARM64 Windows it is not (§2.2) |
+| ADB never reaches the guest at all | The tunnel cannot be established on this deployment | Fall back to a **physical Android 10+ device** over USB for §4.7–§4.8 and **record that the evidence is device evidence, not in-Room evidence**. On an x86_64 host an Android Automotive emulator is an alternative; on ARM64 Windows it is not (§2.2) |
 
 ### 4.11 The mini-blueprint route
 
 For IVI-only work, a 3-node topology — Ethernet Bridge + ADA node + IVI Skycraft node — deploys faster, has fewer variables, and leaves the second Room slot free for the comms track. **The mechanics are exactly §4.2 through §4.10; only the composition differs**, so nothing above is repeated here.
 
-- **Design and rationale:** [phase5-mini-blueprint.md](../../IVI_ECU/doc/research_notes/phase5-mini-blueprint.md).
 - **Creation route — clone, then delete.** Clone the known-good baseline, rename it, then delete the Bench and V2X nodes on the canvas. Cloning is the only route that preserves `ethernet` pins (§1.4); a blueprint built from scratch by script has no network at all. Deleting a node removes its pin and edge; the ADA and IVI pins are untouched.
 - **Do not import** a hand-authored blueprint JSON in place of this: an import arrives without its `ethernet` pins, and typically without the Skycraft `image` block, which gets the deploy rejected outright.
 - **The ADA node is the only node that is reconfigured** — probe config (`m1-netcheck:latest`) before the simulator image exists, evidence config (`m1-r4-sim:latest`) after. Both are in §4.8. Addresses, the `47300` port and the pin shapes stay at the baseline values, so switching to the real ADA image later is an image swap with no node-config edit.
@@ -604,11 +596,10 @@ The split is not a preference — it follows from what an agent can reach. An ag
 | [Read the stored config back](#42-configure-the-blueprint-and-its-ivi-node) | AI | `GET /api/v1/blueprints/{id}`; also captures the Part Prefix and display fields |
 | [Deploy the blueprint](#43-deploy-the-blueprint) | Human | **New Deployment** dialog; picking the Device is a human call |
 | [Poll node phases until Running](#43-deploy-the-blueprint) | AI | `GET /api/v1/deployments/{roomId}/nodes`; also yields each `nodeKey` |
-| [Obtain the ADB endpoint](#44-get-an-adb-endpoint) | Human | Rework device panel or the Gateway tunnel — both are browser surfaces |
-| [Probe the 502 REST routes](#44-get-an-adb-endpoint) | AI | One `curl` each for `…/shell` and `…/screenshot` |
-| [Connect and read guest properties](#45-connect-and-check-the-guest) | AI | `adb connect`, `adb devices`, `getprop`, `pm list features` |
+| [Start the ADB tunnel](#44-get-an-adb-endpoint) | AI | `reach-backend adb …`, left running in its own terminal |
+| [Connect and read guest properties](#45-connect-and-check-the-guest) | AI | `adb connect localhost:5555`, `adb devices`, `getprop`, `pm list features` |
 | [Install the APK](#46-install-the-apk) | AI | `adb install -r`, then `pm path` to confirm |
-| [Open the Screen, Log and ADB widgets](#47-open-the-screen-and-launch-the-app) | Human | Devices panel widgets and their part fields |
+| [Open the Screen, Log and ADB widgets](#47-open-the-screen-and-launch-the-app) | Human | Devices panel: **Connect**, then add the widgets |
 | [Launch the app](#47-open-the-screen-and-launch-the-app) | AI | `adb shell am start`, with the optional port override |
 | [Configure the ADA node's feed](#48-verify-the-hmi-and-the-logging) | Human | Node Inspector image and env fields, then redeploy |
 | [Read the two log surfaces](#48-verify-the-hmi-and-the-logging) | AI | `adb logcat -s IVI_V2X` and the node logs route |
@@ -616,10 +607,11 @@ The split is not a preference — it follows from what an agent can reach. An ag
 | [Record the screen](#49-capture-the-evidence) | Human | Recorder Part, then download the clip from **Videos** |
 | [Tear the Room down](#412-tear-down) | Human | **Delete Deployment**; releases one of the two Room slots |
 
-Two qualifications on the rows above, neither of which changes the default:
+Three qualifications on the rows above, none of which changes the default:
 
 - **Rows 2 and 3 flip to AI** on a machine with an authenticated `gh` CLI — Route B of §3.2 and §3.3 needs no browser. Without `gh auth login`, they stay human.
 - **The local build of §2 is the AI-side alternative to the first three rows**: an agent with a JDK and an Android SDK produces the same APK without touching a browser at all.
+- **Obtaining the tunnel CLI, its gateway URL and its key is human work.** All three come from the organizers (§4.4); the AI row above assumes they are already in hand.
 
 ---
 
@@ -641,20 +633,23 @@ Two further observations complete the set rather than repeating the four above:
 | Tapping **Home / Apps / Settings** changes what the Display Area shows, and `[UI] mode=… cause=user` follows | The button and app areas switch what the Display Area shows |
 | `cSource=v2x_relayed` on **every** rendered warning, and the guard tripping to `[? UNKNOWN SOURCE]` on an `own_sensor` message | Ghost C is sourced **only** from relayed data — the IVI-side half of the project's definition of done |
 
+Every observable above is gathered over the ADB tunnel of §4.4 or through the Devices panel. Nothing in this list depends on a REST route.
+
 Optional paths — a separate app woken by an ADA ECU message, and 3D through the view seam — are not deliverables here. Record them as not built rather than leaving the boxes ambiguous.
 
 ### 6.1 Confirm before relying on these
 
-Each point below is stated in the platform documentation or follows from the app's design, and each can make a step fail without this guide being wrong. Confirm it on the deployment you are using, at the step named.
+Each point below can make a step fail without this guide being wrong. Confirm it on the deployment you are using, at the step named.
 
 | # | Point | Where it bites |
 |---|---|---|
-| 1 | ADB reach to the Skycraft guest, by any route | §4.4 — the whole in-Room evidence plan |
-| 2 | `GET /api/v1/deployments/{roomId}/adb-tunnel` and `POST /…/adb-exec/{nodeKey}` answering on this deployment | §4.4 |
-| 3 | The AAOS guest's API level and its `automotive` feature | §4.5 — either one blocks the install |
-| 4 | The IVI node's Part Prefix, display size and GPU backend | §4.2, §4.7 — the Screen, Log and ADB widgets select parts by these names |
-| 5 | Whether the guest display sleeps, and that `KEYCODE_WAKEUP` wakes it | §4.7 |
-| 6 | A JDK and an Android SDK being present on the build host | §1.1, §2 — §3 is the route that needs neither |
-| 7 | `…/screenshot` and `…/shell` still answering 502 | §4.4, §4.9 |
-| 8 | The `ubuntu-latest` runner image's Android SDK and licence state staying sufficient for `compileSdk 34` | §3.1 |
-| 9 | Whether the ADB widget can install an APK in practice — the platform says it can, but it exposes no file transfer | §4.4 route #2 |
+| 1 | The tunnel route as a whole — supplied by the organizers, and not yet exercised by this team | §4.4, §4.5 — the whole in-Room evidence plan |
+| 2 | Where the `reach-backend` CLI is obtained, and how it is installed | §4.4 — nothing runs without the binary |
+| 3 | Which gateway URL this team passes to `--gateway` | §4.4 |
+| 4 | How the `a8k_…` derived token is generated, and whether it is the CarSky API key of §1.2 or a separate credential | §4.4 |
+| 5 | The AAOS guest's API level and its `automotive` feature | §4.5 — either one blocks the install |
+| 6 | The IVI node's Part Prefix, display size and GPU backend | §4.2, §4.7 — a widget may ask which part to use |
+| 7 | Whether the guest display sleeps, and that `KEYCODE_WAKEUP` wakes it | §4.7 |
+| 8 | A JDK and an Android SDK being present on the build host | §1.1, §2 — §3 is the route that needs neither |
+| 9 | Whether `GET /api/v1/vms/{roomId}/{nodeKey}/screenshot` answers on this deployment | §4.9 — a convenience path, not the primary one |
+| 10 | The `ubuntu-latest` runner image's Android SDK and licence state staying sufficient for `compileSdk 34` | §3.1 |
