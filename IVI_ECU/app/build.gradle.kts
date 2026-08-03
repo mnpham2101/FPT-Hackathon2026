@@ -1,5 +1,7 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -23,10 +25,17 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        // R4 warning auto-dismiss timeout (4.5.1.4 / 17.5.3.5) — externalized, no literals in source.
+        // R4 warning auto-dismiss timeout — externalized, no literals in source.
         buildConfigField("long", "WARNING_TIMEOUT_MS", "10000L")
-        // R4 UDP listener port (4.5.1.3) — externalized, never hardcode 5004 in source.
-        buildConfigField("int", "R4_UDP_PORT", "5004")
+        // R4 UDP port — Lead `4.5.4.1` / blueprint ADA→IVI: default 47300 (not 5004).
+        // Optional local override via IVI_ECU/local.properties: r4.udp.port=<port>
+        // Never hardcode the port in Kotlin service/VM/repository logic.
+        val localProps = Properties().apply {
+            val f = rootProject.file("local.properties")
+            if (f.exists()) f.inputStream().use { load(it) }
+        }
+        val r4UdpPort = localProps.getProperty("r4.udp.port", "47300")
+        buildConfigField("int", "R4_UDP_PORT", r4UdpPort)
     }
 
     buildTypes {
@@ -52,6 +61,7 @@ android {
     testOptions {
         unitTests {
             isReturnDefaultValues = true
+            isIncludeAndroidResources = true
         }
     }
 }
@@ -73,6 +83,8 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.6")
     implementation("androidx.lifecycle:lifecycle-service:2.8.6")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.6")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.6")
+    implementation("androidx.activity:activity-compose:1.9.2")
 
     // Compose BOM 2024.09.03 (Compose UI 1.7.x, Material3 1.3.0) — compatible with compileSdk 34.
     val composeBom = platform("androidx.compose:compose-bom:2024.09.03")
@@ -81,14 +93,31 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.material:material-icons-core")
     debugImplementation("androidx.compose.ui:ui-tooling")
 
     implementation("com.google.dagger:hilt-android:2.58")
     ksp("com.google.dagger:hilt-android-compiler:2.58")
+    implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
 
-    // Unit testing
+    // Unit / integration testing
+    // compileOnly: fwcd Kotlin LS resolves only the main compile classpath for files under
+    // src/test when the workspace root is the monorepo (not IVI_ECU). Expose test APIs to
+    // analysis without packaging them into the APK; tests still use testImplementation.
+    compileOnly("junit:junit:4.13.2")
+    compileOnly("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
+    compileOnly("io.mockk:mockk:1.13.13")
+    compileOnly("app.cash.turbine:turbine:1.2.0")
+    compileOnly("com.google.dagger:hilt-android-testing:2.58")
+    compileOnly("org.robolectric:robolectric:4.13")
+    compileOnly("androidx.test:core:1.6.1")
     testImplementation("junit:junit:4.13.2")
+    testImplementation("androidx.test.ext:junit:1.2.1")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
     testImplementation("io.mockk:mockk:1.13.13")
     testImplementation("app.cash.turbine:turbine:1.2.0")
+    testImplementation("org.robolectric:robolectric:4.13")
+    testImplementation("com.google.dagger:hilt-android-testing:2.58")
+    kspTest("com.google.dagger:hilt-android-compiler:2.58")
+    testImplementation("androidx.test:core:1.6.1")
 }

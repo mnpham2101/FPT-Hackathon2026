@@ -16,6 +16,7 @@ captures/
 .temp_ag_kit/
 skills-lock.json
 .DS_Store
+.cursor/
 
 # local credentials - never commit
 secrets/
@@ -24,5 +25,7 @@ secrets/
 __pycache__/
 *.pyc
 
+
 # Raw downloaded footage - the encoded clip is committed, its source is not
 ADA_ECU/media/source/
+

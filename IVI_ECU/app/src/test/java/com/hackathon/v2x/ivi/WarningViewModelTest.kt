@@ -23,6 +23,10 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+<<<<<<< HEAD
+=======
+import org.junit.Assert.assertNotNull
+>>>>>>> origin/feat/phase5-ivi-hmi-complete
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -129,6 +133,9 @@ class WarningViewModelTest {
         val scene = viewModel.latestScene.value
         assertTrue("Scene should be non-null after warning", scene != null)
         assertEquals(25f, scene!!.vehicleC!!.x)
+        assertNotNull("R19: vehicleCSnapshot must be wired from objectSnapshot", scene.vehicleCSnapshot)
+        assertEquals("C-001", scene.vehicleCSnapshot!!.id)
+        assertEquals(R3Snapshot.SOURCE_V2X_RELAYED, scene.vehicleCSnapshot!!.source)
     }
 
     // ── Test 4: latestScene cleared after timeout ─────────────────────────────
@@ -176,4 +183,5 @@ class WarningViewModelTest {
         )
     }
 }
+
 

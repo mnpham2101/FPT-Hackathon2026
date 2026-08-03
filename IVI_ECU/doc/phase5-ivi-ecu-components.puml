@@ -1,0 +1,55 @@
+@startuml phase5-ivi-ecu-components
+title Phase 5 — IVI ECU module / MVC map (R4 consumer, R16, R17)
+
+skinparam componentStyle rectangle
+skinparam packageStyle rectangle
+
+package "External producers (outside IVI_ECU APK)" {
+  [ADA ECU\nnlohmann/json + UDP] as ADA
+  [mock-sender/\nPython UDP harness] as Mock
+}
+
+cloud "R6 Ethernet Bridge\n(L2 only; no app UDP port)" as Bridge
+
+package "IVI_ECU APK — Skycraft AAOS" {
+  package "Data" {
+    [model/\nR4Message · R3Snapshot\nSceneGeometry] as Models
+    [data/R4Deserializer\nkotlinx.serialization] as Deser
+    [optional :r4-contract\nGradle submodule] as ContractMod
+  }
+
+  package "Transport (controller edge)" {
+    [service/R4ListenerService\nUDP · Dispatchers.IO] as Svc
+  }
+
+  package "Business / observer" {
+    [data/R4Repository\nSharedFlow · StateFlow] as Repo
+  }
+
+  package "UI logic" {
+    [ui/WarningViewModel\nui/MainViewModel] as VMs
+    [di/AppModule\nHilt] as Di
+  }
+
+  package "UI (R16 / R17)" {
+    [ui/screen/MainScreen\nR16 shell] as Shell
+    [ui/view/IviWarningViewSeam] as Seam
+    [ui/view/CanvasWarningView\n2D God View] as Canvas
+  }
+}
+
+ADA --> Bridge
+Mock --> Bridge
+Bridge --> Svc : UDP JSON bytes
+Svc --> Deser : UTF-8 string
+Deser --> Models
+ContractMod ..> Models : optional extract
+ContractMod ..> Deser
+Svc --> Repo : sealed R4Message
+Repo --> VMs : warningEvents /\ncurrentState
+Di --> Repo
+Di --> Svc
+VMs --> Shell
+Shell --> Seam
+Seam --> Canvas : M1 renderer
+@enduml

@@ -11,19 +11,14 @@ import kotlinx.serialization.json.jsonPrimitive
 /**
  * Stateless JSON deserializer for R4 UDP packets.
  *
- * Subtask 4.5.1.2 — Additive-version safety rules:
- * - Unknown [R4WarningEvent.warningType] → degraded to [R4WarningEvent.UNKNOWN_WARNING_TYPE]
- * - Unknown extra JSON fields → ignored silently (lenient mode via [R4Json])
+ * Aligned to main's authority contract ([R4Message] / [R4Json]):
+ * - Unknown extra JSON fields → ignored (`ignoreUnknownKeys`)
+ * - Unknown `warningType` → **preserved verbatim** (HLD D4, §4.4 fix); presentation degrades at UI edge
  * - Unknown message `type` → [Result.failure] with [UnknownMessageTypeException]
- * - Malformed JSON → [Result.failure] with [MalformedR4PayloadException] (byte offset included)
+ * - Malformed JSON → [Result.failure] with [MalformedR4PayloadException]
  */
 class R4Deserializer {
 
-    /**
-     * Parse raw [bytes] into an [R4Message].
-     *
-     * @return [Result.success] with the parsed message, or [Result.failure] on any error.
-     */
     fun deserialize(bytes: ByteArray): Result<R4Message> = runCatching {
         val raw = bytes.decodeToString()
         val root = parseJsonObject(raw, bytes)
@@ -32,8 +27,8 @@ class R4Deserializer {
             ?: return Result.failure(MalformedR4PayloadException("Missing 'type' field", bytes))
 
         return when (type) {
-            R4WarningEvent.TYPE_KEY -> parseWarningEvent(raw, bytes)
-            R4StateMessage.TYPE_KEY -> parseStateMessage(raw)
+            TYPE_WARNING -> parseWarningEvent(raw, bytes)
+            TYPE_STATE -> parseStateMessage(raw)
             else -> Result.failure(UnknownMessageTypeException(type))
         }
     }.onFailure { e ->
@@ -55,11 +50,13 @@ class R4Deserializer {
             return Result.failure(MalformedR4PayloadException(e.message ?: "parse error", bytes))
         }
 
-        // §4.4 fix: do NOT rewrite the warningType here. The frozen contract requires the wire
-        // value to survive intact to the consumer (R4AdditiveVersionTest asserts this). Unknown
-        // types degrade gracefully at the UI edge, not at parse time. Only log — never overwrite.
+        // §4.4 fix: do NOT rewrite warningType here. The frozen contract requires the wire
+        // value to survive intact to the consumer. Classification belongs at the UI edge.
         if (event.warningType.isBlank() || !isKnownWarningType(event.warningType)) {
-            safeLogW(TAG, "Unknown warningType='${event.warningType}' — passing through for UI-layer classification")
+            safeLogW(
+                TAG,
+                "Non-registry warningType='${event.warningType}' — preserving verbatim for UI-layer classification",
+            )
         }
         return Result.success(event)
     }
@@ -83,9 +80,10 @@ class R4Deserializer {
 
     companion object {
         private const val TAG = "R4Deserializer"
+        private const val TYPE_WARNING = "warning"
+        private const val TYPE_STATE = "state"
     }
 }
-
 
 /** Thrown when the R4 packet's `type` field is not "warning" or "state". */
 class UnknownMessageTypeException(type: String) :
@@ -94,4 +92,3 @@ class UnknownMessageTypeException(type: String) :
 /** Thrown when the raw bytes cannot be parsed as valid R4 JSON. */
 class MalformedR4PayloadException(reason: String, bytes: ByteArray) :
     Exception("Malformed R4 payload ($reason): first 256 bytes = '${bytes.take(256).toByteArray().decodeToString()}'")
-

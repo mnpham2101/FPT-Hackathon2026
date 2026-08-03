@@ -102,7 +102,7 @@ private val BadgeTextStyle = TextStyle(
 // --- Defensive source guard (17.5.3.4) ---
 
 private val UnknownSourceColor = Color(0xFFFFD700)
-private const val UNKNOWN_SOURCE_LABEL = "[? UNKNOWN SOURCE]"
+internal const val UNKNOWN_SOURCE_LABEL = "[? UNKNOWN SOURCE]"
 private const val LOG_TAG = "IVI_V2X"
 
 /**
@@ -115,6 +115,18 @@ internal fun riskColor(riskState: String): Color = when (riskState.lowercase(Loc
     "high" -> HighRiskGlowColor
     else -> HighRiskGlowColor
 }
+
+/**
+ * Defensive source guard (17.5.3.4): missing snapshot (dev/mock) is trusted;
+ * any non-null snapshot must carry [R3Snapshot.SOURCE_V2X_RELAYED].
+ */
+internal fun isGhostCSourceTrusted(snapshot: R3Snapshot?): Boolean =
+    snapshot == null || snapshot.source == R3Snapshot.SOURCE_V2X_RELAYED
+
+/** ERROR log body when the Ghost C source guard trips. */
+internal fun ghostCSourceGuardErrorMessage(snapshot: R3Snapshot): String =
+    "Ghost C source guard tripped: source=\"${snapshot.source}\" != " +
+        "\"${R3Snapshot.SOURCE_V2X_RELAYED}\"; snapshot=${Json.encodeToString(R3Snapshot.serializer(), snapshot)}"
 
 /**
  * Committed M1 renderer for the R17 Warning View: a top-down 2D "God View"
@@ -133,17 +145,11 @@ class CanvasWarningView : IviWarningViewSeam {
     override fun Render(scene: SceneGeometry, riskState: String) {
         val textMeasurer = rememberTextMeasurer()
 
-        // Defensive guard: a missing snapshot (dev/mock scene) is trusted;
-        // a snapshot with any source other than v2x_relayed is not.
         val snapshot = scene.vehicleCSnapshot
-        val cSourceTrusted = snapshot == null || snapshot.source == R3Snapshot.SOURCE_V2X_RELAYED
+        val cSourceTrusted = isGhostCSourceTrusted(snapshot)
         if (snapshot != null && !cSourceTrusted) {
             LaunchedEffect(snapshot) {
-                Log.e(
-                    LOG_TAG,
-                    "Ghost C source guard tripped: source=\"${snapshot.source}\" != " +
-                        "\"${R3Snapshot.SOURCE_V2X_RELAYED}\"; snapshot=${Json.encodeToString(R3Snapshot.serializer(), snapshot)}",
-                )
+                Log.e(LOG_TAG, ghostCSourceGuardErrorMessage(snapshot))
             }
         }
 

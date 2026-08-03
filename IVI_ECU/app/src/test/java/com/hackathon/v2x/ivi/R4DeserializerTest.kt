@@ -7,7 +7,6 @@ import com.hackathon.v2x.ivi.model.R4Message
 import com.hackathon.v2x.ivi.model.R4StateMessage
 import com.hackathon.v2x.ivi.model.R4WarningEvent
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -60,8 +59,8 @@ class R4DeserializerTest {
         assertEquals(1, event.schemaVersion)
         assertEquals("nlos_obstruction", event.warningType)
         assertEquals("high", event.riskState)
-        assertEquals("C-001", event.trackedObject.id)
-        assertEquals("v2x_relayed", event.trackedObject.source)
+        assertEquals("C-001", event.objectSnapshot.id)
+        assertEquals("v2x_relayed", event.objectSnapshot.source)
         assertEquals(25.0f, event.geometry.vehicleC!!.x)
     }
 
@@ -89,12 +88,7 @@ class R4DeserializerTest {
         assertEquals(0.0f, state.vehicles.ego.x)
     }
 
-    // ── Test 3: Unknown warningType preserved (wire value survives intact) ────
-    //
-    // §4.4 fix: the old code rewrote unknown warningType to "unknown" at parse time,
-    // destroying the log's only evidence of which type arrived. The frozen contract
-    // (and R4AdditiveVersionTest) require the wire value to reach the consumer unchanged.
-    // Classification belongs at the UI edge, not the deserializer.
+    // ── Test 3: Unknown warningType preserved verbatim (HLD D4, §4.4 fix) ─────
 
     @Test
     fun `unknown warningType is passed through intact without exception`() {
@@ -137,7 +131,6 @@ class R4DeserializerTest {
         val result = deserializer.deserialize(bad)
 
         assertTrue("Result should be failure for malformed JSON", result.isFailure)
-        // No exception propagated — Result wraps it
     }
 
     // ── Test 5: Extra unknown JSON fields are ignored ─────────────────────────
@@ -176,7 +169,7 @@ class R4DeserializerTest {
         val event = result.getOrThrow() as R4WarningEvent
         assertEquals("nlos_obstruction", event.warningType)
         assertEquals("low", event.riskState)
-        assertEquals("C-002", event.trackedObject.id)
+        assertEquals("C-002", event.objectSnapshot.id)
         assertEquals(40.0f, event.geometry.vehicleC!!.x)
     }
 }

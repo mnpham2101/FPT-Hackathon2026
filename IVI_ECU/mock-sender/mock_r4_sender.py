@@ -3,8 +3,8 @@
 mock_r4_sender.py — Mock R4 Sender node for 2-node Task 5.1 test blueprint.
 
 Reads config from environment variables (never hardcoded):
-  IVI_ECU_HOST   IP of IVI ECU node           (default: 10.88.0.12)
-  IVI_ECU_PORT   UDP port on IVI ECU           (default: 5004)
+  IVI_ECU_HOST   IP of IVI ECU node           (default: 10.99.0.13)
+  IVI_ECU_PORT   UDP port on IVI ECU           (default: 47300)
   INTERVAL_MS    Milliseconds between packets  (default: 2000)
   CYCLES         Number of full cycles         (default: 5)
   SCHEMA_VERSION R4 schema version             (default: 1)
@@ -22,8 +22,8 @@ import socket
 import sys
 import time
 
-IVI_HOST = os.environ.get("IVI_ECU_HOST", "10.88.0.12")
-IVI_PORT = int(os.environ.get("IVI_ECU_PORT", "5004"))
+IVI_HOST = os.environ.get("IVI_ECU_HOST", "10.99.0.13")
+IVI_PORT = int(os.environ.get("IVI_ECU_PORT", "47300"))
 INTERVAL_S = int(os.environ.get("INTERVAL_MS", "2000")) / 1000.0
 CYCLES = int(os.environ.get("CYCLES", "5"))
 SCHEMA_VERSION = int(os.environ.get("SCHEMA_VERSION", "1"))
@@ -53,14 +53,25 @@ def make_warning_event(dist_b, dist_c, warning_type, risk):
 
 
 def make_state_message(seq):
+<<<<<<< HEAD
+=======
+    # Matches main authority contract: R4Vehicles(ego, vehicleB, vehicleC?)
+>>>>>>> origin/feat/phase5-ivi-hmi-complete
     return {
         "schemaVersion": SCHEMA_VERSION,
         "type": "state",
         "seq": seq,
         "vehicles": {
+<<<<<<< HEAD
             "ego": {"position": {"x": 0.0,  "y": 0.0}, "speed": 10.0},
             "B":   {"position": {"x": 15.0, "y": 0.0}, "speed": 9.5}
         }
+=======
+            "ego": {"x": 0.0, "y": 0.0},
+            "vehicleB": {"x": 15.0, "y": 0.0},
+            "vehicleC": None,
+        },
+>>>>>>> origin/feat/phase5-ivi-hmi-complete
     }
 
 
