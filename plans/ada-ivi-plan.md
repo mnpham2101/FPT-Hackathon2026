@@ -94,7 +94,7 @@ Plus, new from the update and carrying no milestone box: media layer ≤ 60 MB w
 
 ### Phase 5 — IVI: HMI and warning view (R4, R16, R17)
 
-**Full decomposition:** [phase5_minh_tasks.md](phase5_minh_tasks.md) — 9 task groups, 45 subtasks (39 agent, 6 user-manual), nothing started. Design of record: [phase5-ivi-hld.md](../IVI_ECU/doc/phase5-ivi-hld.md) (commit `85387b5`). **Unaffected by the update** — see §5 for why, which is the point.
+**Full decomposition:** [phase5_minh_tasks.md](phase5_minh_tasks.md) — 9 task groups, 61 subtasks (38 agent, 11 car-sky, 12 human), nothing started. Design of record: [phase5-ivi-hld.md](../IVI_ECU/doc/phase5-ivi-hld.md) (commit `85387b5`). **Unaffected by the update** — see §5 for why, which is the point.
 
 > **[phase5_minh_tasks.md](phase5_minh_tasks.md) is the only Phase 5 breakdown.** An earlier one existed and is deleted. Two facts it had wrong, which must not resurface anywhere: the R4 UDP port is **47300, not 5004**, and the IVI address is **10.99.0.13, not 10.88.0.12**.
 
@@ -142,7 +142,7 @@ deployed reading:       5.3.6.2 (reads phase-4 18.4.11.1's saved ADA log - books
 
 Lane A (`4.5.1.1` → `4.5.1.4`) is strictly sequential and gates lanes B–F; lane H (the isolated IVI test) and lane J (the system test) are each strictly sequential, and lane J is last. Four independent day-one start points: `4.5.1.1` (code), `5.5.9.1` (mini-blueprint, Human), `16.5.7.1` (CI lane), `17.5.5.8` (mapper test). Full graph and critical path: [phase5_minh_tasks.md § Execution order](phase5_minh_tasks.md#execution-order).
 
-**Lane H is the one to start on day one regardless of anything else** — `5.5.9.1` through `16.5.9.7` probes whether ADB reaches the Skycraft guest and what Android version it runs. A negative answer degrades the whole of group 5.9 to emulator evidence, and that is not something to discover in the last two days.
+**Lane H is the one to start on day one regardless of anything else** — `5.5.9.1` through `16.5.9.7` starts the organizers' ADB tunnel to the Skycraft guest, proves it carries ADB, and reads what Android version the guest runs. The route is the sanctioned one and the only one, but this team has not yet run it. A negative answer degrades the whole of group 5.9 to emulator evidence, and that is not something to discover in the last two days.
 
 ## 5. Deferred and excluded — read before picking up any task
 
@@ -178,7 +178,7 @@ Items owned inside a phase file are not duplicated here; these are the ones that
 | 6 | **`container-file` API is not the deploy path.** [Update §5](../requirements/m1-video-source-and-ivi-dashcam.md) documents `POST /api/v1/deployments/:roomId/container-file/:nodeKey` as a real post-deploy file channel with no schema, no size limit and no example. Sanctioned **only** as a rehearsal-time clip swap; no subtask depends on it, and nothing deployed may differ from its image tag | recorded, no action |
 | 7 | **No documented registry size ceiling.** [Update §10 item 1](../requirements/m1-video-source-and-ivi-dashcam.md) — a ~1.2 GB artifact is observed succeeding on the platform, so ~30 MB is unremarkable, but the number is unverified. `5.3.7.3` is where a real push either confirms it or fails loudly | `5.3.7.3` |
 | 8 | **R4 binding defect across the Phase 4/Phase 5 boundary** — [phase4_tasks.md open item 4](phase4_tasks.md): the unmerged Phase 5 branch's `R4WarningMessage.kt` cannot decode Phase 4's output; `main`'s `R4Message.kt` is the binding. Fixed on the IVI side in Phase 5 group 5.1; **not** an ADA change | Phase 5 group 5.1 |
-| 9 | **AAOS reachability is Phase 5's dominant unknown** — whether ADB reaches the Skycraft guest, and the guest's API level against `minSdk 29`. Probed on day one at `16.5.9.7`; a negative answer degrades group 5.9 to emulator evidence | `16.5.9.7`, then user |
+| 9 | **AAOS reachability is Phase 5's dominant unknown** — the organizers' `reach-backend` ADB tunnel is the sanctioned route and the only one, but this team has not yet run it; nor is the guest's API level against `minSdk 29` read. Started and probed on day one at `16.5.9.6`/`16.5.9.7`; a negative answer degrades group 5.9 to emulator evidence. Its CLI, gateway URL and token are supplied by the organizers, not derived here | `16.5.9.6`/`16.5.9.7`, then user |
 | 10 | **Three rungs, each changing one thing.** Isolated ADA Room (both neighbours mocked) → group 4.12's real-upstream Room (real bench and V2X ECU, sink still mocked) → group 5.10's system test (real IVI too). Each keeps the ADA node's own config byte-identical, so a failure is attributable to what its rung added. **Phase 4's boxes close at rung 2, which needs no IVI app**; only rendering waits for rung 3 | project-planner (scheduling) |
 
 ## 7. Traceability

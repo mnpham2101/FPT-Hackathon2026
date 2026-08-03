@@ -767,7 +767,7 @@ Nothing else in that file changes. Add a one-line comment recording that this Ph
 >
 > **The APK is installed twice, by two subtasks with different purposes.** `16.5.9.7` installs whatever build exists at the time, only to prove the ADB route works. `16.5.9.10` installs the finished Phase 5 build, which is the one every observation after it is made against.
 >
-> **`16.5.9.7` is the phase's earliest risk.** ADB reach to the Skycraft guest is unverified on this deployment and the REST VM-shell route answers 502. A negative answer moves every criterion below to AAOS-emulator evidence — cheap to learn early, expensive to learn late — and the probe needs no Phase 5 code, so its dependency line places it ahead of the code groups.
+> **`16.5.9.6`–`16.5.9.7` are the phase's earliest risk.** The ADB tunnel route is the organizers' own and there is only one of it, but **this team has not yet run it** ([§6.1](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#61-confirm-before-relying-on-these) item 1), and the guest's API level and `automotive` feature are unread (item 5). A negative answer on either moves every criterion below to AAOS-emulator evidence — cheap to learn early, expensive to learn late — and neither subtask needs Phase 5 code, so their dependency lines place them ahead of the code groups.
 
 ### [ ] `5.5.9.1` — Compose the mini-blueprint by cloning the baseline *(Human)*
 
@@ -842,29 +842,31 @@ Watching the node badges is not part of this subtask — `5.5.9.5` records the p
 
 **Dependencies:** after `5.5.9.4`. **Commit:** `[5.5.9.5] docs: record the mini-blueprint Room reaching Running`
 
-### [ ] `16.5.9.6` — Obtain an ADB endpoint to the guest *(Human)*
+### [ ] `16.5.9.6` — Start the ADB tunnel to the guest *(car-sky)*
 
-**Objective:** produce a reachable ADB endpoint for the Skycraft guest, and write down which route produced it.
+**Objective:** leave the organizers' ADB tunnel serving a local port, so every step below can reach the Skycraft guest.
 
-**Scope:** work through the three candidate routes of [§4.4](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#44-get-an-adb-endpoint), strongest first, until one answers. That section also says which routes can transfer a file, which is what decides whether the APK can be installed in-Room at all. §5 keeps this Human because the Rework device panel and the Gateway tunnel are both browser screens.
+**Scope:** [§4.4](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#44-get-an-adb-endpoint) — one route, not a search. §5's *Start the ADB tunnel* row assigns it to **AI**: a CLI invocation is agent-runnable. Run the `reach-backend` tunnel command exactly as §4.4 fixes it and **leave it running in its own terminal** — closing that terminal drops the tunnel, and `16.5.9.7` runs in a second one. The command and its flags stay in §4.4; they are not copied here.
 
-**Write down which route worked, and the endpoint it gave.** §4.4 asks for exactly that, `16.5.9.7` connects to that endpoint, and `16.5.9.8` copies the answer into the node guide.
+**Three inputs are human work and must be in hand first** — the `reach-backend` binary, the gateway URL, and the `a8k_…` derived token. All three come from the organizers, none is derivable from this repository, and §5's closing qualification keeps obtaining them a person's job; the AI row assumes they are already supplied. They are §6.1 items **2, 3 and 4**, answered when they are handed over — record where each came from, never the token value.
 
-**Acceptance:** an endpoint recorded in `plans/doc/phase5-ivi-run.md` together with the route that produced it, or the exact failure of all three routes. Evidence commit by the orchestrating session after the user confirms.
+**The route is mentor-supplied and unexercised by this team** (§6.1 item 1). Treat a failure as a finding, not a retry loop: §4.10's `command not found` and tunnel-exits rows say what each failure means.
 
-**Dependencies:** after `5.5.9.5`. **Commit:** `[16.5.9.6] docs: record the ADB endpoint route to the Skycraft guest`
+**Acceptance:** the CLI serving on the local port, recorded in `plans/doc/phase5-ivi-run.md` with the port used and the provenance of the three inputs — or the exact failure. `16.5.9.7` is what confirms the tunnel actually carries ADB, via §4.5's `localhost:<port>   device` line.
+
+**Dependencies:** after `5.5.9.5`, and after the three inputs are supplied. **Commit:** `[16.5.9.6] docs: record the ADB tunnel start against the Skycraft guest`
 
 ### [ ] `16.5.9.7` — Prove the ADB route and read the guest's properties *(car-sky)*
 
 **Objective:** answer whether the guest is reachable and whether it will accept the APK at all — the two findings that invalidate every in-Room criterion below if negative.
 
-**Scope:** [§4.5](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#45-connect-and-check-the-guest) then [§4.6](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#46-install-the-apk), both AI rows in §5, over the endpoint `16.5.9.6` produced. Those sections carry the `adb connect`, `getprop` and `pm list features` commands, the install command, and what each failure means; none of that is restated here. What is specific to running them before the app is finished:
+**Scope:** [§4.5](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#45-connect-and-check-the-guest) then [§4.6](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#46-install-the-apk), both AI rows in §5, over the tunnel `16.5.9.6` left running. Those sections carry the `adb connect`, `getprop` and `pm list features` commands, the install command, and what each failure means; none of that is restated here. What is specific to running them before the app is finished:
 
 - **Install whatever build exists now** — `./gradlew assembleDebug` locally, or the `app-debug-apk` artifact of lane `16.5.7.1`. Before `16.5.5.5` lands that build has no launcher activity, so it installs and cannot be started; that is expected, because this subtask proves the **route** and `16.5.9.10` is where the finished build is installed and launched.
 - **Confirm the evidence filter streams** — `adb logcat -s IVI_V2X`, the guest-side surface [§4.8](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging) reads and the whole demo's text evidence depends on.
-- **Probe the REST pair §4.4 instructs** — record which of `…/screenshot` and `…/shell` answer. A live `screenshot` route is a second, independent evidence path that does not depend on ADB at all.
+- **Try the screenshot route once** — `GET /api/v1/vms/{roomId}/{nodeKey}/screenshot`, the scriptable alternative [§4.9](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#49-capture-the-evidence) offers for evidence capture. One call, recorded either way: a live route gives the later evidence subtasks a path that needs no browser.
 
-The findings this subtask produces are items **1, 2, 3, 7 and 9** of [§6.1](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#61-confirm-before-relying-on-these). Answer each on this deployment and write the answer down.
+The findings this subtask produces are items **1, 5 and 9** of [§6.1](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#61-confirm-before-relying-on-these) — the tunnel route carrying ADB at all, the guest's API level and `automotive` feature, and whether the screenshot route answers here. Answer each on this deployment and write the answer down.
 
 **If §4.5's connect or §4.6's install fails**, that is the finding: record it, and every criterion below degrades to **AAOS emulator** evidence on an *automotive* system image — a phone image rejects the APK on the `automotive` feature. Escalate rather than retrying blind; [§4.10](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#410-troubleshooting-the-deploy-and-install) is a troubleshooting table, not a licence to repeat a failed route.
 
@@ -876,9 +878,9 @@ The findings this subtask produces are items **1, 2, 3, 7 and 9** of [§6.1](../
 
 **Objective:** write the ADB facts `16.5.9.6` and `16.5.9.7` established into the per-node deploy guide, which is where node facts live.
 
-**Scope:** extend [node-ivi-ecu.md](../requirements/car-sky-guide/node-ivi-ecu.md) § Post-deploy with, verbatim from `16.5.9.6`'s and `16.5.9.7`'s recorded outputs, the **facts** that file owns: which endpoint source of [§4.4](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#44-get-an-adb-endpoint) worked and the `adb connect` form it produced, the guest's API level, and its automotive-feature answer. **The commands are not copied in** — install is [§4.6](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#46-install-the-apk), launch and the `--ei r4_port` override are [§4.7](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#47-open-the-screen-and-launch-the-app), and the `adb logcat -s IVI_V2X` filter is [§4.8](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging); link them. That is the division the walkthrough states about itself: the node guide owns the node's *facts*, the walkthrough owns the *doing*. If the route failed, record that instead, plus the emulator fallback. Do not restate the blueprint procedure — that is [§4.2](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#42-configure-the-blueprint-and-its-ivi-node) and [§4.11](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#411-the-mini-blueprint-route).
+**Scope:** extend [node-ivi-ecu.md](../requirements/car-sky-guide/node-ivi-ecu.md) § Post-deploy with, verbatim from `16.5.9.6`'s and `16.5.9.7`'s recorded outputs, the **facts** that file owns: that [§4.4](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#44-get-an-adb-endpoint)'s tunnel carried ADB to this node, the local port it served and the `adb connect` target that answered, the guest's API level, and its automotive-feature answer. **The commands are not copied in** — install is [§4.6](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#46-install-the-apk), launch and the `--ei r4_port` override are [§4.7](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#47-open-the-screen-and-launch-the-app), and the `adb logcat -s IVI_V2X` filter is [§4.8](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging); link them. That is the division the walkthrough states about itself: the node guide owns the node's *facts*, the walkthrough owns the *doing*. If the route failed, record that instead, plus the emulator fallback. Do not restate the blueprint procedure — that is [§4.2](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#42-configure-the-blueprint-and-its-ivi-node) and [§4.11](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#411-the-mini-blueprint-route).
 
-**Acceptance:** the guide's § Post-deploy carries the proven or failed endpoint and the guest's API-level and automotive answers, and links §4.6–§4.8 for the commands instead of duplicating them; every line traces to a recorded output, with no invented values. Doc-only.
+**Acceptance:** the guide's § Post-deploy carries the tunnel form that connected — or the failure — and the guest's API-level and automotive answers, and links §4.6–§4.8 for the commands instead of duplicating them; every line traces to a recorded output, with no invented values. Doc-only.
 
 **Dependencies:** after `16.5.9.7` and `16.5.5.5` (the launch-override command must exist before it is documented as working). **Commit:** `[16.5.9.8] docs: record the proven ADB route and launch override in the IVI node guide`
 
@@ -902,7 +904,7 @@ Then deploy again per §4.3, wait for the ADA node to read `Running`, and open i
 
 **Objective:** get the Phase 5 build running on the AAOS guest, and capture the one timing number no other phase can produce.
 
-**Scope:** [§4.6](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#46-install-the-apk) then the launch half of [§4.7](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#47-open-the-screen-and-launch-the-app) — `adb install -r`, `pm path` to confirm, then `adb shell am start`, with the `--ei r4_port` override available. §5 assigns both rows to AI. The build comes from lane `16.5.7.1`, fetched per [§3.3](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#33-get-the-apk-off-ci); the endpoint is `16.5.9.6`'s. [§4.1](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#41-how-the-apk-reaches-the-ivi-ecu-node) fixes the ordering — the guest must exist before anything installs into it.
+**Scope:** [§4.6](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#46-install-the-apk) then the launch half of [§4.7](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#47-open-the-screen-and-launch-the-app) — `adb install -r`, `pm path` to confirm, then `adb shell am start`, with the `--ei r4_port` override available. §5 assigns both rows to AI. The build comes from lane `16.5.7.1`, fetched per [§3.3](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#33-get-the-apk-off-ci); the tunnel is `16.5.9.6`'s, still running. [§4.1](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#41-how-the-apk-reaches-the-ivi-ecu-node) fixes the ordering — the guest must exist before anything installs into it.
 
 **This installs the APK; it does not set a node image field and does not touch the canvas.** It also does not open the Screen widget — that is `16.5.9.11`, which runs after this one and needs the app already launched.
 
@@ -1071,7 +1073,7 @@ Then confirm each image resolves in the registry. An image that cannot be pulled
 
 **Objective:** get the Phase 5 build running on the IVI node of the full topology.
 
-**Scope:** [§4.6](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#46-install-the-apk) then the launch half of [§4.7](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#47-open-the-screen-and-launch-the-app), both AI rows in [§5](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#5-work-division-between-ai-and-human), over an endpoint obtained as [§4.4](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#44-get-an-adb-endpoint) describes and by the route `16.5.9.8` recorded as working. The Room is new, so the guest is new and `adb install -r` runs again. [§4.1](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#41-how-the-apk-reaches-the-ivi-ecu-node)'s ordering holds — the node must be `Running` first.
+**Scope:** [§4.6](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#46-install-the-apk) then the launch half of [§4.7](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#47-open-the-screen-and-launch-the-app), both AI rows in [§5](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#5-work-division-between-ai-and-human), over a tunnel started as [§4.4](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#44-get-an-adb-endpoint) fixes it, in the form `16.5.9.8` recorded as working. The Room is new, so the guest is new and `adb install -r` runs again. [§4.1](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#41-how-the-apk-reaches-the-ivi-ecu-node)'s ordering holds — the node must be `Running` first.
 
 This is the **APK**, not a node image field: the container nodes' images were set at `5.5.10.1` and pulled at deploy.
 
@@ -1141,9 +1143,10 @@ Lane F  test equip:   4.5.6.1 ─► 4.5.6.2 ─► 4.5.6.3 ─► 4.5.6.4 ─�
                       4.5.6.7 dev injector (after 16.5.5.5 + 4.5.4.2)
 Lane G  CI:           16.5.7.1 (no dependencies, ∥ everything)   4.5.7.2 (after 4.5.6.4)   5.5.7.3 (after 5.5.6.6)
 Lane H  isolated:     5.5.9.1 (Human) ─► 4.5.9.2 (Human) ─► 6.5.9.3 ─► 5.5.9.4 (Human) ─► 5.5.9.5
-                        ─► 16.5.9.6 (Human) ─► 16.5.9.7 ─► 4.5.9.9 (Human) ─► 16.5.9.10 ─► 16.5.9.11 (Human)
+                        ─► 16.5.9.6 ─► 16.5.9.7 ─► 4.5.9.9 (Human) ─► 16.5.9.10 ─► 16.5.9.11 (Human)
                         ─► 18.5.9.12 ─► 17.5.9.13 (Human) ─► 4.5.9.14 (Human) ─► 4.5.9.15 ─► 17.5.9.16 (Human)
                       (5.5.9.1 through 16.5.9.7 need no Phase 5 code and run parallel to lanes A–G;
+                       16.5.9.6 also needs the organizers' CLI, gateway URL and token in hand;
                        16.5.9.8 branches off 16.5.9.7, also needing 16.5.5.5;
                        4.5.9.9 needs 5.5.7.3's pushed image; 16.5.9.10 needs 17.5.5.6)
 Lane J  system:       5.5.10.1 (Human) ─► 5.5.10.2 ─► 5.5.10.3 (Human) ─► 5.5.10.4
@@ -1152,7 +1155,7 @@ Lane J  system:       5.5.10.1 (Human) ─► 5.5.10.2 ─► 5.5.10.3 (Human) �
                        5.5.10.3 needs the Room slot lane H releases at 17.5.9.16)
 ```
 
-- **Parallel:** lanes B, D-partial, F and G against each other once `4.5.1.4` has landed; `4.5.4.1 ∥ 4.5.4.2 ∥ 4.5.4.3` inside lane D; `17.5.5.7 ∥ 17.5.5.6`; `17.5.5.8` against everything. The first seven subtasks of lane H are parallel with **all** code work by design — `5.5.9.1` through `16.5.9.7` are canvas, deploy and ADB-probe work that needs no Phase 5 code, and must not wait for it.
+- **Parallel:** lanes B, D-partial, F and G against each other once `4.5.1.4` has landed; `4.5.4.1 ∥ 4.5.4.2 ∥ 4.5.4.3` inside lane D; `17.5.5.7 ∥ 17.5.5.6`; `17.5.5.8` against everything. The first seven subtasks of lane H are parallel with **all** code work by design — `5.5.9.1` through `16.5.9.7` are canvas, deploy and ADB-tunnel work that needs no Phase 5 code, and must not wait for it.
 - **Sequential:** every arrow above. Lane A is strictly sequential and gates everything (a Gradle module graph cannot be built out of order). Lanes H and J are strictly sequential — each step's evidence depends on the previous step's Room state.
 - **Lane J follows lane H on the Room budget, not on logic.** Only two Rooms run at once and the comms track holds one, so the full blueprint deploys after the mini-blueprint's Room is released. Lane J also waits on every node's real image, which its own phase publishes — nothing in Phase 5 builds them.
 - **Spawn order:** `4.5.1.1` and `16.5.7.1` go to subagents together, since neither waits on anything. Lane H opens at the same time — `5.5.9.1` waits on nothing. The rest of lane H opens once `5.5.7.3` has pushed a verified image, and lane J once every node's real image exists. The *car-sky* subtasks in both lanes are spawned to [[car-sky]] at the Room events they attach to.
@@ -1165,7 +1168,7 @@ The shortest ordered set that closes all five acceptance boxes:
 
 with **`5.5.9.1` → `16.5.9.7` running alongside it**, unblocked from the start — it does not sit on the critical path but it decides whether the path's last steps are in-Room or on an emulator.
 
-**The isolated IVI test closes this path** — `4.5.9.9` through `17.5.9.16` turn a built app into the four proofs of [§6](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#6-expected-outputs-and-acceptance). Its first seven subtasks — the blueprint, the deploy and the ADB probe — need no APK and can be done while lanes A–F are still running; only `4.5.9.9` onward waits on `5.5.7.3`'s pushed image.
+**The isolated IVI test closes this path** — `4.5.9.9` through `17.5.9.16` turn a built app into the four proofs of [§6](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#6-expected-outputs-and-acceptance). Its first seven subtasks — the blueprint, the deploy and the ADB tunnel — need no APK and can be done while lanes A–F are still running; only `4.5.9.9` onward waits on `5.5.7.3`'s pushed image.
 
 **The system test is not on the path to the five boxes.** Every box is closed by the isolated IVI test against the R4 simulator feed, which is what "mock-driven" means for this phase. The system test waits on the other tracks' real images and produces the whole-system evidence Phase 6's convergence run builds on — valuable, and not a Phase 5 gate.
 
@@ -1177,7 +1180,7 @@ Every Phase 5 acceptance criterion in [milestone1.md](milestone1.md#phase-5--ivi
 
 | Milestone Phase 5 box | Closed by |
 |---|---|
-| The HMI runs on the AAOS node with the R16 layout; button/app areas switch the Display area | `16.5.5.4` · `16.5.5.5` (the launcher entry the APK lacks today) · `17.5.5.6` · `16.5.4.5` · deployed by `5.5.9.1`–`5.5.9.4`, confirmed `Running` by `5.5.9.5`, route proven by `16.5.9.6`/`16.5.9.7`, installed and launched by `16.5.9.10`, observed by `16.5.9.11` |
+| The HMI runs on the AAOS node with the R16 layout; button/app areas switch the Display area | `16.5.5.4` · `16.5.5.5` (the launcher entry the APK lacks today) · `17.5.5.6` · `16.5.4.5` · deployed by `5.5.9.1`–`5.5.9.4`, confirmed `Running` by `5.5.9.5`, the ADB tunnel started by `16.5.9.6` and proven by `16.5.9.7`, installed and launched by `16.5.9.10`, observed by `16.5.9.11` |
 | **(Dev)** A mock R4 warning brings the warning view up with ego, B and ghost C at the composed positions | `4.5.2.2` · `4.5.3.3` · `4.5.4.2` · `17.5.4.4` · `16.5.4.5` · `17.5.5.6` · simulator `4.5.6.3`/`4.5.6.4` (`approach.json`) · fed to the node by `4.5.9.9` · dev path `4.5.6.7` (I3) · read by `18.5.9.12` and seen by `17.5.9.13` (I4) |
 | Ghost C renders from `v2x_relayed` data only; the 2D drawing is delivered | **`17.5.4.4`** (the §9.2 snapshot wiring that arms the committed guard — without it the guard silently disables) · **`17.5.5.9`** (the guard itself under test) · `17.5.5.6` · `17.5.5.7` · `17.5.5.8` · `4.5.3.3` (`cSource=` on every `[RX]`) · `degrade.json` guard-trip step in `4.5.6.4` · `cSource=v2x_relayed` on every warning evidenced in text by `18.5.9.12` and on screen by `17.5.9.13`, the guard trip gated by `17.5.9.16`, and the whole shown again from live relayed data by `19.5.10.7`/`19.5.10.8` |
 | A newer message with an unknown `warningType` degrades gracefully | `4.5.1.4` (the committed `R4AdditiveVersionTest` relocated and still green) · `4.5.2.2` (decode preserves the value, D4) · `4.5.4.3` (`WarningClassifier` generic presentation) · `4.5.6.4` (`degrade.json`) · read by `4.5.9.15` and observed by `17.5.9.16` |
@@ -1191,8 +1194,8 @@ Carried, not decided. No Phase 5 subtask may close one of these by assuming an a
 
 | # | Item | Owner / closes at |
 |---|---|---|
-| 1 | **ADB reach to the Skycraft guest** (REST VM-shell route known-502) | `16.5.9.7`, which needs no Phase 5 code and is scheduled first. Negative ⇒ every later subtask in group 5.9 degrades to AAOS-emulator evidence |
-| 2 | **AAOS guest Android version** vs `minSdk 29`, and the `automotive` feature | `16.5.9.7`, same probe |
+| 1 | **ADB reach to the Skycraft guest** — one route exists, the organizers' `reach-backend` tunnel, and this team has not yet run it ([§6.1](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#61-confirm-before-relying-on-these) item 1). Its CLI, gateway URL and token are supplied, not derived (items 2–4) | `16.5.9.6` starts it, `16.5.9.7` proves it; neither needs Phase 5 code and both are scheduled first. Negative ⇒ every later subtask in group 5.9 degrades to AAOS-emulator evidence |
+| 2 | **AAOS guest Android version** vs `minSdk 29`, and the `automotive` feature | `16.5.9.7`, same connection |
 | 3 | Simulator `Dockerfile` at `r4-simulator/`, not the node-folder root | HLD-flagged deviation with rationale; self-containment preserved. Revisit only if `IVI_ECU/` gains a root image |
 | 4 | Coroutines version skew between `:observer` and what AndroidX resolves in `:app` | Mitigated by the catalog (`4.5.1.1`); a skew shows as a runtime `NoSuchMethodError`, not a build failure — watch for it at `16.5.9.10` |
 | 5 | Deployment budget: 2 concurrent Rooms | `17.5.9.16` and `19.5.10.8` tear their Rooms down; coordinate with the comms track before `5.5.9.4` deploys |
