@@ -3,10 +3,15 @@
 **The authoritative procedure for exercising the ADA ECU on its own**, in a Room containing only the ADA node, a stand-in for the V2X ECU that feeds it, a stand-in for the IVI ECU that consumes its output, and the Ethernet Bridge that joins them.
 
 - **Companion to** [deploy-walkthrough-netcheck.md](deploy-walkthrough-netcheck.md) — the template for container nodes (build → push to Zot → node pulls). Read it once for the platform model (blueprint, node, pin, Device, Room) and the credential table; none of that is repeated here.
-- **Companion to** [deploy-ivi-hmi-walkthrough.md](deploy-ivi-hmi-walkthrough.md) — the same idea from the other end of the chain, for the Android node.
+- **Companion to** [deploy-ivi-hmi-walkthrough.md](deploy-ivi-hmi-walkthrough.md) — the same chain seen from the consumer end, on the Android node. It owns everything about the IVI app's build, install, launch and verification.
 - **Node facts** — image tag, blueprint config block, pin shape, address — live in [node-ada-ecu.md](node-ada-ecu.md) and are linked, never copied. That file owns the node's *facts*; this one owns the *doing*.
 
-**What this Room proves, and what it does not.** It proves the ADA node's whole internal chain: a relayed object arrives on the wire, an event is raised, a track is admitted, ego's own detector produces a second track from the baked-in clip, and a warning carrying both vehicles leaves the node on the wire. It does not prove anything about the real V2X ECU or the real IVI app — both are replaced by bench containers here.
+**What this Room proves, and what it does not.** It proves the ADA node's whole internal chain: a relayed object arrives on the wire, an event is raised, a track is admitted, ego's own detector produces a second track from the baked-in clip, and a warning carrying both vehicles leaves the node on the wire. It does not prove anything about the real V2X ECU or the real IVI app — both are replaced by bench containers here. The full-chain variant is [§5.6](#56-the-full-blueprint-route).
+
+```
+bench + ADA sources  ──push──▶  GitHub Actions  ──push──▶  Zot registry  ──pull──▶  Room nodes
+    (git repo)                    (two jobs)                                         (§4.5)
+```
 
 ```
 relayed-object datagrams  ──▶  ADA ECU  ──▶  warning datagrams
@@ -17,7 +22,7 @@ relayed-object datagrams  ──▶  ADA ECU  ──▶  warning datagrams
                           on the baked-in clip
 ```
 
-**Most of this route has never been run.** The ADA ECU container image, the bench image proposed in [§2.3](#23-the-bench-image--one-image-two-roles), and this topology are all unexercised. Read [§8.1](#81-confirm-before-relying-on-these) before scheduling work against any step below.
+**Most of this route has never been run.** The ADA ECU container image, the bench image of [§2.3](#23-the-bench-image--one-image-two-roles), the two CI jobs that build them, and this topology are all unexercised. Read [§8.1](#81-confirm-before-relying-on-these) before scheduling work against any step below.
 
 ---
 
@@ -25,24 +30,23 @@ relayed-object datagrams  ──▶  ADA ECU  ──▶  warning datagrams
 
 ### 1.1 Toolchain on the build machine
 
-Needed for [§3](#3-build-and-push-the-images) only. Every later section needs a shell, `curl`, and nothing else.
+**Nothing is built by hand.** Both images come off GitHub Actions ([§3](#3-build-the-images-on-ci)), so the machine following this guide needs no Docker, no compiler and no Python.
 
-| Need | Value | Why this value |
+| Need | Value | Used at |
 |---|---|---|
-| Docker with buildx | any recent release | Both images are built with `docker buildx build` |
-| A Linux build host, or QEMU emulation | `linux/arm64` output | A Container Node pulls `linux/arm64`. On an x86_64 host, buildx emulates it — slowly for the detector's Python wheels |
-| `curl` | any | Every registry and platform check below |
-| Python 3 | 3.9 or newer | Only for reading a saved log offline; not needed in the Room |
+| A clone of this repository, with push access | any | [§3.1](#31-write-the-bench-scripts), [§3.2](#32-build-and-push-the-images-on-ci) |
+| `curl` | any | Every registry and platform call below |
+| A browser | any | The Nydus canvas and the Actions run page |
 
-There is no local Docker on a Windows developer machine in this project. The alternative is a CI lane that builds and pushes on a Linux runner — see [§3](#3-build-and-push-the-images).
+Optionally the [`gh` CLI](https://cli.github.com/), authenticated with `gh auth login` — it replaces the browser half of [§3.3](#33-confirm-the-run-passed-and-the-images-landed).
 
 ### 1.2 Cloud platform access
 
 | Credential | Format | Used for |
 |---|---|---|
 | Keycloak login | email + password | Signing in to the Nydus and Zot web UIs |
-| CarSky API key | `a8k_…` | Every REST call below — blueprint read-back, node phases, logs |
-| Zot API key | `zak_…` | `docker login` for the two image pushes ([zot-registry-api-key.md](zot-registry-api-key.md)) |
+| CarSky API key | `a8k_…` | Every REST call below — blueprint creation, config read-back, node phases, logs |
+| Zot API key | `zak_…` | Stored as the `CARSKY_ZOT_API_KEY` repository secret; the CI jobs' `docker login` password ([zot-registry-api-key.md](zot-registry-api-key.md)) |
 
 Verifying a key before it is needed: [carsky-deploy-preflight](../../.claude/skills/carsky-deploy-preflight/SKILL.md).
 
@@ -50,7 +54,7 @@ One Room slot must be free. The account allows two concurrent deployments; this 
 
 ### 1.3 Deliverable prerequisites
 
-The software this procedure deploys and verifies must exist before the procedure is run. Each row is a development deliverable the procedure consumes, not a step of this guide. Check every row is present before starting — item 2 of [§8.1](#81-confirm-before-relying-on-these) is why.
+The ADA ECU's own software must exist before the procedure is run. Each row is product code the procedure consumes, not a step of this guide — the bench scripts beside it *are* a step, [§3.1](#31-write-the-bench-scripts). Check every row is present before starting; item 2 of [§8.1](#81-confirm-before-relying-on-these) is why.
 
 | Deliverable | What it must provide |
 |---|---|
@@ -60,17 +64,26 @@ The software this procedure deploys and verifies must exist before the procedure
 | The Python detector | Reads the baked-in clip, emits one tracked-object JSON line per detection on stdout, and never mints a relayed source or a `v2x:` track id |
 | `ADA_ECU/models/yolo11n.onnx` | The committed detection model the detector loads |
 | `ADA_ECU/media/ego-b-occluding-c.mp4` | The clip ego's detector runs on, containing vehicle B and never vehicle C |
-| `ADA_ECU/entrypoint.sh` and `capture.sh` | Start the capture alongside the core, so the node's own log carries `[CAP]` lines. Optional for this procedure — [§5.4](#54-traffic-evidence-and-wireshark-scope) takes its traffic evidence on the sink node instead |
-| The bench sources | `tools/ada-bench/` — the emitter, the sink, the capture script, the entrypoint and the Dockerfile of [§2.3](#23-the-bench-image--one-image-two-roles) |
-| A route that builds and pushes both images | A CI lane on a Linux runner, or a Linux host with Docker |
+| `ADA_ECU/entrypoint.sh` and `capture.sh` | Start the capture alongside the core, so the node's own log carries `[CAP]` lines. Optional in the isolated Room — [§5.4](#54-traffic-evidence-and-wireshark-scope) takes its traffic evidence on the sink node instead. Not optional on the full blueprint — [§5.6](#56-the-full-blueprint-route) |
+
+### 1.4 Blueprints
+
+Two blueprints can be constructed and used:
+
+- **The isolated blueprint** — the smallest topology that still exercises the ADA node end to end: Ethernet Bridge + V2X bench (mock) + ADA ECU + IVI sink (mock).
+- **The full blueprint** — every node: bench Scenario Player, V2X ECU, ADA ECU, IVI Skycraft node and the Ethernet Bridge.
+
+**The isolated blueprint is what this guide runs against.** Its detail is [§2](#2-the-isolated-blueprint), and [§5.6](#56-the-full-blueprint-route) for the full one; it is not repeated there.
+
+Their nodes can be created over the API, with full config. **Their `ethernet` pins and edges cannot** — neither REST nor a JSON import can create them, so those are drawn by hand on the Nydus canvas for both blueprints. The platform limitation and its consequence: [carsky-rest-api-blueprint.md § Key finding](carsky-rest-api-blueprint.md#key-finding-what-rest-can-and-cannot-do) and [carsky-4-node-blueprint.md § Steps](carsky-4-node-blueprint.md#4-steps).
 
 ---
 
-## 2. The isolated Room
+## 2. The isolated blueprint
 
 ### 2.1 Topology
 
-Four nodes. Every address and port is the value the full vehicle blueprint uses, so the ADA node's own config is identical in both — switching to the full topology is an image swap on the two neighbours, with no edit to the ADA node.
+Four nodes. Every address and port is the value the full blueprint uses, so the ADA node's own config is identical in both — switching between them is a change to the neighbours alone.
 
 | Node | Type | Address | Role in this Room |
 |---|---|---|---|
@@ -80,21 +93,19 @@ Four nodes. Every address and port is the value the full vehicle blueprint uses,
 | IVI Sink (mock) | Container Node | `10.99.0.13` | Binds UDP `47300`, logs and checks every warning datagram, and captures the traffic |
 
 - The bench emitter stands in for the V2X ECU **only at its output edge**. It performs no decoding and sends no encoded frames; it produces exactly the JSON the ADA node expects to receive, at the cadence the real node would.
-- The sink stands in for the Android node. It is a Linux container, so it can log, validate and capture — none of which the real Android node does.
+- The sink stands in for the Android node. It is a Linux container, so it can log, check and capture — none of which the real Android node does.
 - Vehicle C is never visible to ego's detector. That is a property of the clip, not of this Room: the clip contains only vehicle B, so C can reach the store through the relayed path alone.
 
 ### 2.2 The blueprint definition and where it lives
 
-**Designated path: `requirements/car-sky-guide/blueprint-ada-isolated.json`**, beside [blueprint-m1-cooperative-awareness.json](blueprint-m1-cooperative-awareness.json), which it follows in shape. The content below is what belongs in that file.
-
-It is a record of intent, not an import route. **Importing it produces a Room with no network**: the platform drops `ethernet` pins on import, exactly as it rejects them over REST ([carsky-rest-api-blueprint.md § Key finding](carsky-rest-api-blueprint.md#key-finding-what-rest-can-and-cannot-do)). Build the blueprint by cloning instead — [§4.1](#41-create-the-blueprint).
+**Designated path: `requirements/car-sky-guide/blueprint-ada-isolated.json`**, beside [blueprint-m1-cooperative-awareness.json](blueprint-m1-cooperative-awareness.json), which it follows in shape. The content below is what belongs in that file, and it is the source [§4.1](#41-create-the-blueprint) creates the nodes from.
 
 ```json
 {
   "version": 1,
   "blueprint": {
     "name": "ada-isolated",
-    "description": "ADA ECU exercised alone: a bench emitter stands in for the V2X ECU, a bench sink stands in for the IVI ECU, both from one image selected by ROLE. Addresses and ports match the full vehicle blueprint, so the ADA node's config is unchanged between the two. ETHERNET pins are rejected on import - clone a blueprint that already has them and edit it on the canvas.",
+    "description": "ADA ECU exercised alone: a bench emitter stands in for the V2X ECU, a bench sink stands in for the IVI ECU, both from one image selected by ROLE. Addresses and ports match the full vehicle blueprint, so the ADA node's config is unchanged between the two. ETHERNET pins are rejected on import and over REST - draw and wire them on the Nydus canvas after the nodes exist.",
     "zones": [],
     "nodes": [
       {
@@ -196,7 +207,7 @@ It is a record of intent, not an import route. **Importing it produces a Room wi
 Two notes on the ADA node's block:
 
 - The env set above is the subset this Room needs. The node's full configuration surface, with defaults and meanings, is in [the node's design document](../../ADA_ECU/doc/phase2-4-ada-ecu-hld.md); the node's own config block is owned by [node-ada-ecu.md § Blueprint node config](node-ada-ecu.md#blueprint-node-config).
-- `command: ["./entrypoint.sh"]` and `capabilities: ["NET_RAW"]` assume the image ships the capture entrypoint. **Confirm both against [node-ada-ecu.md](node-ada-ecu.md) before deploying**; if the delivered image has no `entrypoint.sh`, leave `command` empty so the image's own default runs, and drop `capabilities`. The checks of [§5](#5-run-the-checks) still pass — the traffic evidence is taken on the sink node.
+- `command: ["./entrypoint.sh"]` and `capabilities: ["NET_RAW"]` assume the image ships the capture entrypoint. **Confirm both against [node-ada-ecu.md](node-ada-ecu.md) before deploying**; if the delivered image has no `entrypoint.sh`, leave `command` empty so the image's own default runs, and drop `capabilities`. The checks of [§5](#5-run-the-checks) still pass in this Room — the traffic evidence is taken on the sink node.
 
 ### 2.3 The bench image — one image, two roles
 
@@ -247,7 +258,7 @@ One log line per datagram:
 | `V2X_ECU/` | That folder is one self-contained build context producing the real V2X ECU image. A stand-in for that node is not its implementation; putting a second Dockerfile and stand-in sources in the context breaks the one-folder-one-image rule and risks shipping bench code in the real image |
 | `IVI_ECU/` | That folder builds an Android APK for the Skycraft node. A Linux container has no build path there at all |
 | `ADA_ECU/` | The folder root Dockerfile is the node under test. Its build context should stay minimal, and the bench must be able to change without rebuilding the thing it is testing |
-| A fifth top-level node folder | The four top-level code folders are one per node in the vehicle blueprint. These two containers are not nodes of that blueprint; they replace nodes that are |
+| A fifth top-level node folder | The four top-level code folders are one per node in the full blueprint. These two containers are not nodes of that blueprint; they replace nodes that are |
 
 `tools/` is where this repository already keeps test equipment that deploys as a Container node: [tools/netcheck/](../../tools/netcheck/) builds `m1-netcheck:latest` and runs as three nodes. `tools/ada-bench/` is the same category of artifact, held to the same rules — self-contained, its own Dockerfile, no imports from any node folder, no hardcoded peer addresses.
 
@@ -255,34 +266,59 @@ One log line per datagram:
 
 ---
 
-## 3. Build and push the images
+## 3. Build the images on CI
 
-Both images are single-platform `linux/arm64` with attestations disabled. **A Container Node rejects a multi-platform manifest index** and hangs in `Provisioning` — this is a hard requirement of the platform, not a preference.
+Both images are built and pushed by GitHub Actions on a Linux runner. **No Docker is needed on the developer machine, and no image is ever built by hand.** Change the code → push → the lane rebuilds and republishes.
 
-Registry host: `registry.hackathon-2.carsky.io`. Use the same host in `docker login`, in the image tag, and in the node's `image` field; a mismatch is the "push succeeded but the node cannot pull" failure ([zot-registry-api-key.md § Registry host caveat](zot-registry-api-key.md#registry-host-caveat-open-item-o1)).
+### 3.1 Write the bench scripts
 
-### 3.1 Build and push the ADA ECU image
+The five files of [§2.3](#23-the-bench-image--one-image-two-roles), under `tools/ada-bench/`. Two rules make one image serve both roles:
 
-```bash
-docker login registry.hackathon-2.carsky.io -u <registry-account> --password-stdin
+- **Nothing about the topology is in the code** — addresses, ports, cadence, profile and role come from environment variables.
+- **The container starts its role itself**, so a deploy alone produces evidence; no shell session is ever needed.
+
+Keep the emitter's field list and the sink's checks aligned with the contract copies, per [§2.4](#24-where-the-bench-sources-live-and-why).
+
+### 3.2 Build and push the images on CI
+
+Two jobs, one per image, following the shape of the existing image jobs in [.github/workflows/phase1-ci.yml](../../.github/workflows/phase1-ci.yml):
+
+| Job | Image | Build context |
+|---|---|---|
+| `ada-bench-image` | `m1-ada-bench:latest` | `tools/ada-bench/` |
+| `ada-ecu-image` | `m1-ada-ecu:latest` | `ADA_ECU/` |
+
+Each job runs the same push, and both flags are mandatory:
+
+```
+docker login <registry-host> -u <account> --password-stdin   # key supplied from the secret
 docker buildx build --platform linux/arm64 --provenance=false --sbom=false \
-  -t registry.hackathon-2.carsky.io/m1-ada-ecu:latest --push ADA_ECU/
+  -t <registry-host>/<image> --push <context>
 ```
 
-Expected tail: `pushed registry.hackathon-2.carsky.io/m1-ada-ecu:latest`.
+- `--platform linux/arm64` — a Container Node rejects a multi-platform manifest index and hangs in `Provisioning`.
+- `--provenance=false --sbom=false` — attestations turn the result into a manifest index, with the same effect.
+- Registry host `registry.hackathon-2.carsky.io`. Use the same host in the login, the tag, and the node's `image` field; a mismatch is the "push succeeded but the node cannot pull" failure ([zot-registry-api-key.md § Registry host caveat](zot-registry-api-key.md#registry-host-caveat-open-item-o1)).
+- The key lives only in the `CARSKY_ZOT_API_KEY` repository secret and is never written to the repository ([zot-registry-api-key.md § CI secret](zot-registry-api-key.md#ci-secret-carsky_zot_api_key)).
 
-This build compiles the C++ core and installs the detector's Python dependencies for `linux/arm64`. On an x86_64 host under emulation it is slow, and a Python package with no `linux/arm64` wheel is built from source inside the emulator — budget hours, not minutes, for a first cold build.
+**Requires both workflow jobs to exist.** Neither is present; add them before expecting a push to produce anything. If a job's context, tag, registry host or platform flag does not match the table above, fix the `.yml` first — there is nothing to verify without it.
 
-### 3.2 Build and push the bench image
+**Trigger:** push a commit. Both lanes run on every push, matching the existing image lanes.
+
+The runner is x86_64, so the `linux/arm64` build runs under emulation. The bench image is Alpine plus two packages and finishes in about a minute. The ADA image compiles the C++ core and installs the detector's Python dependencies under that emulation — give its job a long timeout; the existing image jobs use 360 minutes for the same reason.
+
+### 3.3 Confirm the run passed and the images landed
+
+**The run.** GitHub → **Actions** → the newest run → the two jobs above. Green on both means the images were built and pushed. A red push step printing `secret not set` means the credential of [§1.2](#12-cloud-platform-access) is missing.
+
+With `gh` authenticated, the same check without a browser:
 
 ```bash
-docker buildx build --platform linux/arm64 --provenance=false --sbom=false \
-  -t registry.hackathon-2.carsky.io/m1-ada-bench:latest --push tools/ada-bench/
+gh run list --limit 5
+gh run view <run-id>
 ```
 
-Expected tail: `pushed registry.hackathon-2.carsky.io/m1-ada-bench:latest`. This one is fast — Alpine, two packages, four files.
-
-### 3.3 Confirm both images reached the registry
+**The registry**, independent of what the run reported:
 
 ```bash
 curl -u <registry-account>:<zak-key> https://registry.hackathon-2.carsky.io/v2/_catalog
@@ -300,47 +336,94 @@ A name missing here means the node will hang in `Provisioning` later. Fix it now
 
 ### 4.1 Create the blueprint
 
-**Clone an existing blueprint that already has its `ethernet` pins, then edit it on the canvas.** Cloning is the only route that preserves pins; a blueprint built from scratch by script or by import has no network at all.
+| Blueprint | Use when |
+|---|---|
+| The isolated blueprint — bridge + V2X bench + ADA + IVI sink ([§2.1](#21-topology)) | ADA work alone: fewer nodes, faster deploy, every neighbour under your control |
+| The full 5-node blueprint ([carsky-4-node-blueprint.md](carsky-4-node-blueprint.md)) | Full-chain work — bench, V2X ECU, ADA, IVI Skycraft node, bridge — [§5.6](#56-the-full-blueprint-route) |
 
-1. Nydus → blueprint list → the known-good baseline → **Clone**. Rename the copy `ada-isolated`.
-2. Open the clone's canvas. Delete the node at `10.99.0.10` — this Room has no bench beyond the emitter. Deleting a node removes its pin and its edge; the other pins are untouched.
-3. Delete the Android node at `10.99.0.13`. A Skycraft node cannot run the sink container.
-4. Drag one **Container Node** onto the canvas and label it `IVI Sink (mock)`.
-5. Add one `ethernet` pin to it, `OUTPUT`, with `properties.address` set to `10.99.0.13` — the pin shape is the one in [node-ada-ecu.md § Pins](node-ada-ecu.md#pins), with a different address.
-6. Drag from that pin to the Ethernet Bridge node's connector. Same-type wiring only.
-7. Rename the node at `10.99.0.11` to `V2X Bench (mock)`. Its pin and edge stay as they are.
+The blueprint and its four nodes are created over the API in two calls. Its pins are not — [§4.2](#42-wire-the-ethernet-pins).
 
-Three pins survive the clone and one is drawn by hand. **REST cannot create `ETHERNET` pins and has no delete operation** — steps 2 through 6 are canvas work with no scripted alternative.
+```bash
+export CS=https://hackathon-2.carsky.io
+curl -X POST -H "Authorization: Bearer $KEY" -H 'Content-Type: application/json' \
+  -d '{"name":"ada-isolated","description":"ADA ECU exercised alone"}' \
+  $CS/api/v1/blueprints
+```
+
+Expected: the created blueprint, with the `id` every call below needs.
+
+Then one `/batch` call adding the four nodes, each carrying the `config` block from [§2.2](#22-the-blueprint-definition-and-where-it-lives). **Node config is flat** — `image`, `command`, `capabilities` and `env` sit directly in `config`, not wrapped ([carsky-rest-api-blueprint.md § Node config is flat](carsky-rest-api-blueprint.md#node-config-is-flat-not-wrapped)). Each entry is one `{"op":"addNode","data":{…}}` operation:
+
+```bash
+curl -X POST -H "Authorization: Bearer $KEY" -H 'Content-Type: application/json' \
+  -d @batch-ada-isolated.json $CS/api/v1/blueprints/{id}/batch
+```
+
+Expected: four nodes created, no pins, no edges.
+
+Nydus → **Import from File** on the [§2.2](#22-the-blueprint-definition-and-where-it-lives) definition produces the same result. Both routes create the nodes and drop the pins; neither is better than the other for that.
+
+A blueprint that already carries `ethernet` pins at these addresses can be cloned and edited instead, which saves drawing the pins that survive. Cloning is the only route that preserves them.
 
 > **Do not edit the `<name>-deploy` snapshot.** Deploying creates a copy under that name. Edits to it appear to save and are ignored by the next deploy. Always edit the original.
 
-### 4.2 Configure the three container nodes
+### 4.2 Wire the ethernet pins
 
-Click a node, edit in the Inspector, click empty canvas to commit. Apply the `image`, `command`, `capabilities` and `env` values from the JSON of [§2.2](#22-the-blueprint-definition-and-where-it-lives), node by node.
+Canvas work, with no scripted alternative: **REST cannot create `ETHERNET` pins, a JSON import silently drops them, and the API has no delete operation.** `POST /api/v1/blueprints/{id}/validate` returns 422 `Node "…" has no pins` until this step is done.
+
+1. Open the blueprint on the Nydus canvas.
+2. Add one `ethernet` pin to the Ethernet Bridge node — the single `ETHERNET` / `INPUT` pin every other node's pin targets.
+3. Add one `ethernet` pin to each of the three container nodes, `direction: OUTPUT`, with `properties.address` set from the table below. The pin shape is the one in [node-ada-ecu.md § Pins](node-ada-ecu.md#pins); only the address differs per node.
+
+   | Node | `properties.address` |
+   |---|---|
+   | V2X Bench (mock) | `10.99.0.11` |
+   | ADA ECU | `10.99.0.12` |
+   | IVI Sink (mock) | `10.99.0.13` |
+
+4. Drag from each container node's pin to the bridge's connector. Same-type wiring only (`ethernet ↔ ethernet`). Three edges total, all terminating at the bridge — a star, not a chain.
+5. Validate:
+
+```bash
+curl -X POST -H "Authorization: Bearer $KEY" $CS/api/v1/blueprints/{id}/validate
+```
+
+Expected: a pass. A 422 naming a node means that node still has no pin.
+
+### 4.3 Configure each node's image
+
+Click a node, edit in the Inspector, click empty canvas to commit. Set and confirm each node's `image` against the table below, and its `command`, `capabilities` and `env` against [§2.2](#22-the-blueprint-definition-and-where-it-lives).
+
+| Node | Image | Distinguishing env |
+|---|---|---|
+| V2X Bench (mock) | `registry.hackathon-2.carsky.io/m1-ada-bench:latest` | `ROLE=v2x_mock` |
+| ADA ECU | `registry.hackathon-2.carsky.io/m1-ada-ecu:latest` | — |
+| IVI Sink (mock) | `registry.hackathon-2.carsky.io/m1-ada-bench:latest` | `ROLE=ivi_mock` |
+
+This step stays a hand edit even when [§4.1](#41-create-the-blueprint) created the nodes with config attached: **the API has no update route**, so every correction after creation is an Inspector edit.
 
 Four values decide whether anything works at all, and each fails in a way that looks like something else:
 
 | Value | Node | What a wrong value looks like |
 |---|---|---|
 | `TARGET_HOST=10.99.0.12` | V2X Bench | The emitter logs `[TX]` normally and the ADA node's log is silent. A single wrong digit is the usual cause |
-| `TARGET_PORT=47200` equals `V2X_LISTEN_PORT` | both | Same symptom: traffic on the wire, nothing received |
+| `TARGET_PORT=47200` equals `V2X_LISTEN_PORT` | V2X Bench and ADA | Same symptom: traffic on the wire, nothing received |
 | `IVI_ECU_HOST=10.99.0.13`, `IVI_ECU_PORT=47300` equals the sink's `LISTEN_PORT` | ADA and sink | The ADA log shows warnings sent and the sink log shows nothing received |
 | `ROLE` spelled exactly `v2x_mock` / `ivi_mock` | both bench nodes | The container exits at start; restart count climbs |
 
 `command` is relative to the image workdir `/app`. `./entrypoint.sh` works; `/entrypoint.sh` does not exist and the container dies at start.
 
-### 4.3 Read the stored config back
+### 4.4 Read the stored config back
 
-Read the config back rather than trusting the Inspector's truncated fields. This one call catches every row of the table above.
+Read the config back rather than trusting the Inspector's truncated fields. This one call catches every row of the two tables above.
 
 ```bash
-export CS=https://hackathon-2.carsky.io
 curl -H "Authorization: Bearer $KEY" $CS/api/v1/blueprints/{id}
 ```
 
-Expected: four nodes; three `ETHERNET` / `OUTPUT` pins at `10.99.0.11`, `.12`, `.13` plus the bridge's single `INPUT` pin; and each container node's `config` carrying the image, command, capabilities and env exactly as typed.
+Expected: four nodes; three `ETHERNET` / `OUTPUT` pins at `10.99.0.11`, `.12`, `.13` plus the bridge's single `INPUT` pin and three edges; and each container node's `config` carrying the image, command, capabilities and env exactly as typed.
 
-### 4.4 Deploy
+### 4.5 Deploy
 
 1. Click empty canvas → the blueprint Inspector → **New Deployment**.
 2. Pick an **existing Device** from the dropdown — the Kubernetes resource pool, not an ECU. `+ Create new device` is unnecessary and eats into the two-Room budget.
@@ -356,7 +439,7 @@ Each entry carries `{displayName, name, nodeType, phase, message}`. `name` is th
 
 The ADA node is the slowest to become useful: the image is the largest, and the detector loads its model before the first detection appears. Give it a minute past `Running` before reading its log.
 
-*Stuck in `Provisioning`* means the image could not be pulled. Re-check [§3.3](#33-confirm-both-images-reached-the-registry) and the node's `image` field. Diagnosis procedure: [carsky-room-diagnostics](../../.claude/skills/carsky-room-diagnostics/SKILL.md).
+*Stuck in `Provisioning`* means the image could not be pulled. Re-check [§3.3](#33-confirm-the-run-passed-and-the-images-landed) and the node's `image` field. Diagnosis procedure: [carsky-room-diagnostics](../../.claude/skills/carsky-room-diagnostics/SKILL.md).
 
 ---
 
@@ -415,7 +498,7 @@ Expected transitions for the relayed track, in this order:
 | `parse_reject` count | exactly **0** |
 | Relayed transitions | one `to":"tentative"` and one later `to":"tracked"`, both with `"source":"v2x_relayed"` and id `v2x:1201:7` |
 
-**Fails when** `r2_ingest` is 0 while `bench.log` shows `[TX]` lines — the datagram is not arriving. Re-check `TARGET_HOST`, `TARGET_PORT` and `V2X_LISTEN_PORT` in [§4.2](#42-configure-the-three-container-nodes).
+**Fails when** `r2_ingest` is 0 while `bench.log` shows `[TX]` lines — the datagram is not arriving. Re-check `TARGET_HOST`, `TARGET_PORT` and `V2X_LISTEN_PORT` in [§4.3](#43-configure-each-nodes-image).
 
 **Fails when** `parse_reject` is non-zero — the emitter and the ADA node disagree on the message shape. The emitter is wrong, not the node: fix the bench against [r2-v2x-object.schema.json](../../ADA_ECU/contracts/r2-v2x-object.schema.json).
 
@@ -531,7 +614,19 @@ A warning is emitted when the assessed risk level **changes**. If both tracks ar
 
 Record every value you changed. A run whose thresholds are unknown proves nothing.
 
-### 5.6 Tear down
+### 5.6 The full-blueprint route
+
+For full-chain work, the 5-node blueprint replaces both bench containers with the real nodes: the bench Scenario Player feeding the real V2X ECU on one side, the Android Skycraft node on the other. **The mechanics are exactly [§4.1](#41-create-the-blueprint) through [§5.5](#55-retune-when-no-warning-is-emitted); only the composition differs**, so nothing above is repeated here.
+
+- **Composition and creation route:** [carsky-4-node-blueprint.md](carsky-4-node-blueprint.md), whose per-node files carry each neighbour's image, config and pin.
+- **Do not import** a hand-authored blueprint JSON in place of it: an import arrives without its `ethernet` pins, and typically without the Skycraft `image` block, which gets the deploy rejected outright.
+- **The ADA node is not reconfigured.** Its image, `command`, `capabilities`, env, address and port are the values of [§2.2](#22-the-blueprint-definition-and-where-it-lives) unchanged — that is why the isolated blueprint uses the full blueprint's addresses. Switching between the two touches the neighbours only.
+- **Checks 1 and 2 are unchanged**, and read the same ADA log lines. What changes is where the relayed traffic originates: the real V2X ECU, driven by the bench scenario, in place of the emitter — so `STATION_ID`, `OBJECT_ID` and the distance profile come from that scenario rather than from node env, and [§5.5](#55-retune-when-no-warning-is-emitted)'s `MIN_DISTANCE_M` lever is not available.
+- **Check 3 has no sink log.** The Android node runs no container and produces none of the `[RX]`, `[CHECK]`, `[SUMMARY]` or `[CAP]` lines. Consumer-side evidence moves to the guest's own log, and that route belongs to [deploy-ivi-hmi-walkthrough.md § Verify the HMI and the logging](deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging).
+- **The ADA node's own capture stops being optional.** With no sink to capture on, the `[CAP]` evidence for the outgoing warning can only come from this node — so its `entrypoint.sh`, `capture.sh` and `capabilities: ["NET_RAW"]` are required rather than nice to have ([§1.3](#13-deliverable-prerequisites)).
+- **Room budget:** the full blueprint is one deployment like any other, and only two run at once.
+
+### 5.7 Tear down
 
 **Delete Deployment** when the logs are saved. The blueprint is untouched and redeployable. Only two Rooms may run at once, so releasing one matters.
 
@@ -543,7 +638,11 @@ Save all three log files before deleting — the log route returns nothing once 
 
 | Symptom | Meaning | Action |
 |---|---|---|
-| A container node stuck in `Provisioning` | The image could not be pulled | [§3.3](#33-confirm-both-images-reached-the-registry), then the node's `image` field. [carsky-room-diagnostics](../../.claude/skills/carsky-room-diagnostics/SKILL.md) |
+| A push produces no image job in Actions | The workflow jobs do not exist on that branch | [§3.2](#32-build-and-push-the-images-on-ci) |
+| Image job red at the push step, printing `secret not set` | The registry credential is not configured | [§1.2](#12-cloud-platform-access) |
+| Image job red after 360 minutes | The emulated `linux/arm64` build hit the timeout cap | Almost always a Python dependency building from source; re-run, then raise the cap |
+| A container node stuck in `Provisioning` | The image could not be pulled | [§3.3](#33-confirm-the-run-passed-and-the-images-landed), then the node's `image` field. [carsky-room-diagnostics](../../.claude/skills/carsky-room-diagnostics/SKILL.md) |
+| `validate` returns 422 `Node "…" has no pins` | The pins are not drawn yet | [§4.2](#42-wire-the-ethernet-pins) |
 | Log call returns 500 listing two container names | `container` was omitted from the query | Add `?container=user` |
 | A bench node's restart count climbs | `ROLE` is misspelled, or `command` is an absolute path | `v2x_mock` / `ivi_mock` exactly; `./entrypoint.sh`, not `/entrypoint.sh` |
 | Bench logs `[TX]`, ADA log is empty | Wrong target address or port | One digit in `TARGET_HOST` is the usual cause |
@@ -561,21 +660,22 @@ Save all three log files before deleting — the log route returns nothing once 
 
 ## 7. Work division between AI and human
 
-The split follows from what an agent can reach. An agent runs CLI tools and authenticated REST calls; it cannot use the Nydus canvas, a browser download, or its own eyes.
+The split follows from what an agent can reach. An agent writes code, runs CLI tools and makes authenticated REST calls; it cannot use the Nydus canvas, a browser download, or its own eyes.
 
 | Action | AI / Human | Description |
 |---|---|---|
-| [Write the ADA and bench deliverables](#13-deliverable-prerequisites) | Neither | Development deliverables this procedure consumes; they exist before it starts |
-| [Build and push the ADA ECU image](#31-build-and-push-the-ada-ecu-image) | AI | `docker buildx` on a Linux host, or a push that triggers a CI lane |
-| [Build and push the bench image](#32-build-and-push-the-bench-image) | AI | Same route, same registry host |
-| [Confirm both images reached the registry](#33-confirm-both-images-reached-the-registry) | AI | Registry catalog and tag lists over `curl` |
-| [Clone the blueprint and rename it](#41-create-the-blueprint) | Human | Nydus blueprint list; cloning is the only route that preserves pins |
-| [Delete the two unused nodes](#41-create-the-blueprint) | Human | Nydus canvas; the API has no delete operation |
-| [Add the sink node and draw its pin](#41-create-the-blueprint) | Human | Nydus canvas; REST cannot create `ETHERNET` pins |
-| [Configure the three container nodes](#42-configure-the-three-container-nodes) | Human | Node Inspector; no REST route updates an existing node's config |
-| [Read the stored config back](#43-read-the-stored-config-back) | AI | `GET /api/v1/blueprints/{id}` returns every pin, address and env value as stored |
-| [Deploy](#44-deploy) | Human | **New Deployment** dialog; picking the Device is the user's call and consumes a Room slot |
-| [Poll node phases until Running](#44-deploy) | AI | `GET /api/v1/deployments/{roomId}/nodes`; also yields each `nodeKey` |
+| [Write the ADA ECU deliverables](#13-deliverable-prerequisites) | Neither | Product code the procedure consumes; it exists before the procedure starts |
+| [Write the bench scripts](#31-write-the-bench-scripts) | AI | The emitter, the sink, the capture script, the entrypoint and the Dockerfile under `tools/ada-bench/` |
+| [Add the two image jobs](#32-build-and-push-the-images-on-ci) | AI | The workflow jobs that build and push both images |
+| [Push, and let the jobs build and push the images](#32-build-and-push-the-images-on-ci) | AI | A commit push is the whole trigger; no local Docker anywhere |
+| [Confirm the run passed](#33-confirm-the-run-passed-and-the-images-landed) | Human | Actions web UI; an agent session holds no GitHub token |
+| [Confirm both images reached the registry](#33-confirm-the-run-passed-and-the-images-landed) | AI | Registry catalog and tag lists over `curl` |
+| [Create the blueprint and its four nodes](#41-create-the-blueprint) | AI | `POST /api/v1/blueprints`, then one `/batch` call carrying every node's config |
+| [Wire the ethernet pins](#42-wire-the-ethernet-pins) | Human | Nydus canvas; REST cannot create `ETHERNET` pins or the edges joining them |
+| [Configure each node's image](#43-configure-each-nodes-image) | Human | Node Inspector; the API has no update route, so every correction is a UI edit |
+| [Read the stored config back](#44-read-the-stored-config-back) | AI | `GET /api/v1/blueprints/{id}` returns every pin, address, image and env as stored |
+| [Deploy the blueprint](#45-deploy) | Human | **New Deployment** dialog; picking the Device is the user's call and consumes a Room slot |
+| [Poll node phases until Running](#45-deploy) | AI | `GET /api/v1/deployments/{roomId}/nodes`; also yields each `nodeKey` |
 | [Save the three node logs](#5-run-the-checks) | AI | Logs route with `container=user` |
 | [Check 1 — reception and its event](#51-check-1--the-relayed-message-is-received-and-raises-its-event) | AI | Text in the ADA log |
 | [Check 2 — both vehicles in the store](#52-check-2--both-vehicles-are-in-the-track-store) | AI | Text in the ADA log |
@@ -583,14 +683,16 @@ The split follows from what an agent can reach. An agent runs CLI tools and auth
 | [Run the out-of-range negative case](#51-check-1--the-relayed-message-is-received-and-raises-its-event) | Human | A bench node config edit, then a fresh deployment |
 | [Retune the profile or the risk thresholds](#55-retune-when-no-warning-is-emitted) | Human | Node Inspector edits, then a fresh deployment |
 | [Export a `.pcap` for Wireshark](#54-traffic-evidence-and-wireshark-scope) | Human | Browser log download, then the extraction script; optional, not a pass criterion |
-| [Tear the Room down](#56-tear-down) | Human | **Delete Deployment**; releases one of the two Room slots |
+| [Switch to the full blueprint](#56-the-full-blueprint-route) | Human | Canvas composition and a fresh deploy |
+| [Tear the Room down](#57-tear-down) | Human | **Delete Deployment**; releases one of the two Room slots |
 
-Four notes on the rows above:
+Five notes on the rows above:
 
-- **The first row belongs to neither column.** No agent writes product code here and no human writes it at bring-up time — the sources are consumed, not authored, by this procedure.
+- **The first row belongs to neither column.** No agent writes the node's product code here and no human writes it at bring-up time — those sources are consumed, not authored, by this procedure. The bench scripts of the second row are different: they are this procedure's own test equipment, and writing them is a step of it.
+- **No image is built by hand, by anyone.** The build rows are AI because the work is a commit and a push, not a `docker build`.
+- **Confirming the run flips to AI** on a machine with an authenticated `gh` CLI. Without it, the Actions web UI is the only route.
 - **Every node-config edit is human.** The API adds nodes, pins and edges; it has no update and no delete operation, so an existing node's config is edited in the Inspector and only read back over REST.
-- **Deploy and teardown have REST calls and stay human anyway.** Each consumes or releases one of the two Room slots, and that call is the user's.
-- **Every AI row needs a credential supplied at run time** — the CarSky API key for the REST rows, the registry account and key for the image rows. An agent stores neither.
+- **Every AI row needs a credential supplied at run time** — the CarSky API key for the REST rows, the registry account and key for the registry check. An agent stores neither.
 
 ---
 
@@ -613,6 +715,8 @@ Two further observations complete the set rather than repeating the three above:
 
 Record the values of `PROFILE`, `START_DISTANCE_M`, `MIN_DISTANCE_M`, `CLOSING_RATE_MPS`, `GATE_ENTER_M`, `GATE_EXIT_M`, `RISK_NEAR_M` and `RISK_CRITICAL_M` alongside the logs. A pass at unknown thresholds proves nothing.
 
+On the full blueprint, outputs 1 and 2 are accepted identically and output 3 is replaced by the guest-side evidence of [§5.6](#56-the-full-blueprint-route).
+
 ### 8.1 Confirm before relying on these
 
 Every point below can make a step fail without this guide being wrong. Confirm each at the step named before scheduling work that depends on it.
@@ -620,18 +724,18 @@ Every point below can make a step fail without this guide being wrong. Confirm e
 | # | Point | Where it bites |
 |---|---|---|
 | 1 | **The whole route is unexercised.** No Room has ever carried this topology, and no step below has been run end to end | The entire document |
-| 2 | Every deliverable in [§1.3](#13-deliverable-prerequisites) other than the clip — the ADA `Dockerfile`, the core binary, the detector, the model file, the entrypoint and capture scripts, and the bench sources. None of them has been written | [§1.3](#13-deliverable-prerequisites), [§3](#3-build-and-push-the-images) |
-| 3 | The `[EVT]` event names and payload fields the checks grep for. They are what the node's design specifies, not what a run has produced | [§5.1](#51-check-1--the-relayed-message-is-received-and-raises-its-event), [§5.2](#52-check-2--both-vehicles-are-in-the-track-store) |
-| 4 | The bench image, its two roles, its env names and its log-line shapes — proposed in [§2.3](#23-the-bench-image--one-image-two-roles), not yet built | [§2.3](#23-the-bench-image--one-image-two-roles), [§5.3](#53-check-3--the-warning-reaches-the-ivi-stand-in-carrying-both-vehicles) |
-| 5 | A route that builds and pushes these two images. No CI lane builds either one, and the developer machine has no Docker | [§3](#3-build-and-push-the-images) |
-| 6 | `linux/arm64` wheel availability for the detector's Python dependencies. A missing wheel means a source build under emulation, which can turn a build into an hours-long job or fail outright | [§3.1](#31-build-and-push-the-ada-ecu-image) |
-| 7 | The ADA node's `command` and `capabilities` values against [node-ada-ecu.md](node-ada-ecu.md). If that reference names a different `command` and no capabilities, resolve the discrepancy with its owner before deploying | [§2.2](#22-the-blueprint-definition-and-where-it-lives), [§4.2](#42-configure-the-three-container-nodes) |
+| 2 | Every deliverable in [§1.3](#13-deliverable-prerequisites) other than the clip — the ADA `Dockerfile`, the core binary, the detector, the model file, the entrypoint and capture scripts. None of them has been written | [§1.3](#13-deliverable-prerequisites), [§3.2](#32-build-and-push-the-images-on-ci) |
+| 3 | The two CI jobs `ada-bench-image` and `ada-ecu-image`. Neither exists, so a push currently builds and publishes nothing | [§3.2](#32-build-and-push-the-images-on-ci) |
+| 4 | The `[EVT]` event names and payload fields the checks grep for. They are what the node's design specifies, not what a run has produced | [§5.1](#51-check-1--the-relayed-message-is-received-and-raises-its-event), [§5.2](#52-check-2--both-vehicles-are-in-the-track-store) |
+| 5 | The bench image, its two roles, its env names and its log-line shapes — specified in [§2.3](#23-the-bench-image--one-image-two-roles), not yet written | [§3.1](#31-write-the-bench-scripts), [§5.3](#53-check-3--the-warning-reaches-the-ivi-stand-in-carrying-both-vehicles) |
+| 6 | `linux/arm64` wheel availability for the detector's Python dependencies. A missing wheel means a source build under the runner's emulation, which can exhaust the job timeout or fail outright | [§3.2](#32-build-and-push-the-images-on-ci) |
+| 7 | The ADA node's `command` and `capabilities` values against [node-ada-ecu.md](node-ada-ecu.md). If that reference names a different `command` and no capabilities, resolve the discrepancy with its owner before deploying | [§2.2](#22-the-blueprint-definition-and-where-it-lives), [§4.3](#43-configure-each-nodes-image) |
 | 8 | The blueprint file at `requirements/car-sky-guide/blueprint-ada-isolated.json`, which has not been created | [§2.2](#22-the-blueprint-definition-and-where-it-lives) |
-| 9 | That cloning preserves the three surviving `ethernet` pins and their addresses through two node deletions. Verify with the read-back of [§4.3](#43-read-the-stored-config-back) before deploying, not after | [§4.1](#41-create-the-blueprint) |
+| 9 | That a four-node blueprint created over `/batch` accepts hand-drawn pins afterwards and then validates. Adding nodes over the API is a proven route; this particular blueprint has not been built by it | [§4.1](#41-create-the-blueprint), [§4.2](#42-wire-the-ethernet-pins) |
 | 10 | That the relayed profile defaults produce a risk-level change against the clip's actual ego-to-B range. They may not, in which case no warning is emitted and [§5.5](#55-retune-when-no-warning-is-emitted) is on the critical path rather than a fallback | [§5.2](#52-check-2--both-vehicles-are-in-the-track-store), [§5.5](#55-retune-when-no-warning-is-emitted) |
 | 11 | The detector's frame rate on the Room's CPU allocation. If it falls far below the configured stride, ego's own track may expire between updates and the composed geometry disappears | [§5.2](#52-check-2--both-vehicles-are-in-the-track-store) |
 | 12 | That `NET_RAW` is granted on this deployment. Without it the `[CAP]` criterion of [§5.3](#53-check-3--the-warning-reaches-the-ivi-stand-in-carrying-both-vehicles) cannot be met by any route in this document | [§5.4](#54-traffic-evidence-and-wireshark-scope) |
-| 13 | A free Room slot. Two deployments run at once across the whole account, and this Room holds one for its full duration | [§4.4](#44-deploy) |
+| 13 | A free Room slot. Two deployments run at once across the whole account, and this Room holds one for its full duration | [§4.5](#45-deploy) |
 
 ---
 
@@ -640,8 +744,9 @@ Every point below can make a step fail without this guide being wrong. Confirm e
 | Thing | Value |
 |---|---|
 | Registry host | `registry.hackathon-2.carsky.io` |
-| ADA image | `registry.hackathon-2.carsky.io/m1-ada-ecu:latest`, single-platform `linux/arm64`, built from `ADA_ECU/` |
-| Bench image | `registry.hackathon-2.carsky.io/m1-ada-bench:latest`, single-platform `linux/arm64`, built from `tools/ada-bench/` |
+| ADA image | `registry.hackathon-2.carsky.io/m1-ada-ecu:latest`, single-platform `linux/arm64`, built from `ADA_ECU/` by job `ada-ecu-image` |
+| Bench image | `registry.hackathon-2.carsky.io/m1-ada-bench:latest`, single-platform `linux/arm64`, built from `tools/ada-bench/` by job `ada-bench-image` |
+| CI secret | `CARSKY_ZOT_API_KEY` (`zak_…`) |
 | Blueprint definition | `requirements/car-sky-guide/blueprint-ada-isolated.json` |
 | Node addresses | V2X bench `.11` · ADA `.12` · IVI sink `.13`, on `10.99.0.0/24` with the bridge at `.1` |
 | Ports | bench → ADA `47200` · ADA → sink `47300` |
