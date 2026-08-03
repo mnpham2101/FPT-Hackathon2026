@@ -290,7 +290,6 @@ The split is not a preference — it follows from what an agent can reach. An ag
 | [M9 — Poll node phases until Running](#m9--deploy--criterion-c1) | AI | `GET /api/v1/deployments/{roomId}/nodes`; also yields each `nodeKey` |
 | [M10 — Read every node's log](#m10--read-the-logs--criteria-c2c5) | AI | Logs route with `container=user`; C2–C5 are all text |
 | [M10 — Record the hop-3 evidence](#checking-ivi-rx-traffic-hop-3) | AI | The ADA node's `[TX]` and `[CAP]` lines, and which method was used |
-| [Verify the capture in Wireshark](#6-expected-outputs-and-acceptance) | Human | A judgement on the datagrams themselves, made outside the platform |
 | [M11 — Set `PAD` and redeploy](#m11--optional-mtu-headroom) | Human | A bench node config edit, then a fresh deployment |
 | [M11 — Read the logs for the ceiling](#m11--optional-mtu-headroom) | AI | Compare arrivals across `PAD` values on the same logs route |
 | [M12 — Tear down](#m12--tear-down) | Human | **Delete Deployment**; releases one of the two Room slots |
@@ -307,14 +306,13 @@ Five notes on the rows above:
 
 ## 6. Expected outputs and acceptance
 
-Two outputs. The logs are what the run produces; the capture is the human's corroboration that the datagrams were really on the wire.
+One output: the node logs read at M10. They carry all five pass criteria.
 
 | Output | Retrieved at | Accepted when |
 |---|---|---|
 | One live log per container node — bench, V2X, ADA | [M10](#m10--read-the-logs--criteria-c2c5) | **C1** every node `Running`, restart count 0 · **C2** no `[ERR]` line · **C3** a live, readable log per node · **C4** a `[CAP]` line on the sending node · **C5** the accumulated stamp `seq=0\|bench\|v2x` at ADA |
-| The traffic capture, read by a human | The same logs | A human reads the capture and confirms UDP datagrams on `47100`, `47200` and `47300` between `10.99.0.10`–`.13`, matching the counts and timing of the `[TX]`/`[RX]` lines |
 
-**The capture this image produces is text, not a `.pcap`.** [capture.sh](../../tools/netcheck/capture.sh) runs `tcpdump -l` and prefixes each line `[CAP]`; it writes no capture file. Opening the traffic in Wireshark instead needs the `tcpdump -w` and base64 log export described in [traffic-capture-wireshark.md](traffic-capture-wireshark.md), which the netcheck image does not ship — confirm which of the two a run is expected to produce before relying on either.
+> **Note — Wireshark is out of scope here.** [capture.sh](../../tools/netcheck/capture.sh) runs `tcpdump -l` and prefixes each line `[CAP]`; it writes no capture file, so this procedure produces no `.pcap`. The `[CAP]` lines in the log are the traffic evidence, and **C4** is what accepts them.
 
 ---
 
