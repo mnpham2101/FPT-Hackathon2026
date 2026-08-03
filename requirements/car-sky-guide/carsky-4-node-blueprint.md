@@ -62,7 +62,7 @@ CarSky's own docs use "Device" for two unrelated things — worth disambiguating
 ## 4. Steps
 
 1. **Push the 3 team images to the registry.**
-   `docker login registry.carsky.io -u <username>` (password = Zot API key), then tag and push each of the Bench, V2X ECU, and ADA ECU images — commands are in each node's file.
+   `docker login registry.hackathon-2.carsky.io -u <username>` (password = Zot API key), then tag and push each of the Bench, V2X ECU, and ADA ECU images — commands are in each node's file. `registry.hackathon-2.carsky.io` is the host that actually serves Zot; `registry.carsky.io` does not ([zot-registry-api-key.md § Registry host caveat](zot-registry-api-key.md#registry-host-caveat-open-item-o1)). Login, image tag and each node's blueprint `image` field must all name the same host — a mismatch is the "push succeeded, node cannot pull" failure at step 8.
 2. **Create the blueprint.** Nydus → Blueprint list → **New Blueprint**. Name it (e.g. `m1-cooperative-awareness`).
 3. **Open the canvas** and drag one **Ethernet Bridge Node** onto it. In its Inspector, set `bridgeMode: "linux"`, `subnet: "10.99.0.0/24"`.
 4. **Add the 4 role nodes** — drag from the node library:
