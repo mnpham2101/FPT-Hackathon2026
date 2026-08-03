@@ -1,6 +1,6 @@
 # Deploying a Blueprint on CarSky — End-to-End Walkthrough
 
-Worked example: the **netcheck** connectivity test ([tools/netcheck/](../../tools/netcheck/)), from source file to running Room. Every manual step **M1–M12** of [baseline-connectivity-smoke-test.md](../../plans/doc/research_notes/baseline-connectivity-smoke-test.md) is covered here in order; that note owns the test's *design* (why each check exists, pass criteria C1–C5), this guide owns the *doing*.
+Worked example: the **netcheck** connectivity test ([tools/netcheck/](../../tools/netcheck/)), from source file to running Room. Every step **M1–M12** of [baseline-connectivity-smoke-test.md](../../plans/doc/research_notes/baseline-connectivity-smoke-test.md) is covered here in order — several are performed by an agent rather than by hand, and [§5](#5-work-division-between-ai-and-human) states which; that note owns the test's *design* (why each check exists, and the [pass criteria C1–C5](../../plans/doc/research_notes/baseline-connectivity-smoke-test.md#2-pass-criteria) every later mention refers to), this guide owns the *doing*.
 
 Use it as the template for deploying any container node — the ECU images follow the identical path with different images and env.
 
@@ -102,7 +102,21 @@ CarSky simulates a vehicle's electronic architecture in the cloud.
 
 ---
 
-## 3. Step-by-step: deploying netcheck (M1–M12)
+## 3. Prerequisites
+
+All three must hold before M5. Without them the deploy cannot complete, and the failure appears late — as a node stuck in `Provisioning` or a chain that stops at a hop.
+
+| Prerequisite | Established by | Checked at |
+|---|---|---|
+| The job that builds and pushes this image ran green on the latest push | [phase0-ci.yml](../../.github/workflows/phase0-ci.yml), job `netcheck-image` | [M3 + M4](#m3--m4--build-and-push-automatic) |
+| The image is in Zot on the push host of §2.4, single-platform `linux/arm64` | The same job | [M4](#m3--m4--build-and-push-automatic)'s catalog check |
+| The blueprint exists, and each role node has one `ethernet` pin wired to the bridge at `10.99.0.10`–`.13` | Drawn by hand on the Nydus canvas | [M6](#m6--check-the-wiring) |
+
+All three credentials of §2.5 are in hand: the Keycloak login for the web UIs, the CarSky API key for REST, and the Zot key stored as the GitHub secret of [M2](#m2--store-the-registry-credential-as-a-github-secret).
+
+---
+
+## 4. Step-by-step: deploying netcheck (M1–M12)
 
 ### M1 — Write the application code
 
@@ -152,19 +166,19 @@ Clicking empty canvas shows the **blueprint** Inspector — the panel that owns 
 | Public / Owner | Private by default; owner is the CarSky account (the same identity used for the registry) |
 | **Delete Blueprint** | Only after its deployments are deleted (M12) |
 
-### M6 — Check the wiring ⚠️
+### M6 — Check the wiring
 
 Confirm each of the four role nodes has one `ethernet` pin wired to the Ethernet Bridge, with addresses `10.99.0.10` (bench), `.11` (V2X), `.12` (ADA), `.13` (IVI).
 
 > **Warning — do not add nodes or pins here.** The REST API cannot create `ETHERNET` pins, and a JSON import silently drops them. If a clone lost its pins, re-draw the four edges by hand on the canvas. On our blueprint the wiring is already correct: nothing to do.
 
-### M7 — Configure the three container nodes 🔑
+### M7 — Configure the three container nodes
 
 **The most important step.** Click a node, edit in the Inspector, click the canvas to commit.
 
 ![Nydus Inspector — V2X ECU node configuration](images/nydus-inspector-v2x-ecu.png)
 
-> Capture that screenshot **only after the values are verified correct** (§4). The first run's screenshot showed `NEXT_HOP_HOST = 10.99.0.2` and `ROLE = V2X` — both wrong — and would teach the mistakes it was meant to prevent.
+> Capture that screenshot **only after the values are verified correct** (§7). The first run's screenshot showed `NEXT_HOP_HOST = 10.99.0.2` and `ROLE = V2X` — both wrong — and would teach the mistakes it was meant to prevent.
 
 **Common to all three nodes:**
 
@@ -232,7 +246,7 @@ Zero `[ERR]` lines is **C2**; a live, readable log per node is **C3**.
 
 ### Checking IVI RX traffic (hop 3)
 
-The Android node has no APK yet ([`R4ListenerService`](../../plans/phase5_tasks.md), task `4.5.1.3`, not built), so it never produces `[RX]`/`[TX]` logs like the other three nodes. Two ways to check it received ADA's relay, strongest first — per [baseline-connectivity-smoke-test.md §7](../../plans/doc/research_notes/baseline-connectivity-smoke-test.md#7-the-ivi-hop) — and record which was used.
+Until the IVI listener is installed on the Android node, it produces no `[RX]`/`[TX]` logs like the other three nodes. Two ways to check it received ADA's relay, strongest first — per [baseline-connectivity-smoke-test.md §7](../../plans/doc/research_notes/baseline-connectivity-smoke-test.md#7-the-ivi-hop) — and record which was used.
 
 **Note:** a REST-driven listener (`POST` a `toybox nc -u -l -p 47300` to the VM shell route, `GET` the result) is not doable — the VM shell route returns 502 on this deployment, same as `screenshot`/`accessibility`/`container-exec` ([carsky-rest-api-blueprint.md](carsky-rest-api-blueprint.md)). Toybox's availability can't even be checked until that's fixed.
 
@@ -242,7 +256,7 @@ ADA's `[TX] … relayed to 10.99.0.13:47300` plus its `[CAP]` line proves the da
 
 #### Option 2 — Wait for the real R4 listener
 
-Once `4.5.1.3` lands, hop 3 verifies through the actual R4 UDP path and this whole check retires — no netcheck-specific verification needed from then on.
+Once the IVI listener is installed, hop 3 verifies through the actual UDP path and this whole check retires — no netcheck-specific verification needed from then on.
 
 ### M11 — Optional: MTU headroom
 
@@ -254,7 +268,55 @@ Set `PAD=1400` on the bench node and redeploy. If large datagrams do not arrive 
 
 ---
 
-## 4. Mistakes already made — check these first
+## 5. Work division between AI and human
+
+The split is not a preference — it follows from what an agent can reach. An agent runs CLI tools and authenticated REST calls; it cannot use the Nydus canvas, a browser download, or its own eyes. The `M` labels are step names, not the assignment.
+
+| Action | AI / Human | Description |
+|---|---|---|
+| [M1 — Write the application code](#m1--write-the-application-code) | Neither | A development deliverable; the four source files exist before the procedure starts |
+| [M2 — Store the registry credential](#m2--store-the-registry-credential-as-a-github-secret) | Human | GitHub repository settings; the key is pasted once and never echoed |
+| [M3 + M4 — Trigger the build and push](#m3--m4--build-and-push-automatic) | AI | Push a commit; the `netcheck-image` job runs on every push |
+| [M4 — Confirm the run passed](#m3--m4--build-and-push-automatic) | Human | Actions web UI; an agent session holds no GitHub token |
+| [M4 — Confirm the image reached the registry](#m3--m4--build-and-push-automatic) | AI | Registry catalog and tag list over `curl` |
+| [M5 — Choose the blueprint](#m5--choose-the-blueprint) | Human | Nydus blueprint list and Inspector; edit the original, never the snapshot |
+| [M6 — Check the wiring](#m6--check-the-wiring) | AI | `GET /api/v1/blueprints/{id}` returns every pin, edge and address |
+| [M6 — Draw a missing pin or edge](#m6--check-the-wiring) | Human | Nydus canvas; REST cannot create `ETHERNET` pins |
+| [M7 — Configure the three container nodes](#m7--configure-the-three-container-nodes) | Human | Node Inspector; no REST route updates an existing node's config |
+| [M7 — Read the stored config back](#m7--configure-the-three-container-nodes) | AI | The same blueprint read-back returns image, command, env and capabilities |
+| [M8 — Confirm the IVI node's VM artifact](#m8--leave-the-ivi-node-alone) | AI | Also in that read-back; its absence gets the deploy rejected outright |
+| [M8 — Attach a missing VM artifact](#m8--leave-the-ivi-node-alone) | Human | Node Inspector, from the artifact store |
+| [M9 — Deploy](#m9--deploy--criterion-c1) | Human | **New Deployment** dialog; picking the Device is a human call |
+| [M9 — Poll node phases until Running](#m9--deploy--criterion-c1) | AI | `GET /api/v1/deployments/{roomId}/nodes`; also yields each `nodeKey` |
+| [M10 — Read every node's log](#m10--read-the-logs--criteria-c2c5) | AI | Logs route with `container=user`; C2–C5 are all text |
+| [M10 — Record the hop-3 evidence](#checking-ivi-rx-traffic-hop-3) | AI | The ADA node's `[TX]` and `[CAP]` lines, and which method was used |
+| [M11 — Set `PAD` and redeploy](#m11--optional-mtu-headroom) | Human | A bench node config edit, then a fresh deployment |
+| [M11 — Read the logs for the ceiling](#m11--optional-mtu-headroom) | AI | Compare arrivals across `PAD` values on the same logs route |
+| [M12 — Tear down](#m12--tear-down) | Human | **Delete Deployment**; releases one of the two Room slots |
+
+Five notes on the rows above:
+
+- **M1 belongs to neither column.** The deploying agent writes no product code, and no human writes it at bring-up time — the sources are a development deliverable this procedure consumes.
+- **M7 has no agent route.** `/batch` adds nodes, pins and edges; no update or delete op exists anywhere in the API, so an existing node's config is edited in the UI and only read back over REST.
+- **Confirming the run flips to AI** on a machine with an authenticated `gh` CLI. Without it, the Actions web UI is the only route.
+- **Deploy and teardown have REST calls and stay Human anyway.** Each consumes or releases one of the two Room slots, and that call is the user's.
+- **Every AI row needs a credential supplied at run time** — the CarSky API key for the REST rows, the registry account and key for the registry check. An agent stores neither.
+
+---
+
+## 6. Expected outputs and acceptance
+
+One output: the node logs read at M10. They carry all five pass criteria **C1–C5**, defined in [baseline-connectivity-smoke-test.md § 2](../../plans/doc/research_notes/baseline-connectivity-smoke-test.md#2-pass-criteria) — restated below only as what to accept.
+
+| Output | Retrieved at | Accepted when |
+|---|---|---|
+| One live log per container node — bench, V2X, ADA | [M10](#m10--read-the-logs--criteria-c2c5) | **C1** every node `Running`, restart count 0 · **C2** no `[ERR]` line · **C3** a live, readable log per node · **C4** a `[CAP]` line on the sending node · **C5** the accumulated stamp `seq=0\|bench\|v2x` at ADA |
+
+> **Note — Wireshark is out of scope here.** [capture.sh](../../tools/netcheck/capture.sh) runs `tcpdump -l` and prefixes each line `[CAP]`; it writes no capture file, so this procedure produces no `.pcap`. The `[CAP]` lines in the log are the traffic evidence, and **C4** is what accepts them.
+
+---
+
+## 7. Mistakes already made — check these first
 
 Every row below cost real time on the first run (2026-07-31). They are ordered by how expensive they were.
 
@@ -271,7 +333,7 @@ Every row below cost real time on the first run (2026-07-31). They are ordered b
 
 **Before deploying, verify by reading the config back** rather than trusting the Inspector's truncated fields — `GET /api/v1/blueprints/{id}` returns each node's stored `config` exactly, and catches #2, #3, #4 and #5 in one look.
 
-## 5. Quick reference
+## 8. Quick reference
 
 | Thing | Value |
 |---|---|
@@ -280,6 +342,6 @@ Every row below cost real time on the first run (2026-07-31). They are ordered b
 | GitHub secret | `CARSKY_ZOT_API_KEY` (`zak_…`) |
 | Node addresses | bench `.10` · V2X `.11` · ADA `.12` · IVI `.13` on `10.99.0.0/24` |
 | Ports | bench→V2X `47100` · V2X→ADA `47200` · ADA→IVI `47300` |
-| Pass criteria | C1 Running · C2 no `[ERR]` · C3 live log · C4 `[CAP]` capture · C5 accumulated stamps |
+| Pass criteria ([defined here](../../plans/doc/research_notes/baseline-connectivity-smoke-test.md#2-pass-criteria)) | C1 Running · C2 no `[ERR]` · C3 live log · C4 `[CAP]` capture · C5 accumulated stamps |
 
 *Screenshots referenced above live in `requirements/car-sky-guide/images/`; capture them from Nydus when exporting this guide to slides.*

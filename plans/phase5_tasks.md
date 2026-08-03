@@ -8,6 +8,10 @@
 >
 > **Five IDs collide across the two files** — `4.5.1.1`–`4.5.1.5` name entirely different subtasks in each. Per [task-planning-conventions.md](../.claude/rules/task-planning-conventions.md#task-id-scheme), IDs are never renumbered, so this file is kept intact for history and **nothing here is implemented or committed against**. Read it only as a cross-check.
 >
+> **`16.5.2.5`'s deployment doc is void.** The APK's build → retrieval → deploy → install → launch → verification procedure lives in [deploy-ivi-hmi-walkthrough.md](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md), which is authoritative for it; `deployment/phase5-ivi-deploy.md` is not a sanctioned location and nothing is written there.
+>
+> **Every IVI verification step in this file is governed by that document**, and the bodies below are *not* updated to cite it — the file is kept intact as history. Where a subtask here describes installing, launching or observing the app, read the walkthrough section instead: [§2.6](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#26-check-the-apk-is-launchable) launchable check · [§3](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#3-building-on-ci) CI build and artifact · [§4.6](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#46-install-the-apk) install (`16.5.2.1`, `16.5.2.5`) · [§4.7](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#47-open-the-screen-and-launch-the-app) launch (`16.5.2.5`) · [§4.8](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging) the verification ladder and the `IVI_V2X` log surface (`16.5.2.5`, `16.5.4.1`) · [§6](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#6-expected-outputs-and-acceptance) the four proofs. The live decomposition of the same work, with those citations in each subtask, is [phase5_minh_tasks.md](phase5_minh_tasks.md) groups 5.7–5.9.
+>
 > Cross-node execution view: [ada-ivi-plan.md](ada-ivi-plan.md).
 
 > **Authority & Context:**

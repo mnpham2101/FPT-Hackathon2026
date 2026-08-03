@@ -9,16 +9,9 @@ Trigger: [[project-architecture]] is asked to design for a **phase or requiremen
 
 ## Procedure
 
-1. **Resolve phase/requirement → node(s).** Cross-reference the requested phase in [milestone1.md](../../../plans/milestone1.md) §5 and the requirement's home node in the report ([m1-cooperative-awareness.md](../../../requirements/m1-cooperative-awareness.md) §2) against the fixed R5 node map — one top-level repo folder per CarSky node, per [node-code-layout.md](../../rules/node-code-layout.md):
+1. **Resolve phase/requirement → node(s).** Cross-reference the requested phase in [milestone1.md](../../../plans/milestone1.md) §5 and the requirement's home node in the report ([m1-cooperative-awareness.md](../../../requirements/m1-cooperative-awareness.md) §2) against the folder → node → requirement map in [node-code-layout.md](../../rules/node-code-layout.md), which also fixes each node's language and build artifact.
 
-   | Node folder | CarSky node type | Requirements it hosts |
-   |---|---|---|
-   | `Scenario_Player/` | Container Node (bench) | R11 |
-   | `V2X_ECU/` | Container Node | R1, R7–R9 (R10 deferred) |
-   | `ADA_ECU/` | Container Node | R3, R12–R15 |
-   | `IVI_ECU/` | Skycraft Node (AAOS) | R4, R16–R17 |
-
-   The bench Scenario Player is its own node and its own folder — R11 work never lands in `V2X_ECU/`. Multi-node phases (e.g. Phase 0 contracts, Phase 1 comms bring-up, Phase 6 convergence) implicate more than one folder — list every folder touched, not just the first match.
+   Two traps that table exists to prevent: the bench Scenario Player is its own node and its own folder, so R11 work never lands in `V2X_ECU/`; and multi-node phases (Phase 0 contracts, Phase 1 comms bring-up, Phase 6 convergence) implicate more than one folder — list every folder touched, not just the first match.
 
 2. **Investigate each implicated folder's current state** (Glob/Read) — what exists, what's missing, and whether it matches the report's §3 per-node tech stack (bench: Python; V2X: C++17; ADA: C++17 core + Python detector subprocess; IVI: Kotlin/Jetpack Compose/AndroidX). Flag mismatches back to the user instead of silently reconciling.
 3. **Consult [Car-Sky-Platform.html](../../../requirements/development-platform-doc/Car-Sky-Platform.html)** for blueprint/node/pin mechanics whenever the folder's deployment shape (OCI image layout, AAOS module layout) is in question.
