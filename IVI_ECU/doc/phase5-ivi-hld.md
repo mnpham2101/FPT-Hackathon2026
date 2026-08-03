@@ -8,7 +8,7 @@
 
 ## 1. What this phase is actually building
 
-The contract layer and the drawing layer are already committed and are the two hardest pieces; **the gap is the middle of the app** plus the Activity that hosts it ([implementation notes §1](research_notes/phase5-ivi-implementation-notes.md)). Phase 5 closes that gap as four independent modules — a reusable contract library, a serializer, a socket observer, and the front end — plus an R4 simulator that produces the traffic they consume.
+The contract layer and the drawing layer are already committed and are the two hardest pieces; **the gap is the middle of the app** plus the Activity that hosts it. Phase 5 closes that gap as four independent modules — a reusable contract library, a serializer, a socket observer, and the front end — plus an R4 simulator that produces the traffic they consume.
 
 | Already committed (do not rewrite) | Missing (this design) |
 |---|---|
@@ -23,10 +23,9 @@ The contract layer and the drawing layer are already committed and are the two h
 |---|---|
 | [phase5-r4-parsing.md](research_notes/phase5-r4-parsing.md) | §1 wire truth — no application header; de-framing is buffer slicing (D3). §2 decode-failure table as the `R4DecodeResult` shape. §3 unknown-`warningType` preservation (D4). §5 pure-JVM submodule placement (D1, D2). |
 | [phase5-r4-simulator.md](research_notes/phase5-r4-simulator.md) | Injection points I1–I4 as the test strategy (§7). Two run modes, scenario-cases table, and "payloads come from the frozen samples, never a literal" (D9). Simulator is IVI test equipment, inside this folder. |
-| [phase5-ivi-implementation-notes.md](research_notes/phase5-ivi-implementation-notes.md) | §1 inventory (above). §2 Android constraints → D5 and the back-pressure policy. §3 `BuildConfig`-default + launch-override config model (D10). §4 decisions in force (D11). §6 CI facts (§6). §7 R18/R19 log obligations (§5.4). |
 | [deploy-ivi-hmi-walkthrough.md](../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md) — a walkthrough, not a note, and authoritative rather than scratch | The 3-node deploy target (§4.11) and the ADA-node env contract (`IVI_ECU_HOST`/`IVI_ECU_PORT`/`R4_SCENARIO`/`R4_RATE_HZ`/`START_DELAY_S`, §4.8 rung V4) that the simulator's in-Room mode must read verbatim (§8). |
 
-The three notes are non-authoritative scratch; the walkthrough in the last row is not, and on conflict the CLAUDE.md authority order wins. One such conflict is resolved in D4 and one in §9.1.
+The two notes are non-authoritative scratch; the walkthrough in the last row is not, and on conflict the CLAUDE.md authority order wins. One such conflict is resolved in D4 and one in §9.1.
 
 ## 2. Design decisions
 
@@ -52,7 +51,7 @@ The shared R4/R3 models and the configured `Json` live in a **Gradle submodule `
 
 Consequences that are the point of the split:
 
-- **`:serializer` and `:observer` are plain JVM**, so injection points I1 and I2 run in CI with no device and no Robolectric — the cheaper design the implementation notes call for. Robolectric is not added.
+- **`:serializer` and `:observer` are plain JVM**, so injection points I1 and I2 run in CI with no device and no Robolectric. Extracting the receive loop into a plain-JVM class is cheaper than adding Robolectric to test it inside the service; Robolectric is not added.
 - **`:observer` never imports `android.util.Log`.** It logs through an `R4Logger` seam that `:app` implements over the `IVI_V2X` tag.
 - **`:serializer` never logs and never throws across the loop.** It returns a result; the observer decides what to log. This is what keeps one bad producer message from stopping the next good one.
 - The simulator cannot reach into `ADA_ECU/` (no cross-node source imports, [node-code-layout.md](../../.claude/rules/node-code-layout.md)); it reaches the same models the app parses with, by depending on `:contract`.
@@ -142,7 +141,7 @@ adb shell am start -n com.hackathon.v2x.ivi/.MainActivity --ei r4_port 47301
 
 ### D11 — Decisions in force, restated as binding on this design
 
-Not re-litigable during implementation ([implementation notes §4](research_notes/phase5-ivi-implementation-notes.md)):
+Not re-litigable during implementation:
 
 - **`WarningBannerOverlay` is built but must NOT be mounted in the Display Area** (standing user decision, 2026-07-26). The God-View canvas is the deliverable and must render unobstructed. The integration work does not add the banner unless that decision is explicitly revisited.
 - **Ghost C renders only from `v2x_relayed`** — the renderer's source guard is the mechanical form of the R19 claim and stays exercised by a test.
