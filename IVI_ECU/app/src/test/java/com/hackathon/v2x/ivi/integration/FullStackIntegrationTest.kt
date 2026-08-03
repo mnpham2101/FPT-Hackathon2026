@@ -9,6 +9,7 @@ import com.hackathon.v2x.ivi.ui.DisplayMode
 import com.hackathon.v2x.ivi.ui.MainViewModel
 import com.hackathon.v2x.ivi.ui.WarningUiState
 import com.hackathon.v2x.ivi.ui.WarningViewModel
+import com.hackathon.v2x.ivi.ui.view.Canvas3DWarningView
 import com.hackathon.v2x.ivi.ui.view.CanvasWarningView
 import com.hackathon.v2x.ivi.ui.view.IviWarningViewSeam
 import dagger.hilt.android.testing.HiltAndroidRule
@@ -81,10 +82,10 @@ class FullStackIntegrationTest {
     }
 
     @Test
-    fun appModule_bindsSingletonCanvasWarningViewSeam() {
+    fun appModule_bindsSingletonCanvas3DWarningViewSeam() {
         assertTrue(
-            "IviWarningViewSeam must resolve to CanvasWarningView",
-            warningViewSeam is CanvasWarningView,
+            "IviWarningViewSeam must resolve to Canvas3DWarningView",
+            warningViewSeam is Canvas3DWarningView,
         )
     }
 
