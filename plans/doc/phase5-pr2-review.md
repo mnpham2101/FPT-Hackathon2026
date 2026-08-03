@@ -613,6 +613,19 @@ Per class: `R4DeserializerTest` 5 · `MainViewModelTest` 6 · `CanvasWarningView
 
 The mock sender runs on stock Python 3.12 with no dependencies. Its measured payloads: **state 144 B, warnings 367–373 B**.
 
+**The APK is architecture-portable, and the build host's architecture is irrelevant to it.** This is worth stating because the Skycraft node is `aarch64` and the mock-sender *image* genuinely does need `--platform linux/arm64` (§ 3.2 defect 4) — the two are not the same problem. The APK ships as a universal build carrying every ABI:
+
+| `lib/` entry | Size |
+|---|---|
+| `arm64-v8a/libandroidx.graphics.path.so` | 10,096 B |
+| `armeabi-v7a/libandroidx.graphics.path.so` | 7,252 B |
+| `x86/libandroidx.graphics.path.so` | 9,284 B |
+| `x86_64/libandroidx.graphics.path.so` | 10,760 B |
+
+Everything else is DEX bytecode — nine `classes*.dex`, ~25 MB, ART-compiled on the device. The single native library is a **prebuilt** shipped inside the AndroidX AAR from Maven for all four ABIs; nothing is compiled for the host CPU. An identical APK therefore comes out of an x86_64 Linux runner, an Apple-silicon Mac, or this ARM64 Windows laptop, and **the `arm64-v8a` slice needed by the Skycraft AAOS guest is present in the artifact built here**. No `abiFilters` and no per-architecture build are required.
+
+One cosmetic consequence of a Studio-less toolchain: with no NDK installed, `stripDebugDebugSymbols` reports *"Unable to strip … libandroidx.graphics.path.so, packaging as is"*. The library is packaged unstripped — a few KB larger, functionally identical. `16.5.7.1` should record the APK size from a CI runner with an NDK, not from this build.
+
 ### 12.3 § 4.2 retracted — the truncation defect is not real
 
 The claim, carried from the original review into § 8.2 and § 11.6, was that reusing one `DatagramPacket` across `receive()` calls without `setLength()` shrinks the receive window to the smallest datagram seen. **Measured against the branch's own payload sizes, it does not happen.**
