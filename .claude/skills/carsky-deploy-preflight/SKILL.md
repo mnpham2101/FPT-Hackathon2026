@@ -13,11 +13,11 @@ Never start a deploy until all three are pinned. If the spawning agent's brief a
 
 | # | Input | What to resolve | Where it comes from |
 |---|---|---|---|
-| 1 | **Which blueprint** | Exact blueprint name + id to deploy into (e.g. `trial1_minh`, id `a071ccc2-…`). New or existing? If new, confirm it should be created first. | Spawning brief, or `GET /api/v1/blueprints?name=<filter>`; prompt if unclear |
+| 1 | **Which blueprint** | Exact blueprint name + id to deploy into. Almost never a baseline: `baseline_m1` and `baseline_phase1` are clone sources and are not deployed or edited directly, so what a task names is normally a clone of `baseline_phase1` ([carsky-4-node-blueprint.md § The blueprints on CarSky](../../../requirements/car-sky-guide/carsky-4-node-blueprint.md#8-the-blueprints-on-carsky)). If the clone does not exist yet, confirm it should be created first | Spawning brief, or `GET /api/v1/blueprints?name=<filter>`; prompt if unclear |
 | 2 | **Which ECU / node** | Which node(s) in the blueprint this deploy targets — one ECU (`V2X ECU`, `ADA ECU`, `IVI ECU`) or the Bench, or the whole blueprint. Determines which image/artifact to build+push and which node config to update. | Spawning brief (the ECU folder being deployed); confirm against the blueprint's node list |
 | 3 | **Which credential** | The API key (or login) to authenticate with, and thus **which account/environment** the deploy lands in. | **Prompt the user** — never assume; see § Platform access |
 
-Restate the three back to the user as a one-line confirmation before proceeding (e.g. "Deploying **ADA ECU** into blueprint **trial1_minh** on **hackathon-2** using the key you provided — proceed?").
+Restate the three back to the user as a one-line confirmation before proceeding (e.g. "Deploying **ADA ECU** into blueprint **ada-isolated** on **hackathon-2** using the key you provided — proceed?").
 
 ## Platform access (context the deploy needs to log in)
 

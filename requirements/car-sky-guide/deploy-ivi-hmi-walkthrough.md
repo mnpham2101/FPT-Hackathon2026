@@ -79,14 +79,16 @@ The software this procedure installs and verifies must exist before the procedur
 
 ### 1.4 Blueprints
 
-Two blueprints can be constructed and used:
+Both Rooms this guide can run against are **a clone of `baseline_phase1`** — the five-node baseline kept on the platform, and the clone source for every Room after the smoke test ([carsky-4-node-blueprint.md § The blueprints on CarSky](carsky-4-node-blueprint.md#8-the-blueprints-on-carsky)). They differ only in what is deleted from the clone:
 
-- **The full blueprint** — every node: bench, V2X ECU, ADA ECU, IVI ECU and the Ethernet Bridge.
-- **The minimum blueprint** — the smallest topology that still exercises the IVI: Ethernet Bridge + ADA node + IVI Skycraft node.
+| Room | Made from `baseline_phase1` by | Use when |
+|---|---|---|
+| **The full blueprint** — bench, V2X ECU, ADA ECU, IVI ECU, Ethernet Bridge | cloning and renaming; nothing removed | Full-chain work, where the warning originates in the real ADA ECU |
+| **The minimum blueprint** — Ethernet Bridge + ADA node + IVI Skycraft node | cloning, then deleting the bench and V2X nodes | IVI work alone: fewer nodes, faster deploy, leaves the second Room slot free — §4.11 |
 
-**Both must be constructed and deployed by hand**, on the Nydus canvas. The detail is §4.2, and §4.11 for the minimum one; it is not repeated here.
+**Clone; never build either one from scratch and never import one.** A clone keeps its `ethernet` pins, and the platform can create them by no other route — REST cannot make them and a JSON import silently drops them ([carsky-rest-api-blueprint.md § Key finding](carsky-rest-api-blueprint.md#key-finding-what-rest-can-and-cannot-do), [carsky-4-node-blueprint.md § Steps](carsky-4-node-blueprint.md#4-steps)). An imported blueprint also arrives without the Skycraft `image` block, which gets the deploy rejected outright.
 
-Note that **importing a blueprint drops its `ethernet` pins** — the platform limitation and its consequence are stated in [carsky-rest-api-blueprint.md § Key finding](carsky-rest-api-blueprint.md#key-finding-what-rest-can-and-cannot-do) and [carsky-4-node-blueprint.md § Steps](carsky-4-node-blueprint.md#4-steps).
+**Deleting and renaming are canvas work**, done by hand in Nydus. The node-level detail is §4.2, and §4.11 for the minimum one; it is not repeated here.
 
 ---
 
@@ -325,10 +327,7 @@ Every rebuild repeats steps 1 and 3 only — the Room stays up, and `adb install
 
 ### 4.2 Configure the blueprint and its IVI node
 
-| Blueprint | Use when |
-|---|---|
-| The 5-node baseline ([carsky-4-node-blueprint.md](carsky-4-node-blueprint.md)) | Full-chain work — bench, V2X, ADA, IVI, bridge |
-| The 3-node mini-blueprint — bridge + ADA + IVI | IVI work alone: fewer nodes, faster deploy, leaves the second Room slot free — §4.11 |
+Start from a clone of `baseline_phase1` and pick the composition from the table in §1.4 — the full five nodes, or the three that §4.11 reduces it to. Everything below applies to either.
 
 Three things about the IVI node decide whether the deploy is even accepted, and all three are **facts owned by [node-ivi-ecu.md](node-ivi-ecu.md)** — read them there, do not retype them here:
 
@@ -338,7 +337,7 @@ Three things about the IVI node decide whether the deploy is even accepted, and 
 | The Skycraft `image` config block | [§ Blueprint node config](node-ivi-ecu.md#blueprint-node-config) | Its absence gets the whole deploy **rejected outright**, with the exact message quoted there. On a clone the block is already correct — leave it alone. On a hand-authored or imported node it is usually missing |
 | The `ethernet` pin shape and address | [§ Pins](node-ivi-ecu.md#pins) | Its absence leaves the node with no network at all |
 
-**Build the blueprint by cloning, and draw its `ethernet` pins by hand.** A clone keeps its pins; an import arrives without them (§1.4). Draw a missing pin on the Nydus canvas and wire it to the Ethernet Bridge node, same-type only (`ethernet ↔ ethernet`).
+**A clone of `baseline_phase1` arrives with its pins already drawn and wired** (§1.4), so this step is normally a read-back and nothing more. Should a clone ever come back without a pin, draw it on the Nydus canvas and wire it to the Ethernet Bridge node, same-type only (`ethernet ↔ ethernet`); there is no scripted repair.
 
 **Verify by reading the stored config back**, not by trusting the Inspector's truncated fields:
 
@@ -573,10 +572,10 @@ Switch the ADA node to `R4_SCENARIO=/app/scenarios/degrade.json`.
 
 For IVI-only work, a 3-node topology — Ethernet Bridge + ADA node + IVI Skycraft node — deploys faster, has fewer variables, and leaves the second Room slot free for the comms track. **The mechanics are exactly §4.2 through §4.10; only the composition differs**, so nothing above is repeated here.
 
-- **Design and rationale:** [phase5-mini-blueprint.md](../../IVI_ECU/doc/research_notes/phase5-mini-blueprint.md).
-- **Creation route — clone, then delete.** Clone the known-good baseline, rename it, then delete the Bench and V2X nodes on the canvas. Cloning is the only route that preserves `ethernet` pins (§1.4); a blueprint built from scratch by script has no network at all. Deleting a node removes its pin and edge; the ADA and IVI pins are untouched.
-- **Do not import** a hand-authored blueprint JSON in place of this: an import arrives without its `ethernet` pins, and typically without the Skycraft `image` block, which gets the deploy rejected outright.
-- **The ADA node is the only node that is reconfigured** — probe config (`m1-netcheck:latest`) before the simulator image exists, evidence config (`m1-r4-sim:latest`) after. Both are in §4.8. Addresses, the `47300` port and the pin shapes stay at the baseline values, so switching to the real ADA image later is an image swap with no node-config edit.
+- **Why reduce it at all.** The bench and V2X nodes contribute nothing to IVI work: the display track's only input is a warning datagram on `10.99.0.13:47300`, and the ADA node produces it. Every node removed is one fewer image that can fail to pull while the Skycraft guest — always the slowest node to reach `Running` — is booting.
+- **Creation route — clone, then delete.** Clone `baseline_phase1`, rename the clone, then delete the Bench and V2X nodes on the canvas. Deleting a node removes its pin and its edge; the ADA and IVI pins are untouched. Cloning is the only route that preserves `ethernet` pins (§1.4); a blueprint built from scratch by script has no network at all, and an import arrives without pins and usually without the Skycraft `image` block, which gets the deploy rejected outright.
+- **The ADA node is the only node that is reconfigured** — probe config (`m1-netcheck:latest`) before the simulator image exists, evidence config (`m1-r4-sim:latest`) after. Both are in §4.8. It keeps its address, its pin and its env var *names*, so converging on the full blueprint later is an image swap and not a node-config edit.
+- **Nothing about the IVI node changes** between this Room and the full one — same address, same pin, same `image` block. That is the point of deriving both from the same baseline.
 
 ### 4.12 Tear down
 
@@ -593,7 +592,8 @@ The split is not a preference — it follows from what an agent can reach. An ag
 | [Trigger a CI build](#31-the-workflow-its-job-and-its-triggers) | AI | Push a commit; the lane runs unfiltered on every push |
 | [Confirm the run passed](#32-check-that-the-run-finished-and-passed) | Human | Actions web UI; an agent session holds no GitHub token |
 | [Download `app-debug-apk`](#33-get-the-apk-off-ci) | Human | Artifact download needs an authenticated token; unzip before use |
-| [Configure the blueprint and its pins](#42-configure-the-blueprint-and-its-ivi-node) | Human | Nydus canvas — REST cannot create `ETHERNET` pins |
+| [Clone `baseline_phase1`, rename it, delete what the Room does not need](#14-blueprints) | Human | Nydus canvas — cloning is the only route that keeps `ethernet` pins, and REST can neither create nor delete them |
+| [Configure the blueprint and its IVI node](#42-configure-the-blueprint-and-its-ivi-node) | Human | Node Inspector; the API has no update route, so every config correction is a UI edit |
 | [Read the stored config back](#42-configure-the-blueprint-and-its-ivi-node) | AI | `GET /api/v1/blueprints/{id}`; also captures the Part Prefix and display fields |
 | [Deploy the blueprint](#43-deploy-the-blueprint) | Human | **New Deployment** dialog; picking the Device is a human call |
 | [Poll node phases until Running](#43-deploy-the-blueprint) | AI | `GET /api/v1/deployments/{roomId}/nodes`; also yields each `nodeKey` |
@@ -654,3 +654,5 @@ Each point below can make a step fail without this guide being wrong. Confirm it
 | 8 | A JDK and an Android SDK being present on the build host | §1.1, §2 — §3 is the route that needs neither |
 | 9 | Whether `GET /api/v1/vms/{roomId}/{nodeKey}/screenshot` answers on this deployment | §4.9 — a convenience path, not the primary one |
 | 10 | The `ubuntu-latest` runner image's Android SDK and licence state staying sufficient for `compileSdk 34` | §3.1 |
+| 11 | That a clone of `baseline_phase1` arrives with every `ethernet` pin and edge intact, and that deleting a node on the canvas leaves the survivors' pins alone | §1.4, §4.2 — a clone that lost its pins has to be re-wired by hand before anything deploys |
+| 12 | What the ADA node carries on the clone. `baseline_phase1` is defined by its bench and V2X images; the ADA node's image is set per Room by §4.8 and is never assumed | §4.8 — a stale image there is the difference between traffic and silence |

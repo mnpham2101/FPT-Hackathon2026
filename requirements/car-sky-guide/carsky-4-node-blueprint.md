@@ -87,12 +87,29 @@ Deployment Viewer → **Delete Deployment** removes the Room and frees K8s resou
 
 ## 7. Multiple blueprints (trial variants)
 
-Yes — the Blueprint list is a list of independently named designs, not a single slot. Create as many as needed, e.g. `trial1`, `trial2`, to try different node configs, scenario sets, or topology tweaks side by side without touching a known-good baseline.
+Yes — the Blueprint list is a list of independently named designs, not a single slot. Create as many as needed to try different node configs, scenario sets, or topology tweaks side by side without touching a known-good baseline. The two that exist today, and which one to branch from, are [§8](#8-the-blueprints-on-carsky).
 
-- **New, from scratch:** Blueprint list → **New Blueprint** → give it a distinct name (`trial1`) and description. Repeat with another name (`trial2`) for a second, fully independent design.
+- **New, from scratch:** Blueprint list → **New Blueprint** → give it a distinct name and description. Repeat with another name for a second, fully independent design. Not the route to prefer — a blueprint built this way has no `ethernet` pins at all (see the platform limit above).
 - **New, from an existing baseline (recommended for trials):** rather than rebuilding the 4-node topology by hand each time, start from a working blueprint and branch it:
   - **Clone via API:** `POST /api/v1/blueprints/{id}/clone` duplicates an existing blueprint (nodes, pins, edges, config) into a new one you then rename.
   - **Export / Import via UI:** select the baseline blueprint → **Export Selected** (downloads the topology JSON) → **Import from File** → the imported copy becomes a new, separately-named blueprint you can then rename/re-tag.
 - **Each blueprint deploys independently.** A blueprint and a Deployment are different things (§ concepts in [Nydus → Canvas & Node Library](../development-platform-doc/Car-Sky-Platform.html)): one blueprint can itself be deployed multiple times into independent Rooms with independent IPs/ports. Use **that** (repeated **New Deployment** on the *same* blueprint) when you just want several concurrent runs of the identical topology — reserve separate blueprints (`trial1`/`trial2`) for when the topology, node images, or config actually differ between trials.
-- **Keep trials distinguishable:** put the differentiator in the blueprint's Name/Description (Inspector, empty-canvas view) and in each Container node's env (e.g. `SCENARIO_CONFIG=/app/scenarios/trial2.yaml`) — not in code, per CLAUDE.md governing principle 5.
+- **Keep trials distinguishable:** put the differentiator in the blueprint's Name/Description (Inspector, empty-canvas view) and in each Container node's env (e.g. `SCENARIO_CONFIG=/app/scenarios/approaching.yaml`) — not in code, per CLAUDE.md governing principle 5.
 - Deleting a blueprint requires deleting every one of its running Deployments first (§4 steps 7–8, New Deployment / Deployment Viewer) — trial blueprints you're done with need their Deployments torn down before the blueprint itself can be removed.
+
+## 8. The blueprints on CarSky
+
+Two blueprints are kept on the platform. **Both are baselines, and neither is edited in place** — every Room a phase deploys comes from a clone. This section is the authority on which one to clone; the walkthroughs cite it rather than naming a source of their own.
+
+| Blueprint | Composition | Node images | What it is for |
+|---|---|---|---|
+| `baseline_m1` | All five nodes of §1 — bench, V2X ECU, ADA ECU, IVI ECU, Ethernet Bridge | The three container nodes all carry `m1-netcheck:latest`; the IVI Skycraft node carries its AAOS artifact and no APK | The connectivity smoke test — [deploy-walkthrough-netcheck.md](deploy-walkthrough-netcheck.md). It proves the wiring, not any node's behaviour |
+| `baseline_phase1` | The same five nodes | The bench and the V2X ECU carry their latest developed images; the IVI Skycraft node has no APK installed | **The clone source for every Room after the smoke test** — the full system test, and every reduced topology derived from it |
+
+Three things follow from that, and they are the whole rule:
+
+- **A full system test is `baseline_phase1` cloned, deployed, and the IVI APK installed into the running guest.** The APK is not part of any blueprint: it is installed over ADB after the Skycraft node reaches `Running` ([deploy-ivi-hmi-walkthrough.md § How the APK reaches the IVI ECU node](deploy-ivi-hmi-walkthrough.md#41-how-the-apk-reaches-the-ivi-ecu-node)).
+- **A reduced topology is `baseline_phase1` cloned, then nodes deleted or reconfigured** on the canvas — the isolated ADA Room and the IVI-only Room are both made this way. Cloning is the only route that preserves `ethernet` pins, and deleting a node takes its pin and edge with it while leaving every other node's untouched.
+- **Confirm the ADA node's image on the clone before deploying it.** `baseline_phase1` is defined above by its bench and V2X images; what the ADA node carries is set per Room by whichever walkthrough is being run, and is never assumed.
+
+Each clone is renamed on creation so the Blueprint list stays readable, and the name is the only place the differentiator goes. Do not edit the `<name>-deploy` snapshot that deploying creates — edits to it appear to save and are ignored by the next deploy.

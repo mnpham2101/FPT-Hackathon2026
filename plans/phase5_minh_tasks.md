@@ -4,7 +4,7 @@
 >
 > - **Phase content:** [milestone1.md § Phase 5](milestone1.md#phase-5--ivi-hmi-mock-driven-r16-r17--display-track-parallel-from-the-start) — its five acceptance checkboxes are the phase output.
 > - **Design:** [phase5-ivi-hld.md](../IVI_ECU/doc/phase5-ivi-hld.md) (commit `85387b5`) with [phase5-ivi-components.puml](../IVI_ECU/doc/phase5-ivi-components.puml) and [phase5-ivi-callflow.puml](../IVI_ECU/doc/phase5-ivi-callflow.puml). Every target path below is cited verbatim from its **§3.1 / §3.2** folder map; decisions **D1–D11**, module interfaces **§5**, log shapes **§5.4**, CI **§6.1**, test ladder **§7**, deployment **§8**, the latent defect **§9.2**, open items **§11**.
-> - **Research notes:** [phase5-mini-blueprint.md](../IVI_ECU/doc/research_notes/phase5-mini-blueprint.md) · [phase5-r4-simulator.md](../IVI_ECU/doc/research_notes/phase5-r4-simulator.md) · [phase5-r4-parsing.md](../IVI_ECU/doc/research_notes/phase5-r4-parsing.md) · [phase5-ivi-implementation-notes.md](../IVI_ECU/doc/research_notes/phase5-ivi-implementation-notes.md) — non-authoritative; the HLD wins on conflict.
+> - **Research notes:** [phase5-r4-simulator.md](../IVI_ECU/doc/research_notes/phase5-r4-simulator.md) · [phase5-r4-parsing.md](../IVI_ECU/doc/research_notes/phase5-r4-parsing.md) · [phase5-ivi-implementation-notes.md](../IVI_ECU/doc/research_notes/phase5-ivi-implementation-notes.md) — non-authoritative; the HLD wins on conflict.
 > - **Requirements:** [m1-cooperative-awareness.md §2](../requirements/m1-cooperative-awareness.md) R4, R16, R17 (plus R5, R6, R18, R19 where this phase touches them) — referenced by number, never restated.
 > - **Deploy facts:** [node-ivi-ecu.md](../requirements/car-sky-guide/node-ivi-ecu.md) · [carsky-4-node-blueprint.md](../requirements/car-sky-guide/carsky-4-node-blueprint.md) · [deploy-walkthrough-netcheck.md](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md).
 > - **Bring-up procedure:** [deploy-ivi-hmi-walkthrough.md](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md) — **authoritative** for the APK's build, retrieval from CI, blueprint deploy, `adb install`, launch and verification. Every subtask that installs, launches, observes or reads logs from the IVI app cites the section governing that step instead of restating it. Its [§5](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#5-work-division-between-ai-and-human) decides which of those steps an agent can perform and which need a person, and is what the *Human* label below follows.
@@ -23,7 +23,7 @@
 - R4 frozen in Phase 0: [contracts/r4-ada-ivi.schema.json](../contracts/r4-ada-ivi.schema.json), the four samples under [contracts/samples/](../contracts/samples/), and the committed Kotlin binding + `R4RoundTripTest` / `R4AdditiveVersionTest`.
 - The Phase 5 HLD (`85387b5`) and its four research notes.
 - `IVI_ECU/` as a single-module Gradle project (`:app`) carrying the contract layer (`model/`) and the drawing layer (`ui/view/`), AGP 8.13 / Kotlin 2.2.20 / Compose BOM 2024.09.03 / `minSdk 29`, `targetSdk 33`, `compileSdk 34`.
-- CarSky access with the baseline blueprint `trial2_minh_netcheck`, the `AAOS` artifact (`x9oqgIwzTp1m26SWIQqJt` / `xSU_Q7YJZUxxUgDr4Ugcp`, `0.0.1`, `aarch64`), and `registry.hackathon-2.carsky.io/m1-netcheck:latest` already pushed.
+- CarSky access with the baseline blueprint `baseline_phase1` ([carsky-4-node-blueprint.md § The blueprints on CarSky](../requirements/car-sky-guide/carsky-4-node-blueprint.md#8-the-blueprints-on-carsky)), the `AAOS` artifact (`x9oqgIwzTp1m26SWIQqJt` / `xSU_Q7YJZUxxUgDr4Ugcp`, `0.0.1`, `aarch64`), and `registry.hackathon-2.carsky.io/m1-netcheck:latest` already pushed.
 - GitHub secret `CARSKY_ZOT_API_KEY` and the reusable [verify-arm64-image](../.github/actions/verify-arm64-image) action.
 
 **Output (phase acceptance = the five milestone boxes):**
@@ -773,13 +773,13 @@ Nothing else in that file changes. Add a one-line comment recording that this Ph
 
 **Objective:** produce a 3-node blueprint — Ethernet Bridge, ADA container node, IVI Skycraft node — that keeps the baseline's `ethernet` pins.
 
-**Scope:** in Nydus, open the blueprint list, clone `trial2_minh_netcheck`, rename the clone `trial3_minh_ivi`, then delete the Bench node and the V2X node on the canvas. That is the creation route of [§4.11](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#411-the-mini-blueprint-route), which also states what deleting a node does to its pin and edge.
+**Scope:** in Nydus, open the blueprint list, clone **`baseline_phase1`**, rename the clone, then delete the Bench node and the V2X node on the canvas. That is the creation route of [§4.11](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#411-the-mini-blueprint-route), which also states what deleting a node does to its pin and edge. `baseline_phase1` is the sanctioned clone source for every Room after the smoke test — [carsky-4-node-blueprint.md § The blueprints on CarSky](../requirements/car-sky-guide/carsky-4-node-blueprint.md#8-the-blueprints-on-carsky) is the authority, and no other blueprint is cloned in its place.
 
 **Clone; do not build or import one.** §4.11 states that a script-built or imported blueprint arrives without its `ethernet` pins, and usually without the Skycraft `image` block, and is rejected at deploy.
 
 Three nodes are left: Ethernet Bridge `10.99.0.1` (`10.99.0.0/24`, `bridgeMode: "linux"`), ADA Container Node `10.99.0.12`, IVI Skycraft Node `10.99.0.13`. Change nothing else — addresses, the `47300` port and the pin shapes stay at the baseline values, which is what lets `4.5.9.9` later change the ADA node's image and env and nothing more.
 
-Work on the blueprint named `trial3_minh_ivi`, never on a `<name>-deploy` snapshot that a deployment creates ([§4.3](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#43-deploy-the-blueprint)). Editing the snapshot by mistake is the error that costs the most time here.
+**The clone's name is the user's to pick**, and it is the only place the differentiator goes. Record it in the run doc, because every subtask after this one deploys and edits *that* blueprint — never `baseline_phase1` itself, and never a `<name>-deploy` snapshot that a deployment creates ([§4.3](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#43-deploy-the-blueprint)). Editing the snapshot by mistake is the error that costs the most time here.
 
 **Acceptance:** the blueprint exists with exactly three nodes and their pins intact, confirmed by `6.5.9.3`'s read-back, and recorded in `plans/doc/phase5-ivi-run.md` (created by this subtask, on the [phase0-smoke-test-run.md](doc/phase0-smoke-test-run.md) pattern). Evidence commit by the orchestrating session after the user confirms.
 
@@ -822,9 +822,9 @@ Setting an image field is a canvas edit, not an installation: the platform pulls
 
 **Objective:** bring up the Room the rest of this group observes.
 
-**Scope:** open `trial3_minh_ivi` in Nydus, click empty canvas to get the blueprint Inspector, click **New Deployment**, pick an **existing** Device from the dropdown, and click **Deploy**. Do not create a new Device. That is [§4.3](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#43-deploy-the-blueprint), which §5 keeps Human because choosing the Device is a judgement call and deploying spends one of the two Room slots the comms track also draws on.
+**Scope:** open the mini-blueprint `5.5.9.1` cloned in Nydus, click empty canvas to get the blueprint Inspector, click **New Deployment**, pick an **existing** Device from the dropdown, and click **Deploy**. Do not create a new Device. That is [§4.3](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#43-deploy-the-blueprint), which §5 keeps Human because choosing the Device is a judgement call and deploying spends one of the two Room slots the comms track also draws on.
 
-Deploy `trial3_minh_ivi` itself, not the `-deploy` snapshot deploying creates.
+Deploy that blueprint itself, not the `-deploy` snapshot deploying creates.
 
 Watching the node badges is not part of this subtask — `5.5.9.5` records the phases. Expect the Skycraft node to lag the containers.
 
@@ -888,7 +888,7 @@ The findings this subtask produces are items **1, 5 and 9** of [§6.1](../requir
 
 **Objective:** put the R4 simulator on the wire toward `10.99.0.13:47300`.
 
-**Scope:** open `trial3_minh_ivi` in Nydus — the blueprint itself, not the `-deploy` snapshot ([§4.3](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#43-deploy-the-blueprint)) — click the ADA node, and replace the probe config `4.5.9.2` set with the **evidence config** of [§4.8](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging) rung **V4**. That rung fixes the image, the relative `command`, and the `IVI_ECU_HOST` / `IVI_ECU_PORT` / `R4_SCENARIO` / `R4_RATE_HZ` / `START_DELAY_S` env set. Add the `registry.hackathon-2.carsky.io/` prefix to the image reference and keep `capabilities: ["NET_RAW"]`.
+**Scope:** open the mini-blueprint in Nydus — the blueprint itself, not the `-deploy` snapshot ([§4.3](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#43-deploy-the-blueprint)) — click the ADA node, and replace the probe config `4.5.9.2` set with the **evidence config** of [§4.8](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging) rung **V4**. That rung fixes the image, the relative `command`, and the `IVI_ECU_HOST` / `IVI_ECU_PORT` / `R4_SCENARIO` / `R4_RATE_HZ` / `START_DELAY_S` env set. Add the `registry.hackathon-2.carsky.io/` prefix to the image reference and keep `capabilities: ["NET_RAW"]`.
 
 Change nothing on the other two nodes. Addresses, the port and the pin shapes were fixed at the baseline, so this is the only node config that ever changes — [§4.11](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#411-the-mini-blueprint-route) is why.
 
@@ -1001,7 +1001,7 @@ Recording and screenshots are taken per [§4.9](../requirements/car-sky-guide/de
 
 Screenshots are taken per [§4.9](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#49-capture-the-evidence).
 
-**Then tear the Room down**, and only after `4.5.9.15` has saved its log excerpts — the log route returns nothing once the Room is gone. In the Deployment Viewer click **Delete Deployment** ([§4.12](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#412-tear-down)). The blueprint `trial3_minh_ivi` stays and can be deployed again. The slot matters: only two Rooms run at once and the comms track needs one.
+**Then tear the Room down**, and only after `4.5.9.15` has saved its log excerpts — the log route returns nothing once the Room is gone. In the Deployment Viewer click **Delete Deployment** ([§4.12](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#412-tear-down)). The mini-blueprint stays and can be deployed again. The slot matters: only two Rooms run at once and the comms track needs one.
 
 **Acceptance:** screenshots for all three V5 rows and the teardown confirmed, recorded in `plans/doc/phase5-ivi-run.md`. This record closes the isolated IVI test's evidence trail. Evidence commit by the orchestrating session after the user confirms.
 

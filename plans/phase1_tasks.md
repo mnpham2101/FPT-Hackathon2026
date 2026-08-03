@@ -624,14 +624,16 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 ### [ ] `5.1.10.2` — USER-MANUAL: blueprint node config + deploy → all nodes Running
 
-**Objective:** the user edits `trial2_minh` (or a clone) in the Nydus UI and deploys; every node Running, restart 0 — the R5 box (APK clause aside, § Open items item 2).
+**Objective:** the user edits a clone of `baseline_phase1` in the Nydus UI and deploys; every node Running, restart 0 — the R5 box (APK clause aside, § Open items item 2).
+
+`baseline_phase1` is the platform's Phase 1 baseline and the clone source for every Room after the smoke test ([carsky-4-node-blueprint.md § The blueprints on CarSky](../requirements/car-sky-guide/carsky-4-node-blueprint.md#8-the-blueprints-on-carsky)) — it already carries the bench and V2X images this subtask sets, so on a current clone the config below is a **confirmation, not a first entry**. Work on the clone; never edit `baseline_phase1` itself.
 
 **Scope — node config per the guides + D6:**
 
 - Bench `.10`: per [node-scenario-player.md § Blueprint node config](../requirements/car-sky-guide/node-scenario-player.md) — image `registry.hackathon-2.carsky.io/m1-scenario-player:latest`, `command: ["python", "main.py"]`, env `SCENARIO_CONFIG=/app/scenarios/default.yaml`, `V2X_ECU_HOST=10.99.0.11`, `V2X_ECU_PORT=47100`.
 - V2X `.11`: per [node-v2x-ecu.md § Blueprint node config](../requirements/car-sky-guide/node-v2x-ecu.md) — image `…/m1-v2x-ecu:latest`, `command: ["./entrypoint.sh"]`, `capabilities: ["NET_RAW"]`, env `LISTEN_PORT=47100`, `ADA_ECU_HOST=10.99.0.12`, `ADA_ECU_PORT=47200`, `FAULT_PLAN=none`.
 - ADA `.12` (D6 sink): image `…/m1-netcheck:latest`, `command: ["./entrypoint.sh"]`, `capabilities: ["NET_RAW"]`, env `ROLE=ada-sink`, `LISTEN_PORT=47200`, `BODY_PREVIEW=512` — **no** `NEXT_HOP_*`.
-- IVI: keep the provided AAOS artifact. Ethernet pins/edges already exist on `trial2_minh` (Phase 0). New Deployment → Deployment Viewer all Running, restart 0; mind the 2-deployment quota.
+- IVI: keep the provided AAOS artifact; no APK is installed at this point. Ethernet pins/edges arrive intact on the clone. New Deployment → Deployment Viewer all Running, restart 0; mind the 2-deployment quota.
 
 **Acceptance:** Running evidence (screenshot/notes) recorded in `plans/doc/phase1-comms-run.md`; evidence commit by the orchestrating session after user confirmation.
 

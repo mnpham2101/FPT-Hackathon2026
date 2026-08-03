@@ -68,14 +68,16 @@ The ADA ECU's own software must exist before the procedure is run. Each row is p
 
 ### 1.4 Blueprints
 
-Two blueprints can be constructed and used:
+Both Rooms this guide can run against are **a clone of `baseline_phase1`** — the five-node baseline kept on the platform, and the clone source for every Room after the smoke test ([carsky-4-node-blueprint.md § The blueprints on CarSky](carsky-4-node-blueprint.md#8-the-blueprints-on-carsky)). They differ in what the clone is reduced to:
 
-- **The isolated blueprint** — the smallest topology that still exercises the ADA node end to end: Ethernet Bridge + V2X bench (mock) + ADA ECU + IVI sink (mock).
-- **The full blueprint** — every node: bench Scenario Player, V2X ECU, ADA ECU, IVI Skycraft node and the Ethernet Bridge.
+| Room | Made from `baseline_phase1` by | Use when |
+|---|---|---|
+| **The isolated blueprint** — Ethernet Bridge + V2X bench (mock) at `.11` + ADA ECU at `.12` + IVI sink (mock) at `.13` | deleting the Scenario Player and the IVI Skycraft node, adding one Container node for the sink, and repointing images | ADA work alone: every neighbour under your control, and a sink that can log, check and capture |
+| **The full blueprint** — bench Scenario Player, V2X ECU, ADA ECU, IVI Skycraft node, Ethernet Bridge | cloning and renaming; nothing removed | Full-chain work — [§5.6](#56-the-full-blueprint-route) |
 
-**The isolated blueprint is what this guide runs against.** Its detail is [§2](#2-the-isolated-blueprint), and [§5.6](#56-the-full-blueprint-route) for the full one; it is not repeated there.
+**The isolated blueprint is what this guide runs against.** Its composition and every node's config is [§2](#2-the-isolated-blueprint); its creation is [§4.1](#41-create-the-blueprint).
 
-Their nodes can be created over the API, with full config. **Their `ethernet` pins and edges cannot** — neither REST nor a JSON import can create them, so those are drawn by hand on the Nydus canvas for both blueprints. The platform limitation and its consequence: [carsky-rest-api-blueprint.md § Key finding](carsky-rest-api-blueprint.md#key-finding-what-rest-can-and-cannot-do) and [carsky-4-node-blueprint.md § Steps](carsky-4-node-blueprint.md#4-steps).
+**Clone; never build either one from scratch and never import one.** A clone keeps its `ethernet` pins, and the platform can create them by no other route — neither REST nor a JSON import can make them, and an import silently drops them. Whatever the isolated Room still needs drawn by hand is [§4.2](#42-wire-the-ethernet-pins). The platform limitation and its consequence: [carsky-rest-api-blueprint.md § Key finding](carsky-rest-api-blueprint.md#key-finding-what-rest-can-and-cannot-do) and [carsky-4-node-blueprint.md § Steps](carsky-4-node-blueprint.md#4-steps).
 
 ---
 
@@ -98,14 +100,16 @@ Four nodes. Every address and port is the value the full blueprint uses, so the 
 
 ### 2.2 The blueprint definition and where it lives
 
-**Designated path: `requirements/car-sky-guide/blueprint-ada-isolated.json`**, beside [blueprint-m1-cooperative-awareness.json](blueprint-m1-cooperative-awareness.json), which it follows in shape. The content below is what belongs in that file, and it is the source [§4.1](#41-create-the-blueprint) creates the nodes from.
+**Designated path: `requirements/car-sky-guide/blueprint-ada-isolated.json`**, beside [blueprint-m1-cooperative-awareness.json](blueprint-m1-cooperative-awareness.json), which it follows in shape. The content below is what belongs in that file.
+
+**It is the config specification, not an import payload.** The Room is created by cloning `baseline_phase1` ([§4.1](#41-create-the-blueprint)), so this file is never imported and never `POST`ed — importing it would produce a pinless blueprint. It is what each node's Inspector is edited *to* ([§4.3](#43-configure-each-nodes-image)) and what the read-back is diffed *against* ([§4.4](#44-read-the-stored-config-back)): one place holding the values, so a typo on the canvas is a diff line rather than a mystery.
 
 ```json
 {
   "version": 1,
   "blueprint": {
     "name": "ada-isolated",
-    "description": "ADA ECU exercised alone: a bench emitter stands in for the V2X ECU, a bench sink stands in for the IVI ECU, both from one image selected by ROLE. Addresses and ports match the full vehicle blueprint, so the ADA node's config is unchanged between the two. ETHERNET pins are rejected on import and over REST - draw and wire them on the Nydus canvas after the nodes exist.",
+    "description": "ADA ECU exercised alone: a bench emitter stands in for the V2X ECU, a bench sink stands in for the IVI ECU, both from one image selected by ROLE. Addresses and ports match the full vehicle blueprint, so the ADA node's config is unchanged between the two. Config specification only - the Room is made by cloning baseline_phase1 and editing it on the canvas, because ETHERNET pins are rejected on import and over REST.",
     "zones": [],
     "nodes": [
       {
@@ -336,53 +340,48 @@ A name missing here means the node will hang in `Provisioning` later. Fix it now
 
 ### 4.1 Create the blueprint
 
-| Blueprint | Use when |
-|---|---|
-| The isolated blueprint — bridge + V2X bench + ADA + IVI sink ([§2.1](#21-topology)) | ADA work alone: fewer nodes, faster deploy, every neighbour under your control |
-| The full 5-node blueprint ([carsky-4-node-blueprint.md](carsky-4-node-blueprint.md)) | Full-chain work — bench, V2X ECU, ADA, IVI Skycraft node, bridge — [§5.6](#56-the-full-blueprint-route) |
-
-The blueprint and its four nodes are created over the API in two calls. Its pins are not — [§4.2](#42-wire-the-ethernet-pins).
+**Clone `baseline_phase1` and reduce it** ([§1.4](#14-blueprints)). Cloning is the only route that preserves `ethernet` pins, and the isolated Room's addresses are the baseline's addresses — so three of the four pins it needs arrive already drawn and wired.
 
 ```bash
 export CS=https://hackathon-2.carsky.io
-curl -X POST -H "Authorization: Bearer $KEY" -H 'Content-Type: application/json' \
-  -d '{"name":"ada-isolated","description":"ADA ECU exercised alone"}' \
-  $CS/api/v1/blueprints
+curl -X POST -H "Authorization: Bearer $KEY" $CS/api/v1/blueprints/{baselineId}/clone
 ```
 
-Expected: the created blueprint, with the `id` every call below needs.
+Expected: a new blueprint carrying every node, pin and edge of the baseline, with the `id` every call below needs. Nydus → **Export Selected** → **Import from File** is *not* an equivalent route here: an import arrives with no pins at all.
 
-Then one `/batch` call adding the four nodes, each carrying the `config` block from [§2.2](#22-the-blueprint-definition-and-where-it-lives). **Node config is flat** — `image`, `command`, `capabilities` and `env` sit directly in `config`, not wrapped ([carsky-rest-api-blueprint.md § Node config is flat](carsky-rest-api-blueprint.md#node-config-is-flat-not-wrapped)). Each entry is one `{"op":"addNode","data":{…}}` operation:
+Then, on the Nydus canvas, four edits turn the clone into [§2.1](#21-topology)'s topology. The API performs none of them — it has no update route and no delete operation, so all four are Inspector and canvas work:
 
-```bash
-curl -X POST -H "Authorization: Bearer $KEY" -H 'Content-Type: application/json' \
-  -d @batch-ada-isolated.json $CS/api/v1/blueprints/{id}/batch
-```
+| # | Edit | What it costs |
+|---|---|---|
+| 1 | **Rename** the clone, in the blueprint Inspector | The name is the only place the differentiator goes |
+| 2 | **Delete the bench Scenario Player node** (`10.99.0.10`) | Its pin and edge go with it; nothing else is touched |
+| 3 | **Delete the IVI Skycraft node** (`10.99.0.13`) and **add a Container node** in its place | A node type cannot be changed, so the sink is a new node — and the one pin this procedure has to draw by hand ([§4.2](#42-wire-the-ethernet-pins)) |
+| 4 | **Repoint the V2X ECU node** (`10.99.0.11`) at the bench image, with the emitter's env | Config only; its pin and edge survive untouched |
 
-Expected: four nodes created, no pins, no edges.
+The ADA node at `10.99.0.12` needs no topology edit at all — only the image and env of [§4.3](#43-configure-each-nodes-image).
 
-Nydus → **Import from File** on the [§2.2](#22-the-blueprint-definition-and-where-it-lives) definition produces the same result. Both routes create the nodes and drop the pins; neither is better than the other for that.
+> **Do not edit the `<name>-deploy` snapshot.** Deploying creates a copy under that name. Edits to it appear to save and are ignored by the next deploy. Always edit the clone itself.
 
-A blueprint that already carries `ethernet` pins at these addresses can be cloned and edited instead, which saves drawing the pins that survive. Cloning is the only route that preserves them.
-
-> **Do not edit the `<name>-deploy` snapshot.** Deploying creates a copy under that name. Edits to it appear to save and are ignored by the next deploy. Always edit the original.
+> **Do not edit `baseline_phase1`.** It is the source every other Room is cloned from; a Room-specific edit made in it propagates to every clone taken afterwards.
 
 ### 4.2 Wire the ethernet pins
 
-Canvas work, with no scripted alternative: **REST cannot create `ETHERNET` pins, a JSON import silently drops them, and the API has no delete operation.** `POST /api/v1/blueprints/{id}/validate` returns 422 `Node "…" has no pins` until this step is done.
+Canvas work, with no scripted alternative: **REST cannot create `ETHERNET` pins, a JSON import silently drops them, and the API has no delete operation.** `POST /api/v1/blueprints/{id}/validate` returns 422 `Node "…" has no pins` until every node has one.
 
-1. Open the blueprint on the Nydus canvas.
-2. Add one `ethernet` pin to the Ethernet Bridge node — the single `ETHERNET` / `INPUT` pin every other node's pin targets.
-3. Add one `ethernet` pin to each of the three container nodes, `direction: OUTPUT`, with `properties.address` set from the table below. The pin shape is the one in [node-ada-ecu.md § Pins](node-ada-ecu.md#pins); only the address differs per node.
+**The clone of [§4.1](#41-create-the-blueprint) supplies most of them already.** Confirm what survived, then draw only what is missing:
 
-   | Node | `properties.address` |
-   |---|---|
-   | V2X Bench (mock) | `10.99.0.11` |
-   | ADA ECU | `10.99.0.12` |
-   | IVI Sink (mock) | `10.99.0.13` |
+| Node | `properties.address` | State after the clone |
+|---|---|---|
+| Ethernet Bridge | `10.99.0.1` | Present — the single `ETHERNET` / `INPUT` pin every other node's pin targets |
+| V2X Bench (mock) | `10.99.0.11` | Present, inherited from the V2X ECU node the clone repurposes |
+| ADA ECU | `10.99.0.12` | Present, untouched |
+| IVI Sink (mock) | `10.99.0.13` | **Missing — draw it.** The Skycraft node that held this address was deleted, and the Container node replacing it is new |
 
-4. Drag from each container node's pin to the bridge's connector. Same-type wiring only (`ethernet ↔ ethernet`). Three edges total, all terminating at the bridge — a star, not a chain.
-5. Validate:
+To draw the missing one: add an `ethernet` pin to the sink node, `direction: OUTPUT`, `properties.address` `10.99.0.13`. The pin shape is the one in [node-ada-ecu.md § Pins](node-ada-ecu.md#pins); only the address differs per node. Then drag from that pin to the bridge's connector — same-type wiring only (`ethernet ↔ ethernet`).
+
+The finished Room has three edges, all terminating at the bridge — a star, not a chain. Should a clone ever arrive with pins missing elsewhere, the same two steps redraw them; there is no scripted repair.
+
+Validate:
 
 ```bash
 curl -X POST -H "Authorization: Bearer $KEY" $CS/api/v1/blueprints/{id}/validate
@@ -400,7 +399,7 @@ Click a node, edit in the Inspector, click empty canvas to commit. Set and confi
 | ADA ECU | `registry.hackathon-2.carsky.io/m1-ada-ecu:latest` | — |
 | IVI Sink (mock) | `registry.hackathon-2.carsky.io/m1-ada-bench:latest` | `ROLE=ivi_mock` |
 
-All three nodes take `command: ["./entrypoint.sh"]` and `capabilities: ["NET_RAW"]`. This step stays a hand edit even when [§4.1](#41-create-the-blueprint) created the nodes with config attached: **the API has no update route**, so every correction after creation is an Inspector edit.
+All three nodes take `command: ["./entrypoint.sh"]` and `capabilities: ["NET_RAW"]`. **Every value here is typed by hand**, and there is no route that avoids it: the clone arrives carrying the baseline's images and env, and **the API has no update route**, so changing any of it is an Inspector edit. [§4.4](#44-read-the-stored-config-back) is what catches the typos.
 
 Four values decide whether anything works at all, and each fails in a way that looks like something else:
 
@@ -618,8 +617,10 @@ Record every value you changed. A run whose thresholds are unknown proves nothin
 
 For full-chain work, the 5-node blueprint replaces both bench containers with the real nodes: the bench Scenario Player feeding the real V2X ECU on one side, the Android Skycraft node on the other. **The mechanics are exactly [§4.1](#41-create-the-blueprint) through [§5.5](#55-retune-when-no-warning-is-emitted); only the composition differs**, so nothing above is repeated here.
 
-- **Composition and creation route:** [carsky-4-node-blueprint.md](carsky-4-node-blueprint.md), whose per-node files carry each neighbour's image, config and pin.
+- **Creation route: clone `baseline_phase1` and rename it — that is the whole reduction.** None of [§4.1](#41-create-the-blueprint)'s four canvas edits applies, and [§4.2](#42-wire-the-ethernet-pins) has nothing to draw: this Room *is* the baseline's composition. Set the ADA node's image and env ([§4.3](#43-configure-each-nodes-image)), read the config back ([§4.4](#44-read-the-stored-config-back)), deploy.
+- **Composition and per-node detail:** [carsky-4-node-blueprint.md](carsky-4-node-blueprint.md), whose per-node files carry each neighbour's image, config and pin.
 - **Do not import** a hand-authored blueprint JSON in place of it: an import arrives without its `ethernet` pins, and typically without the Skycraft `image` block, which gets the deploy rejected outright.
+- **The IVI APK is installed after the deploy, not carried by the blueprint** — over ADB into the running guest, by [deploy-ivi-hmi-walkthrough.md § How the APK reaches the IVI ECU node](deploy-ivi-hmi-walkthrough.md#41-how-the-apk-reaches-the-ivi-ecu-node).
 - **The ADA node is not reconfigured.** Its image, `command`, `capabilities`, env, address and port are the values of [§2.2](#22-the-blueprint-definition-and-where-it-lives) unchanged — that is why the isolated blueprint uses the full blueprint's addresses. Switching between the two touches the neighbours only.
 - **Checks 1 and 2 are unchanged**, and read the same ADA log lines. What changes is where the relayed traffic originates: the real V2X ECU, driven by the bench scenario, in place of the emitter — so `STATION_ID`, `OBJECT_ID` and the distance profile come from that scenario rather than from node env, and [§5.5](#55-retune-when-no-warning-is-emitted)'s `MIN_DISTANCE_M` lever is not available.
 - **Check 3 has no sink log.** The Android node runs no container and produces none of the `[RX]`, `[CHECK]`, `[SUMMARY]` or `[CAP]` lines. Consumer-side evidence moves to the guest's own log, and that route belongs to [deploy-ivi-hmi-walkthrough.md § Verify the HMI and the logging](deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging).
@@ -671,8 +672,9 @@ The split follows from what an agent can reach. An agent writes code, runs CLI t
 | [Push, and let the jobs build and push the images](#32-build-and-push-the-images-on-ci) | AI | A commit push is the whole trigger; no local Docker anywhere |
 | [Confirm the run passed](#33-confirm-the-run-passed-and-the-images-landed) | Human | Actions web UI; an agent session holds no GitHub token |
 | [Confirm both images reached the registry](#33-confirm-the-run-passed-and-the-images-landed) | AI | Registry catalog and tag lists over `curl` |
-| [Create the blueprint and its four nodes](#41-create-the-blueprint) | AI | `POST /api/v1/blueprints`, then one `/batch` call carrying every node's config |
-| [Wire the ethernet pins](#42-wire-the-ethernet-pins) | Human | Nydus canvas; REST cannot create `ETHERNET` pins or the edges joining them |
+| [Clone `baseline_phase1`](#41-create-the-blueprint) | AI | `POST /api/v1/blueprints/{id}/clone`; the one scripted step of the creation route |
+| [Rename it, delete two nodes, add the sink node](#41-create-the-blueprint) | Human | Nydus canvas; the API has no delete operation and cannot change a node's type |
+| [Draw and wire the sink's ethernet pin](#42-wire-the-ethernet-pins) | Human | Nydus canvas; REST cannot create `ETHERNET` pins or the edges joining them |
 | [Configure each node's image](#43-configure-each-nodes-image) | Human | Node Inspector; the API has no update route, so every correction is a UI edit |
 | [Read the stored config back](#44-read-the-stored-config-back) | AI | `GET /api/v1/blueprints/{id}` returns every pin, address, image and env as stored |
 | [Deploy the blueprint](#45-deploy) | Human | **New Deployment** dialog; picking the Device is the user's call and consumes a Room slot |
@@ -692,7 +694,7 @@ Five notes on the rows above:
 - **The first row belongs to neither column.** No agent writes the node's product code here and no human writes it at bring-up time — those sources are consumed, not authored, by this procedure. The bench scripts of the second row are different: they are this procedure's own test equipment, and writing them is a step of it.
 - **No image is built by hand, by anyone.** The build rows are AI because the work is a commit and a push, not a `docker build`.
 - **Confirming the run flips to AI** on a machine with an authenticated `gh` CLI. Without it, the Actions web UI is the only route.
-- **Every node-config edit is human.** The API adds nodes, pins and edges; it has no update and no delete operation, so an existing node's config is edited in the Inspector and only read back over REST.
+- **Every node-config and topology edit is human.** The API clones a blueprint and adds nodes; it has no update and no delete operation, and it cannot create a pin — so reducing the clone, and every config value on it, is Inspector and canvas work, read back over REST.
 - **Every AI row needs a credential supplied at run time** — the CarSky API key for the REST rows, the registry account and key for the registry check. An agent stores neither.
 
 ---
@@ -732,7 +734,7 @@ Every point below can make a step fail without this guide being wrong. Confirm e
 | 6 | `linux/arm64` wheel availability for the detector's Python dependencies. A missing wheel means a source build under the runner's emulation, which can exhaust the job timeout or fail outright | [§3.2](#32-build-and-push-the-images-on-ci) |
 | 7 | **Settled — nothing to confirm.** The ADA node's `command` is `["./entrypoint.sh"]` and its `capabilities` are `["NET_RAW"]`, unconditionally, and [node-ada-ecu.md § Blueprint node config](node-ada-ecu.md#blueprint-node-config) states both. Whether the platform honours the capability at run time is item 12 | — |
 | 8 | The blueprint file at `requirements/car-sky-guide/blueprint-ada-isolated.json`, which has not been created | [§2.2](#22-the-blueprint-definition-and-where-it-lives) |
-| 9 | That a four-node blueprint created over `/batch` accepts hand-drawn pins afterwards and then validates. Adding nodes over the API is a proven route; this particular blueprint has not been built by it | [§4.1](#41-create-the-blueprint), [§4.2](#42-wire-the-ethernet-pins) |
+| 9 | **The clone-and-reduce route as a whole.** That `/clone` returns a blueprint with every pin and edge intact; that deleting a node on the canvas leaves the survivors' pins alone; and that a hand-drawn pin on a newly added Container node wires to the bridge and validates | [§4.1](#41-create-the-blueprint), [§4.2](#42-wire-the-ethernet-pins) — a clone that loses its pins turns three inherited edges into three hand-drawn ones |
 | 10 | That the relayed profile defaults produce a risk-level change against the clip's actual ego-to-B range. They may not, in which case no warning is emitted and [§5.5](#55-retune-when-no-warning-is-emitted) is on the critical path rather than a fallback | [§5.2](#52-check-2--both-vehicles-are-in-the-track-store), [§5.5](#55-retune-when-no-warning-is-emitted) |
 | 11 | The detector's frame rate on the Room's CPU allocation. If it falls far below the configured stride, ego's own track may expire between updates and the composed geometry disappears | [§5.2](#52-check-2--both-vehicles-are-in-the-track-store) |
 | 12 | **That the platform grants `NET_RAW` at run time.** Every node requests it unconditionally, but no deployment has yet shown a `[CAP]` line proving the request was honoured. Where it is refused, the `[CAP]` criterion of [§5.3](#53-check-3--the-warning-reaches-the-ivi-stand-in-carrying-both-vehicles) cannot be met by any route in this document | [§5.4](#54-traffic-evidence-and-wireshark-scope) |
@@ -748,7 +750,8 @@ Every point below can make a step fail without this guide being wrong. Confirm e
 | ADA image | `registry.hackathon-2.carsky.io/m1-ada-ecu:latest`, single-platform `linux/arm64`, built from `ADA_ECU/` by job `ada-ecu-image` |
 | Bench image | `registry.hackathon-2.carsky.io/m1-ada-bench:latest`, single-platform `linux/arm64`, built from `tools/ada-bench/` by job `ada-bench-image` |
 | CI secret | `CARSKY_ZOT_API_KEY` (`zak_…`) |
-| Blueprint definition | `requirements/car-sky-guide/blueprint-ada-isolated.json` |
+| Clone source | `baseline_phase1` ([carsky-4-node-blueprint.md § The blueprints on CarSky](carsky-4-node-blueprint.md#8-the-blueprints-on-carsky)) |
+| Blueprint definition | `requirements/car-sky-guide/blueprint-ada-isolated.json` — config specification, never imported |
 | Node addresses | V2X bench `.11` · ADA `.12` · IVI sink `.13`, on `10.99.0.0/24` with the bridge at `.1` |
 | Ports | bench → ADA `47200` · ADA → sink `47300` |
 | Every container node | `command: ["./entrypoint.sh"]` · `capabilities: ["NET_RAW"]` |

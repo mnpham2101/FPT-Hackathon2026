@@ -1,6 +1,6 @@
 # IVI ECU — everything else needed to implement Phase 5
 
-Research note collecting the facts an implementer needs that are not in the requirements, the blueprint guide, or the two companion notes ([mini-blueprint](phase5-mini-blueprint.md), [simulator](phase5-r4-simulator.md), [R4 parsing](phase5-r4-parsing.md)).
+Research note collecting the facts an implementer needs that are not in the requirements, the blueprint guide, or the two companion notes ([simulator](phase5-r4-simulator.md), [R4 parsing](phase5-r4-parsing.md)).
 
 ## 1. What already exists in this folder
 

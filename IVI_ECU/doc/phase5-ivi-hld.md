@@ -24,9 +24,9 @@ The contract layer and the drawing layer are already committed and are the two h
 | [phase5-r4-parsing.md](research_notes/phase5-r4-parsing.md) | §1 wire truth — no application header; de-framing is buffer slicing (D3). §2 decode-failure table as the `R4DecodeResult` shape. §3 unknown-`warningType` preservation (D4). §5 pure-JVM submodule placement (D1, D2). |
 | [phase5-r4-simulator.md](research_notes/phase5-r4-simulator.md) | Injection points I1–I4 as the test strategy (§7). Two run modes, scenario-cases table, and "payloads come from the frozen samples, never a literal" (D9). Simulator is IVI test equipment, inside this folder. |
 | [phase5-ivi-implementation-notes.md](research_notes/phase5-ivi-implementation-notes.md) | §1 inventory (above). §2 Android constraints → D5 and the back-pressure policy. §3 `BuildConfig`-default + launch-override config model (D10). §4 decisions in force (D11). §6 CI facts (§6). §7 R18/R19 log obligations (§5.4). |
-| [phase5-mini-blueprint.md](research_notes/phase5-mini-blueprint.md) | The 3-node deploy target and the ADA-node env contract (`IVI_ECU_HOST`/`IVI_ECU_PORT`/`R4_SCENARIO`/`R4_RATE_HZ`/`START_DELAY_S`) that the simulator's in-Room mode must read verbatim (§8). |
+| [deploy-ivi-hmi-walkthrough.md](../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md) — a walkthrough, not a note, and authoritative rather than scratch | The 3-node deploy target (§4.11) and the ADA-node env contract (`IVI_ECU_HOST`/`IVI_ECU_PORT`/`R4_SCENARIO`/`R4_RATE_HZ`/`START_DELAY_S`, §4.8 rung V4) that the simulator's in-Room mode must read verbatim (§8). |
 
-Notes are non-authoritative scratch; on conflict the CLAUDE.md authority order wins. One such conflict is resolved in D4 and one in §9.1.
+The three notes are non-authoritative scratch; the walkthrough in the last row is not, and on conflict the CLAUDE.md authority order wins. One such conflict is resolved in D4 and one in §9.1.
 
 ## 2. Design decisions
 

@@ -29,7 +29,7 @@ Because it joins downstream of the socket and upstream of everything else, it ex
 
 One program, two run modes, one scenario format.
 
-- **In-Room mode** — a container image on the ADA node of the mini-blueprint ([phase5-mini-blueprint.md](phase5-mini-blueprint.md)), reading `IVI_ECU_HOST` / `IVI_ECU_PORT` from the environment, starting itself from the entrypoint so a deploy alone produces evidence (the netcheck rule: no shell session is ever needed).
+- **In-Room mode** — a container image on the ADA node of the mini-blueprint ([deploy-ivi-hmi-walkthrough.md § The mini-blueprint route](../../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#411-the-mini-blueprint-route)), reading `IVI_ECU_HOST` / `IVI_ECU_PORT` from the environment, starting itself from the entrypoint so a deploy alone produces evidence (the netcheck rule: no shell session is ever needed).
 - **Host mode** — the same program run from a laptop against an emulator or a loopback listener, with the target given as arguments.
 
 **Scenarios are data, not code.** A scenario is a file listing timed messages; the tool walks it and sends. Different scenario files must produce observably different streams — the same rule R11 imposes on the bench Scenario Player ([node-code-layout.md](../../../.claude/rules/node-code-layout.md#scenario_player-specifics-r11)), and for the same reason: a new case is a new file, never a new code branch.

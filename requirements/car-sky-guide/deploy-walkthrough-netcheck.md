@@ -150,9 +150,9 @@ Both are done by the `netcheck-image` job on every push — no local Docker requ
 
 ### M5 — Choose the blueprint
 
-Nydus → blueprint list → open the target (here `trial2_minh_netcheck`).
+Nydus → blueprint list → open the target. **This walkthrough's blueprint is `baseline_m1`** — the five-node topology whose three container nodes all carry `m1-netcheck:latest`, kept for exactly this test ([carsky-4-node-blueprint.md § The blueprints on CarSky](carsky-4-node-blueprint.md#8-the-blueprints-on-carsky)).
 
-Working on a **clone** keeps the known-good baseline untouched — recommended. Deploying also creates a snapshot named `<name>-deploy`; **always edit the original**, never the snapshot.
+Work on a **clone** of it, so the known-good baseline stays untouched. Deploying also creates a snapshot named `<name>-deploy`; **always edit the original**, never the snapshot.
 
 Clicking empty canvas shows the **blueprint** Inspector — the panel that owns the whole design rather than one node:
 
