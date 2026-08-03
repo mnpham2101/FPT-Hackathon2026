@@ -1219,4 +1219,4 @@ Four further exclusions, each with the reason it is a decision rather than an ov
 
 ---
 
-*Decomposed by project-planner from the Phase 5 HLD (`85387b5`), its four research notes, and [milestone1.md § Phase 5](milestone1.md#phase-5--ivi-hmi-mock-driven-r16-r17--display-track-parallel-from-the-start); the in-Room tests from the walkthroughs, per stage 2 of [walkthrough-driven-delivery.md](../.claude/rules/walkthrough-driven-delivery.md). 9 task groups, 61 subtasks: 38 agent, 10 car-sky, 13 human. Nothing blocked. Nothing started except `16.5.7.1`.*
+*Decomposed by project-planner from the Phase 5 HLD (`85387b5`), its four research notes, and [milestone1.md § Phase 5](milestone1.md#phase-5--ivi-hmi-mock-driven-r16-r17--display-track-parallel-from-the-start); the in-Room tests from the walkthroughs, per stage 2 of [walkthrough-driven-delivery.md](../.claude/rules/walkthrough-driven-delivery.md). 9 task groups, 61 subtasks: 38 agent, 10 car-sky, 13 human. **There is no task group 5.8** — that work belongs to the isolated IVI test (5.9) and the `5.8.*` IDs are never reused. Nothing blocked. Nothing started except `16.5.7.1`.*

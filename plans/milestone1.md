@@ -146,7 +146,7 @@ The baseline blueprint deployed as `trial2_minh_netcheck` with all nodes `Runnin
 
 **Objective.** Replace the mock own-sensor input with real detection: a pretrained detector finds **B, the visible occluder**, in the provided video and estimates its distance.
 
-**Tasks.** Decomposed in [phase3_tasks.md](phase3_tasks.md); the ADA+IVI cross-node execution view is [ada-ivi-plan.md](ada-ivi-plan.md).
+**Tasks.** Decomposed in [phase3_tasks.md](phase3_tasks.md).
 
 - YOLO11n exported to ONNX on ONNX Runtime CPU; OpenCV video decode behind the frame-source seam.
 - Per-frame detection + distance estimation; stream R3 JSONL over stdout into the store (subprocess contract — no FFI, no RPC).
@@ -184,11 +184,11 @@ The baseline blueprint deployed as `trial2_minh_netcheck` with all nodes `Runnin
 
 **Objective.** The IVI renders the warning view — the God view of ego, B, and ghost C — from R4 messages alone, developed against mock warnings and integrated against real data at Phase 6.
 
-**Tasks.** Decomposed in [phase5_minh_tasks.md](phase5_minh_tasks.md) — the authoritative Phase 5 breakdown, and the home of the **system verification test** (group 5.10), which is the only place the 5-node blueprint is run. Cross-node view: [ada-ivi-plan.md](ada-ivi-plan.md).
+**Tasks.** Decomposed in [phase5_minh_tasks.md](phase5_minh_tasks.md) — the authoritative Phase 5 breakdown, and the home of the **system verification test** (group 5.10), which is the only place the 5-node blueprint is run.
 
 - Compose HMI with the R16 layout (central Display area + button/app areas) on the provided AAOS node; UDP ingest service for R4.
 - 2D Canvas warning view behind the view seam (R17); optional, only if time permits: SceneView 3D through the same seam, multi-process wake-on-warning.
-- **Not in this phase:** the ego video clip display ("dashcam view") in the Display area — deferred, confirmed by the user 2026-08-02. No Media3 player, no clip serving from ADA, no `exposedPorts` entry for it, no `video` pin. Itemized in [ada-ivi-plan.md §5](ada-ivi-plan.md).
+- **Not in this phase:** the ego video clip display ("dashcam view") in the Display area — deferred, confirmed by the user 2026-08-02. Itemized in [§6](#6-deferred-to-later-milestones).
 
 **Acceptance Criteria.**
 - [ ] The HMI runs on the AAOS node with the R16 layout; button/app areas switch what the Display area shows.
@@ -219,7 +219,7 @@ The baseline blueprint deployed as `trial2_minh_netcheck` with all nodes `Runnin
 
 The single source is the report's § Future developments, mirrored in the [future-features register](../requirements/future/m1-future-features-register.md). Standing M1 exclusions live in the report's §4 decision record (**R10 ego Tx deferred — the V2X ECU is receive-only**, Cortex-M omitted, telux port declined, 3D and multi-process optional, ego video clip deferred, no GPU, no map/GNSS on the IVI).
 
-**Ego video clip display on the IVI — re-confirmed deferred, 2026-08-02.** [m1-video-source-and-ivi-dashcam.md §4/§6](../requirements/m1-video-source-and-ivi-dashcam.md) contains a worked design for it (option B4: ADA serves its own clip over HTTP, the IVI plays it with Media3), and §8 flags that adopting it needs the user's word. **The user's word was no.** The design stays on the shelf; the itemized exclusion — HTTP clip serving, `exposedPorts`, Media3, a dashcam `DisplayMode`, any `video` pin, and real-time detector pacing as a *requirement* — is [ada-ivi-plan.md §5](ada-ivi-plan.md). No Phase 3, 4 or 5 subtask may implement any of it.
+**Ego video clip display on the IVI — re-confirmed deferred, 2026-08-02.** [m1-video-source-and-ivi-dashcam.md §4/§6](../requirements/m1-video-source-and-ivi-dashcam.md) contains a worked design for it (option B4: ADA serves its own clip over HTTP, the IVI plays it with Media3), and §8 flags that adopting it needs the user's word. **The user's word was no.** The design stays on the shelf, and **no Phase 3, 4, 5 or 6 subtask may implement any part of it** — HTTP clip serving from the ADA node (a `http.server` line in the entrypoint, `CLIP_HTTP_ENABLED` / `CLIP_HTTP_PORT`), an `exposedPorts` entry and its gateway route, Media3/ExoPlayer and a `DASHCAM_MEDIA_URI`, a dashcam `DisplayMode`, a raw-resource clip copy in the APK and its size cost (fallback B5), any `video` pin (an R5/R6 re-freeze), or real-time detector pacing as a *requirement* ([phase3_tasks.md open item 6](phase3_tasks.md#open-items--flags-no-phase-3-subtask-may-silently-close-them)). §6 is where each has its concrete shape; reading it is not permission to build it.
 
 ## 7. Definition of Done
 
