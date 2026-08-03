@@ -7,7 +7,8 @@
 > - **Run timing:** [m1-run-timing-and-event-triggering.md](../requirements/m1-run-timing-and-event-triggering.md) — R20/R21, the §6.4 K1–K5 checks that group 4.8 implements, and the §6.2 clock-domain ruling. Its §8(1) fixes this group's schedule: demo-quality, behind every acceptance box, never in front.
 > - **Phase 2 baseline (do not re-plan):** [phase2_tasks.md § Output](phase2_tasks.md#phase-2-overview) — store, R13 machine, `ICollisionRiskAssessment`, `registry` + `builtin_plugins.cpp`, `assessment_db` + its schema, `event_log`, `udp_socket`, `main.cpp` fusion tick, `tools/check_evt_log.py`, the image and `entrypoint.sh`'s capture hook.
 > - **Capture prior art (reuse, do not reinvent):** [traffic-capture-wireshark.md](../requirements/car-sky-guide/traffic-capture-wireshark.md) and the Phase 1 pair `V2X_ECU/capture.sh` (`[6.1.5.2]`) + `V2X_ECU/tools/extract_pcap.sh` (`[6.1.5.3]`) on `main`.
-> - **Rules:** [task-planning-conventions.md](../.claude/rules/task-planning-conventions.md); [node-code-layout.md](../.claude/rules/node-code-layout.md).
+> - **Deployment & verification procedure (groups 4.6, 4.9, 4.10, 4.11):** [deploy-ada-ecu-walkthrough.md](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md) — the stage-1 artifact those groups are decomposed from, per [walkthrough-driven-delivery.md](../.claude/rules/walkthrough-driven-delivery.md). Its [§7 work division](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#7-work-division-between-ai-and-human) fixes each subtask's executor and its [§8 expected outputs and acceptance](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#8-expected-outputs-and-acceptance) fixes each check's criteria. **Cite, never restate** — commands stay in the walkthrough.
+> - **Rules:** [task-planning-conventions.md](../.claude/rules/task-planning-conventions.md); [node-code-layout.md](../.claude/rules/node-code-layout.md); [walkthrough-driven-delivery.md](../.claude/rules/walkthrough-driven-delivery.md).
 >
 > **Task ID legend:** `X.4.Z.W` — X = requirement served · 4 = this phase · Z = task group · W = subtask position. IDs are stable; never renumber.
 >
@@ -32,7 +33,18 @@
 - [ ] **Demo:** ADA logs — collision-risk event list — closed by `18.4.3.2` (`tools/event_report.py`).
 - [ ] **Output check (new — § Phase 4 output acceptance):** the TrackedObjects of vehicle **B** and vehicle **C** are both shown to reach the IVI path, evidenced from the ADA `[EVT]` log **and** from a Wireshark/pcap capture of the ADA→IVI Ethernet traffic — closed by `18.4.6.4` (log path) + `15.4.6.5` (wire path), with the contract caveat below.
 
-**Suggested branch (suggestion only — creation is the user's call):** `feat/phase4-ada-fusion-warning`. One branch for the whole phase. It branches from Phase 2's branch (or `main` after Phase 2 merges); it does **not** need Phase 3's branch.
+**Suggested branch (suggestion only — creation, checkout and push are the user's call):** `feat/phase4-ada-fusion-warning`. One branch for the whole phase, per [task-planning-conventions.md § Branch suggestion](../.claude/rules/task-planning-conventions.md#branch-suggestion-per-phase). It branches from Phase 2's branch (or `main` after Phase 2 merges); it does **not** need Phase 3's branch. Groups 4.9–4.11 share no file with the fusion code — they write only under `tools/ada-bench/`, `.github/workflows/`, `requirements/car-sky-guide/` and `plans/doc/` — so if the user prefers to run the bring-up lane separately, `feat/phase4-ada-isolated-room` is a clean alternative that merges without conflict. Plan and run-doc commits go straight to `main` either way.
+
+### Two Rooms, two routes — which group runs where
+
+[deploy-ada-ecu-walkthrough.md §1.4](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#14-blueprints) defines two blueprints, and this phase uses both in order. Nothing about the ADA node's own config differs between them ([§5.6](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#56-the-full-blueprint-route)); only the neighbours change.
+
+| Route | Blueprint | Groups | Depends on |
+|---|---|---|---|
+| **Isolated — run this first** | bridge + V2X bench mock `.11` + ADA `.12` + IVI sink mock `.13` ([§2.1](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#21-topology)) | **4.9 → 4.10 → 4.11** | Nothing outside `ADA_ECU/` and `tools/ada-bench/`. No V2X ECU, no Scenario Player, no IVI app |
+| **Full chain — after it passes** | the 5-node blueprint ([carsky-4-node-blueprint.md](../requirements/car-sky-guide/carsky-4-node-blueprint.md)), per [§5.6](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#56-the-full-blueprint-route) | **4.6** | Phase 1's deployed comms chain and, for the consumer half, Phase 5's app |
+
+**The isolated route is the cheaper first attempt and is not optional scaffolding**: it puts every ADA-side failure mode — wrong port, drifted message shape, a detector that never spawns, a risk level that never changes — in a Room where both neighbours are under this phase's own control. Discovering any of them inside the full chain costs a second unknown to eliminate first.
 
 ### Execution split legend, subagent spec, subtask discipline
 
@@ -40,7 +52,7 @@ Identical to [phase2_tasks.md § Execution split legend](phase2_tasks.md#executi
 
 ### CI ruling for this phase
 
-New lane in a new `.github/workflows/phase4-ci.yml` — *a lane belongs to the phase that created it*. One job: `ada-e2e-loopback` (`15.4.5.1`). `ada-core-build` (phase0-ci.yml), `ada-ecu-image` (phase2-ci.yml) and the Phase 3 lanes are reused, never duplicated.
+New lane in a new `.github/workflows/phase4-ci.yml` — *a lane belongs to the phase that created it*. Three jobs: `ada-e2e-loopback` (`15.4.5.1`), `ada-bench-image` (`5.4.9.5`) and `ada-bench-selfcheck` (`2.4.9.7`). Whichever of the three lands first creates the file with the standard `on:`/`concurrency:`/header block; **the three edits are sequenced against each other** and are the only shared-file contention inside this phase. `ada-core-build` (phase0-ci.yml), `ada-ecu-image` (phase2-ci.yml — checked against the walkthrough's build table by `5.4.9.6`, never re-created) and the Phase 3 lanes are reused, never duplicated.
 
 ## Phase 4 output acceptance — what "B and C reach the IVI" means, precisely
 
@@ -265,25 +277,29 @@ The user's requirement: *the TrackedObjects of vehicle B and vehicle C are sent 
 
 ---
 
-## Task Group 4.6 — Deploy and live evidence (serves R5, R13, R15, R18)
+## Task Group 4.6 — Full-blueprint deploy and live evidence (serves R5, R13, R15, R18)
 
-> Split per [HLD §9](../ADA_ECU/doc/phase2-4-ada-ecu-hld.md#9-deployment-shape-r5r6): image build/push and node-config **values** are [[car-sky]]-executable; blueprint edits and deploy/verify clicks are user Nydus UI steps (REST cannot edit node config — the Phase 1 finding). Evidence accumulates in `plans/doc/phase4-ada-fusion-run.md`.
+> **Route corrected 2026-08-03.** This group is the **full-blueprint** run of [deploy-ada-ecu-walkthrough.md §5.6](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#56-the-full-blueprint-route) — the ADA node in the 5-node Room beside the Phase 1 bench and V2X ECU. It was planned before the walkthrough existed and read as if that were the only route; it is not. **Groups 4.9–4.11 run first, on the isolated blueprint**, and prove everything this group proves except what only the real neighbours can show. §5.6 is explicit that the mechanics are identical and the ADA node is *not reconfigured* between the two — so nothing below is re-derived for the isolated Room.
+>
+> **What §5.6 changes for this group, and nothing else does:** the relayed traffic originates in the real V2X ECU driven by a bench scenario, so `STATION_ID`, `OBJECT_ID` and the distance profile come from that scenario and [§5.5](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#55-retune-when-no-warning-is-emitted)'s `MIN_DISTANCE_M` lever is unavailable; and there is **no sink log**, because the Android node runs no container — so the `[RX]`/`[CHECK]`/`[SUMMARY]`/`[CAP]` evidence of `15.4.11.4` has no counterpart here and the ADA node's own capture (`6.4.4.1`) stops being optional.
+>
+> Split per [HLD §9](../ADA_ECU/doc/phase2-4-ada-ecu-hld.md#9-deployment-shape-r5r6) and [walkthrough §7](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#7-work-division-between-ai-and-human): image build/push, registry confirmation, config read-back, phase polling and log reading are AI rows performed by [[car-sky]]; canvas edits, node-config edits, the deploy and the teardown are Human rows no agent performs. The *USER-MANUAL* subtasks below keep the human half and the record-keeping; their AI halves are the group 4.10/4.11 subtasks, **re-run against this Room under the same briefs** rather than given new IDs. Evidence accumulates in `plans/doc/phase4-ada-fusion-run.md`; the isolated run's evidence is a separate document, `plans/doc/phase4-ada-isolated-room-run.md`.
 
 ### [ ] `5.4.6.1` — Build and push `m1-ada-ecu:latest` *(car-sky, or the CI push step)*
 
 **Objective:** the registry holds a current ADA image built from the phase's code.
 
-**Scope:** [[car-sky]] runs [carsky-deploy-preflight](../.claude/skills/carsky-deploy-preflight/SKILL.md) — which blueprint, which node, which credential — then ensures `registry.hackathon-2.carsky.io/m1-ada-ecu:latest` is current. In practice the push happens in the `ada-ecu-image` lane whenever `CARSKY_ZOT_API_KEY` is present (the Phase 1 precedent: the agent was never needed there). Create `plans/doc/phase4-ada-fusion-run.md` recording the push.
+**Scope:** [[car-sky]] runs [carsky-deploy-preflight](../.claude/skills/carsky-deploy-preflight/SKILL.md) — which blueprint, which node, which credential — then ensures `registry.hackathon-2.carsky.io/m1-ada-ecu:latest` is current. **No image is built by hand, by anyone** ([walkthrough §3](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#3-build-the-images-on-ci)): the push happens in the `ada-ecu-image` lane (`5.2.8.1`) on every commit push whenever `CARSKY_ZOT_API_KEY` is present, which is the Phase 1 precedent. The job's context, tag, registry host and platform flags must match the [§3.2 table](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#32-build-and-push-the-images-on-ci) — that check is `5.4.9.5`, not this subtask. Create `plans/doc/phase4-ada-fusion-run.md` recording the push.
 
-**Acceptance:** the tag is pullable; the record exists. **Standing hazard:** the tag is mutable and every branch push re-pushes it — identify the deployed image at deploy time, never from an old run log.
+**Acceptance:** the tag is pullable; the record exists. The independent registry-side confirmation is [§3.3](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#33-confirm-the-run-passed-and-the-images-landed) and lands at `5.4.10.1`. **Standing hazard:** the tag is mutable and every branch push re-pushes it — identify the deployed image at deploy time, never from an old run log.
 
-**Dependencies:** after `15.4.2.3` + `6.4.4.1` + Phase 3 `5.3.6.1` (so the deployed image carries the detector too). **Commit:** `[5.4.6.1] docs: record the phase 4 ADA image push`
+**Dependencies:** after `15.4.2.3` + `6.4.4.1` + Phase 3 `5.3.6.1` (so the deployed image carries the detector too) + `5.2.8.1` (the lane must exist — [§8.1 item 3](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#81-confirm-before-relying-on-these) records that it does not yet). **Commit:** `[5.4.6.1] docs: record the phase 4 ADA image push`
 
-### [ ] `5.4.6.2` — USER-MANUAL: node config + deploy → ADA node Running *(user, Nydus UI)*
+### [ ] `5.4.6.2` — USER-MANUAL: node config + deploy → ADA node Running on the **full** blueprint *(user, Nydus UI)*
 
-**Objective:** the ADA node runs in the Room with the D9 configuration, alongside the Phase 1 bench and V2X nodes.
+**Objective:** the ADA node runs in the 5-node Room with the D9 configuration, alongside the Phase 1 bench and V2X nodes — [walkthrough §5.6](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#56-the-full-blueprint-route).
 
-**Scope:** ADA node `.12` per [node-ada-ecu.md § Blueprint node config](../requirements/car-sky-guide/node-ada-ecu.md) as updated by `5.2.9.4` — image `…/m1-ada-ecu:latest`, `command: ["./entrypoint.sh"]`, `capabilities: ["NET_RAW"]`, the §6 env set with `V2X_LISTEN_PORT=47200` and `IVI_ECU_HOST=10.99.0.13`/`IVI_ECU_PORT=47300`. The ADA node replaces the Phase 1 netcheck sink at `.12`. Bench + V2X nodes keep their Phase 1 config. New Deployment → Deployment Viewer shows every node Running, restart 0; mind the 2-deployment quota.
+**Scope:** ADA node `.12` per [node-ada-ecu.md § Blueprint node config](../requirements/car-sky-guide/node-ada-ecu.md) as updated by `5.2.9.4` — image `…/m1-ada-ecu:latest`, `command: ["./entrypoint.sh"]`, `capabilities: ["NET_RAW"]`, the §6 env set with `V2X_LISTEN_PORT=47200` and `IVI_ECU_HOST=10.99.0.13`/`IVI_ECU_PORT=47300`. **These are the same values the isolated Room used** — §5.6's "the ADA node is not reconfigured" is what makes that true, and it is why a mismatch here is a transcription error rather than a design difference. The ADA node replaces the Phase 1 netcheck sink at `.12`. Bench + V2X nodes keep their Phase 1 config. **Do not import a hand-authored blueprint JSON in place of the 5-node blueprint** — §5.6: an import arrives without its `ethernet` pins and typically without the Skycraft `image` block, and the deploy is rejected outright. New Deployment → Deployment Viewer shows every node Running, restart 0; mind the 2-deployment quota. The phase poll and `nodeKey` capture are the AI row of [§4.5](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#45-deploy) and are performed by [[car-sky]] under `5.4.10.8`'s brief, re-run here.
 
 **Readiness is this check, and nothing else is coming** — [m1-run-timing-and-event-triggering.md §4.2](../requirements/m1-run-timing-and-event-triggering.md) rules out a node-to-node startup handshake: the platform offers no `dependsOn`, no readiness probe and no "deployment started" event into a container, the R5/R6 topology has no reverse path to build acks on, and **R5's Deployment-Viewer check performed here by a human *is* the barrier**, paired with a configured bench `start_delay_s`. Do not plan or assume a barrier message; if a node misses early traffic, the remedy is the delay. The §4.2 B-1 pick's other half — one `[EVT] ready` line per node — is unscheduled (§ Open items item 7).
 
@@ -291,11 +307,13 @@ The user's requirement: *the TrackedObjects of vehicle B and vehicle C are sent 
 
 **Dependencies:** after `5.4.6.1`. **Commit:** `[5.4.6.2] docs: record the phase 4 ADA node config and Running evidence`
 
-### [ ] `13.4.6.3` — USER-MANUAL: live R13 lifecycle of relayed C across both scenarios *(user, Nydus UI)*
+### [ ] `13.4.6.3` — USER-MANUAL: live R13 lifecycle of relayed C across both bench scenarios *(user, Nydus UI)*
 
-**Objective:** the first Phase 4 box, live — C's track appears with `source = v2x_relayed` only and follows the full R13 lifecycle, and a scenario swap changes it.
+**Objective:** the first Phase 4 box, live **on the full chain** — C's track appears with `source = v2x_relayed` only and follows the full R13 lifecycle, and a Scenario Player scenario swap changes it.
 
 **Scope:** with `SCENARIO_CONFIG=/app/scenarios/default.yaml` on the bench, save the ADA node View Log and run `python ADA_ECU/tools/check_evt_log.py --admission --fusion <saved.log>` (exit 0) plus `event_report.py`; then swap the bench to `c-out-of-range.yaml`, redeploy (config only, no rebuild), and repeat — the second run must show C never admitted and **zero** `r4_tx`. Confirm by inspection that every C track carries `source: v2x_relayed`, never `own_sensor`.
+
+**This is the full-blueprint form of the negative case, and it is a different lever from the isolated Room's.** [§5.6](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#56-the-full-blueprint-route) states that on the full chain the distance profile comes from the Scenario Player's scenario rather than from node env, so `c-out-of-range.yaml` is the swap here; `13.4.11.5` uses `PROFILE=out_of_range` on the bench mock node for the same claim in the isolated Room. Run both — one proves the gate against the real V2X decode path, the other against a controlled emitter. Saving the log is an AI row ([§5](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#5-run-the-checks)) performed by [[car-sky]] under `18.4.11.1`'s brief.
 
 **Acceptance:** both log sets and both tool outputs recorded in `plans/doc/phase4-ada-fusion-run.md`; evidence commit by the orchestrating session.
 
@@ -307,7 +325,7 @@ The user's requirement: *the TrackedObjects of vehicle B and vehicle C are sent 
 
 **Scope:**
 
-- Save the ADA node View Log over a full `default.yaml` run.
+- Save the ADA node View Log over a full `default.yaml` run — an **AI row** ([§5](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#5-run-the-checks), "Save the three node logs"), performed by [[car-sky]] over the logs route with the mandatory `?container=user`; this *USER-MANUAL* subtask keeps the judgement and the record-keeping.
 - Run `python ADA_ECU/tools/check_evt_log.py --both-tracks --r4-schema ADA_ECU/contracts/r4-ada-ivi.schema.json <saved.log>` → **exit 0**, which asserts: a `tracked` `own_sensor` TrackedObject for **B** with all nine R3 fields; a `tracked` `v2x_relayed` TrackedObject for **C** with all nine R3 fields; ≥ 1 `r4_tx` whose embedded body carries C's R3 object in `object` and a non-null `geometry.vehicleB`.
 - Run `python ADA_ECU/tools/event_report.py <saved.log>` and record the rendered collision-risk event list — this is the §1 demo-table artifact.
 - Record the two excerpts (B's and C's TrackedObject lines) verbatim in the run doc.
@@ -328,9 +346,11 @@ The user's requirement: *the TrackedObjects of vehicle B and vehicle C are sent 
 - Correlate to `18.4.6.4`'s log by timestamp and datagram length — the same event on both paths.
 - **What this proves and what it does not:** C's full TrackedObject and B's *position* are on the wire; **B's full TrackedObject is proven by path A, not by the capture** — the frozen R4 does not carry it (§ Phase 4 output acceptance). If the user requires B's full object on the wire, that is group 4.7, and it must be ratified first.
 
+**Scope note added 2026-08-03 — where this subtask's evidence comes from, and where it does not.** [Walkthrough §5.4](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#54-traffic-evidence-and-wireshark-scope) puts producing a `.pcap` **out of scope of that procedure** and makes it no pass criterion of any of its three checks; the walkthrough's own traffic evidence is the sink node's `[CAP]` text lines, which is `15.4.11.4`'s. This subtask is therefore **not** gated by, and does not gate, the isolated-Room run. It stays in the plan because [milestone1.md § Phase 4](milestone1.md#phase-4--obscured-object-fusion-relayed-c--risk--warning-r13r15--runs--with-phase-3) box (b) and R15's own acceptance require a pcap, and because §5.6 makes the ADA node's own capture **mandatory** on the full blueprint, where no sink log exists. The route is [traffic-capture-wireshark.md](../requirements/car-sky-guide/traffic-capture-wireshark.md), which §5.4 names as the one that does produce a file; §7 marks the browser log download and the extraction script as Human work. It may be run against either Room — the ADA node's capture is identical in both.
+
 **Acceptance:** the `.pcap` archived and the decoded fields recorded in `plans/doc/phase4-ada-fusion-run.md`, showing ≥ 1 R4 warning event; evidence commit by the orchestrating session.
 
-**Dependencies:** after `5.4.6.2` + `6.4.4.1` + `6.4.4.2` (parallel with `18.4.6.4`). **Commit:** `[15.4.6.5] docs: record the ADA to IVI pcap evidence`
+**Dependencies:** after `5.4.6.2` **or** `5.4.10.8` (whichever Room is up), plus `6.4.4.1` + `6.4.4.2` (parallel with `18.4.6.4`). **Commit:** `[15.4.6.5] docs: record the ADA to IVI pcap evidence`
 
 ---
 
@@ -454,6 +474,331 @@ The user's requirement: *the TrackedObjects of vehicle B and vehicle C are sent 
 
 ---
 
+## Task Group 4.9 — Isolated-Room prerequisites: the bench image, the CI lanes, the blueprint reference (serves R2, R4, R5)
+
+> **Added 2026-08-03**, as stage 2 of [walkthrough-driven-delivery.md](../.claude/rules/walkthrough-driven-delivery.md) over [deploy-ada-ecu-walkthrough.md](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md). Every subtask below cites the section that governs its step; **no brief carries a copy of the procedure**, and no command is restated here.
+>
+> **This group is the walkthrough's [§8.1](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#81-confirm-before-relying-on-these) made into work, and that is why it is scheduled ahead of every Room step.** Items 3, 5 and 8 name three artifacts that do not exist — the two CI jobs, the bench image with its two roles and log shapes, and the blueprint file. Nothing in groups 4.10–4.11 can start until they do, and each is cheap to land off-platform. Items 1, 4, 9, 10, 11 and 12 cannot be retired by authoring anything; they are carried as flags and attached to the subtask where each first bites.
+>
+> **Where the bench lives, and why it is not a node folder.** `tools/ada-bench/` at the repository root, one image `m1-ada-bench:latest`, two roles selected by `ROLE` — the placement and its four rejected alternatives are [§2.4](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#24-where-the-bench-sources-live-and-why), argued there against [node-code-layout.md](../.claude/rules/node-code-layout.md). [tools/netcheck/](../tools/netcheck/) is the standing precedent: test equipment that deploys as a Container node, self-contained, its own Dockerfile, no imports from any node folder, no hardcoded peer addresses. **No subtask in this group writes inside `V2X_ECU/`, `IVI_ECU/` or `ADA_ECU/`** — the bench must be able to change without rebuilding the thing it tests. Flagged to [[project-architecture]] as § Open items item 9, because `node-code-layout.md` names four code folders and does not yet name `tools/` as the sanctioned home for bench containers.
+>
+> **Run doc:** `plans/doc/phase4-ada-isolated-room-run.md`, created by the first subtask that records evidence into it and appended by every one after. It is deliberately separate from `plans/doc/phase4-ada-fusion-run.md`, which is group 4.6's full-chain record — two Rooms, two records, so no reader has to work out which run a log came from.
+
+### [ ] `5.4.9.1` — Author `requirements/car-sky-guide/blueprint-ada-isolated.json` *(agent — day one, blocks nothing else in this group)*
+
+**Objective:** land the blueprint definition [§2.2](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#22-the-blueprint-definition-and-where-it-lives) designates but which [§8.1 item 8](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#81-confirm-before-relying-on-these) records as not yet created.
+
+**Scope:** create the file at exactly that path, beside [blueprint-m1-cooperative-awareness.json](../requirements/car-sky-guide/blueprint-m1-cooperative-awareness.json), whose shape it follows. **Its content is [§2.2](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#22-the-blueprint-definition-and-where-it-lives)'s JSON block, transcribed byte-for-byte** — four nodes, flat `config` per [carsky-rest-api-blueprint.md § Node config is flat](../requirements/car-sky-guide/carsky-rest-api-blueprint.md#node-config-is-flat-not-wrapped), empty `pins` and `edges`. Nothing is invented, reordered or "improved": this file's whole value is that `5.4.10.3` creates nodes from it and `5.4.10.6` diffs the live blueprint against it, so a divergence here is a divergence in both.
+
+- **`pins` and `edges` stay empty, unlike the IVI mini-blueprint's reference JSON.** REST rejects `ETHERNET` pins and an import silently drops them ([carsky-rest-api-blueprint.md § Key finding](../requirements/car-sky-guide/carsky-rest-api-blueprint.md#key-finding-what-rest-can-and-cannot-do)), and this file *is* a creation source here — §4.1 sanctions both the `/batch` and the Import-from-File routes off it. Declaring pins it cannot deliver would make the read-back diff at `5.4.10.6` fail on fields nobody typed. The addresses the human draws instead are [§4.2](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#42-wire-the-ethernet-pins)'s table.
+- The `description` field already carries the not-importable-pins warning in §2.2's text; keep it verbatim rather than paraphrasing.
+- **Do not resolve §2.2's own open question inside this file.** Its two notes flag that `command: ["./entrypoint.sh"]` and `capabilities: ["NET_RAW"]` assume the delivered ADA image ships the capture entrypoint, and [§8.1 item 7](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#81-confirm-before-relying-on-these) asks for that to be reconciled with [node-ada-ecu.md](../requirements/car-sky-guide/node-ada-ecu.md). That reconciliation is Phase 2 `5.2.9.4`'s, and it is a **hard dependency of `5.4.10.5`** — see § Open items item 10. Write §2.2's values here and let `5.2.9.4` make the node guide agree.
+
+**Acceptance:** the file parses as JSON; its four nodes, their `nodeType`s, every `image`, `command`, `capabilities` and env key/value, and the bridge's `bridgeMode`/`subnet` match §2.2 field for field; `pins` and `edges` are empty arrays; the addresses and ports agree with [§9 Quick reference](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#9-quick-reference) (`.11` / `.12` / `.13` on `10.99.0.0/24`, bridge `.1`, ports `47200` and `47300`).
+
+**Dependencies:** none — starts immediately, in parallel with everything. **Commit:** `[5.4.9.1] docs: add the isolated ADA blueprint definition`
+
+### [ ] `2.4.9.2` — Bench emitter `tools/ada-bench/mock_v2x.py` *(agent)*
+
+**Objective:** the `ROLE=v2x_mock` role of [§2.3](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#23-the-bench-image--one-image-two-roles) — a relayed-object emitter that stands in for the V2X ECU **at its output edge only**, performing no decoding and sending no encoded frames.
+
+**Scope:** Python 3, standard library only (the image is Alpine plus `python3` and `tcpdump`; no pip install).
+
+- One UDP datagram per tick to `TARGET_HOST:TARGET_PORT` at `RATE_HZ`, after `START_DELAY_S` seconds so the ADA node is listening first. **Every one of those is an environment variable and none is a literal** ([§3.1](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#31-write-the-bench-scripts): nothing about the topology is in the code; [CLAUDE.md](../CLAUDE.md) governing principle 5).
+- The datagram body, the `PROFILE` behaviours (`approaching`, `out_of_range`) and the `STATION_ID` / `OBJECT_ID` / `START_DISTANCE_M` / `MIN_DISTANCE_M` / `CLOSING_RATE_MPS` / `LATERAL_M` / `OBJECT_SPEED_MPS` semantics are §2.3's bullet list — implement them from there, do not re-derive them.
+- **The message must match [`ADA_ECU/contracts/r2-v2x-object.schema.json`](../ADA_ECU/contracts/r2-v2x-object.schema.json) field for field.** [§2.4](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#24-where-the-bench-sources-live-and-why): keep the field list byte-identical to that copy, or the bench will pass a message the real consumer rejects. SI units, `classification: "vehicle"`, `object.confidence` and `sender.speed` populated so no nullable field is exercised by accident. The failure this prevents is the `parse_reject`-on-every-datagram row of [§6](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#6-troubleshooting), whose stated remedy is "fix the emitter, not the node".
+- One `[TX]` log line per datagram, in §2.3's exact shape — `2.4.11.2`'s pass criterion counts them and compares against the ADA node's `r2_ingest` count, so the prefix and the `seq`/`objectId`/`distance`/`bytes` fields are load-bearing, not decoration.
+- **Out of scope:** the entrypoint, the capture script and the Dockerfile (`5.4.9.4`); anything the sink does (`4.4.9.3`); any encoding, ASN.1 or Vanetza path.
+
+**Acceptance:** `python -m py_compile` passes; a loopback self-check sends one datagram of each profile to a local socket and the received body **validates against `ADA_ECU/contracts/r2-v2x-object.schema.json`** — the same acceptance shape `18.4.3.1` uses, evidence in the Status line. The repeatable CI form is `2.4.9.7`.
+
+**Dependencies:** none. Parallel with `4.4.9.3`. **Commit:** `[2.4.9.2] feat: add the V2X bench relayed-object emitter`
+
+### [ ] `4.4.9.3` — Bench sink `tools/ada-bench/mock_ivi.py` *(agent)*
+
+**Objective:** the `ROLE=ivi_mock` role of [§2.3](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#23-the-bench-image--one-image-two-roles) — bind `0.0.0.0:LISTEN_PORT`, log and check every warning datagram. It stands in for the Android node and is a Linux container precisely so it can do what the real node cannot: log, check and capture ([§2.1](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#21-topology)).
+
+**Scope:** Python 3, standard library only.
+
+- Two lines per datagram plus a `[SUMMARY]` every `SUMMARY_EVERY_S` seconds, in §2.3's exact shapes. **`15.4.11.4` greps these strings literally**, so `[RX]`, `[CHECK]`, `[SUMMARY]`, `both_vehicles=yes`, `c_source_relayed=yes` and the field names beside them are the contract of this file.
+- **Explicit field checks, not full schema validation** — §2.3 fixes that so the image stays standard-library only. `both_vehicles=yes` requires `geometry.vehicleB` and `geometry.vehicleC` both present with numeric `x` and `y`; `c_source_relayed=yes` requires `object.source` to be exactly `v2x_relayed`; `rejected` counts datagrams that were not valid JSON or whose `type` was neither `warning` nor `state`.
+- The field list is taken from [`ADA_ECU/contracts/r4-ada-ivi.schema.json`](../ADA_ECU/contracts/r4-ada-ivi.schema.json) and kept byte-identical to it ([§2.4](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#24-where-the-bench-sources-live-and-why)). **A null `geometry.vehicleC` is legitimate before C is first tracked** and must produce `both_vehicles=no` rather than a rejection — [§5.3](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#53-check-3--the-warning-reaches-the-ivi-stand-in-carrying-both-vehicles)'s failure note turns on being able to read `no` on the first `seq` and `yes` afterwards.
+- **Out of scope:** rendering anything, the capture (`5.4.9.4` owns `capture.sh`), and any dependency on `ADA_ECU/tools/mock_ivi_receiver.py` — that is `18.4.3.1`'s loopback tool for CI inside the node folder and **is not shipped in this image**; the two stay separate per the no-cross-folder-imports rule.
+
+**Acceptance:** `python -m py_compile` passes; a loopback self-check feeds it the committed `contracts/samples/r4-warning.json` body and a null-`vehicleC` variant, and the emitted `[RX]`/`[CHECK]`/`[SUMMARY]` lines match §2.3's shapes with `both_vehicles` reading `yes` then `no` respectively and `rejected=0` — evidence in the Status line.
+
+**Dependencies:** none. Parallel with `2.4.9.2`. **Commit:** `[4.4.9.3] feat: add the IVI bench warning sink and checker`
+
+### [ ] `5.4.9.4` — Bench image `tools/ada-bench/{entrypoint.sh,capture.sh,Dockerfile}` *(agent)*
+
+**Objective:** one image serving both roles — [§2.3](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#23-the-bench-image--one-image-two-roles)'s five-file table completed, so **a deploy alone produces evidence and no shell session is ever needed** ([§3.1](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#31-write-the-bench-scripts)).
+
+**Scope:** the three remaining rows of §2.3's file table.
+
+- `entrypoint.sh`: `[BOOT]` line, launch `capture.sh` in the background, then `exec` the script named by `ROLE`. A misspelled `ROLE` must fail loudly at start — the climbing-restart-count row of [§6](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#6-troubleshooting) is what that row diagnoses.
+- `capture.sh`: `tcpdump -i any -n -l` on `CAPTURE_FILTER`, each line prefixed `[CAP]`, falling back to packet counters without `NET_RAW`. **Port `tools/netcheck/capture.sh` rather than writing a new one** — same category of artifact, and `15.4.11.4`'s `[CAP]` criterion depends on the line shape. It writes no rotating pcap: [§5.4](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#54-traffic-evidence-and-wireshark-scope) puts `.pcap` production out of scope for this procedure, and the `[PCAP-BEGIN]` machinery is `ADA_ECU/capture.sh`'s (`6.4.4.1`), not this one's.
+- `Dockerfile`: `FROM alpine:3.20`, `apk add python3 tcpdump`, `WORKDIR /app`, copy the four files, `CMD ["./entrypoint.sh"]`. **`command` is relative to `/app`** — §4.3's closing note: `./entrypoint.sh` works and `/entrypoint.sh` does not exist, so the container dies at start.
+- Self-contained context: no file outside `tools/ada-bench/` enters the build, and nothing here imports from a node folder ([node-code-layout.md § Build rules](../.claude/rules/node-code-layout.md#build-rules-all-container-nodes)).
+
+**Acceptance:** `sh -n` and `bash -n` clean on both scripts, LF line endings, exec bit set; `docker buildx build --platform linux/arm64 --provenance=false --sbom=false -t m1-ada-bench:latest tools/ada-bench/` succeeds in the `5.4.9.5` lane; running the built image with `ROLE=v2x_mock` prints `[BOOT]` and then `[TX]` lines, and with `ROLE=ivi_mock` prints `[BOOT]` and binds.
+
+**Dependencies:** after `2.4.9.2` + `4.4.9.3` (the two files it `exec`s must exist). **Commit:** `[5.4.9.4] feat: add the ADA bench image entrypoint, capture and Dockerfile`
+
+### [ ] `5.4.9.5` — CI lane `ada-bench-image` *(agent — closes [§8.1 item 3](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#81-confirm-before-relying-on-these), half)*
+
+**Objective:** the first of the two jobs [§3.2](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#32-build-and-push-the-images-on-ci) requires and §8.1 item 3 records as absent — **a push currently builds and publishes nothing**.
+
+**Scope:** one job `ada-bench-image` building context `tools/ada-bench/` and pushing `m1-ada-bench:latest`, in the shape of `v2x-ecu-image` in [phase1-ci.yml](../.github/workflows/phase1-ci.yml). Every flag and value comes from §3.2's command block and its four bullets — `--platform linux/arm64`, `--provenance=false --sbom=false`, registry host `registry.hackathon-2.carsky.io` used identically in the login, the tag and the node's `image` field, and the key read only from the `CARSKY_ZOT_API_KEY` repository secret ([zot-registry-api-key.md § CI secret](../requirements/car-sky-guide/zot-registry-api-key.md#ci-secret-carsky_zot_api_key)). Push only when the secret exists, with the same notice-and-exit-0 guard the Phase 1 lanes use; verify the pushed artifact through the existing `.github/actions/verify-arm64-image` composite.
+
+**File placement:** `.github/workflows/phase4-ci.yml` — *a lane belongs to the phase that created it*, this phase's § CI ruling. That file is also `15.4.5.1`'s; **whichever lands first creates it** with the standard `on:`/`concurrency:`/header block, and the other adds only its job. Sequence the two edits — they are the only shared file in this group.
+
+**Acceptance:** workflow YAML valid; run-blocks `bash -n` clean; the lane is green on the pushed branch and the build step completes in roughly a minute (§3.2: Alpine plus two packages under emulation).
+
+**Dependencies:** after `5.4.9.4`. Shares `phase4-ci.yml` with `15.4.5.1` and `2.4.9.7`. **Commit:** `[5.4.9.5] chore: add the ADA bench image build-push CI lane`
+
+### [ ] `5.4.9.6` — Confirm the `ada-ecu-image` lane matches §3.2's table *(agent — closes [§8.1 item 3](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#81-confirm-before-relying-on-these), other half)*
+
+**Objective:** the second job of [§3.2](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#32-build-and-push-the-images-on-ci) exists and is correct. §3.2 is unambiguous about the order: *"If a job's context, tag, registry host or platform flag does not match the table above, fix the `.yml` first — there is nothing to verify without it."*
+
+**Scope:** the job is **already planned as Phase 2 `5.2.8.1`** (`ada-ecu-image` in `phase2-ci.yml`, context `ADA_ECU/`, tag `registry.hackathon-2.carsky.io/m1-ada-ecu:latest`) and is **not** re-planned here — IDs are never duplicated. This subtask's single objective is the confirmation and, if needed, the correction:
+
+- Check the live job against §3.2's table row for row: job name, build context, image tag, registry host, `--platform linux/arm64`, `--provenance=false --sbom=false`, and the secret's name.
+- Check its timeout against §3.2's closing paragraph — the ADA image compiles C++ and installs the detector's Python dependencies under emulation, and the existing image jobs use **360 minutes** for that reason. A shorter cap is the "red after 360 minutes" row of [§6](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#6-troubleshooting) waiting to happen.
+- Any mismatch is fixed in the `.yml` in this same commit. A clean check produces no code change and the commit is the record in `plans/doc/phase4-ada-isolated-room-run.md` — **this subtask creates that run doc.**
+
+**Acceptance:** every row of §3.2's table confirmed against the live workflow and recorded, with any correction applied and the lane green; the run doc exists and names the two job files (`phase2-ci.yml` for the ADA image, `phase4-ci.yml` for the bench image) so no later reader hunts for them.
+
+**Dependencies:** after Phase 2 `5.2.8.1`. Parallel with `5.4.9.5`. **Commit:** `[5.4.9.6] docs: confirm the ADA ECU image lane against the walkthrough build table`
+
+### [ ] `2.4.9.7` — CI lane `ada-bench-selfcheck` — emitter → sink loopback *(agent)*
+
+**Objective:** prove [§8.1 item 5](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#81-confirm-before-relying-on-these) — *"the bench image, its two roles, its env names and its log-line shapes … not yet written"* — **before a Room slot is spent on them**. An unproven route is proved ahead of the work depending on it ([walkthrough-driven-delivery.md § Stage 2](../.claude/rules/walkthrough-driven-delivery.md)); this is the cheapest place that can happen, and it is the only check in this group that runs without the platform.
+
+**Scope:** a second job in `phase4-ci.yml`. Start `mock_ivi.py` on a loopback port; start `mock_v2x.py` with `TARGET_HOST=127.0.0.1`, that port, a short `START_DELAY_S` and `PROFILE=approaching`; feed the sink a handful of synthetic R4 warning bodies from `contracts/samples/`; then assert **all** of:
+
+- the emitter's datagrams validate against `ADA_ECU/contracts/r2-v2x-object.schema.json` (the `parse_reject` failure mode, caught here rather than in a Room);
+- the emitter's `[TX]` lines and the sink's `[RX]`/`[CHECK]`/`[SUMMARY]` lines parse under the exact greps `2.4.11.2` and `15.4.11.4` use — the lane fails if a prefix or field name drifts;
+- `PROFILE=out_of_range` holds distance at `START_DISTANCE_M`, which is what makes `13.4.11.5`'s negative case meaningful;
+- a malformed datagram increments the sink's `rejected` counter rather than killing it.
+
+**Out of scope:** anything requiring the platform, a registry or a deployed node.
+
+**Acceptance:** lane green on the pushed branch, with a non-zero examined-datagram count asserted so the lane cannot pass vacuously.
+
+**Dependencies:** after `2.4.9.2` + `4.4.9.3` + `5.4.9.5` (same file). **Commit:** `[2.4.9.7] chore: add the ADA bench loopback self-check CI lane`
+
+---
+
+## Task Group 4.10 — Create and deploy the isolated Room (serves R5, R6)
+
+> [Walkthrough §3.3](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#33-confirm-the-run-passed-and-the-images-landed) through [§4.5](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#45-deploy), in the order the document states — **that ordering is binding** where the walkthrough gives one, and it does here: the images must exist before the nodes reference them, the nodes before the pins, the pins before validation passes, and the config read-back before a Room slot is spent.
+>
+> **This is where execution stops and waits for a person, three times.** [§7](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#7-work-division-between-ai-and-human) assigns the canvas, every node-config edit and the deploy to Human, and the reasons are structural, not conservatism: REST has no `ETHERNET` pin type, no update route and no delete operation, and picking the Device spends one of two Room slots. **No agent performs a *USER-MANUAL* row below**; [[car-sky]] is spawned for the *car-sky* rows and halts at the next human one, reporting exactly what is needed.
+
+| Step | Subtask | Owner |
+|---|---|---|
+| Confirm the two image jobs passed | `5.4.10.1` | **Human** |
+| Confirm both images reached the registry | `5.4.10.2` | AI — [[car-sky]] |
+| Create the blueprint and its four nodes | `5.4.10.3` | AI — [[car-sky]] |
+| Wire and configure the ethernet pins | `6.4.10.4` | **Human** |
+| Configure the correct image on each node | `5.4.10.5` | **Human** |
+| Read the stored config back and diff it | `5.4.10.6` | AI — [[car-sky]] |
+| Deploy the blueprint | `5.4.10.7` | **Human** |
+| Poll to `Running`, resolve every `nodeKey` | `5.4.10.8` | AI — [[car-sky]] |
+
+### [ ] `5.4.10.1` — HUMAN TASK: confirm the two image jobs passed *(user — no agent performs this)*
+
+**Objective:** the first half of [§3.3](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#33-confirm-the-run-passed-and-the-images-landed) — green on both `ada-bench-image` and `ada-ecu-image` in the newest Actions run.
+
+**Scope:** GitHub → Actions → the newest run → the two jobs. §7 assigns this to Human because *an agent session holds no GitHub token*; the same note records that it **flips to AI on a machine with an authenticated `gh` CLI**, in which case §3.3's two `gh` commands replace the browser and this subtask is handed to [[car-sky]] instead. A red push step printing `secret not set` means the credential of [§1.2](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#12-cloud-platform-access) is missing, not that the code is wrong.
+
+**Acceptance:** both job names and their conclusions recorded in `plans/doc/phase4-ada-isolated-room-run.md`, with the run id. Evidence commit by the orchestrating session after the user confirms.
+
+**Dependencies:** after `5.4.9.5` + `5.4.9.6`, and a commit pushed. **Commit:** `[5.4.10.1] docs: record the image CI run for the isolated ADA Room`
+
+### [ ] `5.4.10.2` — Confirm both images reached the registry *(car-sky)*
+
+**Objective:** the second half of [§3.3](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#33-confirm-the-run-passed-and-the-images-landed) — the registry's own answer, **independent of what the run reported**.
+
+**Scope:** the three `curl` calls §3.3 gives, against the catalog and both tag lists. The Zot credential is supplied at run time and never stored ([zot-registry-api-key.md](../requirements/car-sky-guide/zot-registry-api-key.md)); §7's closing note applies — every AI row needs its credential handed over, an agent keeps none. Confirm each manifest is a **single-platform `linux/arm64` image, not a manifest index**: an index is what makes a node hang in `Provisioning`, and §3.3's warning is that the failure "appears late and reads like a network fault".
+
+**Acceptance, verbatim from [§3.3](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#33-confirm-the-run-passed-and-the-images-landed):** both repository names present in the catalog, and `{"name":"m1-ada-ecu","tags":["latest"]}` / `{"name":"m1-ada-bench","tags":["latest"]}` returned by the tag lists. Both digests recorded in the run doc. A name missing here stops the group — fix it now, per §3.3.
+
+**Dependencies:** after `5.4.10.1`. **Commit:** `[5.4.10.2] docs: record the registry confirmation for both isolated-Room images`
+
+### [ ] `5.4.10.3` — Create the blueprint and its four nodes over REST *(car-sky)*
+
+**Objective:** [§4.1](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#41-create-the-blueprint)'s two calls — a blueprint named `ada-isolated`, then one `/batch` adding the four nodes with their `config` blocks. §7 assigns this to AI; it is the largest scripted step in the procedure and the one that keeps the human's canvas session to pins and corrections.
+
+**Scope:** the endpoints, the payload shape and the flat-`config` rule are §4.1's; the node data is `5.4.9.1`'s file and nothing else. §4.1 names the batch payload `batch-ada-isolated.json` without designating a path — **derive it at run time from `requirements/car-sky-guide/blueprint-ada-isolated.json`, one `{"op":"addNode","data":{…}}` per node, and do not commit a second copy of the node data**; a committed derivative would be a second source of truth for the same fields. Flagged to [[project-researcher]] as § Open items item 11.
+
+- Nydus **Import from File** on the same file produces the same result and is an equally sanctioned route (§4.1); **neither route creates pins**, and neither is better than the other for that.
+- If a blueprint already carries `ethernet` pins at these addresses, cloning it is the only route that preserves them (§4.1) and saves `6.4.10.4` most of its work — check before creating from scratch.
+- **Never edit the `<name>-deploy` snapshot** a deploy creates: §4.1's blockquote — edits to it appear to save and are ignored by the next deploy.
+
+**Acceptance, verbatim from [§4.1](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#41-create-the-blueprint):** the created blueprint returns an `id`, and the batch call reports **four nodes created, no pins, no edges**. The `id` and the four node ids recorded in the run doc — every call in groups 4.10 and 4.11 needs the blueprint id.
+
+**Dependencies:** after `5.4.9.1` + `5.4.10.2`. **Commit:** `[5.4.10.3] docs: record the isolated blueprint and its four nodes created over REST`
+
+### [ ] `6.4.10.4` — HUMAN TASK: wire the four ethernet pins and validate *(user, Nydus canvas — no agent performs this)*
+
+**Objective:** [§4.2](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#42-wire-the-ethernet-pins) — one `ETHERNET`/`INPUT` pin on the bridge, one `ETHERNET`/`OUTPUT` pin per container node at its address, three edges, all terminating at the bridge. A star, not a chain.
+
+**Scope:** §4.2's five numbered steps, its per-node address table, and the pin shape at [node-ada-ecu.md § Pins](../requirements/car-sky-guide/node-ada-ecu.md#pins) — *only the address differs per node*. **This is canvas work with no scripted alternative and it is the reason the whole procedure has a human in it:** REST cannot create `ETHERNET` pins, a JSON import silently drops them, and the API has no delete operation ([carsky-rest-api-blueprint.md § Key finding](../requirements/car-sky-guide/carsky-rest-api-blueprint.md#key-finding-what-rest-can-and-cannot-do)) — so a wrong pin is corrected by hand or not at all. Same-type wiring only.
+
+**Acceptance, verbatim from [§4.2](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#42-wire-the-ethernet-pins):** `POST /api/v1/blueprints/{id}/validate` returns a **pass**. A 422 naming a node means that node still has no pin — the [§6](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#6-troubleshooting) row for it says the same. The validate call itself is a read and may be run by [[car-sky]]; the drawing is not. Recorded in the run doc.
+
+**Dependencies:** after `5.4.10.3`. **Commit:** `[6.4.10.4] docs: record the isolated blueprint pin wiring and validation`
+
+### [ ] `5.4.10.5` — HUMAN TASK: configure each node's image and env in the Inspector *(user, Nydus UI — no agent performs this)*
+
+**Objective:** [§4.3](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#43-configure-each-nodes-image) — every node's `image`, `command`, `capabilities` and `env` set and confirmed against §2.2.
+
+**Scope:** §4.3's three-row image table (`m1-ada-bench:latest` with `ROLE=v2x_mock` on `.11`, `m1-ada-ecu:latest` on `.12`, `m1-ada-bench:latest` with `ROLE=ivi_mock` on `.13`) and its four-row *"values that decide whether anything works at all"* table. **This step stays a hand edit even though `5.4.10.3` created the nodes with config attached** — §4.3: the API has no update route, so every correction after creation is an Inspector edit. Click the node, edit, click empty canvas to commit.
+
+The four values §4.3 singles out each fail in a way that looks like something else, and their symptoms are that table's, not this brief's. `command` is relative to the image workdir `/app`.
+
+**Blocked on a reconciliation, not on a build:** [§8.1 item 7](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#81-confirm-before-relying-on-these) requires the ADA node's `command` and `capabilities` to be resolved against [node-ada-ecu.md](../requirements/car-sky-guide/node-ada-ecu.md) **before deploying**, and that file today still says `command: ["./ada_ecu"]`, no `capabilities`, and the stale `registry.carsky.io` host. Phase 2 `5.2.9.4` is the fix and must land first — § Open items item 10.
+
+**Acceptance:** every field typed, then proven by `5.4.10.6`'s read-back rather than by the Inspector's truncated fields (§4.4 is explicit that the read-back is what counts). Which values were typed recorded in the run doc.
+
+**Dependencies:** after `6.4.10.4` + Phase 2 `5.2.9.4`. **Commit:** `[5.4.10.5] docs: record the isolated-Room node configuration`
+
+### [ ] `5.4.10.6` — Read the stored config back and diff it against the definition *(car-sky)*
+
+**Objective:** [§4.4](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#44-read-the-stored-config-back) — *"one call catches every row of the two tables above"*. **This is the gate in front of the Room slot**: hand transcription is where drift enters, and a mistyped octet found here costs a re-edit rather than a deploy cycle.
+
+**Scope:** `GET /api/v1/blueprints/{id}`, then a field-for-field diff against `requirements/car-sky-guide/blueprint-ada-isolated.json`, ignoring only platform-assigned `id`s and node positions. Every one of these is a diff line, not a judgement call: each node's `nodeType` and whole `config`; the bench's `TARGET_HOST`/`TARGET_PORT` and `ROLE`; the ADA node's `V2X_LISTEN_PORT`, `IVI_ECU_HOST`/`IVI_ECU_PORT` and every threshold; the sink's `LISTEN_PORT`; the bridge's `bridgeMode` and `subnet`, without which the `10.99.0.x` addresses have no network.
+
+**Acceptance, verbatim from [§4.4](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#44-read-the-stored-config-back):** four nodes; **three `ETHERNET`/`OUTPUT` pins at `10.99.0.11`, `.12`, `.13` plus the bridge's single `INPUT` pin and three edges**; and each container node's `config` carrying the image, command, capabilities and env exactly as typed. A clean diff recorded in the run doc — or every mismatching field named and handed back to `5.4.10.5` for a canvas fix, then re-run. **A deploy does not start on a dirty diff.**
+
+**Dependencies:** after `5.4.10.5`. **Commit:** `[5.4.10.6] docs: record the isolated blueprint read-back diff`
+
+### [ ] `5.4.10.7` — HUMAN TASK: deploy the blueprint *(user, Nydus UI — no agent performs this)*
+
+**Objective:** [§4.5](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#45-deploy)'s three clicks — blueprint Inspector → **New Deployment** → pick an **existing Device** → **Deploy**.
+
+**Scope:** §4.5's numbered steps. §7 keeps this Human because picking the Device is the user's call and **consumes one of two Room slots** ([§8.1 item 13](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#81-confirm-before-relying-on-these); § Open items item 12 tracks the contention against Phase 3's and Phase 5's Rooms). `+ Create new device` is unnecessary and eats into that budget. Deploy the **original** blueprint, never the `<name>-deploy` snapshot.
+
+**Readiness is this check and nothing else is coming** — the same ruling `5.4.6.2` carries: [m1-run-timing-and-event-triggering.md §4.2](../requirements/m1-run-timing-and-event-triggering.md) rules out a node-to-node startup handshake, and the bench's `START_DELAY_S=20` is the remedy for a node that would otherwise miss early traffic. Do not plan or assume a barrier message.
+
+**Acceptance:** the deployment exists and its `roomId` is recorded in the run doc; the phase evidence itself is `5.4.10.8`'s.
+
+**Dependencies:** after `5.4.10.6` (clean diff) and a free Room slot. **Commit:** `[5.4.10.7] docs: record the isolated Room deployment`
+
+### [ ] `5.4.10.8` — Poll every node to `Running` and resolve every `nodeKey` *(car-sky)*
+
+**Objective:** the AI row of [§4.5](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#45-deploy) — turn the human's deploy into recorded evidence, and produce the three keys every log call in group 4.11 needs.
+
+**Scope:** poll `GET /api/v1/deployments/{roomId}/nodes` until every node reads `Running` with restart count 0, recording each entry's `name` — the `nodeKey`. §4.5's two timing facts are binding on how this is judged: **the ADA node is the slowest to become useful** (largest image, and the detector loads its model before the first detection), so give it a minute past `Running` before anything reads its log; and *stuck in `Provisioning`* means the image could not be pulled — re-check `5.4.10.2` and the node's `image` field, diagnosing per [carsky-room-diagnostics](../.claude/skills/carsky-room-diagnostics/SKILL.md), never by redeploying blind.
+
+**Acceptance:** 4/4 nodes `Running` with restart count 0, and all three container `nodeKey` values recorded in the run doc. This is the precondition every [§8](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#8-expected-outputs-and-acceptance) proof rests on, and it replaces reading node badges off the Deployment Viewer by eye — the Phase 1 finding that its summary header is unreliable stands.
+
+**Dependencies:** after `5.4.10.7`. **Commit:** `[5.4.10.8] docs: record the isolated Room reaching Running`
+
+---
+
+## Task Group 4.11 — The three checks, the negative case, and teardown (serves R2, R13, R14, R15, R18)
+
+> [Walkthrough §5](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#5-run-the-checks) through [§5.7](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#57-tear-down). **Every acceptance below is [§8](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#8-expected-outputs-and-acceptance)'s, quoted, not invented** — [walkthrough-driven-delivery.md § Stage 2](../.claude/rules/walkthrough-driven-delivery.md) forbids the planner writing its own criteria for a walkthrough-governed check, and §8's three rows are exactly the three the user named.
+>
+> **The three proofs do not substitute for one another:** §8's own framing is that the first two prove what happened *inside* the node and the third proves it *left* the node. A run with checks 1 and 2 green and check 3 silent is a routing failure, not a partial pass.
+>
+> **The event names are the node's design, not an observed fact yet** — [§8.1 item 4](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#81-confirm-before-relying-on-these). `r2_ingest`, `own_sensor_ingest`, `track_transition`, `parse_reject`, `assessment`, `risk_transition` and `r4_tx` are literal strings from [HLD D8](../ADA_ECU/doc/phase2-4-ada-ecu-hld.md#d8--r18-the-ada-half-of-the-evidence-stream); a check that finds none of them is more likely reading a node that emits different names than a node that did nothing. Compare against the log before concluding a failure.
+
+### [ ] `18.4.11.1` — Save the three node logs and the run's threshold values *(car-sky)*
+
+**Objective:** the AI row *"Save the three node logs"* of [§5](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#5-run-the-checks) — one fetch per node into a file, so all three checks read **one window** instead of three.
+
+**Scope:** §5's three `curl` redirections into `ada.log`, `bench.log` and `sink.log`. Two of its rules are load-bearing and are the reason this is its own subtask rather than a step inside each check:
+
+- **`container=user` is mandatory** — omitting it returns 500 listing the two container names, the [§6](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#6-troubleshooting) row for it.
+- **Let the Room run at least 60 seconds after the ADA node reaches `Running`** before reading anything — the emitter waits `START_DELAY_S` and the detector needs time to load its model. Re-fetching per grep gives three checks three different windows, which §5 says plainly not to do.
+
+Also record, per [§8](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#8-expected-outputs-and-acceptance)'s closing instruction: `PROFILE`, `START_DISTANCE_M`, `MIN_DISTANCE_M`, `CLOSING_RATE_MPS`, `GATE_ENTER_M`, `GATE_EXIT_M`, `RISK_NEAR_M`, `RISK_CRITICAL_M` as deployed. **A pass at unknown thresholds proves nothing** — that sentence is §8's, and it is why this subtask exists ahead of the checks rather than beside them.
+
+**Acceptance:** three non-empty log files archived under `plans/doc/`, the eight threshold values recorded beside them in the run doc, and the window (Room start, `Running` time, fetch time) stated.
+
+**Dependencies:** after `5.4.10.8` + 60 s. **Commit:** `[18.4.11.1] docs: record the isolated-Room node logs and their threshold values`
+
+### [ ] `2.4.11.2` — Check 1: the relayed message is received and raises its event *(car-sky)*
+
+**Objective:** [§5.1](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#51-check-1--the-relayed-message-is-received-and-raises-its-event)'s claim under test — the ADA node receives the bench's datagram and raises the corresponding event. **This is the first of the three checks the user named.**
+
+**Scope:** §5.1's five greps over `ada.log` and `bench.log`, and its two expected-line blocks. Nothing is added to them.
+
+**Acceptance — [§8](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#8-expected-outputs-and-acceptance) output 1, verbatim:** `r2_ingest` count ≥ 1 and ≥ 90% of the bench's `[TX]` count · the first payload's `stationId` and `object.objectId` match the bench's configured values · `parse_reject` count is 0 · one `track_transition` to `tentative` and a later one to `tracked`, both `"source":"v2x_relayed"`.
+
+**On failure, §5.1 already says which side is wrong** — `r2_ingest` at 0 while `bench.log` shows `[TX]` is a routing fault (`TARGET_HOST`/`TARGET_PORT`/`V2X_LISTEN_PORT`, back to `5.4.10.5`); a non-zero `parse_reject` means **the emitter is wrong, not the node**, and is fixed against `ADA_ECU/contracts/r2-v2x-object.schema.json` at `2.4.9.2`. Report the verdict and the side; do not improvise a fix on the platform.
+
+**Dependencies:** after `18.4.11.1`. Parallel with `13.4.11.3` and `15.4.11.4` — three reads of saved files, no shared state. **Commit:** `[2.4.11.2] docs: record check 1 — relayed message received and event raised`
+
+### [ ] `13.4.11.3` — Check 2: both vehicles are in the track store *(car-sky)*
+
+**Objective:** [§5.2](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#52-check-2--both-vehicles-are-in-the-track-store)'s claim under test — the store holds a track for vehicle **B**, produced by ego's own detector from the baked-in clip, and a track for vehicle **C**, present only through the relayed path. **This is the second check the user named**, and it is the one that carries the milestone's whole point.
+
+**Scope:** §5.2's five greps and its three expected-line blocks, over `ada.log`. The single strongest line is the emitted `r4_tx`, **because it proves both tracks existed at the same instant** rather than at two different times — §5.2's own words, and the reason its criterion is written against that payload rather than against two separate transitions.
+
+**Acceptance — [§8](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#8-expected-outputs-and-acceptance) output 2, verbatim:** ≥ 1 `track_transition` to `tracked` with `"source":"own_sensor"` · ≥ 1 with `"source":"v2x_relayed"` · ≥ 1 `r4_tx` payload with `object.source` = `v2x_relayed` and numeric `geometry.vehicleB` · **zero** own-sensor entries claiming a relayed source or a `v2x:` id, and **zero** relayed entries claiming an `own:` id.
+
+**Those last three zeros are the zero-C guarantee in text** (§5.2) — nothing ego's detector produced can claim to be C, and nothing relayed can claim to have been seen directly. They are the same claim `ADA_ECU/tools/check_zero_c.py` (`12.3.5.1`) makes structurally, evidenced here on a deployed node.
+
+**Two failures with different owners, per §5.2:** no `own_sensor_ingest` at all is a detector problem — read for `detector_spawn` first, then `VIDEO_CLIP_PATH` / `MODEL_PATH` / `DETECTOR_ENABLED`, the [§6](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#6-troubleshooting) rows. `r4_tx` absent though both tracks reached `tracked` is **a tuning problem, not a defect** — the risk level never changed, and the route is `14.4.11.6`, not a code change. [§8.1 item 10](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#81-confirm-before-relying-on-these) warns this may be the expected outcome rather than the exception.
+
+**Dependencies:** after `18.4.11.1`. Parallel with `2.4.11.2` and `15.4.11.4`. **Commit:** `[13.4.11.3] docs: record check 2 — both vehicles in the track store`
+
+### [ ] `15.4.11.4` — Check 3: the warning reaches the IVI stand-in carrying both vehicles *(car-sky)*
+
+**Objective:** [§5.3](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#53-check-3--the-warning-reaches-the-ivi-stand-in-carrying-both-vehicles)'s claim under test — the ADA node puts a warning datagram on the wire, addressed to the IVI node, carrying both vehicles. **This is the third check the user named, and the traffic evidence for it.**
+
+**Scope:** §5.3's four greps over `sink.log`, and its expected-output block. `cSource=v2x_relayed` on every warning is what §5.3 calls *the point of the whole Room*.
+
+**Acceptance — [§8](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#8-expected-outputs-and-acceptance) output 3, verbatim:** ≥ 1 `[RX]` with `type=warning` from `10.99.0.12` · ≥ 1 `[CHECK] both_vehicles=yes c_source_relayed=yes` · last `[SUMMARY]` with `rejected=0` · ≥ 1 `[CAP] IP 10.99.0.12.<port> > 10.99.0.13.47300: UDP` · the sink's `received` count equals the ADA log's `r4_tx` count.
+
+**Traffic evidence is the sink's `[CAP]` text lines, and producing a `.pcap` is out of scope of this procedure** — [§5.4](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#54-traffic-evidence-and-wireshark-scope), explicitly, with the pcap route named there and marked *"not a pass criterion of any check"*. The plan's own separate pcap box is `15.4.6.5` and does not gate this subtask. **`[CAP]` needs `NET_RAW` on the sink node** ([§8.1 item 12](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#81-confirm-before-relying-on-these)); without it `capture.sh` falls back to packet counters, the `[RX]` line still stands and the `[CAP]` criterion cannot be met by any route in the document — report that state rather than substituting other evidence for it.
+
+**Two failures, per §5.3:** `r4_tx` present with the sink silent is a routing fault (`IVI_ECU_HOST`/`IVI_ECU_PORT` against `LISTEN_PORT`, back to `5.4.10.5`). `both_vehicles=no` needs the `seq` numbers read before it is called a defect — **`no` on the first datagram and `yes` afterwards is expected** because a null C is legitimate before C is first tracked; `no` throughout is the defect.
+
+**Dependencies:** after `18.4.11.1`. Parallel with `2.4.11.2` and `13.4.11.3`. **Commit:** `[15.4.11.4] docs: record check 3 — the warning on the wire carrying both vehicles`
+
+### [ ] `13.4.11.5` — HUMAN TASK: run the `PROFILE=out_of_range` negative case *(user, Nydus UI — no agent performs this)*
+
+**Objective:** [§8](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#8-expected-outputs-and-acceptance)'s first *further observation* — prove the admission gate **rejects** on distance, so admission in the main run was earned rather than automatic.
+
+**Scope:** §5.1's *"Run the negative case too"* paragraph — set `PROFILE=out_of_range` on the V2X bench node and redeploy. §7 marks it Human: it is a node-config edit plus a fresh deployment, and both are Inspector/canvas work. The re-run of the checks over the new logs is [[car-sky]]'s, under `18.4.11.1` and `2.4.11.2`'s briefs.
+
+**Acceptance, verbatim from [§8](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#8-expected-outputs-and-acceptance):** with `PROFILE=out_of_range`, `r2_ingest` still counts up and **no** relayed `track_transition` appears. §5.1 states the failure meaning exactly: a track admitted under this profile means the gate is not reading the message's distance.
+
+**Never reach for the gate constants to make a warning appear** — [§5.5](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#55-retune-when-no-warning-is-emitted)'s closing rule: moving `GATE_ENTER_M`/`GATE_EXIT_M` to change the alarm makes admission and alarm indistinguishable and **invalidates this very subtask**.
+
+**Dependencies:** after `2.4.11.2` (the positive case must have passed first, or the negative proves nothing). **Commit:** `[13.4.11.5] docs: record the out-of-range negative case`
+
+### [ ] `14.4.11.6` — HUMAN TASK: retune when no warning is emitted *(user, Nydus UI — contingency, run only if `13.4.11.3` finds no `r4_tx`)*
+
+**Objective:** [§5.5](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#55-retune-when-no-warning-is-emitted) — get the assessed risk level to **change**, which is what emits a warning, using node config and a redeploy. **No rebuild.**
+
+**Scope:** §5.5's four numbered steps and its three-row lever table (`MIN_DISTANCE_M` down on the bench, `RISK_NEAR_M` up or `RISK_CRITICAL_M` up on the ADA node). §5.5's step 2 carries the fact that makes this likely rather than exotic: **the composed range is ego-to-B plus B-to-C, so it is always larger than the distance the bench emits** — the defaults were chosen against a scenario, not against this clip's actual ego-to-B range, which is [§8.1 item 10](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#81-confirm-before-relying-on-these)'s warning that §5.5 may be on the critical path rather than a fallback.
+
+- **Pick one lever and change only it** (§5.5 step 3), then re-run `13.4.11.3` and `15.4.11.4`.
+- **Never retune the admission gate** — §5.5's closing rule, restated at `13.4.11.5`.
+- **Record every value changed.** §5.5: *a run whose thresholds are unknown proves nothing*; the record goes beside `18.4.11.1`'s threshold list, superseding it for the re-run.
+
+**Acceptance:** §8 outputs 2 and 3 met on the re-run, with the changed lever and its before/after values recorded. If no lever produces a transition, that is a finding about the risk defaults ([HLD §6](../ADA_ECU/doc/phase2-4-ada-ecu-hld.md#6-configuration--no-hardcoded-tunables), § Open items item 2's `(proposal)` values) — report it rather than widening the search.
+
+**Dependencies:** after `13.4.11.3`, only if it found no `r4_tx`. **Commit:** `[14.4.11.6] docs: record the risk-threshold retune and its re-run evidence`
+
+### [ ] `5.4.11.7` — HUMAN TASK: tear the Room down *(user, Nydus UI — no agent performs this)*
+
+**Objective:** [§5.7](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#57-tear-down) — **Delete Deployment**, releasing one of the two Room slots. The blueprint is untouched and redeployable.
+
+**Scope:** §5.7, and its one irreversible condition: **save all three log files before deleting — the log route returns nothing once the Room is gone.** `18.4.11.1` is what satisfies that, so this subtask does not run until its files are archived and every check that needs them has run.
+
+**Acceptance:** the deployment deleted and the release recorded in the run doc; `plans/doc/` holds the three logs and every check's verdict. Group 4.6's full-blueprint deploy may then take the slot.
+
+**Dependencies:** after `2.4.11.2` + `13.4.11.3` + `15.4.11.4` + `13.4.11.5`, and after `14.4.11.6` if it ran. **Commit:** `[5.4.11.7] docs: record the isolated Room teardown`
+
+---
+
 ## Execution order & parallelism
 
 ```
@@ -474,9 +819,27 @@ Group 4.7  BLOCKED on user ratification; if ratified: 4.4.7.1 ──► 4.4.7.2 
 
 Group 4.8  LAST - after every acceptance subtask above and every Phase 3 acceptance box
            20.4.8.1 (Scenario_Player/, no dependency) ──► 21.4.8.2 (also needs 14.4.1.3 + 15.4.2.2)
+
+Lane E (isolated Room - the bring-up lane; touches no file the fusion code touches)
+  4.9  5.4.9.1 (day one, no dependency)
+       2.4.9.2 ∥ 4.4.9.3 (day one) ──► 5.4.9.4 ──► 5.4.9.5 ──► 2.4.9.7
+       5.4.9.6 (after phase-2 5.2.8.1, ∥ everything)
+  4.10 5.4.10.1 (USER) ──► 5.4.10.2 ──► 5.4.10.3 ──► 6.4.10.4 (USER) ──► 5.4.10.5 (USER, also needs phase-2 5.2.9.4)
+       ──► 5.4.10.6 ──► 5.4.10.7 (USER) ──► 5.4.10.8
+  4.11 18.4.11.1 ──► { 2.4.11.2 ∥ 13.4.11.3 ∥ 15.4.11.4 }
+       13.4.11.5 (USER, after 2.4.11.2)      14.4.11.6 (USER, only if 13.4.11.3 found no r4_tx)
+       5.4.11.7 (USER, last - releases the Room slot)
 ```
 
-**Recommended runtime order (single tree):** 18.4.3.1 → 6.4.4.1 → 6.4.4.2 → 15.4.1.1 → 14.4.1.2 → 14.4.1.3 → 15.4.2.1 → 15.4.2.2 → 15.4.2.3 → 18.4.3.2 → 18.4.3.3 → 15.4.5.1 → 15.4.2.4 *(if time)* → group 4.6 when a Room is available.
+**Recommended runtime order (single tree):** 18.4.3.1 → 6.4.4.1 → 6.4.4.2 → 15.4.1.1 → 14.4.1.2 → 14.4.1.3 → 15.4.2.1 → 15.4.2.2 → 15.4.2.3 → 18.4.3.2 → 18.4.3.3 → 15.4.5.1 → 15.4.2.4 *(if time)* → **group 4.9 → 4.10 → 4.11 (isolated Room)** → group 4.6 (full chain) when a second Room is available.
+
+### Lane E in detail — parallel, sequential, and where it stops for a person
+
+- **Parallel with everything, from day one:** `5.4.9.1` (a JSON file), `2.4.9.2` and `4.4.9.3` (two standalone Python scripts), and `5.4.9.6` (a workflow read). None of the four touches `ADA_ECU/src/`, so the whole of group 4.9 can run beside the fusion code rather than after it — which matters, because [§8.1 item 5](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#81-confirm-before-relying-on-these) makes the bench an unproven dependency of the acceptance run.
+- **Sequential, and genuinely so:** every arrow in groups 4.10 and 4.11. The walkthrough's own ordering is binding — the images before the nodes that reference them, the nodes before the pins, the pins before `validate` passes, the read-back before the Room slot, the Room before any log exists, and the logs saved before the teardown deletes them.
+- **The three human gates** are `6.4.10.4` (canvas pins), `5.4.10.5` (node config) and `5.4.10.7` (deploy), plus `13.4.11.5` and `5.4.11.7` afterwards. **[[car-sky]] halts at each one, reports exactly what the human must do, and waits** — it does not improvise around a canvas step. The AI rows either side of them are `5.4.10.3`, `5.4.10.6`, `5.4.10.8` and the whole of group 4.11's reading.
+- **Group 4.9 has one shared file:** `.github/workflows/phase4-ci.yml`, written by `15.4.5.1`, `5.4.9.5` and `2.4.9.7`. Sequence those three edits; nothing else in the lane collides with anything.
+- **Group 4.10's entry condition is not "the code compiles"** — it is [§1.3](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#13-deliverable-prerequisites)'s seven deliverable rows present in the image, every one of which [§8.1 item 2](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#81-confirm-before-relying-on-these) records as unwritten today. They are Phase 2, 3 and 4 work already planned above; group 4.10 consumes them and plans none of them.
 
 **Shared-file sequencing with Phase 3:** `ADA_ECU/CMakeLists.txt` (this phase adds targets, Phase 3 adds none) and `ADA_ECU/Dockerfile` (Phase 3 adds `COPY detector/ models/ media/`, this phase adds nothing — `capture.sh` is picked up by Phase 2's existing entrypoint guard, but the runtime stage must `COPY capture.sh`, which is a one-line edit to sequence against Phase 3's).
 
@@ -492,6 +855,21 @@ Group 4.8  LAST - after every acceptance subtask above and every Phase 3 accepta
 | **Output check:** B's and C's TrackedObjects reach the IVI path, evidenced by log **and** pcap | **path A** 18.4.6.4 (both full R3 objects + `r4_tx`) · **path B** 15.4.6.5 (C's full R3 object + B's position on the wire) · caveat and decision in § Phase 4 output acceptance |
 | R15/R19 — pcap of ADA→IVI traffic | 6.4.4.1 · 6.4.4.2 · 15.4.6.5 |
 
+### Walkthrough acceptance traceability (isolated Room)
+
+Each row of [deploy-ada-ecu-walkthrough.md §8](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#8-expected-outputs-and-acceptance) maps to exactly one subtask, and no subtask invents a criterion §8 does not state.
+
+| §8 proof | Log surface | Closed by |
+|---|---|---|
+| 1 — the relayed message is received and raises its event | ADA node log | `2.4.11.2` |
+| 2 — both vehicles are in the track store | ADA node log | `13.4.11.3` |
+| 3 — the warning reaches the IVI stand-in carrying both vehicles | IVI sink log | `15.4.11.4` |
+| Observation — `PROFILE=out_of_range` admits nothing while `r2_ingest` still counts up | ADA node log | `13.4.11.5` |
+| Observation — every warning in the run carries `cSource=v2x_relayed` | IVI sink log | `15.4.11.4` |
+| §8's threshold record ("a pass at unknown thresholds proves nothing") | run doc | `18.4.11.1`, superseded by `14.4.11.6` if it runs |
+
+**How the isolated Room relates to the milestone boxes above.** It closes none of them on its own and is not planned as if it did: the boxes are worded against *bench scenarios live*, which on the full blueprint means the real Scenario Player. What it does is retire every ADA-side unknown before that Room is booked — which is why groups 4.9–4.11 sit in front of group 4.6 rather than replacing it.
+
 ## Open items & flags (no Phase 4 subtask may silently close them)
 
 | # | Item | Owner / closes at |
@@ -504,7 +882,14 @@ Group 4.8  LAST - after every acceptance subtask above and every Phase 3 accepta
 | 6 | **Phase 6 inherits this phase's live evidence.** `15.4.6.5`'s pcap is the ADA half of R19's corroborating capture; the V2X half is Phase 1's `6.1.10.5`. Phase 6 re-records both in one continuous run — it does not re-derive them | [[project-planner]] → Phase 6 |
 | 7 | **R20/R21 are only partly planned, deliberately** ([report §7](../requirements/m1-run-timing-and-event-triggering.md)). Group 4.8 delivers the instrument (`21.4.8.2`) and §8(2)'s cheap half (`20.4.8.1`). **Not planned anywhere, and no subtask may assume it exists:** (a) **bench deadline scheduling** — `player/generator.py` still sleeps a fixed `period` with no drift correction (§2(d)), so a red K5 is a *measurement*, not a tool defect; (b) **detector real-time pacing and its §6.1 keys** `DETECTOR_REALTIME_PACING` / `DETECTOR_CLIP_FPS` / `DETECTOR_START_DELAY_S` — R20's detector half, ~2 h *inside* Phase 3 work that has not started, hence K4's `--clip-fps`/`--frame-stride` come from the command line and K4 skips without them (annotated at Phase 3 `12.3.2.1`); (c) bench `start_delay_s` / `reference_time_epoch` (§6.1) and the one `[EVT] ready` line per node of the §4.2 B-1 readiness pick; (d) **running the checker on a real run** — all three logs coexist only in Phase 6's continuous run, so this phase delivers the instrument and Phase 6 produces the verdict | **user** (accept/reject R20/R21 per §8(1)) → [[project-planner]] → Phase 6 |
 | 8 | **§6.2's clock-domain ruling is a design decision the ADA HLD does not carry** — `CLOCK_REALTIME` for wire and log stamps, `CLOCK_MONOTONIC` for intervals **including track expiry**, cross-node timestamp arithmetic forbidden. It lands on Phase 2 `13.2.4.3` (expiry) and `2.2.3.1` (the R3 mapping, which is also PR-review defect M1) — annotated there, and carried as [phase2_tasks.md § Open items item 9](phase2_tasks.md#open-items--flags-no-phase-2-subtask-may-silently-close-them). No Phase 4 subtask may implement it silently | [[project-architecture]] (HLD amendment), Phase 2 |
+| 9 | **`tools/ada-bench/` is implementation code outside the four node folders.** [node-code-layout.md](../.claude/rules/node-code-layout.md) opens with "The repo has exactly four code folders … **no implementation code lives outside them**", and [tools/netcheck/](../tools/netcheck/) already contradicts that sentence in practice. [Walkthrough §2.4](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#24-where-the-bench-sources-live-and-why) argues the placement against that rule and rejects all four alternatives, and this plan follows it — but the *rule* is [[project-architecture]]'s and does not yet name `tools/` as the sanctioned home for bench containers. **Requested: one paragraph in `node-code-layout.md` sanctioning it, with the same build rules the four folders carry.** No subtask here may edit that rule | [[project-architecture]] |
+| 10 | **[node-ada-ecu.md](../requirements/car-sky-guide/node-ada-ecu.md) states three facts the walkthrough contradicts, and the deploy is blocked on the reconciliation.** Its § Blueprint node config still carries `command: ["./ada_ecu"]` and no `capabilities`, and its § Build & push still uses the stale registry host `registry.carsky.io`; [walkthrough §2.2](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#22-the-blueprint-definition-and-where-it-lives) and [§9](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#9-quick-reference) use `["./entrypoint.sh"]`, `["NET_RAW"]` and `registry.hackathon-2.carsky.io`. [§8.1 item 7](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#81-confirm-before-relying-on-these) requires this resolved with the file's owner **before deploying**. **The fix is already planned as Phase 2 `5.2.9.4` and is not re-planned here**; it is promoted to a hard dependency of `5.4.10.5`. Reported to [[project-architecture]] as a node-fact discrepancy rather than patched in a subtask brief | [[project-architecture]] · Phase 2 `5.2.9.4` |
+| 11 | **[Walkthrough §4.1](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#41-create-the-blueprint) names a batch payload file `batch-ada-isolated.json` with no designated path and no content spec.** Every other artifact in the document has a path. This plan resolves it by **deriving the payload at run time** from `blueprint-ada-isolated.json` rather than committing a second copy of the node data (`5.4.10.3`), which is the choice that keeps one source of truth — but the walkthrough should say so. Reported to [[project-researcher]] as a missing step detail; **not filled in a subtask brief** | [[project-researcher]] |
+| 12 | **Room quota is now contended four ways, not three.** [§8.1 item 13](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#81-confirm-before-relying-on-these) and [ada-ivi-plan.md open item 5](ada-ivi-plan.md): two concurrent deployments across the whole account, against Phase 3 `5.3.6.2`, this phase's group 4.10 **and** group 4.6, and Phase 5 groups 5.8/5.9. Serialize the deploys and tear each Room down — `5.4.11.7` and `4.5.9.4` both end with one. The isolated Room holds a slot for its full duration | [[project-planner]] (scheduling) |
+| 13 | **[§8.1](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#81-confirm-before-relying-on-these) items that authoring cannot retire, and where each first bites.** Item 1 (the whole route is unexercised) — the lane as a whole. Item 2 (none of the [§1.3](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#13-deliverable-prerequisites) ADA deliverables written) — group 4.10's entry condition; they are Phases 2–4 work planned above. Item 4 (the `[EVT]` names are design, not observation) — `2.4.11.2`, `13.4.11.3`. Item 6 (arm64 wheels for the detector) — Phase 3 `12.3.1.1`, and `5.4.9.6`'s 360-minute timeout check. Item 9 (a `/batch`-created 4-node blueprint accepting hand-drawn pins and then validating) — `6.4.10.4`, whose `validate` pass is the first proof of it. Item 10 (the defaults may produce no risk transition) — `13.4.11.3`, contingency `14.4.11.6`. Item 11 (detector frame rate on the Room's CPU) — Phase 3 `5.3.6.2`. Item 12 (`NET_RAW` granted) — `15.4.11.4`'s `[CAP]` criterion. **None is filled in by guessing; each is reported from the subtask that hits it** | per subtask |
 
 ---
 
 *Created 2026-08-02 by project-planner from [phase2-4-ada-ecu-hld.md](../ADA_ECU/doc/phase2-4-ada-ecu-hld.md) D4/D5/D7/D8/D9 and [milestone1.md § Phase 4](milestone1.md#phase-4--obscured-object-fusion-relayed-c--risk--warning-r13r15--runs--with-phase-3). 8 task groups, 24 subtasks: 15 agent-implemented (1 of them optional), 1 car-sky, 4 user-manual, 4 gated on user ratification (group 4.7, not started). Planned from zero; group 4.8 added the same day from [m1-run-timing-and-event-triggering.md](../requirements/m1-run-timing-and-event-triggering.md) §6.4.*
+
+*Updated 2026-08-03 by project-planner, running stage 2 of [walkthrough-driven-delivery.md](../.claude/rules/walkthrough-driven-delivery.md) over [deploy-ada-ecu-walkthrough.md](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md). **Added groups 4.9, 4.10 and 4.11 — 22 subtasks** (9 agent, 6 car-sky, 7 human), decomposed from that document and taking their acceptance from its §8; **corrected group 4.6 in place** — it is the full-blueprint route of §5.6, not the only route, its AI rows belong to [[car-sky]] per §7, and `15.4.6.5`'s pcap is out of the walkthrough's scope while remaining a milestone box. Five new open items (9–13) carry what could not be filled in without their owner. Nothing renumbered; 11 task groups, 46 subtasks.*
