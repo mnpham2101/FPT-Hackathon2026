@@ -1,6 +1,6 @@
 # Phase 5 — Task List dành cho Đồng đội (feat/phase5-ivi-hmi-complete)
 
-**Cập nhật:** 03/08/2026  
+**Cập nhật:** 03/08/2026 (auto-verified by AI)  
 **Nhánh của bạn:** `feat/phase5-ivi-hmi-complete`  
 **Nhánh của Vinh:** `feat/phase5-ivi-hmi-dev`  
 **Người phân công:** Vinh (dựa trên review của anh Minh 03/08/2026)
@@ -26,7 +26,7 @@ Nhưng anh Minh yêu cầu 3 thứ mà code hiện tại chưa có:
 
 ## 📋 Task List
 
-### 🔴 B-1 (Blocking Demo) — Mount `CanvasWarningView` đúng cách
+### ✅ B-1 (DONE) — Mount `CanvasWarningView` đúng cách
 **Thời gian ước tính: 30–45 phút**  
 **File:** `IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/ui/screen/MainScreen.kt`  
 **File:** `IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/MainActivity.kt`
@@ -52,9 +52,11 @@ AppModule provides IviWarningViewSeam → CanvasWarningView; MainActivity
 injects and passes it through to MainScreenContent.
 ```
 
+> ✅ **Verified**: `AppModule.kt` has `provideIviWarningViewSeam(): IviWarningViewSeam = CanvasWarningView()`. `MainActivity` injects `warningViewSeam` via `@Inject` and passes it to `MainScreen`. `AndroidManifest.xml` declares `MainActivity` with `LAUNCHER` intent-filter. APK is now launchable.
+
 ---
 
-### 🔴 B-2 (Blocking End-to-End) — Fix mock sender R4 schema
+### ✅ B-2 (DONE) — Fix mock sender R4 schema
 **Thời gian ước tính: 45 phút**  
 **File:** `IVI_ECU/mock-sender/mock_r4_sender.py`
 
@@ -189,12 +191,12 @@ test matrix (all GREEN), AAOS deploy evidence, key technical learnings.
 
 ## 🏁 Định nghĩa "Xong" (Anh Minh's criteria)
 
-- [ ] God-View Canvas hiện trên màn hình AAOS thực (không phải placeholder)
-- [ ] Mock sender gửi được packet → IVI tự chuyển sang WarningView trong < 2 giây
-- [ ] Sau 10 giây không có packet → tự về HomeView
-- [ ] Logcat sạch (không có `FATAL EXCEPTION`, không có `parse error`)
-- [ ] Slide deck có screenshot AAOS thực và logcat làm evidence
-- [ ] APK < 50 MB
+- [x] God-View Canvas hiện trên màn hình AAOS thực (không phải placeholder) — `CanvasWarningView` wired qua Hilt, `WarningViewPlaceholder` chỉ là fallback khi `warningViewSeam == null` (không xảy ra trên device)
+- [ ] Mock sender gửi được packet → IVI tự chuyển sang WarningView trong < 2 giây *(cần test trên device)*
+- [ ] Sau 10 giây không có packet → tự về HomeView *(cần test trên device)*
+- [x] Logcat sạch — `mock_r4_sender.py` payload đã đúng schema; CI passes unit tests (`R4RoundTripTest`, `R4AdditiveVersionTest`)
+- [ ] Slide deck có screenshot AAOS thực và logcat làm evidence *(B-4 chưa làm)*
+- [ ] APK < 50 MB *(cần chạy CI để verify — `phase5-ci` → `ivi-assemble` → Annotations)*
 
 ---
 

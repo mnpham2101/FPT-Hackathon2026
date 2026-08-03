@@ -30,6 +30,7 @@ SCHEMA_VERSION = int(os.environ.get("SCHEMA_VERSION", "1"))
 
 
 def make_warning_event(dist_b, dist_c, warning_type, risk):
+    now_ms = int(time.time() * 1000)
     return {
         "schemaVersion": SCHEMA_VERSION,
         "type": "warning",
@@ -37,12 +38,18 @@ def make_warning_event(dist_b, dist_c, warning_type, risk):
         "riskState": risk,
         "object": {
             "id": "C-001",
+            "class": "vehicle",
             "source": "v2x_relayed",
             "position": {"x": dist_c, "y": 1.5},
             "distance": dist_c,
             "speed": 13.5,
             "confidence": 0.87,
-            "state": "tracked"
+            "state": "tracked",
+            "timestamps": {
+                "measured": now_ms,
+                "received": now_ms + 10,
+                "lastUpdated": now_ms + 10
+            }
         },
         "geometry": {
             "ego":      {"x": 0.0,    "y": 0.0},
@@ -53,25 +60,16 @@ def make_warning_event(dist_b, dist_c, warning_type, risk):
 
 
 def make_state_message(seq):
-<<<<<<< HEAD
-=======
     # Matches main authority contract: R4Vehicles(ego, vehicleB, vehicleC?)
->>>>>>> origin/feat/phase5-ivi-hmi-complete
     return {
         "schemaVersion": SCHEMA_VERSION,
         "type": "state",
         "seq": seq,
         "vehicles": {
-<<<<<<< HEAD
             "ego": {"position": {"x": 0.0,  "y": 0.0}, "speed": 10.0},
-            "B":   {"position": {"x": 15.0, "y": 0.0}, "speed": 9.5}
-        }
-=======
-            "ego": {"x": 0.0, "y": 0.0},
-            "vehicleB": {"x": 15.0, "y": 0.0},
+            "vehicleB": {"position": {"x": 15.0, "y": 0.0}, "speed": 9.5},
             "vehicleC": None,
         },
->>>>>>> origin/feat/phase5-ivi-hmi-complete
     }
 
 
