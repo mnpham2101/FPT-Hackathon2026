@@ -34,7 +34,7 @@ Nothing in this phase waits on a person before it can start.
 
 **Suggested branch (suggestion only — creation is the user's call):** `feat/phase2-ada-scaffold`, branched from `main`. One branch for the whole phase; implementation subtasks commit onto it. Docs-only subtasks and evidence records commit straight to `main`.
 
-> The unmerged branch of the same name carries a superseded lowercase `ada-ecu/` implementation, ruled out by [HLD D1](../ADA_ECU/doc/phase2-4-ada-ecu-hld.md). **It is not merged and is not a baseline.** `main` carries no such folder, so this plan is written against `main` and nothing on that branch counts as work done. An implementer may read a deleted file from git history for *shape*; nothing is copied.
+**This plan is written against `main`**, where `ADA_ECU/` carries nothing beyond the Phase 0 contract layer listed above. That is the only baseline; no other branch is one.
 
 ### Execution labels
 
@@ -89,8 +89,6 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none. **Commit:** `[5.2.1.3] docs: point the ADA README at the phase 2-4 HLD`
 
-> `5.2.1.1` and `5.2.1.2` are **retired** — they deleted the superseded `ada-ecu/` tree and `presentation/ada/`, neither of which exists on `main`. The IDs are not reused.
-
 ---
 
 ## Task Group 2.2 — Core foundation: config, socket, event log, input queue (serves R13, R6, R18, R3)
@@ -131,7 +129,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 - Event vocabulary exactly [HLD D8](../ADA_ECU/doc/phase2-4-ada-ecu-hld.md#d8--r18-the-ada-half-of-the-evidence-stream): `detector_spawn`, `detector_eof`, `detector_restart`, `own_sensor_ingest`, `r2_ingest`, `parse_reject`, `track_transition`, `track_expire`, `assessment`, `assess_skipped_b_unknown`, `risk_transition`, `r4_tx`. Phase 2 emits the first eight; the last four are declared here and first written in Phase 4.
 - Line fields match the V2X ECU's frozen shape: `event`, `mono_ms`, `epoch_ms`, `counters`, plus a per-event `payload`. Payload-carrying events: `r2_ingest` embeds the received R2 body, `own_sensor_ingest` the parsed R3 object, `track_transition` the id/source/from/to/distance/reason, `r4_tx` the emitted R4 body.
 - `mono_ms` is `CLOCK_MONOTONIC`, `epoch_ms` is `CLOCK_REALTIME` — [m1-run-timing-and-event-triggering.md §6.2](../requirements/m1-run-timing-and-event-triggering.md). Both are written on every line, never one derived from the other.
-- Serialization through nlohmann (never string concatenation — the superseded implementation could not escape strings). Sink: stdout always, flushed per line (CarSky View Log is the live window); additionally append to `EVENT_LOG_PATH` when non-empty.
+- Serialization through nlohmann, never string concatenation — a payload carrying quotes or newlines must escape correctly. Sink: stdout always, flushed per line (CarSky View Log is the live window); additionally append to `EVENT_LOG_PATH` when non-empty.
 - Test `tests/log/test_event_log.cpp`: line parses as JSON after the `[EVT]` prefix; counters accumulate; embedded payloads present and parseable; a payload string containing quotes/newlines round-trips; file sink writes when the path is set (temp dir).
 
 **Acceptance:** ADA build + ctest green on CI. The field names freeze here — `18.2.6.5`'s log checker parses them, and so do Phase 4's `event_report.py` and `check_evt_log.py --fusion`.
@@ -163,7 +161,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 - Parse **through the frozen `contracts::R2Message` binding**, never by raw JSON probing.
 - Mapping: `id = "v2x:" + stationId + ":" + object.objectId` · `class = object.classification` · `source = v2x_relayed` · `position = object.position{x,y}` · `distance = object.distance` · `speed = object.speed` · `confidence = object.confidence`.
 - **Timestamps, ruled by [m1-run-timing-and-event-triggering.md §6.2](../requirements/m1-run-timing-and-event-triggering.md):**
-  - `timestamps.measured` = `object.timeOfMeasurement` **taken as the absolute epoch-ms value it already is** — Phase 1 `9.1.4.3` builds it as `referenceTime + measurementDeltaTime`, so nothing is added to it here. §6.2's wording `rxTime + timeOfMeasurement` describes a delta form this producer does not emit; adding the two would double-count the reference time. **This is the plan's operative reading and it is flagged, not decided** — § Open items item 4 carries it to [[project-architecture]] for an HLD amendment. If the amendment rules otherwise, this one line changes and nothing else does.
+  - `timestamps.measured` = `object.timeOfMeasurement` **taken as the absolute epoch-ms value it already is** — nothing is added to it here. This is the operative reading of a point § Open items item 4 carries to [[project-architecture]]; it is flagged, not decided, and if the amendment rules otherwise this one line changes and nothing else does.
   - `timestamps.received` = `rxTime`, the ADA `CLOCK_REALTIME` stamp recorded when the datagram was taken off the socket. A recorded value, never an operand.
   - `timestamps.lastUpdated` = **written by the store**, always ADA's own `CLOCK_REALTIME` at store write — never a foreign node's value.
   - **Cross-node timestamp arithmetic is forbidden.** No expression may mix a value that originated on another node with one that originated here.
@@ -238,7 +236,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 **Scope:**
 
 - `TrackStore::apply(update)` runs admission on ingest and `TrackStore::expire(now)` runs the timeout edge for **every** track on the fusion tick, so a track can expire on silence alone (D2). Erased tracks are removed from the map, not flagged.
-- **Expiry is an interval, so it runs on `CLOCK_MONOTONIC`** (`steady_clock`) — [m1-run-timing-and-event-triggering.md §6.2](../requirements/m1-run-timing-and-event-triggering.md). Keep a parallel monotonic stamp per track and compare `now − thatStamp > TRACK_TIMEOUT_MS` against it. `timestamps.lastUpdated` stays `CLOCK_REALTIME` — it is a log/wire value, not an interval operand. Reason to preserve: a host NTP step on the shared wall clock would otherwise expire every track at once mid-demo. `13.2.4.2` is unchanged — `now` is still a parameter; this fixes what the caller passes.
+- **Expiry is an interval, so it runs on `CLOCK_MONOTONIC`** (`steady_clock`) — [m1-run-timing-and-event-triggering.md §6.2](../requirements/m1-run-timing-and-event-triggering.md). Keep a parallel monotonic stamp per track and compare `now − thatStamp > TRACK_TIMEOUT_MS` against it. `timestamps.lastUpdated` stays `CLOCK_REALTIME` — it is a log/wire value, not an interval operand. Reason: a host NTP step on the shared wall clock would otherwise expire every track at once mid-demo. `13.2.4.2` is unaffected — `now` is a parameter there; what this subtask fixes is which clock the caller reads it from.
 - Each edge emits one `track_transition` event (id, source, from, to, distance, reason ∈ `gate_enter|confirmed|gate_exit|out_of_gate|timeout`) through the injected `EventLog&`; expiry additionally emits `track_expire`.
 - Test `tests/store/test_admission_relayed.cpp`: relayed-C boundary cases at the exact gate values — 29.9 / 30.0 / 30.1 m admitting, 34.9 / 35.0 / 35.1 m holding-vs-dropping once `tracked`; **no flicker**: an oscillating 30–34 m sequence yields exactly one admit transition and zero drops; expiry after `TRACK_TIMEOUT_MS` of silence; the emitted `track_transition` sequence matches the diagram edge for edge.
 
@@ -428,7 +426,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 ## Task Group 2.9 — Video input: preflight, spec delivery, node guide (serves R12, R5)
 
-> The clip itself is **already in the repo** — `ADA_ECU/media/ego-b-occluding-c.mp4` with its provenance sidecar, landed by Phase 3 `12.3.7.1`. What this group owns is the machine-checkable preflight over it, the delivery of the spec proposal that closes a milestone box, and the node guide's env rows.
+> The clip is an input, not a deliverable of this group: `ADA_ECU/media/ego-b-occluding-c.mp4` with its provenance sidecar, committed by Phase 3 `12.3.7.1`. This group owns the machine-checkable preflight over it, the delivery of the spec proposal that closes a milestone box, and the node guide's env rows.
 
 ### [ ] `12.2.9.1` — Clip preflight `tools/check_clip_spec.py` *(agent)*
 
@@ -437,7 +435,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 **Scope:**
 
 - Python 3 at `ADA_ECU/tools/check_clip_spec.py`; reads a video path and checks the machine-checkable rows of the [§3 spec table](../ADA_ECU/doc/research_notes/video-source-for-r12.md#3-video-input-spec-to-build-phase-3-against): container MP4, codec H.264, resolution 1280×720, constant frame rate 20 fps, file ≤ 60 MB, no audio track — plus a decode pass proving OpenCV reads ≥ 99% of the declared frame count with zero errors (KPI 2).
-- **Duration default is 10–120 s, not 60–120 s.** The committed clip is 10.0 s / 200 frames, and that deviation is accepted with its reasoning recorded in [the sidecar § The remaining deviation](../ADA_ECU/media/ego-b-occluding-c.source.md): B is the lead vehicle only between t≈6 s and t≈16 s of the source, and a longer run is obtained by **looping** (`DETECTOR_LOOP=true`) rather than by different footage. A preflight whose default rejects the accepted artifact is a defect, not a strict check.
+- **Duration default is 10–120 s.** The committed clip is 10.0 s / 200 frames; B is the lead vehicle only between t≈6 s and t≈16 s of the source, and a longer run comes from **looping** (`DETECTOR_LOOP=true`) rather than from different footage — reasoning in [the sidecar § The remaining deviation](../ADA_ECU/media/ego-b-occluding-c.source.md). A preflight whose default rejects the accepted artifact is a defect, not a strict check.
 - Every expected value comes from CLI flags/env with those defaults — **no literals**.
 - Probe via `ffprobe` when present, falling back to OpenCV properties with a clear notice; exit 1 listing every failing attribute with actual-vs-expected; exit 0 with a one-line summary otherwise.
 - **Out of scope — the content rows.** "B occludes the lane at 10–40 m in ≥ 90% of frames" and "no vehicle ahead of B in the ego lane" are human judgements already recorded in the sidecar's § Content verdict; this script must not claim to verify them.
@@ -453,7 +451,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Scope:** send [video-source-for-r12.md §3](../ADA_ECU/doc/research_notes/video-source-for-r12.md#3-video-input-spec-to-build-phase-3-against) — the format / frame rate / data rate table with its `assume` markers and the KPI list — asking for confirmation or correction of the proposed values. Nothing new is authored; the note is the artifact.
 
-**This no longer requests footage and blocks nothing.** The clip is sourced, encoded, licence-cleared and committed ([sidecar](../ADA_ECU/media/ego-b-occluding-c.source.md)); the send is now confirmation of the spec the project already built against, and every Phase 3 subtask proceeds without waiting for a reply. State the 10 s duration and the looping decision in the message so a correction, if one comes, is against what exists.
+**This requests confirmation of a spec, not footage, and blocks nothing.** The clip is sourced, encoded, licence-cleared and committed ([sidecar](../ADA_ECU/media/ego-b-occluding-c.source.md)), so every Phase 3 subtask proceeds without waiting for a reply. State the 10 s duration and the looping decision in the message, so a correction — if one comes — is against what exists.
 
 **Acceptance:** the send is recorded in `plans/doc/phase2-ada-scaffold-run.md` (created by this subtask) with the date and any reply; evidence commit by the orchestrating session after the user confirms.
 
@@ -473,8 +471,6 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 **Acceptance:** the JSON block is valid JSON; every env name matches `src/config/config.cpp` and `detector/config.py` character for character; links resolve. Doc-only — no build target.
 
 **Dependencies:** after `13.2.2.1` (core env names freeze there) + Phase 3 `12.3.2.1` (detector env names). **Commit:** `[5.2.9.4] docs: add the phase 2-4 env rows to the ADA node guide`
-
-> `12.2.9.3` is **retired** — it was the human deliverable of the demo clip, which Phase 3 `12.3.7.1` has already produced and committed. The ID is not reused.
 
 ---
 
@@ -501,7 +497,7 @@ guide       5.2.9.4 (after 13.2.2.1 + phase-3 12.3.2.1)
 
 **Recommended runtime order (single tree):** 12.2.9.2 *(Human, fire and forget)* → 5.2.8.1 → 5.2.1.3 → 13.2.2.1 → 6.2.2.2 → 18.2.2.3 → 3.2.2.4 → 2.2.3.1 → 3.2.3.2 → 3.2.3.3 → 3.2.4.1 → 13.2.4.2 → 13.2.4.3 → 14.2.5.2 → 14.2.5.1 → 14.2.5.3 → 14.2.5.4 → 2.2.6.1 → 12.2.6.2 → 3.2.6.3 → 18.2.6.5 → 13.2.6.4 → 13.2.8.2 → 5.2.7.1 → 12.2.9.1 → 5.2.9.4.
 
-**Phase 3 and Phase 4 relative to this phase.** [milestone1.md §3](milestone1.md#3-development-plan--order-of-implementation) runs Phases 3 and 4 in parallel after Phase 2. That holds here with one correction: Phase 4 needs only groups 2.2–2.6 (store, admission, CRA seam, main loop) plus `5.2.7.1`; Phase 3 needs only the frozen `detector/contracts/tracked_object.py` from Phase 0 and the `DETECTOR_CMD` contract from `12.2.6.2`. Neither needs the other.
+**Phase 3 and Phase 4 relative to this phase.** Both run in parallel after Phase 2 ([milestone1.md §3](milestone1.md#3-development-plan--order-of-implementation)), and neither needs the other. Phase 4 needs groups 2.2–2.6 (store, admission, CRA seam, main loop) plus `5.2.7.1`; Phase 3 needs only the frozen `detector/contracts/tracked_object.py` from Phase 0 and the `DETECTOR_CMD` contract from `12.2.6.2`.
 
 ## Acceptance traceability
 

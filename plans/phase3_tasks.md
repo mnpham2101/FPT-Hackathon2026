@@ -36,7 +36,7 @@
 
 ### Execution labels
 
-Identical to [phase2_tasks.md § Execution labels](phase2_tasks.md#execution-labels) — *agent* · *car-sky* · *Human*. **Phase 3 is 19 *agent* subtasks (one of them already done) and 2 *car-sky* subtasks. It has no *Human* row at all**: everything a person had to do here — sourcing, licence-clearing and encoding the clip — is done, and the deployed measurement reads off Phase 4's isolated Room rather than booking a Room of its own.
+Identical to [phase2_tasks.md § Execution labels](phase2_tasks.md#execution-labels) — *agent* · *car-sky* · *Human*. **Phase 3 is 19 *agent* subtasks and 2 *car-sky* subtasks, with no *Human* row at all**: the clip it runs against is a committed input rather than a deliverable, and the deployed measurement reads off Phase 4's isolated Room rather than booking a Room of its own.
 
 Two constraints specific to this phase:
 
@@ -181,7 +181,7 @@ New lanes go in a new `.github/workflows/phase3-ci.yml` — *a lane belongs to t
 
 **Scope:** `ADA_ECU/tools/export_yolo11n.py` performs the export (AGPL-3.0 accepted, report §4) with the input size and opset recorded in the script header; the resulting `ADA_ECU/models/yolo11n.onnx` (~10 MB) is committed. The repo's `.gitattributes` already carries `*.onnx binary`. The script **never runs in CI or in the image** — committing the artifact is what keeps the image build offline-reproducible and keeps Ultralytics out of the runtime dependency set. The script's Ultralytics import is not added to `requirements.txt`.
 
-**Binary tracking is settled, not open**: plain git, committed once, no Git LFS — the same decision already exercised for `media/ego-b-occluding-c.mp4` (5.0 MB, landed at `12.3.7.1`). ~15 MB of write-once binaries is within normal git limits, and LFS would add a remote-storage dependency and a new clone/CI failure mode days from the deadline.
+**Binary tracking is settled, not open**: plain git, committed once, no Git LFS — the same rule `media/ego-b-occluding-c.mp4` follows. ~15 MB of write-once binaries is within normal git limits, and LFS would add a remote-storage dependency and a new clone/CI failure mode days from the deadline.
 
 **Acceptance:** the ONNX file loads in an ONNX Runtime CPU session and reports the expected input/output shapes (asserted by `12.3.2.5`'s session test, which unskips here); `python -m py_compile` on the exporter passes.
 
@@ -211,7 +211,7 @@ New lanes go in a new `.github/workflows/phase3-ci.yml` — *a lane belongs to t
 
 ## Task Group 3.4 — Distance calibration against the real clip (serves R12)
 
-> `12.3.4.1` and `12.3.4.2` are **retired**. The delivered-clip validation they described is done and recorded in [the sidecar's § Content verdict](../ADA_ECU/media/ego-b-occluding-c.source.md), and the format check plus the image placement are `12.3.7.2`'s. The IDs are not reused.
+> The clip's content is judged in [the sidecar's § Content verdict](../ADA_ECU/media/ego-b-occluding-c.source.md) and is not re-judged here; its format gate and its image placement are `12.3.7.2`'s. This group owns the distance constants alone.
 
 ### [ ] `12.3.4.3` — Retune the distance constants against the clip *(agent)*
 
@@ -326,17 +326,17 @@ New lanes go in a new `.github/workflows/phase3-ci.yml` — *a lane belongs to t
 
 ## Task Group 3.7 — The demo clip in the repo and in the image (serves R12, R5)
 
-> **The clip is sourced, licence-cleared, encoded and committed.** `ADA_ECU/media/ego-b-occluding-c.mp4` + `ego-b-occluding-c.source.md` are on `main`. What remains in this group is putting it into the image and measuring what that costs.
+> This group puts the committed clip into the image and measures what that costs. The clip itself is an input (§ Input), not a deliverable of any subtask here.
 >
-> **C is synthetic and is never in the footage.** C exists only as a position the bench asserts over V2X, so "C never visible in any frame" holds by construction. What the clip had to avoid was a *decoy* — a vehicle held in the ego lane beyond B, long enough to be admitted as an `own_sensor` track — and the sidecar records that it does. Adjacent-lane and oncoming traffic are not decoys and are present. The obligation this puts on the bench scenario is to **place C in the ego lane beyond B at every instant of the run**, which is `Scenario_Player/scenarios/*.yaml`'s to satisfy, not this phase's.
+> **C is synthetic and is never in the footage.** C exists only as a position the bench asserts over V2X, so "C never visible in any frame" holds by construction. What the clip must avoid is a *decoy* — a vehicle held in the ego lane beyond B, long enough to be admitted as an `own_sensor` track — and the sidecar records that it carries none. Adjacent-lane and oncoming traffic are not decoys and are present. The obligation this puts on the bench scenario is to **place C in the ego lane beyond B at every instant of the run**, which is `Scenario_Player/scenarios/*.yaml`'s to satisfy, not this phase's.
 
-### [x] `12.3.7.1` — The demo clip, its provenance and the binary tracking rules — **done**, commit `3d55d7b`
+### [x] `12.3.7.1` — The demo clip, its provenance and the binary tracking rules *(agent)*
 
-**Landed:** `ADA_ECU/media/ego-b-occluding-c.mp4` (1280×720, 20 fps CFR, H.264 High / yuv420p, 200 frames / 10.0 s, 5 261 876 bytes, no audio) and `ADA_ECU/media/ego-b-occluding-c.source.md`, plus `*.mp4 binary` / `*.onnx binary` in `.gitattributes` and `ADA_ECU/media/source/` in `.gitignore`.
+**Objective:** the clip, its provenance sidecar, and the rules that keep exactly one video file in git — `*.mp4 binary` / `*.onnx binary` in `.gitattributes`, `ADA_ECU/media/source/` in `.gitignore`.
 
-**What the sidecar is authority for, and no subtask may restate or contradict:** the source and its URL, the Pexels License and the attribution string, the exact ffmpeg encode command, both SHA-256s, the content verdict per criterion, the § C is synthetic reasoning and its downstream obligations, the rejected candidates, and the accepted 10 s duration with looping as its remedy.
+**[The sidecar](../ADA_ECU/media/ego-b-occluding-c.source.md) is the authority, and no subtask may restate or contradict it:** the source and its URL, the Pexels License and the attribution string, the exact ffmpeg encode command, both SHA-256s, the content verdict per criterion, the § C is synthetic reasoning and its downstream obligations, the rejected candidates, and the accepted 10 s duration with looping as its remedy.
 
-**Status:** done — 22 candidates frame-inspected, one accepted; raw download gitignored and not committed; exactly one video file in git history.
+**Status:** done, commit `3d55d7b` — 22 candidates frame-inspected, one accepted; raw download gitignored and not committed; exactly one video file in git history.
 
 ### [ ] `12.3.7.2` — Bake the committed clip into the ADA image *(agent)*
 
@@ -436,7 +436,7 @@ deployed   5.3.6.2 (after 5.3.6.1 + phase-4 18.4.11.1 - a log read, not a deploy
 | 4 | **Detector warm-up (ONNX load + `VideoCapture` open) is unmeasured** — estimated 2–5 s against the ≈ 6.4 s slack of [§3.3](../requirements/m1-run-timing-and-event-triggering.md), and it is the term that consumes that slack. `12.3.5.2` produces the number on the host; `5.3.6.2` repeats it on the 2-vCPU node, where it will be worse | `12.3.5.2`, then `5.3.6.2` |
 | 5 | **The clip is 10 s, and every long-run behaviour therefore depends on looping.** Accepted, with reasoning in [the sidecar](../ADA_ECU/media/ego-b-occluding-c.source.md). Two consequences no subtask may absorb silently: `FileFrameSource` must keep `frame_index` monotonic across loops (`12.3.2.2`), and the loop-seam stall must not exceed `TRACK_TIMEOUT_MS` or ego's own B track expires between cycles. `12.3.5.2` measures the seam; if it is too long, the finding goes to [[project-architecture]] — it is not fixed by widening the timeout | `12.3.5.2` |
 | 6 | **R20's detector half is not planned and no subtask may add it.** [m1-run-timing-and-event-triggering.md §7](../requirements/m1-run-timing-and-event-triggering.md) proposes real-time pacing (`DETECTOR_REALTIME_PACING`, `DETECTOR_CLIP_FPS`, `DETECTOR_START_DELAY_S`) and §2(d) names the free-running detector the dominant timing error term — but §8(1) schedules R20/R21 **behind** this phase's acceptance, §8(3) makes it mandatory only if the deferred IVI dashcam view is accepted, and **the user has not accepted R20**. The dashcam view stays deferred ([milestone1.md §6](milestone1.md#6-deferred-to-later-milestones)), so no Phase 3 subtask may add clip-serving, an `exposedPorts` entry, or pacing | **user** (accept/reject R20) |
-| 7 | **The §3 clip-spec numbers were proposals** and one — duration — was overridden by the accepted artifact. `12.2.9.2` sends the spec to FPT-Mentor for confirmation and states the deviation. A correction arriving late is absorbed by **raising the stride**, never by changing the model or the gate | user / `12.2.9.2` |
+| 7 | **The §3 clip-spec numbers are proposals**, and the duration row does not match the committed artifact. `12.2.9.2` sends the spec to FPT-Mentor for confirmation and states the deviation. A correction arriving late is absorbed by **raising the stride**, never by changing the model or the gate | user / `12.2.9.2` |
 | 8 | **The `container-file` API is not the deploy path, and no subtask may make it one.** [m1-video-source-and-ivi-dashcam.md §5](../requirements/m1-video-source-and-ivi-dashcam.md) documents `POST /api/v1/deployments/:roomId/container-file/:nodeKey` as a real post-deploy file channel with no schema, no size limit and no example. It is sanctioned **only** as a rehearsal-time clip swap or log pull; **nothing deployed may differ from its image tag**, so no subtask depends on it and the clip reaches the node through `COPY media/` alone | recorded, no action |
 | 9 | **No documented registry size ceiling.** [§10 item 1](../requirements/m1-video-source-and-ivi-dashcam.md) — a ~1.2 GB artifact is observed succeeding on the platform, so a ~30 MB image is unremarkable, but the number is unverified. `5.3.7.3`'s real `docker push` is where it either holds or fails loudly | `5.3.7.3` |
 

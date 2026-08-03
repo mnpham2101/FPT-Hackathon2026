@@ -21,7 +21,7 @@
 **Input (must exist before start):**
 
 - R4 frozen in Phase 0: [contracts/r4-ada-ivi.schema.json](../contracts/r4-ada-ivi.schema.json), the four samples under [contracts/samples/](../contracts/samples/), and the committed Kotlin binding + `R4RoundTripTest` / `R4AdditiveVersionTest`.
-- The Phase 5 HLD (`85387b5`) and its four research notes.
+- The Phase 5 HLD (`85387b5`) and its three research notes.
 - `IVI_ECU/` as a single-module Gradle project (`:app`) carrying the contract layer (`model/`) and the drawing layer (`ui/view/`), AGP 8.13 / Kotlin 2.2.20 / Compose BOM 2024.09.03 / `minSdk 29`, `targetSdk 33`, `compileSdk 34`.
 - CarSky access with the baseline blueprint `baseline_phase1` ([carsky-4-node-blueprint.md § The blueprints on CarSky](../requirements/car-sky-guide/carsky-4-node-blueprint.md#8-the-blueprints-on-carsky)), the `AAOS` artifact (`x9oqgIwzTp1m26SWIQqJt` / `xSU_Q7YJZUxxUgDr4Ugcp`, `0.0.1`, `aarch64`), and `registry.hackathon-2.carsky.io/m1-netcheck:latest` already pushed.
 - GitHub secret `CARSKY_ZOT_API_KEY` and the reusable [verify-arm64-image](../.github/actions/verify-arm64-image) action.
@@ -58,7 +58,7 @@ Two standing constraints every `IVI_ECU/` subtask inherits:
 
 - **No hardcoded tunables** (CLAUDE.md principle 5): ports, buffer sizes, timeouts, cadences and scales come from `BuildConfig` + launch override (D10) or from the simulator's env/scenario file — never a literal in a class.
 - **No module declares its own repositories.** `settings.gradle.kts` sets `RepositoriesMode.FAIL_ON_PROJECT_REPOS`; a module `repositories { }` block fails the build (D8).
-- **No `android.util.Log` call on a unit-tested path in `:app`.** The stubbed Android jar throws `RuntimeException("Stub!")` from every `Log` method, so a logging line inside tested logic fails the test for a reason unrelated to the logic — PR #2 hit exactly this and spent a fix commit on it. D2 already keeps `Log` out of `:serializer`/`:observer`; in `:app`, log through `AndroidR4Logger` (`18.5.5.1`) and inject a recording logger in tests. `testOptions { unitTests { isReturnDefaultValues = true } }` is the fallback, not the first move — it silences the symptom for the whole module.
+- **No `android.util.Log` call on a unit-tested path in `:app`.** The stubbed Android jar throws `RuntimeException("Stub!")` from every `Log` method, so a logging line inside tested logic fails the test for a reason unrelated to the logic. D2 already keeps `Log` out of `:serializer`/`:observer`; in `:app`, log through `AndroidR4Logger` (`18.5.5.1`) and inject a recording logger in tests. `testOptions { unitTests { isReturnDefaultValues = true } }` is the fallback, not the first move — it silences the symptom for the whole module.
 
 **Status tracking:** as execution proceeds each subtask gains a `**Status:**` line appended in that subtask's own atomic commit, recording done/blocked plus verification evidence. A subtask without a status line is not started. Nothing in this file is started.
 
@@ -80,33 +80,9 @@ Until subtask `4.5.1.4` lands, the only valid test command is `./gradlew :app:te
 
 ---
 
-## Prior work
+## Two constants no subtask may get wrong
 
-Two unmerged branches carry an earlier Phase 5 implementation. Nothing on `main` carries either, so "nothing is started" is accurate for the trunk — but no subagent should retype from scratch what is already written and reviewable. The branches are prior art with no authority: the brief is the specification.
-
-| Branch | What it is | Contains |
-|---|---|---|
-| **`feat/phase5-ivi-hmi-dev`** = **PR #2** (tip `f7f2f55`) | The open pull request | The R4 data layer only — deserializer, listener service, repository, `WarningViewModel` — plus the Python mock sender and a **2-node test blueprint** (`requirements/blueprint-2node-task51-test.{json,md}`, `plans/doc/task51-2node-blueprint-answer.md`) |
-| **`feat/phase5-ivi-hmi-complete`** (tip `1e36cdc`) | A strict superset of PR #2 | Everything above **plus** `MainActivity`, `IviApplication`, `AppModule`, the wired `MainScreen`, wake-on-warning in `MainViewModel`, five more test files, and a deployment doc |
-
-**Review the superset, not the PR**, whenever the two differ — `-complete` is where each file reached its latest state.
-
-**The rule for every code subtask below:** read the corresponding file on that branch first (`git show origin/feat/phase5-ivi-hmi-complete:IVI_ECU/<path>`), lift what meets the brief, and write the rest. **Do not merge or cherry-pick the branch wholesale** — it predates the mini-blueprint, the module split, and the port freeze, and it carries the defects below.
-
-| Branch file | Useful to | Carry over? |
-|---|---|---|
-| `data/R4Deserializer.kt` | `4.5.2.2` | Structure only. It rewrites unknown `warningType` to `"unknown"` — **forbidden by D4**; and it decodes `ByteArray` whole, with no offset/length (D3) |
-| `service/R4ListenerService.kt` | `4.5.3.2`, `4.5.3.3`, `4.5.5.2` | Notification/foreground shape yes. **The receive loop never calls `packet.setLength(...)` before `receive()`** — every datagram after the first short one is silently truncated (the exact bug `4.5.3.2` exists to prevent). Loop, socket and decode are also fused into the service, which D2/D5 separate |
-| `data/R4Repository.kt`, `ui/WarningViewModel.kt` | `4.5.4.2`, `17.5.4.4` | Flow shapes yes. **`_latestScene = event.geometry` passes the scene through without `vehicleCSnapshot`, so the R19 provenance guard is inert** — the defect `17.5.4.4` fixes. No last-value-wins by `seq` |
-| `ui/MainViewModel.kt` | `16.5.4.5` | Yes — wake-on-warning, `previousMode`, `userOverrodeDuringWarning` are all there and match the brief |
-| `MainActivity.kt`, `IviApplication.kt`, manifest | `16.5.5.4`, `16.5.5.5` | Manifest shape yes (activity + service + LAUNCHER). Wiring is Hilt-based, which **D7 removes** — rewrite against `IviGraph`. It also adds `res/values/themes.xml`, an undesignated file |
-| `ui/screen/MainScreen.kt` | `17.5.5.6` | Yes — seam mounting and `collectAsStateWithLifecycle` are sound, and it correctly does **not** mount the banner. The status bar is still hardcoded |
-| `mock-sender/mock_r4_sender.py` | group 5.6 | **No.** Python, writes its own payloads (D9 forbids), targets `10.88.0.12:5004` — both wrong — and its `state` message shape (`vehicles.ego.position/speed`, key `B`) does not match the frozen R4 schema at all |
-| test files | groups 5.2–5.5 | Case lists are a useful checklist. They test the branch's behaviour, including the two defects above, so no assertion transfers unread |
-| `deployment/phase5-ivi-deploy.md`, `phase5_completion_report.md` | `16.5.9.8` | Content is useful (a real Skycraft device id, the logcat filters). The **location is not sanctioned** — a repo-root/node-root `deployment/` folder is not in [node-code-layout.md](../.claude/rules/node-code-layout.md); the material lands in `requirements/car-sky-guide/` |
-| PR #2's `blueprint-2node-task51-test.json` + guide | `5.5.9.1` | **Do not import it.** Its Skycraft node has no `image` artifact block (deploy rejected outright), its bridge `config` is `null` (no `bridgeMode`/`subnet`, so its `10.88.0.x` addresses have no network), and it targets `registry.carsky.io` (502s). Its *ideas* are already adopted: the reduced topology, the display-config fields (`4.5.9.2`) and the approach/leave scenario shape (`4.5.6.4`) |
-
-Two branch-wide constants are wrong against the frozen topology and must not survive into any subtask: the UDP port is **`47300`**, not `5004`, and the IVI address is **`10.99.0.13`**, not `10.88.0.12`.
+The IVI's UDP port is **`47300`** and its address is **`10.99.0.13`**, frozen by R6 and the blueprint topology. Any other value reaching a class, a scenario file or a node config is a defect, whatever its source.
 
 ---
 
@@ -649,7 +625,7 @@ Then assert: `null` snapshot → trusted (the dev/mock-scene path); `source = "v
 
 **Scope — three files under `IVI_ECU/r4-simulator/scenarios/` (HLD §3.1):**
 
-- `approach.json` — the full lifecycle in one file, because the timeout/restore path is otherwise only reachable by waiting for a stream to stop: a **first step with `geometry.vehicleC: null`** (C not yet tracked — the renderer's null-C path), then C approaching with `riskState` low → medium → high and `geometry.vehicleC` closing, then **C leaving** — distance opening back out with risk falling to `low` — and finally silence for longer than `WARNING_TIMEOUT_MS` so the view times out and the previous mode is restored while the scenario is still running. (The approach/leave shape is taken from PR #2's mock sender, which had it right.) This is the scenario the in-Room evidence run uses.
+- `approach.json` — the full lifecycle in one file, because the timeout/restore path is otherwise only reachable by waiting for a stream to stop: a **first step with `geometry.vehicleC: null`** (C not yet tracked — the renderer's null-C path), then C approaching with `riskState` low → medium → high and `geometry.vehicleC` closing, then **C leaving** — distance opening back out with risk falling to `low` — and finally silence for longer than `WARNING_TIMEOUT_MS` so the view times out and the previous mode is restored while the scenario is still running. This is the scenario the in-Room evidence run uses.
 - `degrade.json` — the degradation cases in one file: a step with an unknown `warningType` + `schemaVersion: 2` + a junk field (the R4 additive-version case); a step with `object.source: "own_sensor"` (trips the renderer's provenance guard); and a `kind: "raw"` step of non-JSON bytes (the receive loop must survive and keep listening).
 - `state-stream.json` — the optional R15 path: periodic `state` messages with ascending `seq`.
 - Test `r4-simulator/src/test/kotlin/.../ScenariosDifferTest.kt`: all three files load through `ScenarioLoader`; the byte streams produced by `approach.json` and `degrade.json` differ **observably** (assert on decoded field values — `riskState` progression, `warningType`, `object.source` — not just on byte inequality); and extend `ScenarioLoaderTest` to load the three real files.
@@ -1025,7 +1001,7 @@ Screenshots are taken per [§4.9](../requirements/car-sky-guide/deploy-ivi-hmi-w
 
 **Objective:** produce the 5-node blueprint with Bench, V2X ECU, ADA ECU, IVI ECU and the Ethernet Bridge, each container node carrying its own real image.
 
-**Scope:** in Nydus, clone the known-good baseline and edit the clone on the canvas. Never import a blueprint file. That is the route of [deploy-ada-ecu-walkthrough.md §5.6](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#56-the-full-blueprint-route) and [§4.1](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#41-create-the-blueprint), and §7 of that document assigns it to Human. Each node's image, config and pin are in [carsky-4-node-blueprint.md](../requirements/car-sky-guide/carsky-4-node-blueprint.md) and the per-node files it points at: [node-scenario-player.md](../requirements/car-sky-guide/node-scenario-player.md), [node-v2x-ecu.md](../requirements/car-sky-guide/node-v2x-ecu.md), [node-ada-ecu.md](../requirements/car-sky-guide/node-ada-ecu.md), [node-ivi-ecu.md](../requirements/car-sky-guide/node-ivi-ecu.md).
+**Scope:** in Nydus, clone **`baseline_phase1`** ([carsky-4-node-blueprint.md § The blueprints on CarSky](../requirements/car-sky-guide/carsky-4-node-blueprint.md#8-the-blueprints-on-carsky)) and edit the clone on the canvas. Never edit `baseline_phase1` itself and never import a blueprint file. That is the route of [deploy-ada-ecu-walkthrough.md §5.6](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#56-the-full-blueprint-route) and [§4.1](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#41-create-the-blueprint), and §7 of that document assigns it to Human. Each node's image, config and pin are in [carsky-4-node-blueprint.md](../requirements/car-sky-guide/carsky-4-node-blueprint.md) and the per-node files it points at: [node-scenario-player.md](../requirements/car-sky-guide/node-scenario-player.md), [node-v2x-ecu.md](../requirements/car-sky-guide/node-v2x-ecu.md), [node-ada-ecu.md](../requirements/car-sky-guide/node-ada-ecu.md), [node-ivi-ecu.md](../requirements/car-sky-guide/node-ivi-ecu.md).
 
 - **Click each container node and set its image field** to that node's own image, replacing any probe or simulator reference left over from an earlier Room.
 - **Leave the IVI node's Skycraft `image` block alone** — the four fields of [node-ivi-ecu.md § Blueprint node config](../requirements/car-sky-guide/node-ivi-ecu.md#blueprint-node-config). Without them the deploy is rejected outright.
@@ -1188,6 +1164,7 @@ Every Phase 5 acceptance criterion in [milestone1.md](milestone1.md#phase-5--ivi
 
 
 **Beyond the five boxes.** The system test (`5.5.10.1`–`19.5.10.8`) closes no Phase 5 box on its own — all five are met against the R4 simulator feed. It proves the same IVI behaviour inside the full topology with every node on its real image, and its record is what Phase 6's convergence run starts from.
+
 ## Open items
 
 Carried, not decided. No Phase 5 subtask may close one of these by assuming an answer.
@@ -1204,19 +1181,17 @@ Carried, not decided. No Phase 5 subtask may close one of these by assuming an a
 
 ## Deliberately not in this phase
 
-- **3D (`SceneViewWarning3D`) and multi-process wake-on-warning** — optional, not committed M1 deliverables (D11). A location is designated; no subtask attempts them.
+Each is a decision with its reason, not an oversight.
+
+- **3D (`SceneViewWarning3D`) and multi-process wake-on-warning** — optional, not committed M1 deliverables (D11). No subtask attempts either, and not even a 3D stub: six days do not justify one whose only acceptance is that it does not crash. The file location stays designated (HLD §3.1) so the optional path remains open, and `4.5.5.2`'s foreground service keeps multi-process reachable.
 - **`WarningBannerOverlay` mounted in the Display Area** — forbidden by a standing user decision (D11). The God-View canvas must render unobstructed.
 - **Robolectric, a coverage threshold, and LeakCanary** — none has a basis in R4/R16/R17 acceptance; the boxes are behavioural, and D2's plain-JVM split is what removes the need for Robolectric (HLD §6, §9.1).
 - **Runtime JSON-Schema validation on the device** — the typed decode already enforces required fields and types; the schema is enforced in the round-trip tests on both sides (HLD §5.1).
 - **Real ADA data.** Phase 5 is mock-driven by definition; the simulator honours the real ADA node's env var *names* so Phase 6 is an image swap with no node-config edit (HLD §8).
-
-Four further exclusions, each with the reason it is a decision rather than an oversight:
-
-- **A 3D `SceneViewWarning3D` stub subtask.** R17 makes 3D optional and six days do not justify a stub whose only acceptance is that it does not crash. Its file location stays designated (HLD §3.1) so the optional path remains open.
-- **"Five consecutive socket errors → terminate and emit a service error".** Replaced by bounded back-off that never gives up (`4.5.3.4`); a listener that stops trying mid-run is worse for a recorded demo than one that keeps rebinding.
+- **A listener that gives up after N socket errors.** `4.5.3.4`'s bounded back-off never stops retrying: a listener that stops mid-run is worse for a recorded demo than one that keeps rebinding.
 - **A `--cycles`/`--interval-ms` sender CLI.** Repetition and cadence are scenario data (`loop`, `defaultRateHz`), not flags — D9's "scenarios are data, not code".
-- **A 2-second service-bind latency criterion.** Neither R4, R16 nor R17 states a latency requirement, and nothing in the acceptance boxes turns on it.
+- **A service-bind latency criterion.** Neither R4, R16 nor R17 states a latency requirement, and nothing in the acceptance boxes turns on it.
 
 ---
 
-*Decomposed by project-planner from the Phase 5 HLD (`85387b5`), its four research notes, and [milestone1.md § Phase 5](milestone1.md#phase-5--ivi-hmi-mock-driven-r16-r17--display-track-parallel-from-the-start); the in-Room tests from the walkthroughs, per stage 2 of [walkthrough-driven-delivery.md](../.claude/rules/walkthrough-driven-delivery.md). 9 task groups, 61 subtasks: 38 agent, 10 car-sky, 13 human. **There is no task group 5.8** — that work belongs to the isolated IVI test (5.9) and the `5.8.*` IDs are never reused. Nothing blocked. Nothing started except `16.5.7.1`.*
+*Decomposed by project-planner from the Phase 5 HLD (`85387b5`), its three research notes, and [milestone1.md § Phase 5](milestone1.md#phase-5--ivi-hmi-mock-driven-r16-r17--display-track-parallel-from-the-start); the in-Room tests from the walkthroughs, per stage 2 of [walkthrough-driven-delivery.md](../.claude/rules/walkthrough-driven-delivery.md). 9 task groups, 61 subtasks: 38 agent, 10 car-sky, 13 human. **There is no task group 5.8**, and the `5.8.*` IDs are never used. Nothing blocked. Nothing started except `16.5.7.1`.*
