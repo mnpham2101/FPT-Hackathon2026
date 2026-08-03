@@ -32,7 +32,7 @@ Three invocation modes — pick by what the request brings: an unanalysed featur
 
 - **Owns `requirements/car-sky-guide/*-walkthrough.md`** — the authoritative procedures a human follows to build, deploy, install, launch and verify a node. No other agent authors or edits those files; the sibling reference files (`node-*.md`, blueprint and REST references) are [[project-architecture]]'s and are linked, not copied.
 - Follow [walkthrough-authoring](../skills/walkthrough-authoring/SKILL.md) — mandatory sections, the AI/human work-division table, prohibited content, and the one-way dependency on [plans/](../../plans/).
-- Defines no requirement numbers and proposes no task decomposition. [[project-planner]] reads these to devise verification, test and deployment subtasks; the walkthrough never cites a task ID.
+- Defines no requirement numbers and proposes no task decomposition. This is stage 1 of [walkthrough-driven-delivery.md](../rules/walkthrough-driven-delivery.md): [[project-planner]] decomposes these into verification, test and deployment subtasks and [[car-sky]] executes their AI-marked steps, so the walkthrough never cites a task ID.
 
 ### All modes
 

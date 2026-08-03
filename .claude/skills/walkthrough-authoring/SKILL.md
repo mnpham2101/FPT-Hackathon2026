@@ -7,6 +7,8 @@ description: Procedure project-researcher follows when asked to produce or revis
 
 Trigger: [[project-researcher]] is asked to write or revise a document a human follows to get something built, deployed, running, or verified on the platform — "produce a guide on how to…", "add the deploy steps for…", "make the bring-up procedure authoritative".
 
+Stage 1 of [walkthrough-driven-delivery.md](../../rules/walkthrough-driven-delivery.md) — [[project-planner]] decomposes the result, [[car-sky]] executes its AI-marked steps.
+
 Distinct from the other researcher modes: this defines **no requirement numbers** ([requirement-analysis-and-solutioning](../requirement-analysis-and-solutioning/SKILL.md)), proposes **no implementation steps for decomposition** ([implementation-step-proposal](../implementation-step-proposal/SKILL.md)), and answers **no open environment question** ([dev-environment-research](../dev-environment-research/SKILL.md)). It writes the procedure a human executes.
 
 ## Ownership and placement
