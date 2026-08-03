@@ -6,7 +6,78 @@ Component map of the IVI node (R4, R16, R17) and, per component, its role, input
 
 Source: [research_notes/ivi-ecu-module-architecture.svg](research_notes/ivi-ecu-module-architecture.svg).
 
-The diagram is a UML component diagram: fill colour is the component's role, `«use»` dependencies are dashed with an open arrowhead, realization is dashed with a hollow triangle, and each seam is drawn as a provided interface meeting a required one at an assembly connector. Two `«node»` rectangles enclose the components — **IVI-ECU** holds everything this node runs, **ADA-ECU** holds the mocked producer it depends on — and the CarSky observation surfaces sit outside both. Paths below are relative to `IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/` unless shown otherwise.
+The diagram is a UML component diagram: fill colour is the component's role, `«use»` dependencies are dashed with an open arrowhead, realization is dashed with a hollow triangle, and each seam is drawn as a provided interface meeting a required one at an assembly connector. Two `«node»` rectangles enclose the components — **IVI-ECU** holds everything this node runs, **ADA-ECU** holds the mocked producer it depends on — and the CarSky observation surfaces sit outside both. Component names in the tables below are the short `package/File` form; § Folder structure resolves each to its module and full path.
+
+## Folder structure
+
+Five Gradle modules under `IVI_ECU/`, all sharing the package root `com.hackathon.v2x.ivi` — the Android module rooted at `src/main/java/`, the four pure-JVM ones at `src/main/kotlin/`, so a component's package is the same wherever it lives. Only the folders and files this document names appear below; the full per-file designation map, the tests, the build files and which files are already committed are in [phase5-ivi-hld.md §3](phase5-ivi-hld.md#3-folder-structure-map--file-location-designations).
+
+```
+IVI_ECU/
+├── settings.gradle.kts             includes :contract, :serializer, :observer, :app, :r4-simulator
+├── gradle/libs.versions.toml       the version catalog governing all five modules
+├── contracts/                      byte-synced R4 and R3 schema copies — the field list the model binds against
+│
+├── contract/                       :contract — the Data Model, pure JVM, zero Android
+│   └── src/main/kotlin/…/model/
+│       ├── R4Message.kt            the R4 message set and R4Json
+│       ├── R3Snapshot.kt           the carried R3 snapshot, with its `source` provenance field
+│       ├── SceneGeometry.kt        SceneGeometry and VehiclePosition
+│       └── R4Contract.kt           known schema version, sample paths, warning-registry keys
+│
+├── serializer/                     :serializer — the parser, pure JVM
+│   └── src/main/kotlin/…/serializer/
+│       ├── R4Decoder.kt            the decode seam and R4DecodeResult
+│       ├── R4Deserializer.kt       slice → BOM/UTF-8 → R4Json; returns a result, never throws
+│       └── PayloadPreview.kt       the bounded preview of bad bytes that the [DROP] line carries
+│
+├── observer/                       :observer — the receive path, pure JVM
+│   └── src/main/kotlin/…/observer/
+│       ├── R4DatagramSource.kt     the source seam
+│       ├── JdkDatagramSource.kt    the only socket holder — binds 0.0.0.0:47300
+│       ├── R4SocketObserver.kt     the receive loop, truncation check, rebind back-off, bounded flow
+│       ├── R4Event.kt              R4Event and R4LinkState
+│       ├── R4ObserverConfig.kt     port, buffer, capacity, back-off bounds — no literals
+│       └── R4Logger.kt             the logging seam AndroidR4Logger fills
+│
+├── app/                            :app — the front end, the only Android module
+│   └── src/
+│       ├── main/AndroidManifest.xml    launcher activity, listener service, automotive feature, permissions
+│       ├── main/java/…/
+│       │   ├── IviApplication.kt       the object graph and application scope
+│       │   ├── MainActivity.kt         the Compose host and process entry
+│       │   ├── di/IviGraph.kt          the hand-written composition root
+│       │   ├── config/IviRuntimeConfig.kt   BuildConfig defaults merged with launch-time extras
+│       │   ├── service/                R4ListenerService.kt, AndroidR4Logger.kt
+│       │   ├── data/R4Repository.kt    the event raiser and single injection target
+│       │   ├── warning/WarningClassifier.kt   warningType → presentation
+│       │   ├── ui/                     WarningUiState.kt, WarningViewModel.kt, MainViewModel.kt, DisplayMode.kt
+│       │   ├── ui/screen/MainScreen.kt the R16 layout
+│       │   └── ui/view/                IviWarningViewSeam.kt, CanvasWarningView.kt (with the provenance guard),
+│       │                               SceneCoordinateMapper.kt, WarningBannerOverlay.kt
+│       └── debug/java/…/debug/DevInjectorReceiver.kt   debug source set only — absent from any release build
+│
+├── r4-simulator/                   :r4-simulator — test equipment; builds m1-r4-sim:latest
+│   ├── Dockerfile · entrypoint.sh  the image the ADA Container node of the reduced IVI Room pulls
+│   ├── scenarios/*.json            scenario data — a new case is a new file, never a new code branch
+│   └── src/main/kotlin/…/sim/      the sender: scenario load, message build, validate through R4Json, UDP send
+│
+└── doc/                            this document, the HLD, the .puml diagrams, and research_notes/
+```
+
+Each module carries its own `src/test/` mirroring its main package, so the pure-JVM receive path is exercised with no device attached.
+
+Where each section of this document lands in that tree:
+
+| Section | Modules and folders |
+|---|---|
+| Business logic | `:serializer` and `:observer` entire, plus `app/…/warning/` |
+| Data Model | `:contract` entire, plus `app/…/data/` |
+| UI logic | `app/…/ui/` — the ViewModels and `DisplayMode` |
+| UI / front-end | `app/…/ui/screen/` and `app/…/ui/view/` |
+| Host and lifecycle | the `app/…/` root, `di/`, `service/` |
+| Configuration and descriptors | `app/src/main/AndroidManifest.xml`, `IVI_ECU/contracts/`, `app/…/config/`, `r4-simulator/scenarios/` |
+| Test equipment | `r4-simulator/` and `app/src/debug/` |
 
 ## Platform and boundary
 
