@@ -232,7 +232,7 @@ Zero `[ERR]` lines is **C2**; a live, readable log per node is **C3**.
 
 ### Checking IVI RX traffic (hop 3)
 
-The Android node has no APK yet ([`R4ListenerService`](../../plans/phase5_tasks.md), task `4.5.1.3`, not built), so it never produces `[RX]`/`[TX]` logs like the other three nodes. Two ways to check it received ADA's relay, strongest first — per [baseline-connectivity-smoke-test.md §7](../../plans/doc/research_notes/baseline-connectivity-smoke-test.md#7-the-ivi-hop) — and record which was used.
+Until the IVI listener is installed on the Android node, it produces no `[RX]`/`[TX]` logs like the other three nodes. Two ways to check it received ADA's relay, strongest first — per [baseline-connectivity-smoke-test.md §7](../../plans/doc/research_notes/baseline-connectivity-smoke-test.md#7-the-ivi-hop) — and record which was used.
 
 **Note:** a REST-driven listener (`POST` a `toybox nc -u -l -p 47300` to the VM shell route, `GET` the result) is not doable — the VM shell route returns 502 on this deployment, same as `screenshot`/`accessibility`/`container-exec` ([carsky-rest-api-blueprint.md](carsky-rest-api-blueprint.md)). Toybox's availability can't even be checked until that's fixed.
 
@@ -242,7 +242,7 @@ ADA's `[TX] … relayed to 10.99.0.13:47300` plus its `[CAP]` line proves the da
 
 #### Option 2 — Wait for the real R4 listener
 
-Once `4.5.1.3` lands, hop 3 verifies through the actual R4 UDP path and this whole check retires — no netcheck-specific verification needed from then on.
+Once the IVI listener is installed, hop 3 verifies through the actual UDP path and this whole check retires — no netcheck-specific verification needed from then on.
 
 ### M11 — Optional: MTU headroom
 
