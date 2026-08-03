@@ -1,0 +1,114 @@
+# The lane that originates in Phase 5: ivi-assemble (16.5.7.1) - the IVI APK build, its unit-test
+# gate, and the `app-debug-apk` artifact that the CI route of
+# requirements/car-sky-guide/ivi-hmi-walkthrough.md depends on. A human downloads that artifact and
+# installs it onto the Skycraft AAOS guest by hand; there is no path from this workflow to the
+# platform, because the IVI node pulls no image (its VM image is the starter-pack AAOS artifact).
+#
+# WHERE A NEW JOB GOES, per phase0-ci.yml's own rule: by the lane's ORIGIN phase, not by the date it
+# is written. A lane originating in Phase 0 -> phase0-ci.yml; Phase 1 -> phase1-ci.yml; Phase 5 ->
+# here. All three files use the same `on:` triggers, so every lane still runs on every push and pull
+# request - the split changes where a lane is maintained, never whether it executes.
+#
+# DELIBERATE OVERLAP WITH phase0-ci.yml's `ivi-unit-tests`, and it is not a duplicate to remove.
+# That lane owns the IVI test invocation and stays its maintenance home (4.5.7.2 extends it to the
+# five-module command once the module split lands). The step below runs :app:testDebugUnitTest as
+# well, in the SAME job as the build, for one reason: this job's output is hand-installed onto a
+# guest, so an APK must never leave this workflow unless its own tests passed in the job that
+# produced it. It is a gate on the artifact, not a second test lane - extend ivi-unit-tests when
+# test targets change, never this step.
+#
+# NO `lint` STEP, although 16.5.7.1 names one. This project's lint findings have not been read, and
+# a pre-existing finding would turn red the one lane that produces the APK. Add lint - together with
+# `lint { abortOnError = false }` in app/build.gradle.kts and the findings recorded - once they are
+# known.
+#
+# DEBUG BUILD ONLY. IVI_ECU/app/build.gradle.kts declares no signing config, and nothing downstream
+# consumes a release APK: the artifact installed on the guest is app-debug.apk. Do not add a signing
+# or release path here.
+name: phase5-ci
+
+on:
+  push:
+  pull_request:
+    branches: [main]
+
+# Superseded runs are cancelled rather than left to finish - same reasoning as the other two files.
+# Per ref, so main and a feature branch never cancel each other.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ivi-assemble:
+    runs-on: ubuntu-latest
+    # A cold run resolves AGP 8.13, Kotlin 2.2.20 and the Compose BOM before it compiles anything;
+    # the same assembleDebug measured ~7 minutes on a warm local machine. 30 bounds a hung
+    # dependency resolve without capping a legitimately slow first build.
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      # temurin 17 matches phase0-ci.yml's ivi-unit-tests and the sourceCompatibility / jvmTarget of
+      # IVI_ECU/app/build.gradle.kts. `cache: gradle` is the same caching the IVI lane already uses -
+      # no actions/cache entry of its own, and nothing shared with the Vanetza cache keys that couple
+      # phase0-ci.yml and phase1-ci.yml.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+      # The Android SDK comes from the ubuntu-latest runner image, exactly as ivi-unit-tests already
+      # relies on. android-actions/setup-android is added only if that image's SDK or licence state
+      # turns out insufficient (Phase 5 HLD §6.1); it is not needed today.
+      #
+      # No landed-file guard on any step below: IVI_ECU/ and its Gradle wrapper are on the tree, so a
+      # missing file here should fail the lane loudly rather than pass with a notice.
+      - name: Unit tests (the gate for the artifact below)
+        working-directory: IVI_ECU
+        run: |
+          chmod +x gradlew
+          ./gradlew :app:testDebugUnitTest --no-daemon
+      - name: Assemble the debug APK
+        working-directory: IVI_ECU
+        run: ./gradlew assembleDebug --no-daemon
+      - name: Record the APK size
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK=IVI_ECU/app/build/outputs/apk/debug/app-debug.apk
+          if [ ! -f "$APK" ]; then
+            echo "::error::$APK is missing after a successful assembleDebug"
+            exit 1
+          fi
+          BYTES=$(stat -c%s "$APK")
+          echo "::notice::app-debug.apk is $BYTES bytes ($((BYTES / 1024 / 1024)) MiB)"
+      # Reports, never fails. The IVI APK's launcher entry lands with 16.5.5.5; until then the APK
+      # installs and cannot be started, and that fact is the single most expensive surprise in the
+      # bring-up walkthrough. Saying it in the run log costs one step and removes the surprise.
+      - name: Report whether the APK has a launcher entry
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK=IVI_ECU/app/build/outputs/apk/debug/app-debug.apk
+          SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+          AAPT=""
+          if [ -n "$SDK" ]; then
+            AAPT=$(ls -1 "$SDK"/build-tools/*/aapt 2>/dev/null | sort -V | tail -n1 || true)
+          fi
+          if [ -z "$AAPT" ]; then
+            echo "::notice::no aapt found in the runner image's build-tools - launcher check skipped"
+            exit 0
+          fi
+          if "$AAPT" dump badging "$APK" | grep '^launchable-activity:'; then
+            echo "::notice::the APK declares a launcher activity and can be started with 'am start'"
+          else
+            echo "::notice::the APK declares NO launcher activity - it installs and cannot be started (the entry lands with 16.5.5.5)"
+          fi
+      - name: Upload the debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          # STABLE NAME - do not rename. requirements/car-sky-guide/ivi-hmi-walkthrough.md tells a
+          # human to download exactly this artifact by this name; a rename breaks that guide, not
+          # only this workflow.
+          name: app-debug-apk
+          path: IVI_ECU/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
