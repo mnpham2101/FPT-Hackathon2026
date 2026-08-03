@@ -6,18 +6,22 @@ Component map of the IVI node (R4, R16, R17) and, per component, its role, input
 
 Source: [research_notes/ivi-ecu-module-architecture.svg](research_notes/ivi-ecu-module-architecture.svg).
 
-The diagram is a UML component diagram: fill colour is the component's role, `«use»` dependencies are dashed with an open arrowhead, realization is dashed with a hollow triangle, and each seam is drawn as a provided interface meeting a required one at an assembly connector. Paths below are relative to `IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/` unless shown otherwise.
+The diagram is a UML component diagram: fill colour is the component's role, `«use»` dependencies are dashed with an open arrowhead, realization is dashed with a hollow triangle, and each seam is drawn as a provided interface meeting a required one at an assembly connector. Two `«node»` rectangles enclose the components — **IVI-ECU** holds everything this node runs, **ADA-ECU** holds the mocked producer it depends on — and the CarSky observation surfaces sit outside both. Paths below are relative to `IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/` unless shown otherwise.
 
 ## Platform and boundary
 
 | Component | Role | Input | Output |
 |---|---|---|---|
-| **AAOS guest on the Skycraft node** | the Android Automotive OS runtime the APK is installed into and runs on | the APK, installed over ADB; touch and key events from the Screen widget | `java.net` datagram sockets, the Compose/SurfaceFlinger display surface, the logcat buffer, and the ADB surface that installs and launches the app |
-| **ADA ECU node** (`10.99.0.12`) | the R4 producer | its composed scene | one R4 warning JSON datagram per event, to `10.99.0.13:47300` |
-| **Screen widget** | the visual observation surface | the guest's display output | a recording or screenshot of the God View |
-| **Guest logcat** | the text observation surface | the `IVI_V2X` tag | `adb logcat -s IVI_V2X`, or the Log widget in the Devices panel |
+| **AAOS (Android Automotive OS)** | the platform the IVI-ECU app runs on: the Skycraft node's guest, which the APK is installed into | the APK, installed over ADB; touch and key events from the Screen widget | `java.net` datagram sockets, the Compose/SurfaceFlinger display surface, the logcat buffer, and the ADB surface that installs and launches the app |
+| `«interface»` **ADA-ECU** | the producer's side of R4 — what this node depends on for input, never a particular producer | the scene composed by whatever realizes it | one R4 warning JSON datagram per event, to `10.99.0.13:47300` |
+| **Screen widget** — CarSky | the visual observation surface: a platform widget, part of neither ECU | the guest's display output | a recording or screenshot of the God View |
+| **Guest logcat** — CarSky | the text observation surface, likewise on the platform | the `IVI_V2X` tag | `adb logcat -s IVI_V2X`, or the Log widget in the Devices panel |
 
-## Business logic
+The ADA ECU is a Container node at `10.99.0.12`. It is mocked while the IVI ECU is exercised on its own: the `r4-simulator` realizes the `ADA-ECU` interface and runs there in place of the real ADA image, which realizes the same interface when it takes the node back — nothing on this side changes with the swap.
+
+## IVI-ECU components
+
+### Business logic
 
 Plain-JVM components, free of Android types, so the receive path is exercisable without a device.
 
@@ -30,21 +34,21 @@ Plain-JVM components, free of Android types, so the receive path is exercisable 
 
 Graceful degradation is split deliberately across the last two: the parser preserves the wire value and flags a schema version ahead of this one, and the classifier decides what an unrecognised value looks like. Neither treats it as an error.
 
-## Data
+### Data Model
 
 | Component | Role | Input | Output |
 |---|---|---|---|
 | `model/` — `R4Message`, `R3Snapshot`, `SceneGeometry`, `VehiclePosition`, `R4Json` | the typed binding of the R4 message set and the R3 snapshot it carries, including the `source` provenance field and the nullable `vehicleC` | decoded JSON | `R4WarningEvent` / `R4StateMessage`, and the `SceneGeometry` the renderer draws |
 | `data/R4Repository` | the event raiser — routes received events into app state, and is the single injection target the dev injector writes to | `R4Event`, injected samples | last warning, last `state` (last-value-wins by `seq`), link state |
 
-## UI logic
+### UI logic
 
 | Component | Role | Input | Output |
 |---|---|---|---|
 | `ui/WarningViewModel` | the warning lifecycle: Idle ↔ Active, with `WARNING_TIMEOUT_MS` of silence returning the Display Area to Idle | the warning presentation and its scene | `WarningUiState` |
 | `ui/MainViewModel` + `ui/DisplayMode` | which view the Display Area shows — Warning / Home / Apps / Settings — and whether the change came from a message (`cause=warning`) or a tap (`cause=user`) | mode requests from the button areas, warning state | `currentMode`, and the `[UI]` log line |
 
-## UI / front-end
+### UI / front-end
 
 | Component | Role | Input | Output |
 |---|---|---|---|
@@ -54,7 +58,7 @@ Graceful degradation is split deliberately across the last two: the parser prese
 | the **provenance guard**, nested inside `CanvasWarningView` | ghost C is drawn only when its snapshot `source` is `v2x_relayed`; any other value draws the yellow `[? UNKNOWN SOURCE]` marker and logs at ERROR. This is the mechanical form of the R19 claim | `SceneGeometry.vehicleCSnapshot` | ghost C, or the marker and an ERROR line |
 | `ui/view/WarningBannerOverlay` | the risk banner, kept out of the Display Area by standing decision so the God-View canvas renders unobstructed | `riskState` | a banner, mounted nowhere |
 
-## Host and lifecycle
+### Host and lifecycle
 
 | Component | Role | Input | Output |
 |---|---|---|---|
@@ -62,16 +66,7 @@ Graceful degradation is split deliberately across the last two: the parser prese
 | `service/R4ListenerService` | the foreground host that keeps the receive loop alive while the Display Area shows something else | start / stop | the observer's lifetime, and the process's foreground priority |
 | `service/AndroidR4Logger` | the only bridge from the plain-JVM components to `android.util.Log`, on the single tag `IVI_V2X`; realizes the `R4Logger` interface those components require | log calls from every layer | one greppable `key=value` line per event: `[LINK]`, `[RX]`, `[DROP]`, `[UI]` |
 
-## Test equipment
-
-Never part of the release APK.
-
-| Component | Role | Input | Output |
-|---|---|---|---|
-| `IVI_ECU/r4-simulator/` → `m1-r4-sim:latest` | stands in for the ADA ECU; runs on the ADA node | a scenario file and the frozen contract samples | R4 datagrams at `R4_RATE_HZ` to `10.99.0.13:47300`, and `[TX]` lines in the node log |
-| `debug/DevInjectorReceiver` | exercises the whole UI path with no network; confined to the debug source set so no release build can fabricate a warning | `am broadcast -a com.hackathon.v2x.ivi.DEV_INJECT --es sample …` | one sample message onto the repository's flow |
-
-## Configuration and descriptors
+### Configuration and descriptors
 
 Files, not components — neither data, business logic, UI logic nor front-end.
 
@@ -82,9 +77,24 @@ Files, not components — neither data, business logic, UI logic nor front-end.
 | `BuildConfig` / `config/IviRuntimeConfig` | port, timeout and scene-scale defaults, merged once with launch-time intent extras (`--ei r4_port`) so no other component carries a literal |
 | `r4-simulator/scenarios/*.json` | scenario data; a new case is a new file, never a new code branch |
 
+## Test equipment
+
+Scaffolding for exercising the IVI ECU on its own, and nothing else depends on it. Two pieces, two delivery routes — only one of them is an image:
+
+- **The simulator is a container image.** `IVI_ECU/r4-simulator/` builds `m1-r4-sim:latest`; GitHub Actions builds and pushes it to the CarSky Zot registry, and the ADA **Container node** of the reduced IVI Room pulls that tag — the same push-and-pull route every other node image takes ([phase5-ivi-hld.md §6.1](phase5-ivi-hld.md), [phase5-mini-blueprint.md](research_notes/phase5-mini-blueprint.md), [zot-registry-api-key.md](../../requirements/car-sky-guide/zot-registry-api-key.md)). It is the one place Zot enters IVI work: the APK itself never touches the registry ([deploy-ivi-hmi-walkthrough.md §1](../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md)).
+- **The injector is not.** `DevInjectorReceiver` is a `BroadcastReceiver` in the app's debug source set — it ships inside the debug APK, and has no image, no registry and no node of its own. That is why the diagram places it inside the IVI-ECU boundary and the simulator inside ADA-ECU.
+
+Neither reaches a release build: the injector is excluded by source set, and the simulator is a node away from the APK entirely.
+
+| Component | Role | Input | Output |
+|---|---|---|---|
+| `IVI_ECU/r4-simulator/` → `m1-r4-sim:latest` | realizes the `ADA-ECU` interface; runs on the ADA Container node in place of the real ADA image | a scenario file and the frozen contract samples | R4 datagrams at `R4_RATE_HZ` to `10.99.0.13:47300`, and `[TX]` lines in the node log |
+| `debug/DevInjectorReceiver` | exercises the whole UI path with no network; confined to the debug source set so no release build can fabricate a warning | `am broadcast -a com.hackathon.v2x.ivi.DEV_INJECT --es sample …` | one sample message onto the repository's flow |
+
 ## Interfaces, ports and the layer rule
 
-- **`udp :47300`** is a port on `JdkDatagramSource` — the app's one external network endpoint. Nothing else in the app opens a socket.
+- **`ADA-ECU`** is the only thing outside this node the app depends on: an interface, not a box. `r4-simulator` realizes it while the IVI ECU is exercised alone, the real ADA ECU realizes it afterwards, and the app is written against neither.
+- **`udp :47300`** is a port on `JdkDatagramSource` — the app's one external network endpoint, and where it meets the `ADA-ECU` interface. Nothing else in the app opens a socket.
 - **`R4DatagramSource`** and **`R4Decoder`** are the seams that make the receive loop testable: the loop requires them; a fake or the real implementation provides them.
 - **`R4Logger`** is the seam that keeps the plain-JVM components free of Android — they require it, `AndroidR4Logger` provides it.
 - **`IviWarningViewSeam`** is realized by `CanvasWarningView` and used by `MainScreen`, which never touches a message type — only `WarningUiState`.
