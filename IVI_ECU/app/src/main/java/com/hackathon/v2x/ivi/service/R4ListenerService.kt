@@ -100,16 +100,16 @@ class R4ListenerService : Service() {
                 } catch (e: SocketException) {
                     if (!isActive) return@launch
                     retries++
-                    Log.w(TAG, "UDP socket error (attempt $retries/$MAX_RETRIES): ${e.message}")
+                    safeLogW(TAG, "UDP socket error (attempt $retries/$MAX_RETRIES): ${e.message}")
                     if (retries >= MAX_RETRIES) {
-                        Log.e(TAG, "Max retries reached — emitting ServiceError")
+                        safeLogE(TAG, "Max retries reached — emitting ServiceError")
                         _serviceError.value = R4ServiceError("Max UDP retries reached")
                         return@launch
                     }
                     delay(RETRY_DELAY_MS)
                 } catch (e: Exception) {
                     if (!isActive) return@launch
-                    Log.e(TAG, "Unexpected error in receive loop", e)
+                    safeLogE(TAG, "Unexpected error in receive loop", e)
                     retries++
                     if (retries >= MAX_RETRIES) {
                         _serviceError.value = R4ServiceError("Unexpected error: ${e.message}")
@@ -126,7 +126,7 @@ class R4ListenerService : Service() {
         val packet = DatagramPacket(buffer, buffer.size)
         DatagramSocket(BuildConfig.R4_UDP_PORT).use { socket ->
             datagramSocket = socket
-            Log.i(TAG, "UDP socket open on port ${BuildConfig.R4_UDP_PORT}")
+            safeLogI(TAG, "UDP socket open on port ${BuildConfig.R4_UDP_PORT}")
             try {
                 while (currentCoroutineContext().isActive) {
                     // Reset length each iteration — without this, one short datagram permanently
@@ -137,7 +137,7 @@ class R4ListenerService : Service() {
                     val bytes = packet.data.copyOf(packet.length)
                     deserializer.deserialize(bytes)
                         .onSuccess { message -> _r4EventFlow.emit(message) }
-                        .onFailure { e -> Log.w(TAG, "Skipping bad packet: ${e.message}") }
+                        .onFailure { e -> safeLogW(TAG, "Skipping bad packet: ${e.message}") }
                 }
             } finally {
                 if (datagramSocket === socket) {
@@ -150,16 +150,44 @@ class R4ListenerService : Service() {
     // ── Foreground notification ───────────────────────────────────────────────
 
     private fun startForegroundWithNotification() {
-        val channelId = "r4_listener"
-        val channel = NotificationChannel(
-            channelId, "R4 Warning Listener", NotificationManager.IMPORTANCE_LOW
-        )
-        getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
-        val notification = Notification.Builder(this, channelId)
-            .setContentTitle("V2X IVI — Listening for R4 warnings")
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
-            .build()
-        startForeground(NOTIFICATION_ID, notification)
+        runCatching {
+            val channelId = "r4_listener"
+            val channel = NotificationChannel(
+                channelId, "R4 Warning Listener", NotificationManager.IMPORTANCE_LOW
+            )
+            getSystemService(NotificationManager::class.java)?.createNotificationChannel(channel)
+            val notification = Notification.Builder(this, channelId)
+                .setContentTitle("V2X IVI — Listening for R4 warnings")
+                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .build()
+            startForeground(NOTIFICATION_ID, notification)
+        }.onFailure { e ->
+            safeLogW(TAG, "Foreground notification skipped: ${e.message}")
+        }
+    }
+
+    private fun safeLogW(tag: String, message: String, throwable: Throwable? = null) {
+        runCatching {
+            if (throwable != null) Log.w(tag, message, throwable) else Log.w(tag, message)
+        }.onFailure {
+            println("[$tag] WARN: $message")
+        }
+    }
+
+    private fun safeLogE(tag: String, message: String, throwable: Throwable? = null) {
+        runCatching {
+            if (throwable != null) Log.e(tag, message, throwable) else Log.e(tag, message)
+        }.onFailure {
+            println("[$tag] ERROR: $message")
+        }
+    }
+
+    private fun safeLogI(tag: String, message: String) {
+        runCatching {
+            Log.i(tag, message)
+        }.onFailure {
+            println("[$tag] INFO: $message")
+        }
     }
 
     companion object {
@@ -170,4 +198,5 @@ class R4ListenerService : Service() {
         private const val NOTIFICATION_ID = 1001
     }
 }
+
 
