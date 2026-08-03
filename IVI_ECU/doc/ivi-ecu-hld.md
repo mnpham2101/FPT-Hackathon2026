@@ -220,9 +220,41 @@ No layer is collapsed: the receive loop cannot reach a Composable and a Composab
 
 [phase5-ivi-callflow.puml](phase5-ivi-callflow.puml) — PlantUML sequence: startup and bind, then the nominal warning path datagram → `JdkDatagramSource` → `R4SocketObserver` → `R4Deserializer` → `R4Repository` → `WarningViewModel` → `MainViewModel` → `MainScreen` → `CanvasWarningView` with the provenance guard, plus the malformed-drop, socket-rebind, warning-timeout and dev-injector branches.
 
-## 10. Tech stack, build and CI
+## 10. The contract — R4, the message set from ADA-ECU
 
-No dependency outside this table enters the node without a design change. Traces are to [m1-cooperative-awareness.md](../../requirements/m1-cooperative-awareness.md) and to the decisions in §12.
+**The contract of this ECU is its input message schema: R4, what the ADA ECU sends to the IVI ECU.** It is the only thing crossing the node boundary inward, and every component from `R4Deserializer` rightward is written against it. This node consumes and never produces: there is no reply, no acknowledgement and no message out of the IVI ECU.
+
+| Property | Value |
+|---|---|
+| Direction | ADA-ECU → IVI-ECU, one way |
+| Transport | UDP datagram to `10.99.0.13:47300`, one message per datagram, no framing header (D3) |
+| Encoding | UTF-8 JSON |
+| Normative schema | [contracts/r4-ada-ivi.schema.json](../../contracts/r4-ada-ivi.schema.json), with the embedded R3 snapshot in [contracts/r3-tracked-object.schema.json](../../contracts/r3-tracked-object.schema.json) |
+| Node copy | `IVI_ECU/contracts/*.schema.json`, byte-synced from the normative pair; `:contract`'s models and round-trip tests bind against it |
+| Status | Frozen — a field change is a re-freeze across every consumer, not a local edit |
+
+Two message kinds share the port, discriminated by `type`.
+
+**`type: "warning"`** — edge-triggered, the committed message and the one the God View renders:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `schemaVersion` | integer ≥ 1 | contract version; a value above `R4Contract.KNOWN_SCHEMA_VERSION` is accepted and flagged, never rejected (D4) |
+| `type` | `"warning"` | discriminator |
+| `warningType` | string | warning-registry key; the M1 registry holds `nlos_obstruction`. An unrecognised value degrades to the generic presentation, and is never rewritten (D4) |
+| `riskState` | string | the R14 risk level — `low` / `medium` / `high` — and what colours ghost C's ground glow |
+| `object` | R3 TrackedObject | the snapshot of the triggering track (C), carrying `source`, `position`, `distance`, `speed`, `confidence`, `state` and `timestamps` |
+| `geometry` | object | the composed scene: `ego` (always the frame origin), `vehicleB` (the occluder), `vehicleC` (the relayed vehicle, `null` until C is first tracked). Positions are `x` longitudinal / `y` lateral, metres, ego frame |
+
+**`object.source` is the field the whole R19 claim rests on.** It is `own_sensor` or `v2x_relayed`; the provenance guard draws ghost C only for `v2x_relayed`, so this field must reach `SceneGeometry.vehicleCSnapshot` intact (D12).
+
+**`type: "state"`** — optional periodic awareness state (R15). Fields: `schemaVersion`, `type`, `seq` (integer, last-value-wins), and `vehicles` with the same `ego` / `vehicleB` / `vehicleC` positions. The consumer parses it and keeps the newest by `seq`; no acceptance criterion depends on it (D11).
+
+Evolution is additive, and the consumer's obligations are fixed by the schema itself: ignore unknown fields, tolerate a newer `schemaVersion`, and treat an unknown `warningType` as a generic warning. None of the three is an error path.
+
+## 11. Tech stack, build and CI
+
+No dependency outside this table enters the node without a design change. Traces are to [m1-cooperative-awareness.md](../../requirements/m1-cooperative-awareness.md) and to the decisions in §13.
 
 | Area | Stack | Trace |
 |---|---|---|
@@ -245,7 +277,7 @@ Build commands, from `IVI_ECU/`: `./gradlew assembleDebug` · `./gradlew :contra
 
 The simulator's `Dockerfile` sits at `r4-simulator/Dockerfile` with build context `IVI_ECU/` — a deviation from "own `Dockerfile` at the folder root", because this folder's primary artifact is the APK and the image is secondary test equipment. Self-containment, the property that rule protects, holds: the build reads nothing outside `IVI_ECU/`.
 
-## 11. Test strategy
+## 12. Test strategy
 
 Two configurations exercise the same node, and they differ in exactly one component — which component realizes `ADA-ECU`:
 
@@ -269,7 +301,7 @@ Expected observables, per [deploy-ivi-hmi-walkthrough.md §6](../../requirements
 
 Below both configurations sits the plain-JVM unit layer: `:contract`, `:serializer` and `:observer` are tested with a fake source or a loopback socket, so the receive path is proven without a Room, and the dev injector reaches the real UI with no network at all.
 
-## 12. Design decisions
+## 13. Design decisions
 
 Binding on implementation. A decision is revisited by changing this section, not by an implementation that departs from it.
 
