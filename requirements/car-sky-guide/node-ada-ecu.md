@@ -37,9 +37,13 @@ The provided video clip(s) ship inside the image (`COPY` at build time) — no l
     "command": ["--config", "/app/config/ada-ecu.conf"],
     "capabilities": ["NET_RAW"],
     "env": {
+      "V2X_LISTEN_HOST": "0.0.0.0",
       "V2X_LISTEN_PORT": "47200",
       "IVI_HOST": "10.99.0.13",
       "IVI_PORT": "47300",
+      "TRACK_TIMEOUT_MS": "1000",
+      "CONFIRM_HITS": "3",
+      "EVENT_LOG_PATH": "ada-events.jsonl",
       "DETECTOR_ENABLED": "true",
       "DETECTOR_RESTART_MAX": "3",
       "DETECTOR_CMD": "python3 /app/detector/tools/video_detector.py --video /app/media/ego-b-occluding-c.mp4 --backend yolo-onnx --model /app/models/yolo11n.onnx --every-n-frames 4 --confidence 0.20 --realtime --loop",
@@ -55,7 +59,9 @@ The provided video clip(s) ship inside the image (`COPY` at build time) — no l
 }
 ```
 
-`V2X_LISTEN_PORT` receives R2 JSON from the V2X ECU; `IVI_HOST`/`IVI_PORT` target the IVI ECU's static address for R4 emission. `GATE_ENTER_M`/`GATE_EXIT_M` are the R13 admission-gate constants — externalized configuration, never literals in code (CLAUDE.md governing principle 5; [milestone1.md](../../plans/milestone1.md) §4).
+`V2X_LISTEN_HOST`/`V2X_LISTEN_PORT` bind the R2 receiver; `IVI_HOST`/`IVI_PORT` target the IVI ECU's static address for R4 emission. `TRACK_TIMEOUT_MS` and `CONFIRM_HITS` control R13 lifecycle, while `EVENT_LOG_PATH` selects the container-local evidence file. `GATE_ENTER_M`/`GATE_EXIT_M` are the R13 admission-gate constants — externalized configuration, never literals in code (CLAUDE.md governing principle 5; [milestone1.md](../../plans/milestone1.md) §4).
+
+Canonical environment names always override their legacy aliases, independent of config-file order. Compatibility aliases remain accepted for existing local scripts: `MISS_LIMIT_MS` → `TRACK_TIMEOUT_MS`, `TENTATIVE_HITS` → `CONFIRM_HITS`, `LOG_PATH` → `EVENT_LOG_PATH`, `ADA_LISTEN_HOST`/`ADA_LISTEN_PORT` → `V2X_LISTEN_HOST`/`V2X_LISTEN_PORT`, and `IVI_ECU_HOST`/`IVI_ECU_PORT` → `IVI_HOST`/`IVI_PORT`.
 
 ## Pins
 

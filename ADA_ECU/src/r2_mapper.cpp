@@ -17,23 +17,24 @@ std::optional<TrackedObject> tracked_object_from_r2_json(const std::string& json
         return std::nullopt;
     }
 
-    if (!message.is_object() || message.value("schemaVersion", 0) != 1 || message.value("type", "") != "v2x_object" ||
-        !message.contains("stationId") || !message.contains("object") || !message["object"].is_object()) {
-        return std::nullopt;
-    }
-
-    const auto& r2_object = message["object"];
-    if (!r2_object.contains("objectId") || !r2_object.contains("distance") || !r2_object.contains("position") ||
-        !r2_object["position"].is_object()) {
-        return std::nullopt;
-    }
-
-    const auto& position = r2_object["position"];
-    if (!position.contains("x") || !position.contains("y")) {
-        return std::nullopt;
-    }
-
     try {
+        if (!message.is_object() || message.value("schemaVersion", 0) != 1 ||
+            message.value("type", "") != "v2x_object" || !message.contains("stationId") ||
+            !message.contains("object") || !message["object"].is_object()) {
+            return std::nullopt;
+        }
+
+        const auto& r2_object = message["object"];
+        if (!r2_object.contains("objectId") || !r2_object.contains("distance") ||
+            !r2_object.contains("position") || !r2_object["position"].is_object()) {
+            return std::nullopt;
+        }
+
+        const auto& position = r2_object["position"];
+        if (!position.contains("x") || !position.contains("y")) {
+            return std::nullopt;
+        }
+
         TrackedObject object;
         object.id = "v2x:" + std::to_string(message.at("stationId").get<int>()) + ":" +
                     std::to_string(r2_object.at("objectId").get<int>());

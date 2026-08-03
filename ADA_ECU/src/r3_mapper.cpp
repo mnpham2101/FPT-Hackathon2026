@@ -40,24 +40,24 @@ std::optional<TrackedObject> tracked_object_from_r3_json(const std::string& json
         return std::nullopt;
     }
 
-    if (!message.is_object() || !message.contains("id") || !message.contains("source") || !message.contains("position") ||
-        !message.contains("timestamps")) {
-        return std::nullopt;
-    }
-
-    const auto source = parse_source(message.value("source", ""));
-    const auto state = parse_state(message.value("state", "not_tracked"));
-    if (!source || !state || !message["position"].is_object() || !message["timestamps"].is_object()) {
-        return std::nullopt;
-    }
-
-    const auto& position = message["position"];
-    const auto& timestamps = message["timestamps"];
-    if (!position.contains("x") || !position.contains("y")) {
-        return std::nullopt;
-    }
-
     try {
+        if (!message.is_object() || !message.contains("id") || !message.contains("source") ||
+            !message.contains("position") || !message.contains("timestamps")) {
+            return std::nullopt;
+        }
+
+        const auto source = parse_source(message.value("source", ""));
+        const auto state = parse_state(message.value("state", "not_tracked"));
+        if (!source || !state || !message["position"].is_object() || !message["timestamps"].is_object()) {
+            return std::nullopt;
+        }
+
+        const auto& position = message["position"];
+        const auto& timestamps = message["timestamps"];
+        if (!position.contains("x") || !position.contains("y")) {
+            return std::nullopt;
+        }
+
         TrackedObject object;
         object.id = message.at("id").get<std::string>();
         object.object_class = message.value("class", "vehicle");

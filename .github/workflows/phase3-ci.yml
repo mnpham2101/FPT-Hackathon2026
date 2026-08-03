@@ -29,6 +29,11 @@ jobs:
           python ADA_ECU/tools/smoke_ml_video_detector.py
       - name: Full-clip YOLO acceptance
         run: |
+          # The sourced M1 fixture is intentionally 10 s and loops at runtime;
+          # all other frozen input properties remain preflighted here.
+          python ADA_ECU/tools/check_clip_spec.py \
+            ADA_ECU/media/ego-b-occluding-c.mp4 \
+            --min-duration 10 --max-duration 10
           python ADA_ECU/tools/benchmark_video_detector.py \
             --output "$RUNNER_TEMP/phase3-r3.jsonl"
           python ADA_ECU/tools/check_zero_c.py "$RUNNER_TEMP/phase3-r3.jsonl"

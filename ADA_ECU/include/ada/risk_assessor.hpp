@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <optional>
 
 #include "ada/track_store.hpp"
@@ -7,6 +8,8 @@
 #include "ada/scene_composer.hpp"
 
 namespace ada {
+
+class AssessmentDb;
 
 enum class RiskState {
     Low,
@@ -35,6 +38,7 @@ public:
 class NlosRiskAssessor final : public CollisionRiskAssessor {
 public:
     NlosRiskAssessor(double near_m, double critical_m, std::int64_t dwell_ms);
+    NlosRiskAssessor(double near_m, double critical_m, std::int64_t dwell_ms, std::shared_ptr<AssessmentDb> db);
 
     std::optional<RiskEvent> assess(const TrackStore& store, std::int64_t now_ms) override;
 
@@ -44,13 +48,11 @@ private:
     double near_m_;
     double critical_m_;
     std::int64_t dwell_ms_;
-    RiskState last_state_ = RiskState::Low;
     RiskState pending_state_ = RiskState::Low;
     std::int64_t pending_since_ms_ = 0;
     std::optional<TrackedObject> last_relayed_object_;
     std::optional<SceneGeometry> last_scene_;
-    std::optional<double> previous_distance_ac_m_;
-    std::int64_t previous_assessment_ms_ = 0;
+    std::shared_ptr<AssessmentDb> db_;
 };
 
 }  // namespace ada

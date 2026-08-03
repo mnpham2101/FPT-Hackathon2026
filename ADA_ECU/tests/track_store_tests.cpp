@@ -1,12 +1,14 @@
 #include <cassert>
 #include <filesystem>
 #include <fstream>
+#include <memory>
 #include <sstream>
 #include <string>
 
 #include <nlohmann/json.hpp>
 
 #include "ada/detector_jsonl_ingest.hpp"
+#include "ada/assessment_db.hpp"
 #include "ada/event_logger.hpp"
 #include "ada/r2_mapper.hpp"
 #include "ada/r3_mapper.hpp"
@@ -35,11 +37,19 @@ int main() {
     config.tentative_hits = 2;
 
     const auto own_sensor_jsonl = read_file(std::string(ADA_TESTDATA_DIR) + "/r3_own_sensor.jsonl");
-    const auto first_line_end = own_sensor_jsonl.find('\n');
-    const auto first_own = ada::tracked_object_from_r3_json(own_sensor_jsonl.substr(0, first_line_end));
-    const auto second_own = ada::tracked_object_from_r3_json(own_sensor_jsonl.substr(first_line_end + 1));
+    std::istringstream own_sensor_lines(own_sensor_jsonl);
+    std::string first_line;
+    std::string second_line;
+    std::string third_line;
+    assert(std::getline(own_sensor_lines, first_line));
+    assert(std::getline(own_sensor_lines, second_line));
+    assert(std::getline(own_sensor_lines, third_line));
+    const auto first_own = ada::tracked_object_from_r3_json(first_line);
+    const auto second_own = ada::tracked_object_from_r3_json(second_line);
+    const auto third_own = ada::tracked_object_from_r3_json(third_line);
     assert(first_own);
     assert(second_own);
+    assert(third_own);
     assert(first_own->source == ada::Source::OwnSensor);
     assert(first_own->id == "own:B");
 
@@ -47,7 +57,7 @@ int main() {
     const auto event_log_path = std::filesystem::temp_directory_path() / "ada_core_tests.jsonl";
     ada::EventLogger logger(event_log_path.string());
     const auto ingest = ada::ingest_own_sensor_jsonl_file(std::string(ADA_TESTDATA_DIR) + "/r3_own_sensor.jsonl", store, logger);
-    assert(ingest.accepted == 2);
+    assert(ingest.accepted == 3);
     assert(ingest.rejected == 0);
     const auto own_track = store.get("own:B");
     assert(own_track);
@@ -66,11 +76,16 @@ int main() {
     assert(r2_ingest.track_id == "v2x:1201:7");
     assert(store.get("v2x:1201:7")->state == ada::TrackState::Tracked);
 
-    ada::NlosRiskAssessor risk(50.0, 30.0, 0);
+    const auto assessment_db = std::make_shared<ada::AssessmentDb>();
+    ada::NlosRiskAssessor risk(50.0, 30.0, 0, assessment_db);
     const auto event = risk.assess(store, 1020);
     assert(event);
     assert(event->state == ada::RiskState::Medium);
     assert(event->distance_m == 37.4);
+    const auto assessment = assessment_db->get("nlos_obstruction", "v2x:1201:7");
+    assert(assessment);
+    assert(assessment->risk_state == ada::RiskState::Medium);
+    assert(assessment->distance_m == 37.4);
     const auto warning = ada::build_r4_warning_json(*event, store);
     assert(warning.find("\"type\":\"warning\"") != std::string::npos);
     assert(warning.find("\"warningType\":\"nlos_obstruction\"") != std::string::npos);

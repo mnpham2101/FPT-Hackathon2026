@@ -207,12 +207,34 @@ docker buildx build --platform linux/arm64 --provenance=false --sbom=false \
 
 Evidence recorded on 2026-08-03:
 
-- Build-stage CTest passed `14/14`.
+- Build-stage CTest passed `18/18` with GCC 14 on `linux/arm64`.
+- Host-side Python tool tests passed `17/17`; detector seam tests passed `5/5`.
+- Clip preflight decoded `200/200` frames (1280x720, 20 fps, 10 seconds).
 - The C++ mock runtime emitted R4 with `trackedObjects` containing `own:B`
   (`own_sensor`) and `v2x:1201:7` (`v2x_relayed`).
+- The schema-aware evidence checker passed the captured local chain with
+  `events=11`, `riskTransitions=1`, and `r4Tx=1`.
 - YOLO ONNX decoded the packaged demo video inside the ARM64 image and emitted
   five R3 `own:B` objects at timestamps 0, 1000, 2000, 3000, and 4000 ms.
 - Native `aarch64` wheels resolved for OpenCV, NumPy, and ONNX Runtime.
+
+The latest local acceptance image is
+`m1-ada-ecu:phase24-acceptance-local` (`linux/arm64`). The build exposed and
+fixed one Linux portability issue: `risk_assessor.cpp` now includes
+`<stdexcept>` directly instead of relying on a transitive macOS/Clang include.
+The packaged mock fixture now contains the three own-sensor observations
+required by `CONFIRM_HITS=3`, so vehicle B is `tracked` before R2 vehicle C is
+fused. Registry publication and Room deployment were then completed as recorded
+below; IVI receipt and PCAP inspection remain separate downstream evidence.
+
+The CarSky-ready image was subsequently published as
+`registry.hackathon-2.carsky.io/m1-ada-ecu:20260803-phase24-acceptance-2`.
+The remote registry reports a single OCI image manifest with digest
+`sha256:244143189698649041b0191c47a0590bef5e5aa0fab31124831bc1758796a005`;
+it was built with provenance and SBOM attestations disabled for CarSky
+compatibility. The earlier `20260803-phase24-acceptance-1` tag is retained as
+immutable build history but is not the deployment candidate because its OCI
+index also contains an attestation manifest.
 
 The ONNX Runtime `Unknown CPU vendor` warning under Docker Desktop
 virtualization was informational; inference completed successfully.
@@ -365,16 +387,50 @@ Interpretation:
 - The emitted R4 contains both `trackedObjects` entries (`own:B`, `v2x:1201:7`) and composed `geometry.vehicleB` / `geometry.vehicleC`.
 - Distance is a bounding-box estimate, not calibrated ground truth.
 
+### CarSky deployment acceptance
+
+ADA Phase 2–4 was deployed on the custom CarSky tenant on 2026-08-03 using:
+
+```text
+registry.hackathon-2.carsky.io/m1-ada-ecu:20260803-phase24-acceptance-2
+sha256:244143189698649041b0191c47a0590bef5e5aa0fab31124831bc1758796a005
+```
+
+The deployment reached `5/5 nodes ready`. The ADA node used static Ethernet
+address `10.99.0.12/24`, received R2 on UDP port `47200`, and targeted IVI at
+`10.99.0.13:47300`. For the short deterministic demo, the deploy-only overrides
+were `RISK_NEAR_M=60` and `RISK_DWELL_MS=0`; the source defaults remain 50 m
+and 300 ms.
+
+Observed live evidence:
+
+| Check | Evidence | Result |
+|---|---|---|
+| Real video detection | YOLO emitted tracked `own:B`; observed B distance `16.595 m` at emission | Pass |
+| Live V2X input | `v2x:1201:7` crossed the 30 m admission gate at `29.774 m` | Pass |
+| Fusion/CRA | `distanceAC=46.369 m`, `riskState=medium`, rationale `composed_distance_threshold` | Pass |
+| R4 content | `trackedObjects` contained tracked `own:B` and `v2x:1201:7`; geometry contained ego, B and C | Pass |
+| ADA UDP transmission | `r4_tx` targeted `10.99.0.13:47300` with `sent=true`, length 987 bytes | Pass |
+
+The admission transition, assessment, risk transition, and R4 transmission all
+used timestamp `1785771523404`, proving that ADA emitted the warning in the
+same processing tick after C became tracked. `sent=true` proves the ADA-side
+UDP `sendto()` succeeded; an IVI-side receive/parse log is still required to
+claim transport delivery and HMI acceptance for the Phase 5 scope.
+
 ## Open Integration Notes for Other Owners
 
 These are requests to coordinate with other phases, not ADA-owned changes:
 
 | Owner scope | Request |
 |---|---|
-| Phase 1 / V2X ECU | Send R2 JSON to ADA deploy port `47200`; object distance should be derived consistently from position. |
+| Phase 1 / V2X ECU | Live R2 delivery to ADA port `47200` passed on CarSky; retain consistent position/distance derivation. |
 | Phase 5 / IVI ECU | Consume R4 `geometry.vehicleB` / `geometry.vehicleC` and `riskState = low | medium | high`; listen on deploy port `47300`. |
-| Deployment / CarSky | Use env overrides instead of editing local ADA config: `V2X_LISTEN_PORT=47200`, `IVI_HOST=10.99.0.13`, `IVI_PORT=47300`. |
+| Deployment / CarSky | ADA deploy and ADA-side R4 transmission passed; preserve the immutable image tag and canonical environment block. |
 
 ## Status
 
-ADA Phase 2–4 is ready for MR as an ego-side mock/demo runtime. Full closure still depends on integration with Phase 1 live R2 and Phase 5 IVI consumption.
+ADA Phase 2–4 passed local tests, ARM64 container verification, live CarSky R2
+ingest, real-video B detection, B+C fusion, CRA assessment, and ADA-side R4
+transmission. It is ready for commit and MR. Full product end-to-end closure
+still requires the Phase 5 IVI receive/parse or HMI evidence.

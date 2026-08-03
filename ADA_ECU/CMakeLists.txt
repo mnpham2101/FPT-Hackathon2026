@@ -22,6 +22,8 @@ enable_testing()
 find_package(Threads REQUIRED)
 
 add_library(ada_core
+  src/assessment_db.cpp
+  src/ada_pipeline.cpp
   src/config.cpp
   src/detector_jsonl_ingest.cpp
   src/detector_process.cpp
@@ -47,6 +49,22 @@ add_executable(ada_core_tests tests/track_store_tests.cpp)
 target_link_libraries(ada_core_tests PRIVATE ada_core)
 target_compile_definitions(ada_core_tests PRIVATE ADA_TESTDATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/testdata")
 add_test(NAME ada_core_tests COMMAND ada_core_tests)
+
+add_executable(ada_cra_tests tests/cra_tests.cpp)
+target_link_libraries(ada_cra_tests PRIVATE ada_core)
+add_test(NAME ada_cra_tests COMMAND ada_cra_tests)
+
+add_executable(ada_config_tests tests/config_tests.cpp)
+target_link_libraries(ada_config_tests PRIVATE ada_core)
+add_test(NAME ada_config_tests COMMAND ada_config_tests)
+
+add_executable(ada_acceptance_error_tests tests/acceptance_error_tests.cpp)
+target_link_libraries(ada_acceptance_error_tests PRIVATE ada_core)
+add_test(NAME ada_acceptance_error_tests COMMAND ada_acceptance_error_tests)
+
+add_executable(ada_pipeline_tests tests/pipeline_tests.cpp)
+target_link_libraries(ada_pipeline_tests PRIVATE ada_core)
+add_test(NAME ada_pipeline_tests COMMAND ada_pipeline_tests)
 
 # Contracts library — pure model code, no transport (3.0.4.2).
 add_library(ada_contracts STATIC
