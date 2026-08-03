@@ -91,7 +91,9 @@ _latestScene.value = event.geometry
 
 Fix: compose the scene as `warning.geometry.copy(vehicleCSnapshot = warning.objectSnapshot)`. This is subtask `17.5.4.4`, with a named regression test.
 
-### 4.2 Blocking — silent datagram truncation
+### 4.2 Silent datagram truncation — **RETRACTED 2026-08-03**
+
+> **This finding was wrong.** It is preserved verbatim below because § 5, § 8 and § 9 were written on top of it. The measurement refuting it is § 12.3; wherever this document later calls truncation "blocking", read § 12.3 instead.
 
 `R4ListenerService.openSocketAndReceive` allocates one `DatagramPacket` and reuses it across the loop without ever calling `packet.setLength(buffer.size)` before `socket.receive(packet)`. The JDK sets the packet's length to each received message's size, and the *next* receive reads at most that many bytes. One short datagram permanently shrinks the receive window, and every later message is truncated — which surfaces as intermittent `MALFORMED` parse failures that look like a producer bug.
 
@@ -284,12 +286,12 @@ Either:
 
 ## 8. Defect status at the rebased `-complete` head (`06cb936`)
 
-`06cb936` is 23 commits ahead of `main` and 0 behind — the rebase took `main`'s `R4Message.kt` and `SceneGeometry.kt` verbatim, so the § 4 findings need re-checking rather than re-quoting. **§ 7's recommendation stands unchanged**: one of the two blocking defects is still live, and the branch still targets a structure the plan does not have.
+`06cb936` is 23 commits ahead of `main` and 0 behind — the rebase took `main`'s `R4Message.kt` and `SceneGeometry.kt` verbatim, so the § 4 findings need re-checking rather than re-quoting. **§ 7's recommendation stands, on narrower grounds**: both § 4 blocking defects are now closed — § 4.1 by a fix, § 4.2 by retraction (§ 12.3) — and what remains against a merge is the weakened R3 contract, the unconditional link indicator, and a structure the plan does not have.
 
 | § | Finding | Status at `06cb936` |
 |---|---|---|
 | 4.1 | R19 provenance guard inert | **Fixed** |
-| 4.2 | Silent datagram truncation | **Live — blocking** |
+| 4.2 | Silent datagram truncation | **Not a defect — retracted, § 12.3** |
 | 4.3a | `R3Snapshot` required fields defaulted | **Persists, widened** |
 | 4.3b | `R4ServiceError` in the sealed `R4Message` | **Fixed**, with a residue |
 | 4.4 | Unknown `warningType` rewritten to `"unknown"` | **Fixed** |
@@ -307,7 +309,7 @@ Either:
 
 ### 8.2 Still live
 
-- **Datagram truncation (§ 4.2) — blocking.** [`R4ListenerService.kt:118`](../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/service/R4ListenerService.kt) allocates `DatagramPacket(buffer, buffer.size)` outside the loop, and `:124` calls `socket.receive(packet)` with no `packet.setLength(buffer.size)` first. Every datagram after the shortest one seen is silently truncated. § 11.6 shows the mock sender's own scenario triggering this within one cycle.
+- ~~**Datagram truncation (§ 4.2).**~~ **Retracted 2026-08-03 — this was never a defect.** The reasoning is preserved and refuted in § 12.3. `4.5.3.2`'s `setLength` clause should be rewritten as defensive hygiene, not a bug fix, and its "long-then-short datagram" regression test will pass before and after.
 - **`R3Snapshot` defaults (§ 4.3a) — widened.** `R3Snapshot.kt` now defaults `objectClass`, `distance`, `speed`, `confidence`, `state` and `timestamps`, and `R3Timestamps` defaults all three fields. [`contracts/r3-tracked-object.schema.json`](../../contracts/r3-tracked-object.schema.json) marks all nine fields required. The cause is visible in the same PR: `mock_r4_sender.py:38-46` omits `class` and `timestamps`, so the model was relaxed to let the mock parse. **Fix the producer, not the contract** — a missing `distance` currently decodes to a plausible `0.0 m` in a distance-warning system.
 - **Hardcoded tunables (§ 4.5).** `R4ListenerService` companion: `BUFFER_SIZE = 4096`, `MAX_RETRIES = 5`, `RETRY_DELAY_MS = 1_000L`, `NOTIFICATION_ID = 1001` (`:155-158`).
 - **Give-up-after-5 (§ 4.5).** `:97-100` and `:106-109` return from the loop after five consecutive failures, leaving a dead listener. `4.5.3.4` replaces this with bounded back-off that never stops retrying.
@@ -340,7 +342,7 @@ Either:
 | Bách | Lead subtasks it touches | Coverage |
 |---|---|---|
 | **B.1** Gradle AAOS + `BuildConfig.R4_UDP_PORT=47300` | `4.5.4.1` (the port field only) | 1 of 7 `BuildConfig` fields; no `IviRuntimeConfig`, no `--ei` override. Opposes `4.5.1.1`/`4.5.1.2` (no catalog; Hilt expanded) |
-| **B.2** UDP FGS listener + deserializer | `4.5.2.1` `4.5.2.2` `4.5.3.1` `4.5.3.2` `4.5.3.3` `4.5.3.4` `4.5.5.2` | Seven subtasks fused into two classes. Decode preserves `warningType`; the loop carries § 8.2's truncation defect and § 8.3's suspending emit |
+| **B.2** UDP FGS listener + deserializer | `4.5.2.1` `4.5.2.2` `4.5.3.1` `4.5.3.2` `4.5.3.3` `4.5.3.4` `4.5.5.2` | Seven subtasks fused into two classes. Decode preserves `warningType`; the loop carries § 8.3's suspending emit and the give-up-after-5 (truncation retracted, § 12.3) |
 | **B.3** Mapper + Canvas God View + guard | `17.5.5.8` `17.5.5.9` | The mapper and the renderer are `[C]` on `main` — Phase 5's work here is the two test files plus the helper extraction, and both landed |
 | **B.4** Default `HomeView`, status `BOUND :{port}` | `17.5.5.6` | Default mode yes; the status string is a constant, not the live `R4LinkState` the subtask requires (§ 8.3) |
 | **B.5** Wake-on-warning + restore | `16.5.4.5`, mount half of `17.5.5.6` | The one item that meets its subtask's acceptance |
@@ -410,7 +412,7 @@ His marks are claims. Each row below is checked against the tree at `06cb936`.
 | `4.5.2.2` `R4Deserializer` + decode table | No | 55 % | `data/R4Deserializer.kt` preserves unknown `warningType` and never escapes an exception — keep both. Add `decode(buffer, offset, length)` (`:22` takes the whole array), the three-value failure taxonomy as a return, `schemaVersionAhead`, BOM/whitespace stripping and the empty-input case; bound the preview — `MalformedR4PayloadException` (`:91`) dumps up to 256 raw bytes including newlines. `R4DeserializerTest` covers 4 of the 10 required rows and builds its JSON from string literals rather than the frozen fixtures: missing are unknown message `type`, empty, all-whitespace, truncated prefix, `"distance": "far"`, and `object` removed |
 | `4.5.2.3` buffer-slicing test | No | 0 % | No offset/length API to test |
 | `4.5.3.1` `:observer` module + seams | No | 5 % | Only a raw `SharedFlow<R4Message>` on the service. No `R4Event`, `R4LinkState`, `R4ObserverConfig` or `R4Logger` |
-| `4.5.3.2` `JdkDatagramSource` + `setLength` | No | 0 % | **Blocking.** `R4ListenerService.kt:118` allocates the packet outside the loop; `:124` receives without `packet.setLength(buffer.size)`. Fix in place first if the branch is used at all, then extract to the seam |
+| `4.5.3.2` `JdkDatagramSource` + `setLength` | No | 0 % | Not blocking — the truncation premise is retracted (§ 12.3). The work is still real: extract the socket behind the seam. Keep `packet.setLength(buffer.size)` as hygiene, and reword the subtask so its regression test is not sold as catching a bug |
 | `4.5.3.3` receive loop + typed events | No | 30 % | Loop and IO dispatch are sound. Replace the suspending `emit` (`:127`) with `tryEmit`/`DROP_OLDEST`; add `R4Event.Dropped`, the `length == bufferBytes` truncation-suspect check, and the `[RX]`/`[DROP]`/`[LINK]` shapes with `cSource=` |
 | `4.5.3.4` bounded rebind back-off | No | 25 % | Fixed 1 s delay, no doubling, no ceiling, and `:97-100`/`:106-109` abandon the loop after 5 failures. Replace with `retryInitialMs`→`retryMaxMs` doubling that resets on bind and never gives up; emit `R4LinkState` |
 | `4.5.3.5` loopback socket test (I2) | No | 35 % | `FullStackIntegrationTest.udpR4Warning_propagatesThroughServiceToMainViewModelWarningView` does send a real datagram, but through Robolectric + Hilt on the fixed port 47300. Rewrite as a plain-JVM test on an ephemeral port, and add the malformed-then-valid survival case |
@@ -564,18 +566,9 @@ Each step states its own pass condition. A step that fails is a finding; do not 
 
 19. Stop the sender, `adb uninstall com.hackathon.v2x.ivi`, remove the redirect, and — if you used a Room — delete the deployment (only two may run at once). Finally `git worktree remove ../ivi-demo`.
 
-### 11.6 The truncation defect is visible in this run
+### 11.6 Retracted — there is no truncation defect to watch for
 
-The mock sender's own scenario triggers § 8.2 within one cycle, because the packet's length is never reset between receives:
-
-| Order | Packet | Effect |
-|---|---|---|
-| 1 | approach, `risk="low"` | Sets the receive window to that packet's size |
-| 3 | approach, `risk="medium"` — three bytes longer | Truncated by three bytes → `R4Deserializer` fails → `R4ListenerService: Skipping bad packet` |
-| 6 | `STATE heartbeat` — far shorter | Shrinks the window permanently to roughly 180 bytes |
-| 7+ | every later warning | Truncated → dropped; the Warning View stops updating and times out to Idle |
-
-**Watch for `Skipping bad packet` in logcat.** Seeing it is the defect, not a producer bug. A run that looks clean for one or two packets and then goes quiet has reproduced it.
+This subsection previously predicted that the mock sender's own scenario would truncate every warning after the state heartbeat. **It was wrong; see § 12.3 for the measurement that refutes it.** Nothing in the run needs watching for it, and `Skipping bad packet` in logcat is a producer or payload problem, not this.
 
 ### 11.7 What this run cannot prove
 
@@ -584,5 +577,50 @@ The mock sender's own scenario triggers § 8.2 within one cycle, because the pac
 - **Rebind and back-off.** Nothing in the run kills the socket, so neither the 1 s retry nor the give-up-after-5 behaviour is exercised. In a recorded demo the give-up is the one that would bite.
 - **The R3 contract.** The mock omits the required `class` and `timestamps`, and the app's Kotlin defaults absorb it. A green run actively conceals § 8.2 — it demonstrates that the weakened model parses, not that the contract holds.
 - **The null-C path.** The mock never sends `geometry.vehicleC: null`, so the "C not yet tracked" render is untested outside `SceneCoordinateMapperTest`.
-- **Anything past a truncated packet.** Once § 11.6 has bitten, every downstream observation in that run is about a broken receive window rather than about the feature under test.
 - **The real topology.** An emulator run proves the app; it proves nothing about the R6 bridge, the Skycraft guest, or the ADB route — those are `16.5.8.3` and group 5.9.
+
+---
+
+## 12. Local build evidence (2026-08-03)
+
+§ 6 and § 11 were written without a toolchain on the machine. One has since been installed and the branch built, so the build claims below are measured rather than predicted.
+
+### 12.1 Toolchain
+
+Installed outside the repo, under `C:\Users\MinhP\dev-tools\` — nothing was added to the project:
+
+| Component | Version | Notes |
+|---|---|---|
+| Temurin JDK | 21.0.12+8 | The pre-existing Java 21 was a **JRE** — no `javac`, so Gradle could not have run |
+| Android cmdline-tools | 11076708 | `sdkmanager` only; the full Studio IDE is not needed |
+| SDK platform | android-34 | matches `compileSdk = 34` |
+| Build-tools | 34.0.0 | provides `aapt` |
+| Platform-tools | latest | `adb`, for a later device step |
+
+`IVI_ECU/local.properties` points at that SDK. It is git-ignored, so the tree stays clean.
+
+### 12.2 Results at `06cb936`
+
+| Check | Result |
+|---|---|
+| `gradlew assembleDebug` | **BUILD SUCCESSFUL** (7m 02s, 43 tasks) |
+| APK | `app/build/outputs/apk/debug/app-debug.apk`, **24.86 MB** |
+| `aapt dump badging` | `launchable-activity: com.hackathon.v2x.ivi.MainActivity` — **present**, unlike PR #2 (§ 2) |
+| Manifest gates | `sdkVersion:'29'`, `targetSdkVersion:'33'`, `uses-feature android.hardware.type.automotive` — an automotive image is required, confirming § 11.3's phone-image warning |
+| `gradlew testDebugUnitTest` | **BUILD SUCCESSFUL** — **36 tests, 0 failed, 0 skipped** |
+
+Per class: `R4DeserializerTest` 5 · `MainViewModelTest` 6 · `CanvasWarningViewTest` 5 · `SceneCoordinateMapperTest` 5 · `WarningViewModelTest` 4 · `R4RepositoryTest` 3 · `R4RoundTripTest` 3 · `R4AdditiveVersionTest` 3 · `FullStackIntegrationTest` 2.
+
+The mock sender runs on stock Python 3.12 with no dependencies. Its measured payloads: **state 144 B, warnings 367–373 B**.
+
+### 12.3 § 4.2 retracted — the truncation defect is not real
+
+The claim, carried from the original review into § 8.2 and § 11.6, was that reusing one `DatagramPacket` across `receive()` calls without `setLength()` shrinks the receive window to the smallest datagram seen. **Measured against the branch's own payload sizes, it does not happen.**
+
+A reproduction replaying `R4ListenerService.openSocketAndReceive()`'s loop verbatim — packet allocated once outside the loop, no `setLength` — sent 367, 144, 367, 367, 373 B and read back **367, 144, 367, 367, 373**. Every datagram arrived whole; the 144 B heartbeat shrank nothing. A control run with `setLength(buffer.length)` restored each iteration was byte-for-byte identical.
+
+The cause is a distinction the original finding missed. `DatagramPacket` keeps two lengths: `length` and the buffer capacity (`bufLength`). Public [`setLength()`](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/net/DatagramPacket.html) sets **both** — which is what makes a *hand-shrunk* packet stay shrunk, and is where the folklore comes from. But the receive path does not use it: Android's `libcore` records the received size through a package-private [`setReceivedLength(int)`](https://android.googlesource.com/platform/libcore/+/refs/heads/master/ojluni/src/main/java/java/net/DatagramPacket.java), whose whole body is `this.length = length;` — capacity untouched. Modern desktop JDKs behave the same way, as the measurement shows.
+
+**Evidence limits, stated plainly.** The reproduction ran on desktop JDK 21, not on an Android runtime; the Android half rests on reading `libcore`'s `ojluni` source, which is the same OpenJDK lineage. The Android-side confirmation is step 15 of § 11 — a run in which warnings keep rendering after the heartbeat is the observation that closes it. This was once a genuine bug in old JDK and early Android releases, which is why it is still widely repeated; it is fixed in everything this project targets (`minSdk 29`).
+
+Calling `packet.setLength(buffer.size)` each iteration remains good defensive practice and costs nothing — keep it in `4.5.3.2` as hygiene. It is not a bug fix, it does not block a merge, and no demo failure should be attributed to it.
