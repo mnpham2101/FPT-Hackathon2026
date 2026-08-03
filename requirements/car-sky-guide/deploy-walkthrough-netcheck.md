@@ -1,6 +1,6 @@
 # Deploying a Blueprint on CarSky — End-to-End Walkthrough
 
-Worked example: the **netcheck** connectivity test ([tools/netcheck/](../../tools/netcheck/)), from source file to running Room. Every step **M1–M12** of [baseline-connectivity-smoke-test.md](../../plans/doc/research_notes/baseline-connectivity-smoke-test.md) is covered here in order — several are performed by an agent rather than by hand, and [§4](#4-work-division-between-ai-and-human) states which; that note owns the test's *design* (why each check exists, pass criteria C1–C5), this guide owns the *doing*.
+Worked example: the **netcheck** connectivity test ([tools/netcheck/](../../tools/netcheck/)), from source file to running Room. Every step **M1–M12** of [baseline-connectivity-smoke-test.md](../../plans/doc/research_notes/baseline-connectivity-smoke-test.md) is covered here in order — several are performed by an agent rather than by hand, and [§5](#5-work-division-between-ai-and-human) states which; that note owns the test's *design* (why each check exists, pass criteria C1–C5), this guide owns the *doing*.
 
 Use it as the template for deploying any container node — the ECU images follow the identical path with different images and env.
 
@@ -102,7 +102,21 @@ CarSky simulates a vehicle's electronic architecture in the cloud.
 
 ---
 
-## 3. Step-by-step: deploying netcheck (M1–M12)
+## 3. Prerequisites
+
+All three must hold before M5. Without them the deploy cannot complete, and the failure appears late — as a node stuck in `Provisioning` or a chain that stops at a hop.
+
+| Prerequisite | Established by | Checked at |
+|---|---|---|
+| The job that builds and pushes this image ran green on the latest push | [phase0-ci.yml](../../.github/workflows/phase0-ci.yml), job `netcheck-image` | [M3 + M4](#m3--m4--build-and-push-automatic) |
+| The image is in Zot on the push host of §2.4, single-platform `linux/arm64` | The same job | [M4](#m3--m4--build-and-push-automatic)'s catalog check |
+| The blueprint exists, and each role node has one `ethernet` pin wired to the bridge at `10.99.0.10`–`.13` | Drawn by hand on the Nydus canvas | [M6](#m6--check-the-wiring) |
+
+All three credentials of §2.5 are in hand: the Keycloak login for the web UIs, the CarSky API key for REST, and the Zot key stored as the GitHub secret of [M2](#m2--store-the-registry-credential-as-a-github-secret).
+
+---
+
+## 4. Step-by-step: deploying netcheck (M1–M12)
 
 ### M1 — Write the application code
 
@@ -164,7 +178,7 @@ Confirm each of the four role nodes has one `ethernet` pin wired to the Ethernet
 
 ![Nydus Inspector — V2X ECU node configuration](images/nydus-inspector-v2x-ecu.png)
 
-> Capture that screenshot **only after the values are verified correct** (§5). The first run's screenshot showed `NEXT_HOP_HOST = 10.99.0.2` and `ROLE = V2X` — both wrong — and would teach the mistakes it was meant to prevent.
+> Capture that screenshot **only after the values are verified correct** (§7). The first run's screenshot showed `NEXT_HOP_HOST = 10.99.0.2` and `ROLE = V2X` — both wrong — and would teach the mistakes it was meant to prevent.
 
 **Common to all three nodes:**
 
@@ -254,7 +268,7 @@ Set `PAD=1400` on the bench node and redeploy. If large datagrams do not arrive 
 
 ---
 
-## 4. Work division between AI and human
+## 5. Work division between AI and human
 
 The split is not a preference — it follows from what an agent can reach. An agent runs CLI tools and authenticated REST calls; it cannot use the Nydus canvas, a browser download, or its own eyes. The `M` labels are step names, not the assignment.
 
@@ -276,6 +290,7 @@ The split is not a preference — it follows from what an agent can reach. An ag
 | [M9 — Poll node phases until Running](#m9--deploy--criterion-c1) | AI | `GET /api/v1/deployments/{roomId}/nodes`; also yields each `nodeKey` |
 | [M10 — Read every node's log](#m10--read-the-logs--criteria-c2c5) | AI | Logs route with `container=user`; C2–C5 are all text |
 | [M10 — Record the hop-3 evidence](#checking-ivi-rx-traffic-hop-3) | AI | The ADA node's `[TX]` and `[CAP]` lines, and which method was used |
+| [Verify the capture in Wireshark](#6-expected-outputs-and-acceptance) | Human | A judgement on the datagrams themselves, made outside the platform |
 | [M11 — Set `PAD` and redeploy](#m11--optional-mtu-headroom) | Human | A bench node config edit, then a fresh deployment |
 | [M11 — Read the logs for the ceiling](#m11--optional-mtu-headroom) | AI | Compare arrivals across `PAD` values on the same logs route |
 | [M12 — Tear down](#m12--tear-down) | Human | **Delete Deployment**; releases one of the two Room slots |
@@ -290,7 +305,20 @@ Five notes on the rows above:
 
 ---
 
-## 5. Mistakes already made — check these first
+## 6. Expected outputs and acceptance
+
+Two outputs. The logs are what the run produces; the capture is the human's corroboration that the datagrams were really on the wire.
+
+| Output | Retrieved at | Accepted when |
+|---|---|---|
+| One live log per container node — bench, V2X, ADA | [M10](#m10--read-the-logs--criteria-c2c5) | **C1** every node `Running`, restart count 0 · **C2** no `[ERR]` line · **C3** a live, readable log per node · **C4** a `[CAP]` line on the sending node · **C5** the accumulated stamp `seq=0\|bench\|v2x` at ADA |
+| The traffic capture, read by a human | The same logs | A human reads the capture and confirms UDP datagrams on `47100`, `47200` and `47300` between `10.99.0.10`–`.13`, matching the counts and timing of the `[TX]`/`[RX]` lines |
+
+**The capture this image produces is text, not a `.pcap`.** [capture.sh](../../tools/netcheck/capture.sh) runs `tcpdump -l` and prefixes each line `[CAP]`; it writes no capture file. Opening the traffic in Wireshark instead needs the `tcpdump -w` and base64 log export described in [traffic-capture-wireshark.md](traffic-capture-wireshark.md), which the netcheck image does not ship — confirm which of the two a run is expected to produce before relying on either.
+
+---
+
+## 7. Mistakes already made — check these first
 
 Every row below cost real time on the first run (2026-07-31). They are ordered by how expensive they were.
 
@@ -307,7 +335,7 @@ Every row below cost real time on the first run (2026-07-31). They are ordered b
 
 **Before deploying, verify by reading the config back** rather than trusting the Inspector's truncated fields — `GET /api/v1/blueprints/{id}` returns each node's stored `config` exactly, and catches #2, #3, #4 and #5 in one look.
 
-## 6. Quick reference
+## 8. Quick reference
 
 | Thing | Value |
 |---|---|
