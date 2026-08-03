@@ -3,7 +3,7 @@
 > **Authority & context:**
 >
 > - **Phase content:** [milestone1.md § Phase 5](milestone1.md#phase-5--ivi-hmi-mock-driven-r16-r17--display-track-parallel-from-the-start) — its five acceptance checkboxes are the phase output.
-> - **Design:** [phase5-ivi-hld.md](../IVI_ECU/doc/phase5-ivi-hld.md) (commit `85387b5`) with [phase5-ivi-components.puml](../IVI_ECU/doc/phase5-ivi-components.puml) and [phase5-ivi-callflow.puml](../IVI_ECU/doc/phase5-ivi-callflow.puml). Every target path below is cited verbatim from its **§3.1 / §3.2** folder map; decisions **D1–D11**, module interfaces **§5**, log shapes **§5.4**, CI **§6.1**, test ladder **§7**, deployment **§8**, the latent defect **§9.2**, open items **§11**.
+> - **Design:** [phase5-ivi-hld.md](../IVI_ECU/doc/phase5-ivi-hld.md) (commit `85387b5`) with [phase5-ivi-components.puml](../IVI_ECU/doc/phase5-ivi-components.puml) and [phase5-ivi-callflow.puml](../IVI_ECU/doc/phase5-ivi-callflow.puml). Every target path below is cited verbatim from its **§3.1 / §3.2** folder map; decisions **D1–D11**, module interfaces **§5**, log shapes **§5.4**, CI **§6.1**, test ladder **§7**, deployment **§8**, the committed code's constraints on this design **§9.2**, open items **§11**.
 > - **Research notes:** [phase5-r4-simulator.md](../IVI_ECU/doc/research_notes/phase5-r4-simulator.md) · [phase5-r4-parsing.md](../IVI_ECU/doc/research_notes/phase5-r4-parsing.md) — non-authoritative; the HLD wins on conflict.
 > - **Requirements:** [m1-cooperative-awareness.md §2](../requirements/m1-cooperative-awareness.md) R4, R16, R17 (plus R5, R6, R18, R19 where this phase touches them) — referenced by number, never restated.
 > - **Deploy facts:** [node-ivi-ecu.md](../requirements/car-sky-guide/node-ivi-ecu.md) · [carsky-4-node-blueprint.md](../requirements/car-sky-guide/carsky-4-node-blueprint.md) · [deploy-walkthrough-netcheck.md](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md).
@@ -261,7 +261,7 @@ The IVI's UDP port is **`47300`** and its address is **`10.99.0.13`**, frozen by
 - `receive()` calls **`packet.setLength(buffer.size)` before every `socket.receive(packet)`** (D3 row 2 — without it every datagram after the first is truncated to the shortest one seen), then returns `Received(packet.data, packet.offset, packet.length)`.
 - `close()` is idempotent and unblocks a pending `receive()`.
 - Bind failure propagates as an exception for `R4SocketObserver` to turn into `Rebinding` — it is **not** swallowed here.
-- Unit test `observer/src/test/kotlin/.../JdkDatagramSourceTest.kt`: bind on port `0` (ephemeral), send two datagrams from a local `DatagramSocket` — a long one then a **shorter** one — and assert the second `Received.length` equals the second payload's length (the regression this class exists to prevent).
+- Unit test `observer/src/test/kotlin/.../JdkDatagramSourceTest.kt`: bind on port `0` (ephemeral), send two datagrams from a local `DatagramSocket` — a long one then a **shorter** one — and assert the second `Received.length` equals the second payload's length — without the `setLength` call it reports the first payload's length, and this test is what holds the rule.
 
 **Acceptance:** `./gradlew :observer:test` green; the `setLength` call is textually inside the `receive()` body, before the `socket.receive(...)` call.
 
@@ -384,11 +384,11 @@ class R4SocketObserver(
 - `app/src/main/java/com/hackathon/v2x/ivi/ui/WarningUiState.kt`: `sealed interface WarningUiState { data object Idle; data class Active(val scene: SceneGeometry, val riskState: String, val presentation: WarningPresentation) }`.
 - `app/src/main/java/com/hackathon/v2x/ivi/ui/WarningViewModel.kt`:
   - Collects `repository.warnings`; on each warning → `Active(...)`, and (re-)arms a `warningTimeoutMs` timer; on expiry → `Idle`. A new warning resets the timer rather than stacking timers.
-  - **The composition step (the defect fix).** `SceneGeometry` arriving in `warning.geometry` has `vehicleCSnapshot = null`, and `CanvasWarningView` treats a `null` snapshot as **trusted** — so passing `warning.geometry` straight through silently disables the R19 source guard. The view-model must build the scene as `warning.geometry.copy(vehicleCSnapshot = warning.objectSnapshot)` (an internal function of this file; HLD §3.1 designates no separate composer file). `riskState` and `presentation` come from `WarningClassifier`.
+  - **The composition step — the wiring the R19 guard depends on.** `SceneGeometry` arriving in `warning.geometry` has `vehicleCSnapshot = null`, and `CanvasWarningView` treats a `null` snapshot as **trusted** — so passing `warning.geometry` straight through silently disables the R19 source guard. The view-model must build the scene as `warning.geometry.copy(vehicleCSnapshot = warning.objectSnapshot)` (an internal function of this file; HLD §3.1 designates no separate composer file). `riskState` and `presentation` come from `WarningClassifier`.
   - Holds no drawing code and no socket (HLD §4 UI logic).
 - Test `app/src/test/java/com/hackathon/v2x/ivi/ui/WarningViewModelTest.kt`:
   - Idle initially; a warning → `Active`; no further warning for `warningTimeoutMs` → `Idle`; a second warning inside the window extends rather than double-fires.
-  - **Guard-armed test (the R19 regression test, name it explicitly):** decode the frozen `/contracts/samples/r4-warning.json`, feed it in, and assert `(state as Active).scene.vehicleCSnapshot?.source == "v2x_relayed"` — i.e. the snapshot is **not null**. Then feed a warning whose `object.source` is `own_sensor` and assert the composed scene carries that snapshot verbatim, so the renderer's guard can trip. A `null` `vehicleCSnapshot` in either case fails the test.
+  - **Guard-armed test — the R19 test, and name it so:** decode the frozen `/contracts/samples/r4-warning.json`, feed it in, and assert `(state as Active).scene.vehicleCSnapshot?.source == "v2x_relayed"` — i.e. the snapshot is **not null**. Then feed a warning whose `object.source` is `own_sensor` and assert the composed scene carries that snapshot verbatim, so the renderer's guard can trip. A `null` `vehicleCSnapshot` in either case fails the test.
   - Use virtual time (`kotlinx-coroutines-test`) for the timeout; add `testImplementation(libs.kotlinx.coroutines.test)` to `app/build.gradle.kts` if absent.
 
 **Acceptance:** `./gradlew :app:testDebugUnitTest` green including the named guard-armed test; the timeout value is read from the injected config, never a literal.
@@ -702,7 +702,7 @@ Then assert: `null` snapshot → trusted (the dev/mock-scene path); `source = "v
 
 ### [ ] `4.5.7.2` — Extend `ivi-unit-tests` to all five modules *(agent)*
 
-**Objective:** stop new modules' tests from passing locally and never running in CI (HLD §6.1 — the invocation that must change).
+**Objective:** run every one of the five modules' tests in CI, not just `:app`'s (HLD §6.1 — the invocation that must change). A module whose tests only ever run locally is untested as far as the phase's acceptance is concerned.
 
 **Scope:** in [.github/workflows/phase0-ci.yml](../.github/workflows/phase0-ci.yml), the `ivi-unit-tests` job's run step becomes exactly:
 
@@ -1003,7 +1003,7 @@ Screenshots are taken per [§4.9](../requirements/car-sky-guide/deploy-ivi-hmi-w
 
 **Scope:** in Nydus, clone **`baseline_phase1`** ([carsky-4-node-blueprint.md § The blueprints on CarSky](../requirements/car-sky-guide/carsky-4-node-blueprint.md#8-the-blueprints-on-carsky)) and edit the clone on the canvas. Never edit `baseline_phase1` itself and never import a blueprint file. That is the route of [deploy-ada-ecu-walkthrough.md §5.6](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#56-the-full-blueprint-route) and [§4.1](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#41-create-the-blueprint), and §7 of that document assigns it to Human. Each node's image, config and pin are in [carsky-4-node-blueprint.md](../requirements/car-sky-guide/carsky-4-node-blueprint.md) and the per-node files it points at: [node-scenario-player.md](../requirements/car-sky-guide/node-scenario-player.md), [node-v2x-ecu.md](../requirements/car-sky-guide/node-v2x-ecu.md), [node-ada-ecu.md](../requirements/car-sky-guide/node-ada-ecu.md), [node-ivi-ecu.md](../requirements/car-sky-guide/node-ivi-ecu.md).
 
-- **Click each container node and set its image field** to that node's own image, replacing any probe or simulator reference left over from an earlier Room.
+- **Click each container node and set its image field** to that node's own real image, whatever the clone arrived carrying.
 - **Leave the IVI node's Skycraft `image` block alone** — the four fields of [node-ivi-ecu.md § Blueprint node config](../requirements/car-sky-guide/node-ivi-ecu.md#blueprint-node-config). Without them the deploy is rejected outright.
 - **Leave the ADA node's `command`, `capabilities`, env, address and port alone too.** §5.6 states they are the same in the isolated and full compositions; only the neighbours change.
 - **Confirm the ADA node still has `NET_RAW`.** Here it is not optional: the Android node runs no container, so there is no sink log, and the ADA node is the only place a `[CAP]` line can capture the outgoing warning.
