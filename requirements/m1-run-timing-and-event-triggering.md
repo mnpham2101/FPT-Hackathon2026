@@ -65,7 +65,7 @@ Three distinct quantities. Two already have repo names; the third is described r
 
 | Segment | Value | Source |
 |---|---|---|
-| Bench tick → CPM bytes (persistent `cpm_encode --stream` subprocess, not a fork per message) | unmeasured; pipe round-trip to a resident process | [SP HLD D1](../Scenario_Player/doc/phase1-scenario-player-hld.md) |
+| Bench tick → CPM bytes (persistent `cpm_encode --stream` subprocess, not a fork per message) | unmeasured; pipe round-trip to a resident process | [SP D1](../Scenario_Player/doc/scenario-player-design-decisions.md) |
 | Bench → V2X, 58 B UDP over R6 | unmeasured individually | — |
 | V2X decode → validate → dedupe → build → `sendto` | **142–151 µs, measured, stable** | [phase1-comms-run.md](../plans/doc/phase1-comms-run.md) |
 | V2X → ADA, ~339 B UDP | **inside the < 55 ms bound of §2(a)**, together with the clock offset | derived |
@@ -299,7 +299,7 @@ Two new numbers, continuing after R19. Ordering is by **urgency** — R20 is the
 - [phase1-comms-run.md](../plans/doc/phase1-comms-run.md) — the live R2 excerpt with `rxTime` against the ADA sink's own log clock (§2(a)); the 142–151 µs V2X in→out measurement; the `[CAP]` In/Out/P reading rules.
 - [phase0-smoke-test-run.md](../plans/doc/phase0-smoke-test-run.md) · [baseline-connectivity-smoke-test.md](../plans/doc/research_notes/baseline-connectivity-smoke-test.md) · [netcheck.py](../tools/netcheck/netcheck.py) — the smoke test is a one-way relay chain, not a handshake; `START_DELAY_S` is its only readiness mechanism; hop 3 unconfirmed (O4).
 - [phase2-4-pr3-review.md](../plans/doc/phase2-4-pr3-review.md) — the true ADA starting state: no service loop, detector is a placeholder, R3 timestamps swapped (M1).
-- [phase1-scenario-player-hld.md](../Scenario_Player/doc/phase1-scenario-player-hld.md) · [generator.py](../Scenario_Player/player/generator.py) · [config.py](../Scenario_Player/player/config.py) · [default.yaml](../Scenario_Player/scenarios/default.yaml) — the tick-counter scenario clock, the fixed-sleep loop, the YAML key set, the persistent `cpm_encode --stream` codec path (D1).
+- [scenario-player-hld.md](../Scenario_Player/doc/scenario-player-hld.md) · [generator.py](../Scenario_Player/player/generator.py) · [config.py](../Scenario_Player/player/config.py) · [default.yaml](../Scenario_Player/scenarios/default.yaml) — the tick-counter scenario clock, the fixed-sleep loop, the YAML key set, the persistent `cpm_encode --stream` codec path (D1).
 - [phase2-4-ada-ecu-hld.md](../ADA_ECU/doc/phase2-4-ada-ecu-hld.md) — `TRACK_TIMEOUT_MS` as wall-clock silence with the clock source unspecified; `DETECTOR_FRAME_STRIDE` as decimation, not a rate; `Frame.timestamp_ms` source unstated.
 - [ivi-ecu-hld.md](../IVI_ECU/doc/ivi-ecu-hld.md) · `R4Message.kt` · `build.gradle.kts` — R4 carries no timestamp; `WARNING_TIMEOUT_MS` is a local countdown; R3 timestamps parsed and unused.
 - [r1-cpm-profile.md](../contracts/r1-cpm-profile.md) and the R1–R4 schemas under [contracts/](../contracts/) — `TimestampIts` epoch definition, F1/F8/F9, and the exact frozen time fields.
