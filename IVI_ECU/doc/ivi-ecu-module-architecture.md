@@ -1,16 +1,46 @@
 # IVI ECU — component architecture
 
-Component map of the IVI node (R4, R16, R17) and, per component, its role, input and output. Design decisions behind it: [phase5-ivi-hld.md](phase5-ivi-hld.md). Build, install and verification procedure: [deploy-ivi-hmi-walkthrough.md](../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md). Node facts — VM artifact, pin, address: [node-ivi-ecu.md](../../requirements/car-sky-guide/node-ivi-ecu.md).
+> Component-level design of the IVI node (R4, R16, R17): every component this node runs, its role, input and output, where it lives on disk, and how the components connect. Frozen contract: [contracts/r4-ada-ivi.schema.json](../../contracts/r4-ada-ivi.schema.json). Build, install and verification procedure: [deploy-ivi-hmi-walkthrough.md](../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md). Node facts — VM artifact, pin, address: [node-ivi-ecu.md](../../requirements/car-sky-guide/node-ivi-ecu.md).
+>
+> Diagrams: [ivi-ecu-module-architecture.svg](research_notes/ivi-ecu-module-architecture.svg) (component map) · [phase5-ivi-callflow.puml](phase5-ivi-callflow.puml) (sequence) · [phase5-ivi-components.puml](phase5-ivi-components.puml) (module map).
+
+## 1. Scope
+
+`IVI_ECU/` only — the consumer side of R4 and everything downstream of it, up to the rendered God View and the log lines that evidence it.
+
+- **In scope:** the five Gradle modules of this folder, the components inside them, the seams between them, the node's one network endpoint, and the test equipment that exercises the node on its own.
+- **Out of scope:** how the R4 message is produced — this node depends on the `ADA-ECU` interface, never on a particular producer; the deploy/install/verify procedure, which is the walkthrough's; and the task decomposition, which is the plan's.
+
+## 2. Sourced research notes
+
+| Note | Adopted here |
+|---|---|
+| [phase5-r4-parsing.md](research_notes/phase5-r4-parsing.md) | §1 wire truth — no application header, de-framing is buffer slicing (D3). §2 decode-failure table as the `R4DecodeResult` shape. §3 unknown-`warningType` preservation (D4). §5 pure-JVM submodule placement (D1, D2). |
+| [phase5-r4-simulator.md](research_notes/phase5-r4-simulator.md) | The simulator's two run modes and scenario-case table, and "payloads come from the frozen samples, never a literal" (D9). The simulator is IVI test equipment. |
+| [deploy-ivi-hmi-walkthrough.md](../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md) — a walkthrough, not a note, and authoritative rather than scratch | The mini-blueprint target (§4.11) and the ADA-node env contract (`IVI_ECU_HOST` / `IVI_ECU_PORT` / `R4_SCENARIO` / `R4_RATE_HZ` / `START_DELAY_S`, §4.8) that the simulator's in-Room mode reads verbatim. |
+
+The two notes are non-authoritative scratch; the walkthrough in the last row is not, and on conflict the CLAUDE.md authority order wins.
+
+## 3. The component architecture
 
 ![IVI ECU component architecture](research_notes/ivi-ecu-module-architecture.svg)
 
 Source: [research_notes/ivi-ecu-module-architecture.svg](research_notes/ivi-ecu-module-architecture.svg).
 
-The diagram is a UML component diagram: fill colour is the component's role, `«use»` dependencies are dashed with an open arrowhead, realization is dashed with a hollow triangle, and each seam is drawn as a provided interface meeting a required one at an assembly connector. Two `«node»` rectangles enclose the components — **IVI-ECU** holds everything this node runs, **ADA-ECU** holds the mocked producer it depends on — and the CarSky observation surfaces sit outside both. Component names in the tables below are the short `package/File` form; § Folder structure resolves each to its module and full path.
+The diagram is a UML component diagram: fill colour is the component's role, `«use»` dependencies are dashed with an open arrowhead, realization is dashed with a hollow triangle, and each seam is drawn as a provided interface meeting a required one at an assembly connector. Two `«node»` rectangles enclose the components — **IVI-ECU** holds everything this node runs, **ADA-ECU** holds the mocked producer it depends on — and the CarSky observation surfaces sit outside both. Component names in the tables below are the short `package/File` form; §4 resolves each to its module and full path.
 
-## Folder structure
+### MVC separation
 
-Five Gradle modules under `IVI_ECU/`, all sharing the package root `com.hackathon.v2x.ivi` — the Android module rooted at `src/main/java/`, the four pure-JVM ones at `src/main/kotlin/`, so a component's package is the same wherever it lives. Only the folders and files this document names appear below; the full per-file designation map, the tests, the build files and which files are already committed are in [phase5-ivi-hld.md §3](phase5-ivi-hld.md#3-folder-structure-map--file-location-designations).
+| Layer | Where | Rule that keeps it separate |
+|---|---|---|
+| **Data** | `:contract` models + frozen samples; `:app data/R4Repository` (last warning, last `state` by `seq`, link state) | The repository stores and routes; it never decides what a warning *means* and never formats anything |
+| **Business logic** | `:serializer` (bytes → typed), `:observer` (receive, retry, back-pressure), `:app warning/WarningClassifier`, `ui/view/SceneCoordinateMapper` | All four are free of Android UI types; three of them are free of Android entirely, and every one is unit-testable without a device |
+| **UI logic** | `:app ui/WarningViewModel` (Idle↔Active, timeout), `ui/MainViewModel` (mode, wake-on-warning, restore), `config/IviRuntimeConfig` | View-models hold no drawing code and no socket; they translate domain state into what the Display Area should show |
+| **UI** | `ui/screen/MainScreen`, `ui/view/CanvasWarningView` behind `IviWarningViewSeam` | The seam is the swap point for the optional 3D renderer; `MainScreen` never touches a message type, only `WarningUiState` |
+
+## 4. Folder structure
+
+Five Gradle modules under `IVI_ECU/`, all sharing the package root `com.hackathon.v2x.ivi` — the Android module rooted at `src/main/java/`, the four pure-JVM ones at `src/main/kotlin/`, so a component's package is the same wherever it lives. Only the folders and files this document names appear below; the full per-file designation map, the tests and the build files are in [phase5-ivi-hld.md §3](phase5-ivi-hld.md#3-folder-structure-map--file-location-designations).
 
 ```
 IVI_ECU/
@@ -67,9 +97,9 @@ IVI_ECU/
 
 Each module carries its own `src/test/` mirroring its main package, so the pure-JVM receive path is exercised with no device attached.
 
-Where each section of this document lands in that tree:
+Where each component group of this document lands in that tree:
 
-| Section | Modules and folders |
+| Component group | Modules and folders |
 |---|---|
 | Business logic | `:serializer` and `:observer` entire, plus `app/…/warning/` |
 | Data Model | `:contract` entire, plus `app/…/data/` |
@@ -79,7 +109,7 @@ Where each section of this document lands in that tree:
 | Configuration and descriptors | `app/src/main/AndroidManifest.xml`, `IVI_ECU/contracts/`, `app/…/config/`, `r4-simulator/scenarios/` |
 | Test equipment | `r4-simulator/` and `app/src/debug/` |
 
-## Platform and boundary
+## 5. Platform and boundary
 
 | Component | Role | Input | Output |
 |---|---|---|---|
@@ -90,7 +120,7 @@ Where each section of this document lands in that tree:
 
 The ADA ECU is a Container node at `10.99.0.12`. It is mocked while the IVI ECU is exercised on its own: the `r4-simulator` realizes the `ADA-ECU` interface and runs there in place of the real ADA image, which realizes the same interface when it takes the node back — nothing on this side changes with the swap.
 
-## IVI-ECU components
+## 6. Internal components
 
 ### Business logic
 
@@ -148,7 +178,11 @@ Files, not components — neither data, business logic, UI logic nor front-end.
 | `BuildConfig` / `config/IviRuntimeConfig` | port, timeout and scene-scale defaults, merged once with launch-time intent extras (`--ei r4_port`) so no other component carries a literal |
 | `r4-simulator/scenarios/*.json` | scenario data; a new case is a new file, never a new code branch |
 
-## Test equipment
+## 7. External related components
+
+Everything the design names that sits outside the IVI-ECU node boundary: the `ADA-ECU` interface and the platform's two observation surfaces, tabulated in §5, and the test equipment below.
+
+### Test equipment
 
 Scaffolding for exercising the IVI ECU on its own, and nothing else depends on it. Two pieces, two delivery routes — only one of them is an image:
 
@@ -162,7 +196,7 @@ Neither reaches a release build: the injector is excluded by source set, and the
 | `IVI_ECU/r4-simulator/` → `m1-r4-sim:latest` | realizes the `ADA-ECU` interface; runs on the ADA Container node in place of the real ADA image | a scenario file and the frozen contract samples | R4 datagrams at `R4_RATE_HZ` to `10.99.0.13:47300`, and `[TX]` lines in the node log |
 | `debug/DevInjectorReceiver` | exercises the whole UI path with no network; confined to the debug source set so no release build can fabricate a warning | `am broadcast -a com.hackathon.v2x.ivi.DEV_INJECT --es sample …` | one sample message onto the repository's flow |
 
-## Interfaces, ports and the layer rule
+## 8. Interfaces, ports and the layer rule
 
 - **`ADA-ECU`** is the only thing outside this node the app depends on: an interface, not a box. `r4-simulator` realizes it while the IVI ECU is exercised alone, the real ADA ECU realizes it afterwards, and the app is written against neither.
 - **`udp :47300`** is a port on `JdkDatagramSource` — the app's one external network endpoint, and where it meets the `ADA-ECU` interface. Nothing else in the app opens a socket.
@@ -172,17 +206,43 @@ Neither reaches a release build: the injector is excluded by source set, and the
 
 No layer is collapsed: the receive loop cannot reach a Composable and a Composable cannot reach a socket. The only path between them is `R4Event → R4Repository → WarningUiState`.
 
-## Call flow
+## 9. Call flow
 
 [phase5-ivi-callflow.puml](phase5-ivi-callflow.puml) — PlantUML sequence: startup and bind, then the nominal warning path datagram → `JdkDatagramSource` → `R4SocketObserver` → `R4Deserializer` → `R4Repository` → `WarningViewModel` → `MainViewModel` → `MainScreen` → `CanvasWarningView` with the provenance guard, plus the malformed-drop, socket-rebind, warning-timeout and dev-injector branches.
 
-## A design property worth flagging: the guard fails open
+## 10. Tech stack, build and CI
 
-`SceneGeometry.vehicleCSnapshot` is nullable, and the guard treats a `null` snapshot as trusted. The guard therefore protects the render only when whatever composes the scene copies the R4 message's `object` snapshot into that field. A `SceneGeometry` built from the message's `geometry` alone carries no snapshot, draws ghost C unchallenged, and silently voids the R19 provenance claim — so every composer of a scene for the renderer must populate `vehicleCSnapshot`.
+| Area | Stack | Trace |
+|---|---|---|
+| App language / UI | Kotlin 2.2.20, Jetpack Compose (BOM 2024.09.03), AndroidX, Material3 | report §3(e); R16/R17 tech stack |
+| 2D renderer | Compose Canvas behind `IviWarningViewSeam`; SceneView/Filament optional | report §3(e), R17 |
+| Contract binding | kotlinx.serialization-json | report R4 tech stack ("kotlinx.serialization (IVI side)"), D1 |
+| Transport | `java.net.DatagramSocket`, UDP + versioned JSON | report §3(f), R6 |
+| Concurrency | kotlinx-coroutines-core (`SharedFlow`/`StateFlow`) | D5 back-pressure policy |
+| Build | Gradle multi-project, AGP 8.13, JDK 17, version catalog | D2, D8 |
+| Tests | JUnit4 (+ kotlinx-coroutines-test in `:observer`); **no Robolectric** | D2 — the loop is plain JVM |
+| Simulator image | multi-stage Docker; single-platform `linux/arm64`, `--provenance=false --sbom=false` | the cluster rejects manifest indexes |
 
-## Which component produces which acceptance observable
+Build commands, from `IVI_ECU/`: `./gradlew assembleDebug` · `./gradlew :contract:test :serializer:test :observer:test :r4-simulator:test :app:testDebugUnitTest` · `./gradlew lint`.
 
-Per [deploy-ivi-hmi-walkthrough.md §6](../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#6-expected-outputs-and-acceptance):
+| CI lane | File | What it does |
+|---|---|---|
+| `ivi-unit-tests` | [phase0-ci.yml](../../.github/workflows/phase0-ci.yml) | the module tests on a plain JVM, no device and no emulator |
+| `ivi-assemble` | [phase5-ci.yml](../../.github/workflows/phase5-ci.yml) | `assembleDebug` + `lint`, uploading `app-debug.apk` under the stable artifact name the walkthrough tells a human to download |
+| the simulator image | [phase5-ci.yml](../../.github/workflows/phase5-ci.yml) | `linux/arm64` build of `m1-r4-sim:latest` from context `IVI_ECU/`, pushed to Zot and verified by pull-back |
+
+`ivi-unit-tests` invokes `:app:testDebugUnitTest` until the other four modules exist; [phase5-ivi-hld.md §6.1](phase5-ivi-hld.md#61-the-ci-invocation-that-must-change) fixes the extended invocation and the simulator lane. The simulator's `Dockerfile` sits at `r4-simulator/Dockerfile` with build context `IVI_ECU/` — a flagged deviation from "own `Dockerfile` at the folder root", because this folder's primary artifact is the APK and the image is secondary test equipment; self-containment, the property that rule protects, holds since the build reads nothing outside `IVI_ECU/`.
+
+## 11. Test strategy
+
+Two configurations exercise the same node, and they differ in exactly one component — who realizes `ADA-ECU`:
+
+- **Isolated IVI test — the mini-blueprint.** Ethernet Bridge + ADA Container node running `m1-r4-sim:latest` + the IVI Skycraft node. The scenario file chooses what the producer sends, including the degraded cases a real ADA run would not reproduce on demand.
+- **System test — the whole blueprint.** The real ADA ECU takes its node back and sends R4 from its own fusion output, over the same bridge to the same port.
+
+**The expected output and the observed behaviour are identical in both.** The log lines below are what each run is read against, and the God View is judged the same way; nothing in this node distinguishes the two producers, which is the point of depending on the interface rather than on a box. A difference between the two runs is therefore a producer finding, never an IVI one.
+
+Expected observables, per [deploy-ivi-hmi-walkthrough.md §6](../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#6-expected-outputs-and-acceptance), and the component that produces each:
 
 | Observable | Produced by |
 |---|---|
@@ -194,3 +254,94 @@ Per [deploy-ivi-hmi-walkthrough.md §6](../../requirements/car-sky-guide/deploy-
 | `cause=user` on a button tap, and `cause=timeout` back to Idle | `MainViewModel`; `WarningViewModel`'s `WARNING_TIMEOUT_MS` |
 | the God View drawn in the Display Area | `MainScreen` → `IviWarningViewSeam` → `CanvasWarningView` |
 | `[? UNKNOWN SOURCE]` on an `own_sensor` message | the provenance guard |
+
+Below both sits the plain-JVM unit layer: `:contract`, `:serializer` and `:observer` are tested with a fake source or a loopback socket, so the receive path is proven before any Room is booked, and the dev injector reaches the real UI with no network at all.
+
+## 12. Design decisions
+
+### D1 — The contract library is kotlinx.serialization in a pure-JVM submodule
+
+The shared R4/R3 models and the configured `Json` live in a Gradle submodule `:contract` with zero Android dependencies, consumed by both the APK and the simulator. nlohmann/json stays on the ADA (producer) side where the report puts it — using it inside a Kotlin APK would mean an NDK/JNI layer for a job the Kotlin binding already does. A submodule rather than a package in `:app` because it must be usable by a command-line tool with no Android SDK and testable in the plain-JVM CI job: one artifact consumed by producer and consumer is what stops the two from drifting.
+
+### D2 — Five modules, one-way dependency graph
+
+`:contract` ← `:serializer` ← `:observer` ← `:app`, and `:contract` ← `:r4-simulator`. No cycles, and **Android types exist only in `:app`**.
+
+| Module | Its one job | Depends on |
+|---|---|---|
+| `:contract` | the R4/R3 models, `R4Json`, and the frozen samples | — (kotlinx-serialization-json only) |
+| `:serializer` | datagram bytes → typed R4 payload, or a typed failure | `:contract` |
+| `:observer` | owns the socket, the receive loop, the retry policy, and the event flow | `:serializer` |
+| `:app` | R16 layout, Display Area switcher, warning view-model, R17 God View | `:observer` (+ transitive) |
+| `:r4-simulator` | test equipment: scenario-driven R4 traffic | `:contract` |
+
+Consequences that are the point of the split: `:serializer` and `:observer` are plain JVM, so they run in CI with no device and no Robolectric; `:observer` never imports `android.util.Log`, logging through the `R4Logger` seam instead; `:serializer` never logs and never throws across the loop, which is what keeps one bad producer message from stopping the next good one; and the simulator reaches the models the app parses with by depending on `:contract`, never by importing across node folders.
+
+### D3 — De-framing is buffer slicing, not header parsing
+
+By the time Android hands the app a packet, the NIC and kernel have removed the Ethernet, IP and UDP headers: one R4 message is one UDP datagram is one UTF-8 JSON object, with no length prefix, envelope or framing header. "Strip the header, keep the payload" therefore means exactly these five things:
+
+| Real job | Module | Failure it prevents |
+|---|---|---|
+| Decode `data[offset until offset+length]`, never the whole backing array | `:serializer` | Trailing bytes of a previous, longer datagram silently appended |
+| `packet.setLength(buffer.size)` before **every** `receive()` | `:observer` | Every datagram after the first truncated to the shortest one seen |
+| Treat `length == bufferBytes` as truncation-suspect: log, still attempt decode | `:observer` | Silent UDP truncation passing as malformed JSON with no clue why |
+| Strip a UTF-8 BOM and surrounding whitespace before decoding | `:serializer` | A BOM the JSON parser will not tolerate |
+| **No accumulate-and-split logic at all** | both | Inventing TCP framing for a datagram protocol that already preserves boundaries |
+
+`R4_SOCKET_BUFFER_BYTES` defaults to 2048 against a ~450 B frozen warning. `network_security_config.xml` governs HTTP stacks only and has no bearing on a raw `DatagramSocket`.
+
+### D4 — Unknown `warningType` is preserved verbatim; classification happens at the UI edge
+
+The parser puts the wire value into `warningType` and stops; `WarningClassifier` in `:app` maps known types to their presentation and everything else to a generic one. **The parser must never rewrite an unknown `warningType` to `"unknown"`** — the committed `R4AdditiveVersionTest` asserts the opposite, and rewriting the field would destroy what the log needs and push a UI concern into the data layer. A `schemaVersion` above `R4Contract.KNOWN_SCHEMA_VERSION` is not a gate either: decode succeeds and `schemaVersionAhead` is set so the observer logs it once.
+
+### D5 — A foreground service hosts the observer
+
+`R4ListenerService` starts foreground immediately, survives the Display Area switching away from the Warning View, and holds foreground priority for the whole recorded run (R19 is *one continuous* run). The rejected alternative — a receive loop scoped to the Activity lifecycle — ties reception to whether the UI happens to be resumed.
+
+- **The service is a lifecycle host, not the loop.** The loop, the back-off and the flow are plain-JVM code in `:observer`; the service only calls `start`/`stop`.
+- **Socket:** bind `0.0.0.0:<port>`, never the node address, which the bridge assigns. Bind failure is logged at ERROR and retried with back-off, never swallowed.
+- **Back-pressure:** `MutableSharedFlow` with bounded `extraBufferCapacity` and `DROP_OLDEST`, emitted with `tryEmit` — for warnings the newest message is the one that matters, and a slow collector must never stall the socket.
+- `POST_NOTIFICATIONS` is a runtime permission from API 33: a denial suppresses the notification only and is never a failure to start.
+
+### D6 — The frozen samples are **main** resources of `:contract`
+
+One byte-synced location at `contract/src/main/resources/contracts/samples/*.json`, registered in [contracts/sync-manifest.json](../../contracts/sync-manifest.json), reachable from the three places that must agree: the contract tests, the simulator's payload builder, and the dev injector. Accepted cost: ~2 KB of fixtures ship inside the release APK. Rejected alternative: three separate copies, which is exactly the drift the sync manifest exists to prevent.
+
+### D7 — Manual composition root; no Hilt
+
+The object graph is seven objects with one Activity and one service. A hand-written `IviGraph` created in `IviApplication.onCreate` wires it in ~40 lines with no annotation processor; Hilt would additionally need `hilt-navigation-compose` and a KSP round on every build. Against [solution-selection-criteria](../../.claude/rules/solution-selection-criteria.md): C2 (fastest path to the milestone) and C4 (smaller surface). Replacing `IviGraph` later changes no consumer, because view-models are obtained through a single `ViewModelProvider.Factory` either way.
+
+### D8 — A Gradle version catalog governs all five modules
+
+`IVI_ECU/gradle/libs.versions.toml` is the single place Kotlin, kotlinx-serialization, coroutines, the Compose BOM, AGP and JUnit versions are declared; every module's `build.gradle.kts` uses aliases. Five modules resolving coroutines and serialization independently is precisely how a version skew appears at runtime instead of at build time. `settings.gradle.kts` keeps `RepositoriesMode.FAIL_ON_PROJECT_REPOS`; no module declares its own repositories.
+
+### D9 — The simulator mutates JSON, then validates through `R4Json` before sending
+
+A simulator carrying its own copy of the schema is a second, unversioned contract that keeps passing after the real one changes. So it loads the frozen sample from the `:contract` classpath, applies the scenario step's overrides at `JsonElement` level (`riskState`, `warningType`, `schemaVersion`, `object.source`, `object.distance`, `geometry.vehicleC` including explicit `null`, plus additive junk fields), decodes the result through `R4Json` before sending — a payload the simulator cannot parse is one the app cannot parse, and the run fails loudly at the producer — then sends, logs `[TX]`, and waits for the scenario's rate. The one exception is a step of kind `raw`, which sends literal bytes on purpose.
+
+**Scenarios are data, not code** — the same rule R11 imposes on the bench. Format is JSON, parsed by kotlinx.serialization, so the tool adds zero dependencies beyond `:contract`.
+
+### D10 — Configuration: `BuildConfig` defaults, launch-time override, no literals anywhere
+
+Unlike a container node, whose env comes from the blueprint at deploy time, an installed APK cannot be reconfigured without a rebuild — so `BuildConfig` supplies the default and `MainActivity` accepts an intent-extra override at launch, merged in the one place, `IviRuntimeConfig.resolve(intent)`.
+
+| `BuildConfig` field | Default | Consumer | Overridable at launch |
+|---|---|---|---|
+| `R4_UDP_PORT` | `47300` (blueprint-frozen) | `R4ObserverConfig.port` | `--ei r4_port` |
+| `R4_SOCKET_BUFFER_BYTES` | `2048` | `R4ObserverConfig.bufferBytes` | — |
+| `R4_FLOW_BUFFER_EVENTS` | `8` | `SharedFlow` extra buffer (DROP_OLDEST) | — |
+| `R4_RETRY_INITIAL_MS` / `R4_RETRY_MAX_MS` | `500` / `5000` | rebind back-off | — |
+| `WARNING_TIMEOUT_MS` | `10000` | `WarningViewModel` auto-dismiss | `--el warning_timeout_ms` |
+| `SCENE_SCALE_M_PER_PX` | `0.5` | `CanvasWarningView` → `SceneCoordinateMapper` | `--ef scene_scale` |
+
+### D11 — Standing decisions binding on this design
+
+- **`WarningBannerOverlay` is built but not mounted in the Display Area** (standing user decision, 2026-07-26) — the God-View canvas is the deliverable and must render unobstructed.
+- **Ghost C renders only from `v2x_relayed`** — the renderer's source guard is the mechanical form of the R19 claim and stays exercised by a test.
+- **3D (`SceneViewWarning3D`) and multi-process wake-on-warning are optional**, not committed M1 deliverables; nothing else depends on either.
+- **The periodic `state` message is optional on the producer side**; the consumer parses it (last-value-wins by `seq`) and no acceptance box depends on it.
+
+### D12 — The provenance guard fails open, so every scene composer must fill the snapshot
+
+`SceneGeometry.vehicleCSnapshot` is nullable and the guard treats a `null` snapshot as trusted. The guard therefore protects the render only when whatever composes the scene copies the R4 message's `object` snapshot into that field. A `SceneGeometry` built from the message's `geometry` alone carries no snapshot, draws ghost C unchallenged, and silently voids the R19 provenance claim — so every composer of a scene for the renderer populates `vehicleCSnapshot`.
