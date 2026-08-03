@@ -23,11 +23,13 @@
 - An R2 source: `ADA_ECU/tools/mock_v2x_sender.py` (`3.2.6.3`) for CI and loopback; the bench mock of `2.4.9.2` for the isolated Room.
 - **Phase 3 is required for the deployed Room only** — groups 4.10–4.11 need a real `own_sensor` B track from the detector inside the image. Everything in groups 4.1–4.5 runs against the Phase 2 fixture.
 
-**This phase does not run a system test, and cannot.** A system test is the 5-node blueprint with the real IVI app rendering the warning — which needs the IVI ECU finished. It is planned once, in [phase5_minh_tasks.md § Task Group 5.10](phase5_minh_tasks.md#task-group-510--system-verification-test-serves-r4-r5-r6-r16-r17-r18-r19), and it is Phase 5's to run. What this phase proves, it proves in the **isolated ADA Room**, where both of the ADA node's neighbours are mocks under this phase's own control. See § Where each Phase 4 box actually closes.
+**This phase does not run the system test, and cannot** — that is the 5-node blueprint with the real IVI app *rendering* the warning, which needs the IVI ECU finished. It is planned once, in [phase5_minh_tasks.md § Task Group 5.10](phase5_minh_tasks.md#task-group-510--system-verification-test-serves-r4-r5-r6-r16-r17-r18-r19), and it is Phase 5's to run.
+
+**What this phase can run is two Rooms, and the second is what makes its boxes live.** The [isolated ADA Room](#task-group-410--isolated-ada-test-create-and-deploy-the-room-serves-r5-r6) mocks both of the ADA node's neighbours and retires every ADA-side unknown cheaply. The [alternative test](#task-group-412--alternative-test-real-bench-and-v2x-ecu-upstream-serves-r13-r15-r18) then keeps the ADA node byte-identical and replaces the **upstream** mock with the real thing — bench Scenario Player and V2X ECU — while the IVI sink mock stays downstream. Relayed C then originates in a real bench scenario and arrives as a real decoded CPM, which is exactly what the acceptance boxes mean by *"with bench scenarios live"*. **No IVI app is needed for that**; only the God view is. See § Where each Phase 4 box actually closes.
 
 **Output (phase acceptance):**
 
-- [ ] C's track appears with `source = v2x_relayed` only and follows the full R13 lifecycle — Phase 2 `2.2.3.1`/`13.2.4.3` at unit level, `15.4.5.1` in CI, `13.4.11.3` + `13.4.11.5` on a deployed node. **The box's "with bench scenarios live" wording means the real Scenario Player, which exists only in the system test** — § Open items item 4.
+- [ ] C's track appears with `source = v2x_relayed` only and follows the full R13 lifecycle — Phase 2 `2.2.3.1`/`13.2.4.3` at unit level, `15.4.5.1` in CI, `13.4.11.3` + `13.4.11.5` on a deployed node against the bench mock, and **`13.4.12.1` against the real Scenario Player and V2X ECU**, which is the box's *"with bench scenarios live"* wording met in full.
 - [ ] The NLOS plugin registers through the CRA interface; the abstraction + database schema are the committed artifacts (R14) — closed by `14.4.1.2` (one new file + one line in `builtin_plugins.cpp`) over Phase 2 `14.2.5.1`/`14.2.5.2`/`14.2.5.4`. **Closes entirely off-platform.**
 - [ ] At least one R4 warning event per scenario run, carrying the risk state and the composed geometry (R15) — closed by `15.4.5.1` (CI, repeatable) and `15.4.11.4` (deployed, on the wire).
 - [ ] The event list reconstructs a full run offline (R18) — closed by `18.4.3.2` (the tool) + `13.4.11.3` (its run over a deployed node's log).
@@ -40,7 +42,7 @@
 
 Identical to [phase2_tasks.md § Execution labels](phase2_tasks.md#execution-labels) — *agent* · *car-sky* · *Human*. The split is not a preference: it comes from [walkthrough §7](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#7-work-division-between-ai-and-human), and the reasons are structural. REST has no `ETHERNET` pin type, no update route for an existing node's config, and no delete operation; picking a Device spends one of two Room slots; and an agent session holds no browser and no GitHub token.
 
-**Phase 4 is 20 *agent*, 9 *car-sky*, 7 *Human* subtasks.** Every human row is in groups 4.10 and 4.11 — the whole of groups 4.1–4.6 and 4.9 is agent work.
+**Phase 4 is 20 *agent*, 9 *car-sky*, 8 *Human* subtasks.** Every human row is in groups 4.10, 4.11 and 4.12 — the whole of groups 4.1–4.6 and 4.9 is agent work.
 
 | Where | AI does | A person does |
 |---|---|---|
@@ -49,6 +51,7 @@ Identical to [phase2_tasks.md § Execution labels](phase2_tasks.md#execution-lab
 | Group 4.9 (bench image, lanes, blueprint file) | everything — 7 *agent* subtasks | nothing |
 | Group 4.10 (create and deploy the Room) | registry confirmation, blueprint + node creation over REST, config read-back diff, phase polling (*car-sky* ×4) | confirm the CI jobs went green · draw the ethernet pins on the canvas · type each node's image and env in the Inspector · click Deploy (*Human* ×4) |
 | Group 4.11 (the three checks, negative case, teardown) | save the logs, run all three checks and the evidence tools (*car-sky* ×4) | flip `PROFILE` and redeploy for the negative case · retune a risk threshold if no warning appeared · delete the deployment (*Human* ×3) |
+| Group 4.12 (alternative test — real upstream) | nothing new; groups 4.10–4.11's *car-sky* subtasks re-run against this Room under their existing briefs | clone the blueprint, add the real bench and V2X ECU, deploy, swap the scenario, redeploy (*Human* ×1) |
 
 **[[car-sky]] halts at every *Human* row**, reports exactly what the person must do, and waits. It never improvises around a canvas step, a browser step, or a deploy click.
 
@@ -113,10 +116,17 @@ Stated once, so no subtask claims more than it can deliver.
 | Closes | Boxes |
 |---|---|
 | **Off-platform** — unit tests + the `ada-e2e-loopback` CI lane | R14 plugin registration; the R18 event-report tool; the edge-triggered emission chain; the negative control (out-of-range ⇒ zero `r4_tx`) |
-| **Isolated ADA Room** (groups 4.10–4.11) — real node, mock neighbours | R13 lifecycle of relayed C on a deployed node; ≥ 1 R4 warning on the wire; both TrackedObjects in the log; the pcap; the gate's negative case |
-| **System test** — [phase5_minh_tasks.md group 5.10](phase5_minh_tasks.md#task-group-510--system-verification-test-serves-r4-r5-r6-r16-r17-r18-r19), which needs the finished IVI | the *"with bench scenarios live"* half of box 1 — relayed C originating in the real Scenario Player and decoded by the real V2X ECU, rendered by the real IVI |
+| **Isolated ADA Room** (groups 4.10–4.11) — real node, both neighbours mocked | R13 lifecycle of relayed C on a deployed node; ≥ 1 R4 warning on the wire; both TrackedObjects in the log; the pcap; the gate's negative case |
+| **Alternative test** (group 4.12) — real bench + real V2X ECU upstream, sink mock downstream | the *"with bench scenarios live"* wording of every box above: relayed C originating in a real bench scenario, encoded as an R1 CPM and decoded by the real V2X ECU, and a scenario **swap** changing what the ADA node tracks |
+| **System test** — [phase5_minh_tasks.md group 5.10](phase5_minh_tasks.md#task-group-510--system-verification-test-serves-r4-r5-r6-r16-r17-r18-r19), which needs the finished IVI | nothing this phase owns. It adds the **rendering** half — the God view drawing ghost C — which is R16/R17 and R19, not R13–R15 |
 
-The isolated Room is **not optional scaffolding**: it puts every ADA-side failure mode — wrong port, drifted message shape, a detector that never spawns, a risk level that never changes — in a Room where both neighbours are under this phase's control. Discovering any of them inside the 5-node system test costs a second unknown to eliminate first, and a Room slot the system test needs.
+**The three are a ladder, not alternatives to pick between.** Each keeps the ADA node's own config byte-identical and changes only what surrounds it ([§5.6](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#56-the-full-blueprint-route)), so a failure that appears at one rung is attributable to what that rung added:
+
+1. **Isolated** — both neighbours mocked. Every ADA-side failure mode (wrong port, drifted message shape, a detector that never spawns, a risk level that never changes) surfaces where both sides are under this phase's control. Discovering one of these further up costs a second unknown to eliminate first.
+2. **Alternative** — the upstream mock is replaced by the real relay. What it newly exercises is the R1 CPM encode/decode path and the real R2 producer shape; a regression here is Phase 1's, not the ADA node's.
+3. **System test** — the downstream mock is replaced by the real IVI. What it newly exercises is rendering.
+
+Run them in that order. Rung 2 is where this phase's acceptance boxes are closed at their full wording, and it is the last rung that needs no IVI app.
 
 ---
 
@@ -703,6 +713,46 @@ Also record, per [§8](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.
 
 ---
 
+## Task Group 4.12 — Alternative test: real bench and V2X ECU upstream (serves R13, R15, R18)
+
+> **One subtask, and it is a person's.** This is the isolated Room with the **upstream** mock removed: the bench Scenario Player and the V2X ECU are the real nodes, so relayed C originates in a real scenario and arrives as a real decoded CPM. Only the downstream sink stays mocked, because the real one is the IVI app and it does not exist yet.
+>
+> **The ADA node is not reconfigured** — [§5.6](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#56-the-full-blueprint-route) is explicit that its `image`, `command`, `capabilities`, address, port and env are the same in every composition, and that is what makes this rung cheap: the only edits are which neighbours sit beside it. A value that differs here from the isolated Room is a transcription error, not a design difference.
+>
+> **This group creates no new checks.** The three checks, the negative case and the log-saving are groups 4.10–4.11's subtasks, **re-run against this Room under their existing briefs** — no new IDs, no second copy of the criteria.
+
+### [ ] `13.4.12.1` — Deploy the real-upstream blueprint and re-run the checks *(Human, Nydus UI)*
+
+**Objective:** close the *"with bench scenarios live"* wording of this phase's acceptance boxes — C tracked as `v2x_relayed` through the **real** relay, at least one R4 warning carrying the composed geometry, and a scenario swap that visibly changes what the ADA node tracks.
+
+**The composition** — the [4-node blueprint](../requirements/car-sky-guide/carsky-4-node-blueprint.md) with its Skycraft node replaced by a container sink:
+
+| Node | Address | Node type | `image` | Note |
+|---|---|---|---|---|
+| Ethernet Bridge | `10.99.0.1` | Ethernet Bridge | — | `bridgeMode: "linux"`, `subnet: "10.99.0.0/24"` |
+| Bench — Scenario Player | `10.99.0.10` | Container | `…/scenario-player:latest` | real, per [node-scenario-player.md](../requirements/car-sky-guide/node-scenario-player.md) |
+| V2X ECU | `10.99.0.11` | Container | `…/m1-v2x-ecu:latest` | real, per [node-v2x-ecu.md](../requirements/car-sky-guide/node-v2x-ecu.md) |
+| **ADA ECU** | `10.99.0.12` | Container | `…/m1-ada-ecu:latest` | **unchanged from the isolated Room, field for field** |
+| IVI Sink (mock) | `10.99.0.13` | **Container**, not Skycraft | `…/m1-ada-bench:latest`, `ROLE=ivi_mock` | stands in for the IVI app so a `[RX]`/`[CHECK]`/`[CAP]` log exists |
+
+**Why the sink stays a mock, and what it costs.** The Android node runs no container, so on the real 5-node blueprint there is **no sink log at all** and the only downstream evidence is the ADA node's own capture. Keeping `10.99.0.13` a container preserves `15.4.11.4`'s entire criterion set through this rung. The cost is that nothing renders — which is R16/R17's box, not one of this phase's.
+
+**Scope — what the person does, in order:**
+
+- **Compose the blueprint by cloning**, never by importing a JSON file. An imported or script-built blueprint arrives without its `ethernet` pins and is rejected at deploy ([§4.1](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#41-create-the-blueprint)). Cloning the isolated blueprint keeps three of the four pins and the ADA node's whole config; what remains is to add the bench node at `.10`, repoint `.11` from the mock to the real V2X ECU image, and wire the new pin. Work on the blueprint, never on a `<name>-deploy` snapshot.
+- **Bench and V2X ECU config** comes from their own node guides, unchanged — this group re-derives neither. The bench's `SCENARIO_CONFIG` selects the scenario, and `Scenario_Player/scenarios/default.yaml` is the approach case.
+- **Confirm the ADA node was not touched** by the clone: `image`, `command: ["./entrypoint.sh"]`, `capabilities: ["NET_RAW"]`, `V2X_LISTEN_PORT=47200`, `IVI_ECU_HOST=10.99.0.13`, `IVI_ECU_PORT=47300` and every threshold identical to what `5.4.10.6` diffed. The read-back call is [[car-sky]]'s under `5.4.10.6`'s brief.
+- **Deploy**, then re-run — under their existing briefs, no new IDs — `18.4.11.1` (save `ada.log`, `bench.log`, `sink.log` and the deployed threshold values), `2.4.11.2` (check 1), `13.4.11.3` (check 2 plus the two evidence tools), `15.4.11.4` (check 3) and `15.4.6.5` (the pcap, if not already taken off the isolated Room).
+- **Then swap the scenario and re-run check 1.** Set `SCENARIO_CONFIG=/app/scenarios/c-out-of-range.yaml` on the bench node and redeploy — config only, no rebuild. **This is the negative case's real-relay form and a different lever from `13.4.11.5`'s**: that one sets `PROFILE=out_of_range` on a mock emitter, this one changes a committed bench scenario file, and passing both is what shows the gate reads the *message's* distance rather than one emitter's quirk. It is also R11's own acceptance — different scenario configurations produce observably different message streams — observed at the ADA node.
+
+**Scope note — the two things this rung newly exercises, and who owns a failure in each.** The R1 CPM encode/decode path and the real R2 producer shape are **Phase 1's**, not this node's. A `parse_reject` storm here after a clean isolated run means the V2X ECU's R2 output has drifted from `ADA_ECU/contracts/r2-v2x-object.schema.json`, and the fix is on that side. Report the side; do not retune the ADA node to accept a drifted message.
+
+**Acceptance:** §8 outputs 1, 2 and 3 met on this Room exactly as worded for the isolated one, plus: the first `r2_ingest` payload's `stationId` and `object.objectId` match the **bench scenario's** configured values rather than a mock's; and with `c-out-of-range.yaml` deployed, `r2_ingest` still counts up while **no** relayed `track_transition` appears. Recorded in `plans/doc/phase4-ada-fusion-run.md`, created by this subtask and kept separate from the isolated Room's record so no reader has to work out which Room a log came from. Evidence commit by the orchestrating session after the user confirms.
+
+**Dependencies:** after `5.4.11.7` (this Room takes the slot the isolated one releases) and after Phase 1's bench and V2X ECU images are pushed and their nodes known-good. **Commit:** `[13.4.12.1] docs: record the real-upstream ADA run and its scenario swap`
+
+---
+
 ## Execution order & parallelism
 
 ```
@@ -723,10 +773,13 @@ Lane B (isolated ADA test - starts day one, never blocks lane A)
         ──► 5.4.10.6 ──► 5.4.10.7 (HUMAN) ──► 5.4.10.8
   4.11  18.4.11.1 ──► { 2.4.11.2 ∥ 13.4.11.3 ∥ 15.4.11.4 ∥ 15.4.6.5 ∥ phase-3 5.3.6.2 }
         13.4.11.5 (HUMAN, after 2.4.11.2)   14.4.11.6 (HUMAN, only if 13.4.11.3 found no r4_tx)
-        5.4.11.7 (HUMAN, last - releases the Room slot for phase 5's system test)
+        5.4.11.7 (HUMAN - releases the Room slot)
+  4.12  13.4.12.1 (HUMAN, after 5.4.11.7 + phase-1's bench and V2X ECU nodes known-good)
+        └─ re-runs 18.4.11.1 -> { 2.4.11.2 | 13.4.11.3 | 15.4.11.4 | 15.4.6.5 } against the new Room,
+           under their existing briefs - no new IDs
 ```
 
-**Recommended runtime order (single tree):** 18.4.3.1 → 6.4.4.1 → 6.4.4.2 → 15.4.1.1 → 14.4.1.2 → 14.4.1.3 → 15.4.2.1 → 15.4.2.2 → 15.4.2.3 → 18.4.3.2 → 18.4.3.3 → 15.4.5.1 → 15.4.2.4 *(if time)* → **group 4.9 → 4.10 → 4.11**.
+**Recommended runtime order (single tree):** 18.4.3.1 → 6.4.4.1 → 6.4.4.2 → 15.4.1.1 → 14.4.1.2 → 14.4.1.3 → 15.4.2.1 → 15.4.2.2 → 15.4.2.3 → 18.4.3.2 → 18.4.3.3 → 15.4.5.1 → 15.4.2.4 *(if time)* → **group 4.9 → 4.10 → 4.11 → 4.12**.
 
 **Group 4.9 runs beside lane A from day one.** `5.4.9.1` (a JSON file), `2.4.9.2` and `4.4.9.3` (two standalone Python scripts) touch no file lane A touches, and the bench is an unproven dependency of the acceptance run — proving it early is the point.
 
@@ -740,7 +793,7 @@ Lane B (isolated ADA test - starts day one, never blocks lane A)
 
 | Milestone Phase 4 box | Closed by | Where |
 |---|---|---|
-| C tracked with `source = v2x_relayed` only, full R13 lifecycle | Phase 2 `2.2.3.1` + `13.2.4.3` · CI `15.4.5.1` · deployed `13.4.11.3` + `13.4.11.5` | node level here; *"bench scenarios live"* at [phase5 group 5.10](phase5_minh_tasks.md#task-group-510--system-verification-test-serves-r4-r5-r6-r16-r17-r18-r19) — § Open items item 4 |
+| C tracked with `source = v2x_relayed` only, full R13 lifecycle | Phase 2 `2.2.3.1` + `13.2.4.3` · CI `15.4.5.1` · deployed `13.4.11.3` + `13.4.11.5` · **real relay `13.4.12.1`** | node level at the isolated Room; *"bench scenarios live"* in full at group 4.12 |
 | NLOS plugin registers through the CRA interface; abstraction + DB schema are the artifacts (R14) | `14.4.1.2` (one file + one line) over Phase 2 `14.2.5.1`–`14.2.5.4` | off-platform, fully |
 | ≥ 1 R4 warning per run with risk state and composed geometry (R15) | `15.4.1.1` · `15.4.2.1` · `15.4.2.2` · `15.4.2.3` · CI `15.4.5.1` · deployed `15.4.11.4` | isolated Room |
 | The event list reconstructs a full run offline (R18) | `18.4.3.2` (tool) · `18.4.3.3` (checker) · `13.4.11.3` (run over a real node's log) | isolated Room |
@@ -767,14 +820,14 @@ Each row of [deploy-ada-ecu-walkthrough.md §8](../requirements/car-sky-guide/de
 | 1 | **The frozen R4 carries C's full TrackedObject and B's *position*, not B's TrackedObject.** This plan accepts that and proves B's full object from the `[EVT]` log — reasoning in § Phase 4 output acceptance. **Adding an optional `trackedObjects` array is out of scope and no subtask implements it**: it changes a frozen contract and forces a re-freeze across the ADA binding, the ADA emitter, the golden samples, both synced copy sets, the IVI Kotlin binding and both languages' round-trip tests, days from the deadline. Recorded so the decision is visible, not so the work is queued | **user** (if they want it, it becomes new work, planned then) |
 | 2 | **`(proposal)` risk defaults proceed as proposed** — `RISK_NEAR_M=25`, `RISK_CRITICAL_M=15`, `RISK_TTC_WARN_S=6`, `RISK_TTC_CRITICAL_S=3`, `RISK_DWELL_MS=300`, `ASSESS_LOG_EVERY_MS=1000`. Chosen so an approach produces a visible `low → medium → high` progression and an out-of-range profile never leaves `low`. Externalized, so ratification is a node-config edit. **They have not been checked against the real clip's ego-to-B range**, which is why `14.4.11.6` exists | user |
 | 3 | **Planner-designated test/tool paths beyond the HLD's list**: `tests/output/test_ivi_sender.cpp`; `tests/fusion/test_scene_composer.cpp`; the `--fusion` / `--both-tracks` / `--r4-schema` modes of `tools/check_evt_log.py`. HLD-consistent additions, not new design | [[project-architecture]] (ack) |
-| 4 | **The system test is not in this phase and cannot be.** Three Phase 4 boxes are worded *"with bench scenarios live"*, which means the real Scenario Player and the real V2X ECU — and the demo they feed is rendered by the real IVI, which does not exist until Phase 5 completes. The isolated Room closes those boxes at **node level**; their live half closes at [phase5_minh_tasks.md group 5.10](phase5_minh_tasks.md#task-group-510--system-verification-test-serves-r4-r5-r6-r16-r17-r18-r19) and is re-recorded in Phase 6's continuous run. **No subtask here may claim a box the isolated Room cannot close**, and no full-blueprint subtask is planned in this file | [[project-planner]] (scheduling) → Phase 5, Phase 6 |
+| 4 | **This phase closes its own boxes; only the rendering half waits on Phase 5.** *"With bench scenarios live"* means the real Scenario Player and V2X ECU upstream, and group 4.12 supplies exactly that with the sink still mocked — so no Phase 4 box depends on the IVI app. What does wait on Phase 5 is the **God view drawing ghost C**, which is R16/R17 and R19, recorded in [phase5_minh_tasks.md group 5.10](phase5_minh_tasks.md#task-group-510--system-verification-test-serves-r4-r5-r6-r16-r17-r18-r19) and re-recorded in Phase 6's continuous run. **A subtask may not claim a box at a rung that cannot close it** — the isolated Room closes them at node level, group 4.12 at their full wording | [[project-planner]] (scheduling) |
 | 5 | **R4 binding defect on the Phase 5 side, not this phase's work:** the unmerged Phase 5 branch's `R4WarningMessage.kt` cannot decode this design's output — no `@SerialName`, and it requires a `trackedObjects` array this design does not emit. **`main`'s `R4Message.kt` is the binding the IVI uses.** Fixed in [phase5_minh_tasks.md group 5.1](phase5_minh_tasks.md); **the ADA side changes nothing for it** | Phase 5 group 5.1 |
 | 6 | **`15.4.2.4` (periodic awareness state) is optional and may be dropped** without affecting any acceptance box — R15 words it optional and the warning event alone renders the M1 demo. It must stay off by default (`STATE_RATE_HZ=0`), asserted in test | Phase 4, if time permits |
 | 7 | **R20/R21 are not planned and no subtask implements them.** [m1-run-timing-and-event-triggering.md §8(1)](../requirements/m1-run-timing-and-event-triggering.md) schedules them behind every Phase 3 and Phase 4 acceptance box, they gate no box, and **the user has not accepted them**. That covers: bench deadline scheduling and `mono_ms` on the `[TX]` line; detector real-time pacing and its `DETECTOR_REALTIME_PACING` / `DETECTOR_CLIP_FPS` / `DETECTOR_START_DELAY_S` keys; bench `start_delay_s` / `reference_time_epoch`; the `[EVT] ready` readiness line; and the K1–K5 run-alignment checker. If the user accepts R20/R21 they become new work with new IDs, planned then — the retired group 4.8 is not revived | **user** (accept/reject per §8(1)) |
 | 8 | **[Walkthrough §4.1](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#41-create-the-blueprint) names a batch payload file `batch-ada-isolated.json` with no designated path and no content spec.** Every other artifact in the document has a path. This plan resolves it by **deriving the payload at run time** from `blueprint-ada-isolated.json` rather than committing a second copy of the node data (`5.4.10.3`) — but the walkthrough should say so. Reported as a missing step detail; **not filled in a subtask brief** | [[project-researcher]] |
-| 9 | **Room quota — two concurrent deployments across the whole account, contended three ways.** This phase's isolated Room (groups 4.10–4.11), Phase 5's isolated IVI Room (group 5.9) and Phase 5's system test (group 5.10). Phase 3's `5.3.6.2` books none — it reads this phase's log. Serialize the deploys and tear each Room down: `5.4.11.7` here, `17.5.9.16` and `19.5.10.8` in Phase 5 | [[project-planner]] (scheduling) |
+| 9 | **Room quota — two concurrent deployments across the whole account, contended four ways.** This phase's isolated Room (groups 4.10–4.11) and its real-upstream Room (group 4.12), Phase 5's isolated IVI Room (group 5.9) and Phase 5's system test (group 5.10). Phase 3's `5.3.6.2` books none — it reads this phase's log. **The two Phase 4 Rooms are sequential, not concurrent**: `13.4.12.1` takes the slot `5.4.11.7` releases, so this phase holds one slot at a time. Tear each down — `5.4.11.7` here, `17.5.9.16` and `19.5.10.8` in Phase 5 | [[project-planner]] (scheduling) |
 | 10 | **[§8.1](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#81-confirm-before-relying-on-these) items that authoring cannot retire, and where each first bites.** Item 1 (the whole route is unexercised) — the lane as a whole. Item 2 (the §1.3 ADA deliverables) — group 4.10's entry condition; Phases 2–4 work planned above. Item 4 (the `[EVT]` names are design, not observation) — `2.4.11.2`, `13.4.11.3`. Item 6 (arm64 wheels for the detector) — Phase 3 `12.3.1.1`, and `5.4.9.6`'s 360-minute timeout check. Item 9 (a `/batch`-created 4-node blueprint accepting hand-drawn pins and then validating) — `6.4.10.4`, whose `validate` pass is the first proof of it. Item 10 (the defaults may produce no risk transition) — `13.4.11.3`, contingency `14.4.11.6`. Item 11 (detector frame rate on the Room's CPU) — Phase 3 `5.3.6.2`. Item 12 (whether the platform **honours** a requested `NET_RAW`) — `15.4.11.4`'s `[CAP]` criterion and `15.4.6.5`'s pcap. **None is filled in by guessing; each is reported from the subtask that hits it** | per subtask |
 
 ---
 
-*Phase 4 = 9 task groups, 36 subtasks — 20 *agent* (1 optional), 9 *car-sky*, 7 *Human*. Nothing started. Retired IDs, never reused: `5.4.6.1`, `5.4.6.2`, `13.4.6.3`, `18.4.6.4` (the full-blueprint system test — [phase5 group 5.10](phase5_minh_tasks.md#task-group-510--system-verification-test-serves-r4-r5-r6-r16-r17-r18-r19) owns it), `4.4.7.1`–`4.4.7.4` (the R4 re-freeze, out of scope), `20.4.8.1` and `21.4.8.2` (R20/R21, unratified). Decomposed from [phase2-4-ada-ecu-hld.md](../ADA_ECU/doc/phase2-4-ada-ecu-hld.md) D4/D5/D7/D8/D9, [deploy-ada-ecu-walkthrough.md](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md) per [walkthrough-driven-delivery.md](../.claude/rules/walkthrough-driven-delivery.md) stage 2, and [milestone1.md § Phase 4](milestone1.md#phase-4--obscured-object-fusion-relayed-c--risk--warning-r13r15--runs--with-phase-3). Consolidated ADA+IVI view: [ada-ivi-plan.md](ada-ivi-plan.md).*
+*Phase 4 = 10 task groups, 37 subtasks — 20 *agent* (1 optional), 9 *car-sky*, 8 *Human*. Nothing started. Retired IDs, never reused: `5.4.6.1`, `5.4.6.2`, `13.4.6.3`, `18.4.6.4` (the full-blueprint system test — [phase5 group 5.10](phase5_minh_tasks.md#task-group-510--system-verification-test-serves-r4-r5-r6-r16-r17-r18-r19) owns it), `4.4.7.1`–`4.4.7.4` (the R4 re-freeze, out of scope), `20.4.8.1` and `21.4.8.2` (R20/R21, unratified). Decomposed from [phase2-4-ada-ecu-hld.md](../ADA_ECU/doc/phase2-4-ada-ecu-hld.md) D4/D5/D7/D8/D9, [deploy-ada-ecu-walkthrough.md](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md) per [walkthrough-driven-delivery.md](../.claude/rules/walkthrough-driven-delivery.md) stage 2, and [milestone1.md § Phase 4](milestone1.md#phase-4--obscured-object-fusion-relayed-c--risk--warning-r13r15--runs--with-phase-3). Consolidated ADA+IVI view: [ada-ivi-plan.md](ada-ivi-plan.md).*
