@@ -759,7 +759,7 @@ Nothing else in that file changes. Add a one-line comment recording that this Ph
 
 ## Task Group 5.8 — Retire the deployment unknowns early (serves R5, R16) — HLD §11 items 1–2
 
-> **Scope against group 5.10.** This group exists to answer the ADB and guest questions before anything depends on the answer; group 5.10 owns the two full in-Room runs and their choreography. `5.5.8.2`'s Room is the one chain A reuses, so the two are sequenced, not duplicated: `5.5.8.2` stands a Room up against **today's** APK to probe the route, and `5.5.10.1`–`17.5.10.9` run the evidence chain on it once the app exists.
+> **Scope against group 5.10.** This group exists to answer the ADB and guest questions before anything depends on the answer; group 5.10 owns the two full in-Room runs and their choreography. `5.5.8.2`'s Room is the one the isolated IVI test reuses, so the two are sequenced, not duplicated: `5.5.8.2` stands a Room up against **today's** APK to probe the route, and `5.5.10.1`–`17.5.10.9` gather the evidence on it once the app exists.
 >
 > **This group is the phase's biggest schedule risk and depends on nothing, so it must not wait behind any code work.** The ADB route to the Skycraft guest is unverified on this deployment and the platform's REST VM-shell route answers 502. If the guest is unreachable, **every in-Room criterion falls back to emulator evidence** — an answer that is cheap to get first and expensive to get last. The probe deliberately uses **today's** APK, so it does not wait for a single line of Phase 5 code.
 
@@ -870,24 +870,24 @@ Capture the evidence per [§4.9](../requirements/car-sky-guide/deploy-ivi-hmi-wa
 
 ---
 
-## Task Group 5.10 — In-Room verification: the mini-blueprint run and the whole-system run (serves R4, R5, R6, R16, R17, R18, R19)
+## Task Group 5.10 — In-Room verification: the isolated IVI test and the system test (serves R4, R5, R6, R16, R17, R18, R19)
 
 > **This group verifies on the platform what the rest of the phase builds.** It writes no product code and no images. The IVI app is groups **5.1–5.5**; the mock-ADA container — the image that stands in for the ADA ECU and emits R4 warning messages — is groups **5.6–5.7**, which write its source and the CI lane that builds, pushes and verifies it. The real Bench, V2X ECU and ADA ECU images come from their own phases. Nothing below rebuilds any of them.
 >
-> **Two runs, two chains.** They differ only in composition, and each closes different evidence:
+> **Two tests.** They differ only in composition, and each closes different evidence:
 >
-> - **Chain A — the mini-blueprint run** (`5.5.10.1`–`17.5.10.9`): Ethernet Bridge + a mocked ADA node + the IVI Skycraft node. The ADA node runs the group 5.6–5.7 image, so the IVI is exercised against R4 traffic with no dependency on the ADA or comms tracks.
-> - **Chain B — the whole-system run** (`5.5.10.10`–`19.5.10.17`): every node in the blueprint — Bench, V2X ECU, ADA ECU, IVI ECU, Ethernet Bridge — each carrying its own real image, with the warning the IVI renders originating in a bench scenario and travelling the full relay.
+> - **The isolated IVI test** (`5.5.10.1`–`17.5.10.9`), on the mini-blueprint: Ethernet Bridge + a mocked ADA node + the IVI Skycraft node. The ADA node runs the group 5.6–5.7 image, so the IVI is exercised against R4 traffic with no dependency on the ADA or comms tracks.
+> - **The system test** (`5.5.10.10`–`19.5.10.17`), on the full blueprint: every node — Bench, V2X ECU, ADA ECU, IVI ECU, Ethernet Bridge — each carrying its own real image, with the warning the IVI renders originating in a bench scenario and travelling the full relay.
 >
-> **The governing walkthroughs, by subject.** Chain A's composition is [deploy-ivi-hmi-walkthrough.md §4.11](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#411-the-mini-blueprint-route), which states that its mechanics are exactly §4.2–§4.10 with only the composition differing. Chain B's composition is [deploy-ada-ecu-walkthrough.md §5.6](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#56-the-full-blueprint-route), which states the same about its own §4.1–§5.5 and hands consumer-side evidence to the IVI walkthrough's [§4.8](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging). Container image build → push → pull is [deploy-walkthrough-netcheck.md](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md)'s subject, which the IVI walkthrough's header and [§1.2](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#12-cloud-platform-access) delegate to it outright. Each subtask cites the section governing *it*; [walkthrough-driven-delivery.md](../.claude/rules/walkthrough-driven-delivery.md) asks for that, not that one group cite one document.
+> **The governing walkthroughs, by subject.** The isolated IVI test's composition is [deploy-ivi-hmi-walkthrough.md §4.11](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#411-the-mini-blueprint-route), which states that its mechanics are exactly §4.2–§4.10 with only the composition differing. The system test's composition is [deploy-ada-ecu-walkthrough.md §5.6](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#56-the-full-blueprint-route), which states the same about its own §4.1–§5.5 and hands consumer-side evidence to the IVI walkthrough's [§4.8](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging). Container image build → push → pull is [deploy-walkthrough-netcheck.md](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md)'s subject, which the IVI walkthrough's header and [§1.2](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#12-cloud-platform-access) delegate to it outright. Each subtask cites the section governing *it*; [walkthrough-driven-delivery.md](../.claude/rules/walkthrough-driven-delivery.md) asks for that, not that one group cite one document.
 >
 > **Cloning is the only route that preserves `ethernet` pins.** Both §4.11 and [deploy-ada-ecu-walkthrough.md §5.6](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#56-the-full-blueprint-route) say plainly that a script-built or imported blueprint arrives without its pins, and typically without the Skycraft `image` block, and is rejected at deploy. Every blueprint below is built by cloning and editing on the canvas.
 >
 > **Two different things are called "install", and they land on opposite sides of the split.** Setting a node's **image field** is a Nydus Inspector edit and is Human — the REST API has no update route for an existing node's config, which [§5](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#5-work-division-between-ai-and-human) and [deploy-ada-ecu-walkthrough.md §7](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#7-work-division-between-ai-and-human) both state. Installing the **APK** with `adb install -r` and launching it with `adb shell am start` are CLI calls against the guest, and §5 assigns both to AI. A subtask that sets an image field is never the one that installs the APK.
 >
-> **Where the two runs meet groups 5.8 and 5.9.** `16.5.8.3` answers the ADB-reach and guest-API questions both chains depend on. Group 5.9 owns the *scenario content* of the runs — `approach.json` at rung V4 and `degrade.json` at rung V5 — while this group owns the Room choreography that carries them. Neither restates the other.
+> **Where the two runs meet groups 5.8 and 5.9.** `16.5.8.3` answers the ADB-reach and guest-API questions both tests depend on. Group 5.9 owns the *scenario content* of the runs — `approach.json` at rung V4 and `degrade.json` at rung V5 — while this group owns the Room choreography that carries them. Neither restates the other.
 
-**The work split, applied to both chains.**
+**The work split, applied to both tests.**
 
 | Action | Label | Why |
 |---|---|---|
@@ -903,7 +903,7 @@ Capture the evidence per [§4.9](../requirements/car-sky-guide/deploy-ivi-hmi-wa
 
 ---
 
-### Chain A — the mini-blueprint run
+### The isolated IVI test
 
 ### [ ] `5.5.10.1` — Compose the mini-blueprint by cloning the baseline *(USER-MANUAL)*
 
@@ -974,7 +974,7 @@ The Skycraft node is the slowest to reach `Running` and is expected to lag the c
 
 **Dependencies:** after `5.5.10.4`. **Commit:** `[5.5.10.5] docs: record the mini-blueprint Room reaching Running`
 
-### [ ] `16.5.10.6` — Install and launch the APK on the guest *(car-sky)*
+### [ ] `16.5.10.6` — Install and launch the APK on the isolated IVI test guest *(car-sky)*
 
 **Objective:** get the Phase 5 build running on the AAOS node.
 
@@ -1000,7 +1000,7 @@ Set the **Recorder Part** now if the run is to be recorded — [§4.9](../requir
 
 **Dependencies:** after `16.5.10.6`. **Commit:** `[16.5.10.7] docs: record the device widgets opened on the mini-blueprint guest`
 
-### [ ] `18.5.10.8` — Read both log surfaces on the mini-blueprint run *(car-sky)*
+### [ ] `18.5.10.8` — Read both log surfaces on the isolated IVI test *(car-sky)*
 
 **Objective:** produce in text three of the four proofs of [§6](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#6-expected-outputs-and-acceptance) — the incoming warning, its parsed fields, and the event raised — making no visual judgement.
 
@@ -1015,13 +1015,13 @@ The rung is §4.8 **V4**; its four links are the checklist and are not restated 
 
 **Dependencies:** after `16.5.10.6`. **Commit:** `[18.5.10.8] docs: record the mini-blueprint log evidence for the R4 warning chain`
 
-### [ ] `17.5.10.9` — Confirm the God View on the mini-blueprint run, capture it, tear down *(USER-MANUAL)*
+### [ ] `17.5.10.9` — Confirm the God View on the isolated IVI test, capture it, tear down *(USER-MANUAL)*
 
 **Objective:** produce [§6](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#6-expected-outputs-and-acceptance)'s fourth proof, and release the Room slot.
 
 **Scope:** the "Confirm the display switched" and "Record the screen" Human rows of [§5](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#5-work-division-between-ai-and-human), on the widgets `16.5.10.7` opened, captured per [§4.9](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#49-capture-the-evidence). What counts as correct is [§4.8](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging) V4's **link 4** and its two failure rows — including that a yellow `[? UNKNOWN SOURCE]` marker where ghost C belongs is a **blocking defect**, not a display quirk: stop and report it rather than accepting the run. Also confirm §6's second table row — tapping Home / Apps / Settings changes what the Display Area shows.
 
-Tear down per [§4.12](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#412-tear-down) once the evidence is saved: the log route returns nothing after the Room is gone, and chain B needs the slot.
+Tear down per [§4.12](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#412-tear-down) once the evidence is saved: the log route returns nothing after the Room is gone, and the system test needs the slot.
 
 **Acceptance:** §6 proof 4 — a recording or screenshot showing the God View with ghost C dashed, badged and glowing — plus the side-button observation, recorded in `plans/doc/phase5-ivi-run.md`; the deployment deleted and the blueprint kept. Evidence commit by the orchestrating session after the user confirms.
 
@@ -1029,7 +1029,7 @@ Tear down per [§4.12](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.
 
 ---
 
-### Chain B — the whole-system run
+### The system test
 
 ### [ ] `5.5.10.10` — Compose the full blueprint and set every node's real image *(USER-MANUAL)*
 
@@ -1059,11 +1059,11 @@ Confirm each image is pullable from the registry before deploying: an unpullable
 
 **Objective:** bring up the Room the whole-system evidence is gathered in.
 
-**Scope:** [§4.3](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#43-deploy-the-blueprint) and [deploy-ada-ecu-walkthrough.md §4.4](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#44-deploy) — **New Deployment**, an existing Device from the dropdown, the original blueprint rather than its snapshot. §5.6 notes the full blueprint is one deployment like any other and the two-Room budget still applies, so chain A's Room is released first.
+**Scope:** [§4.3](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#43-deploy-the-blueprint) and [deploy-ada-ecu-walkthrough.md §4.4](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#44-deploy) — **New Deployment**, an existing Device from the dropdown, the original blueprint rather than its snapshot. §5.6 notes the full blueprint is one deployment like any other and the two-Room budget still applies, so the isolated IVI test's Room is released first.
 
 **Acceptance:** the deployment exists and its Room id is recorded in `plans/doc/phase5-ivi-run.md`; `5.5.10.13` confirms the node phases. Evidence commit by the orchestrating session after the user confirms.
 
-**Dependencies:** after `5.5.10.11` and chain A's teardown at `17.5.10.9`. **Commit:** `[5.5.10.12] docs: record the full blueprint deployment`
+**Dependencies:** after `5.5.10.11` and the isolated IVI test's teardown at `17.5.10.9`. **Commit:** `[5.5.10.12] docs: record the full blueprint deployment`
 
 ### [ ] `5.5.10.13` — Poll the full blueprint's nodes to `Running` *(car-sky)*
 
@@ -1075,7 +1075,7 @@ Confirm each image is pullable from the registry before deploying: an unpullable
 
 **Dependencies:** after `5.5.10.12`. **Commit:** `[5.5.10.13] docs: record the full blueprint Room reaching Running`
 
-### [ ] `16.5.10.14` — Install and launch the APK on the full-blueprint guest *(car-sky)*
+### [ ] `16.5.10.14` — Install and launch the APK on the system test guest *(car-sky)*
 
 **Objective:** get the Phase 5 build running on the IVI node of the full topology.
 
@@ -1087,9 +1087,9 @@ Again this is the **APK**, not a node image field; the container nodes' images w
 
 **Dependencies:** after `5.5.10.13`. **Commit:** `[16.5.10.14] docs: record the APK install and launch on the full-blueprint guest`
 
-### [ ] `16.5.10.15` — Open the device and its Screen widget on the full-blueprint run *(USER-MANUAL)*
+### [ ] `16.5.10.15` — Open the device and its Screen widget on the system test *(USER-MANUAL)*
 
-**Objective:** make the guest's display visible for the whole-system run, with recording armed.
+**Objective:** make the guest's display visible for the system test, with recording armed.
 
 **Scope:** the widget half of [§4.7](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#47-open-the-screen-and-launch-the-app) — Devices, **Connect**, the Screen widget with its parts set from the Part Prefix, plus Log and ADB widgets. Set the **Recorder Part** before the run: this is the run the recorded evidence comes from, and [§4.9](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#49-capture-the-evidence) needs it armed in advance.
 
@@ -1113,7 +1113,7 @@ Save every node log before the Room is torn down — the log route returns nothi
 
 **Objective:** see the warning view come up from data that travelled the whole chain, and capture it.
 
-**Scope:** the visual-judgement and recording rows of [§5](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#5-work-division-between-ai-and-human), against [§4.8](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging) V4's link 4 and captured per [§4.9](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#49-capture-the-evidence). The `[? UNKNOWN SOURCE]` marker remains a blocking defect. What differs from chain A is only the source of the data, so nothing about the expected drawing changes.
+**Scope:** the visual-judgement and recording rows of [§5](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#5-work-division-between-ai-and-human), against [§4.8](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging) V4's link 4 and captured per [§4.9](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#49-capture-the-evidence). The `[? UNKNOWN SOURCE]` marker remains a blocking defect. What differs from the isolated IVI test is only the source of the data, so nothing about the expected drawing changes.
 
 Tear down per [§4.12](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#412-tear-down) after `19.5.10.16` has saved every log, releasing the Room slot.
 
@@ -1146,11 +1146,11 @@ Lane H  unknowns:     5.5.8.2 (USER) ─► 16.5.8.3 (USER) ─► 16.5.8.4
                       (fully parallel with lanes A–G; 16.5.8.4 also needs 16.5.5.5)
 Lane I  evidence:     5.5.9.1 (USER) ─► 16.5.9.2 (USER) ─► 17.5.9.3 (USER) ─► 4.5.9.4 (USER)
                       (5.5.9.1 needs 5.5.7.3 + 5.5.8.2; 16.5.9.2 needs 17.5.5.6 + 16.5.8.3)
-Lane J  mini run:     5.5.10.1 (USER) ─► 4.5.10.2 (USER) ─► 6.5.10.3 ─► 5.5.10.4 (USER)
+Lane J  isolated:     5.5.10.1 (USER) ─► 4.5.10.2 (USER) ─► 6.5.10.3 ─► 5.5.10.4 (USER)
                         ─► 5.5.10.5 ─► 16.5.10.6 ─► 16.5.10.7 (USER) ─► 18.5.10.8 ─► 17.5.10.9 (USER)
                       (4.5.10.2 needs 5.5.7.3's pushed image; 16.5.10.6 needs 17.5.5.6 + 16.5.8.3.
                        Lane I's scenario rungs run against this Room before 17.5.10.9 tears it down)
-Lane K  full run:     5.5.10.10 (USER) ─► 5.5.10.11 ─► 5.5.10.12 (USER) ─► 5.5.10.13
+Lane K  system:       5.5.10.10 (USER) ─► 5.5.10.11 ─► 5.5.10.12 (USER) ─► 5.5.10.13
                         ─► 16.5.10.14 ─► 16.5.10.15 (USER) ─► 19.5.10.16 ─► 19.5.10.17 (USER)
                       (5.5.10.10 needs every node's real image pushed by its own phase;
                        5.5.10.12 needs the Room slot lane J released at 17.5.10.9)
@@ -1160,7 +1160,7 @@ Lane K  full run:     5.5.10.10 (USER) ─► 5.5.10.11 ─► 5.5.10.12 (USER) 
 - **Sequential:** every arrow above. Lane A is strictly sequential and gates everything (a Gradle module graph cannot be built out of order). Lanes I, J and K are strictly sequential — each step's evidence depends on the previous step's Room state.
 - **Lane K follows lane J on the Room budget, not on logic.** Only two Rooms run at once and the comms track holds one, so the full blueprint deploys after the mini-blueprint's Room is released. Lane K also waits on every node's real image, which its own phase publishes — nothing in Phase 5 builds them.
 - **Lane I interleaves with lane J** rather than following it: lane I decides which scenario file is on the wire, lane J stands the Room up, installs the app and reads the result.
-- **Spawn order:** `4.5.1.1` and `16.5.7.1` go to subagents together, since neither waits on anything. Lane H's USER steps go to the user at the same time — `5.5.8.2` waits on nothing. Lane I's USER steps and lane J's chain open once `5.5.7.3` has pushed a verified image. The *car-sky* subtasks in lanes J and K are spawned to [[car-sky]] at the Room events they attach to.
+- **Spawn order:** `4.5.1.1` and `16.5.7.1` go to subagents together, since neither waits on anything. Lane H's USER steps go to the user at the same time — `5.5.8.2` waits on nothing. Lane I's USER steps and lane J open once `5.5.7.3` has pushed a verified image. The *car-sky* subtasks in lanes J and K are spawned to [[car-sky]] at the Room events they attach to.
 
 ### Critical path
 
@@ -1170,9 +1170,9 @@ The shortest ordered set that closes all five acceptance boxes:
 
 with **lane H (`5.5.8.2` → `16.5.8.3`) running alongside**, unblocked from the start — it does not sit on the critical path but it decides whether the path's last steps are in-Room or on an emulator.
 
-**Chain A of group 5.10 is the tail of this path** — `5.5.10.1` through `17.5.10.9` are what turn a built app into the four proofs of [§6](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#6-expected-outputs-and-acceptance). Its first three subtasks are canvas and read-back work that needs no APK, so they can be done while lanes A–F are still running; only `16.5.10.6` onward waits on `17.5.5.6`.
+**The isolated IVI test is the tail of this path** — `5.5.10.1` through `17.5.10.9` are what turn a built app into the four proofs of [§6](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#6-expected-outputs-and-acceptance). Its first three subtasks are canvas and read-back work that needs no APK, so they can be done while lanes A–F are still running; only `16.5.10.6` onward waits on `17.5.5.6`.
 
-**Chain B is not on the path to the five boxes.** Every box is closed by chain A against the mock-ADA feed, which is what "mock-driven" means for this phase. Chain B waits on the other tracks' real images and produces the whole-system evidence Phase 6's convergence run builds on — valuable, and not a Phase 5 gate.
+**The system test is not on the path to the five boxes.** Every box is closed by the isolated IVI test against the mock-ADA feed, which is what "mock-driven" means for this phase. The system test waits on the other tracks' real images and produces the whole-system evidence Phase 6's convergence run builds on — valuable, and not a Phase 5 gate.
 
 **Droppable without failing a box, in this order if time runs short:** `4.5.1.5` (ProGuard rules — release build is not an acceptance target), `17.5.5.7` (config-driven scale — the library default is correct), `4.5.6.7` (dev injector — only needed if the ADB/UI route is awkward), `4.5.2.3` and `4.5.3.5` (extra test depth, not extra behaviour), `state-stream.json` inside `4.5.6.4` (the periodic `state` message is optional on the producer side and no box depends on it).
 
@@ -1189,7 +1189,7 @@ Every Phase 5 acceptance criterion in [milestone1.md](milestone1.md#phase-5--ivi
 | Optional paths, only if built | **Not built in M1** — declared, not attempted. `SceneViewWarning3D.kt`'s location is designated by HLD §3.1 and nothing depends on it; multi-process wake-on-warning stays reachable because `4.5.5.2` chose the foreground service (D5). Recorded as "not built" in `plans/doc/phase5-ivi-run.md` by `4.5.9.4`. |
 
 
-**Beyond the five boxes.** Chain B (`5.5.10.10`–`19.5.10.17`) closes no Phase 5 box on its own — all five are met against the mock-ADA feed. It proves the same IVI behaviour inside the full topology with every node on its real image, and its record is what Phase 6's convergence run starts from.
+**Beyond the five boxes.** The system test (`5.5.10.10`–`19.5.10.17`) closes no Phase 5 box on its own — all five are met against the mock-ADA feed. It proves the same IVI behaviour inside the full topology with every node on its real image, and its record is what Phase 6's convergence run starts from.
 ## Open items carried, not decided (no Phase 5 subtask may close them by assumption)
 
 | # | Item | Owner / closes at |
