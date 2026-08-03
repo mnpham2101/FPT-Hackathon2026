@@ -25,6 +25,12 @@
         "warningType": { "type": "string", "description": "warning-registry key; M1 registry: nlos_obstruction. Unknown values must degrade gracefully at the consumer (D4)" },
         "riskState": { "type": "string", "description": "risk level from the R14 assessment; M1 NLOS plugin emits low | medium | high" },
         "object": { "$ref": "r3-tracked-object.schema.json", "description": "R3 snapshot of the triggering track (C)" },
+        "trackedObjects": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "r3-tracked-object.schema.json" },
+          "description": "additive full R3 snapshots used by the IVI scene; ADA emits B and C"
+        },
         "geometry": {
           "type": "object",
           "description": "composed scene; field names frozen to the IVI SceneGeometry model",

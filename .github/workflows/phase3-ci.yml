@@ -1,0 +1,50 @@
+name: phase3-ci
+
+on:
+  push:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  detector-video-and-ml:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: ADA_ECU/requirements.txt
+      - name: Install detector dependencies
+        run: python -m pip install -r ADA_ECU/requirements.txt
+      - name: Detector unit and video seam tests
+        run: |
+          python -m unittest discover -s ADA_ECU/tools/tests -p 'test_*.py'
+          python ADA_ECU/tools/smoke_video_detector.py
+          python ADA_ECU/tools/smoke_demo_video_detector.py
+          python ADA_ECU/tools/smoke_ml_video_detector.py
+      - name: Full-clip YOLO acceptance
+        run: |
+          python ADA_ECU/tools/benchmark_video_detector.py \
+            --output "$RUNNER_TEMP/phase3-r3.jsonl"
+          python ADA_ECU/tools/check_zero_c.py "$RUNNER_TEMP/phase3-r3.jsonl"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: phase3-r3-evidence
+          path: ${{ runner.temp }}/phase3-r3.jsonl
+
+  arm64-container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - name: Build CarSky-compatible image
+        run: |
+          docker buildx build --platform linux/arm64 \
+            --provenance=false --sbom=false \
+            -t m1-ada-ecu:ci ADA_ECU

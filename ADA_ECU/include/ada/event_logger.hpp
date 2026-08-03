@@ -1,6 +1,7 @@
 #pragma once
 
 #include <fstream>
+#include <mutex>
 #include <string>
 
 namespace ada {
@@ -13,7 +14,7 @@ public:
 
 private:
     std::ofstream out_;
+    std::mutex mutex_;
 };
 
 }  // namespace ada
-

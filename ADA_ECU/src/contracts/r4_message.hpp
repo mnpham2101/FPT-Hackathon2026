@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <vector>
 
 #include <nlohmann/json.hpp>
 
@@ -43,13 +44,14 @@ struct R4WarningEvent {
   std::string warningType;  // warning-registry key; M1 registry: "nlos_obstruction"
   std::string riskState;    // R14 risk level; M1 NLOS plugin emits low | medium | high
   TrackedObject object;     // R3 snapshot of the triggering track (C); wire name kept
+  std::optional<std::vector<TrackedObject>> trackedObjects;  // additive B/C snapshots
   R4VehicleSet geometry;    // composed scene, frozen to the IVI SceneGeometry model
 };
 
 inline bool operator==(const R4WarningEvent& a, const R4WarningEvent& b) {
   return a.schemaVersion == b.schemaVersion && a.type == b.type &&
          a.warningType == b.warningType && a.riskState == b.riskState && a.object == b.object &&
-         a.geometry == b.geometry;
+         a.trackedObjects == b.trackedObjects && a.geometry == b.geometry;
 }
 
 // Periodic awareness state (type == "state"), last-value-wins by seq (R15).

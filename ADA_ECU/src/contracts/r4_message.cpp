@@ -29,6 +29,9 @@ void to_json(nlohmann::json& j, const R4WarningEvent& w) {
                      {"riskState", w.riskState},
                      {"object", w.object},
                      {"geometry", w.geometry}};
+  if (w.trackedObjects.has_value()) {
+    j["trackedObjects"] = *w.trackedObjects;
+  }
 }
 
 void from_json(const nlohmann::json& j, R4WarningEvent& w) {
@@ -37,6 +40,10 @@ void from_json(const nlohmann::json& j, R4WarningEvent& w) {
   j.at("warningType").get_to(w.warningType);
   j.at("riskState").get_to(w.riskState);
   j.at("object").get_to(w.object);
+  const auto tracked = j.find("trackedObjects");
+  w.trackedObjects = tracked == j.end()
+                         ? std::nullopt
+                         : std::optional<std::vector<TrackedObject>>(tracked->get<std::vector<TrackedObject>>());
   j.at("geometry").get_to(w.geometry);
 }
 

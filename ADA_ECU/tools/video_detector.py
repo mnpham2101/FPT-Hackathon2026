@@ -69,6 +69,7 @@ class PlaceholderVehicleBackend:
             lateral_m=0.0,
             confidence=0.5,
             timestamp_ms=frame.timestamp_ms,
+            speed_mps=0.0,
         )
 
 
@@ -117,6 +118,8 @@ class YoloOnnxVehicleBackend:
         self.vehicle_width_m = vehicle_width_m
         self.focal_px = focal_px
         self.log_detections = log_detections
+        self.previous_distance_m: float | None = None
+        self.previous_timestamp_ms: int | None = None
 
     def detect(self, frame: FrameInput) -> Iterable[dict]:
         if frame.image is None:
@@ -148,6 +151,7 @@ class YoloOnnxVehicleBackend:
         distance_m = self._distance_m(vehicle_b.width)
         lateral_m = self._lateral_m(vehicle_b.center_x, frame.width, distance_m)
         confidence = round(vehicle_b.score, 3)
+        speed_mps = self._speed_mps(distance_m, frame.timestamp_ms)
 
         if self.log_detections:
             print(
@@ -178,8 +182,19 @@ class YoloOnnxVehicleBackend:
                 lateral_m=lateral_m,
                 confidence=confidence,
                 timestamp_ms=frame.timestamp_ms,
+                speed_mps=speed_mps,
             )
         ]
+
+    def _speed_mps(self, distance_m: float, timestamp_ms: int) -> float:
+        speed_mps = 0.0
+        if self.previous_distance_m is not None and self.previous_timestamp_ms is not None:
+            elapsed_s = (timestamp_ms - self.previous_timestamp_ms) / 1000.0
+            if elapsed_s > 0:
+                speed_mps = (distance_m - self.previous_distance_m) / elapsed_s
+        self.previous_distance_m = distance_m
+        self.previous_timestamp_ms = timestamp_ms
+        return speed_mps
 
     def _preprocess(self, image: object) -> tuple[object, float, float, float]:
         import cv2  # type: ignore
@@ -267,7 +282,14 @@ class YoloOnnxVehicleBackend:
         return ((center_x - frame_width / 2.0) / self.focal_px) * distance_m
 
 
-def r3_vehicle_b(distance_m: float, lateral_m: float, confidence: float, timestamp_ms: int) -> dict:
+def r3_vehicle_b(
+    distance_m: float,
+    lateral_m: float,
+    confidence: float,
+    timestamp_ms: int,
+    speed_mps: float,
+) -> dict:
+    received_ms = int(time.time() * 1000)
     return {
         "id": "own:B",
         "class": "vehicle",
@@ -278,13 +300,13 @@ def r3_vehicle_b(distance_m: float, lateral_m: float, confidence: float, timesta
             "confidence": confidence,
         },
         "distance": round(distance_m, 3),
-        "speed": 0.0,
+        "speed": round(speed_mps, 3),
         "confidence": confidence,
-        "state": "tentative",
+        "state": "not_tracked",
         "timestamps": {
             "measured": timestamp_ms,
-            "received": timestamp_ms,
-            "lastUpdated": timestamp_ms,
+            "received": received_ms,
+            "lastUpdated": received_ms,
         },
     }
 

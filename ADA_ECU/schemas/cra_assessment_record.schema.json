@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "cra_assessment_record.schema.json",
+  "title": "ADA CRA assessment record",
+  "type": "object",
+  "required": ["timestampMs", "plugin", "trackId", "distance", "riskState", "rationale"],
+  "properties": {
+    "timestampMs": { "type": "integer" },
+    "plugin": { "const": "nlos_obstruction" },
+    "trackId": { "type": "string" },
+    "distance": { "type": "number" },
+    "riskState": { "enum": ["low", "medium", "high"] },
+    "rationale": { "type": "string" }
+  }
+}

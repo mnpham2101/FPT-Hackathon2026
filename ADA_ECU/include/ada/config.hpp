@@ -16,6 +16,13 @@ struct AdaConfig {
     std::int64_t r2_receive_timeout_ms = 200;
     std::string ivi_host = "127.0.0.1";
     int ivi_port = 46004;
+    bool detector_enabled = false;
+    std::string detector_cmd;
+    int detector_restart_max = 0;
+    std::string cra_enabled = "nlos_obstruction";
+    double risk_near_m = 30.0;
+    double risk_critical_m = 15.0;
+    std::int64_t risk_dwell_ms = 300;
 };
 
 AdaConfig load_config(const std::string& path);

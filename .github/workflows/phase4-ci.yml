@@ -1,0 +1,45 @@
+name: phase4-ci
+
+on:
+  push:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fusion-contract-and-evidence:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Configure and build ADA
+        run: cmake -S ADA_ECU -B ADA_ECU/build -DCMAKE_BUILD_TYPE=Release
+      - name: Unit and contract tests
+        run: |
+          cmake --build ADA_ECU/build -j "$(nproc)"
+          ctest --test-dir ADA_ECU/build --output-on-failure
+          python contracts/check_sync.py
+          python -m unittest discover -s ADA_ECU/tools/tests -p 'test_*.py'
+      - name: Produce and validate B+C-to-R4 evidence
+        env:
+          LOG_PATH: ${{ runner.temp }}/phase4-events.jsonl
+        run: |
+          ADA_ECU/build/ada_ecu \
+            --config ADA_ECU/config/ada-ecu.conf \
+            --mock \
+            --own-sensor-sample ADA_ECU/testdata/r3_own_sensor.jsonl
+          python ADA_ECU/tools/check_evt_log.py "$LOG_PATH"
+          python ADA_ECU/tools/event_report.py "$LOG_PATH" > "$RUNNER_TEMP/phase4-report.tsv"
+      - name: Validate capture tooling
+        run: sh -n ADA_ECU/capture.sh ADA_ECU/entrypoint.sh ADA_ECU/tools/extract_pcap.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: phase4-fusion-evidence
+          path: |
+            ${{ runner.temp }}/phase4-events.jsonl
+            ${{ runner.temp }}/phase4-report.tsv

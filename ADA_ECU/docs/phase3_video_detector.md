@@ -11,6 +11,10 @@ Phase 3 replaces the Phase 2 mock own-sensor input with a Python detector subpro
 - Vehicle B selection rejects implausible full-frame boxes, then scores vehicle area weighted by ego-lane center proximity.
 - Distance is estimated from bounding-box width with `VEHICLE_WIDTH_M` and `CAMERA_FOCAL_PX`.
 - Output contract is R3 JSONL with `source = "own_sensor"` and id `own:B`.
+- ADA can own the detector lifecycle with `DETECTOR_ENABLED=true` and consume its stdout while
+  receiving R2 UDP traffic in the same runtime.
+- `measured` is video time, `received`/`lastUpdated` are wall-clock time, and signed speed is
+  computed from consecutive distance estimates. The C++ track store owns tentative/tracked state.
 
 ## Install
 
@@ -97,6 +101,12 @@ The calibrated defaults are `VEHICLE_WIDTH_M=1.8` and
 `CAMERA_FOCAL_PX=2000`. They affect only monocular distance estimation; the
 R13 admission gates remain unchanged.
 
+Local acceptance on Apple M2 (2026-08-03): 200 total frames, 50 sampled frames,
+50 detections (100% coverage), 20.277 effective Hz, distance 31.674 m → 7.249 m,
+and exactly one 30 m gate crossing. The zero-C check examined all 50 emitted
+objects and passed. The `linux/arm64` container also built successfully with all
+14 C++/contract tests passing inside its build stage.
+
 Example ML evidence:
 
 ```json
@@ -106,7 +116,7 @@ Example ML evidence:
 Example emitted R3:
 
 ```json
-{"id":"own:B","class":"vehicle","source":"own_sensor","position":{"x":11.104,"y":1.679,"confidence":0.885},"distance":11.104,"speed":0.0,"confidence":0.885,"state":"tentative","timestamps":{"measured":4000,"received":4000,"lastUpdated":4000}}
+{"id":"own:B","class":"vehicle","source":"own_sensor","position":{"x":11.104,"y":1.679,"confidence":0.885},"distance":11.104,"speed":-1.2,"confidence":0.885,"state":"not_tracked","timestamps":{"measured":4000,"received":1785715000000,"lastUpdated":1785715000000}}
 ```
 
 ## Feed ML R3 Into ADA
@@ -124,6 +134,17 @@ Expected R4 evidence:
 - `trackedObjects` contains V2X-relayed `v2x:1201:7`.
 - `geometry.vehicleB` is populated from ML-derived B.
 - `geometry.vehicleC` is composed from B + V2X C.
+
+For the production-style path, enable the managed subprocess instead of generating an intermediate
+file:
+
+```sh
+DETECTOR_ENABLED=true \
+DETECTOR_CMD="python3 ADA_ECU/tools/video_detector.py --video ADA_ECU/media/ego-b-occluding-c.mp4 --backend yolo-onnx --model ADA_ECU/models/yolo11n.onnx --every-n-frames 4 --confidence 0.20" \
+ADA_ECU/build/ada_ecu --config ADA_ECU/config/ada-ecu.conf --max-r2 1
+```
+
+Send R2 from a second terminal with `tools/mock_v2x_sender.py`, or from V2X ECU on CarSky.
 
 ## Status
 

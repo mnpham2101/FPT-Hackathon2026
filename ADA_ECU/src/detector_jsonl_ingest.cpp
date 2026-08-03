@@ -7,6 +7,28 @@
 
 namespace ada {
 
+bool ingest_own_sensor_jsonl_line(const std::string& line, TrackStore& store, EventLogger& logger) {
+    logger.write("own_sensor_ingest", line);
+    const auto object = tracked_object_from_r3_json(line);
+    if (!object || object->source != Source::OwnSensor) {
+        logger.write("parse_reject", "{\"source\":\"own_sensor\",\"reason\":\"invalid_r3\"}");
+        return false;
+    }
+
+    const auto update = store.upsert(*object);
+    const auto stored = store.get(object->id);
+    logger.write(
+        "track_transition",
+        "{\"id\":\"" + object->id + "\",\"source\":\"" + std::string(to_string(object->source)) +
+            "\",\"previous\":\"" + std::string(to_string(update.previous)) + "\",\"state\":\"" +
+            std::string(to_string(update.current)) + "\",\"distance\":" + std::to_string(object->distance_m) +
+            ",\"changed\":" + (update.changed ? "true" : "false") +
+            ",\"object\":{\"id\":\"" + object->id + "\",\"source\":\"" +
+            std::string(to_string(object->source)) + "\",\"state\":\"" +
+            std::string(to_string(stored ? stored->state : update.current)) + "\"}}");
+    return true;
+}
+
 DetectorIngestResult ingest_own_sensor_jsonl_file(const std::string& path, TrackStore& store, EventLogger& logger) {
     std::ifstream in(path);
     if (!in) {
@@ -20,21 +42,10 @@ DetectorIngestResult ingest_own_sensor_jsonl_file(const std::string& path, Track
             continue;
         }
 
-        logger.write("own_sensor_rx", line);
-        const auto object = tracked_object_from_r3_json(line);
-        if (!object || object->source != Source::OwnSensor) {
+        if (!ingest_own_sensor_jsonl_line(line, store, logger)) {
             ++result.rejected;
-            logger.write("own_sensor_rejected", "{\"reason\":\"invalid_r3_own_sensor\"}");
             continue;
         }
-
-        const auto update = store.upsert(*object);
-        logger.write(
-            "track_transition",
-            "{\"id\":\"" + object->id + "\",\"source\":\"" + std::string(to_string(object->source)) +
-                "\",\"state\":\"" + std::string(to_string(update.current)) + "\",\"distance\":" +
-                std::to_string(object->distance_m) + ",\"position\":{\"x\":" + std::to_string(object->position.x_m) +
-                ",\"y\":" + std::to_string(object->position.y_m) + "}}");
         ++result.accepted;
     }
 

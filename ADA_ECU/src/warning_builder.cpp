@@ -23,10 +23,6 @@ std::string tracked_object_json(const TrackedObject& object) {
     return out.str();
 }
 
-const char* r4_risk_state(RiskState state) {
-    return state == RiskState::Warning ? "high" : "low";
-}
-
 }  // namespace
 
 std::string build_r4_warning_json(const RiskEvent& event, const TrackStore& store) {
@@ -41,7 +37,7 @@ std::string build_r4_warning_json(const RiskEvent& event, const TrackStore& stor
     out << "{\"schemaVersion\":1,"
         << "\"type\":\"warning\","
         << "\"warningType\":\"nlos_obstruction\","
-        << "\"riskState\":\"" << r4_risk_state(event.state) << "\","
+        << "\"riskState\":\"" << to_string(event.state) << "\","
         << "\"object\":" << tracked_object_json(event.object) << ","
         << "\"trackedObjects\":[";
     if (own_b) {

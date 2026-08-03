@@ -8,32 +8,41 @@
 namespace ada {
 
 enum class RiskState {
-    Clear,
-    Warning,
+    Low,
+    Medium,
+    High,
 };
 
 const char* to_string(RiskState state);
 
 struct RiskEvent {
-    RiskState state = RiskState::Clear;
+    RiskState state = RiskState::Low;
     TrackedObject object;
+    double distance_m = 0.0;
+    std::string rationale;
 };
 
 class CollisionRiskAssessor {
 public:
     virtual ~CollisionRiskAssessor() = default;
-    virtual std::optional<RiskEvent> assess(const TrackStore& store) = 0;
+    virtual std::optional<RiskEvent> assess(const TrackStore& store, std::int64_t now_ms) = 0;
 };
 
 class NlosRiskAssessor final : public CollisionRiskAssessor {
 public:
-    explicit NlosRiskAssessor(double risk_distance_m);
+    NlosRiskAssessor(double near_m, double critical_m, std::int64_t dwell_ms);
 
-    std::optional<RiskEvent> assess(const TrackStore& store) override;
+    std::optional<RiskEvent> assess(const TrackStore& store, std::int64_t now_ms) override;
 
 private:
-    double risk_distance_m_;
-    RiskState last_state_ = RiskState::Clear;
+    RiskState classify(const std::optional<TrackedObject>& relayed) const;
+
+    double near_m_;
+    double critical_m_;
+    std::int64_t dwell_ms_;
+    RiskState last_state_ = RiskState::Low;
+    RiskState pending_state_ = RiskState::Low;
+    std::int64_t pending_since_ms_ = 0;
     std::optional<TrackedObject> last_relayed_object_;
 };
 

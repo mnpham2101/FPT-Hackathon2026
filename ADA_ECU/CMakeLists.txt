@@ -19,14 +19,17 @@ if(NOT nlohmann_json_FOUND)
 endif()
 
 enable_testing()
+find_package(Threads REQUIRED)
 
 add_library(ada_core
   src/config.cpp
   src/detector_jsonl_ingest.cpp
+  src/detector_process.cpp
   src/event_logger.cpp
   src/r2_mapper.cpp
   src/r3_mapper.cpp
   src/risk_assessor.cpp
+  src/risk_registry.cpp
   src/track_store.cpp
   src/udp_r2_receiver.cpp
   src/udp_r4_sender.cpp
@@ -34,7 +37,7 @@ add_library(ada_core
   src/warning_builder.cpp
 )
 target_include_directories(ada_core PUBLIC include)
-target_link_libraries(ada_core PUBLIC nlohmann_json::nlohmann_json)
+target_link_libraries(ada_core PUBLIC nlohmann_json::nlohmann_json Threads::Threads)
 
 add_executable(ada_ecu src/main.cpp)
 target_link_libraries(ada_ecu PRIVATE ada_core)

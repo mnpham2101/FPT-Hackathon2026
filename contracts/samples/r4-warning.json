@@ -14,6 +14,30 @@
     "state": "tracked",
     "timestamps": { "measured": 1789000000073, "received": 1789000000123, "lastUpdated": 1789000000123 }
   },
+  "trackedObjects": [
+    {
+      "id": "own:B",
+      "class": "vehicle",
+      "source": "own_sensor",
+      "position": { "x": 30.0, "y": 0.5 },
+      "distance": 30.0,
+      "speed": 15.0,
+      "confidence": 0.92,
+      "state": "tracked",
+      "timestamps": { "measured": 1789000000050, "received": 1789000000100, "lastUpdated": 1789000000100 }
+    },
+    {
+      "id": "trk-c-001",
+      "class": "vehicle",
+      "source": "v2x_relayed",
+      "position": { "x": 55.0, "y": 1.7 },
+      "distance": 55.03,
+      "speed": 15.2,
+      "confidence": 0.95,
+      "state": "tracked",
+      "timestamps": { "measured": 1789000000073, "received": 1789000000123, "lastUpdated": 1789000000123 }
+    }
+  ],
   "geometry": {
     "ego": { "x": 0.0, "y": 0.0 },
     "vehicleB": { "x": 30.0, "y": 0.5 },

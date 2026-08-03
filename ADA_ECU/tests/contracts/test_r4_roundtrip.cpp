@@ -42,6 +42,9 @@ TEST(R4WarningRoundTrip, FieldSpotChecks) {
   EXPECT_EQ(warning.warningType, "nlos_obstruction");  // the M1 registry key
   EXPECT_EQ(warning.object.source, Source::v2x_relayed);
   EXPECT_EQ(warning.object.id, "trk-c-001");
+  ASSERT_TRUE(warning.trackedObjects.has_value());
+  ASSERT_EQ(warning.trackedObjects->size(), 2U);
+  EXPECT_EQ(warning.trackedObjects->front().id, "own:B");
   EXPECT_TRUE(warning.geometry.vehicleC.has_value());
 }
 

@@ -22,6 +22,7 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         ca-certificates \
         libgomp1 \
+        tcpdump \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -35,9 +36,12 @@ COPY --from=build /src/testdata /app/testdata
 COPY tools /app/detector/tools
 COPY media /app/media
 COPY models/yolo11n.onnx /app/models/yolo11n.onnx
+COPY capture.sh entrypoint.sh /app/
+
+RUN chmod +x /app/capture.sh /app/entrypoint.sh
 
 ENV MODEL_PATH=/app/models/yolo11n.onnx \
     VIDEO_PATH=/app/media/ego-b-occluding-c.mp4
 
-ENTRYPOINT ["/app/ada_ecu"]
+ENTRYPOINT ["/app/entrypoint.sh"]
 CMD ["--config", "/app/config/ada-ecu.conf"]

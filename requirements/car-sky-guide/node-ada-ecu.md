@@ -17,12 +17,13 @@
 
 C++17 core (store, CRA, emission, logging) + Python 3.11 detector subprocess; YOLO11n (AGPL-3.0) on ONNX Runtime CPU; OpenCV video decode; the two processes join only through argv + exit codes + R3 JSONL over stdout (report §3(d)/(g)).
 
-## Build & push the image
+## Build & push the ARM64 image
 
 ```
-docker login registry.carsky.io -u <your_carsky_username>
-docker tag ada-ecu:latest registry.carsky.io/m1-ada-ecu:latest
-docker push registry.carsky.io/m1-ada-ecu:latest
+docker buildx build --platform linux/arm64 --provenance=false --sbom=false \
+  -t registry.hackathon-2.carsky.io/m1-ada-ecu:<commit> --load ADA_ECU
+docker login registry.hackathon-2.carsky.io -u <your_carsky_username>
+docker push registry.hackathon-2.carsky.io/m1-ada-ecu:<commit>
 ```
 
 The provided video clip(s) ship inside the image (`COPY` at build time) — no live video pin is used in M1 (per report §1, live camera bring-up is out of scope).
@@ -33,11 +34,18 @@ The provided video clip(s) ship inside the image (`COPY` at build time) — no l
 {
   "container": {
     "image": "registry.carsky.io/m1-ada-ecu:latest",
-    "command": ["./ada_ecu"],
+    "command": ["--config", "/app/config/ada-ecu.conf"],
     "env": {
       "V2X_LISTEN_PORT": "47200",
-      "IVI_ECU_HOST": "10.99.0.13",
-      "IVI_ECU_PORT": "47300",
+      "IVI_HOST": "10.99.0.13",
+      "IVI_PORT": "47300",
+      "DETECTOR_ENABLED": "true",
+      "DETECTOR_CMD": "python3 /app/detector/tools/video_detector.py --video /app/media/ego-b-occluding-c.mp4 --backend yolo-onnx --model /app/models/yolo11n.onnx --every-n-frames 4 --confidence 0.20",
+      "CRA_ENABLED": "nlos_obstruction",
+      "RISK_NEAR_M": "30",
+      "RISK_CRITICAL_M": "15",
+      "RISK_DWELL_MS": "300",
+      "ENABLE_PCAP": "true",
       "GATE_ENTER_M": "30",
       "GATE_EXIT_M": "35"
     }
@@ -45,7 +53,7 @@ The provided video clip(s) ship inside the image (`COPY` at build time) — no l
 }
 ```
 
-`V2X_LISTEN_PORT` receives R2 JSON from the V2X ECU; `IVI_ECU_HOST`/`IVI_ECU_PORT` target the IVI ECU's static address for R4 emission. `GATE_ENTER_M`/`GATE_EXIT_M` are the R13 admission-gate constants — externalized configuration, never literals in code (CLAUDE.md governing principle 5; [milestone1.md](../../plans/milestone1.md) §4).
+`V2X_LISTEN_PORT` receives R2 JSON from the V2X ECU; `IVI_HOST`/`IVI_PORT` target the IVI ECU's static address for R4 emission. `GATE_ENTER_M`/`GATE_EXIT_M` are the R13 admission-gate constants — externalized configuration, never literals in code (CLAUDE.md governing principle 5; [milestone1.md](../../plans/milestone1.md) §4).
 
 ## Pins
 
@@ -81,3 +89,11 @@ This pin's edge targets the Ethernet Bridge node's single `ETHERNET`/`INPUT` pin
 - The NLOS plugin registers through the CRA interface (R14).
 - At least one R4 warning event per scenario run, carrying risk state and composed geometry, observed at the IVI ECU (R15).
 - JSONL event logs reconstruct a full run offline (R18).
+
+After one scenario, save the ADA event log and the rotating capture directory from the container.
+Validate the event chain with `python3 ADA_ECU/tools/check_evt_log.py <event-log>`. To transport a
+single capture through text-only CarSky logs, run `/app/capture.sh --export-one <capture.pcap>` in
+the node, save the emitted `[CAP]` line locally, then run
+`ADA_ECU/tools/extract_pcap.sh <capture-line.txt> <output.pcap>`. The script checks the SHA-256
+before accepting the file. In Wireshark, filter `udp.port == 47300` and inspect the R4 payload for
+tracked `own:B` and `v2x:1201:7` objects.
