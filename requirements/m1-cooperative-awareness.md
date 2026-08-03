@@ -380,6 +380,12 @@ Awareness state (optional — R15):
 **R17 — Warning view: God view of the 3 vehicles.** *(analysed)*
 
 - **Definition:** implement the warning view — a God view of the 3 vehicles (ego, B, and ghost C rendered from `v2x_relayed` data), drawn from R4 messages only. **The 2D drawing is the M1 deliverable; the 3D drawing is optional**, both behind one view seam.
+- **Visual target:** the screen reads like a Tesla-style driving visualisation — a dark canvas and a lane-marked road carrying the three vehicles as car-shaped silhouettes in one lane, ego nearest the viewer. The camera is **slightly inclined rather than strictly overhead**, so vehicles show a shallow rear face and the road converges toward the top. Ego and B are drawn solid; ghost C is a dashed, translucent reconstruction standing on a pulsing ground glow **coloured by the current R14 risk state** (low / medium / high) — that glow and the dashed outline are what distinguish a relayed vehicle from a directly sensed one. Nothing else is drawn: no legend, no distance labels, no text overlay, no banner — the scene alone is the warning. The image below fixes that visual language and the elements to draw, not pixel geometry, fonts, or exact placement.
+
+![The R17 warning view — ego A, occluder B, and ghost C ahead of B](ivi-god-view-scene.svg)
+
+- **Annotated variant** — the same scene with the vehicles, the A→B and A→C distances, a `[V2X]` provenance badge and the zone B occludes called out. An explanatory figure for describing the demo; **not** what the IVI renders: [ivi-god-view-warning-screen.svg](ivi-god-view-warning-screen.svg).
+
 - **Dependency:** R4, R16.
 - **Acceptance:** the warning view shows the 3 vehicles with ghost C sourced only from `v2x_relayed` data; the 2D drawing is delivered. The optional 3D drawing, if built, renders the same scene through the view seam.
 - **Tech stack:** Compose Canvas (2D); SceneView/Filament (3D, optional).
