@@ -41,7 +41,7 @@ The boundary — this carves out test equipment, it does not weaken the product-
 - **These are not R5 nodes.** They may deploy as Container nodes, but they stand in for nodes rather than being them: no row in the node table above, no requirement number of their own, and no place in the full blueprint.
 - **The Scenario Player stays a node folder.** Being test equipment is not what puts a folder here — *replacing a node* is. The bench is a node of the R5 blueprint with its own address and pin (R11), so it keeps [Scenario_Player/](../../Scenario_Player/).
 - **Same build rules.** A test-equipment folder that builds an image — a `tools/<name>/`, or the in-folder mock above — is self-contained under § Build rules exactly as a node folder is: own `Dockerfile` (that section fixes where it may sit), own dependency manifest, own tests, no cross-folder source imports, no hardcoded tunables (role, peer addresses, ports and cadences come from env). A host-side tool that builds no image still obeys everything but the `Dockerfile` line.
-- **Mirrored contracts are copied, never forked.** A tool that speaks R1–R4 takes its field list from the owning node's `contracts/` copy; a drifted copy makes the tool pass messages the real consumer rejects.
+- **Take contract fields from the node's `contracts/` file, never a private copy.** A tool whose field list has drifted accepts messages the real node would reject — the test passes and the system is still broken.
 
 ## Per-folder `doc/`
 
