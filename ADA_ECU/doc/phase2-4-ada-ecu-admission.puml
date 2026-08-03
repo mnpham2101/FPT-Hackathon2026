@@ -1,7 +1,8 @@
 @startuml phase2-4-ada-ecu-admission
 ' R13 track admission state machine - PlantUML form of
 ' requirements/vehicleC_track_admission_state_machine.png, made unambiguous for implementation.
-' One machine, both sources (own_sensor and v2x_relayed); see phase2-4-ada-ecu-hld.md D3.
+' One machine, both sources (own_sensor and v2x_relayed); see ada-ecu-design-decisions.md D3,
+' cited from ada-ecu-hld.md section 6.
 
 title R13 admission state machine - one machine, both perception sources
 
@@ -28,9 +29,12 @@ note right of NT
       own_sensor  -> one detector JSONL line (distance)
   * GATE_ENTER_M (30 m) admits and holds while tentative;
     GATE_EXIT_M (35 m) holds only once tracked - the hysteresis band.
-  * TRACK_TIMEOUT_MS is wall-clock, not a message count:
+  * TRACK_TIMEOUT_MS is a timeout, not a message count:
     the two sources run at independently configured cadences,
     and "messages stopped" cannot be counted from messages that never arrive.
+    It is measured on CLOCK_MONOTONIC, against the per-track stamp the store
+    keeps beside `lastUpdated` (design decision D10), so a host clock step
+    cannot expire every track at once.
   * The store is the sole writer of `state`; the `state` field on
     incoming detector / R2-derived objects is ignored.
   * Every edge writes one track_transition event to the R18 [EVT] stream.

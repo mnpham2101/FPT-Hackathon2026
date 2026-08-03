@@ -1,5 +1,5 @@
 @startuml phase5-ivi-components
-' Phase 5 module map for IVI_ECU (R4, R16, R17) — see phase5-ivi-hld.md §3/§4.
+' Phase 5 module map for IVI_ECU (R4, R16, R17) — see ivi-ecu-hld.md §3/§4.
 ' Arrows read "depends on". The graph is acyclic and one-way: nothing below
 ' :app knows an Android type, and nothing knows the front end.
 

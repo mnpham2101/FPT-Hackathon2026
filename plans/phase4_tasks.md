@@ -2,7 +2,7 @@
 
 > **Authority & context:**
 > - **Phase content:** [milestone1.md § Phase 4](milestone1.md#phase-4--obscured-object-fusion-relayed-c--risk--warning-r13r15--runs--with-phase-3) — its acceptance checkboxes are the phase output, plus the output-evidence box this plan sharpens (§ Phase 4 output acceptance).
-> - **Design:** [phase2-4-ada-ecu-hld.md](../ADA_ECU/doc/phase2-4-ada-ecu-hld.md) — **D4** (CRA interface, registry, database), **D5** (risk vocabulary, thresholds, edge-triggered emission, composition), **D7** (output stage), **D8** (evidence stream), **D9** (capture on this node); §4 folder map; §6 env table.
+> - **Design:** [ada-ecu-hld.md](../ADA_ECU/doc/ada-ecu-hld.md) — §4 folder structure, §6 env tables; and in the [decision record](../ADA_ECU/doc/ada-ecu-design-decisions.md) **D4** (CRA interface, registry, database), **D5** (risk vocabulary, thresholds, edge-triggered emission, composition), **D7** (output stage), **D8** (evidence stream), **D9** (capture on this node).
 > - **Requirements:** [m1-cooperative-awareness.md §2](../requirements/m1-cooperative-awareness.md) R2, R4, R5, R6, R13, R14, R15, R18 — referenced by number, never restated.
 > - **Deployment & verification procedure (groups 4.9–4.11):** [deploy-ada-ecu-walkthrough.md](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md) — the stage-1 artifact those groups are decomposed from, per [walkthrough-driven-delivery.md](../.claude/rules/walkthrough-driven-delivery.md). Its [§7 work division](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#7-work-division-between-ai-and-human) fixes each subtask's executor and its [§8 expected outputs and acceptance](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#8-expected-outputs-and-acceptance) fixes each check's criteria. **Cite, never restate** — commands stay in the walkthrough.
 > - **Capture (port, do not reinvent):** [traffic-capture-wireshark.md](../requirements/car-sky-guide/traffic-capture-wireshark.md) is the host-side procedure; `V2X_ECU/capture.sh` and `V2X_ECU/tools/extract_pcap.sh` on `main` are the working pair this phase's ADA copies are ported from, and their `[PCAP-BEGIN]` marker format is frozen.
@@ -132,7 +132,7 @@ Run them in that order. Rung 2 is where this phase's acceptance boxes are closed
 
 ## Task Group 4.1 — Scene composition and the NLOS plugin (serves R15, R14)
 
-> The business-logic half. `scene_composer` is geometry, `chained_collision` is rules; neither opens a socket, reads env, or formats a wire message ([HLD §8](../ADA_ECU/doc/phase2-4-ada-ecu-hld.md#8-mvc-mapping)).
+> The business-logic half. `scene_composer` is geometry, `chained_collision` is rules; neither opens a socket, reads env, or formats a wire message ([HLD §8](../ADA_ECU/doc/ada-ecu-hld.md#mvc-separation)).
 
 ### [ ] `15.4.1.1` — Scene composer `src/fusion/scene_composer.{hpp,cpp}` *(agent)*
 
@@ -158,7 +158,7 @@ Run them in that order. Rung 2 is where this phase's acceptance boxes are closed
 **Scope:**
 
 - Implements `ICollisionRiskAssessment`: `name() == "nlos_obstruction"`; `assess(RiskContext&)` reads the store and the `AssessmentDb`, returns a `RiskFinding`. **The plugin never emits** — the output stage decides transport.
-- Band table exactly [D5](../ADA_ECU/doc/phase2-4-ada-ecu-hld.md#d5--risk-vocabulary-and-edge-triggered-emission): `high` when C is `tracked` and (`d_AC ≤ RISK_CRITICAL_M` **or** `ttc ≤ RISK_TTC_CRITICAL_S`); `medium` when C is `tracked`, `d_AC ≤ RISK_NEAR_M`, and not `high`; `low` otherwise — including no `tracked` C at all.
+- Band table exactly [D5](../ADA_ECU/doc/ada-ecu-design-decisions.md#d5--risk-vocabulary-and-edge-triggered-emission): `high` when C is `tracked` and (`d_AC ≤ RISK_CRITICAL_M` **or** `ttc ≤ RISK_TTC_CRITICAL_S`); `medium` when C is `tracked`, `d_AC ≤ RISK_NEAR_M`, and not `high`; `low` otherwise — including no `tracked` C at all.
 - Derived values: `closingRateMps = -(d_AC(t) − d_AC(t−Δ)) / Δ` from the record's `previousDistanceM`/`lastUpdatedMs`; `ttcS = d_AC / closingRate` when the rate is positive, otherwise **null**.
 - **`b_unknown` path:** with no own-sensor B and no `lastKnownB`, `d_AC` does not exist — return `low` with rationale `b_unknown` and log `assess_skipped_b_unknown`. Consequence to preserve: no `medium`/`high` is ever entered without a known B, so a clearing event can always fill the required `geometry.vehicleB` from `lastKnownB`.
 - DB writes on every assessment: `riskState`, `distanceM`/`previousDistanceM`, `closingRateMps`, `ttcS`, `lastSnapshot` (C's R3 snapshot, carried past its erasure), `lastKnownB`, `lastUpdatedMs`, `rationale`.
@@ -619,7 +619,7 @@ The V2X ECU node at `.11` and the ADA node at `.12` are **not touched here** —
 >
 > **The three proofs do not substitute for one another:** the first two prove what happened *inside* the node and the third proves it *left* the node. A run with checks 1 and 2 green and check 3 silent is a routing failure, not a partial pass.
 >
-> **The event names are the node's design, not an observed fact yet** — [§8.1 item 4](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#81-confirm-before-relying-on-these). `r2_ingest`, `own_sensor_ingest`, `track_transition`, `parse_reject`, `assessment`, `risk_transition` and `r4_tx` are literal strings from [HLD D8](../ADA_ECU/doc/phase2-4-ada-ecu-hld.md#d8--r18-the-ada-half-of-the-evidence-stream); a check that finds none of them is more likely reading a node that emits different names than a node that did nothing. Compare against the log before concluding a failure.
+> **The event names are the node's design, not an observed fact yet** — [§8.1 item 4](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#81-confirm-before-relying-on-these). `r2_ingest`, `own_sensor_ingest`, `track_transition`, `parse_reject`, `assessment`, `risk_transition` and `r4_tx` are literal strings from [HLD D8](../ADA_ECU/doc/ada-ecu-design-decisions.md#d8--r18-the-ada-half-of-the-evidence-stream); a check that finds none of them is more likely reading a node that emits different names than a node that did nothing. Compare against the log before concluding a failure.
 
 ### [ ] `18.4.11.1` — Save the three node logs and the run's threshold values *(car-sky)*
 
@@ -836,4 +836,4 @@ Each row of [deploy-ada-ecu-walkthrough.md §8](../requirements/car-sky-guide/de
 
 ---
 
-*Phase 4 = 10 task groups, 37 subtasks — 20 *agent* (1 optional), 9 *car-sky*, 8 *Human*. Nothing started. Retired IDs, never reused: `5.4.6.1`, `5.4.6.2`, `13.4.6.3`, `18.4.6.4`, `4.4.7.1`–`4.4.7.4`, `20.4.8.1`, `21.4.8.2`. Decomposed from [phase2-4-ada-ecu-hld.md](../ADA_ECU/doc/phase2-4-ada-ecu-hld.md) D4/D5/D7/D8/D9, [deploy-ada-ecu-walkthrough.md](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md) per [walkthrough-driven-delivery.md](../.claude/rules/walkthrough-driven-delivery.md) stage 2, and [milestone1.md § Phase 4](milestone1.md#phase-4--obscured-object-fusion-relayed-c--risk--warning-r13r15--runs--with-phase-3).*
+*Phase 4 = 10 task groups, 37 subtasks — 20 *agent* (1 optional), 9 *car-sky*, 8 *Human*. Nothing started. Retired IDs, never reused: `5.4.6.1`, `5.4.6.2`, `13.4.6.3`, `18.4.6.4`, `4.4.7.1`–`4.4.7.4`, `20.4.8.1`, `21.4.8.2`. Decomposed from [ada-ecu-hld.md](../ADA_ECU/doc/ada-ecu-hld.md) D4/D5/D7/D8/D9, [deploy-ada-ecu-walkthrough.md](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md) per [walkthrough-driven-delivery.md](../.claude/rules/walkthrough-driven-delivery.md) stage 2, and [milestone1.md § Phase 4](milestone1.md#phase-4--obscured-object-fusion-relayed-c--risk--warning-r13r15--runs--with-phase-3).*

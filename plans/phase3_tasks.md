@@ -2,7 +2,7 @@
 
 > **Authority & context:**
 > - **Phase content:** [milestone1.md § Phase 3](milestone1.md#phase-3--object-detection-from-video-r12--runs--with-phase-4) — its four acceptance checkboxes are the phase output.
-> - **Design:** [phase2-4-ada-ecu-hld.md](../ADA_ECU/doc/phase2-4-ada-ecu-hld.md) — **D6** is this phase's design (frame-source seam, inference, distance, association, emission, zero-C evidence, model provenance); §4 folder map for every path; §6 env table for every constant.
+> - **Design:** [ada-ecu-hld.md](../ADA_ECU/doc/ada-ecu-hld.md) — §4 folder structure for every path, §6 env tables for every constant; **[D6](../ADA_ECU/doc/ada-ecu-design-decisions.md#d6--r12-detector-frame-source-seam-inference-distance-zero-c-evidence)** is this phase's design (frame-source seam, inference, distance, association, emission, zero-C evidence, model provenance) and **[D10](../ADA_ECU/doc/ada-ecu-design-decisions.md#d10--clock-domains-and-stimulus-paced-against-clock_monotonic)** adds the detector's real-time pacing.
 > - **Video source:** [video-source-for-r12.md](../ADA_ECU/doc/research_notes/video-source-for-r12.md) §3 the clip spec and its KPIs; and **the clip's own record**, [ADA_ECU/media/ego-b-occluding-c.source.md](../ADA_ECU/media/ego-b-occluding-c.source.md) — provenance, licence, encode command, content verdict, and the accepted duration deviation.
 > - **Requirements:** [m1-cooperative-awareness.md §2](../requirements/m1-cooperative-awareness.md) R3, R5, R12, R18 and §3(g) — referenced by number, never restated.
 > - **Run timing:** [m1-run-timing-and-event-triggering.md](../requirements/m1-run-timing-and-event-triggering.md) — §6.2's detector timestamp ruling (`12.3.2.6`) and §3.3's warm-up budget (`12.3.5.2`).
@@ -27,7 +27,7 @@
 
 - [ ] Detection log over the provided clip with per-frame objects and distance estimates (R12) — closed by `12.3.5.2`.
 - [ ] Entries enter the store via the same R3 interface as relayed entries, `source = own_sensor` — mock no longer required — closed by `3.3.5.3`.
-- [ ] **Zero detections labeled C** — closed by `12.3.5.1` (`tools/check_zero_c.py`) + `12.3.5.4` (the CI lane that makes it repeatable) + the structural argument in [HLD D6](../ADA_ECU/doc/phase2-4-ada-ecu-hld.md#d6--r12-detector-frame-source-seam-inference-distance-zero-c-evidence) + the clip's own content verdict.
+- [ ] **Zero detections labeled C** — closed by `12.3.5.1` (`tools/check_zero_c.py`) + `12.3.5.4` (the CI lane that makes it repeatable) + the structural argument in [HLD D6](../ADA_ECU/doc/ada-ecu-design-decisions.md#d6--r12-detector-frame-source-seam-inference-distance-zero-c-evidence) + the clip's own content verdict.
 - [ ] Runs CPU-only on the provided clip; offline pace acceptable — closed by `12.3.5.2` (measured effective inference rate ≥ 5 Hz, i.e. ≤ 200 ms per sampled frame) on the dev host, and `5.3.6.2` (the same measurement on the deployed node — [research note KPI 3](../ADA_ECU/doc/research_notes/video-source-for-r12.md#measurable-checks-kpis)).
 
 **The clip is 10 s and that is by design.** B is the lead vehicle only across a 10 s window of the source; a longer run is obtained by **looping** (`DETECTOR_LOOP=true`, default), each loop reading as a fresh approach cycle with B re-appearing at ~60 m and closing again. Reasoning and the source's own geometry: [sidecar § The remaining deviation](../ADA_ECU/media/ego-b-occluding-c.source.md). Every duration-sensitive check in this phase and in Phase 4 is worded against a **looped** run, not a single pass.
@@ -85,7 +85,7 @@ New lanes go in a new `.github/workflows/phase3-ci.yml` — *a lane belongs to t
 
 ## Task Group 3.2 — Detector modules (serves R12; HLD D6)
 
-> The Python subprocess. Paths from [HLD §4](../ADA_ECU/doc/phase2-4-ada-ecu-hld.md#4-folder-structure-map--file-location-designations); every module is importable and unit-testable on its own, and none of them opens a socket or reads env directly.
+> The Python subprocess. Paths from [HLD §4](../ADA_ECU/doc/ada-ecu-hld.md#4-folder-structure); every module is importable and unit-testable on its own, and none of them opens a socket or reads env directly.
 
 ### [ ] `12.3.2.1` — `detector/config.py` + `detector/requirements.txt` *(agent)*
 
@@ -93,7 +93,7 @@ New lanes go in a new `.github/workflows/phase3-ci.yml` — *a lane belongs to t
 
 **Scope:**
 
-- `detector/config.py`: a frozen dataclass loaded from env with the [HLD §6](../ADA_ECU/doc/phase2-4-ada-ecu-hld.md#6-configuration--no-hardcoded-tunables) detector half and defaults — `VIDEO_CLIP_PATH` (`/app/media/ego-b-occluding-c.mp4`) · `DETECTOR_FRAME_STRIDE` (4) · `DETECTOR_LOOP` (true) · `MODEL_PATH` (`/app/models/yolo11n.onnx`) · `CONF_THRESHOLD` (0.35) · `IOU_THRESHOLD` (0.45) · `TRACK_IOU_MIN` (0.3) · `VEHICLE_WIDTH_M` (1.8) · `CAMERA_HFOV_DEG` (60). Injectable env mapping so tests never mutate `os.environ`. Validation: positive stride, thresholds in [0, 1], positive width, HFOV in (0, 180) — invalid value raises `ValueError` naming the variable, and `main.py` exits non-zero on it.
+- `detector/config.py`: a frozen dataclass loaded from env with the [HLD §6](../ADA_ECU/doc/ada-ecu-hld.md#6-internal-components) detector half and defaults — `VIDEO_CLIP_PATH` (`/app/media/ego-b-occluding-c.mp4`) · `DETECTOR_FRAME_STRIDE` (4) · `DETECTOR_LOOP` (true) · `MODEL_PATH` (`/app/models/yolo11n.onnx`) · `CONF_THRESHOLD` (0.35) · `IOU_THRESHOLD` (0.45) · `TRACK_IOU_MIN` (0.3) · `VEHICLE_WIDTH_M` (1.8) · `CAMERA_HFOV_DEG` (60). Injectable env mapping so tests never mutate `os.environ`. Validation: positive stride, thresholds in [0, 1], positive width, HFOV in (0, 180) — invalid value raises `ValueError` naming the variable, and `main.py` exits non-zero on it.
 - `detector/requirements.txt`: `onnxruntime`, `opencv-python-headless`, `numpy`, each **pinned** to the versions proven by `12.3.1.1`. `requirements-dev.txt` (Phase 0) gains a leading `-r requirements.txt` so a dev install carries the runtime set.
 - **Do not add real-time-pacing keys.** `DETECTOR_REALTIME_PACING`, `DETECTOR_CLIP_FPS` and `DETECTOR_START_DELAY_S` belong to R20, which is unratified and unplanned (§ Open items item 6). `DETECTOR_FRAME_STRIDE` is a decimation stride, **not** a rate, and "5 Hz effective" is an assumed CPU throughput, not an enforced one (report §2(d)). Design the loader so those three keys would be a table addition rather than a restructure — and add none of them.
 - Test `detector/tests/test_config.py`: defaults when unset; each override; each rejection case.
@@ -215,14 +215,14 @@ New lanes go in a new `.github/workflows/phase3-ci.yml` — *a lane belongs to t
 
 ### [ ] `12.3.4.3` — Retune the distance constants against the clip *(agent)*
 
-**Objective:** close [HLD §11 item 3](../ADA_ECU/doc/phase2-4-ada-ecu-hld.md#11-open-items-and-flags) — `VEHICLE_WIDTH_M` and `CAMERA_HFOV_DEG` are proposals with no calibration target until the detector runs on the real clip.
+**Objective:** close [HLD decision D6](../ADA_ECU/doc/ada-ecu-design-decisions.md#d6--r12-detector-frame-source-seam-inference-distance-zero-c-evidence) — `VEHICLE_WIDTH_M` and `CAMERA_HFOV_DEG` are proposals with no calibration target until the detector runs on the real clip.
 
 **Scope:**
 
 - Run the detector over `ADA_ECU/media/ego-b-occluding-c.mp4`; extract the estimated range series for B; compare against the clip's recorded geometry — [the sidecar](../ADA_ECU/media/ego-b-occluding-c.source.md) states B is a white coach closing from roughly 60 m to roughly 10 m across the 10 s, present in every sampled frame.
 - **B is the largest, most central, closest track** — not the only one. Adjacent-lane and oncoming vehicles are expected in the series; select B by that criterion and say in the record how it was selected.
 - Required property is **monotonic, consistently-biased range**, not absolute accuracy: the approach must yield a decreasing series that crosses `GATE_ENTER_M` (30 m) exactly once per loop.
-- If the series disagrees, retune **only** `VEHICLE_WIDTH_M` / `CAMERA_HFOV_DEG` — the new values are recorded in [HLD §6](../ADA_ECU/doc/phase2-4-ada-ecu-hld.md#6-configuration--no-hardcoded-tunables) as the defaults and in `node-ada-ecu.md`. **Never retune the R13 gate** (D3/D6): the gate is a requirement value, the camera constants are estimates. The coach is wider than the 1.8 m car default, so a systematic under-read of range is the expected first finding.
+- If the series disagrees, retune **only** `VEHICLE_WIDTH_M` / `CAMERA_HFOV_DEG` — the new values are recorded in [HLD §6](../ADA_ECU/doc/ada-ecu-hld.md#6-internal-components) as the defaults and in `node-ada-ecu.md`. **Never retune the R13 gate** (D3/D6): the gate is a requirement value, the camera constants are estimates. The coach is wider than the 1.8 m car default, so a systematic under-read of range is the expected first finding.
 - Record the before/after series summary in `plans/doc/phase3-ada-detector-run.md`.
 
 **Acceptance:** the estimated-range series for B is monotonic through the approach and crosses the gate once per loop; the two constants' final values are committed in the config defaults and the node guide.
@@ -273,7 +273,7 @@ New lanes go in a new `.github/workflows/phase3-ci.yml` — *a lane belongs to t
 
 **Scope:**
 
-- No new module. Change the default `DETECTOR_CMD` path in use from the Phase 2 fixture (`cat …/own_sensor_mock.jsonl`) to `python3 /app/detector/main.py` — already the [HLD §6](../ADA_ECU/doc/phase2-4-ada-ecu-hld.md#6-configuration--no-hardcoded-tunables) default, so this is a verification subtask plus whatever wiring defect it uncovers.
+- No new module. Change the default `DETECTOR_CMD` path in use from the Phase 2 fixture (`cat …/own_sensor_mock.jsonl`) to `python3 /app/detector/main.py` — already the [HLD §6](../ADA_ECU/doc/ada-ecu-hld.md#6-internal-components) default, so this is a verification subtask plus whatever wiring defect it uncovers.
 - Add a sibling arm to `13.2.8.2`'s loopback lane driving `ada_ecu` with the **real** detector over a synthetic frame source, asserting `own_sensor_ingest` events and at least one `track_transition` for an `own:<n>` id — proving the JSONL crosses the process boundary, parses through `r3_parser`, and lands in the store via the same `upsert` as `r2_parser`.
 - The Phase 2 fixture stays committed as a test artifact — it is what `--expect-no-tracks` and the deterministic admission cases run against.
 
@@ -301,7 +301,7 @@ New lanes go in a new `.github/workflows/phase3-ci.yml` — *a lane belongs to t
 
 **Scope:** `ADA_ECU/Dockerfile` — add **exactly two** COPY lines, `COPY models/ /app/models/` and `COPY detector/ /app/detector/`, plus `RUN pip install --no-cache-dir -r /app/detector/requirements.txt`. **`COPY media/` is not this subtask's to write** — `12.3.7.2` owns that line and lands before this one; verify it is present and sits above the two added here, and do not duplicate or reorder it. **Layer order is load-bearing:** `COPY media/` then `COPY models/` — both rarely-changing, so their blobs are pushed once and cached — and `COPY detector/` last, because it changes every commit. `detector/tests/` and `requirements-dev.txt` stay out via `.dockerignore`. Image layout ends as `/app/ada_ecu`, `/app/entrypoint.sh`, `/app/detector/`, `/app/models/yolo11n.onnx`, `/app/media/ego-b-occluding-c.mp4`.
 
-**Acceptance:** `ada-ecu-image` lane green; the lane's in-image run step starts `detector/main.py --synthetic` inside the pulled arm64 image and observes R3 JSONL on stdout — proving the wheels resolved for aarch64 in the real image, which is what [HLD §11 item 6](../ADA_ECU/doc/phase2-4-ada-ecu-hld.md#11-open-items-and-flags) asks for.
+**Acceptance:** `ada-ecu-image` lane green; the lane's in-image run step starts `detector/main.py --synthetic` inside the pulled arm64 image and observes R3 JSONL on stdout — proving the wheels resolved for aarch64 in the real image, which is what [HLD decision D9](../ADA_ECU/doc/ada-ecu-design-decisions.md#d9--deployment-shape) asks for.
 
 **Dependencies:** after `12.3.1.1` + `12.3.2.7` + `12.3.3.1` + `12.3.7.2` (which must have written `COPY media/` first). **Commit:** `[5.3.6.1] feat: add the detector and model to the ADA image`
 
@@ -430,9 +430,9 @@ deployed   5.3.6.2 (after 5.3.6.1 + phase-4 18.4.11.1 - a log read, not a deploy
 
 | # | Item | Owner / closes at |
 |---|---|---|
-| 1 | **`onnxruntime` / `opencv-python-headless` aarch64 wheel availability is unproven** ([HLD §11 item 6](../ADA_ECU/doc/phase2-4-ada-ecu-hld.md#11-open-items-and-flags)). De-risked first by `12.3.1.1`. A red lane escalates — pin an older wheel, change the base image, or accept a QEMU source build with a raised timeout. Not an implementer's call | `12.3.1.1`, then [[project-architecture]] |
+| 1 | **`onnxruntime` / `opencv-python-headless` aarch64 wheel availability is unproven** ([HLD decision D9](../ADA_ECU/doc/ada-ecu-design-decisions.md#d9--deployment-shape)). De-risked first by `12.3.1.1`. A red lane escalates — pin an older wheel, change the base image, or accept a QEMU source build with a raised timeout. Not an implementer's call | `12.3.1.1`, then [[project-architecture]] |
 | 2 | **Planner-designated test/tool paths beyond the HLD's list**: `detector/tests/test_config.py`, `test_inference.py`, `test_main.py`; `ADA_ECU/tools/tests/test_check_zero_c.py`. Required by subtask discipline; HLD-consistent additions, not new design | [[project-architecture]] (ack) |
-| 3 | **Distance accuracy is unvalidated until the detector runs on the clip** ([HLD §11 item 3](../ADA_ECU/doc/phase2-4-ada-ecu-hld.md#11-open-items-and-flags)). `12.3.4.3` is the retune, and it may only move `VEHICLE_WIDTH_M` / `CAMERA_HFOV_DEG`, never `GATE_ENTER_M` / `GATE_EXIT_M`. B is a coach, wider than the 1.8 m car default, so expect a systematic bias to correct | `12.3.4.3` |
+| 3 | **Distance accuracy is unvalidated until the detector runs on the clip** ([HLD decision D6](../ADA_ECU/doc/ada-ecu-design-decisions.md#d6--r12-detector-frame-source-seam-inference-distance-zero-c-evidence)). `12.3.4.3` is the retune, and it may only move `VEHICLE_WIDTH_M` / `CAMERA_HFOV_DEG`, never `GATE_ENTER_M` / `GATE_EXIT_M`. B is a coach, wider than the 1.8 m car default, so expect a systematic bias to correct | `12.3.4.3` |
 | 4 | **Detector warm-up (ONNX load + `VideoCapture` open) is unmeasured** — estimated 2–5 s against the ≈ 6.4 s slack of [§3.3](../requirements/m1-run-timing-and-event-triggering.md), and it is the term that consumes that slack. `12.3.5.2` produces the number on the host; `5.3.6.2` repeats it on the 2-vCPU node, where it will be worse | `12.3.5.2`, then `5.3.6.2` |
 | 5 | **The clip is 10 s, and every long-run behaviour therefore depends on looping.** Accepted, with reasoning in [the sidecar](../ADA_ECU/media/ego-b-occluding-c.source.md). Two consequences no subtask may absorb silently: `FileFrameSource` must keep `frame_index` monotonic across loops (`12.3.2.2`), and the loop-seam stall must not exceed `TRACK_TIMEOUT_MS` or ego's own B track expires between cycles. `12.3.5.2` measures the seam; if it is too long, the finding goes to [[project-architecture]] — it is not fixed by widening the timeout | `12.3.5.2` |
 | 6 | **R20's detector half is not planned and no subtask may add it.** [m1-run-timing-and-event-triggering.md §7](../requirements/m1-run-timing-and-event-triggering.md) proposes real-time pacing (`DETECTOR_REALTIME_PACING`, `DETECTOR_CLIP_FPS`, `DETECTOR_START_DELAY_S`) and §2(d) names the free-running detector the dominant timing error term — but §8(1) schedules R20/R21 **behind** this phase's acceptance, §8(3) makes it mandatory only if the deferred IVI dashcam view is accepted, and **the user has not accepted R20**. The dashcam view stays deferred ([milestone1.md §6](milestone1.md#6-deferred-to-later-milestones)), so no Phase 3 subtask may add clip-serving, an `exposedPorts` entry, or pacing | **user** (accept/reject R20) |
@@ -442,4 +442,4 @@ deployed   5.3.6.2 (after 5.3.6.1 + phase-4 18.4.11.1 - a log read, not a deploy
 
 ---
 
-*Phase 3 = 7 task groups, 21 subtasks — 19 *agent*, 2 *car-sky*, 0 *Human*. One subtask done (`12.3.7.1`); the rest not started. Retired IDs, never reused: `12.3.4.1`, `12.3.4.2`. Decomposed from [phase2-4-ada-ecu-hld.md D6](../ADA_ECU/doc/phase2-4-ada-ecu-hld.md#d6--r12-detector-frame-source-seam-inference-distance-zero-c-evidence), [video-source-for-r12.md](../ADA_ECU/doc/research_notes/video-source-for-r12.md), [the clip sidecar](../ADA_ECU/media/ego-b-occluding-c.source.md) and [milestone1.md § Phase 3](milestone1.md#phase-3--object-detection-from-video-r12--runs--with-phase-4).*
+*Phase 3 = 7 task groups, 21 subtasks — 19 *agent*, 2 *car-sky*, 0 *Human*. One subtask done (`12.3.7.1`); the rest not started. Retired IDs, never reused: `12.3.4.1`, `12.3.4.2`. Decomposed from [ada-ecu-design-decisions.md D6](../ADA_ECU/doc/ada-ecu-design-decisions.md#d6--r12-detector-frame-source-seam-inference-distance-zero-c-evidence), [video-source-for-r12.md](../ADA_ECU/doc/research_notes/video-source-for-r12.md), [the clip sidecar](../ADA_ECU/media/ego-b-occluding-c.source.md) and [milestone1.md § Phase 3](milestone1.md#phase-3--object-detection-from-video-r12--runs--with-phase-4).*
