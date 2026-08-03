@@ -15,7 +15,7 @@
 
 **Objective.** Stand up the ADA ECU skeleton inside `ADA_ECU/`: the C++17 core (config, socket, event log, observers, parsers), the R3 track store, the R13 admission state machine, and the R14 Collision Risk Assessment abstraction with its committed database schema — all driven by mock input (a JSONL fixture through the real detector-reader, mock R2 traffic through the real socket), so the pipeline works before any ML. Also lands the deployable image, the ADA CI lanes, and the R12 clip preflight Phase 3 depends on.
 
-**Input (must exist before start).** All present on `main` today:
+**Input (must exist before start).** All present on `main`:
 
 - The Phase 0 contract layer listed under § Authority above.
 - [phase2-4-ada-ecu-hld.md](../ADA_ECU/doc/phase2-4-ada-ecu-hld.md) and [video-source-for-r12.md](../ADA_ECU/doc/research_notes/video-source-for-r12.md) committed.

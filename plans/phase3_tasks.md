@@ -17,7 +17,7 @@
 
 **Objective.** Replace Phase 2's JSONL fixture with real perception: a YOLO11n ONNX detector reads the committed clip, finds **B — the visible occluder**, estimates its range, and streams R3 JSONL on stdout into the same store through the same interface. Zero entries labelled C, proven rather than asserted.
 
-**Input (must exist before start).** All present on `main` today except the Phase 2 items:
+**Input (must exist before start).** All present on `main` except the Phase 2 items:
 
 - Phase 2 complete: `src/observer/detector_reader` (the `DETECTOR_CMD` + stdout-JSONL contract), `src/parser/r3_parser`, the store, `ada_ecu`, the ADA image and its CI lane, `ADA_ECU/tools/check_clip_spec.py`.
 - Phase 0's frozen `ADA_ECU/detector/contracts/tracked_object.py` binding, `detector/requirements-dev.txt`, and `ADA_ECU/detector/tests/test_r3_roundtrip.py`.

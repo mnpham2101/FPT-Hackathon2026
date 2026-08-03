@@ -26,6 +26,8 @@
 - CarSky access with the baseline blueprint `baseline_phase1` ([carsky-4-node-blueprint.md § The blueprints on CarSky](../requirements/car-sky-guide/carsky-4-node-blueprint.md#8-the-blueprints-on-carsky)), the `AAOS` artifact (`x9oqgIwzTp1m26SWIQqJt` / `xSU_Q7YJZUxxUgDr4Ugcp`, `0.0.1`, `aarch64`), and `registry.hackathon-2.carsky.io/m1-netcheck:latest` already pushed.
 - GitHub secret `CARSKY_ZOT_API_KEY` and the reusable [verify-arm64-image](../.github/actions/verify-arm64-image) action.
 
+**The starting state of `IVI_ECU/` is [HLD §1](../IVI_ECU/doc/phase5-ivi-hld.md)'s table** — what is committed, and what this design adds — with the per-file detail in its §3.1 folder map, where `[C]` marks a committed file and `[R]` one that moves verbatim. **Briefs below cite it; they do not restate it.** A brief names the file it changes and what it must end up doing, and the reader gets the before-picture from one table rather than from a sentence in each subtask.
+
 **Output (phase acceptance = the five milestone boxes):**
 
 - [ ] The HMI runs on the AAOS node with the R16 layout; button/app areas switch what the Display area shows.
@@ -107,13 +109,22 @@ The IVI's UDP port is **`47300`** and its address is **`10.99.0.13`**, frozen by
 
 ### [ ] `4.5.1.2` — Move `:app` onto the catalog and drop Hilt *(agent)*
 
-**Objective:** make `app/build.gradle.kts` resolve every plugin and dependency through the catalog, removing the unused Hilt stack (HLD D7).
+**Objective:** make `app/build.gradle.kts` resolve every plugin and dependency through the catalog, and delete the dependency-injection framework the design does not use (HLD D7).
 
 **Scope:**
 
 - Rewrite `app/build.gradle.kts`'s `plugins { }` and `dependencies { }` blocks to `alias(libs.plugins.…)` / `libs.…` references. Behaviour must not change apart from the removal below.
-- **Remove** `id("com.google.dagger.hilt.android")` from `app/build.gradle.kts` and from `IVI_ECU/build.gradle.kts`, and remove `implementation("com.google.dagger:hilt-android:2.58")` and `ksp("com.google.dagger:hilt-android-compiler:2.58")`. Nothing references Hilt today — there is no `@HiltAndroidApp` class and no `@Inject` site (verify with a repo-wide grep for `dagger` and `Hilt` before committing). D7 replaces it with the hand-written `IviGraph` of `4.5.5.3`.
-- Keep the KSP plugin only if something still uses it; if the grep shows Hilt was its only consumer, remove `id("com.google.devtools.ksp")` from `app/build.gradle.kts` too and say so in the commit body.
+- **Delete these four lines.** They declare **Hilt** — Google's dependency-injection framework for Android, built on Dagger, which generates object wiring from annotations at compile time. D7 wires the app by hand in `IviGraph` (`4.5.5.3`) instead, so nothing needs it:
+
+  | Line | File |
+  |---|---|
+  | `id("com.google.dagger.hilt.android") version "2.58" apply false` | `IVI_ECU/build.gradle.kts` |
+  | `id("com.google.dagger.hilt.android")` | `app/build.gradle.kts` |
+  | `implementation("com.google.dagger:hilt-android:2.58")` | `app/build.gradle.kts` |
+  | `ksp("com.google.dagger:hilt-android-compiler:2.58")` | `app/build.gradle.kts` |
+
+  **Grep for `dagger` and `Hilt` under `IVI_ECU/` before committing.** The removal is safe only while no `@HiltAndroidApp` class and no `@Inject` site exists; a hit means something depends on it and the removal has to be reported, not forced.
+- KSP is the annotation processor Hilt drove. If the grep shows nothing else uses it, remove `id("com.google.devtools.ksp")` from `app/build.gradle.kts` too and say so in the commit body.
 - Do not add the new `buildConfigField`s here — `4.5.4.1` owns those.
 
 **Acceptance:** `./gradlew :app:testDebugUnitTest` and `./gradlew assembleDebug` both green; a repo-wide grep for `hilt`/`dagger` under `IVI_ECU/` returns nothing.
@@ -403,7 +414,7 @@ class R4SocketObserver(
 
 - Add `previousMode` capture: on entering `WarningView` because of a warning, remember the mode that was showing.
 - Add `fun onWarningState(state: WarningUiState)` (or an injected flow collect): `Active` → force `WarningView`; `Idle` → restore `previousMode`, **unless** the user deliberately navigated away during the warning, in which case the user's chosen mode stands.
-- Add the user-override flag: the committed `setMode` currently **ignores** every navigation request while `WarningView` is active. Relax it to record a deliberate user navigation as an override and honour it, so `Idle` does not yank the user back. Keep the safety intent — the warning still *comes up* unconditionally.
+- Add the user-override flag, and relax `setMode` to honour it: a deliberate user navigation while `WarningView` is active is recorded as an override and obeyed, so `Idle` does not pull the user back. Keep the safety intent — the warning still *comes up* unconditionally.
 - Test `app/src/test/java/com/hackathon/v2x/ivi/ui/MainViewModelTest.kt`: from `HomeView`, a warning forces `WarningView`; on `Idle` the mode returns to `HomeView`; if the user selects `SettingsView` during the warning, `Idle` leaves `SettingsView` in place; a second warning still forces `WarningView` again and clears the override.
 
 **Acceptance:** `./gradlew :app:testDebugUnitTest` green with all four cases; `DisplayMode.kt` is unchanged (HLD §3.1 marks it `[C] unchanged`).
@@ -414,7 +425,7 @@ class R4SocketObserver(
 
 ## Task Group 5.5 — `:app` shell & UI wiring — the launchable APK (serves R16, R17, R18)
 
-> **The APK has no launcher entry today** — no `<activity>`, no `<service>`, no application class (HLD §1, §9.2). This group is what makes something render on the node. Nothing here may mount `WarningBannerOverlay` (**D11**, a standing user decision).
+> This group gives the APK its `<activity>`, its `<service>` and its application class, which is what makes it startable and makes something render on the node — see [HLD §1](../IVI_ECU/doc/phase5-ivi-hld.md) for what the manifest carries before it. Nothing here may mount `WarningBannerOverlay` (**D11**, a standing user decision).
 
 ### [ ] `18.5.5.1` — `AndroidR4Logger` — the `IVI_V2X` evidence bridge *(agent)*
 
@@ -470,11 +481,11 @@ class R4SocketObserver(
 
 ### [ ] `16.5.5.5` — `MainActivity` + the LAUNCHER entry — **the APK becomes startable** *(agent)*
 
-**Objective:** add the launcher Activity that hosts Compose, resolves the launch-time config override, and starts the listener service. This is the subtask that closes "nothing renders on the node today".
+**Objective:** add the launcher Activity that hosts Compose, resolves the launch-time config override, and starts the listener service — the subtask that makes the APK startable at all.
 
 **Scope:**
 
-- `app/build.gradle.kts`: add `implementation(libs.androidx.activity.compose)` (catalog alias from `4.5.1.1`). **This dependency is absent today** and `ComponentActivity.setContent` will not resolve without it.
+- `app/build.gradle.kts`: add `implementation(libs.androidx.activity.compose)` (catalog alias from `4.5.1.1`). `ComponentActivity.setContent` does not resolve without it.
 - `app/src/main/java/com/hackathon/v2x/ivi/MainActivity.kt`: `class MainActivity : ComponentActivity()`; in `onCreate` call `IviRuntimeConfig.resolve(intent)`, hand it to the graph (`updateConfig`), `startForegroundService(Intent(this, R4ListenerService::class.java))`, request `POST_NOTIFICATIONS` on API 33+ **without blocking startup on the answer**, then `setContent { MainScreen(viewModel = viewModel(factory = graph.viewModelFactory)) }`.
 - `app/src/main/AndroidManifest.xml`: add
 
@@ -488,7 +499,7 @@ class R4SocketObserver(
   </activity>
   ```
 
-  **Use a platform theme, not a new `res/values/themes.xml`** — HLD §3.1 designates no new resource files, and the project has no `res/values/` today. If the platform theme proves unusable on the guest, that is a finding to report, not a licence to invent an unlisted file.
+  **Use a platform theme, not a new `res/values/themes.xml`** — HLD §3.1 designates no new resource files. If the platform theme proves unusable on the guest, that is a finding to report, not a licence to invent an unlisted file.
 - Verify the D10 override reaches `IviRuntimeConfig.resolve`. The launch command and its `--ei r4_port` form are [deploy-ivi-hmi-walkthrough.md §4.7](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#47-open-the-screen-and-launch-the-app) — run it from there; this subtask only proves the extra arrives.
 
 **Acceptance:** `./gradlew assembleDebug` green and the built `app-debug.apk` passes the launchable check of [deploy-ivi-hmi-walkthrough.md §2.6](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#26-check-the-apk-is-launchable) with exactly one LAUNCHER activity — the check CI also reports as a notice ([§3.1](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#31-the-workflow-its-job-and-its-triggers)); `./gradlew :app:testDebugUnitTest` still green.
@@ -545,7 +556,7 @@ class R4SocketObserver(
 
 **Scope:** `app/src/test/java/com/hackathon/v2x/ivi/ui/view/CanvasWarningViewTest.kt`.
 
-The guard decision currently lives inline in `CanvasWarningView.Render`, and a `Canvas`-drawn marker is not in the Compose semantics tree, so it cannot be asserted from a composition test. Extract the decision and its ERROR line into two `internal` top-level functions in the committed `CanvasWarningView.kt` — `isGhostCSourceTrusted(snapshot: R3Snapshot?): Boolean` and `ghostCSourceGuardErrorMessage(snapshot: R3Snapshot): String` — and have `Render` call them. **Extraction only: no behaviour may change**, and the three committed `@Preview` functions must compile untouched.
+Extract the guard decision and its ERROR line out of `CanvasWarningView.Render` into two `internal` top-level functions in the committed `CanvasWarningView.kt` — `isGhostCSourceTrusted(snapshot: R3Snapshot?): Boolean` and `ghostCSourceGuardErrorMessage(snapshot: R3Snapshot): String` — and have `Render` call them. The extraction is what makes the guard assertable: a `Canvas`-drawn marker is not in the Compose semantics tree, so a composition test cannot reach the decision while it sits inline. **Extraction only: no behaviour may change**, and the three committed `@Preview` functions must compile untouched.
 
 Then assert: `null` snapshot → trusted (the dev/mock-scene path); `source = "v2x_relayed"` → trusted; `source = "own_sensor"` → **not** trusted; the error message names both the offending source and `v2x_relayed` and carries the snapshot JSON; and `riskColor` maps an unknown `riskState` to the high-urgency colour (fail-safe, HLD §9.2) so this test and `WarningClassifier.normaliseRisk` (`4.5.4.3`) cannot drift apart.
 
@@ -1156,7 +1167,7 @@ Every Phase 5 acceptance criterion in [milestone1.md](milestone1.md#phase-5--ivi
 
 | Milestone Phase 5 box | Closed by |
 |---|---|
-| The HMI runs on the AAOS node with the R16 layout; button/app areas switch the Display area | `16.5.5.4` · `16.5.5.5` (the launcher entry the APK lacks today) · `17.5.5.6` · `16.5.4.5` · deployed by `5.5.9.1`–`5.5.9.4`, confirmed `Running` by `5.5.9.5`, the ADB tunnel started by `16.5.9.6` and proven by `16.5.9.7`, installed and launched by `16.5.9.10`, observed by `16.5.9.11` |
+| The HMI runs on the AAOS node with the R16 layout; button/app areas switch the Display area | `16.5.5.4` · `16.5.5.5` (the launcher entry) · `17.5.5.6` · `16.5.4.5` · deployed by `5.5.9.1`–`5.5.9.4`, confirmed `Running` by `5.5.9.5`, the ADB tunnel started by `16.5.9.6` and proven by `16.5.9.7`, installed and launched by `16.5.9.10`, observed by `16.5.9.11` |
 | **(Dev)** A mock R4 warning brings the warning view up with ego, B and ghost C at the composed positions | `4.5.2.2` · `4.5.3.3` · `4.5.4.2` · `17.5.4.4` · `16.5.4.5` · `17.5.5.6` · simulator `4.5.6.3`/`4.5.6.4` (`approach.json`) · fed to the node by `4.5.9.9` · dev path `4.5.6.7` (I3) · read by `18.5.9.12` and seen by `17.5.9.13` (I4) |
 | Ghost C renders from `v2x_relayed` data only; the 2D drawing is delivered | **`17.5.4.4`** (the §9.2 snapshot wiring that arms the committed guard — without it the guard silently disables) · **`17.5.5.9`** (the guard itself under test) · `17.5.5.6` · `17.5.5.7` · `17.5.5.8` · `4.5.3.3` (`cSource=` on every `[RX]`) · `degrade.json` guard-trip step in `4.5.6.4` · `cSource=v2x_relayed` on every warning evidenced in text by `18.5.9.12` and on screen by `17.5.9.13`, the guard trip gated by `17.5.9.16`, and the whole shown again from live relayed data by `19.5.10.7`/`19.5.10.8` |
 | A newer message with an unknown `warningType` degrades gracefully | `4.5.1.4` (the committed `R4AdditiveVersionTest` relocated and still green) · `4.5.2.2` (decode preserves the value, D4) · `4.5.4.3` (`WarningClassifier` generic presentation) · `4.5.6.4` (`degrade.json`) · read by `4.5.9.15` and observed by `17.5.9.16` |

@@ -424,7 +424,7 @@ Run them in that order. Rung 2 is where this phase's acceptance boxes are closed
 
 ### [ ] `5.4.9.5` — CI lane `ada-bench-image` *(agent)*
 
-**Objective:** the first of the two jobs [§3.2](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#32-build-and-push-the-images-on-ci) requires and §8.1 item 3 records as absent — **a push currently builds and publishes nothing**.
+**Objective:** the first of the two jobs [§3.2](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#32-build-and-push-the-images-on-ci) requires — **the lane that makes a push build and publish the bench image**, which nothing else in the repository does.
 
 **What this job covers.** **One image, `m1-ada-bench:latest`, which two of the Room's three nodes run** — the V2X Bench mock under `ROLE=v2x_mock` and the IVI Sink mock under `ROLE=ivi_mock`. **One build, one push, one tag, deployed twice** — the lane does not build a second mock image and must not be extended to, because the roles are an env-var selection inside `entrypoint.sh` (`5.4.9.4`), not separate artifacts. The third node's image is `ada-ecu-image`'s and is confirmed by `5.4.9.6`.
 
