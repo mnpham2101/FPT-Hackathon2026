@@ -353,15 +353,13 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 ### IVI reconciliation with phase5 (HLD §11 item 5 — resolved here)
 
-Ownership split so no deliverable is decomposed twice; [phase5_tasks.md](phase5_tasks.md) IDs stay stable (never renumbered):
+Ownership split so no deliverable is decomposed twice:
 
-| Deliverable | Owner | Effect on phase5 |
+| Deliverable | Owner | What Phase 5 does with it |
 |---|---|---|
-| `R4Message.kt` sealed models + finalized `R3Snapshot.kt`/`SceneGeometry.kt` + binding round-trip test | **`4.0.6.1` (this plan)** | `4.5.1.1` is **superseded — do not implement**; at Phase 5 execution it closes by verifying `4.0.6.1`'s artifacts exist and its models are consumed unchanged |
-| Binding-level additive-version behavior (lenient parse, unknown `warningType` no-crash) + `R4AdditiveVersionTest.kt` | **`4.0.6.2` (this plan)** | `4.5.1.2` **keeps** `R4Deserializer.kt` (Result wrapper, error taxonomy, WARN logging, malformed-JSON handling) built **on** the frozen binding; its unknown-`warningType` test cases consume the shared `r4-unknown-warning.json` fixture instead of inventing payloads |
-| `SceneGeometry`/`R3Snapshot` field-name compatibility | frozen by `3.0.1.4`/`4.0.1.5` schemas | interim field names were kept deliberately; downstream phase5 UI subtasks are unaffected |
-
-Flag: this run commits only `plans/phase0_tasks.md`, so the supersede note is recorded here; annotating `4.5.1.1`/`4.5.1.2` inside `phase5_tasks.md` itself is a follow-up docs edit for the main session (blocked only by this run's single-file commit scope).
+| `R4Message.kt` sealed models + finalized `R3Snapshot.kt`/`SceneGeometry.kt` + binding round-trip test | **`4.0.6.1` (this plan)** | Phase 5 does not rebuild them — it relocates them into its `:contract` module and consumes the models unchanged |
+| Binding-level additive-version behavior (lenient parse, unknown `warningType` no-crash) + `R4AdditiveVersionTest.kt` | **`4.0.6.2` (this plan)** | Phase 5's `R4Deserializer` (Result wrapper, error taxonomy, malformed-JSON handling) is built **on** the frozen binding, and its unknown-`warningType` cases consume the shared `r4-unknown-warning.json` fixture instead of inventing payloads |
+| `SceneGeometry`/`R3Snapshot` field-name compatibility | frozen by `3.0.1.4`/`4.0.1.5` schemas | interim field names were kept deliberately; Phase 5's UI work is unaffected |
 
 ---
 
@@ -501,7 +499,6 @@ Lane F  smoke test:      6.0.8.1 ──► 5.0.8.2 (car-sky) ──► 5.0.8.3 (
 | Bench Python → R1 codec path (F3) — `1.0.5.1` explicitly must not improvise it | [[project-architecture]], R11 HLD |
 | Smoke-test O3, O4 | O1 and O2 closed by 5.0.8.2/6.0.8.4. O3 (MTU headroom) — M11 optional, not run. O4 (AAOS `nc` availability) — the direct listener check is unavailable on this deployment (deploy-walkthrough-netcheck.md), so only the indirect check ran. Neither blocks Phase 0 |
 | Report errata: R2 sample `distance 25.4` vs derived `25.03` (F7); `sender.speed` source wording (F1) — HLD §11 items 3–4 | [[project-researcher]] — contracts use the derived/nullable values meanwhile |
-| Annotating `4.5.1.1`/`4.5.1.2` in `phase5_tasks.md` per § IVI reconciliation | main session, follow-up docs edit (this run's commit scope is this file only) |
 
 ---
 
