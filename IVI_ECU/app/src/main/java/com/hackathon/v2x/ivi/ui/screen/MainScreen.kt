@@ -31,6 +31,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -242,7 +245,7 @@ private fun WarningViewContent(
     latestScene: SceneGeometry?,
     warningViewSeam: IviWarningViewSeam?,
 ) {
-    var is3DMode by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(true) }
+    var is3DMode by remember { mutableStateOf(true) }
 
     val active = uiWarningState as? WarningUiState.Active
     val scene = when {
