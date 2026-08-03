@@ -513,7 +513,7 @@ Each step states its own pass condition. A step that fails is a finding; do not 
 
 8. **Preferred — the Skycraft guest.** Follow § 6 steps 3–4 for the Room and the ADB endpoint. This route has never been proven on this deployment; if `adb connect` does not yield a `device`, stop and use step 9 instead of retrying blind.
 
-9. **No-device fallback — an Android Automotive emulator.** A phone image **refuses this APK**: the manifest declares `android.hardware.type.automotive`. Create an AVD from an *Automotive* system image at API 33 or above, then:
+9. **Fallback — an Android Automotive emulator, or any Android 10+ phone.** Create an AVD from an *Automotive* system image at API 33 or above. **This is impossible on an ARM64 Windows host — see § 12.4**; on such a machine use a physical device instead. A phone is a legitimate target here: `uses-feature android.hardware.type.automotive` is `required="true"`, but that element only filters the Play Store, and `adb install` does not enforce it. The app declares **no car-API dependency**, so it runs unmodified on any Android 10+ handset. Then:
 
    ```bash
    adb install -r app/build/outputs/apk/debug/app-debug.apk
@@ -624,3 +624,13 @@ The cause is a distinction the original finding missed. `DatagramPacket` keeps t
 **Evidence limits, stated plainly.** The reproduction ran on desktop JDK 21, not on an Android runtime; the Android half rests on reading `libcore`'s `ojluni` source, which is the same OpenJDK lineage. The Android-side confirmation is step 15 of § 11 — a run in which warnings keep rendering after the heartbeat is the observation that closes it. This was once a genuine bug in old JDK and early Android releases, which is why it is still widely repeated; it is fixed in everything this project targets (`minSdk 29`).
 
 Calling `packet.setLength(buffer.size)` each iteration remains good defensive practice and costs nothing — keep it in `4.5.3.2` as hygiene. It is not a bug fix, it does not block a merge, and no demo failure should be attributed to it.
+
+### 12.4 No emulator is possible on an ARM64 Windows host
+
+The build machine is a **Snapdragon X1E80100 (ARM64)**. The Android Automotive emulator cannot run on it, and this is a hard platform limit rather than a configuration problem:
+
+- `sdkmanager` ships `emulator.exe` as an **x86_64 PE binary** (checked: COFF machine `0x8664`), so it runs only under Windows' x64 emulation layer. Google publishes no ARM64 Windows emulator; the native ARM host build exists for macOS only.
+- `emulator -accel-check` exits **3**: *"requires an Intel/AMD processor with virtualization extension support (Virtualization extension is not supported)"*. `VirtualizationFirmwareEnabled` is `False`.
+- An `arm64-v8a` AVD is refused outright by an x86_64 QEMU2 host, and an `x86_64` AVD would mean software-emulating x86_64 on an ARM CPU from inside an x64-emulated process — not viable for booting AAOS.
+
+**Consequences for this plan.** Group 5.9's evidence cannot be produced on this machine by the emulator route, which raises the priority of group 5.8 (`5.5.8.2`, `16.5.8.3`) — the Skycraft ADB route is not merely the preferred path here, it is the only in-Room one. The cheap alternative for UI-level checks is a **physical Android 10+ phone** over USB (step 9), which needs no automotive hardware. A CI runner or any x86_64 machine can still host the emulator; this constraint is local to this laptop.
