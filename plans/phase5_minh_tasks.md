@@ -3,7 +3,7 @@
 > **Authority & context:**
 >
 > - **Phase content:** [milestone1.md § Phase 5](milestone1.md#phase-5--ivi-hmi-mock-driven-r16-r17--display-track-parallel-from-the-start) — its five acceptance checkboxes are the phase output.
-> - **Design:** [phase5-ivi-hld.md](../IVI_ECU/doc/phase5-ivi-hld.md) (commit `85387b5`) with [phase5-ivi-components.puml](../IVI_ECU/doc/phase5-ivi-components.puml) and [phase5-ivi-callflow.puml](../IVI_ECU/doc/phase5-ivi-callflow.puml). Every target path below is cited verbatim from its **§3.1 / §3.2** folder map; decisions **D1–D11**, module interfaces **§5**, log shapes **§5.4**, CI **§6.1**, test ladder **§7**, deployment **§8**, the committed code's constraints on this design **§9.2**, open items **§11**.
+> - **Design:** [ivi-ecu-hld.md](../IVI_ECU/doc/ivi-ecu-hld.md) — the node's sole design authority — with [phase5-ivi-components.puml](../IVI_ECU/doc/phase5-ivi-components.puml) and [phase5-ivi-callflow.puml](../IVI_ECU/doc/phase5-ivi-callflow.puml). Every target path below is cited from its **[§4](../IVI_ECU/doc/ivi-ecu-hld.md#4-folder-structure)** folder map; component responsibilities **[§6](../IVI_ECU/doc/ivi-ecu-hld.md#6-internal-components)**, seams **[§8](../IVI_ECU/doc/ivi-ecu-hld.md#8-interfaces-ports-and-the-layer-rule)**, the R4 input contract **§10**, CI **[§11](../IVI_ECU/doc/ivi-ecu-hld.md#11-tech-stack-build-and-ci)**, test configurations and log shapes **[§12](../IVI_ECU/doc/ivi-ecu-hld.md#12-test-strategy)**, decisions **D1–D12** ([§13](../IVI_ECU/doc/ivi-ecu-hld.md#13-design-decisions)). Deployment steps come from the bring-up procedure below, not from the design.
 > - **Research notes:** [phase5-r4-simulator.md](../IVI_ECU/doc/research_notes/phase5-r4-simulator.md) · [phase5-r4-parsing.md](../IVI_ECU/doc/research_notes/phase5-r4-parsing.md) — non-authoritative; the HLD wins on conflict.
 > - **Requirements:** [m1-cooperative-awareness.md §2](../requirements/m1-cooperative-awareness.md) R4, R16, R17 (plus R5, R6, R18, R19 where this phase touches them) — referenced by number, never restated.
 > - **Deploy facts:** [node-ivi-ecu.md](../requirements/car-sky-guide/node-ivi-ecu.md) · [carsky-4-node-blueprint.md](../requirements/car-sky-guide/carsky-4-node-blueprint.md) · [deploy-walkthrough-netcheck.md](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md).
@@ -26,7 +26,7 @@
 - CarSky access with the baseline blueprint `baseline_phase1` ([carsky-4-node-blueprint.md § The blueprints on CarSky](../requirements/car-sky-guide/carsky-4-node-blueprint.md#8-the-blueprints-on-carsky)), the `AAOS` artifact (`x9oqgIwzTp1m26SWIQqJt` / `xSU_Q7YJZUxxUgDr4Ugcp`, `0.0.1`, `aarch64`), and `registry.hackathon-2.carsky.io/m1-netcheck:latest` already pushed.
 - GitHub secret `CARSKY_ZOT_API_KEY` and the reusable [verify-arm64-image](../.github/actions/verify-arm64-image) action.
 
-**The starting state of `IVI_ECU/` is [HLD §1](../IVI_ECU/doc/phase5-ivi-hld.md)'s table** — what is committed, and what this design adds — with the per-file detail in its §3.1 folder map, where `[C]` marks a committed file and `[R]` one that moves verbatim. **Briefs below cite it; they do not restate it.** A brief names the file it changes and what it must end up doing, and the reader gets the before-picture from one table rather than from a sentence in each subtask.
+**The component set and every target path are [HLD §4](../IVI_ECU/doc/ivi-ecu-hld.md#4-folder-structure) and [§6](../IVI_ECU/doc/ivi-ecu-hld.md#6-internal-components).** **Briefs below cite them; they do not restate them.** A brief names the file it changes and what it must end up doing, and the reader gets the component's responsibility, its inputs and its outputs from the design's tables rather than from a sentence in each subtask.
 
 **Output (phase acceptance = the five milestone boxes):**
 
@@ -425,7 +425,7 @@ class R4SocketObserver(
 
 ## Task Group 5.5 — `:app` shell & UI wiring — the launchable APK (serves R16, R17, R18)
 
-> This group gives the APK its `<activity>`, its `<service>` and its application class, which is what makes it startable and makes something render on the node — see [HLD §1](../IVI_ECU/doc/phase5-ivi-hld.md) for what the manifest carries before it. Nothing here may mount `WarningBannerOverlay` (**D11**, a standing user decision).
+> This group gives the APK its `<activity>`, its `<service>` and its application class, which is what makes it startable and makes something render on the node — the manifest's required content is [HLD §6 Configuration and descriptors](../IVI_ECU/doc/ivi-ecu-hld.md#6-internal-components). Nothing here may mount `WarningBannerOverlay` (**D11**, a standing user decision).
 
 ### [ ] `18.5.5.1` — `AndroidR4Logger` — the `IVI_V2X` evidence bridge *(agent)*
 
