@@ -1,6 +1,6 @@
 ---
 name: walkthrough-authoring
-description: Procedure project-researcher follows when asked to produce or revise an operational walkthrough — the authoritative, human-followed build/export/deploy/install/verify guides under requirements/car-sky-guide/ (e.g. deploy-walkthrough-netcheck.md, ivi-hmi-walkthrough.md). Covers the mandatory sections, the AI/human split, the prohibited content, and the one-way dependency that keeps the documents plannable.
+description: Procedure project-researcher follows when asked to produce or revise an operational walkthrough — the authoritative, human-followed build/export/deploy/install/verify guides under requirements/car-sky-guide/ (e.g. deploy-walkthrough-netcheck.md, deploy-ivi-hmi-walkthrough.md). Covers the mandatory sections, the AI/human split, the prohibited content, and the one-way dependency that keeps the documents plannable.
 ---
 
 # Operational Walkthrough Authoring (project-researcher)
@@ -18,7 +18,7 @@ Worked examples, correct in every respect — follow their shape rather than inv
 | File | Subject |
 |---|---|
 | [deploy-walkthrough-netcheck.md](../../../requirements/car-sky-guide/deploy-walkthrough-netcheck.md) | Source file → container image → registry → running Room |
-| [ivi-hmi-walkthrough.md](../../../requirements/car-sky-guide/ivi-hmi-walkthrough.md) | APK build (local and CI) → deploy → install → launch → verified HMI |
+| [deploy-ivi-hmi-walkthrough.md](../../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md) | APK build (local and CI) → deploy → install → launch → verified HMI |
 
 A walkthrough owns the **doing**. The sibling reference files in the same folder — `node-*.md`, the blueprint and REST references — own the **facts** (artifact IDs, config blocks, pin shapes, platform limits) and belong to [[project-architecture]] via [carsky-deployment-guide](../carsky-deployment-guide/SKILL.md). Link them for every fact; never copy one in. A fact that turns out to be missing is reported to that owner, not restated here.
 
