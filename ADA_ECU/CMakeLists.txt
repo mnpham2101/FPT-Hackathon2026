@@ -54,4 +54,24 @@ target_link_libraries(ada_r4_roundtrip_test PRIVATE ada_contracts)
 ada_add_test(ada_r4_additive_version_test tests/contracts/test_r4_additive_version.cpp)
 target_link_libraries(ada_r4_additive_version_test PRIVATE ada_contracts)
 
-# Group 0.4 C++ targets complete; remaining ADA additions come with later phases (Phase 2 HLD), not Phase 0.
+# Collision Risk Assessment (CRA) ICW Engine Library
+add_library(ada_cra_icw STATIC
+  src/cra/icw_evaluator.cpp
+  src/cra/risk_matrix.cpp
+  src/contracts/r4_icw_payload.cpp
+)
+target_include_directories(ada_cra_icw PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(ada_cra_icw PUBLIC ada_contracts nlohmann_json::nlohmann_json)
+target_compile_features(ada_cra_icw PUBLIC cxx_std_17)
+target_compile_definitions(ada_cra_icw PRIVATE ADA_CONFIG_DIR="${CMAKE_CURRENT_SOURCE_DIR}/config")
+
+# ICW Tests
+ada_add_test(ada_r4_icw_payload_test tests/contracts/test_r4_icw_payload.cpp)
+target_link_libraries(ada_r4_icw_payload_test PRIVATE ada_cra_icw)
+
+ada_add_test(ada_icw_evaluator_test tests/cra/test_icw_evaluator.cpp)
+target_link_libraries(ada_icw_evaluator_test PRIVATE ada_cra_icw)
+
+ada_add_test(ada_risk_matrix_test tests/cra/test_risk_matrix.cpp)
+target_link_libraries(ada_risk_matrix_test PRIVATE ada_cra_icw)
+
