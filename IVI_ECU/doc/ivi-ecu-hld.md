@@ -9,7 +9,7 @@
 `IVI_ECU/` only — the consumer side of R4 and everything downstream of it, up to the rendered God View and the log lines that evidence it.
 
 - **In scope:** the five Gradle modules of this folder, the components inside them, the seams between them, the node's one network endpoint, and the test equipment that exercises the node on its own.
-- **Out of scope:** how the R4 message is produced — this node depends on the `ADA-ECU` interface, never on a particular producer; the deploy/install/verify procedure, which the walkthrough owns; the task and subtask decomposition, which the plan owns.
+- **Out of scope:** how the R4 message is produced — this node depends on the `ADA-ECU` interface, never on a particular producer; the deploy/install/verify procedure, which the walkthrough owns; the task and subtask decomposition, which the plan owns; and the ADA→IVI wire capture that R15 and R19 ask for, which is taken on the ADA side and is that node's evidence, never this one's.
 
 **This document is the design authority for work inside `IVI_ECU/`, and no other design document governs this node.** It fixes the component set and each component's single responsibility, the module graph and its direction, the target path of every deliverable, the seams and their interfaces, the configuration keys and their defaults, and the shape of the evidence log lines.
 
@@ -18,7 +18,22 @@
 - **Implementation does not extend it silently.** A component, module, file location or configuration key not designated here is not created ad hoc — the design changes first.
 - **What overrides it:** [m1-cooperative-awareness.md](../../requirements/m1-cooperative-awareness.md) (R4, R16, R17 and the §3 tech stack), the frozen R4/R3 contracts, and — for the build/deploy/verify procedure — the walkthrough. On conflict, the CLAUDE.md authority order decides.
 
-## 2. Sourced research notes
+## 2. Required reading and sourced notes
+
+### Requirement documents
+
+**Read in full before this design is written or changed** — the requirements decide what this node must do; the sections below only decide how. Every row is live; none may be skimmed for the requirement numbers alone.
+
+| Document | What it fixes for this node |
+|---|---|
+| [m1-cooperative-awareness.md](../../requirements/m1-cooperative-awareness.md) — **the authority** | R4, R16 and R17 in full — definition, dependency, acceptance and tech stack; R5 and R6 for the node type, the bridge and the port; R18 and R19 for what the run must evidence; §3(e)/(f) for the stack; §4 for the standing decisions that bind this node (restated in D11) |
+| Its figures — [ivi-ecu.svg](../../requirements/ivi-ecu.svg) · [ivi-god-view-scene.svg](../../requirements/ivi-god-view-scene.svg) · [ivi-god-view-warning-screen.svg](../../requirements/ivi-god-view-warning-screen.svg) | The R16 layout; R17's visual language for the God View; and the annotated variant, which is explanatory and is never what this node renders |
+| [contracts/r4-ada-ivi.schema.json](../../contracts/r4-ada-ivi.schema.json) · [contracts/r3-tracked-object.schema.json](../../contracts/r3-tracked-object.schema.json) | The frozen input contract, field for field (§10) |
+| [m1-run-timing-and-event-triggering.md](../../requirements/m1-run-timing-and-event-triggering.md) | R20 and R21 place no obligation on this node: R4 carries no timestamp, so the warning timeout is a local countdown, and pacing belongs to the bench and the detector. What this node owes the run is the AAOS boot-to-listener time that sets the bench's start delay |
+| [m1-video-source-and-ivi-dashcam.md](../../requirements/m1-video-source-and-ivi-dashcam.md) | A dashcam view in the Display Area is deferred (D11). If it is ever accepted, the clip reaches this node over HTTP from the ADA node or as a local copy — never through a `video` pin |
+| [node-ivi-ecu.md](../../requirements/car-sky-guide/node-ivi-ecu.md) | The node's platform facts: VM artifact, pin and address |
+
+### Research notes
 
 | Note | Adopted here |
 |---|---|

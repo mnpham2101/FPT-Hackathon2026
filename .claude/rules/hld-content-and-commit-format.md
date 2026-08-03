@@ -31,7 +31,7 @@ Nothing may be used before it is defined, and a planner must be able to reach an
 | # | Section | Required | Must contain |
 |---|---|---|---|
 | 1 | **Scope and authority** | always | What the node covers and does not; that the HLD is binding for work in the folder; that task planning decomposes from it plus the requirements report; what overrides it |
-| 2 | **Sourced research notes** | when notes exist | One row per note, and the single line stating what this design adopts from it |
+| 2 | **Required reading and sourced notes** | always | The requirement documents that had to be read in full to write the design, each with what it fixes for this node; then one row per research note with what the design adopts from it |
 | 3 | **The component architecture** | always | The component diagram, its legend, and an **MVC separation** subsection placing every component in exactly one layer |
 | 4 | **Folder structure** | always | The tree designating the target path of every component the document names |
 | 5 | **Platform and boundary** | always | The runtime platform, the interfaces at the node's edge, and the observation surfaces the evidence comes from |
@@ -48,6 +48,7 @@ A header blockquote precedes §1: what the document is, the frozen contract, the
 
 ## What each section must get right
 
+- **§2 is the reading list, and it is not optional reading.** Before writing or changing an HLD, [[project-architecture]] reads the requirement documents that bear on the node **in full** — the whole requirement entries with their definition, dependency, acceptance and tech stack, the figures they embed, the frozen contract files, the §4 decision record, and any later report that adds requirement numbers or defers work touching the node. Skimming for requirement numbers produces a design that satisfies the headline and contradicts an acceptance clause. §2 then lists exactly what was read and what each document fixed, so a reviewer can tell a sourced design from a plausible one, and so a requirement that lands later has a visible place to be checked against.
 - **§1 is what makes the document usable by a planner.** State plainly that task planning decomposes from this HLD plus the requirements report, that briefs cite sections rather than restating them, and that a component, path or configuration key not designated here is not created ad hoc.
 - **§4 designates paths; it does not sketch them.** Every component named anywhere in the document has exactly one path in the tree. An implementer who has to choose a location is reading a defective HLD.
 - **§6 gives each component one responsibility.** Role, input, output, in a table. Work that fits no row belongs to a component the design has not defined yet — a design change, not an implementer's judgement call.
