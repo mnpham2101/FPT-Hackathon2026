@@ -232,7 +232,7 @@ Build commands, from `IVI_ECU/`: `./gradlew assembleDebug` · `./gradlew :contra
 | `ivi-assemble` | [phase5-ci.yml](../../.github/workflows/phase5-ci.yml) | `assembleDebug` + `lint`, uploading `app-debug.apk` under the stable artifact name the walkthrough tells a human to download |
 | the simulator image | [phase5-ci.yml](../../.github/workflows/phase5-ci.yml) | `linux/arm64` build of `m1-r4-sim:latest` from context `IVI_ECU/`, pushed to Zot and verified by pull-back |
 
-`ivi-unit-tests` invokes `:app:testDebugUnitTest` until the other four modules exist; [phase5-ivi-hld.md §6.1](phase5-ivi-hld.md#61-the-ci-invocation-that-must-change) fixes the extended invocation and the simulator lane. The simulator's `Dockerfile` sits at `r4-simulator/Dockerfile` with build context `IVI_ECU/` — a flagged deviation from "own `Dockerfile` at the folder root", because this folder's primary artifact is the APK and the image is secondary test equipment; self-containment, the property that rule protects, holds since the build reads nothing outside `IVI_ECU/`.
+The simulator's `Dockerfile` sits at `r4-simulator/Dockerfile` with build context `IVI_ECU/` — a deviation from "own `Dockerfile` at the folder root", because this folder's primary artifact is the APK and the image is secondary test equipment; self-containment, the property that rule protects, holds since the build reads nothing outside `IVI_ECU/`.
 
 ## 11. Test strategy
 
@@ -294,7 +294,7 @@ By the time Android hands the app a packet, the NIC and kernel have removed the 
 
 ### D4 — Unknown `warningType` is preserved verbatim; classification happens at the UI edge
 
-The parser puts the wire value into `warningType` and stops; `WarningClassifier` in `:app` maps known types to their presentation and everything else to a generic one. **The parser must never rewrite an unknown `warningType` to `"unknown"`** — the committed `R4AdditiveVersionTest` asserts the opposite, and rewriting the field would destroy what the log needs and push a UI concern into the data layer. A `schemaVersion` above `R4Contract.KNOWN_SCHEMA_VERSION` is not a gate either: decode succeeds and `schemaVersionAhead` is set so the observer logs it once.
+The parser puts the wire value into `warningType` and stops; `WarningClassifier` in `:app` maps known types to their presentation and everything else to a generic one. **The parser must never rewrite an unknown `warningType` to `"unknown"`** — `R4AdditiveVersionTest` asserts the opposite, and rewriting the field would destroy what the log needs and push a UI concern into the data layer. A `schemaVersion` above `R4Contract.KNOWN_SCHEMA_VERSION` is not a gate either: decode succeeds and `schemaVersionAhead` is set so the observer logs it once.
 
 ### D5 — A foreground service hosts the observer
 
@@ -340,9 +340,9 @@ Unlike a container node, whose env comes from the blueprint at deploy time, an i
 
 ### D11 — Standing decisions binding on this design
 
-- **`WarningBannerOverlay` is built but not mounted in the Display Area** (standing user decision, 2026-07-26) — the God-View canvas is the deliverable and must render unobstructed. R17's visual target now requires the same thing independently: no banner, no legend, no text overlay, the scene alone.
+- **`WarningBannerOverlay` is built but not mounted in the Display Area** — the God-View canvas is the deliverable and must render unobstructed, which is also what R17's visual target requires: no banner, no legend, no text overlay, the scene alone.
 - **Ghost C renders only from `v2x_relayed`** — the renderer's source guard is the mechanical form of the R19 claim and stays exercised by a test.
-- **3D (`SceneViewWarning3D`) and multi-process wake-on-warning are optional**, not committed M1 deliverables; nothing else depends on either.
+- **3D (`SceneViewWarning3D`) and multi-process wake-on-warning are optional**, not M1 deliverables; nothing else depends on either.
 - **The periodic `state` message is optional on the producer side**; the consumer parses it (last-value-wins by `seq`) and no acceptance box depends on it.
 
 ### D12 — The provenance guard fails open, so every scene composer must fill the snapshot
