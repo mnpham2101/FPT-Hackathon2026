@@ -242,17 +242,48 @@ private fun WarningViewContent(
     latestScene: SceneGeometry?,
     warningViewSeam: IviWarningViewSeam?,
 ) {
+    var is3DMode by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(true) }
+
     val active = uiWarningState as? WarningUiState.Active
     val scene = when {
         latestScene == null -> null
         active != null -> latestScene.copy(vehicleCSnapshot = active.event.objectSnapshot)
         else -> latestScene
     }
-    if (warningViewSeam != null && scene != null) {
-        val riskState = active?.event?.riskState ?: "low"
-        warningViewSeam.Render(scene = scene, riskState = riskState)
-    } else {
-        WarningViewPlaceholder()
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        if (scene != null) {
+            val riskState = active?.event?.riskState ?: "low"
+            if (is3DMode) {
+                val view3D = androidx.compose.runtime.remember { com.hackathon.v2x.ivi.ui.view.Canvas3DWarningView() }
+                view3D.Render(scene = scene, riskState = riskState)
+            } else {
+                val view2D = androidx.compose.runtime.remember { com.hackathon.v2x.ivi.ui.view.CanvasWarningView() }
+                view2D.Render(scene = scene, riskState = riskState)
+            }
+        } else {
+            WarningViewPlaceholder()
+        }
+
+        // HUD 2D/3D Mode Switcher Toggle Pill
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(16.dp)
+                .clip(RoundedCornerShape(20.dp))
+                .background(Color(0xFF141829).copy(alpha = 0.85f))
+                .border(1.dp, Color(0xFF00E5FF).copy(alpha = 0.6f), RoundedCornerShape(20.dp))
+                .clickable { is3DMode = !is3DMode }
+                .padding(horizontal = 14.dp, vertical = 8.dp),
+        ) {
+            Text(
+                text = if (is3DMode) "MODE: 3D HUD (TAP FOR 2D)" else "MODE: 2D HUD (TAP FOR 3D)",
+                color = Color(0xFF00E5FF),
+                fontFamily = FontFamily.Monospace,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+            )
+        }
     }
 }
 
