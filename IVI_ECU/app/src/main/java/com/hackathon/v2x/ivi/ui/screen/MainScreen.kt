@@ -43,10 +43,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.hackathon.v2x.ivi.model.SceneGeometry
 import com.hackathon.v2x.ivi.ui.DisplayMode
 import com.hackathon.v2x.ivi.ui.MainViewModel
-import com.hackathon.v2x.ivi.ui.view.CanvasWarningView
 
 // ---------------------------------------------------------------------------
 // R16 design tokens — dark automotive scheme. All dimensions are Dp tokens;
@@ -125,12 +123,8 @@ fun MainScreen(
     viewModel: MainViewModel = viewModel(),
 ) {
     val currentMode by viewModel.currentMode.collectAsState()
-    val warningScene by viewModel.warningScene.collectAsState()
-    val riskState by viewModel.riskState.collectAsState()
     MainScreenContent(
         currentMode = currentMode,
-        warningScene = warningScene,
-        riskState = riskState,
         onModeSelected = viewModel::setMode,
         modifier = modifier,
     )
@@ -144,8 +138,6 @@ fun MainScreen(
 @Composable
 fun MainScreenContent(
     currentMode: DisplayMode,
-    warningScene: SceneGeometry? = null,
-    riskState: String = "clear",
     onModeSelected: (DisplayMode) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -175,11 +167,7 @@ fun MainScreenContent(
                         .fillMaxHeight()
                         .weight(DISPLAY_AREA_WIDTH_FRACTION),
                 ) {
-                    DisplayModeSwitcher(
-                        currentMode = currentMode,
-                        warningScene = warningScene,
-                        riskState = riskState,
-                    )
+                    DisplayModeSwitcher(currentMode = currentMode)
                 }
                 SideButtonBar(
                     items = RightBarItems,
@@ -223,12 +211,7 @@ private fun DisplayArea(
  * placeholders until their features land.
  */
 @Composable
-private fun DisplayModeSwitcher(
-    currentMode: DisplayMode,
-    warningScene: SceneGeometry?,
-    riskState: String,
-    modifier: Modifier = Modifier,
-) {
+private fun DisplayModeSwitcher(currentMode: DisplayMode, modifier: Modifier = Modifier) {
     AnimatedContent(
         targetState = currentMode,
         transitionSpec = {
@@ -240,13 +223,7 @@ private fun DisplayModeSwitcher(
     ) { mode ->
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             when (mode) {
-                DisplayMode.WarningView -> {
-                    if (warningScene != null) {
-                        CanvasWarningView().Render(scene = warningScene, riskState = riskState)
-                    } else {
-                        WarningViewPlaceholder()
-                    }
-                }
+                DisplayMode.WarningView -> WarningViewPlaceholder()
                 DisplayMode.HomeView -> ViewPlaceholder("Home View Placeholder")
                 DisplayMode.AppsView -> ViewPlaceholder("Apps View Placeholder")
                 DisplayMode.SettingsView -> ViewPlaceholder("Settings View Placeholder")
