@@ -414,7 +414,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after `13.2.2.1` + `2.2.6.1` + `12.2.6.2` + `2.2.3.1` + `3.2.3.2` + `13.2.4.3` + `14.2.5.4`. **Commit:** `[13.2.6.4] feat: add the ada_ecu composition root`
 
-### [ ] `18.2.6.5` — `[EVT]`-stream checker `tools/check_evt_log.py` *(AI)*
+### [x] `18.2.6.5` — `[EVT]`-stream checker `tools/check_evt_log.py` *(AI)*
 
 **Objective:** the scripted assertion that turns a saved `[EVT]` stream into a pass/fail — the ADA counterpart of `tools/comms_check/check_v2x_log.py`, reused on-platform and in CI.
 
@@ -428,6 +428,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 **Acceptance:** `python -m py_compile` passes; demonstrated exit 0 on a synthetic conforming log and non-zero on each of: an illegal edge, an early promotion, a mid-band drop, and a log with zero `[EVT]` lines — evidence in the Status line.
 
 **Dependencies:** after `18.2.2.3` (field names freeze there). **Commit:** `[18.2.6.5] feat: add the ADA EVT-stream admission checker`
+
+**Status:** done — py_compile exit 0; demonstrated exit 0 on a conforming synthetic log (full NT→TE→TR→NT cycle, band refresh) and non-zero naming the first illegal edge on each of: NT→TR jump, promotion at 2 < CONFIRM_HITS 3 hits, TR→NT drop at 33 m inside the (30, 35] band, and a zero-`[EVT]` input; `--expect-no-tracks` 0/1 arms and `--min-transitions` vacuous-pass block demonstrated; vocabulary admits `detector_disabled` as a 13th name pending D8 ratification (run-B log passes `--expect-no-tracks`, unknown names still fail); mode dispatch is an additive registry for Phase 4's `--fusion`.
 
 ---
 

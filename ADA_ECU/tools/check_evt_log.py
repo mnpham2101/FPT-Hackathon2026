@@ -1,0 +1,600 @@
+#!/usr/bin/env python3
+"""``[EVT]``-stream assertion for the ADA ECU -- the R18 evidence checker.
+
+The ADA counterpart of ``tools/comms_check/check_v2x_log.py``: turns a saved
+ADA ``[EVT]`` stream (CI-captured stdout, an ``EVENT_LOG_PATH`` file, or a
+CarSky View Log export) into a pass/fail. Test equipment only, never deployed.
+
+Any non-``[EVT]`` line is ignored, so ``[CAP]`` capture text, boot banners,
+tcpdump output and blank lines may be interleaved freely. A line that claims
+to be ``[EVT]`` but does not carry a JSON object is a failure, not noise.
+
+Usage::
+
+    check_evt_log.py --admission [logfile] [--confirm-hits N]
+                     [--gate-enter-m M] [--gate-exit-m M] [--min-transitions N]
+    check_evt_log.py --expect-no-tracks [logfile]
+
+``logfile`` omitted or ``-`` reads stdin. Exactly one mode flag is required;
+the modes are additive -- Phase 4 registers ``--fusion`` beside them.
+
+**Mode --admission** asserts the observed ``track_transition`` sequence per
+track id is a legal path through the R13 admission state machine
+(``ADA_ECU/doc/phase2-4-ada-ecu-admission.puml``):
+
+* per-id chain continuity: each transition's ``from`` equals the id's current
+  state, starting from ``not_tracked``;
+* no ``not_tracked -> tracked`` jump (legal only when ``--confirm-hits`` is 1,
+  where the tentative range 1..CONFIRM_HITS-1 is empty);
+* no promotion (``tentative -> tracked``) before ``--confirm-hits`` in-gate
+  updates for that id (default ``3``; the admitting update counts as hit 1);
+* no drop inside the hysteresis band: a distance-based
+  ``tracked -> not_tracked`` requires distance > ``--gate-exit-m``; admissions
+  and tentative holds require distance <= ``--gate-enter-m``; tracked
+  refreshes require distance <= ``--gate-exit-m``;
+* a timeout drop (``distance`` absent/null, or ``reason`` naming
+  expiry/timeout) is legal from tentative and tracked;
+* at least one full ``not_tracked -> tentative -> tracked -> not_tracked``
+  cycle observed per named source (each distinct ``source`` value seen);
+* at least ``--min-transitions`` transitions in total (default ``1``), so an
+  empty stream can never pass vacuously.
+
+The first illegal edge, in stream order, is named in the failure output.
+
+**Mode --expect-no-tracks** exits non-zero if any ``track_transition``
+appears -- the "mock off yields no tracks" arm.
+
+**Every mode:** zero ``[EVT]`` lines is a failure, never a pass.
+
+Frozen ``[EVT]`` fields this script depends on
+(``ADA_ECU/src/log/event_log.hpp`` -- renaming any breaks this consumer):
+line prefix ``[EVT] `` followed by one JSON object with ``event``,
+``mono_ms``, ``epoch_ms``, ``counters`` and ``payload``; the 12-name event
+vocabulary plus ``detector_disabled`` -- the detector reader's disabled-arm
+line, pending D8 ratification (an unknown name is a failure, not a
+tolerated extra); on
+``track_transition`` a payload with ``id``, ``source``, ``from``, ``to``,
+``distance`` and ``reason``. ``reason`` is parsed only to recognise
+timeout/expiry drops; its full vocabulary stays free diagnostics.
+
+Output: one ``[CHK] <group>: PASS|FAIL`` line per assertion group, then a
+final ``[CHK] PASS ...`` or ``[CHK] FAIL: <first failure>``. Exit 0 when
+every group passes, 1 on any assertion failure, 2 on a bad invocation.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Callable, Optional
+
+EVT_PREFIX = "[EVT] "
+
+# Emitted once by detector_reader.cpp's disabled arm (DETECTOR_ENABLED=false,
+# no spawn); a 13th name pending D8 ratification alongside the frozen twelve.
+EVENT_DETECTOR_DISABLED = "detector_disabled"
+
+# Frozen D8 event vocabulary (event_log.hpp events::kAll) -- an unknown name
+# is a failure. Phase 2 emits the first eight; the last four are Phase 4.
+EVENT_NAMES = frozenset({
+    "detector_spawn", "detector_eof", "detector_restart", "own_sensor_ingest",
+    "r2_ingest", "parse_reject", "track_transition", "track_expire",
+    "assessment", "assess_skipped_b_unknown", "risk_transition", "r4_tx",
+    EVENT_DETECTOR_DISABLED,
+})
+MANDATORY_FIELDS = ("event", "mono_ms", "epoch_ms", "counters", "payload")
+
+# The three R13 states of the admission diagram.
+STATE_NAMES = frozenset({"not_tracked", "tentative", "tracked"})
+
+# Defaults mirror the R13 diagram's noted values (CONFIRM_HITS, GATE_ENTER_M
+# 30 m, GATE_EXIT_M 35 m). They are CLI flags, never literals in the checks --
+# a run against a differently configured node passes the node's values here.
+DEFAULT_CONFIRM_HITS = 3
+DEFAULT_GATE_ENTER_M = 30.0
+DEFAULT_GATE_EXIT_M = 35.0
+DEFAULT_MIN_TRANSITIONS = 1
+
+# A drop whose reason names one of these is the diagram's timeout edge, legal
+# regardless of any distance carried (step() evaluates the timeout first).
+TIMEOUT_REASON_MARKERS = ("expire", "timeout")
+
+MAX_REPORTED_PER_GROUP = 5   # keep a broken log readable; the count is stated
+
+
+def log(msg: str) -> None:
+    print(f"[CHK] {msg}", flush=True)
+
+
+def die(msg: str, code: int) -> None:
+    print(f"[ERR] {msg}", file=sys.stderr, flush=True)
+    sys.exit(code)
+
+
+@dataclass(frozen=True)
+class Event:
+    """One parsed ``[EVT]`` line. ``index`` orders events among themselves;
+    ``lineno`` points back into the input file for human diagnosis."""
+    index: int
+    lineno: int
+    name: str
+    counters: dict
+    obj: dict
+
+    def counter(self) -> Optional[int]:
+        """This event's own cumulative counter, when present and integral."""
+        value = self.counters.get(self.name)
+        return value if isinstance(value, int) and not isinstance(value, bool) else None
+
+
+@dataclass(frozen=True)
+class Transition:
+    """One ``track_transition`` payload, already field-checked."""
+    event: Event
+    track_id: str
+    source: str
+    from_state: str
+    to_state: str
+    distance: Optional[float]   # None = absent/null (an expiry tick)
+    reason: str
+
+    @property
+    def lineno(self) -> int:
+        return self.event.lineno
+
+    def edge(self) -> str:
+        return f"{self.from_state} -> {self.to_state}"
+
+    def is_timeout(self) -> bool:
+        if self.distance is None:
+            return True
+        return any(marker in self.reason for marker in TIMEOUT_REASON_MARKERS)
+
+
+@dataclass(frozen=True)
+class AdmissionConfig:
+    """The thresholds the legality checks run against (all from CLI flags)."""
+    confirm_hits: int
+    gate_enter_m: float
+    gate_exit_m: float
+    min_transitions: int
+
+
+@dataclass
+class TrackWalk:
+    """Per-track-id replay state while walking the transition stream."""
+    state: str = "not_tracked"
+    hits: int = 0            # in-gate updates accumulated while tentative
+    cycle_stage: int = 0     # 0 idle, 1 tentative seen, 2 tracked via tentative
+
+
+@dataclass
+class Checker:
+    """Collects per-group verdicts; the first failure recorded is the
+    reported first illegal edge / first missing link."""
+    failures: list = field(default_factory=list)
+
+    def group(self, name: str, failures: list, detail: str) -> None:
+        if failures:
+            log(f"{name}: FAIL ({len(failures)}) - {failures[0]}")
+            for extra in failures[1:MAX_REPORTED_PER_GROUP]:
+                log(f"{name}:   also - {extra}")
+            if len(failures) > MAX_REPORTED_PER_GROUP:
+                log(f"{name}:   ... {len(failures) - MAX_REPORTED_PER_GROUP} more")
+            self.failures.extend(failures)
+        else:
+            log(f"{name}: PASS - {detail}")
+
+
+def read_lines(logfile: Optional[str]) -> tuple[str, list]:
+    if logfile in (None, "-"):
+        return "<stdin>", sys.stdin.read().splitlines()
+    path = Path(logfile).expanduser()
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError as e:
+        die(f"cannot read logfile {path}: {e}", 2)
+    return str(path), text.splitlines()
+
+
+def extract_events(lines: list) -> tuple[list, list]:
+    """Pull the ``[EVT] {json}`` lines out of an arbitrarily noisy log.
+    Returns (events, malformed)."""
+    events: list = []
+    malformed: list = []
+    for lineno, raw in enumerate(lines, start=1):
+        stripped = raw.strip()
+        if not stripped.startswith(EVT_PREFIX):
+            continue
+        payload = stripped[len(EVT_PREFIX):]
+        try:
+            obj = json.loads(payload)
+        except ValueError as e:
+            malformed.append(f"line {lineno}: malformed [EVT] JSON - {e}")
+            continue
+        if not isinstance(obj, dict):
+            malformed.append(
+                f"line {lineno}: [EVT] payload is {type(obj).__name__}, not a JSON object")
+            continue
+        name = obj.get("event")
+        counters = obj.get("counters")
+        events.append(Event(index=len(events), lineno=lineno,
+                            name=name if isinstance(name, str) else "",
+                            counters=counters if isinstance(counters, dict) else {},
+                            obj=obj))
+    return events, malformed
+
+
+def check_fields(chk: Checker, events: list) -> None:
+    """Mandatory frozen fields + a well-formed counters object on every event."""
+    failures = []
+    for ev in events:
+        missing = [f for f in MANDATORY_FIELDS if f not in ev.obj]
+        if missing:
+            failures.append(
+                f"line {ev.lineno}: [EVT] missing mandatory field(s) {', '.join(missing)}")
+            continue
+        if not isinstance(ev.obj["counters"], dict):
+            failures.append(f"line {ev.lineno}: 'counters' is not a JSON object")
+            continue
+        if not isinstance(ev.obj["payload"], dict):
+            failures.append(f"line {ev.lineno}: 'payload' is not a JSON object")
+    chk.group("fields", failures,
+              f"all {len(events)} event(s) carry {'/'.join(MANDATORY_FIELDS)}")
+
+
+def check_vocabulary(chk: Checker, events: list) -> None:
+    failures = [f"line {ev.lineno}: unknown event name {ev.obj.get('event')!r} "
+                f"(frozen vocabulary: {', '.join(sorted(EVENT_NAMES))})"
+                for ev in events if ev.name not in EVENT_NAMES]
+    chk.group("vocabulary", failures,
+              f"all event names within the frozen {len(EVENT_NAMES)}-name vocabulary")
+
+
+def check_counters(chk: Checker, events: list) -> None:
+    """Each event name's own counter advances by exactly 1 between consecutive
+    occurrences -- a bigger jump means log lines were lost, which would
+    otherwise surface as a phantom illegal edge."""
+    failures = []
+    names = sorted({ev.name for ev in events if ev.name in EVENT_NAMES})
+    for name in names:
+        seen = [ev for ev in events if ev.name == name]
+        for prev_ev, ev in zip(seen, seen[1:]):
+            before, now = prev_ev.counter(), ev.counter()
+            if before is None or now is None:
+                continue
+            if now != before + 1:
+                failures.append(
+                    f"line {ev.lineno}: counters.{name} jumped {before} -> {now} "
+                    f"- {now - before - 1} {name} line(s) missing from the stream")
+    chk.group("counters", failures,
+              "every event's own counter advances by exactly 1 (no lost lines)")
+
+
+def number_or_none(value: object) -> tuple:
+    """(ok, parsed) -- None/absent stays None; a bool or non-number is not ok."""
+    if value is None:
+        return True, None
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return False, None
+    return True, float(value)
+
+
+def collect_transitions(chk: Checker, events: list) -> list:
+    """Field-checks every ``track_transition`` payload and returns the
+    well-formed ones as Transition objects, in stream order."""
+    failures: list = []
+    transitions: list = []
+    for ev in events:
+        if ev.name != "track_transition":
+            continue
+        payload = ev.obj.get("payload")
+        if not isinstance(payload, dict):
+            continue    # already reported by check_fields
+        track_id = payload.get("id")
+        source = payload.get("source")
+        from_state = payload.get("from")
+        to_state = payload.get("to")
+        ok_distance, distance = number_or_none(payload.get("distance"))
+        reason = payload.get("reason")
+        bad = []
+        if not isinstance(track_id, str) or not track_id:
+            bad.append(f"'id' missing or not a string ({track_id!r})")
+        if not isinstance(source, str) or not source:
+            bad.append(f"'source' missing or not a string ({source!r})")
+        if from_state not in STATE_NAMES:
+            bad.append(f"'from' not a state name ({from_state!r})")
+        if to_state not in STATE_NAMES:
+            bad.append(f"'to' not a state name ({to_state!r})")
+        if not ok_distance:
+            bad.append(f"'distance' not a number or null ({payload.get('distance')!r})")
+        if bad:
+            failures.append(f"line {ev.lineno}: track_transition payload invalid - "
+                            + "; ".join(bad))
+            continue
+        transitions.append(Transition(
+            event=ev, track_id=track_id, source=source,
+            from_state=from_state, to_state=to_state, distance=distance,
+            reason=reason if isinstance(reason, str) else ""))
+    chk.group("transition-payloads", failures,
+              f"{len(transitions)} track_transition payload(s) carry "
+              f"id/source/from/to/distance/reason well-formed")
+    return transitions
+
+
+def resync(walk: TrackWalk, t: Transition, cfg: AdmissionConfig) -> None:
+    """After a chain break, adopt the transition's claimed target state so one
+    defect does not cascade into a failure per subsequent line."""
+    walk.state = t.to_state
+    walk.cycle_stage = 0
+    if t.to_state == "tentative":
+        walk.hits = 1
+    elif t.to_state == "tracked":
+        walk.hits = cfg.confirm_hits
+    else:
+        walk.hits = 0
+
+
+def apply_edge(walk: TrackWalk, t: Transition, cfg: AdmissionConfig) -> Optional[str]:
+    """Validates one transition against the R13 machine and advances the
+    walk. Returns a failure message for an illegal edge, else None."""
+    frm, to, d = t.from_state, t.to_state, t.distance
+    where = f"line {t.lineno}: track {t.track_id!r} ({t.source})"
+
+    if frm != walk.state:
+        expected = walk.state
+        resync(walk, t, cfg)
+        return (f"{where} edge {t.edge()} breaks the chain - "
+                f"the track's observed state is {expected!r}, not {frm!r}")
+
+    if frm == "not_tracked" and to == "tentative":
+        if d is None:
+            resync(walk, t, cfg)
+            return f"{where} admission {t.edge()} carries no distance"
+        if d > cfg.gate_enter_m:
+            resync(walk, t, cfg)
+            return (f"{where} admission {t.edge()} at distance {d} m > "
+                    f"GATE_ENTER_M {cfg.gate_enter_m} m - out-of-gate admission")
+        walk.state, walk.hits, walk.cycle_stage = "tentative", 1, 1
+        return None
+
+    if frm == "not_tracked" and to == "tracked":
+        if cfg.confirm_hits != 1:
+            resync(walk, t, cfg)
+            return (f"{where} illegal edge {t.edge()} - the not_tracked -> tracked "
+                    f"jump is legal only with CONFIRM_HITS 1, checker runs with "
+                    f"{cfg.confirm_hits}")
+        if d is None or d > cfg.gate_enter_m:
+            resync(walk, t, cfg)
+            return (f"{where} admission {t.edge()} at distance {d} m not within "
+                    f"GATE_ENTER_M {cfg.gate_enter_m} m")
+        walk.state, walk.hits, walk.cycle_stage = "tracked", 1, 0
+        return None
+
+    if frm == "tentative" and to == "tentative":
+        if d is None or d > cfg.gate_enter_m:
+            resync(walk, t, cfg)
+            return (f"{where} tentative hold {t.edge()} at distance {d} m not within "
+                    f"GATE_ENTER_M {cfg.gate_enter_m} m")
+        walk.hits += 1
+        if walk.hits >= cfg.confirm_hits:
+            hits = walk.hits
+            resync(walk, t, cfg)
+            return (f"{where} edge {t.edge()} at {hits} in-gate update(s) - the machine "
+                    f"promotes at CONFIRM_HITS {cfg.confirm_hits}, this hold is illegal")
+        return None
+
+    if frm == "tentative" and to == "tracked":
+        if d is None or d > cfg.gate_enter_m:
+            resync(walk, t, cfg)
+            return (f"{where} promotion {t.edge()} at distance {d} m not within "
+                    f"GATE_ENTER_M {cfg.gate_enter_m} m")
+        updates = walk.hits + 1
+        if updates < cfg.confirm_hits:
+            resync(walk, t, cfg)
+            return (f"{where} early promotion {t.edge()} after {updates} in-gate "
+                    f"update(s) < CONFIRM_HITS {cfg.confirm_hits}")
+        walk.hits += 1
+        walk.state = "tracked"
+        walk.cycle_stage = 2 if walk.cycle_stage == 1 else 0
+        return None
+
+    if frm == "tracked" and to == "tracked":
+        if d is None or d > cfg.gate_exit_m:
+            resync(walk, t, cfg)
+            return (f"{where} refresh {t.edge()} at distance {d} m not within "
+                    f"GATE_EXIT_M {cfg.gate_exit_m} m")
+        return None
+
+    if frm == "tentative" and to == "not_tracked":
+        if not t.is_timeout() and t.distance <= cfg.gate_enter_m:
+            resync(walk, t, cfg)
+            return (f"{where} drop {t.edge()} at distance {t.distance} m <= "
+                    f"GATE_ENTER_M {cfg.gate_enter_m} m - in-gate drop")
+        walk.state, walk.hits, walk.cycle_stage = "not_tracked", 0, 0
+        return None
+
+    if frm == "tracked" and to == "not_tracked":
+        completed = walk.cycle_stage == 2
+        if not t.is_timeout() and t.distance <= cfg.gate_exit_m:
+            band = t.distance > cfg.gate_enter_m
+            resync(walk, t, cfg)
+            return (f"{where} drop {t.edge()} at distance {t.distance} m <= "
+                    f"GATE_EXIT_M {cfg.gate_exit_m} m - "
+                    + ("drop inside the hysteresis band "
+                       f"({cfg.gate_enter_m}, {cfg.gate_exit_m}] m" if band
+                       else "in-gate drop"))
+        walk.state, walk.hits = "not_tracked", 0
+        walk.cycle_stage = 3 if completed else 0    # 3 = full cycle done
+        return None
+
+    resync(walk, t, cfg)
+    return f"{where} illegal edge {t.edge()} - no such edge in the R13 machine"
+
+
+def check_legal_paths(chk: Checker, transitions: list, cfg: AdmissionConfig) -> dict:
+    """Walks every transition in stream order; returns per-source cycle
+    completion for the cycle check."""
+    failures: list = []
+    walks: dict = {}
+    cycled: dict = {}   # source -> bool: a full NT->TE->TR->NT cycle seen
+    for t in transitions:
+        walk = walks.setdefault(t.track_id, TrackWalk())
+        cycled.setdefault(t.source, False)
+        failure = apply_edge(walk, t, cfg)
+        if failure is not None:
+            failures.append(failure)
+            continue
+        if walk.cycle_stage == 3:
+            cycled[t.source] = True
+            walk.cycle_stage = 0
+    chk.group("legal-path", failures,
+              f"{len(transitions)} transition(s) across {len(walks)} track id(s) all "
+              f"legal R13 edges (CONFIRM_HITS {cfg.confirm_hits}, gates "
+              f"{cfg.gate_enter_m}/{cfg.gate_exit_m} m)")
+    return cycled
+
+
+def check_full_cycles(chk: Checker, cycled: dict) -> None:
+    failures = [f"source {source!r} never completed a full "
+                f"not_tracked -> tentative -> tracked -> not_tracked cycle"
+                for source, done in sorted(cycled.items()) if not done]
+    if not cycled:
+        failures.append("no track_transition events at all - no source observed, "
+                        "nothing admitted")
+    chk.group("full-cycle", failures,
+              "full not_tracked -> tentative -> tracked -> not_tracked cycle seen "
+              f"for every named source ({', '.join(sorted(cycled))})")
+
+
+def run_admission(chk: Checker, events: list, cfg: AdmissionConfig) -> None:
+    transitions = collect_transitions(chk, events)
+    chk.group("volume",
+              [] if len(transitions) >= cfg.min_transitions else
+              [f"track_transition events: {len(transitions)} < {cfg.min_transitions} "
+               f"required by --min-transitions - a vacuous pass is forbidden"],
+              f"{len(transitions)} track_transition event(s) >= "
+              f"{cfg.min_transitions} required")
+    cycled = check_legal_paths(chk, transitions, cfg)
+    check_full_cycles(chk, cycled)
+
+
+def run_expect_no_tracks(chk: Checker, events: list, _cfg: AdmissionConfig) -> None:
+    offenders = [ev for ev in events if ev.name == "track_transition"]
+    failures = []
+    for ev in offenders:
+        payload = ev.obj.get("payload")
+        track_id = payload.get("id") if isinstance(payload, dict) else None
+        failures.append(f"line {ev.lineno}: track_transition present "
+                        f"(id={track_id!r}) - expected none")
+    chk.group("no-tracks", failures,
+              f"0 track_transition events across {len(events)} [EVT] line(s)")
+
+
+def positive_int(raw: str) -> int:
+    value = int(raw)
+    if value < 1:
+        raise argparse.ArgumentTypeError(f"must be >= 1, got {value}")
+    return value
+
+
+def positive_float(raw: str) -> float:
+    value = float(raw)
+    if value <= 0:
+        raise argparse.ArgumentTypeError(f"must be > 0, got {value}")
+    return value
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="check_evt_log.py",
+        description="ADA [EVT]-stream assertion (R18); see the module "
+                    "docstring for the full contract.")
+    parser.add_argument("logfile", nargs="?", default=None,
+                        help="log to read; omitted or '-' reads stdin")
+    modes = parser.add_mutually_exclusive_group(required=True)
+    modes.add_argument("--admission", action="store_true",
+                       help="assert legal R13 admission paths and full cycles")
+    modes.add_argument("--expect-no-tracks", action="store_true",
+                       help="assert zero track_transition events")
+    parser.add_argument("--confirm-hits", type=positive_int,
+                        default=DEFAULT_CONFIRM_HITS,
+                        help=f"CONFIRM_HITS the node ran with "
+                             f"(default {DEFAULT_CONFIRM_HITS})")
+    parser.add_argument("--gate-enter-m", type=positive_float,
+                        default=DEFAULT_GATE_ENTER_M,
+                        help=f"GATE_ENTER_M the node ran with "
+                             f"(default {DEFAULT_GATE_ENTER_M})")
+    parser.add_argument("--gate-exit-m", type=positive_float,
+                        default=DEFAULT_GATE_EXIT_M,
+                        help=f"GATE_EXIT_M the node ran with "
+                             f"(default {DEFAULT_GATE_EXIT_M})")
+    parser.add_argument("--min-transitions", type=positive_int,
+                        default=DEFAULT_MIN_TRANSITIONS,
+                        help=f"minimum track_transition count for --admission "
+                             f"(default {DEFAULT_MIN_TRANSITIONS})")
+    return parser
+
+
+def select_mode(args: argparse.Namespace) -> tuple:
+    """(name, handler) for the one selected mode. Additive by design: Phase 4
+    registers its --fusion flag in build_parser() and its row here; nothing
+    else changes."""
+    registry: tuple = (
+        ("admission", args.admission, run_admission),
+        ("expect-no-tracks", args.expect_no_tracks, run_expect_no_tracks),
+    )
+    for name, selected, handler in registry:
+        if selected:
+            return name, handler
+    raise AssertionError("argparse required-group guarantees one mode")
+
+
+def main(argv: list) -> int:
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    if args.gate_enter_m >= args.gate_exit_m:
+        parser.error(f"--gate-enter-m {args.gate_enter_m} must be < "
+                     f"--gate-exit-m {args.gate_exit_m} (the hysteresis band)")
+    cfg = AdmissionConfig(confirm_hits=args.confirm_hits,
+                          gate_enter_m=args.gate_enter_m,
+                          gate_exit_m=args.gate_exit_m,
+                          min_transitions=args.min_transitions)
+    mode, handler = select_mode(args)
+
+    source, lines = read_lines(args.logfile)
+    log(f"mode={mode} input={source} lines={len(lines)}"
+        + (f" confirm_hits={cfg.confirm_hits} gate_enter_m={cfg.gate_enter_m}"
+           f" gate_exit_m={cfg.gate_exit_m} min_transitions={cfg.min_transitions}"
+           if mode == "admission" else ""))
+
+    events, malformed = extract_events(lines)
+    chk = Checker()
+    parse_failures = list(malformed)
+    if not events:
+        parse_failures.append(f"no [EVT] lines found in {source} - an empty "
+                              f"input is never a pass")
+    chk.group("parse", parse_failures,
+              f"{len(events)} [EVT] line(s) parsed from {len(lines)} input line(s), "
+              f"0 malformed")
+
+    check_fields(chk, events)
+    check_vocabulary(chk, events)
+    check_counters(chk, events)
+    handler(chk, events, cfg)
+
+    if chk.failures:
+        log(f"FAIL: {chk.failures[0]}")
+        if len(chk.failures) > 1:
+            log(f"FAIL: {len(chk.failures)} assertion failure(s) total")
+        return 1
+    transitions = sum(1 for ev in events if ev.name == "track_transition")
+    log(f"PASS mode={mode} evt_lines={len(events)} track_transitions={transitions}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
