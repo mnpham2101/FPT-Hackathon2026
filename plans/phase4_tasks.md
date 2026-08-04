@@ -64,9 +64,9 @@ Identical to [phase2_tasks.md § Subtask discipline](phase2_tasks.md#subtask-dis
 
 ### CI ruling for this phase
 
-New lane in a new `.github/workflows/phase4-ci.yml` — *a lane belongs to the phase that created it*. Three jobs: `ada-e2e-loopback` (`15.4.5.1`), `ada-bench-image` (`5.4.9.5`) and `ada-bench-selfcheck` (`2.4.9.7`). Whichever of the three lands first creates the file with the standard `on:`/`concurrency:`/header block; **the three edits are sequenced against each other** and are the only shared-file contention inside this phase. `ada-core-build` (phase0-ci.yml), `ada-ecu-image` (`phase2-ci.yml` — checked against the walkthrough's build table by `5.4.9.6`, never re-created) and the Phase 3 lanes are reused, never duplicated.
+New lane in a new `.github/workflows/phase4-ci.yml` — *a lane belongs to the phase that created it*. Four jobs: `ada-e2e-loopback` (`15.4.5.1`), `ada-ecu-image`, `ada-bench-image` (`5.4.9.5`) and `ada-bench-selfcheck` (`2.4.9.7`). Whichever lands first creates the file with the standard `on:`/`concurrency:`/header block; **the edits are sequenced against each other** and are the only shared-file contention inside this phase. `ada-core-build` (phase0-ci.yml) and the Phase 3 lanes are reused, never duplicated; `ada-ecu-image` is checked against the walkthrough's build table by `5.4.9.6`.
 
-**The ADA image lane's file is `.github/workflows/phase2-ci.yml`**, created by Phase 2 `5.2.8.1`. Every reference to that lane in this plan names that file.
+**The ADA image lane's file is `.github/workflows/phase4-ci.yml`**, alongside the phase's other jobs. Every reference to that lane in this plan names that file. The image built from `ADA_ECU/` carries the Phase 2 scaffold, the Phase 3 detector and the Phase 4 fusion, so it is the node's artifact rather than any single phase's.
 
 ### Image build and push
 
@@ -76,7 +76,7 @@ New lane in a new `.github/workflows/phase4-ci.yml` — *a lane belongs to the p
 |---|---|---|---|---|---|---|
 | `m1-ada-bench:latest` | **V2X Bench mock**, `10.99.0.11` | `ROLE=v2x_mock` | `tools/ada-bench/` | `ada-bench-image` | `phase4-ci.yml` | `5.4.9.4` (image), `5.4.9.5` (lane) |
 | `m1-ada-bench:latest` | **IVI Sink mock**, `10.99.0.13` | `ROLE=ivi_mock` | `tools/ada-bench/` | `ada-bench-image` — *the same job, the same tag, pushed once* | `phase4-ci.yml` | as above |
-| `m1-ada-ecu:latest` | **ADA ECU**, `10.99.0.12` — the node under test | — | `ADA_ECU/` | `ada-ecu-image` | `phase2-ci.yml` | Phase 2 `5.2.8.1` (lane); contents by Phase 2 `5.2.7.1` + this phase's `6.4.4.1` + Phase 3 `12.3.7.2` / `5.3.6.1` |
+| `m1-ada-ecu:latest` | **ADA ECU**, `10.99.0.12` — the node under test | — | `ADA_ECU/` | `ada-ecu-image` | `phase4-ci.yml` | Phase 2 `5.2.8.1` (lane); contents by Phase 2 `5.2.7.1` + this phase's `6.4.4.1` + Phase 3 `12.3.7.2` / `5.3.6.1` |
 
 Every tag above is a **registry** tag, carrying the `m1-` prefix and pushed to `registry.hackathon-2.carsky.io`. A node's `image` field takes the registry tag; a local build tag never appears in a blueprint.
 
@@ -546,7 +546,7 @@ Also create `plans/doc/phase4-ada-isolated-room-run.md` as the empty run doc, wi
 - Confirm the image the lane produces carries all four ADA runtime deliverables — `ada_ecu`, `entrypoint.sh`, `capture.sh`, `detector/` + `models/` + `media/` — since a Room deployed from an image missing the detector cannot close `13.4.11.3`'s own-sensor half.
 - Any mismatch is fixed in the `.yml` in this same commit. A clean check produces no code change and the commit is the record; the findings are recorded in `5.4.9.1`'s run doc.
 
-**Acceptance:** every row of §3.2's table confirmed against the live workflow and recorded in the run doc, with any correction applied; the run doc names the two job files (`phase2-ci.yml` for the ADA image, `phase4-ci.yml` for the bench image) so no later reader hunts for them. **Lane green is not this subtask's criterion** — `5.4.10.1` is where both image jobs' conclusions are confirmed, and §7 marks that a Human row.
+**Acceptance:** every row of §3.2's table confirmed against the live workflow and recorded in the run doc, with any correction applied; the run doc names the job file (`phase4-ci.yml`, which carries both the ADA and the bench image jobs) so no later reader hunts for it. **Lane green is not this subtask's criterion** — `5.4.10.1` is where both image jobs' conclusions are confirmed, and §7 marks that a Human row.
 
 **Dependencies:** after Phase 2 `5.2.8.1` + `6.4.4.1` + Phase 3 `5.3.6.1` (the image must carry everything before its contents are confirmed). Parallel with `5.4.9.5`. **Commit:** `[5.4.9.6] docs: confirm the ADA ECU image lane against the walkthrough build table`
 

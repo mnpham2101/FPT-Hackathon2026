@@ -75,7 +75,7 @@ Identical to [phase2_tasks.md § Subtask discipline](phase2_tasks.md#subtask-dis
 
 ### CI ruling for this phase
 
-New lanes go in a new `.github/workflows/phase3-ci.yml` — *a lane belongs to the phase that created it* ([phase1-ci.yml](../.github/workflows/phase1-ci.yml) header). Four jobs: `ada-detector-wheels` (`12.3.1.1`), `ada-detector-tests` (`12.3.3.3`), `ada-detector-run` (`12.3.3.4`), `ada-zero-c` (`12.3.5.4`). `ada-core-build` and `python-tests` in phase0-ci.yml stay untouched; `ada-ecu-image` in `phase2-ci.yml` is reused, not duplicated.
+New lanes go in a new `.github/workflows/phase3-ci.yml` — *a lane belongs to the phase that created it* ([phase1-ci.yml](../.github/workflows/phase1-ci.yml) header). Four jobs: `ada-detector-wheels` (`12.3.1.1`), `ada-detector-tests` (`12.3.3.3`), `ada-detector-run` (`12.3.3.4`), `ada-zero-c` (`12.3.5.4`). `ada-core-build` and `python-tests` in phase0-ci.yml stay untouched; `ada-ecu-image` in `phase4-ci.yml` is reused, not duplicated.
 
 ---
 
