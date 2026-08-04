@@ -19,7 +19,7 @@ class MainViewModel @JvmOverloads constructor(
         MutableStateFlow(WarningUiState.Idle),
 ) : ViewModel() {
 
-    private val _currentMode = MutableStateFlow<DisplayMode>(DisplayMode.HomeView)
+    private val _currentMode = MutableStateFlow<DisplayMode>(DisplayMode.WarningView)
     val currentMode: StateFlow<DisplayMode> = _currentMode.asStateFlow()
 
     /** Mode shown before a warning forced WarningView. Visible to tests. */
