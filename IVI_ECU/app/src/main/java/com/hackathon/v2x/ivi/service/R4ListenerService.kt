@@ -136,8 +136,11 @@ class R4ListenerService : Service() {
                     socket.receive(packet)
                     val bytes = packet.data.copyOf(packet.length)
                     deserializer.deserialize(bytes)
-                        .onSuccess { message -> _r4EventFlow.emit(message) }
-                        .onFailure { e -> safeLogW(TAG, "Skipping bad packet: ${e.message}") }
+                        .onSuccess { message ->
+                            safeLogI("IVI_V2X", "[RX] R4 message received: $message")
+                            _r4EventFlow.emit(message)
+                        }
+                        .onFailure { e -> safeLogW("IVI_V2X", "[DROP] Skipping bad packet: ${e.message}") }
                 }
             } finally {
                 if (datagramSocket === socket) {
