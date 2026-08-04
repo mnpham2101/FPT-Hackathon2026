@@ -50,7 +50,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hackathon.v2x.ivi.BuildConfig
-import com.hackathon.v2x.ivi.model.SceneGeometry
 import com.hackathon.v2x.ivi.ui.DisplayMode
 import com.hackathon.v2x.ivi.ui.MainViewModel
 import com.hackathon.v2x.ivi.ui.WarningUiState
