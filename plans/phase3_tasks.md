@@ -402,10 +402,11 @@ The clip-time value `frame_index / fps * 1000` stays a detector-local `Frame` fi
 4. Compare it against the clip's recorded geometry — [the provenance record](../ADA_ECU/media/ego-b-occluding-c.source.md) states B is a white coach closing from roughly 60 m to roughly 10 m across the 10 s, present in every sampled frame.
 5. Check the required property, which is a monotonic, consistently-biased range rather than absolute accuracy: the approach yields a decreasing series crossing `GATE_ENTER_M` (30 m) exactly once per loop.
 6. On disagreement, retune **only** `VEHICLE_WIDTH_M` and `CAMERA_HFOV_DEG`, re-running the lane with the candidate values. Never retune the R13 gate (D3/D6): the gate is a requirement value and the camera constants are estimates. The coach is wider than the 1.8 m car default, so a systematic under-read of range is the expected first finding.
-7. Record the final values as the defaults in [HLD §6](../ADA_ECU/doc/ada-ecu-hld.md#6-internal-components), in `detector/config.py` and in `node-ada-ecu.md`.
+7. Record the final values as the defaults in `detector/config.py`, which is the node's only detector env reader.
 8. Record the before/after series summary in `plans/doc/phase3-ada-detector-run.md`, naming the workflow run the artifact came from.
+9. Hand the two final values to [[project-architecture]] for [HLD §6](../ADA_ECU/doc/ada-ecu-hld.md#6-internal-components)'s **Env — detector** table and for [node-ada-ecu.md](../requirements/car-sky-guide/node-ada-ecu.md). **The implementing subagent does not edit either file** — the HLD is this node's sole design authority and the node guide is a platform reference, both owned by [[project-architecture]] ([CLAUDE.md § Roles](../CLAUDE.md), [hld-content-and-commit-format.md § How to apply](../.claude/rules/hld-content-and-commit-format.md)). The hand-off carries the measured series, the chosen values and the run they came from.
 
-**Acceptance:** the estimated-range series for B is monotonic through the approach and crosses the gate once per loop; the two constants' final values are committed in the config defaults and the node guide.
+**Acceptance:** the estimated-range series for B is monotonic through the approach and crosses the gate once per loop; the two constants' final values are committed in `detector/config.py` and recorded in the run doc, and the hand-off to [[project-architecture]] is recorded there too.
 
 **Dependencies:** after `12.3.2.7` + `12.3.3.1` + `12.3.3.4`. **Commit:** `[12.3.4.3] fix: retune the pinhole distance constants against the demo clip`
 
