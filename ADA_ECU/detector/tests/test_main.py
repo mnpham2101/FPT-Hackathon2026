@@ -111,8 +111,19 @@ def test_sigterm_terminates_promptly():
     try:
         # The startup line is printed (and flushed) once the frame loop is about
         # to start — wait for it so the signal lands after handler installation.
-        startup = proc.stderr.readline()
-        assert "detector: starting" in startup
+        # stderr is NOT part of the process contract (only stdout is), and third
+        # parties write there first on some platforms — onnxruntime 1.28 emits a
+        # device-discovery warning on Linux before our line — so scan for the
+        # startup line instead of asserting it arrives first.
+        startup_seen = False
+        for _ in range(50):
+            line = proc.stderr.readline()
+            if not line:
+                break
+            if "detector: starting" in line:
+                startup_seen = True
+                break
+        assert startup_seen, "startup line never appeared on stderr"
 
         t0 = time.monotonic()
         if os.name == "nt":
