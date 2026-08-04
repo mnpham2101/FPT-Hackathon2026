@@ -304,3 +304,66 @@ jobs:
             ${{ runner.temp }}/ada-detector-unpaced.summary.txt
           if-no-files-found: warn
 
+  # ---- ada-zero-c (12.3.5.4) ----
+  # The repeatable form of the zero-C check: one single pass of the real detector over the
+  # committed clip (loop off, pacing off, exit 0 on clean EOF), then
+  # ADA_ECU/tools/check_zero_c.py over the captured R3 stream - a non-zero checker exit fails
+  # the job. The synthetic source is NOT a fallback here: it yields zero detections and
+  # nothing to examine, so the clip and model must be present or the lane skips with a notice.
+  ada-zero-c:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Single pass over the committed clip, then the zero-C checker
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Landed-file guard: model (12.3.3.1), checker (12.3.5.x) and pinned requirements
+          # (12.3.2.1) are other subtasks' deliverables.
+          for REQUIRED in ADA_ECU/models/yolo11n.onnx ADA_ECU/tools/check_zero_c.py ADA_ECU/detector/requirements.txt; do
+            if [ ! -f "$REQUIRED" ]; then
+              echo "::notice::$REQUIRED not landed yet - skipping"
+              exit 0
+            fi
+          done
+
+          python -m pip install -r ADA_ECU/detector/requirements.txt
+
+          DETECTIONS="$RUNNER_TEMP/detections.jsonl"
+          STDERR_LOG="$RUNNER_TEMP/zero-c-detector-stderr.log"
+
+          # Capture-then-assert: a non-zero detector exit must not end the step before the
+          # stderr diagnostics can be printed.
+          echo "[LANE] single pass over ADA_ECU/media/ego-b-occluding-c.mp4 (loop off, pacing off)"
+          STATUS=0
+          DETECTOR_LOOP=false \
+          DETECTOR_REALTIME_PACING=false \
+          VIDEO_CLIP_PATH=ADA_ECU/media/ego-b-occluding-c.mp4 \
+          MODEL_PATH=ADA_ECU/models/yolo11n.onnx \
+            python ADA_ECU/detector/main.py > "$DETECTIONS" 2> "$STDERR_LOG" || STATUS=$?
+
+          echo "::group::detector stderr"
+          cat "$STDERR_LOG" || true
+          echo "::endgroup::"
+
+          if [ "$STATUS" -ne 0 ]; then
+            echo "::error::detector exited $STATUS on the single pass (expected 0 on clean EOF)"
+            exit 1
+          fi
+
+          if [ ! -s "$DETECTIONS" ]; then
+            echo "::error::empty detection log - the single pass produced no R3 lines to examine"
+            exit 1
+          fi
+          echo "[LANE] captured $(wc -l < "$DETECTIONS") R3 lines"
+
+          # The verdict: the checker prints its examined counts and exits non-zero on any C
+          # detection - and also on an empty log, so a vacuous pass is impossible.
+          python ADA_ECU/tools/check_zero_c.py "$DETECTIONS"
+          echo "[LANE] zero-C check PASSED"
