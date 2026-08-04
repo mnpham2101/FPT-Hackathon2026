@@ -1,6 +1,6 @@
 # The two lanes that are Phase 0's OWN artifacts, and the only two this file holds:
 #   * contracts-gate - the repo-wide static gate over the frozen R1-R6 contracts (1.0.7.1);
-#   * netcheck-image - the smoke-test tool's arm64 image (6.0.8.1).
+#   * netcheck-image - the smoke-test tool's arm64 image (5.0.8.2; the tool itself is 6.0.8.1).
 # Neither exercises a node. The gate is a source check spanning all four folders, and netcheck is
 # test equipment that stands in for no node at all.
 #
@@ -23,9 +23,8 @@ on:
     branches: [main]
 
 # Superseded runs are cancelled rather than left to finish - see the fuller note in phase1-ci.yml.
-# Cheap here (netcheck-image is a ~40 s build), but it keeps the workflow files behaving alike.
-# Safe for the one-shot golden-vector publish step, which is guarded on contracts/golden-vectors/
-# being absent - which it no longer is.
+# Cheap here (netcheck-image is a ~40 s build), but it keeps the workflow files behaving alike, and
+# it stops stacked pushes racing to overwrite the one mutable m1-netcheck:latest tag.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -33,8 +32,13 @@ concurrency:
 jobs:
   # Both steps are static source checks over the frozen contracts, which is why they sit together
   # here rather than with a node: check_sync.py compares every node-local contract copy against its
-  # master across all four folders, and the R7 gate (added by 7.1.3.5) is a grep over V2X sources
-  # that compiles nothing. A lane that BUILDS a node belongs to that node's phase file.
+  # master across all four folders, and the R7 gate (7.1.3.5) is a grep over V2X sources that
+  # compiles nothing. A lane that BUILDS a node belongs to that node's phase file.
+  #
+  # No landed-file guard on either step, the convention phase1/2/5-ci.yml state: both scripts are on
+  # the tree, so a `[ -f ... ]` test can no longer mean "not written yet" - it can only mean the
+  # script was deleted, and it would turn that into a green run. This job is what holds the R1-R6
+  # freeze; it must fail loudly when its checker is missing.
   contracts-gate:
     runs-on: ubuntu-latest
     steps:
@@ -42,20 +46,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Contract byte-identity gate (lands with 1.0.7.1)
-        run: |
-          if [ -f contracts/check_sync.py ]; then
-            python contracts/check_sync.py
-          else
-            echo "contracts/check_sync.py not landed yet (subtask 1.0.7.1) - skipping"
-          fi
-      - name: R7 transport-import gate (lands with 7.1.3.5)
-        run: |
-          if [ -f V2X_ECU/tools/check_transport_imports.py ]; then
-            python V2X_ECU/tools/check_transport_imports.py
-          else
-            echo "V2X_ECU/tools/check_transport_imports.py not landed yet (subtask 7.1.3.5) - skipping"
-          fi
+      - name: Contract byte-identity gate (1.0.7.1)
+        run: python contracts/check_sync.py
+      - name: R7 transport-import gate (7.1.3.5)
+        run: python V2X_ECU/tools/check_transport_imports.py
 
   netcheck-image:
     runs-on: ubuntu-latest
