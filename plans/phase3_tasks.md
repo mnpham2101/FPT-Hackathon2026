@@ -69,9 +69,9 @@ Identical to [phase2_tasks.md § Subtask discipline](phase2_tasks.md#subtask-dis
 | `ADA_ECU/detector/` | `pip install -r ADA_ECU/detector/requirements.txt -r ADA_ECU/detector/requirements-dev.txt && python -m pytest ADA_ECU/detector/tests` | CI `ada-detector-tests` (`12.3.3.3`); local with skips |
 | `ADA_ECU/` (C++ core) | `cmake -S ADA_ECU -B ADA_ECU/build && cmake --build ADA_ECU/build -j $(nproc) && ctest --test-dir ADA_ECU/build --output-on-failure` | CI `ada-core-build` |
 | `ADA_ECU/tools/` | `python -m py_compile ADA_ECU/tools/<script>.py` | local + CI |
-| ADA image | `docker buildx build --platform linux/arm64 --provenance=false --sbom=false -t ada-ecu:latest ADA_ECU/` | CI `ada-ecu-image` |
+| ADA image | `docker buildx build --platform linux/arm64 --provenance=false --sbom=false -t m1-ada-ecu:latest ADA_ECU/` | CI `ada-ecu-image` |
 
-**Local tag and registry tag are different strings.** The local build tag is `ada-ecu:latest`; the tag CI builds, pushes and the blueprint pulls is `registry.hackathon-2.carsky.io/m1-ada-ecu:latest` ([node-ada-ecu.md](../requirements/car-sky-guide/node-ada-ecu.md), [node-code-layout.md](../.claude/rules/node-code-layout.md#build-rules-all-container-nodes)). Every acceptance below names which of the two it means.
+**Local tag and registry tag are different strings.** The local build tag is `m1-ada-ecu:latest` ([HLD D9](../ADA_ECU/doc/ada-ecu-design-decisions.md#d9--deployment-shape) and [§11](../ADA_ECU/doc/ada-ecu-hld.md#11-tech-stack-build-and-ci)); the tag CI builds, pushes and the blueprint pulls is `registry.hackathon-2.carsky.io/m1-ada-ecu:latest` ([node-ada-ecu.md](../requirements/car-sky-guide/node-ada-ecu.md)). Every acceptance below names which of the two it means. A third form for this node's artifact appears in [node-code-layout.md](../.claude/rules/node-code-layout.md) — carried as [phase2_tasks.md § Open items item 7](phase2_tasks.md#open-items--flags-no-phase-2-subtask-may-silently-close-them), not decided here.
 
 ### CI ruling for this phase
 
