@@ -433,7 +433,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 > Two files, per § CI ruling: `5.2.8.1` writes `.github/workflows/phase4-ci.yml` (the node-artifact lane), `13.2.8.2` creates `.github/workflows/phase2-ci.yml`. Both lanes land **before** their consumers, guarded on file existence like the Phase 0/1 jobs, so consuming subtasks have CI acceptance from day one. `.github/workflows/` is explicitly in these two subtasks' write scope and no other's in this phase.
 
-### [ ] `5.2.8.1` — Lane `ada-ecu-image` in `phase4-ci.yml` *(AI)*
+### [x] `5.2.8.1` — Lane `ada-ecu-image` in `phase4-ci.yml` *(AI)*
 
 **Objective:** arm64 image build and gated push for the ADA node image; `v2x-ecu-image` in [phase1-ci.yml](../.github/workflows/phase1-ci.yml) is the template. This lane builds `m1-ada-ecu:latest`, the image Phase 4's isolated Room deploys. No other route builds it.
 
@@ -455,6 +455,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 **Acceptance:** workflow YAML valid; run-blocks `bash -n` clean; lane green on the current tree (guard branch) — goes live when `5.2.7.1` lands.
 
 **Dependencies:** none — lands immediately. **Commit:** `[5.2.8.1] chore: add the ADA ECU image build-push CI lane`
+
+**Status:** done — `.github/workflows/phase4-ci.yml` created (job `ada-ecu-image`, guard branch active while `ADA_ECU/Dockerfile` is absent); YAML parses via `yaml.safe_load`, both bash `run:` blocks `bash -n` clean, LF endings (zero CR bytes).
 
 ### [ ] `13.2.8.2` — Lane `ada-loopback-check` *(AI)*
 
