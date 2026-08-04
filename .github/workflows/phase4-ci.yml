@@ -363,3 +363,292 @@ jobs:
           username: ${{ vars.CARSKY_REGISTRY_USER || 'kis@hackathon.fpt.com' }}
           password: ${{ secrets.CARSKY_ZOT_API_KEY }}
           digest: ${{ steps.push.outputs.digest }}
+
+  # The bench loopback self-check (2.4.9.7) - proves walkthrough section 8.1 item 5 (the bench
+  # scripts, their env names and their log-line shapes) off-platform, before a Room slot is spent
+  # on them. Plain runner: no Docker, no registry, no platform. Four arms, each asserting a
+  # non-zero examined-datagram count so the lane cannot pass vacuously:
+  #   A - emitter (PROFILE=approaching) against an inline UDP recorder; every received body must
+  #       validate against ADA_ECU/contracts/r2-v2x-object.schema.json - the parse_reject
+  #       failure mode of walkthrough section 6, caught here rather than in a Room;
+  #   B - emitter (PROFILE=out_of_range): every [TX] line holds distance at START_DISTANCE_M,
+  #       which is what makes the deployed negative case meaningful;
+  #   C - sink fed the committed contracts/samples R4 bodies plus a null-vehicleC variant:
+  #       [RX]/[CHECK]/[SUMMARY] shapes under the exact greps the deployed checks use, ending
+  #       rejected=0;
+  #   D - sink fed one malformed datagram then one valid one: rejected increments and the sink
+  #       survives. The malformed probe is its own sink instance, so arm C's rejected=0 and arm
+  #       D's rejected>=1 are both unambiguous.
+  # The emitter deliberately never targets the sink: mock_v2x emits R2 v2x_object bodies (the
+  # ADA node's INPUT) while mock_ivi accepts only R4 warning/state (the ADA node's OUTPUT), so
+  # wiring them directly would count every emitter datagram as a type rejection and destroy both
+  # rejected assertions. The two scripts meet only through the ADA node they bracket.
+  ada-bench-selfcheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      # jsonschema serves this lane's validation harness only; the two bench scripts stay
+      # stdlib-only and run exactly as committed.
+      - name: Install the validation harness dependency
+        run: python -m pip install jsonschema
+      - name: Emitter arms - R2 schema validation and the out_of_range hold
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Fixed ports are safe here: the whole lane is loopback-only inside a fresh runner
+          # (same note as phase1-ci.yml's v2x-comms-check). 47320 is outside the blueprint's
+          # 47100/47200/47300 set so a log line can never be misread as a node port.
+          REC_PORT=47320
+          TX_LOG="$RUNNER_TEMP/tx.log"
+          OUT_LOG="$RUNNER_TEMP/out.log"
+          CAPTURED="$RUNNER_TEMP/captured.jsonl"
+          REC_ERR="$RUNNER_TEMP/recorder.err"
+
+          # Inline UDP recorder: one body per stdout line - the emitter's wire shape is compact
+          # JSON with no newlines, so JSONL is lossless. Readiness goes to stderr so stdout
+          # stays pure bodies.
+          cat > "$RUNNER_TEMP/recorder.py" <<'PY'
+          import socket
+          import sys
+
+          sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+          sock.bind(("127.0.0.1", int(sys.argv[1])))
+          print("[REC] bound port=%s" % sys.argv[1], file=sys.stderr, flush=True)
+          while True:                                   # runs until the arm kills it
+              data, _ = sock.recvfrom(65535)
+              sys.stdout.write(data.decode("utf-8", "replace") + "\n")
+              sys.stdout.flush()
+          PY
+          python "$RUNNER_TEMP/recorder.py" "$REC_PORT" > "$CAPTURED" 2> "$REC_ERR" &
+          REC_PID=$!
+
+          # Bounded readiness poll, never a bare sleep: a datagram sent before the bind is
+          # simply lost and would surface as a confusing count mismatch.
+          READY=0
+          for _ in $(seq 1 30); do
+            if grep -q '\[REC\] bound' "$REC_ERR" 2>/dev/null; then READY=1; break; fi
+            sleep 0.2
+          done
+          if [ "$READY" -ne 1 ]; then
+            echo "::error::recorder never bound 127.0.0.1:$REC_PORT within 6s"
+            exit 1
+          fi
+
+          # Arm A: a ~3 s approaching burst at 10 Hz. START_DELAY_S=1 keeps the deployed
+          # listen-first semantics in play without the blueprint's 20 s wait; every other knob
+          # is the script's documented default (the blueprint's values).
+          echo "[LANE] arm A: PROFILE=approaching burst at the recorder"
+          TARGET_HOST=127.0.0.1 TARGET_PORT="$REC_PORT" START_DELAY_S=1 \
+          PROFILE=approaching RATE_HZ=10 \
+            python tools/ada-bench/mock_v2x.py > "$TX_LOG" 2>&1 &
+          TX_PID=$!
+          sleep 4
+          kill -TERM "$TX_PID" 2>/dev/null || true
+          wait "$TX_PID" 2>/dev/null || true
+
+          # Arm B: out_of_range holds the distance. START_DISTANCE_M passed explicitly (its
+          # default value) so the env value and the assertion below are visibly the same number.
+          echo "[LANE] arm B: PROFILE=out_of_range burst at the recorder"
+          TARGET_HOST=127.0.0.1 TARGET_PORT="$REC_PORT" START_DELAY_S=0 \
+          PROFILE=out_of_range RATE_HZ=10 START_DISTANCE_M=45 \
+            python tools/ada-bench/mock_v2x.py > "$OUT_LOG" 2>&1 &
+          TX_PID=$!
+          sleep 2
+          kill -TERM "$TX_PID" 2>/dev/null || true
+          wait "$TX_PID" 2>/dev/null || true
+          # The recorder is idle by now (the emitter is dead), so its last JSONL line is complete.
+          kill -TERM "$REC_PID" 2>/dev/null || true
+          wait "$REC_PID" 2>/dev/null || true
+
+          echo "::group::tx.log (approaching)"
+          cat "$TX_LOG"
+          echo "::endgroup::"
+          echo "::group::out.log (out_of_range)"
+          cat "$OUT_LOG"
+          echo "::endgroup::"
+
+          # SIGTERM can truncate the one line in flight when it lands mid-print, so the final
+          # line of each emitter log is dropped before the every-line shape equality - with
+          # 20-40 [TX] lines per burst the >=5 floors keep the check far from vacuous.
+          head -n -1 "$TX_LOG" > "$TX_LOG.trim"
+          head -n -1 "$OUT_LOG" > "$OUT_LOG.trim"
+
+          # The exact grep the deployed emitter check uses - the lane fails if a prefix or a
+          # field name drifts. EVERY [TX] line must carry the full shape, not merely some.
+          TX_TOTAL=$(grep -c '^\[TX\]' "$TX_LOG.trim" || true)
+          TX_SHAPE=$(grep -Ec '^\[TX\] seq=[0-9]+ objectId=.+ distance=.+ bytes=[0-9]+ -> ' "$TX_LOG.trim" || true)
+          echo "[LANE] approaching [TX] lines: $TX_TOTAL, matching the deployed grep: $TX_SHAPE"
+          if [ "$TX_TOTAL" -lt 5 ] || [ "$TX_TOTAL" -ne "$TX_SHAPE" ]; then
+            echo "::error::[TX] shape drift or too few lines (total=$TX_TOTAL shape=$TX_SHAPE, need >=5 and equal)"
+            exit 1
+          fi
+
+          OUT_TOTAL=$(grep -c '^\[TX\]' "$OUT_LOG.trim" || true)
+          OUT_SHAPE=$(grep -Ec '^\[TX\] seq=[0-9]+ objectId=.+ distance=.+ bytes=[0-9]+ -> ' "$OUT_LOG.trim" || true)
+          OUT_HELD=$(grep -c '^\[TX\] .*distance=45\.0 ' "$OUT_LOG.trim" || true)
+          echo "[LANE] out_of_range [TX] lines: $OUT_TOTAL, shape: $OUT_SHAPE, holding distance=45.0: $OUT_HELD"
+          if [ "$OUT_TOTAL" -lt 5 ] || [ "$OUT_TOTAL" -ne "$OUT_SHAPE" ] || [ "$OUT_TOTAL" -ne "$OUT_HELD" ]; then
+            echo "::error::out_of_range distance walked or shape drifted (total=$OUT_TOTAL shape=$OUT_SHAPE held=$OUT_HELD)"
+            exit 1
+          fi
+
+          # Every captured body - both arms; out_of_range bodies are equally bound by the
+          # contract - must validate against the ADA node's R2 schema copy. Zero bodies is a
+          # failure, never a pass.
+          python - "$CAPTURED" ADA_ECU/contracts/r2-v2x-object.schema.json <<'PY'
+          import json
+          import sys
+
+          import jsonschema
+
+          lines = [l for l in open(sys.argv[1], encoding="utf-8") if l.strip()]
+          schema = json.load(open(sys.argv[2], encoding="utf-8"))
+          validator = jsonschema.Draft202012Validator(schema)
+          count = 0
+          for line in lines:
+              body = json.loads(line)
+              errors = sorted(validator.iter_errors(body), key=str)
+              if errors:
+                  print("::error::emitter datagram %d fails the R2 schema: %s"
+                        % (count + 1, errors[0].message))
+                  sys.exit(1)
+              count += 1
+          if count == 0:
+              print("::error::recorder captured zero emitter datagrams")
+              sys.exit(1)
+          print("[LANE] validated %d emitter datagrams against r2-v2x-object.schema.json" % count)
+          PY
+          echo "[LANE] emitter arms PASSED"
+      - name: Sink arms - valid R4 feed, then the malformed probe
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Fixed loopback-only port, distinct from the emitter step's 47320 and from the
+          # blueprint's node ports for the same misread-avoidance reason.
+          SINK_PORT=47310
+          SINK_LOG="$RUNNER_TEMP/sink.log"
+          SINK2_LOG="$RUNNER_TEMP/sink2.log"
+
+          wait_boot() {
+            for _ in $(seq 1 30); do
+              if grep -q '\[BOOT\] mock_ivi' "$1" 2>/dev/null; then return 0; fi
+              sleep 0.2
+            done
+            echo "::error::mock_ivi never logged [BOOT] within 6s"
+            cat "$1" 2>/dev/null || true
+            return 1
+          }
+
+          # Arm C - the valid feed: the two committed contracts/samples bodies plus a
+          # null-vehicleC variant built inline (legitimate before C is first tracked, so it must
+          # read both_vehicles=no, never a rejection). SUMMARY_EVERY_S=2 keeps the wait short.
+          echo "[LANE] arm C: valid R4 feed"
+          LISTEN_PORT="$SINK_PORT" SUMMARY_EVERY_S=2 \
+            python tools/ada-bench/mock_ivi.py > "$SINK_LOG" 2>&1 &
+          SINK_PID=$!
+          wait_boot "$SINK_LOG"
+
+          python - "$SINK_PORT" <<'PY'
+          import json
+          import socket
+          import sys
+          import time
+
+          tx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+          port = int(sys.argv[1])
+          warning = open("contracts/samples/r4-warning.json", "rb").read()
+          state = open("contracts/samples/r4-state.json", "rb").read()
+          null_c = json.loads(warning)
+          null_c["geometry"]["vehicleC"] = None
+          for payload in (warning, state,
+                          json.dumps(null_c, separators=(",", ":")).encode()):
+              tx.sendto(payload, ("127.0.0.1", port))
+              time.sleep(0.3)   # keeps the sink's seq deterministic for the per-seq asserts
+          print("[LANE] fed warning, state and null-vehicleC bodies", flush=True)
+          PY
+
+          # One summary period plus slack, so the final [SUMMARY] reflects all three datagrams.
+          sleep 3
+          kill -TERM "$SINK_PID" 2>/dev/null || true
+          wait "$SINK_PID" 2>/dev/null || true
+
+          echo "::group::sink.log (valid arm)"
+          cat "$SINK_LOG"
+          echo "::endgroup::"
+
+          # The exact greps the deployed checks use - fail on any prefix or field-name drift.
+          # Exactly ONE yes/yes [CHECK]: the r4-warning body. The state body reads
+          # c_source_relayed=no (it carries no object) and the null-vehicleC body reads
+          # both_vehicles=no, so a second match would itself be drift.
+          YES_YES=$(grep -c '\[CHECK\] .*both_vehicles=yes c_source_relayed=yes' "$SINK_LOG" || true)
+          SUM_SHAPE=$(grep -c '\[SUMMARY\] received=.* rejected=' "$SINK_LOG" || true)
+          if [ "$YES_YES" -ne 1 ]; then
+            echo "::error::expected exactly 1 both_vehicles=yes c_source_relayed=yes [CHECK] (the r4-warning body), got $YES_YES"
+            exit 1
+          fi
+          grep -q '\[CHECK\] seq=3 both_vehicles=no ' "$SINK_LOG" || {
+            echo "::error::null-vehicleC body did not read both_vehicles=no"
+            exit 1
+          }
+          if [ "$SUM_SHAPE" -lt 1 ]; then
+            echo "::error::no [SUMMARY] line matched the deployed grep"
+            exit 1
+          fi
+          LAST_SUM=$(grep '\[SUMMARY\] received=.* rejected=' "$SINK_LOG" | tail -1)
+          echo "[LANE] final summary (valid arm): $LAST_SUM"
+          echo "$LAST_SUM" | grep -q 'received=3 warnings=2 both_vehicles=2 rejected=0' || {
+            echo "::error::valid arm's final [SUMMARY] drifted from received=3 warnings=2 both_vehicles=2 rejected=0"
+            exit 1
+          }
+
+          # Arm D - the malformed probe, on its own sink instance so arm C's rejected=0 stays
+          # unambiguous. A valid body follows the malformed one to prove the sink survived it.
+          echo "[LANE] arm D: malformed probe"
+          LISTEN_PORT="$SINK_PORT" SUMMARY_EVERY_S=2 \
+            python tools/ada-bench/mock_ivi.py > "$SINK2_LOG" 2>&1 &
+          SINK_PID=$!
+          wait_boot "$SINK2_LOG"
+
+          python - "$SINK_PORT" <<'PY'
+          import socket
+          import sys
+          import time
+
+          tx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+          port = int(sys.argv[1])
+          tx.sendto(b"this is not json {", ("127.0.0.1", port))
+          time.sleep(0.3)
+          tx.sendto(open("contracts/samples/r4-warning.json", "rb").read(),
+                    ("127.0.0.1", port))
+          print("[LANE] fed 1 malformed + 1 valid datagram", flush=True)
+          PY
+
+          sleep 3
+          kill -TERM "$SINK_PID" 2>/dev/null || true
+          wait "$SINK_PID" 2>/dev/null || true
+
+          echo "::group::sink2.log (malformed arm)"
+          cat "$SINK2_LOG"
+          echo "::endgroup::"
+
+          grep -q '\[REJECT\] seq=1 .*reason=not_json' "$SINK2_LOG" || {
+            echo "::error::malformed datagram produced no [REJECT] line"
+            exit 1
+          }
+          grep -q '\[CHECK\] seq=2 both_vehicles=yes c_source_relayed=yes' "$SINK2_LOG" || {
+            echo "::error::sink did not process the valid datagram after the malformed one"
+            exit 1
+          }
+          LAST_SUM2=$(grep '\[SUMMARY\] received=.* rejected=' "$SINK2_LOG" | tail -1)
+          echo "[LANE] final summary (malformed arm): $LAST_SUM2"
+          echo "$LAST_SUM2" | grep -Eq 'received=2 .*rejected=1' || {
+            echo "::error::malformed arm's final [SUMMARY] drifted from received=2 ... rejected=1"
+            exit 1
+          }
+          echo "[LANE] sink arms PASSED"
