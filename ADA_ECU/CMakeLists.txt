@@ -124,3 +124,12 @@ target_compile_features(ada_admission PUBLIC cxx_std_17)
 
 ada_add_test(ada_admission_own_sensor_test tests/store/test_admission_own_sensor.cpp)
 target_link_libraries(ada_admission_own_sensor_test PRIVATE ada_admission)
+
+# R2 UDP listener thread — socket → input queue, no parsing (2.2.6.1).
+add_library(ada_v2x_listener STATIC src/observer/v2x_listener.cpp)
+target_include_directories(ada_v2x_listener PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(ada_v2x_listener PUBLIC ada_net ada_input_queue Threads::Threads)
+target_compile_features(ada_v2x_listener PUBLIC cxx_std_17)
+
+ada_add_test(ada_v2x_listener_test tests/observer/test_v2x_listener.cpp)
+target_link_libraries(ada_v2x_listener_test PRIVATE ada_v2x_listener)

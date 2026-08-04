@@ -345,7 +345,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 > The input edges and the controller. **No mock branch exists inside `src/`** (D2): Phase 2's mock own-sensor input is the *real* detector-reader pointed at a JSONL fixture via `DETECTOR_CMD`, and mock R2 traffic is a real datagram on the real socket. "Toggling the mock off" is `DETECTOR_ENABLED=false` plus no bench traffic.
 
-### [ ] `2.2.6.1` — V2X listener `src/observer/v2x_listener.{hpp,cpp}` *(AI)*
+### [x] `2.2.6.1` — V2X listener `src/observer/v2x_listener.{hpp,cpp}` *(AI)*
 
 **Objective:** the R2 ingress thread — bind `V2X_LISTEN_HOST:V2X_LISTEN_PORT`, receive datagrams, push onto the input queue.
 
@@ -354,6 +354,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 **Acceptance:** ADA build + ctest green on CI; no socket headers outside `src/net/`.
 
 **Dependencies:** after `6.2.2.2` + `3.2.2.4`. **Commit:** `[2.2.6.1] feat: add the R2 UDP listener thread`
+
+**Status:** done — RAII listener thread over the sole UdpSocket, each datagram one InputItem{V2xR2, body, rxEpochMs}, receive errors counted via receiveErrorCount() (logging is the composition root's, per D2 no-logging-in-class); tests cover byte-identical delivery incl. NUL/0xFF, ordered arrival, idempotent stop, bounded join, deterministic capacity-1 drop count; build/tests deferred to CI ada-core-build.
 
 ### [ ] `12.2.6.2` — Detector reader `src/observer/detector_reader.{hpp,cpp}` *(AI — parallel with 2.2.6.1)*
 
