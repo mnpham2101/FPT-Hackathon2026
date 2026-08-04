@@ -11,7 +11,7 @@ Endpoint catalog and auth live in [carsky-rest-api-blueprint.md](../../../requir
 
 ## 1. Check the CI workflow can build the image
 
-Image lanes live in the workflow named for the phase that created them: `netcheck-image` in [phase0-ci.yml](../../../.github/workflows/phase0-ci.yml), `v2x-ecu-image` and `scenario-player-image` in [phase1-ci.yml](../../../.github/workflows/phase1-ci.yml). Read the one holding the target image's lane and confirm it is actually capable of producing it:
+An image lane lives in the workflow of the phase that **completes** the node it builds, per the designated layout in [ci-lane-placement.md](../../rules/ci-lane-placement.md) — `netcheck-image` in `phase0-ci.yml`, `v2x-ecu-image` and `scenario-player-image` in `phase1-ci.yml`, `ada-ecu-image` and `ada-bench-image` in `phase4-ci.yml`, `r4-sim-image` in `phase5-ci.yml`. Read the one holding the target image's lane and confirm it is actually capable of producing it:
 
 - the job exists for this node's image and its build context points at the right folder;
 - **`PLATFORMS` names exactly one platform** — the project requires single-platform `linux/arm64` images ([phase0-smoke-test-run.md § Standing requirement](../../../plans/doc/phase0-smoke-test-run.md)); a multi-platform list is a defect to fix here, not at deploy time;
