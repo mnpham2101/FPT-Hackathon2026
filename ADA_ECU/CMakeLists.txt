@@ -196,6 +196,20 @@ target_compile_features(ada_fusion PUBLIC cxx_std_17)
 ada_add_test(ada_scene_composer_test tests/fusion/test_scene_composer.cpp)
 target_link_libraries(ada_scene_composer_test PRIVATE ada_fusion)
 
+# R15 warning builder — RiskFinding + composed geometry onto the frozen R4
+# binding; the node's only R4 producer (15.4.2.1).
+add_library(ada_warning_builder STATIC src/output/warning_builder.cpp)
+target_include_directories(ada_warning_builder PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(ada_warning_builder PUBLIC ada_contracts ada_fusion)
+target_compile_features(ada_warning_builder PUBLIC cxx_std_17)
+
+# The builder test loads the synced schemas from disk (schema-guided
+# structural validation) — ADA_CONTRACTS_DIR mirrors the ADA_FIXTURE_DIR
+# pattern of ada_add_test.
+ada_add_test(ada_warning_builder_test tests/output/test_warning_builder.cpp)
+target_link_libraries(ada_warning_builder_test PRIVATE ada_warning_builder)
+target_compile_definitions(ada_warning_builder_test PRIVATE ADA_CONTRACTS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/contracts")
+
 # The ada_ecu executable — composition root, controller only (13.2.6.4).
 add_executable(ada_ecu src/main.cpp)
 target_link_libraries(ada_ecu PRIVATE
