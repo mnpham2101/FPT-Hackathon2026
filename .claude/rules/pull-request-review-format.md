@@ -6,14 +6,36 @@ A review is a **verdict on work already done**. It is not a plan, not a design, 
 
 ## Location & naming
 
-- Reviews live in [reviews/](../../reviews/) at the repo root, one file per reviewed pull request: `reviews/pr-<N>-<slug>-review.md`.
-- `<N>` is the pull-request number; `<slug>` is a few kebab-case words naming what the PR delivers.
-- **The review is committed on the branch under review**, not on `main` — it travels with the work it judges, so the author reads it where they are working.
-- A re-review of the same PR after changes **updates that file** rather than adding a second one; the header's reviewed-commit line moves to the new tip.
+Reviews live in the **reviewed node's own `doc/`**, beside the HLD that judged them, at:
+
+```
+<Node_Folder>/doc/<node-slug>-pr<N>-review-v<K>.md
+```
+
+Worked example: [ivi-ecu-pr2-review-v1.md](../../IVI_ECU/doc/ivi-ecu-pr2-review-v1.md).
+
+| Element | Value |
+|---|---|
+| `<Node_Folder>/doc/` | the `doc/` of the node the PR principally develops, per [node-code-layout.md § Per-folder doc/](node-code-layout.md#per-folder-doc) |
+| `<node-slug>` | the same slug the node's HLD uses — `ivi-ecu`, `ada-ecu`, `v2x-ecu`, `scenario-player` |
+| `<N>` | the pull-request number |
+| `<K>` | the review version, from `1` |
+
+- **The review sits with the design it was judged against.** An agent reading a node folder's `doc/` for context gets the HLD, the decisions, and what the last review of that node found — in one place, without knowing a review happened.
+- **A PR spanning several node folders gets one document**, in the `doc/` of the node carrying most of the change; cross-node findings stay in it rather than being split. A PR with no principal node goes to [plans/doc/](../../plans/doc/).
+- **Reviews are committed and pushed to `main`**, not to the branch under review. The branch is rewritten, rebased, squashed or deleted as the work lands; the review is the record of what was found and must outlive it.
+
+## Versions are enumerated, never overwritten
+
+**A re-review is a new file at the next `<K>`.** The previous version is never edited and never deleted.
+
+- Each version is a **point-in-time verdict against one commit**. Editing v1 in place destroys the only evidence of what the branch looked like when it was judged, and with it any way to see whether the next round improved.
+- **Every version from v2 carries a § Since v*K−1* section**, immediately after the header block: what was fixed, what still stands, and what is newly broken. A reader opening the latest version alone must be able to follow the arc.
+- **Version numbers are stable.** They are cited the way task IDs are, and are never renumbered or reused.
 
 ## The header block
 
-A blockquote before §1 carrying, one per line: the PR number and title, the branch, the reviewed commit SHA, the base commit the diff was taken against, and the documents the review judged the work against. A review whose reader cannot tell **which commit was read** is not reproducible.
+A blockquote before §1 carrying, one per line: the review version and the date, the PR number and title, the branch, the reviewed commit SHA, the base commit the diff was taken against, the documents the review judged the work against, and — from v2 — the previous version's file and commit. A review whose reader cannot tell **which commit was read** is not reproducible.
 
 ## Section order is mandatory
 

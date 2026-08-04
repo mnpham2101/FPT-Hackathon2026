@@ -45,7 +45,7 @@ The boundary — this carves out test equipment, it does not weaken the product-
 
 ## Per-folder `doc/`
 
-Each work folder — the four node folders above plus [plans/](../../plans/) — carries a `doc/` subfolder holding **report-style documents about that folder's design and rationale**: HLDs, design notes, decision rationale, and `doc/research_notes/` for investigation findings and their diagrams (`.puml`/`.svg`/`.drawio`). Existing examples: [Scenario_Player/doc/research_notes/](../../Scenario_Player/doc/research_notes/), [plans/doc/research_notes/](../../plans/doc/research_notes/).
+Each work folder — the four node folders above plus [plans/](../../plans/) — carries a `doc/` subfolder holding **report-style documents about that folder's design and rationale**: HLDs, design notes, decision rationale, the versioned pull-request reviews of that node ([pull-request-review-format.md](pull-request-review-format.md)), and `doc/research_notes/` for investigation findings and their diagrams (`.puml`/`.svg`/`.drawio`). Existing examples: [Scenario_Player/doc/research_notes/](../../Scenario_Player/doc/research_notes/), [plans/doc/research_notes/](../../plans/doc/research_notes/).
 
 - **Read before writing.** Any agent working in a folder reads that folder's `doc/` first — it is the local context (why the design is what it is, what was already investigated and rejected) that the requirements report and plan do not carry.
 - **Write design & rationale there, not in code comments or the plan.** Design/rationale output for a node lands in that node's `doc/`; the HLD content and commit rules still apply ([hld-content-and-commit-format.md](hld-content-and-commit-format.md)).

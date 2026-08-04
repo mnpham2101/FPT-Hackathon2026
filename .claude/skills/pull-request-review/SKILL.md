@@ -5,7 +5,7 @@ description: Procedure project-reviewer follows when asked to review a pull requ
 
 # Pull-Request Review Procedure (project-reviewer)
 
-Trigger: [[project-reviewer]] is asked to review a pull request, a delivery branch, or "the work on branch X". The artifact is one review document under [reviews/](../../../reviews/), shaped by [pull-request-review-format.md](../../rules/pull-request-review-format.md) — this skill is how it gets produced, that rule is what it must look like.
+Trigger: [[project-reviewer]] is asked to review a pull request, a delivery branch, or "the work on branch X". The artifact is one versioned review document in the reviewed node's `doc/`, shaped by [pull-request-review-format.md](../../rules/pull-request-review-format.md) — this skill is how it gets produced, that rule is what it must look like.
 
 The review judges **delivered work against the authorities that governed it**. Establishing those authorities is step 2 and it is not optional: a review written against the reviewer's own idea of good design is an opinion, and the author is entitled to reject it.
 
@@ -41,13 +41,13 @@ The review judges **delivered work against the authorities that governed it**. E
 
 7. **Score each row.** Architecture rows are scored against the HLD component's stated responsibility; requirement rows against the acceptance clause. A component that exists, compiles and is wired to nothing sits well below half however polished it is — the design's unit of completion is a working path, not a file.
 
-8. **Write the review** to `reviews/pr-<N>-<slug>-review.md` per [pull-request-review-format.md](../../rules/pull-request-review-format.md): header block, architecture table, low-level table, conclusion. Write the conclusion last and check it against that rule's § The conclusion is encouragement, never a plan — the failure mode is drifting from "this falls short" into "here is how to fix it in order".
+8. **Write the review** to `<Node_Folder>/doc/<node-slug>-pr<N>-review-v<K>.md` — next unused `<K>`, never overwriting an existing version — per [pull-request-review-format.md](../../rules/pull-request-review-format.md): header block, architecture table, low-level table, conclusion. Write the conclusion last and check it against that rule's § The conclusion is encouragement, never a plan — the failure mode is drifting from "this falls short" into "here is how to fix it in order".
 
-9. **Commit on the reviewed branch**, `[<taskID>] docs: <subject>` where an ID applies and no tag otherwise, then report to the user: the verdict in a sentence, the findings that would block a merge, and the location of the document. Never push, never merge, never open or close the PR — and never edit the branch's code to fix what the review found.
+9. **Commit and push to `main`**, `[<taskID>] docs: <subject>` where an ID applies and no tag otherwise, then report to the user: the verdict in a sentence, the findings that would block a merge, and the location of the document. Never push, never merge, never open or close the PR — and never edit the branch's code to fix what the review found.
 
 ## Output
 
-- One review document at `reviews/pr-<N>-<slug>-review.md`, committed on the reviewed branch.
+- One review document at `<Node_Folder>/doc/<node-slug>-pr<N>-review-v<K>.md`, committed and pushed to `main`.
 - A user-facing summary carrying the verdict, the blocking findings, and the reasoning behind the low-level variant chosen.
 
 ## How to apply
