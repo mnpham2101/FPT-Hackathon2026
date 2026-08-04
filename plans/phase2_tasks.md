@@ -319,7 +319,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Status:** done — D4 interface transcribed verbatim into `src/cra/i_collision_risk_assessment.hpp` in `ada::cra` (AssessmentDb forward-declared, no accessor signature; `using store::TrackStore;` added so D4's text resolves — both convention facts flagged to architecture); test exercises a fake plugin through a base pointer and static_asserts the frozen signatures; build/tests deferred to CI ada-core-build.
 
-### [ ] `14.2.5.3` — Assessment database accessor `src/cra/assessment_db.{hpp,cpp}` *(AI)*
+### [x] `14.2.5.3` — Assessment database accessor `src/cra/assessment_db.{hpp,cpp}` *(AI)*
 
 **Objective:** the typed in-process accessor over the D4 schema — the seam a future milestone swaps for real persistence.
 
@@ -328,6 +328,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 **Acceptance:** ADA build + ctest green on CI; the schema is loaded and enforced by the test, not duplicated.
 
 **Dependencies:** after `14.2.5.2` + `14.2.5.1` + `18.2.2.3`. **Commit:** `[14.2.5.3] feat: add the CRA assessment database accessor`
+
+**Status:** done — AssessmentRecord mirrors the schema's fourteen fields by name (`ttcS`/`lastKnownB` as optionals); AssessmentDb defines the 14.2.5.1 forward declaration in `ada::cra`, keyed (trackId, warningType) per D4's field table (Open item 5 noted at the signature), every upsert mirrored as one `assessment` [EVT] line; test validates the serialized record against `schema/cra-assessment-record.schema.json` loaded from disk (minimal in-test validator over the features the schema uses) and round-trips the committed sample; build/tests deferred to CI ada-core-build. The implementing agent's report was lost to a session limit — files verified by planner inspection instead.
 
 ### [x] `14.2.5.4` — Plugin registry `src/cra/registry.{hpp,cpp}` + `src/cra/builtin_plugins.cpp` *(AI)*
 

@@ -168,3 +168,13 @@ target_compile_features(ada_cra_registry PUBLIC cxx_std_17)
 
 ada_add_test(ada_cra_registry_test tests/cra/test_registry.cpp)
 target_link_libraries(ada_cra_registry_test PRIVATE ada_cra_registry)
+
+# R14 assessment database — typed accessor over the D4 schema, every write
+# mirrored to the [EVT] stream (14.2.5.3).
+add_library(ada_assessment_db STATIC src/cra/assessment_db.cpp)
+target_include_directories(ada_assessment_db PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(ada_assessment_db PUBLIC ada_contracts ada_event_log)
+target_compile_features(ada_assessment_db PUBLIC cxx_std_17)
+
+ada_add_test(ada_assessment_db_test tests/cra/test_assessment_db.cpp)
+target_link_libraries(ada_assessment_db_test PRIVATE ada_assessment_db)
