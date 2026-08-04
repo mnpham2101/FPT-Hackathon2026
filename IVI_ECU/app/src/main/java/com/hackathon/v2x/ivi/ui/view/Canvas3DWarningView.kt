@@ -270,50 +270,82 @@ private fun DrawScope.drawCyberVehicle(
         close()
     }
 
-    if (filled) {
-        // Ego gets a subtle translucent fill so it reads as "solid"
-        drawPath(top, color = color.copy(alpha = 0.12f))
+    val base = Path().apply {
+        moveTo(box.bottomCorners[0].screenX, box.bottomCorners[0].screenY)
+        for (i in 1..3) lineTo(box.bottomCorners[i].screenX, box.bottomCorners[i].screenY)
+        close()
     }
 
-    // Top face outline — sharp square joints (Cybertruck: no rounded corners)
-    drawPath(top, color = color, style = Stroke(
-        width = EDGE_STROKE, join = StrokeJoin.Miter,
-    ))
+    // 1. 3D Body Fill
+    if (filled) {
+        drawPath(base, color = color.copy(alpha = 0.25f))
+        drawPath(top, color = color.copy(alpha = 0.40f))
+    }
 
-    // Side vertical pillars
+    // 2. Wheels / Tires (4 tires at bottom corners)
+    for (i in 0..3) {
+        val bPt = box.bottomCorners[i]
+        val r = 5.5f * bPt.scale.coerceIn(0.4f, 1.0f)
+        drawCircle(color = Color(0xFF0F131A), radius = r, center = Offset(bPt.screenX, bPt.screenY))
+        drawCircle(color = color.copy(alpha = 0.7f), radius = r * 0.6f, center = Offset(bPt.screenX, bPt.screenY), style = Stroke(width = 1.2f))
+    }
+
+    // 3. Top face outline & side pillars
+    drawPath(top, color = color, style = Stroke(width = EDGE_STROKE, join = StrokeJoin.Miter))
+    drawPath(base, color = color.copy(alpha = 0.40f), style = Stroke(width = EDGE_STROKE * 0.7f))
+
     for (i in 0..3) {
         drawLine(
-            color = color.copy(alpha = 0.6f),
+            color = color.copy(alpha = 0.8f),
             start = Offset(box.bottomCorners[i].screenX, box.bottomCorners[i].screenY),
             end   = Offset(box.topCorners[i].screenX,   box.topCorners[i].screenY),
             strokeWidth = EDGE_STROKE * 0.8f,
         )
     }
 
-    // Bottom base outline (visible sides only — front & sides, not hidden rear)
-    val base = Path().apply {
-        moveTo(box.bottomCorners[0].screenX, box.bottomCorners[0].screenY)
-        for (i in 1..3) lineTo(box.bottomCorners[i].screenX, box.bottomCorners[i].screenY)
+    // 4. 3D Windshield Glass (Front Slope)
+    val wsPath = Path().apply {
+        moveTo(box.topCorners[3].screenX, box.topCorners[3].screenY)
+        lineTo(box.topCorners[2].screenX, box.topCorners[2].screenY)
+        val midR = Offset(box.topCorners[2].screenX * 0.5f + box.bottomCorners[2].screenX * 0.5f, box.topCorners[2].screenY * 0.5f + box.bottomCorners[2].screenY * 0.5f)
+        val midL = Offset(box.topCorners[3].screenX * 0.5f + box.bottomCorners[3].screenX * 0.5f, box.topCorners[3].screenY * 0.5f + box.bottomCorners[3].screenY * 0.5f)
+        lineTo(midR.x, midR.y)
+        lineTo(midL.x, midL.y)
         close()
     }
-    drawPath(base, color = color.copy(alpha = 0.25f), style = Stroke(width = EDGE_STROKE * 0.6f))
+    drawPath(wsPath, color = Color(0x7000E5FF))
+    drawPath(wsPath, color = color.copy(alpha = 0.9f), style = Stroke(width = 1.2f))
 
-    // Corner bracket accents (Cybertruck: corner brackets highlight the bounding box)
+    // 5. Front Headlight Lightbar
+    drawLine(
+        color = if (label == "EGO") Color(0xFF00E5FF) else Color(0xFFFFCC00),
+        start = Offset(box.bottomCorners[3].screenX, box.bottomCorners[3].screenY),
+        end   = Offset(box.bottomCorners[2].screenX, box.bottomCorners[2].screenY),
+        strokeWidth = EDGE_STROKE * 1.8f,
+    )
+
+    // 6. Rear Brake Lights
+    drawLine(
+        color = Color(0xFFFF3344),
+        start = Offset(box.bottomCorners[0].screenX, box.bottomCorners[0].screenY),
+        end   = Offset(box.bottomCorners[1].screenX, box.bottomCorners[1].screenY),
+        strokeWidth = EDGE_STROKE * 1.5f,
+    )
+
+    // Corner brackets & Label
     drawCornerBrackets(box, color)
-
-    // Label above top face
-    val layout = textMeasurer.measure(AnnotatedString(label), HudMono.copy(color = color))
+    val layout = textMeasurer.measure(AnnotatedString(label), HudMono.copy(color = color, fontWeight = FontWeight.Bold))
     drawText(
         textLayoutResult = layout,
         topLeft = Offset(
             box.centerTop.screenX - layout.size.width / 2f,
-            box.centerTop.screenY - layout.size.height - 5f,
+            box.centerTop.screenY - layout.size.height - 6f,
         ),
     )
 }
 
 // ---------------------------------------------------------------------------
-// Ghost C — dashed wireframe + radar pulse
+// Ghost C — dashed wireframe + 3D car silhouette + radar pulse
 // ---------------------------------------------------------------------------
 
 private fun DrawScope.drawCyberGhostVehicle(
@@ -327,15 +359,28 @@ private fun DrawScope.drawCyberGhostVehicle(
         close()
     }
 
-    // Translucent red fill
-    drawPath(top, color = color.copy(alpha = 0.10f))
+    val base = Path().apply {
+        moveTo(box.bottomCorners[0].screenX, box.bottomCorners[0].screenY)
+        for (i in 1..3) lineTo(box.bottomCorners[i].screenX, box.bottomCorners[i].screenY)
+        close()
+    }
 
-    // Dashed top outline
-    drawPath(top, color = color, style = Stroke(
-        width = DASH_STROKE, pathEffect = GhostDash, join = StrokeJoin.Miter,
-    ))
+    // 1. Translucent red fill
+    drawPath(top, color = color.copy(alpha = 0.20f))
+    drawPath(base, color = color.copy(alpha = 0.12f))
 
-    // Dashed vertical pillars
+    // 2. Wheels
+    for (i in 0..3) {
+        val bPt = box.bottomCorners[i]
+        val r = 5.5f * bPt.scale.coerceIn(0.4f, 1.0f)
+        drawCircle(color = color.copy(alpha = 0.4f), radius = r, center = Offset(bPt.screenX, bPt.screenY), style = Stroke(width = DASH_STROKE, pathEffect = GhostDash))
+    }
+
+    // 3. Dashed top & base outline
+    drawPath(top, color = color, style = Stroke(width = DASH_STROKE, pathEffect = GhostDash, join = StrokeJoin.Miter))
+    drawPath(base, color = color.copy(alpha = 0.5f), style = Stroke(width = DASH_STROKE * 0.8f, pathEffect = GhostDash))
+
+    // 4. Dashed vertical pillars
     for (i in 0..3) {
         drawLine(
             color = color.copy(alpha = 0.7f),
@@ -346,23 +391,26 @@ private fun DrawScope.drawCyberGhostVehicle(
         )
     }
 
-    // Dashed base
-    val base = Path().apply {
-        moveTo(box.bottomCorners[0].screenX, box.bottomCorners[0].screenY)
-        for (i in 1..3) lineTo(box.bottomCorners[i].screenX, box.bottomCorners[i].screenY)
+    // 5. 3D Windshield Glass Outline (Dashed)
+    val wsPath = Path().apply {
+        moveTo(box.topCorners[3].screenX, box.topCorners[3].screenY)
+        lineTo(box.topCorners[2].screenX, box.topCorners[2].screenY)
+        val midR = Offset(box.topCorners[2].screenX * 0.5f + box.bottomCorners[2].screenX * 0.5f, box.topCorners[2].screenY * 0.5f + box.bottomCorners[2].screenY * 0.5f)
+        val midL = Offset(box.topCorners[3].screenX * 0.5f + box.bottomCorners[3].screenX * 0.5f, box.topCorners[3].screenY * 0.5f + box.bottomCorners[3].screenY * 0.5f)
+        lineTo(midR.x, midR.y)
+        lineTo(midL.x, midL.y)
         close()
     }
-    drawPath(base, color = color.copy(alpha = 0.35f), style = Stroke(
-        width = DASH_STROKE * 0.8f, pathEffect = GhostDash,
-    ))
+    drawPath(wsPath, color = color.copy(alpha = 0.25f))
+    drawPath(wsPath, color = color, style = Stroke(width = DASH_STROKE, pathEffect = GhostDash))
 
     // Ghost label
-    val layout = textMeasurer.measure(AnnotatedString("GHOST C"), HudMono.copy(color = color))
+    val layout = textMeasurer.measure(AnnotatedString("GHOST C"), HudMono.copy(color = color, fontWeight = FontWeight.Bold))
     drawText(
         textLayoutResult = layout,
         topLeft = Offset(
             box.centerTop.screenX - layout.size.width / 2f,
-            box.centerTop.screenY - layout.size.height - 5f,
+            box.centerTop.screenY - layout.size.height - 6f,
         ),
     )
 }
