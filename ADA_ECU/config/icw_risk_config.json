@@ -1,0 +1,12 @@
+{
+  "icw_config": {
+    "ttc_thresholds_sec": {
+      "critical": 1.5,
+      "warning": 3.0,
+      "info": 5.0
+    },
+    "coasting_timeout_ms": 500,
+    "min_ego_speed_mps": 0.5,
+    "conflict_radius_meters": 5.0
+  }
+}

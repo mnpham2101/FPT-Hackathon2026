@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ADA_to_IVI_ICW_Warning_Message",
+  "type": "object",
+  "required": [
+    "warning_id",
+    "warning_type",
+    "risk_level",
+    "target_object_id",
+    "distance_m",
+    "ttc_sec",
+    "timestamp_ms"
+  ],
+  "properties": {
+    "warning_id": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Unique identifier for this warning sequence"
+    },
+    "warning_type": {
+      "type": "string",
+      "enum": ["ICW", "FCW"],
+      "description": "Warning scenario type (ICW = Intersection Collision Warning)"
+    },
+    "risk_level": {
+      "type": "string",
+      "enum": ["NONE", "INFO", "WARNING", "CRITICAL"],
+      "description": "Evaluated threat severity level"
+    },
+    "target_object_id": {
+      "type": "integer",
+      "description": "Track ID of the hazardous target vehicle"
+    },
+    "distance_m": {
+      "type": "number",
+      "minimum": 0.0,
+      "description": "Relative distance to conflict point in meters"
+    },
+    "ttc_sec": {
+      "type": "number",
+      "minimum": 0.0,
+      "description": "Time to collision in seconds"
+    },
+    "timestamp_ms": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "POSIX timestamp in milliseconds when warning was generated"
+    }
+  }
+}
