@@ -287,6 +287,13 @@ private fun WarningViewContent(
         }
 
 
+        // Top Floating Warning Banner Overlay
+        com.hackathon.v2x.ivi.ui.view.WarningBannerOverlay(
+            warningActive = active != null || scene == defaultMockScene,
+            riskState = riskState,
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = 8.dp),
+        )
+
         // HUD 2D/3D Mode Switcher Toggle Pill
         Box(
             modifier = Modifier
