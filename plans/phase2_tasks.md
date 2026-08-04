@@ -515,7 +515,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 > The clip is an input, not a deliverable of this group: `ADA_ECU/media/ego-b-occluding-c.mp4` with its provenance sidecar, committed by Phase 3 `12.3.7.1`. This group owns the machine-checkable preflight over it, the delivery of the spec proposal that closes a milestone box, and the node guide's env rows.
 
-### [ ] `12.2.9.1` — Clip preflight `tools/check_clip_spec.py` *(AI)*
+### [x] `12.2.9.1` — Clip preflight `tools/check_clip_spec.py` *(AI)*
 
 **Objective:** the [research note KPI 1](../ADA_ECU/doc/research_notes/video-source-for-r12.md#measurable-checks-kpis) made executable — reject a non-conforming clip naming the failing attribute, and pass on the committed one.
 
@@ -531,6 +531,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 **Acceptance:** `python -m py_compile` passes; the test passes **locally**, per the `ADA_ECU/tools/` row of § Per-node build commands; **and the script exits 0 on `ADA_ECU/media/ego-b-occluding-c.mp4`** with its summary recorded in the Status line. No CI lane covers this test — `python-tests` collects `Scenario_Player/tests` and `ADA_ECU/detector/tests` only, and installs neither the OpenCV this test needs to synthesize clips.
 
 **Dependencies:** none. **Commit:** `[12.2.9.1] feat: add the R12 clip preflight checker`
+
+**Status:** done — py_compile OK; `pytest ADA_ECU/tools/tests -q` = 12 passed, 1 skipped (ffprobe-gated); real clip exit 0: `OK ego-b-occluding-c.mp4: container=mp4 codec=h264 1280x720 20.00fps decoded=200/200 frames (100.0%) duration=10.00s size=5.02MiB probe=opencv skipped=frame_rate_constant,audio` — the two skips are honest OpenCV-fallback limits (no ffprobe on this host), never false passes. Verified with official x64 CPython 3.12.10 under WoA emulation — PyPI has no win_arm64 OpenCV wheel.
 
 ### [ ] `12.2.9.2` — Send the video-input proposal to FPT-Mentor *(Human)*
 
