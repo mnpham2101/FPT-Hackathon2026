@@ -93,6 +93,35 @@ jobs:
             "$CONTEXT"
           echo "::endgroup::"
           echo "::notice::built $IMAGE ($PLATFORMS) - not pushed by this step"
+      # These measurement steps are 12.3.7.2's write scope in this file; the build and push steps
+      # are not edited. Rebuild WITH --load from the same gha cache scope - a cache hit, no
+      # recompile - because the build step above deliberately exports nothing an inspect could
+      # read. Expected media delta is ~5.0 MB (H.264 is already compressed - gzip gains ~0%).
+      # The media layer digest in the RootFS.Layers list is read positionally against the
+      # `docker history` table; KPI 7's cross-build digest comparison reads this output from two
+      # runs.
+      - name: Measure the media layer (12.3.7.2)
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ -d ADA_ECU/media ] || { echo "::notice::no media/ - nothing to measure"; exit 0; }
+          docker buildx build \
+            --platform "$PLATFORMS" \
+            --provenance=false --sbom=false \
+            --cache-from "type=gha,scope=$CACHE_SCOPE" \
+            --load \
+            -t "$IMAGE" \
+            "$CONTEXT"
+          echo "::group::media layer measurement (12.3.7.2)"
+          echo "== total image size (bytes) =="
+          docker image inspect -f '{{.Size}}' "$IMAGE"
+          echo "== docker history (size / created-by) =="
+          docker history --format '{{.Size}}\t{{.CreatedBy}}' "$IMAGE"
+          echo "== media layer row =="
+          docker history --format '{{.Size}}\t{{.CreatedBy}}' "$IMAGE" | grep 'COPY media/'
+          echo "== RootFS layer digests =="
+          docker image inspect -f '{{json .RootFS.Layers}}' "$IMAGE"
+          echo "::endgroup::"
       - name: Push to CarSky Zot registry (skips until the secret exists)
         id: push
         shell: bash
