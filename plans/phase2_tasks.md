@@ -443,7 +443,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 ## Task Group 2.7 — Image and entrypoint (serves R5; HLD D9)
 
-### [ ] `5.2.7.1` — `ADA_ECU/Dockerfile` + `entrypoint.sh` + `.dockerignore` *(AI)*
+### [x] `5.2.7.1` — `ADA_ECU/Dockerfile` + `entrypoint.sh` + `.dockerignore` *(AI)*
 
 **Objective:** the deployable `m1-ada-ecu:latest` image — two stages, **one base**, single-platform `linux/arm64` (D9).
 
@@ -466,6 +466,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 **Acceptance:** `sh -n` and `bash -n` clean on `entrypoint.sh`, LF line endings, exec bit set; CI `ada-ecu-image` lane (`5.2.8.1`) green — `docker buildx build --platform linux/arm64 --provenance=false --sbom=false -t m1-ada-ecu:latest ADA_ECU/` succeeds. `--platform` and the disabled attestations are a standing requirement: a Container Node rejects a multi-platform manifest index and hangs in Provisioning ([phase0-smoke-test-run.md](doc/phase0-smoke-test-run.md)).
 
 **Dependencies:** after `13.2.6.4` + `5.2.8.1` (the lane must exist to verify). **Commit:** `[5.2.7.1] feat: add the ADA ECU Dockerfile and entrypoint`
+
+**Status:** done — Dockerfile (one base `python:3.11-slim`, two stages, target-scoped `--target ada_ecu`, layer slot reserved for Phase 3 media/models/detector) + entrypoint.sh (`sh -n`/`bash -n` clean, LF, capture guard + `exec ./ada_ecu`) + .dockerignore; **divergence, implemented working form:** `tests/` stays in the build context (`ada_add_test` resolves sources at configure time, no toggle exists) and never reaches the runtime stage — the scope bullet's `.dockerignore keeps tests/ out` line is thereby overridden; exec bit recorded via `git update-index --chmod=+x`; image build pending CI `ada-ecu-image` on the pushed branch.
 
 ---
 

@@ -1,0 +1,40 @@
+# Keeps the ADA_ECU/ build context small. The Dockerfile's stage boundaries decide what lands
+# in the image - this file only stops useless bytes being uploaded to the builder.
+#
+# Do NOT add tests/ here: stage 1 needs it at CONFIGURE time (CMakeLists.txt names
+# tests/**.cpp in ada_add_test()'s add_executable(), and CMake errors on a missing source file
+# even for targets the image build never compiles). tests/ is build-stage only and never
+# reaches the runtime stage.
+#
+# Do NOT add media/ itself: media/ego-b-occluding-c.mp4 is the R12 clip the runtime stage
+# gains in Phase 3 (12.3.7.2). Only its provenance notes are excluded below.
+
+# A local developer build tree - _deps alone holds the FetchContent clones plus their object
+# files, i.e. useless megabytes of context.
+build/
+
+# Documentation is never part of the image (node-code-layout.md: doc/ is documentation only);
+# README.md is the folder's human guide, same category.
+doc/
+README.md
+
+# Host-side test equipment - never deployed, never in the image.
+tools/
+
+# The schema authority copy for the CRA assessment record - a doc/contract artifact, not a
+# runtime input.
+schema/
+
+# Test tooling manifest (pytest etc.). The runtime manifest is detector/requirements.txt,
+# which arrives with the detector in Phase 3.
+detector/requirements-dev.txt
+
+# Clip provenance, not clip data - the mp4 stays in the context (see header). Both patterns:
+# the committed note is media/ego-b-occluding-c.source.md; media/source/ covers a future
+# provenance folder.
+media/source/
+media/*.source.md
+
+# Python bytecode from local detector/tools runs - stale and platform-specific.
+**/__pycache__/
+*.pyc
