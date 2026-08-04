@@ -3,9 +3,9 @@
 > **Authority & context:**
 >
 > - **Phase content:** [milestone1.md § Phase 5](milestone1.md#phase-5--ivi-hmi-mock-driven-r16-r17--display-track-parallel-from-the-start) — its five acceptance criteria are the phase output.
-> - **Design:** [ivi-ecu-hld.md](../IVI_ECU/doc/ivi-ecu-hld.md) — the node's sole design authority — with [phase5-ivi-components.puml](../IVI_ECU/doc/phase5-ivi-components.puml) and [phase5-ivi-callflow.puml](../IVI_ECU/doc/phase5-ivi-callflow.puml). Every target path below is cited from its **[§4](../IVI_ECU/doc/ivi-ecu-hld.md#4-folder-structure)** folder map; component responsibilities **[§6](../IVI_ECU/doc/ivi-ecu-hld.md#6-internal-components)**, seams **[§8](../IVI_ECU/doc/ivi-ecu-hld.md#8-interfaces-ports-and-the-layer-rule)**, the R4 input contract **§10**, CI **[§11](../IVI_ECU/doc/ivi-ecu-hld.md#11-tech-stack-build-and-ci)**, test configurations and log shapes **[§12](../IVI_ECU/doc/ivi-ecu-hld.md#12-test-strategy)**, decisions **D1–D12** ([§13](../IVI_ECU/doc/ivi-ecu-hld.md#13-design-decisions)). Deployment steps come from the bring-up procedure below, not from the design.
+> - **Design:** [ivi-ecu-hld.md](../IVI_ECU/doc/ivi-ecu-hld.md) — the node's sole design authority — with [phase5-ivi-components.puml](../IVI_ECU/doc/phase5-ivi-components.puml) and [phase5-ivi-callflow.puml](../IVI_ECU/doc/phase5-ivi-callflow.puml). Every target path below is cited from its **[§4](../IVI_ECU/doc/ivi-ecu-hld.md#4-folder-structure)** folder map; component responsibilities **[§6](../IVI_ECU/doc/ivi-ecu-hld.md#6-internal-components)**, seams **[§8](../IVI_ECU/doc/ivi-ecu-hld.md#8-interfaces-ports-and-the-layer-rule)**, the R4 input contract **§10**, CI **[§11](../IVI_ECU/doc/ivi-ecu-hld.md#11-tech-stack-build-and-ci)**, test configurations and log shapes **[§12](../IVI_ECU/doc/ivi-ecu-hld.md#12-test-strategy)**, decisions **D1–D13** ([§13](../IVI_ECU/doc/ivi-ecu-hld.md#13-design-decisions)). Deployment steps come from the bring-up procedure below, not from the design.
 > - **Research notes:** [phase5-r4-simulator.md](../IVI_ECU/doc/research_notes/phase5-r4-simulator.md) · [phase5-r4-parsing.md](../IVI_ECU/doc/research_notes/phase5-r4-parsing.md) — non-authoritative; the HLD wins on conflict.
-> - **Requirements:** [m1-cooperative-awareness.md §2](../requirements/m1-cooperative-awareness.md) R4, R16, R17 (plus R5, R6, R18, R19 where this phase touches them) — referenced by number, never restated.
+> - **Requirements:** [m1-cooperative-awareness.md §2](../requirements/m1-cooperative-awareness.md) R4, R16, R17 (plus R5, R6, R18, R19 where this phase touches them) and [m1-run-timing-and-event-triggering.md §7](../requirements/m1-run-timing-and-event-triggering.md) R22, whose K7 this phase's system test reads — referenced by number, never restated.
 > - **Deploy facts:** [node-ivi-ecu.md](../requirements/car-sky-guide/node-ivi-ecu.md) · [carsky-4-node-blueprint.md](../requirements/car-sky-guide/carsky-4-node-blueprint.md) · [deploy-walkthrough-netcheck.md](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md).
 > - **Bring-up procedure:** [deploy-ivi-hmi-walkthrough.md](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md) — **authoritative** for the APK's build, retrieval from CI, blueprint deploy, `adb install`, launch and verification. Every subtask that installs, launches, observes or reads logs from the IVI app cites the section governing that step instead of restating it. Its [§5](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#5-work-division-between-ai-and-human) decides which of those steps an agent can perform and which need a person, and is what the *Human* label below follows.
 > - **Rules:** [task-planning-conventions.md](../.claude/rules/task-planning-conventions.md) (`X.Y.Z.W`; subtask discipline restated once in § Subtask discipline) · [node-code-layout.md](../.claude/rules/node-code-layout.md).
@@ -172,6 +172,7 @@ Every row is a test this plan commits to, traced to what makes it necessary. A r
 | Warnings, last-value-wins `state`, drops and injection route identically | `R4RepositoryTest` | `4.5.4.2` | HLD §6 |
 | An unknown `warningType` degrades to generic; unknown risk fails safe to highest | `WarningClassifierTest` | `4.5.4.3` | D4 |
 | **The composed scene carries the R3 snapshot, so the guard is armed** | `WarningViewModelTest` guard-armed case | `17.5.4.4` | **D12** |
+| A `low` neither raises the warning nor dismisses it, and restarts the countdown | `WarningViewModelTest` D13 cases | `17.5.4.4` | **D13** |
 | A warning forces the view; the previous mode restores unless the user overrode it | `MainViewModelTest` | `16.5.4.5` | R16 acceptance |
 | The projection anchors, clamps, scales and survives a `null` C | `SceneCoordinateMapperTest` | `17.5.5.3` | R17 |
 | **Ghost C is drawn only for `v2x_relayed`; anything else marks and logs ERROR** | `CanvasWarningViewTest` | `17.5.5.4` | **R19, D12** |
@@ -179,6 +180,7 @@ Every row is a test this plan commits to, traced to what makes it necessary. A r
 | A scenario file is rejected loudly rather than defaulted silently | `ScenarioLoaderTest` | `4.5.6.2` | D9 |
 | Every non-raw payload validates through `R4Json` before sending; junk fields survive | `MessageBuilderTest` | `4.5.6.3` | D9 |
 | Different scenario files produce observably different streams | `ScenariosDifferTest` | `4.5.6.4` | D9 |
+| `downgrade.json` emits `medium` then three `low`s, differing from `approach.json` | `ScenariosDifferTest` downgrade case | `4.5.6.8` | D13 |
 
 **Two of these are R4's own acceptance** — the round-trip and additive-version tests — and **two are the R19 claim in code**: the guard-armed composition (`17.5.4.4`) and the guard itself (`17.5.5.4`). Losing either R19 test leaves a guard that is present, passing and disabled, which is the exact failure D12 exists to prevent. **Neither is droppable.**
 
@@ -200,10 +202,12 @@ Every row is a test this plan commits to, traced to what makes it necessary. A r
 | A generic warning on an unknown `warningType`, wire value preserved in the log | `WarningClassifier`; `R4Deserializer` | V5 | `4.5.9.15`, `17.5.9.16` | acceptance criterion 4 |
 | `[? UNKNOWN SOURCE]` and an ERROR line on an `own_sensor` message — **the trip is the pass** | the provenance guard | V5 | `4.5.9.15`, `17.5.9.16` | R19 |
 | `[DROP] reason=malformed …` and the next valid warning still rendering | `R4Deserializer`; `R4SocketObserver` | V5 | `4.5.9.15`, `17.5.9.16` | loop survival |
+| A `medium` followed by a `low` leaves the Display Area on Warning, risk colour updated | `WarningViewModel` (D13) | — | `17.5.4.4` (the rules) · `4.5.6.8` (the file that steps it on demand) | D13 |
+| The run's first `[UI] mode=WarningView cause=warning` follows the startup `[UI] mode=HomeView` by ≥ 8.0 s | `MainViewModel` under D13, against the **real** producer | — | `22.5.10.10` | R22 K7 |
 
 ### Test data
 
-One scenario file per purpose, all data (`4.5.6.4`): `approach.json` drives V4 and carries the null-C, risk-progression and timeout cases; `degrade.json` drives V5's three rows; `state-stream.json` exercises R4's optional `state` message, which no acceptance criterion depends on (D11). Payloads come from the frozen samples, never from a literal (D9).
+One scenario file per purpose, all data: `approach.json` drives V4 and carries the null-C, risk-progression and timeout cases; `degrade.json` drives V5's three rows; `state-stream.json` exercises R4's optional `state` message, which no acceptance criterion depends on (D11) — all three from `4.5.6.4`. `downgrade.json` (`4.5.6.8`) steps `medium` then `low` on demand, which is D13's in-Room half. Payloads come from the frozen samples, never from a literal (D9).
 
 ---
 
@@ -525,15 +529,27 @@ class R4SocketObserver(
 
 - `app/src/main/java/com/hackathon/v2x/ivi/ui/WarningUiState.kt`: `sealed interface WarningUiState { data object Idle; data class Active(val scene: SceneGeometry, val riskState: String, val presentation: WarningPresentation) }`.
 - `app/src/main/java/com/hackathon/v2x/ivi/ui/WarningViewModel.kt`:
-  - Collects `repository.warnings`; on each warning → `Active(...)`, and (re-)arms a `warningTimeoutMs` timer; on expiry → `Idle`. A new warning resets the timer rather than stacking timers.
+  - Collects `repository.warnings`. **The lifecycle is [D13](../IVI_ECU/doc/ivi-ecu-design-decisions.md#d13--active-risk-raises-the-warning-only-silence-lowers-it)'s three rules and nothing else moves the mode automatically:**
+
+    | Event | Effect |
+    |---|---|
+    | a warning with `riskState` `medium` or `high` | Idle → Active; already Active, the scene refreshes. The countdown restarts |
+    | a warning with `riskState` `low` | the scene and risk colour update, the countdown restarts, **the mode does not change** |
+    | `warningTimeoutMs` with no warning of any level | Active → Idle |
+
+  - **A `low` neither raises nor dismisses.** Arriving while the Display Area shows Home it leaves Home showing, which is what holds the normal screen up across R22's pre-warning window; arriving while Active it restarts the countdown like any other warning, so the warning survives the gap to the next cycle. Dismissal is the countdown alone.
+  - A new warning of any level resets the timer rather than stacking timers.
   - **The composition step — the wiring the R19 guard depends on.** `SceneGeometry` arriving in `warning.geometry` has `vehicleCSnapshot = null`, and `CanvasWarningView` treats a `null` snapshot as **trusted** — so passing `warning.geometry` straight through silently disables the R19 source guard. The view-model must build the scene as `warning.geometry.copy(vehicleCSnapshot = warning.objectSnapshot)` (an internal function of this file; HLD §4 designates no separate composer file). `riskState` and `presentation` come from `WarningClassifier`.
   - Holds no drawing code and no socket (HLD §3 UI logic).
 - Test `app/src/test/java/com/hackathon/v2x/ivi/ui/WarningViewModelTest.kt`:
-  - Idle initially; a warning → `Active`; no further warning for `warningTimeoutMs` → `Idle`; a second warning inside the window extends rather than double-fires.
+  - Idle initially; a `medium` warning → `Active`; no further warning for `warningTimeoutMs` → `Idle`; a second warning inside the window extends rather than double-fires.
+  - **The three D13 cases, one test each:** a `low` arriving from `Idle` leaves the state `Idle`; a `low` arriving while `Active` leaves the state `Active` with the scene and risk level updated; a `low` restarts the countdown, so `Active` survives to `warningTimeoutMs` **after** the `low` rather than after the preceding `medium`. A `high` from `Idle` raises like a `medium`.
   - **Guard-armed test — the R19 test, and name it so:** decode the frozen `/contracts/samples/r4-warning.json`, feed it in, and assert `(state as Active).scene.vehicleCSnapshot?.source == "v2x_relayed"` — i.e. the snapshot is **not null**. Then feed a warning whose `object.source` is `own_sensor` and assert the composed scene carries that snapshot verbatim, so the renderer's guard can trip. A `null` `vehicleCSnapshot` in either case fails the test.
   - Use virtual time (`kotlinx-coroutines-test`) for the timeout; add `testImplementation(libs.kotlinx.coroutines.test)` to `app/build.gradle.kts` if absent.
 
-**Acceptance:** `./gradlew :app:testDebugUnitTest` green including the named guard-armed test; the timeout value is read from the injected config, never a literal.
+**Acceptance:** `./gradlew :app:testDebugUnitTest` green including the named guard-armed test and the three D13 cases; the timeout value is read from the injected config, never a literal.
+
+**`WARNING_TIMEOUT_MS` stays 10000 and is bound to the producer's cycle** (D13, [D10](../IVI_ECU/doc/ivi-ecu-design-decisions.md)): it must exceed the interval from a cycle's clearing `low` to the next cycle's first active-risk message, ≈ 8.5 s under R22's 10.0 s cycle. Lowering it drops the warning for part of every cycle. It is externalized, so a retune is a config edit — but it is not free.
 
 **Dependencies:** after `4.5.4.2` and `4.5.4.3`. **Commit:** `[17.5.4.4] feat: add WarningViewModel with timeout and R19 snapshot composition`
 
@@ -791,6 +807,25 @@ class R4SocketObserver(
 **Acceptance:** `./gradlew assembleDebug` and `assembleRelease` both green, and the **release** merged manifest contains no `DEV_INJECT` receiver (check `app/build/intermediates/merged_manifests/release/AndroidManifest.xml`); `:app:testDebugUnitTest` still green.
 
 **Dependencies:** after `16.5.5.8` and `4.5.4.2`. **Commit:** `[4.5.6.7] feat: add the debug-only dev injector for I3 UI testing`
+
+### [ ] `4.5.6.8` — `downgrade.json` — the D13 medium→low case on demand *(agent)*
+
+**Objective:** a scenario file that steps `medium` then `low` and then holds, so [D13](../IVI_ECU/doc/ivi-ecu-design-decisions.md#d13--active-risk-raises-the-warning-only-silence-lowers-it)'s "a `low` does not dismiss" rule is provable in the Room without waiting for a producer cycle to wrap. [IVI HLD §12](../IVI_ECU/doc/ivi-ecu-hld.md#12-test-strategy) names this the mini-blueprint half of D13's proof; the view-model half is `17.5.4.4`'s.
+
+**Scope — one data file, no Kotlin:**
+
+- `IVI_ECU/r4-simulator/scenarios/downgrade.json`, in the `4.5.6.2` scenario shape, `loop: false`:
+  1. a step at `riskState: "medium"` with `geometry.vehicleC` present — raises the warning;
+  2. a step at `riskState: "low"` with `geometry.vehicleC` present and a **different** `object.distance`, so the scene visibly updates — must **not** change the mode;
+  3. two further `low` steps at the same rate, proving the countdown keeps restarting;
+  4. then the file ends, so silence times the view out `WARNING_TIMEOUT_MS` later — the only automatic dismissal path.
+- Every payload is built from the frozen `:contract` samples through `4.5.6.3`'s `MessageBuilder`. **A literal message body in this file is a defect** (D9) — only `sample` + `overrides`.
+- **No new Kotlin branch keys off the scenario name**, and no existing file changes: `approach.json`, `degrade.json` and `state-stream.json` are `4.5.6.4`'s and stay as written.
+- Extend `r4-simulator/src/test/kotlin/.../ScenarioLoaderTest.kt` to load this file too, and `ScenariosDifferTest.kt` with one case: the decoded `riskState` sequence of `downgrade.json` is `medium` then `low`, and differs from `approach.json`'s.
+
+**Acceptance:** `./gradlew :r4-simulator:test` green; the file exists at the designated path; the emitted `riskState` sequence read back off the built payloads is `medium, low, low, low`.
+
+**Dependencies:** after `4.5.6.4` (the shape, the loader test and the differ test it extends). **Parallel** with `4.5.6.5`, and **before `5.5.6.6`**, whose `COPY scenarios/` is what puts the file in the image. **Commit:** `[4.5.6.8] feat: add the downgrade scenario proving a low does not dismiss the warning`
 
 ---
 
@@ -1421,7 +1456,30 @@ The blueprint itself stays and can be deployed again.
 
 **Acceptance:** the deployment deleted and recorded in `plans/doc/phase5-ivi-run.md`.
 
-**Dependencies:** after `19.5.10.8` and `19.5.10.7`, which saves every node log first. **Commit:** `[5.5.10.9] docs: record the full blueprint Room teardown`
+**Dependencies:** after `19.5.10.8`, `19.5.10.7`, which saves every node log first, and `22.5.10.10`, which reads them. **Commit:** `[5.5.10.9] docs: record the full blueprint Room teardown`
+
+### [ ] `22.5.10.10` — R22 run-choreography evidence: K6 and K7 on the system-test run *(car-sky)*
+
+**Objective:** R22's two measurable outputs, read off the run `19.5.10.7` and `19.5.10.8` already produce. This is the **only** configuration that can produce them — the real bench drives the real detector-paced ADA node, which drives the real IVI app.
+
+**Scope — reading two surfaces of one run. No deploy, no new Room, no configuration change.**
+
+- **K6 — the ADA side** ([ADA HLD §12](../ADA_ECU/doc/ada-ecu-hld.md#12-test-strategy)). Save the ADA node's `[EVT]` stream, the detector's R3 JSONL and the bench node's `[TX]` JSONL from the same run, then run Phase 4's checker:
+
+  ```
+  python ADA_ECU/tools/check_run_alignment.py --evt ada.log --detector r3.jsonl --bench tx.jsonl
+  ```
+
+  **Accepted when K6 passes: the interval from `T0` — the run's first `own_sensor` R3 line — to the first `r4_tx` is 8.0 s ≤ Δ < 10.0 s.** Report K1–K5's verdicts from the same invocation; a K1–K5 failure is a finding against R20/R21, not against R22.
+- **K7 — the IVI side** ([IVI HLD §12](../IVI_ECU/doc/ivi-ecu-hld.md#12-test-strategy)). From `adb logcat -s IVI_V2X` over the tunnel `16.5.10.5` established — the AI row of [deploy-ivi-hmi-walkthrough.md §5](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#5-work-division-between-ai-and-human), procedure [§4.8](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging), evidence capture [§4.9](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#49-capture-the-evidence). **Accepted when both hold:** the run's first `[UI] mode=WarningView cause=warning` line is the **first** Warning-mode line of the run, and it follows the app's own startup `[UI] mode=HomeView` line by **≥ 8.0 s**. Record both timestamps and the delta.
+- **The screen recording is the visual half and it is armed by `16.5.10.6` and confirmed by `19.5.10.8`.** This subtask cites it, does not re-record it, and stops at any Human row rather than improvising around it.
+- **The two clocks never meet.** K6 reads the ADA node's own stamps, K7 the guest's own logcat stamps; no check subtracts one from the other ([ADA D10](../ADA_ECU/doc/ada-ecu-design-decisions.md#d10--clock-domains-and-stimulus-paced-against-clock_monotonic)).
+- **Record the configuration the run used** — the bench's `start_delay_s`, `duration_s`, `initial_distance_m`, `closing_speed_mps`, `cpm_rate_hz`; the ADA node's `DETECTOR_REALTIME_PACING`, `DETECTOR_CLIP_FPS`, `DETECTOR_FRAME_STRIDE`, `GATE_ENTER_M`, `RISK_NEAR_M`, `RISK_CRITICAL_M`, `RISK_DWELL_MS`. A pass at unknown values proves nothing.
+- **A K6 miss is a `start_delay_s` finding first.** The remedy is the bench key, re-derived from this run's measured `T0`; it is never the R13 gate and never the risk bands ([SP D7](../Scenario_Player/doc/scenario-player-design-decisions.md#d7--the-demo-cycle-is-one-clip-length-and-its-geometry-is-solved-backwards-from-the-first-warning)). Report the number and hand back to Phase 1 `22.1.13.4` rather than retuning here.
+
+**Acceptance:** the checker's six verdicts with K6's measured Δ, K7's two log lines with their delta, and the run's configuration values — all recorded in `plans/doc/phase5-ivi-run.md`, cited by the run this group produced.
+
+**Dependencies:** after `19.5.10.7` (the logs it reads are saved there) and Phase 4 `21.4.3.4` (the checker). Must run **before `5.5.10.9`** tears the Room down — the logs route returns nothing once the Room is gone. **Commit:** `[22.5.10.10] docs: record the R22 K6 and K7 evidence from the system test run`
 
 ---
 
@@ -1440,7 +1498,7 @@ Track D  app logic:    { 4.5.4.1 ∥ 4.5.4.2 ∥ 4.5.4.3 } ─► 17.5.4.4 ─�
 Track E  app UI/shell: 18.5.5.1 ─► 4.5.5.2 ─► 4.5.5.7 ─► 16.5.5.8
                        17.5.5.3 ─► 17.5.5.4 ─► 16.5.5.6   (16.5.5.6 also needs 16.5.4.5)
                        17.5.5.5 ∥ everything, after 4.5.1.4   (4.5.5.7 also needs track D through 17.5.4.4, and 17.5.5.4)
-Track F  test equip:   4.5.6.1 ─► 4.5.6.2 ─► 4.5.6.3 ─► 4.5.6.4 ─► 4.5.6.5 ─► 5.5.6.6
+Track F  test equip:   4.5.6.1 ─► 4.5.6.2 ─► 4.5.6.3 ─► 4.5.6.4 ─► { 4.5.6.5 ∥ 4.5.6.8 } ─► 5.5.6.6
                        (needs only 4.5.1.4 — fully parallel with tracks B–E)
                        4.5.6.7 dev injector (after 16.5.5.8 + 4.5.4.2)
 Track G  CI:           16.5.7.1 (no dependencies, ∥ everything) ─► 16.5.7.5 (Human, or agent on an authenticated gh CLI)
@@ -1458,9 +1516,11 @@ Track H  isolated:     5.5.9.1 (Human) ─► 4.5.9.2 (Human) ─► 6.5.9.3 ─
                         4.5.9.9 needs 5.5.7.3's pushed image; 16.5.9.10 needs 16.5.5.8;
                         4.5.9.17 needs the probe config in place, so run it before 4.5.9.9 where the APK is ready in time)
 Track J  system:       5.5.10.1 (Human) ─► 5.5.10.2 ─► 5.5.10.3 (Human) ─► 5.5.10.4
-                         ─► 16.5.10.5 ─► 16.5.10.6 (Human) ─► 19.5.10.7 ─► 19.5.10.8 (Human) ─► 5.5.10.9 (Human)
+                         ─► 16.5.10.5 ─► 16.5.10.6 (Human) ─► 19.5.10.7 ─► 22.5.10.10
+                         ─► 19.5.10.8 (Human) ─► 5.5.10.9 (Human)
                        (5.5.10.1 needs every node's real image published by its own phase;
-                        5.5.10.3 needs the Room slot track H releases at 5.5.9.22)
+                        5.5.10.3 needs the Room slot track H releases at 5.5.9.22;
+                        22.5.10.10 needs phase-4 21.4.3.4's checker and must read before 5.5.10.9 tears down)
 ```
 
 - **Parallel:** tracks B, D-partial, F and G against each other once `4.5.1.4` has landed; `4.5.4.1 ∥ 4.5.4.2 ∥ 4.5.4.3` inside track D; `17.5.5.3 → 17.5.5.4 → 16.5.5.6` as its own chain; `17.5.5.5` against everything. The first seven subtasks of track H are parallel with **all** code work by design — `5.5.9.1` through `16.5.9.7` are canvas, deploy and ADB-tunnel work that needs no Phase 5 code, and must not wait for it.
@@ -1493,8 +1553,9 @@ Every Phase 5 acceptance criterion in [milestone1.md](milestone1.md#phase-5--ivi
 | Ghost C renders from `v2x_relayed` data only; the 2D drawing is delivered | **`17.5.4.4`** (the D12 snapshot wiring that arms the guard — without it the guard silently disables) · **`17.5.5.4`** (the renderer and the guard itself, under test) · `16.5.5.6` · `17.5.5.3` · `4.5.3.3` (`cSource=` on every `[RX]`) · `degrade.json` guard-trip step in `4.5.6.4` · `cSource=v2x_relayed` on every warning evidenced in text by `18.5.9.12` and on screen by `17.5.9.13`, the guard trip gated by `17.5.9.16`, and the whole shown again from live relayed data by `19.5.10.7`/`19.5.10.8` |
 | A newer message with an unknown `warningType` degrades gracefully | `4.5.1.4` (the committed `R4AdditiveVersionTest` relocated and still green) · `4.5.2.2` (decode preserves the value, D4) · `4.5.4.3` (`WarningClassifier` generic presentation) · `4.5.6.4` (`degrade.json`) · read by `4.5.9.15` and observed by `17.5.9.16` |
 | Optional paths, only if built | **Not built in M1** — declared, not attempted. 3D stays reachable through the **`IviWarningViewSeam`** render seam ([HLD §8](../IVI_ECU/doc/ivi-ecu-hld.md#8-interfaces-ports-and-the-layer-rule)), which is what a second renderer would realize; multi-process wake-on-warning stays reachable because `4.5.5.2` chose the foreground service (D5). Recorded as "not built" in `plans/doc/phase5-ivi-run.md` by `17.5.9.16`, per [§6](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#6-expected-outputs-and-acceptance)'s instruction to record rather than leave the criteria ambiguous. |
+| *(no Phase 5 criterion)* **R22** — the first R4 lands in (`T0` + 8.0 s, `T0` + 10.0 s) and the HMI holds Home until then | `22.5.10.10` (K6 and K7 on the system-test run) · `17.5.4.4` (D13's lifecycle, which is what keeps Home showing through the `low`s) · `4.5.6.8` (the D13 case on demand) · producer side: Phase 1 group 1.13, Phase 3 `12.3.2.8`/`22.3.6.3`, Phase 4 `21.4.3.4` |
 
-**What group 5.10 adds.** The system test (`5.5.10.1`–`5.5.10.9`) closes no Phase 5 acceptance criterion on its own — all five are met against the R4 simulator feed. It proves the same IVI behaviour inside the full topology with every node on its real image, and its record is what Phase 6's convergence run starts from.
+**What group 5.10 adds.** The system test (`5.5.10.1`–`22.5.10.10`) closes no Phase 5 acceptance criterion on its own — all five are met against the R4 simulator feed. It proves the same IVI behaviour inside the full topology with every node on its real image, it is the only configuration that can produce R22's K6 and K7, and its record is what Phase 6's convergence run starts from.
 
 ## Open items
 
@@ -1508,7 +1569,7 @@ Carried, not decided. No Phase 5 subtask may close one of these by assuming an a
 | 4 | Coroutines version skew between `:observer` and what AndroidX resolves in `:app` | Mitigated by the catalog (`4.5.1.1`); a skew shows as a runtime `NoSuchMethodError`, not a build failure — watch for it at `16.5.9.10` |
 | 5 | Deployment budget: 2 concurrent Rooms | `5.5.9.22` and `5.5.10.9` tear their Rooms down; coordinate with the comms track before `5.5.9.4` deploys |
 | 6 | MTU headroom (Phase 0 open item O3) | Non-issue for this hop — an R4 warning is ~450 B against a 2048 B buffer — but still formally open |
-| 7 | **AAOS boot-to-listener time sets the bench `start_delay_s` floor** — a number no other phase can produce ([m1-run-timing-and-event-triggering.md §9 item 5](../requirements/m1-run-timing-and-event-triggering.md)). Measured at `16.5.9.10`; consumed by the bench key `start_delay_s`, which §6.1 defines and no phase currently schedules ([phase1_tasks.md § Open items item 10](phase1_tasks.md#open-items--flags-no-phase-1-subtask-may-silently-close-them)). **No startup handshake is coming** — §4.2 rules readiness as R5's Deployment-Viewer check plus that delay, so nothing in this phase should be designed around a barrier the topology has no reverse path for | `16.5.9.10`, then **user** / Phase 6 |
+| 7 | **AAOS boot-to-listener time is a constraint on this node, not an input to the bench's `start_delay_s`.** That key is set by the ADA detector's warm-up ([§6.6(g)](../requirements/m1-run-timing-and-event-triggering.md), Phase 3 `22.3.6.3` → Phase 1 `22.1.13.4`) and is not free to absorb the guest's boot time. R22 states the requirement directly here instead: **the app must be listening on its R4 port before `T0` + 8.0 s**, the earliest instant a warning can arrive ([§4.2](../requirements/m1-run-timing-and-event-triggering.md)). `16.5.9.10` produces the boot-to-listener number; if it exceeds that window the finding is this node's, and the operator's R5 Deployment-Viewer check before recording is what covers it. **No startup handshake is coming** — the topology has no reverse path for a barrier | `16.5.9.10`, then **user** |
 | 8 | **`18.5.5.1` and `18.5.9.12` carry `X = 18`, and R18's definition does not cover this node.** R18 defines structured JSONL event logs **on the V2X ECU and ADA**; the IVI's `key=value` logcat lines are neither JSONL nor produced on those nodes. The two IDs are published and are not renumbered ([task-planning-conventions.md § Task ID scheme](../.claude/rules/task-planning-conventions.md#task-id-scheme)), and the group headers of 5.5, 5.9 and 5.10 name R18 because those subtasks sit in them | [[project-researcher]] — either widen R18's definition to the IVI's evidence surface, or state that the IVI's log evidence traces to R4 alone. **Raise before Phase 6 reads the R18 event list** |
 | 9 | **Committed comments name task IDs this plan assigns different work to.** `IVI_ECU/app/proguard-rules.pro` and `IVI_ECU/app/src/main/java/…/model/SceneGeometry.kt` cite `4.5.1.1`; `IVI_ECU/app/build.gradle.kts` cites `4.5.1.4`; `SceneGeometry.kt` and `R3Snapshot.kt` cite `17.5.3.1` and `17.5.3.4`, which this plan does not assign at all. The IDs in this file are the live assignment. Neither set is renumbered, and `4.5.1.4` moves those files byte-identically, so its `git mv` cannot refresh the comments | [[project-planner]] — the comment in each file is corrected by the next subtask that rewrites that file for its own objective (`17.5.5.4` for `CanvasWarningView.kt`), never by a subtask opened to edit comments |
 | 10 | **`gh` CLI authentication on the execution host.** [§5](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#5-work-division-between-ai-and-human)'s first qualification flips the run-confirmation and artifact-download rows from Human to AI on a host with `gh auth login` run. Which state applies is unrecorded | **user** — the answer is recorded at `16.5.7.5`, which is where it bites, and decides whether that subtask is handed to a person or spawned to a subagent |
@@ -1530,4 +1591,4 @@ Each is a decision with its reason.
 
 ---
 
-*9 task groups, 70 subtasks: 39 agent, 13 car-sky, 17 Human, and one (`17.5.9.18`) split between a car-sky command and a human judgement. **There is no task group 5.8.** Nothing started except `16.5.7.1`.*
+*9 task groups, 72 subtasks: 40 agent, 14 car-sky, 17 Human, and one (`17.5.9.18`) split between a car-sky command and a human judgement. **There is no task group 5.8.** Nothing started except `16.5.7.1`.*

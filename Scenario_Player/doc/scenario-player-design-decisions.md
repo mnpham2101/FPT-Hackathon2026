@@ -33,7 +33,7 @@ Drift is caught twice: by byte identity in `check_sync.py`, and by wire truth in
 
 - **Scenario variants are new files**, selected at runtime by `SCENARIO_CONFIG`. A variant that needs a code branch is a design change, not a scenario.
 - **Every scenario tunable lives in the YAML**, validated by `player/config.py`; nothing about the content is an env var or a literal.
-- The two committed variants are chosen to drive the R13 lifecycle from the consumer's side: `default.yaml` closes 60 m → 10 m through the 30 m admission gate, and `c-out-of-range.yaml` holds C static at 60 m, beyond the 35 m exit gate, so no track is ever admitted.
+- The two committed variants are chosen to drive the R13 lifecycle from the consumer's side: `default.yaml` closes C from 70 m to 20.5 m across its cycle, crossing the 30 m admission gate 8.0 s in (D7), and `c-out-of-range.yaml` holds C static at 60 m, beyond the 35 m exit gate, so no track is ever admitted.
 
 The scenario values pair with the R13 gate constants that [milestone1.md §4](../../plans/milestone1.md#track-admission-gate-r13) fixes. The pairing is a property of the data, so a gate change is answered by editing the YAML, never by editing the model.
 
@@ -58,9 +58,9 @@ Scenario time advances at 1.0× wall time, scheduled against `CLOCK_MONOTONIC` d
 
 - **The deadline is computed, not accumulated.** Tick *n* is due at `t0 + n × period` on `time.monotonic()`; the loop sleeps until that instant. A fixed `sleep(period)` per tick accumulates the per-tick work cost into scenario time, which drifts unbounded over a run.
 - **`[TX]` carries `mono_ms`**, so `scenario_time_s` can be regressed against elapsed time — R20's K5 check, ±1 % over ≥ 60 s.
-- **`start_delay_s`** is a grace period from process start before the first CPM. It exists because the AAOS guest boots slower than a container, and the operator restarting this node *is* the run start (R21) — there is no orchestrator, no trigger message and no reverse channel to wait on.
+- **`start_delay_s`** is a grace period from process start before the first CPM. The operator restarting this node *is* the run start (R21) — there is no orchestrator, no trigger message and no reverse channel to wait on — so a configured delay is the only lever that aligns this node's scenario time with the ADA detector's clip time (D7).
 - **`reference_time_epoch`** names the epoch `referenceTime` is stamped against. The frozen profile defines it as `TimestampIts` — milliseconds since 2004-01-01T00:00:00.000 TAI — so a Unix-epoch stamp is non-conformant even though it passes the schema's upper bound. The epoch is a config value, never a literal in the loop.
-- **`loop: true` is a safety net, not a convenience.** A fresh admission cycle every `duration_s` means any start misalignment between the bench and the ADA detector self-corrects within one cycle.
+- **`loop: true` repeats the choreography, and corrects nothing.** A fresh admission cycle every `duration_s` means a recording that starts late still captures a complete cycle. With the bench cycle and the clip loop at the same period, an offset between them is constant for the whole run — which is why `start_delay_s` is a measured value rather than an approximation (D7).
 
 ## D6 — Standing decisions binding on this design
 
@@ -70,3 +70,26 @@ Scenario time advances at 1.0× wall time, scheduled against `CLOCK_MONOTONIC` d
 - **No signing and no PKI.** The R1 profile carries no security envelope, and the V2X protocol stack ships in the modem — out of scope for the whole project, not only M1.
 - **R10 ego Tx is deferred**, so nothing on this node ever receives. The encoder returns for R10 as a second caller of `ICpmCodec::encode`, with no change here.
 - **No capture on this node.** The V2X ECU's interface sees both live flows, which makes it the single capture point.
+
+## D7 — The demo cycle is one clip length, and its geometry is solved backwards from the first warning
+
+Realizes R22 ([m1-run-timing-and-event-triggering.md §6.6](../../requirements/m1-run-timing-and-event-triggering.md)) on the bench side. Every lever is scenario data in `scenarios/default.yaml`, so the choreography is a file, never a code branch (D3).
+
+| Key | What it is bound to |
+|---|---|
+| `duration_s` | the ego clip's length, exactly |
+| `object.initial_distance_m` | `GATE_ENTER_M + closing_speed_mps × 8.0 s`, which places C's gate crossing 8.0 s into the cycle |
+| `object.closing_speed_mps` | a rate that keeps ego-to-C and ego-to-B closing at comparable speeds, and `initial_distance_m` inside a plausible CPM perceived-object range |
+| `cpm_rate_hz` | the R1 profiled rate; three ticks are what promote C to `tracked` after the crossing |
+| `loop` | `true`, so the cycle repeats without operator action |
+| `start_delay_s` | the measured ADA detector warm-up `W` |
+
+- **`duration_s` is bound to the clip, not chosen for the bench.** Matched periods are what keep B and C admitted and dropped inside one window. A longer bench cycle leaves C tracked across a clip wrap at which B is absent, and the ADA assessment falls to `low` on its `b_unknown` path mid-run ([ADA D11](../../ADA_ECU/doc/ada-ecu-design-decisions.md)). Retuning either period alone breaks the run.
+- **`start_delay_s` is a measurement, not a guess.** Cancelling `W` is what makes bench scenario time equal clip time. The value holds to **−0.5 / +1.1 s** around the true `W` before the first warning leaves R22's window. `W` is read on the deployed ADA node as the interval from detector spawn to its first emitted R3 line.
+- **The gate crossing is placed at 8.0 s of the cycle**, one second above R22's floor and, once the ADA node's confirm count, risk dwell, fusion tick and pipeline latency are added, at worst 1.1 s below its ceiling.
+
+| Rejected alternative | Why |
+|---|---|
+| A cycle longer than the clip, with the crossing placed inside it | Breaks the matched-period constraint above |
+| Leaving the geometry alone and shifting the cycle with `start_delay_s` | No offset places the resulting first warning in the required interval; the offset moves the whole cycle, crossing included |
+| A closing speed high enough to trigger the ADA node's TTC threshold instead of its range threshold | Needs a B-to-C closing rate of ~47 km/h, and makes the trigger depend on a differentiated range estimate rather than one distance comparison |

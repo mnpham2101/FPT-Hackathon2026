@@ -174,8 +174,8 @@ Four nodes. Every address and port is the value the full blueprint uses, so the 
             "DETECTOR_FRAME_STRIDE": "4",
             "MODEL_PATH": "/app/models/yolo11n.onnx",
             "CRA_ENABLED": "nlos_obstruction",
-            "RISK_NEAR_M": "25",
-            "RISK_CRITICAL_M": "15",
+            "RISK_NEAR_M": "60",
+            "RISK_CRITICAL_M": "30",
             "CAPTURE_FILTER": "udp port 47300"
           }
         },
@@ -598,7 +598,7 @@ Every `[CAP]` line depends on the platform actually granting the `NET_RAW` the n
 A warning is emitted when the assessed risk level **changes**. If both tracks are healthy and no `r4_tx` line ever appears, the level never left its initial value. Retune with node config and a redeploy — no rebuild:
 
 1. Read the observed geometry off the ADA log: `grep '"event":"assessment"' ada.log | tail -5`. Each payload carries the composed ego-to-C range and the time-to-collision estimate.
-2. Compare the smallest composed range to `RISK_NEAR_M` (25). The composed range is ego-to-B plus B-to-C, so it is always larger than the distance the bench emits.
+2. Compare the smallest composed range to `RISK_NEAR_M` (60). The composed range is ego-to-B plus B-to-C, so it is always larger than the distance the bench emits.
 3. Pick one lever and change only it:
 
 | Lever | Where | Effect |

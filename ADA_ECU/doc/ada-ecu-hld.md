@@ -1,6 +1,6 @@
 # ADA ECU — high-level design (R3, R12–R15; R18 ADA side)
 
-> **The ADA node's HLD, and the sole design authority for `ADA_ECU/`.** Every component this node runs, its role, input and output, where it lives, and how the components connect. Decision record: [ada-ecu-design-decisions.md](ada-ecu-design-decisions.md) (D1–D10). Frozen contracts: [r2-v2x-object.schema.json](../../contracts/r2-v2x-object.schema.json) in, [r3-tracked-object.schema.json](../../contracts/r3-tracked-object.schema.json) as the store's object model, [r4-ada-ivi.schema.json](../../contracts/r4-ada-ivi.schema.json) out. Deploy and verify: [deploy-ada-ecu-walkthrough.md](../../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md). Node facts: [node-ada-ecu.md](../../requirements/car-sky-guide/node-ada-ecu.md).
+> **The ADA node's HLD, and the sole design authority for `ADA_ECU/`.** Every component this node runs, its role, input and output, where it lives, and how the components connect. Decision record: [ada-ecu-design-decisions.md](ada-ecu-design-decisions.md) (D1–D11). Frozen contracts: [r2-v2x-object.schema.json](../../contracts/r2-v2x-object.schema.json) in, [r3-tracked-object.schema.json](../../contracts/r3-tracked-object.schema.json) as the store's object model, [r4-ada-ivi.schema.json](../../contracts/r4-ada-ivi.schema.json) out. Deploy and verify: [deploy-ada-ecu-walkthrough.md](../../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md). Node facts: [node-ada-ecu.md](../../requirements/car-sky-guide/node-ada-ecu.md).
 >
 > Diagrams: [ada-ecu-module-architecture.svg](research_notes/ada-ecu-module-architecture.svg) (components, paired with its `.drawio`) · [phase2-4-ada-ecu-components.puml](phase2-4-ada-ecu-components.puml) (module graph) · [phase2-4-ada-ecu-callflow.puml](phase2-4-ada-ecu-callflow.puml) (sequence) · [phase2-4-ada-ecu-admission.puml](phase2-4-ada-ecu-admission.puml) (the R13 state machine).
 
@@ -29,7 +29,7 @@
 | [m1-cooperative-awareness.md](../../requirements/m1-cooperative-awareness.md) — **the authority** | R3, R12, R13, R14, R15 whole — definition, dependency, acceptance, tech stack. R2 as the input contract and R4 as the output contract. R5/R6: node type, bridge, address, ports. R18: the evidence stream. R19: zero direct C detections for the whole run. §1: this node's responsibility list and the demo table. §3(d)/(f)/(g): the stack. §4: the standing decisions |
 | Its figures — [ada-ecu.svg](../../requirements/ada-ecu.svg) · [vehicleC_track_admission_state_machine.png](../../requirements/vehicleC_track_admission_state_machine.png) | The R14 module shape this design realizes — DataObserver, Data Parser, Current Input, Collision Risk Assessment, Current TrackedObject/Risk — and the R13 lifecycle, realized as [phase2-4-ada-ecu-admission.puml](phase2-4-ada-ecu-admission.puml) |
 | [r2-v2x-object.schema.json](../../contracts/r2-v2x-object.schema.json) · [r3-tracked-object.schema.json](../../contracts/r3-tracked-object.schema.json) · [r4-ada-ivi.schema.json](../../contracts/r4-ada-ivi.schema.json) | The three frozen contracts, field for field, with their bounds and their nullable fields (§10) |
-| [m1-run-timing-and-event-triggering.md](../../requirements/m1-run-timing-and-event-triggering.md) | R20/R21. §6.2's clock-domain ruling, which this design makes (D10); §6.1's three detector pacing keys; §6.4's `tools/check_run_alignment.py` and its K1–K5 checks (§12) |
+| [m1-run-timing-and-event-triggering.md](../../requirements/m1-run-timing-and-event-triggering.md) | R20/R21/R22 whole. §6.2's clock-domain ruling, which this design makes (D10); §6.1's three detector pacing keys and the two risk-band values; §6.6's run choreography — `T0`, the paced clip, the matched bench-cycle and clip periods, and the band pair on the composed range (D11); §6.4's `tools/check_run_alignment.py` and its K1–K6 checks (§12) |
 | [m1-video-source-and-ivi-dashcam.md](../../requirements/m1-video-source-and-ivi-dashcam.md) | The clip reaches the container as one image layer and by no other route. The IVI dashcam view is deferred, and no part of it is built here (D6) |
 | [milestone1.md](../../plans/milestone1.md) | §4's R13 gate constants; §2's near-collinear composition assumption; Phases 2, 3 and 4 acceptance; §6's deferred scope |
 | [node-ada-ecu.md](../../requirements/car-sky-guide/node-ada-ecu.md) | Image tag, blueprint `command` and `capabilities`, env set, pin, address |
@@ -44,7 +44,7 @@ Non-authoritative scratch; on any conflict the CLAUDE.md authority order wins.
 | [video-source-for-r12.md](research_notes/video-source-for-r12.md) | The R12 input decision, wholesale: the clip is user-supplied and baked in at `media/ego-b-occluding-c.mp4`, reached through `VIDEO_CLIP_PATH` and `DETECTOR_FRAME_STRIDE`. §3's input spec and its KPIs; §2(a′)'s rejection of the `video` pin, which rests on frame acquisition sitting behind a seam (D6); the synthetic generator as a CI fixture only |
 | [phase0-contract-freeze-hld.md](../../plans/doc/phase0-contract-freeze-hld.md) | D1's access model — byte-synced schema copies, no cross-folder reads; D2's bindings as pure model code; D4's additive-version tolerance. The bindings in `src/contracts/` are the only message models this design uses (D1) |
 | [v2x-ecu-hld.md](../../V2X_ECU/doc/v2x-ecu-hld.md) and its [decisions](../../V2X_ECU/doc/v2x-ecu-design-decisions.md) | The sole-socket-holder rule; the `[EVT]` line's `mono_ms`/`epoch_ms` pair and its payload-carrying events, so one offline reader walks both nodes (D8); the clock discipline this node continues (D10); the `entrypoint.sh` plus `capture.sh` tcpdump pattern, reused here for the ADA→IVI hop (D9) |
-| [scenario-player-hld.md](../../Scenario_Player/doc/scenario-player-hld.md) and its [decisions](../../Scenario_Player/doc/scenario-player-design-decisions.md) | The bench cadence `cpm_rate_hz` (10 Hz default), which is the relayed-update rate this design sizes `TRACK_TIMEOUT_MS` against; the two committed scenarios — `default.yaml` closing 60 m → 10 m through the gate, `c-out-of-range.yaml` held beyond the exit gate — as the R13 and R14 exercise inputs |
+| [scenario-player-hld.md](../../Scenario_Player/doc/scenario-player-hld.md) and its [decisions](../../Scenario_Player/doc/scenario-player-design-decisions.md) | The bench cadence `cpm_rate_hz` (10 Hz default), which is the relayed-update rate this design sizes `TRACK_TIMEOUT_MS` against; the two committed scenarios — `default.yaml` closing C from 70 m to 20.5 m across a 10.0 s cycle, crossing the gate 8.0 s in, and `c-out-of-range.yaml` held beyond the exit gate — as the R13 and R14 exercise inputs; the bench half of the R22 alignment, `start_delay_s` set to this node's detector warm-up (D11) |
 
 ## 3. The component architecture
 
@@ -133,7 +133,7 @@ ADA_ECU/
 │   ├── export_yolo11n.py           the one-off Ultralytics → ONNX export (D6)
 │   ├── make_sample_video.py        the CI decode fixture generator, never the demo source
 │   ├── check_zero_c.py             the R12/R19 zero-C check (D6)
-│   ├── check_run_alignment.py      the R21 run-alignment check, K1–K5 (D10)
+│   ├── check_run_alignment.py      the R21/R22 run-alignment check, K1–K6 (D10, D11)
 │   ├── event_report.py             [EVT] → the collision-risk event list (D8)
 │   └── extract_pcap.sh             host-side log → .pcap (D9)
 │
@@ -227,8 +227,8 @@ Every runtime value the deployment wires enters through env. Core values are rea
 | `DETECTOR_ENABLED` · `DETECTOR_CMD` | `true` · `python3 /app/detector/main.py` | the detector spawn; the fixture override is how the core runs without a model (D2) |
 | `DETECTOR_RESTART_MAX` | `5` | bounded restarts after a non-zero exit (D2) |
 | `CRA_ENABLED` | `nlos_obstruction` | the active plugin list (D4) |
-| `RISK_NEAR_M` · `RISK_CRITICAL_M` | `25` · `15` | the `medium` and `high` range thresholds (D5) |
-| `RISK_TTC_WARN_S` · `RISK_TTC_CRITICAL_S` | `6` · `3` | the TTC thresholds (D5) |
+| `RISK_NEAR_M` · `RISK_CRITICAL_M` | `60` · `30` | the `medium` and `high` thresholds on the composed range `d_AC` (D5, D11) |
+| `RISK_TTC_WARN_S` · `RISK_TTC_CRITICAL_S` | `6` · `3` | the `medium` and `high` TTC thresholds (D5) |
 | `RISK_DWELL_MS` | `300` | the debounce before a transition commits (D5) |
 | `STATE_RATE_HZ` | `0` | the optional R15 periodic awareness state (D7) |
 | `EVENT_LOG_PATH` · `ASSESS_LOG_EVERY_MS` | *(empty = stdout only)* · `1000` | the R18 file sink and the assessment heartbeat (D8) |
@@ -239,8 +239,8 @@ Every runtime value the deployment wires enters through env. Core values are rea
 | `VIDEO_CLIP_PATH` | `/app/media/ego-b-occluding-c.mp4` | the clip `FileFrameSource` opens (D6) |
 | `DETECTOR_FRAME_STRIDE` | `4` | decimation: every Nth decoded frame is sampled |
 | `DETECTOR_LOOP` | `true` | restart the clip at EOF (D2) |
-| `DETECTOR_REALTIME_PACING` | `true` | release sampled frames at wall-clock rate rather than as fast as the CPU allows (D10) |
-| `DETECTOR_CLIP_FPS` | the clip's declared rate | the rate pacing targets; overridable (D10) |
+| `DETECTOR_REALTIME_PACING` | `true` | release sampled frames at wall-clock rate rather than as fast as the CPU allows; `true` for every demo run, since clip time is run time only under pacing (D10, D11) |
+| `DETECTOR_CLIP_FPS` | `20.0` — the committed clip's declared rate | the rate pacing targets; overridable (D10) |
 | `DETECTOR_START_DELAY_S` | `0.0` | grace from spawn before the first emitted frame (D10) |
 | `MODEL_PATH` | `/app/models/yolo11n.onnx` | the ONNX session |
 | `CONF_THRESHOLD` · `IOU_THRESHOLD` | `0.35` · `0.45` | the detection score floor and the NMS overlap |
@@ -248,6 +248,17 @@ Every runtime value the deployment wires enters through env. Core values are rea
 | `VEHICLE_WIDTH_M` · `CAMERA_HFOV_DEG` | `1.8` · `60` | the pinhole distance inputs (D6) |
 
 The addresses, the ports and the two gate constants are fixed by a committed source — [node-ada-ecu.md](../../requirements/car-sky-guide/node-ada-ecu.md#blueprint-node-config) and [milestone1.md §4](../../plans/milestone1.md#track-admission-gate-r13). Every other default above is this design's proposal. A value the blueprint omits falls through to the app's own default, never to an `ENV` baked into the image.
+
+**Startup validation.** `config/config` asserts the rules below and nothing beyond them. A violation names the offending key and exits non-zero. Each rule orders values of one quantity, or bounds a single value. **No rule relates a risk threshold to a gate threshold**, because the two measure different ranges (D5).
+
+| Rule | Quantity it constrains |
+|---|---|
+| `0 < GATE_ENTER_M < GATE_EXIT_M` | the relayed or estimated range of one source, `d_BC` or `d_AB` — the R13 Schmitt band (D3) |
+| `0 < RISK_CRITICAL_M < RISK_NEAR_M` | the composed range `d_AC` — the R14 bands (D5) |
+| `0 < RISK_TTC_CRITICAL_S < RISK_TTC_WARN_S` | time to collision on `d_AC` (D5) |
+| `CONFIRM_HITS ≥ 1`; `TRACK_TIMEOUT_MS > 0`; `FUSION_TICK_MS > 0`; `RISK_DWELL_MS ≥ 0`; `STATE_RATE_HZ ≥ 0`; `DETECTOR_RESTART_MAX ≥ 0` | a single value's domain |
+| ports in 1–65535; hosts non-empty; `CRA_ENABLED` naming registered plugins only | a single value's domain |
+| `DETECTOR_CLIP_FPS > 0`; `DETECTOR_FRAME_STRIDE ≥ 1`; `DETECTOR_START_DELAY_S ≥ 0`, asserted by `detector/config` | a single value's domain, detector side |
 
 | Artifact | Role |
 |---|---|
@@ -272,7 +283,7 @@ Scaffolding for exercising this node alone. None of it ships in the node image.
 | `tools/ada-bench/` → `m1-ada-bench:latest`, at the repo root | replaces both neighbours in the isolated Room: `ROLE=v2x_mock` emits R2 at `10.99.0.11`, `ROLE=ivi_mock` binds `47300` at `10.99.0.13` and checks every warning | env-configured profile, rate and distance walk | R2 datagrams; `[RX]`, `[CHECK]`, `[SUMMARY]` and `[CAP]` lines |
 | `tests/fixtures/own_sensor_mock.jsonl` | a recorded own-sensor stream the real `detector_reader` replays through `DETECTOR_CMD`, so the core runs with no model and no clip (D2) | — | R3 JSONL lines |
 | `tools/make_sample_video.py` | a synthetic clip proving the decoder and the JSONL path in CI; it cannot produce R12 detection evidence (D6) | — | a short `.mp4` |
-| `tools/check_zero_c.py` · `tools/check_run_alignment.py` · `tools/event_report.py` | host-side readers of this node's own output | the `[EVT]` stream, the detector's R3 JSONL, the bench's `[TX]` JSONL | the zero-C verdict, the K1–K5 verdict, the collision-risk event list |
+| `tools/check_zero_c.py` · `tools/check_run_alignment.py` · `tools/event_report.py` | host-side readers of this node's own output | the `[EVT]` stream, the detector's R3 JSONL, the bench's `[TX]` JSONL | the zero-C verdict, the K1–K6 verdict, the collision-risk event list |
 
 **A mock of another node never lives in this folder.** `tools/ada-bench/` sits at the repo root so it can change without rebuilding the thing it tests, and so bench code cannot ship inside the real image ([node-code-layout § `tools/`](../../.claude/rules/node-code-layout.md#tools--test-equipment-and-ecu-mocks), [walkthrough §2.4](../../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#24-where-the-bench-sources-live-and-why)). The scripts in `ADA_ECU/tools/` mock nothing: they read this node's own logs, build no image, and are excluded from the build context.
 
@@ -431,16 +442,19 @@ Expected observables, per [walkthrough § Expected outputs and acceptance](../..
 
 The single strongest line is `r4_tx`: it proves both tracks existed at the same instant rather than at two different times, which is Phase 4's output acceptance.
 
-R20/R21 alignment is checked after a run by `tools/check_run_alignment.py` (D10). K1–K3 read this node's `[EVT]` stream, K4 the detector's R3 JSONL, K5 the bench's `[TX]` JSONL — each check stays inside one clock domain.
+R20/R21/R22 alignment is checked after a run by `tools/check_run_alignment.py` (D10, D11). K1–K3 and K6 read this node's `[EVT]` stream, K4 the detector's R3 JSONL, K5 the bench's `[TX]` JSONL — each check stays inside one clock domain.
 
 | # | Check | Bound |
 |---|---|---|
 | K1 | at every `r4_tx`, a `tracked` `own_sensor` B entry exists whose `lastUpdated` is within `TRACK_TIMEOUT_MS` | pass |
-| K2 | the first `own_sensor` → `tracked` transition precedes the first `v2x_relayed` → `tracked` transition | pass |
+| K2 | the first `own_sensor` → `tracked` transition precedes the first `v2x_relayed` → `tracked` transition | ≥ 1.0 s |
 | K3 | `max │lastUpdated(own_sensor B) − lastUpdated(v2x_relayed C)│` over all `r4_tx` | ≤ 1000 ms |
 | K4 | the detector's frame-index advance against its own emit-timestamp advance, over ≥ 60 s | ±2 % of `DETECTOR_CLIP_FPS / DETECTOR_FRAME_STRIDE` |
 | K5 | the bench's `scenario_time_s` advance against its `mono_ms` advance, over ≥ 60 s | ±1 % |
+| K6 | the interval from `T0` — the run's first `own_sensor` R3 line — to the first `r4_tx` | 8.0 s ≤ Δ < 10.0 s |
+
+K6 is R22's ADA-side observable, and it is what the D11 configuration exists to produce. Its IVI-side counterpart, K7, is read from the guest and belongs to that node ([ivi-ecu-hld.md §12](../../IVI_ECU/doc/ivi-ecu-hld.md#12-test-strategy)).
 
 ## 13. Design decisions
 
-[ada-ecu-design-decisions.md](ada-ecu-design-decisions.md) — D1–D10, binding on implementation and cited by number throughout this document: the one folder and one object model (D1), the process and thread model (D2), R13 admission (D3), the R14 interface, registry and database (D4), the risk vocabulary and edge-triggered emission (D5), the R12 detector (D6), the R15 output stage (D7), the R18 evidence stream (D8), the deployment shape (D9), and the clock domains with paced stimulus (D10).
+[ada-ecu-design-decisions.md](ada-ecu-design-decisions.md) — D1–D11, binding on implementation and cited by number throughout this document: the one folder and one object model (D1), the process and thread model (D2), R13 admission (D3), the R14 interface, registry and database (D4), the risk vocabulary and edge-triggered emission (D5), the R12 detector (D6), the R15 output stage (D7), the R18 evidence stream (D8), the deployment shape (D9), the clock domains with paced stimulus (D10), and the R22 run choreography (D11).

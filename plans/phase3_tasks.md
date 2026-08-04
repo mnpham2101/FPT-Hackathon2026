@@ -5,7 +5,7 @@
 > - **Design:** [ada-ecu-hld.md](../ADA_ECU/doc/ada-ecu-hld.md) — §4 folder structure for every path, §6 env tables for every constant; **[D6](../ADA_ECU/doc/ada-ecu-design-decisions.md#d6--r12-detector-frame-source-seam-inference-distance-zero-c-evidence)** is this phase's design (frame-source seam, inference, distance, association, emission, zero-C evidence, model provenance) and **[D10](../ADA_ECU/doc/ada-ecu-design-decisions.md#d10--clock-domains-and-stimulus-paced-against-clock_monotonic)** adds the detector's real-time pacing.
 > - **Video source:** [video-source-for-r12.md](../ADA_ECU/doc/research_notes/video-source-for-r12.md) §3 the clip spec and its KPIs; and **the clip's own record**, [ADA_ECU/media/ego-b-occluding-c.source.md](../ADA_ECU/media/ego-b-occluding-c.source.md) — provenance, licence, encode command, content verdict, and the accepted duration deviation.
 > - **Requirements:** [m1-cooperative-awareness.md §2](../requirements/m1-cooperative-awareness.md) R3, R5, R12, R18 and §3(g) — referenced by number, never restated.
-> - **Run timing:** [m1-run-timing-and-event-triggering.md](../requirements/m1-run-timing-and-event-triggering.md) — §6.2's detector timestamp ruling (`12.3.2.6`) and §3.3's warm-up budget (`12.3.5.2`).
+> - **Run timing:** [m1-run-timing-and-event-triggering.md](../requirements/m1-run-timing-and-event-triggering.md) — §6.2's detector timestamp ruling (`12.3.2.6`), §6.1's three pacing keys and R20's detector half (`12.3.2.1`, `12.3.2.8`), and §6.6(g)'s warm-up budget (`12.3.5.2`, `22.3.6.3`).
 > - **Phase 2 baseline (do not re-plan):** [phase2_tasks.md § Phase 2 overview](phase2_tasks.md#phase-2-overview) — the C++ core, the store, the R13 machine, the CRA seam, `src/observer/detector_reader` with its `DETECTOR_CMD` process contract, the image and the `ada-ecu-image` lane, `tools/check_clip_spec.py`.
 > - **Rules:** [task-planning-conventions.md](../.claude/rules/task-planning-conventions.md); [node-code-layout.md](../.claude/rules/node-code-layout.md).
 >
@@ -129,7 +129,7 @@ New lanes go in a new `.github/workflows/phase3-ci.yml` — *a lane belongs to t
 | `DETECTOR_FRAME_STRIDE` | `4` |
 | `DETECTOR_LOOP` | `true` |
 | `DETECTOR_REALTIME_PACING` | `true` |
-| `DETECTOR_CLIP_FPS` | unset — the pacer takes the frame source's declared rate (`CAP_PROP_FPS`); an explicit value overrides it |
+| `DETECTOR_CLIP_FPS` | `20.0` — the committed clip's declared rate ([HLD §6](../ADA_ECU/doc/ada-ecu-hld.md#6-internal-components)); overridable, and the frame source's `CAP_PROP_FPS` is the fallback when a different clip is mounted |
 | `DETECTOR_START_DELAY_S` | `0.0` |
 | `MODEL_PATH` | `/app/models/yolo11n.onnx` |
 | `CONF_THRESHOLD` · `IOU_THRESHOLD` | `0.35` · `0.45` |
@@ -302,7 +302,7 @@ The clip-time value `frame_index / fps * 1000` stays a detector-local `Frame` fi
 8. Exit cleanly and promptly on SIGTERM.
 9. Write `detector/tests/test_main.py` (planner-designated path) with three cases: a short synthetic run with a fake detector emits N valid JSONL lines on stdout and nothing else; a missing clip exits non-zero with the path named; SIGTERM terminates within a bounded time.
 
-**Acceptance:** pytest green on CI; **stdout contains only JSONL** — asserted, because a stray print corrupts the process contract.
+**Acceptance:** pytest green on CI; **stdout contains only JSONL** — asserted, because a stray print corrupts the process contract; the pacer is wired unconditionally and its behaviour is decided by config alone.
 
 **Dependencies:** after `12.3.2.2` + `12.3.2.5` + `12.3.2.6` + `12.3.2.8`. **Commit:** `[12.3.2.7] feat: add the detector entrypoint`
 
@@ -449,11 +449,11 @@ The clip-time value `frame_index / fps * 1000` stays a detector-local `Frame` fi
 5. Record KPI 4 — ≥ 1 `class = vehicle`, `source = own_sensor` entry with a distance estimate for ≥ 90 % of sampled frames.
 6. Record KPI 5 — `check_zero_c.py` exit 0 over the whole log.
 7. Raise `DETECTOR_FRAME_STRIDE` and re-run if KPI 3 fails, never changing the model ([research note §5](../ADA_ECU/doc/research_notes/video-source-for-r12.md#5-requirement-mapping-and-flags)); record the stride used.
-8. Record the detector warm-up interval — ONNX model load plus `VideoCapture` open, from process start to the first emitted R3 line. [m1-run-timing-and-event-triggering.md §9 open item 4](../requirements/m1-run-timing-and-event-triggering.md) carries it as estimated at 2–5 s and unmeasured, and §3.3 gives the budget: against a 12.0 s bench lead-in, the ADA side needs warm-up plus `confirm_hits` at 5 Hz (0.6 s), leaving roughly 6.4 s of slack. This run produces that number. The remedy if it exceeds the slack is the bench's `start_delay_s`, not a change here.
+8. Record the detector warm-up `W` — ONNX model load plus `VideoCapture` open, from process start to the first emitted R3 line. It is the value the bench's `start_delay_s` is set to, and R22's alignment budget is **−0.5 / +1.1 s** around it ([m1-run-timing-and-event-triggering.md §6.6(g)](../requirements/m1-run-timing-and-event-triggering.md); [SP D7](../Scenario_Player/doc/scenario-player-design-decisions.md#d7--the-demo-cycle-is-one-clip-length-and-its-geometry-is-solved-backwards-from-the-first-warning)). This run produces the **host** figure; the deployed one, which is what the bench is configured from, is `22.3.6.3`. The remedy for a large `W` is the bench's `start_delay_s`, never a change here.
 9. Record the interval between the last emitted line of one clip pass and the first of the next, and whether B's track id is re-minted or carried. A long re-open stall is what would expire ego's own B track between cycles, which is `13.4.11.3`'s own-sensor half in Phase 4.
 10. Record the paced-rate check: with `DETECTOR_REALTIME_PACING` true, the sampled-frame rate equals `DETECTOR_CLIP_FPS / DETECTOR_FRAME_STRIDE` within ±2 %, which is [HLD §12](../ADA_ECU/doc/ada-ecu-hld.md#12-test-strategy) K4's bound read off this run's own stamps.
 
-**Acceptance:** the four KPIs, the measured warm-up, the clip-pass interval and the paced-rate check recorded with their values; this closes the R12 detection-log box and the CPU-only/offline-pace box at runner level (`5.3.6.2` repeats KPI 3 on the deployed node).
+**Acceptance:** the four KPIs, the measured host warm-up `W`, the clip-pass interval and the paced-rate check recorded with their values; this closes the R12 detection-log box and the CPU-only/offline-pace box at runner level (`5.3.6.2` repeats KPI 3 on the deployed node, `22.3.6.3` the warm-up).
 
 **Dependencies:** after `12.3.2.7` + `12.3.3.1` + `12.3.3.4` + `12.3.4.3` + `12.3.5.1`. **Commit:** `[12.3.5.2] docs: record the R12 detection log and KPI measurements`
 
@@ -530,6 +530,26 @@ Layer order decides which blobs are re-pushed: `media/` and `models/` sit above 
 **Acceptance:** the measured deployed rate, warm-up, clip-pass interval and reported clip path recorded in `plans/doc/phase3-ada-detector-run.md`, citing the Room and log the reading came from.
 
 **Dependencies:** after `5.3.6.1` (so the deployed image carries the detector) + Phase 4 `18.4.11.1` (the log to read). **Commit:** `[5.3.6.2] docs: record the deployed ADA inference rate and clip-open evidence`
+
+### [ ] `22.3.6.3` — Measure the detector warm-up `W` on the deployed node and derive `start_delay_s` *(car-sky)*
+
+**Objective:** produce **one number** — the interval, on the deployed ADA node, from the detector process spawn to its first emitted R3 line. It is the value the bench's `start_delay_s` is set to, and R22 cannot be configured without it ([m1-run-timing-and-event-triggering.md §6.6(g)](../requirements/m1-run-timing-and-event-triggering.md), [§9 item 4](../requirements/m1-run-timing-and-event-triggering.md); [SP D7](../Scenario_Player/doc/scenario-player-design-decisions.md)).
+
+**This subtask books no Room and performs no deploy.** Like `5.3.6.2` it reads [phase4_tasks.md](phase4_tasks.md) `18.4.11.1`'s already-saved `ada.log` from the isolated ADA Room. The account allows two concurrent deployments; a second slot for a log read is waste. If group 4.11 has not run, this subtask waits.
+
+**Scope — reading and arithmetic, entirely:**
+
+- From the saved ADA node `[EVT]` stream, take `mono_ms` of the **`detector_spawn`** line and `mono_ms` of the **first `own_sensor_ingest`** line. `W = Δ mono_ms / 1000`, seconds. Both stamps are this node's own `CLOCK_MONOTONIC`, so the measurement crosses no clock domain ([ADA D10](../ADA_ECU/doc/ada-ecu-design-decisions.md#d10--clock-domains-and-stimulus-paced-against-clock_monotonic)).
+- The first `own_sensor_ingest` is also **`T0`**, the R22 run origin ([ADA D11](../ADA_ECU/doc/ada-ecu-design-decisions.md#d11--r22-run-choreography-the-run-origin-the-paced-clip-and-the-risk-band-pair)). Record its `mono_ms` and `epoch_ms` alongside `W`, so a later K6 read has the origin the run actually used.
+- Confirm the run was paced: the node's `DETECTOR_REALTIME_PACING` as deployed, and the observed sampled-frame period against `DETECTOR_FRAME_STRIDE / DETECTOR_CLIP_FPS`. **An unpaced run yields no usable `W`** — clip time is not run time, so report it as unmeasured and hand back rather than deriving a number from it.
+- Take `W` over **at least three detector spawns** where the log has them (a restart, or a second Room), and record the spread. A single sample with no spread is still acceptable evidence; state which it is.
+- **Derive the bench value:** `start_delay_s = W`, since `DETECTOR_START_DELAY_S` stays `0.0` (D11). State it to one decimal, with the −0.5 / +1.1 s tolerance band around the measurement, so `22.1.13.4` writes a value with a stated margin rather than a guess.
+
+**Executor:** *car-sky*, per [deploy-ada-ecu-walkthrough.md §7](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#7-work-division-between-ai-and-human)'s AI row for reading node logs. It performs no canvas step and no deploy click.
+
+**Acceptance:** `W` in seconds, `T0`'s two stamps, the observed sampled-frame period, the deployed `DETECTOR_REALTIME_PACING` value, and the derived `start_delay_s` with its tolerance band — all recorded in `plans/doc/phase3-ada-detector-run.md`, citing the Room and the log the reading came from.
+
+**Dependencies:** after `5.3.6.1` + `12.3.2.8` (the run must be paced) + Phase 4 `18.4.11.1` (the log). **Unblocks** Phase 1 `22.1.13.4`. **Commit:** `[22.3.6.3] docs: record the deployed detector warm-up and the derived bench start delay`
 
 ---
 
@@ -619,12 +639,12 @@ evidence   12.3.5.1 (after 12.3.2.6) ──► 12.3.5.4 (also needs 12.3.2.7 + 1
            12.3.4.3 (after 12.3.2.7 + 12.3.3.1 + 12.3.3.4) ──► 12.3.5.2 (also needs 12.3.5.1)
 image      5.3.6.1 (after 12.3.1.1 + 12.3.2.7 + 12.3.3.1 + 12.3.7.2)
 push/KPI   5.3.7.3 (after 12.3.7.2 + 5.3.6.1)
-deployed   5.3.6.2 (after 5.3.6.1 + phase-4 18.4.11.1 - a log read, not a deploy)
+deployed   5.3.6.2 ∥ 22.3.6.3 (after 5.3.6.1 + 12.3.2.8 + phase-4 18.4.11.1 - log reads, not deploys)
 ```
 
 **`12.3.3.1` gates every subtask that runs the real detector** — `12.3.3.4`, `12.3.4.3`, `12.3.5.2`, `12.3.5.4`, `3.3.5.3` and `5.3.6.1` all execute against `MODEL_PATH`, and that file reaches disk only when `12.3.3.1` commits it. The edges above are the dependency structure a parallel run must honour, not a suggestion the recommended order happens to satisfy.
 
-**Recommended runtime order (single tree):** 12.3.1.1 → 12.3.3.3 → 12.3.2.1 → 12.3.2.2 → 12.3.2.3 → 12.3.2.4 → 12.3.2.8 → 12.3.3.2 → 12.3.3.1 → 12.3.2.5 → 12.3.2.6 → 12.3.2.7 → 12.3.3.4 → 12.3.7.2 → 12.3.5.1 → 12.3.5.4 → 3.3.5.3 → 12.3.4.3 → 12.3.5.2 → 5.3.6.1 → 5.3.7.3 → 5.3.6.2.
+**Recommended runtime order (single tree):** 12.3.1.1 → 12.3.3.3 → 12.3.2.1 → 12.3.2.2 → 12.3.2.3 → 12.3.2.4 → 12.3.2.8 → 12.3.3.2 → 12.3.3.1 → 12.3.2.5 → 12.3.2.6 → 12.3.2.7 → 12.3.3.4 → 12.3.7.2 → 12.3.5.1 → 12.3.5.4 → 3.3.5.3 → 12.3.4.3 → 12.3.5.2 → 5.3.6.1 → 5.3.7.3 → 5.3.6.2 → 22.3.6.3.
 
 **Three `Human` steps and one external input gate this phase** (§ Execution labels): the branch creation and push, the workflow-run confirmations and artifact downloads, and the `yolo11n.pt` fetch `12.3.3.1` needs when the export host has no egress. The remaining external unknown is `12.3.1.1`'s wheel availability, which is taken first.
 
@@ -640,6 +660,8 @@ deployed   5.3.6.2 (after 5.3.6.1 + phase-4 18.4.11.1 - a log read, not a deploy
 | CPU-only, offline pace acceptable | `12.3.5.2` KPI 3 (CI runner) · `5.3.6.2` (deployed node) · `12.3.1.1` (CPU-only wheels) |
 | *(no milestone box — § Open items item 12)* media layer ≤ 60 MB, digest stable; second push transfers 0 bytes | `5.3.7.3` |
 | *(no milestone box)* the baked-in clip opens **on the deployed node** | `5.3.6.2` |
+| *(no milestone box)* R20's detector half — sampled frames released at 1.0× wall time, K4 within ±2 % | `12.3.2.8` (the pacer) · `12.3.5.2` (the host measurement) · verified by Phase 4 `21.4.3.4` |
+| *(no milestone box)* the detector warm-up `W` and the bench `start_delay_s` R22 rests on | `22.3.6.3`, consumed by Phase 1 `22.1.13.4` |
 | *(phase task, no box)* R18 own-sensor evidence | `own_sensor_ingest` payloads from Phase 2 `18.2.2.3`, fed by this phase's real lines |
 
 **Three of the four boxes close off-platform.** Only the deployed half of the CPU-pace box needs a Room, and it reads Phase 4's.
@@ -651,7 +673,7 @@ deployed   5.3.6.2 (after 5.3.6.1 + phase-4 18.4.11.1 - a log read, not a deploy
 | 1 | **`onnxruntime` / `opencv-python-headless` aarch64 wheel availability is unproven** ([HLD decision D9](../ADA_ECU/doc/ada-ecu-design-decisions.md#d9--deployment-shape)). Verified first by `12.3.1.1`. A red lane escalates — pin an older wheel, change the base image, or accept a QEMU source build with a raised timeout. Not an implementer's call | `12.3.1.1`, then [[project-architecture]] |
 | 2 | **Planner-designated test/tool paths beyond the HLD's list**: `detector/tests/test_config.py`, `test_inference.py`, `test_main.py`; `ADA_ECU/tools/tests/test_check_zero_c.py`. Required by subtask discipline; HLD-consistent additions, not new design | [[project-architecture]] (ack) |
 | 3 | **Distance accuracy is unvalidated until the detector runs on the clip** ([HLD decision D6](../ADA_ECU/doc/ada-ecu-design-decisions.md#d6--r12-detector-frame-source-seam-inference-distance-zero-c-evidence)). `12.3.4.3` is the retune, and it may only move `VEHICLE_WIDTH_M` / `CAMERA_HFOV_DEG`, never `GATE_ENTER_M` / `GATE_EXIT_M`. B is a coach, wider than the 1.8 m car default, so expect a systematic bias to correct | `12.3.4.3` |
-| 4 | **Detector warm-up (ONNX load + `VideoCapture` open) is unmeasured** — estimated 2–5 s against the ≈ 6.4 s slack of [§3.3](../requirements/m1-run-timing-and-event-triggering.md), and it is the term that consumes that slack. `12.3.5.2` produces the number on the CI runner; `5.3.6.2` repeats it on the 2-vCPU node, where it will be worse | `12.3.5.2`, then `5.3.6.2` |
+| 4 | **Detector warm-up `W` (ONNX load + `VideoCapture` open) is unmeasured** — estimated 2–5 s, and it is the one measurement R22 cannot ship without: it sets the bench's `start_delay_s`, held to **−0.5 / +1.1 s** ([§6.6(g)](../requirements/m1-run-timing-and-event-triggering.md)). `12.3.5.2` produces the CI-runner figure; **`22.3.6.3` produces the deployed one, which is the value that ships**, and Phase 1 `22.1.13.4` writes it into `scenarios/default.yaml` | `12.3.5.2`, then `22.3.6.3` |
 | 5 | **The clip is 10 s, and every long-run behaviour therefore depends on looping.** Accepted, with reasoning in [the provenance record](../ADA_ECU/media/ego-b-occluding-c.source.md). Two consequences no subtask may absorb silently: `FileFrameSource` must keep `frame_index` monotonic across loops (`12.3.2.2`), and the gap between the last emitted line of one clip pass and the first of the next must not exceed `TRACK_TIMEOUT_MS`, or ego's own B track expires between cycles. `12.3.5.2` measures that gap; if it is too long, the finding goes to [[project-architecture]] — it is not fixed by widening the timeout | `12.3.5.2` |
 | 6 | **The detector's pacer is built because [HLD §4/§6/§12](../ADA_ECU/doc/ada-ecu-hld.md#6-internal-components) and [D10](../ADA_ECU/doc/ada-ecu-design-decisions.md#d10--clock-domains-and-stimulus-paced-against-clock_monotonic) designate it (`12.3.2.8`); the requirement number it serves is unratified.** [m1-run-timing-and-event-triggering.md §7](../requirements/m1-run-timing-and-event-triggering.md) defines R20 and §8(1) schedules R20/R21 behind this phase's acceptance. D10 states that pacing serves R20 on its own footing rather than the deferred IVI dashcam view, so building it pulls no deferred surface in; the dashcam view stays deferred ([milestone1.md §6](milestone1.md#6-deferred-to-later-milestones)) and no Phase 3 subtask may add clip-serving or an `exposedPorts` entry. **Trigger:** the user accepts or rejects R20, which fixes whether `12.3.2.8` and its K4 bound are traceable to a ratified requirement | **user** (accept/reject R20) |
 | 7 | **The §3 clip-spec numbers are proposals**, and the duration row does not match the committed artifact. `12.2.9.2` sends the spec to FPT-Mentor for confirmation and states the deviation. A correction arriving late is absorbed by **raising the stride**, never by changing the model or the gate | user / `12.2.9.2` |
@@ -663,4 +685,4 @@ deployed   5.3.6.2 (after 5.3.6.1 + phase-4 18.4.11.1 - a log read, not a deploy
 
 ---
 
-*Phase 3 = 7 task groups, 23 subtasks, every one `AI`; `5.3.6.2` and `5.3.7.3` go to [[car-sky]] and the rest to an implementation subagent. `12.3.7.1` is done; the rest are not started.*
+*Phase 3 = 7 task groups, 24 subtasks, every one `AI`; `5.3.6.2`, `5.3.7.3` and `22.3.6.3` go to [[car-sky]] and the rest to an implementation subagent. `12.3.7.1` is done; the rest are not started.*

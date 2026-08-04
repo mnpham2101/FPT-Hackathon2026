@@ -548,6 +548,7 @@ Switch the ADA node to `R4_SCENARIO=/app/scenarios/degrade.json`.
 - **Screen recording:** set **Recorder Part** on the Screen widget *before* the run; the clip lands under **Videos** and downloads as `.mp4`. Videos record at the screen's native resolution, so files are large.
 - **Screenshots:** from the Screen widget. `GET /api/v1/vms/{roomId}/{nodeKey}/screenshot` is a scriptable alternative where it answers (§6.1).
 - **Guest log excerpt:** `adb logcat -s IVI_V2X` — the `[RX] … cSource=v2x_relayed` lines are what back the recording in text.
+- **Timestamps on that excerpt:** keep logcat's default `threadtime` format and start the capture before the app is launched, so the excerpt holds the app's own startup `[UI] mode=HomeView` line as well as the first `[UI] mode=WarningView cause=warning`. The interval between those two lines is an acceptance observable (§6, row 5).
 - **Producer log excerpt:** the ADA node's `[TX]` lines, from **View Log** or the logs route.
 - Record every result in the phase's run record, as [phase0-smoke-test-run.md](../../plans/doc/phase0-smoke-test-run.md) does for the smoke test.
 
@@ -618,7 +619,7 @@ Three qualifications on the rows above, none of which changes the default:
 
 ## 6. Expected outputs and acceptance
 
-Four observables prove the bring-up. Three are text and one is visual; none substitutes for another.
+Five observables prove the bring-up. Four are text and one is visual; none substitutes for another.
 
 | # | Proof | Where it appears | What it settles |
 |---|---|---|---|
@@ -626,6 +627,7 @@ Four observables prove the bring-up. Three are text and one is visual; none subs
 | 2 | **The parsed tracked-object data model** — the same `[RX]` line's `warningType=`, `risk=`, `cSource=` and `cPos=` fields, read off the decoded message and its object snapshot | `IVI_V2X` | The consumer parses the contract, and an unknown `warningType` degrades gracefully rather than crashing (§4.8 V5, first row) |
 | 3 | **The event raised in the IVI ECU** — `[UI] mode=WarningView cause=warning`, with `cause=warning` and not `cause=user` | `IVI_V2X` | The message, not a tap, brought the warning view up in the Display Area |
 | 4 | **The HMI switched to the warning display** — the Display Area drawing the God View: ego and B solid, ghost C dashed with its risk glow and `[V2X]` badge | Screen widget, captured as a recording or screenshot | The warning view is shown in the Display Area, with the three vehicles drawn in 2D and ghost C sourced only from `v2x_relayed` |
+| 5 | **The normal screen held before it** — on a run driven by the real bench and ADA ECU nodes, the first `[UI] mode=WarningView cause=warning` line is the run's first Warning-mode line, and it follows the app's own startup `[UI] mode=HomeView` line by at least 8.0 s | `IVI_V2X`, timestamped (§4.9) | The Display Area holds the normal screen for at least the first 8 seconds of the run, and the warning appears only after it |
 
 Two further observations complete the set rather than repeating the four above:
 

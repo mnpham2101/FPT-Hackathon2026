@@ -1,6 +1,6 @@
 # IVI ECU — high-level design (R4, R16, R17)
 
-> **The IVI node's HLD, and the sole design authority for `IVI_ECU/`.** Every component this node runs, its role, input and output, where it lives, and how the components connect. Decision record: [ivi-ecu-design-decisions.md](ivi-ecu-design-decisions.md) (D1–D12). Frozen contract: [r4-ada-ivi.schema.json](../../contracts/r4-ada-ivi.schema.json). Build, install and verify: [deploy-ivi-hmi-walkthrough.md](../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md). Node facts: [node-ivi-ecu.md](../../requirements/car-sky-guide/node-ivi-ecu.md).
+> **The IVI node's HLD, and the sole design authority for `IVI_ECU/`.** Every component this node runs, its role, input and output, where it lives, and how the components connect. Decision record: [ivi-ecu-design-decisions.md](ivi-ecu-design-decisions.md) (D1–D13). Frozen contract: [r4-ada-ivi.schema.json](../../contracts/r4-ada-ivi.schema.json). Build, install and verify: [deploy-ivi-hmi-walkthrough.md](../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md). Node facts: [node-ivi-ecu.md](../../requirements/car-sky-guide/node-ivi-ecu.md).
 >
 > Diagrams: [ivi-ecu-module-architecture.svg](research_notes/ivi-ecu-module-architecture.svg) (components) · [phase5-ivi-callflow.puml](phase5-ivi-callflow.puml) (sequence) · [phase5-ivi-components.puml](phase5-ivi-components.puml) (modules).
 
@@ -29,7 +29,7 @@
 | [m1-cooperative-awareness.md](../../requirements/m1-cooperative-awareness.md) — **the authority** | R4, R16, R17 whole — definition, dependency, acceptance, tech stack. R5/R6: node type, bridge, port. R18/R19: what the run must evidence. §3(e)/(f): the stack. §4: the standing decisions, restated in D11 |
 | Its figures — [ivi-ecu.svg](../../requirements/ivi-ecu.svg) · [ivi-god-view-scene.svg](../../requirements/ivi-god-view-scene.svg) · [ivi-god-view-warning-screen.svg](../../requirements/ivi-god-view-warning-screen.svg) | The R16 layout; R17's visual language; and the annotated variant, which is explanatory and never rendered |
 | [r4-ada-ivi.schema.json](../../contracts/r4-ada-ivi.schema.json) · [r3-tracked-object.schema.json](../../contracts/r3-tracked-object.schema.json) | The frozen input contract, field for field (§10) |
-| [m1-run-timing-and-event-triggering.md](../../requirements/m1-run-timing-and-event-triggering.md) | R20/R21 oblige this node with nothing: R4 carries no timestamp, so the warning timeout is a local countdown, and pacing belongs to the bench and the detector. This node owes the run its AAOS boot-to-listener time, which sets the bench's start delay |
+| [m1-run-timing-and-event-triggering.md](../../requirements/m1-run-timing-and-event-triggering.md) | R20/R21 oblige this node with nothing: R4 carries no timestamp, so the warning timeout is a local countdown, and pacing belongs to the bench and the detector. R22 obliges it with two things: the app is listening on its R4 port before the first warning can arrive at `T0` + 8.0 s, and the Display Area holds Home until an active-risk warning raises it (D13). K7 is this node's observable (§12) |
 | [m1-video-source-and-ivi-dashcam.md](../../requirements/m1-video-source-and-ivi-dashcam.md) | A dashcam view is deferred (D11). If accepted, the clip arrives over HTTP from the ADA node or as a local copy — never through a `video` pin |
 | [node-ivi-ecu.md](../../requirements/car-sky-guide/node-ivi-ecu.md) | VM artifact, pin, address |
 
@@ -160,8 +160,8 @@ Graceful degradation is split across the last two on purpose: the parser preserv
 
 | Component | Role | Input | Output |
 |---|---|---|---|
-| `ui/WarningViewModel` | the warning lifecycle Idle ↔ Active, with `WARNING_TIMEOUT_MS` of silence returning to Idle | the presentation and its scene | `WarningUiState` |
-| `ui/MainViewModel` + `ui/DisplayMode` | which view the Display Area shows — Warning / Home / Apps / Settings — and whether a message (`cause=warning`) or a tap (`cause=user`) changed it | mode requests, warning state | `currentMode`, the `[UI]` line |
+| `ui/WarningViewModel` | the warning lifecycle Idle ↔ Active: an active-risk warning raises it, a `low` updates the scene without moving it, and `WARNING_TIMEOUT_MS` of R4 silence returns it to Idle (D13) | the presentation and its scene | `WarningUiState` |
+| `ui/MainViewModel` + `ui/DisplayMode` | which view the Display Area shows — Warning / Home / Apps / Settings — and whether a message (`cause=warning`), a tap (`cause=user`) or the countdown (`cause=timeout`) changed it | mode requests, warning state | `currentMode`, the `[UI]` line |
 
 ### UI / front-end
 
@@ -245,7 +245,7 @@ Two message kinds share the port, discriminated by `type`.
 | `schemaVersion` | integer ≥ 1 | contract version; a value above `R4Contract.KNOWN_SCHEMA_VERSION` is accepted and flagged, never rejected (D4) |
 | `type` | `"warning"` | discriminator |
 | `warningType` | string | registry key; M1 holds `nlos_obstruction`. An unrecognised value degrades to the generic presentation (D4) |
-| `riskState` | string | the R14 risk level — `low` / `medium` / `high` — which colours ghost C's glow |
+| `riskState` | string | the R14 risk level — `low` / `medium` / `high` — which colours ghost C's glow; what each level does to the Display Area is D13 |
 | `object` | R3 TrackedObject | snapshot of the triggering track C: `source`, `position`, `distance`, `speed`, `confidence`, `state`, `timestamps` |
 | `geometry` | object | the composed scene: `ego` (frame origin), `vehicleB` (occluder), `vehicleC` (`null` until C is tracked). Positions are `x` longitudinal / `y` lateral, metres, ego frame |
 
@@ -299,8 +299,12 @@ Expected observables, per [walkthrough §6](../../requirements/car-sky-guide/dep
 | `[DROP] reason=malformed …`, the next valid message still rendering | `R4Deserializer` returning a result instead of throwing |
 | `[UI] mode=WarningView cause=warning` | `R4Repository` → `WarningViewModel` → `MainViewModel` |
 | `cause=user` on a tap, `cause=timeout` back to Idle | `MainViewModel`; `WarningViewModel`'s `WARNING_TIMEOUT_MS` |
+| a `medium` message followed by a `low` one leaving the Display Area on Warning, with the risk colour updated | `WarningViewModel` (D13) |
+| the run's first `[UI] mode=WarningView cause=warning` line following the startup `[UI] mode=HomeView` line by ≥ 8.0 s | R22's K7 — `MainViewModel` under D13, against the real producer |
 | the God View in the Display Area | `MainScreen` → `IviWarningViewSeam` → `CanvasWarningView` |
 | `[? UNKNOWN SOURCE]` on an `own_sensor` message | the provenance guard |
+
+**Where each half of D13 is proved.** The rules themselves — a `low` raises nothing, a `low` dismisses nothing, silence dismisses — are view-model tests on a plain JVM, plus a mini-blueprint scenario stepping `medium` then `low` on demand. The margin between the countdown and the producer's cycle is a property of the pair, so only a full-blueprint run shows the warning surviving a cycle wrap; K7 and that margin are read from the guest's logcat and the screen recording. A dismissal observed between cycles is a `WARNING_TIMEOUT_MS` finding against the producer's cycle length, not a defect in the rules.
 
 Below both sits the plain-JVM unit layer: `:contract`, `:serializer` and `:observer` run against a fake source or a loopback socket, proving the receive path without a Room, and the dev injector reaches the real UI with no network. Two of those tests are R4's own acceptance:
 
@@ -309,4 +313,4 @@ Below both sits the plain-JVM unit layer: `:contract`, `:serializer` and `:obser
 
 ## 13. Design decisions
 
-[ivi-ecu-design-decisions.md](ivi-ecu-design-decisions.md) — D1–D12, binding on implementation and cited by number throughout this document: the contract submodule and module graph (D1, D2), de-framing (D3), unknown-`warningType` handling (D4), the foreground service (D5), the frozen samples (D6), the composition root (D7), the version catalog (D8), the simulator (D9), configuration (D10), the standing decisions (D11), and the provenance guard's fail-open property (D12).
+[ivi-ecu-design-decisions.md](ivi-ecu-design-decisions.md) — D1–D13, binding on implementation and cited by number throughout this document: the contract submodule and module graph (D1, D2), de-framing (D3), unknown-`warningType` handling (D4), the foreground service (D5), the frozen samples (D6), the composition root (D7), the version catalog (D8), the simulator (D9), configuration (D10), the standing decisions (D11), the provenance guard's fail-open property (D12), and the warning lifecycle's response to `riskState` (D13).

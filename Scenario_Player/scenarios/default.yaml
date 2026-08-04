@@ -1,12 +1,18 @@
-# default.yaml - C approaching (SP HLD D3): starts at 60 m and closes to ~10 m over the run,
-# driving C through the 30 m admission gate (R13 admission lifecycle in later phases).
+# default.yaml - the R22 demo choreography (requirements/m1-run-timing-and-event-triggering.md 6.6):
+# C starts at 70.0 m and closes at 5.0 m/s, so it crosses the R13 gate_enter (30 m) 8.0 s into the
+# cycle and reaches `tracked` at 8.3 s - putting the first R4 warning after the 8th second of the
+# run and before the cycle ends.
+# duration_s equals the 10.0 s of ADA_ECU/media/ego-b-occluding-c.mp4, so the bench cycle and the
+# detector's clip loop wrap together and B and C are tracked over the same window.
+# R22 also sets `start_delay_s` to the measured ADA detector warm-up, cancelling it so bench
+# scenario time equals clip time; that key arrives with R20 and is not read by player/config.py.
 # All values here are scenario data, never code - new variants are new YAML files (D3).
 # Sender/object values stay in the family of the frozen contract samples
 # (contracts/golden-vectors/nominal.json, contracts/samples/r2-object.json), in human units.
 
 name: c-approaching
 cpm_rate_hz: 10
-duration_s: 20.0          # 60.0 - 2.5 m/s x 20 s = 10 m at end of run
+duration_s: 10.0          # = the committed clip's length; bench cycle and clip loop stay in phase
 loop: true
 
 sender:                   # B's static WGS84 pose (nominal.json converted to degrees)
@@ -17,8 +23,8 @@ sender:                   # B's static WGS84 pose (nominal.json converted to deg
 
 object:                   # C relative to B, SI units
   object_id: 7
-  initial_distance_m: 60.0
-  closing_speed_mps: 2.5
+  initial_distance_m: 70.0  # 30 m gate + 5.0 m/s x 8.0 s
+  closing_speed_mps: 5.0    # d_BC 70.0 m -> 20.5 m across the cycle
   lateral_offset_m: 1.2   # frozen-sample family (r2-object.json position.y)
   classification: 5       # vehicle (wire-native class code, nominal.json)
   confidence: 95
