@@ -99,6 +99,8 @@ dependencies {
     implementation("com.google.dagger:hilt-android:2.58")
     ksp("com.google.dagger:hilt-android-compiler:2.58")
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
+    implementation("com.google.guava:guava:33.4.0-android")
+
 
     // Unit / integration testing
     // compileOnly: fwcd Kotlin LS resolves only the main compile classpath for files under
