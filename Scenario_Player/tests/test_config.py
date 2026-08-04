@@ -256,17 +256,32 @@ SCENARIOS_DIR = Path(__file__).resolve().parents[1] / "scenarios"
 
 
 class TestCommittedScenarioVariants:
-    """The two R11-acceptance scenario files load and are observably different by construction."""
+    """The two R11-acceptance scenario files load and are observably different by construction.
 
-    def test_default_is_c_approaching_60m_closing_to_10m(self):
+    This is the **one** place the committed geometry is written as literals: it pins what the demo
+    is meant to be, so a retune has to change a test that states the intent rather than one that
+    restates the arithmetic. ``test_streams_differ.py`` derives everything from these same files
+    and checks the wiring from them to the wire.
+    """
+
+    #: R13 admission gate (m) the R22 crossing instant is written against. Frozen with the Phase 2
+    #: gate constants; re-checked there per SP HLD section 10 item 3.
+    GATE_ENTER_M = 30.0
+
+    def test_default_is_the_r22_approach_geometry(self):
+        """default.yaml is the R22 demo cycle (SP D7): C starts at 70,0 m and closes at 5,0 m/s
+        over a 10,0 s cycle, so d_BC crosses the 30 m admission gate 8,0 s in - inside R22's open
+        interval (7,0 s, 10,0 s) and leaving the run's remaining time for the warning."""
         scenario = load_scenario(SCENARIOS_DIR / "default.yaml")
-        assert scenario.object.initial_distance_m == 60.0
-        assert scenario.object.closing_speed_mps > 0
-        final_distance = (
-            scenario.object.initial_distance_m
-            - scenario.object.closing_speed_mps * scenario.duration_s
-        )
-        assert final_distance == pytest.approx(10.0, abs=2.0)
+        assert scenario.object.initial_distance_m == 70.0
+        assert scenario.object.closing_speed_mps == 5.0
+        assert scenario.duration_s == 10.0
+
+        gate_crossing_s = (
+            scenario.object.initial_distance_m - self.GATE_ENTER_M
+        ) / scenario.object.closing_speed_mps
+        assert gate_crossing_s == pytest.approx(8.0)
+        assert 7.0 < gate_crossing_s < scenario.duration_s
 
     def test_c_out_of_range_is_static_beyond_35m_exit_gate(self):
         scenario = load_scenario(SCENARIOS_DIR / "c-out-of-range.yaml")
