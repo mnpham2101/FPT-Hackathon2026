@@ -63,8 +63,8 @@ class Registry {
 };
 
 // The single registration point, defined in src/cra/builtin_plugins.cpp —
-// the one file an added plugin edits (D4). Empty in Phase 2: no builtin
-// plugin exists yet.
+// the one file an added plugin edits (D4). Registers the M1 NLOS plugin,
+// ChainedCollision, under the frozen key "nlos_obstruction" (14.4.1.2).
 void registerBuiltinPlugins(Registry& registry, const config::Config& config);
 
 }  // namespace ada::cra

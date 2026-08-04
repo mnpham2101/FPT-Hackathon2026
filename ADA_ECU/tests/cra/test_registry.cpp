@@ -2,7 +2,8 @@
 // lookup by name (D4): two fakes register and are retrievable, a duplicate
 // name is rejected, enabled() selects the CRA_ENABLED subset in order, an
 // unknown enabled name throws a RegistryError naming it, and
-// registerBuiltinPlugins leaves a Phase 2 registry empty.
+// registerBuiltinPlugins registers the M1 NLOS plugin under its frozen key
+// nlos_obstruction (14.4.1.2).
 //
 // No RiskContext is ever constructed, so the AssessmentDb forward declaration
 // stays incomplete here — the fakes' assess() never reads its context.
@@ -131,13 +132,20 @@ TEST(CraRegistry, UnknownEnabledNameThrowsNamingIt) {
                             "no_such_plugin");
 }
 
-TEST(CraRegistry, RegisterBuiltinPluginsIsEmptyInPhase2) {
+TEST(CraRegistry, RegisterBuiltinPluginsRegistersTheNlosPlugin) {
   const ada::config::Config cfg =
       ada::config::load([](const char*) -> const char* { return nullptr; });
 
   Registry registry;
   ada::cra::registerBuiltinPlugins(registry, cfg);
-  EXPECT_EQ(registry.size(), 0u);
+
+  ASSERT_EQ(registry.size(), 1u);
+  ICollisionRiskAssessment* plugin = registry.get("nlos_obstruction");
+  ASSERT_NE(plugin, nullptr);
+  EXPECT_EQ(plugin->name(), "nlos_obstruction");
+  // The builtin set satisfies the loader's default CRA_ENABLED list — the
+  // wiring the composition root performs.
+  EXPECT_EQ(registry.enabled(cfg.craEnabled).size(), 1u);
 }
 
 }  // namespace
