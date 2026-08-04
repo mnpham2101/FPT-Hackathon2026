@@ -91,3 +91,25 @@ def test_missing_file_raises_naming_the_path(tmp_path):
     with pytest.raises(RuntimeError) as excinfo:
         FileFrameSource(str(missing), stride=1, loop=False)
     assert str(missing) in str(excinfo.value)
+# 12.3.3.2 test extension — appended to ADA_ECU/detector/tests/test_frame_source.py
+# at commit time. Module-level imports it needs are already present there:
+# subprocess, sys, Path (pathlib), pytest, and FileFrameSource (from frame_source).
+
+
+def test_make_sample_video_output_opens_through_file_frame_source(tmp_path):
+    pytest.importorskip("cv2")
+    import frame_source  # locate the repo from the module under test, not from this file's path
+
+    repo_root = Path(frame_source.__file__).resolve().parents[2]
+    script = repo_root / "ADA_ECU" / "tools" / "make_sample_video.py"
+    out = tmp_path / "out.mp4"
+    result = subprocess.run(
+        [sys.executable, str(script), str(out), "--frames", "30"],
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, result.stderr
+    assert out.exists()
+
+    frames = list(FileFrameSource(str(out), stride=1, loop=False).iter_frames())
+    assert len(frames) == 30
