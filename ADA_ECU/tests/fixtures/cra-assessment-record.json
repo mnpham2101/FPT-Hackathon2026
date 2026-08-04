@@ -1,0 +1,30 @@
+{
+  "trackId": "v2x:1001:7",
+  "warningType": "nlos_obstruction",
+  "riskState": "medium",
+  "riskStateEnteredMs": 1785801609400,
+  "firstSeenMs": 1785801608200,
+  "lastUpdatedMs": 1785801609600,
+  "distanceM": 46.5,
+  "previousDistanceM": 48.2,
+  "closingRateMps": 8.5,
+  "ttcS": 5.47,
+  "lastSnapshot": {
+    "id": "v2x:1001:7",
+    "class": "vehicle",
+    "source": "v2x_relayed",
+    "position": { "x": 28.4, "y": 0.4 },
+    "distance": 28.4,
+    "speed": 8.3,
+    "confidence": 0.9,
+    "state": "tracked",
+    "timestamps": {
+      "measured": 1785801609550,
+      "received": 1785801609580,
+      "lastUpdated": 1785801609600
+    }
+  },
+  "lastKnownB": { "x": 18.1, "y": 0.2 },
+  "emittedCount": 1,
+  "rationale": "C tracked and d_AC 46.5 m <= RISK_NEAR_M; transition held for RISK_DWELL_MS"
+}

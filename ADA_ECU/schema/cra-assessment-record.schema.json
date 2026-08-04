@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "cra-assessment-record.schema.json",
+  "title": "CRA assessment record",
+  "description": "One row of the ADA ECU's R14 assessment database (HLD decision D4): the append-and-upsert record a Collision Risk Assessment plugin reads and writes, keyed conceptually by trackId + warningType - which track, assessed by which plugin. Node-local schema, deliberately outside contracts/ and the sync manifest (D1): it crosses no node boundary. Every write is also appended to the [EVT] stream so the table is reconstructible offline.",
+  "type": "object",
+  "required": [
+    "trackId",
+    "warningType",
+    "riskState",
+    "riskStateEnteredMs",
+    "firstSeenMs",
+    "lastUpdatedMs",
+    "distanceM",
+    "previousDistanceM",
+    "closingRateMps",
+    "ttcS",
+    "lastSnapshot",
+    "lastKnownB",
+    "emittedCount",
+    "rationale"
+  ],
+  "properties": {
+    "trackId": { "type": "string", "description": "key part 1: the assessed track's id in the ego store" },
+    "warningType": { "type": "string", "description": "key part 2: the assessing plugin's registry key (frozen R4 warningType, e.g. nlos_obstruction)" },
+    "riskState": { "enum": ["low", "medium", "high"], "description": "the last committed risk level (frozen R4 vocabulary)" },
+    "riskStateEnteredMs": { "type": "integer", "description": "when the current riskState was entered, ms - the edge-trigger and dwell input" },
+    "firstSeenMs": { "type": "integer", "description": "when this assessment record was created, ms - start of the assessment's lifetime" },
+    "lastUpdatedMs": { "type": "integer", "description": "when this record was last written, ms - end of the assessment's lifetime so far" },
+    "distanceM": { "type": "number", "minimum": 0, "description": "the last composed range d_AC, m - the closing-rate input" },
+    "previousDistanceM": { "type": "number", "minimum": 0, "description": "the prior composed range d_AC, m - the closing-rate input" },
+    "closingRateMps": { "type": "number", "description": "derived closing rate, m/s; negative when the track is opening" },
+    "ttcS": { "type": ["number", "null"], "description": "derived time to collision, s; null when the track is not closing" },
+    "lastSnapshot": { "$ref": "../contracts/r3-tracked-object.schema.json", "description": "the R3 snapshot of the track, carried past its erasure so a cleared warning still has an object" },
+    "lastKnownB": {
+      "type": ["object", "null"],
+      "description": "the last own-sensor B position, ego frame, so a clear can still fill the required geometry.vehicleB; null while no own-sensor B has been seen",
+      "required": ["x", "y"],
+      "properties": {
+        "x": { "type": "number", "description": "longitudinal, m, ego frame" },
+        "y": { "type": "number", "description": "lateral, m, ego frame" }
+      }
+    },
+    "emittedCount": { "type": "integer", "minimum": 0, "description": "evidence: how many R4 events this track produced" },
+    "rationale": { "type": "string", "description": "evidence: why the last level was chosen, mirrored to the [EVT] stream" }
+  }
+}

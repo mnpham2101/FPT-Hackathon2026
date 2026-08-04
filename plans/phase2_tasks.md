@@ -283,7 +283,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 > R14's acceptance is **the code plus the database schema** — the interface, the registry, and a committed schema the assessment reads and writes. Phase 2 lands all three empty of rules; Phase 4's `chained_collision` is the first plugin and the proof that adding one is *one new file plus one line* (D4).
 
-### [ ] `14.2.5.2` — CRA assessment-record schema `schema/cra-assessment-record.schema.json` *(AI — first in the group)*
+### [x] `14.2.5.2` — CRA assessment-record schema `schema/cra-assessment-record.schema.json` *(AI — first in the group)*
 
 **Objective:** the committed R14 database schema — one of the two artifacts R14's acceptance names, and a Phase 2 acceptance box on its own.
 
@@ -296,6 +296,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 **Acceptance:** schema is valid JSON Schema and the sample validates (checked by `14.2.5.3`'s test); `contracts/check_sync.py` still exits 0.
 
 **Dependencies:** none. **Commit:** `[14.2.5.2] feat: commit the CRA assessment-record schema`
+
+**Status:** done — draft 2020-12 schema with all fourteen D4 fields required, `ttcS`/`lastKnownB` nullable, `lastSnapshot` `$ref`ing the synced R3 schema by relative path; sample validates (jsonschema Draft202012Validator, zero errors); `contracts/check_sync.py` exit 0 (47 copies byte-identical).
 
 ### [ ] `14.2.5.1` — Freeze the CRA interface `src/cra/i_collision_risk_assessment.hpp` *(AI)*
 
