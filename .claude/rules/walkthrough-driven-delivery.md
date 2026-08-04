@@ -47,7 +47,7 @@ When a phase or request has test, verification or deployment as its objective, [
 - **Read the walkthrough first.** The brief should name it; when it does not, find the subject's `*-walkthrough.md` before improvising a route.
 - **Perform only the rows marked AI.** At a Human row, stop, report exactly what the human must do, and wait. Do not improvise around a browser-only, visual-judgement, or download step.
 - **Produce the evidence § Expected outputs and acceptance names** — that section, not the agent's own judgement, is what closes the subtask.
-- **Never edit the walkthrough.** Findings go back in the report: a failed command, a route that proved unreachable, an unproven step now proven. [[project-researcher]] folds procedure changes in; [[project-architecture]] records platform or node *facts* in the `node-*.md` reference.
+- **Never edit the walkthrough.** Findings go back in the report: a failed command, a route that proved unreachable, an unproven step now proven. [[project-researcher]] folds procedure changes in; a platform or node *fact* goes in the `node-*.md` reference, which is unowned and which any agent may correct.
 - **A walkthrough with no work-division table** predates the rule that mandates it. Treat browser-only, visual-judgement and download steps as Human, and report the missing table as a finding.
 
 ## The dependency runs one way
@@ -64,7 +64,7 @@ Walkthrough ← plan ← execution. Each stage cites the one before it and never
 |---|---|
 | Objective is test/verify/deploy, no walkthrough exists | [[project-planner]] flags back; stage 1 runs first |
 | Walkthrough exists but a needed step is absent | Report to [[project-researcher]] to add it — do not fill the gap in a subtask brief |
-| Walkthrough states a fact that turns out wrong | Report to [[project-architecture]] if it is a node/platform fact, to [[project-researcher]] if it is a step |
+| Walkthrough states a fact that turns out wrong | A node/platform fact is corrected in the `node-*.md` reference, by whichever agent established it; a step goes to [[project-researcher]] |
 | A Human row blocks an agent mid-run | [[car-sky]] halts and reports; the plan tracks the step as human work |
 
 ## How to apply

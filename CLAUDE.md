@@ -31,11 +31,11 @@ Working order: **project-researcher → project-architecture → project-planner
 | Agent | Owns | Does not do |
 |---|---|---|
 | [project-researcher](.claude/agents/project-researcher.md) | Requirements, feasibility, tech-stack selection, the `*-walkthrough.md` human procedures | Architecture, task breakdown, code |
-| [project-architecture](.claude/agents/project-architecture.md) | HLD, folder structure, dependency/toolchain config, subagent definitions, the platform/node reference files | Requirements research, task decomposition, implementation |
+| [project-architecture](.claude/agents/project-architecture.md) | HLD, folder structure, dependency/toolchain config, subagent definitions | Requirements research, task decomposition, implementation |
 | [project-planner](.claude/agents/project-planner.md) | Phase/task/subtask plans with `X.Y.Z.W` IDs, subagent spawning, completion tracking | Requirements research, architecture, direct implementation |
 | [car-sky](.claude/agents/car-sky.md) | Executing deploys on the platform, Room diagnostics, acceptance evidence | Authoring any document, product code |
 
-Two agents write into [requirements/car-sky-guide/](requirements/car-sky-guide/) and the split is by artifact, not by folder: architecture owns the **reference** files (`node-*.md`, blueprint and REST references — what the platform and each node *are*); researcher owns `*-walkthrough.md` (the procedure a human *follows*).
+[requirements/car-sky-guide/](requirements/car-sky-guide/) holds two kinds of file, split by artifact rather than by folder. The **reference** files (`node-*.md`, blueprint and REST references — what the platform and each node *are*) are **unowned**: any agent that establishes a platform or node fact records it there, and no edit waits on another agent. Researcher owns `*-walkthrough.md` (the procedure a human *follows*) and is the only agent that writes one.
 
 **Test, verification and deployment run one fixed workflow** — researcher writes the `*-walkthrough.md`, planner decomposes tasks from it, car-sky executes its AI-marked steps: [.claude/rules/walkthrough-driven-delivery.md](.claude/rules/walkthrough-driven-delivery.md). No stage starts from the raw platform, and no stage may be skipped.
 

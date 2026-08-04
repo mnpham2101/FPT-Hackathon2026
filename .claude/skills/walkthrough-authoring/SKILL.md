@@ -22,7 +22,7 @@ Worked examples, correct in every respect — follow their shape rather than inv
 | [deploy-walkthrough-netcheck.md](../../../requirements/car-sky-guide/deploy-walkthrough-netcheck.md) | Source file → container image → registry → running Room |
 | [deploy-ivi-hmi-walkthrough.md](../../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md) | APK build (local and CI) → deploy → install → launch → verified HMI |
 
-A walkthrough owns the **doing**. The sibling reference files in the same folder — `node-*.md`, the blueprint and REST references — own the **facts** (artifact IDs, config blocks, pin shapes, platform limits) and belong to [[project-architecture]] via [carsky-deployment-guide](../carsky-deployment-guide/SKILL.md). Link them for every fact; never copy one in. A fact that turns out to be missing is reported to that owner, not restated here.
+A walkthrough owns the **doing**. The sibling reference files in the same folder — `node-*.md`, the blueprint and REST references — own the **facts** (artifact IDs, config blocks, pin shapes, platform limits) and are unowned reference, written by [[project-architecture]] via [carsky-deployment-guide](../carsky-deployment-guide/SKILL.md). Link them for every fact; never copy one in. A fact that turns out to be missing is added there, not restated here.
 
 ## The six rules
 
