@@ -25,12 +25,12 @@ Nothing in this phase waits on a person before it can start.
 
 **Output (phase acceptance = the six milestone boxes):**
 
-- [ ] The store exposes all R3 fields; detector-shaped and relayed-shaped entries enter through the identical interface (R3) — closed by `3.2.4.1` + `2.2.3.1` + `3.2.3.2` (both parsers call the same `upsert`).
-- [ ] Mock-driven state transitions are observable in logs and match the R13 diagram; toggling the mock off yields no tracks — closed by `13.2.4.2` + `13.2.4.3` + `13.2.8.2` (loopback lane, `DETECTOR_ENABLED=false` arm).
-- [ ] Mock C is admitted only within `gate_enter` and dropped only beyond `gate_exit` or after `miss_limit` — no add/remove flicker — closed by `13.2.4.3` boundary cases at 30 m / 35 m plus `TRACK_TIMEOUT_MS` expiry. **`miss_limit` is realized as wall-clock, flagged not absorbed** — § Open items item 1.
-- [ ] Gate constants are read from configuration — no literals — closed by `13.2.2.1` (the node's only env reader).
-- [ ] CRA database schema committed; video-input proposal sent to FPT-Mentor — closed by `14.2.5.2` (schema) + `12.2.9.2` (the send).
-- [ ] **Demo:** build + CI round-trip tests green on the frozen contracts (golden vectors) — closed by `ada-core-build` staying green across every subtask plus `5.2.8.1` / `13.2.8.2`.
+- [x] The store exposes all R3 fields; detector-shaped and relayed-shaped entries enter through the identical interface (R3) — closed by `3.2.4.1` + `2.2.3.1` + `3.2.3.2` (both parsers call the same `upsert`).
+- [x] Mock-driven state transitions are observable in logs and match the R13 diagram; toggling the mock off yields no tracks — closed by `13.2.4.2` + `13.2.4.3` + `13.2.8.2` (loopback lane, `DETECTOR_ENABLED=false` arm).
+- [x] Mock C is admitted only within `gate_enter` and dropped only beyond `gate_exit` or after `miss_limit` — no add/remove flicker — closed by `13.2.4.3` boundary cases at 30 m / 35 m plus `TRACK_TIMEOUT_MS` expiry. **`miss_limit` is realized as wall-clock, flagged not absorbed** — § Open items item 1.
+- [x] Gate constants are read from configuration — no literals — closed by `13.2.2.1` (the node's only env reader).
+- [x] CRA database schema committed; video-input proposal sent to FPT-Mentor — closed by `14.2.5.2` (schema) + `12.2.9.2` (the send).
+- [x] **Demo:** build + CI round-trip tests green on the frozen contracts (golden vectors) — closed by `ada-core-build` staying green across every subtask plus `5.2.8.1` / `13.2.8.2`.
 
 **Suggested branch (suggestion only — creation is the user's call):** `feat/phase2-ada-scaffold`, branched from `main`. One branch for the whole phase; implementation subtasks commit onto it. Docs-only subtasks and evidence records commit straight to `main`.
 

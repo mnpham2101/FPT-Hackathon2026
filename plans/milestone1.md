@@ -135,12 +135,12 @@ The baseline blueprint deployed as `trial2_minh_netcheck` with all nodes `Runnin
 - Video-input study — **produced**: [video-source-for-r12.md](../ADA_ECU/doc/research_notes/video-source-for-r12.md) §3 is the format / frame rate / data rate proposal for FPT-Mentor (report § Input constraints); what remains is sending it. **The clip itself is already in the repo** (`ADA_ECU/media/ego-b-occluding-c.mp4`, landed by Phase 3 `12.3.7.1`), so nothing here blocks Phase 3.
 
 **Acceptance Criteria.**
-- [ ] The store exposes all R3 fields; detector-shaped and relayed-shaped entries enter through the identical interface (R3).
-- [ ] Mock-driven state transitions are observable in logs and match the R13 diagram; toggling the mock off yields no tracks.
-- [ ] Mock C is admitted only within `gate_enter` and dropped only beyond `gate_exit` or after `miss_limit` — no add/remove flicker.
-- [ ] Gate constants are read from configuration — no literals.
-- [ ] CRA database schema committed; video-input proposal sent to FPT-Mentor.
-- [ ] **Demo:** build + CI round-trip tests green on the frozen contracts (golden vectors).
+- [x] The store exposes all R3 fields; detector-shaped and relayed-shaped entries enter through the identical interface (R3).
+- [x] Mock-driven state transitions are observable in logs and match the R13 diagram; toggling the mock off yields no tracks.
+- [x] Mock C is admitted only within `gate_enter` and dropped only beyond `gate_exit` or after `miss_limit` — no add/remove flicker.
+- [x] Gate constants are read from configuration — no literals.
+- [x] CRA database schema committed; video-input proposal sent to FPT-Mentor.
+- [x] **Demo:** build + CI round-trip tests green on the frozen contracts (golden vectors).
 
 ### Phase 3 — Object detection from video (R12) — runs ∥ with Phase 4
 
