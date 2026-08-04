@@ -232,7 +232,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 > The "Current Input" block. The state machine realizes [phase2-4-ada-ecu-admission.puml](../ADA_ECU/doc/phase2-4-ada-ecu-admission.puml) exactly — **one machine, both sources**, parameterized only by what counts as an update (D3). `not_tracked` means **absent from the store**: a drop erases the entry, it does not leave one flagged.
 
-### [ ] `3.2.4.1` — Track store `src/store/track_store.{hpp,cpp}` *(AI)*
+### [x] `3.2.4.1` — Track store `src/store/track_store.{hpp,cpp}` *(AI)*
 
 **Objective:** the R3 store — an `id → TrackedObject` map with `upsert / get / all / nearest / erase`, single-writer, exposing every R3 field.
 
@@ -245,6 +245,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 **Acceptance:** ADA build + ctest green on CI — this test is the R3 acceptance box's unit-level closure.
 
 **Dependencies:** none (uses the Phase 0 binding). **Commit:** `[3.2.4.1] feat: add the R3 track store`
+
+**Status:** done — upsert/get/all/allBySource/nearest/erase with injectable CLOCK_REALTIME stamp; store owns `state` (not_tracked on first insert, preserved on refresh) and restamps `lastUpdated`; 7-case test covers the nine-field round-trip, identical-upsert for both source shapes, per-source nearest with tie case, erase, and the restamp; build/tests deferred to CI ada-core-build.
 
 ### [ ] `13.2.4.2` — Admission state machine `src/store/admission.{hpp,cpp}` *(AI)*
 

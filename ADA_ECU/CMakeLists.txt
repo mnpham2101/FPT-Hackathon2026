@@ -106,3 +106,12 @@ target_compile_features(ada_input_queue INTERFACE cxx_std_17)
 
 ada_add_test(ada_input_queue_test tests/observer/test_input_queue.cpp)
 target_link_libraries(ada_input_queue_test PRIVATE ada_input_queue Threads::Threads)
+
+# R3 track store — id → TrackedObject map, single writer (3.2.4.1).
+add_library(ada_store STATIC src/store/track_store.cpp)
+target_include_directories(ada_store PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(ada_store PUBLIC ada_contracts)
+target_compile_features(ada_store PUBLIC cxx_std_17)
+
+ada_add_test(ada_track_store_test tests/store/test_track_store.cpp)
+target_link_libraries(ada_track_store_test PRIVATE ada_store)
