@@ -379,7 +379,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after `13.2.2.1` + `3.2.2.4` + `18.2.2.3`. **Commit:** `[12.2.6.2] feat: add the detector subprocess reader`
 
-### [ ] `3.2.6.3` — Mock drive equipment: `tests/fixtures/own_sensor_mock.jsonl` + `tools/mock_v2x_sender.py` *(AI)*
+### [x] `3.2.6.3` — Mock drive equipment: `tests/fixtures/own_sensor_mock.jsonl` + `tools/mock_v2x_sender.py` *(AI)*
 
 **Objective:** the two Phase 2 stimulus sources — both outside `src/`.
 
@@ -392,6 +392,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 **Acceptance:** `python -m py_compile ADA_ECU/tools/mock_v2x_sender.py` passes; the script's `--validate` self-check reports every fixture line valid against the synced R3 schema and every generated body valid against the synced R2 schema (both loaded from `ADA_ECU/contracts/`, never restated); a loopback self-check receives every datagram byte-identical — evidence in the Status line.
 
 **Dependencies:** none. **Commit:** `[3.2.6.3] feat: add the Phase 2 mock own-sensor fixture and R2 sender`
+
+**Status:** done — `py_compile` clean; `--validate`: 61/61 fixture lines valid vs synced R3 schema, 100/100 approaching + 200/200 out-of-range bodies valid vs synced R2 schema (schemas loaded from `ADA_ECU/contracts/`); `--loopback`: 100+200 datagrams byte-identical on 127.0.0.1; profiles read geometry from the two committed scenario YAMLs (70.0→20.5 m @ 5.0 m/s; static 60.0 m); no hardcoded peer (env `ADA_ECU_HOST`/`ADA_ECU_PORT` or CLI).
 
 ### [ ] `13.2.6.4` — Composition root `src/main.cpp` + `ada_ecu` executable *(AI)*
 
