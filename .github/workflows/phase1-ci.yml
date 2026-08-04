@@ -45,10 +45,6 @@ concurrency:
 jobs:
   v2x-core-build:
     runs-on: ubuntu-latest
-    # Needed by the one-shot golden-vector publish step below, which pushes a commit back to the
-    # branch. Everything else in this job is read-only.
-    permissions:
-      contents: write
     # Vanetza's asn1c-generated C (asn1_support + asn1_its + asn1_its_r2, ~1400 translation units)
     # is a long first-run compile, hence the raised timeout.
     timeout-minutes: 60
@@ -83,32 +79,14 @@ jobs:
       # trees. diff exits non-zero on any difference, which fails the step.
       - name: Golden-vector determinism check
         run: diff -r "$RUNNER_TEMP/gv1" "$RUNNER_TEMP/gv2"
-      # The corpus is generated on Linux and handed back as an artifact; committing it into
-      # contracts/golden-vectors/ is a separate hand-off step (1.0.2.5 consumes it).
+      # The corpus is generated on Linux and handed back as an artifact for inspection. The frozen
+      # copy lives in contracts/golden-vectors/, published once by 1.0.2.4 and committed since;
+      # sp-codec-helper's test_encoder_golden.py is what checks an encoder against it.
       - name: Upload golden-vector corpus
         uses: actions/upload-artifact@v4
         with:
           name: golden-vectors
           path: ${{ runner.temp }}/gv1
-      # One-shot self-publish: artifact download needs an authenticated token the dev session does
-      # not have, so the corpus lands via CI instead. The hashFiles guard makes this fire exactly
-      # once - the moment contracts/golden-vectors/ exists in the tree, the step stops running.
-      # [skip ci] keeps the push from re-triggering this workflow.
-      - name: Publish golden-vector corpus (once, when absent)
-        if: hashFiles('contracts/golden-vectors/**') == ''
-        run: |
-          mkdir -p contracts/golden-vectors
-          cp -r "$RUNNER_TEMP/gv1/." contracts/golden-vectors/
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add contracts/golden-vectors
-          git commit -m "[1.0.2.4] feat: add gv_tool golden-vector corpus [skip ci]
-
-          Generated on Linux by V2X_ECU/tools/golden_vectors/gv_tool in this run and verified
-          byte-identical across two consecutive generations (determinism step above).
-
-          Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
-          git push origin HEAD:${{ github.ref_name }}
 
   # The bench suite on a plain Python runner, with no cpm_encode binary present: 116 passed, 7
   # skipped, in about a second. sp-codec-helper below runs the SAME suite with ENCODER_PATH set and
@@ -124,12 +102,8 @@ jobs:
           python-version: "3.12"
       - name: Scenario_Player unit tests
         run: |
-          if [ -f Scenario_Player/requirements-dev.txt ] && [ -d Scenario_Player/tests ]; then
-            python -m pip install -r Scenario_Player/requirements-dev.txt
-            python -m pytest Scenario_Player/tests
-          else
-            echo "Scenario_Player tests not landed yet - skipping"
-          fi
+          python -m pip install -r Scenario_Player/requirements-dev.txt
+          python -m pytest Scenario_Player/tests
 
   # D7 (V2X HLD §3) CI-side acceptance: a bench-sent CPM is received, raises events, deserializes to
   # JSON and is forwarded as R2. No landed-file guard on purpose - V2X_ECU/src/main.cpp and
@@ -324,19 +298,14 @@ jobs:
           key: sp-helper-deps-${{ runner.os }}-vanetza-fb6c5510-json-v3.11.3-${{ hashFiles('Scenario_Player/codec_helper/CMakeLists.txt', 'Scenario_Player/codec_helper/cmake/vanetza-pin.cmake') }}
           restore-keys: |
             sp-helper-deps-${{ runner.os }}-vanetza-fb6c5510-json-v3.11.3-
-      # Guard style for every run: block below: `[ -f ... ] || { echo "::notice::..."; exit 0; }`
-      # rather than a job-level output plus `if:` on each step - fewer moving parts, and `exit 0`
-      # under `set -euo pipefail` ends that step successfully, so an absent codec_helper degrades
-      # the whole lane into notices instead of a red run. 11.1.7.1 has landed, so this guard is
-      # belt-and-braces: the expected path is a real build.
+      # No landed-file guard on any run: block below. codec_helper landed with 11.1.7.1, so a
+      # `[ -f ... ] || exit 0` could only mean the folder was deleted - and it would end this lane
+      # in notices with a green tick. This is the only lane proving the encoder byte-exact; a
+      # missing codec_helper must be a red run.
       - name: Configure
         shell: bash
         run: |
           set -euo pipefail
-          [ -f Scenario_Player/codec_helper/CMakeLists.txt ] || {
-            echo "::notice::Scenario_Player/codec_helper/CMakeLists.txt not landed yet (11.1.7.1) - skipping configure"
-            exit 0
-          }
           cmake -S Scenario_Player/codec_helper -B Scenario_Player/codec_helper/build
       # Bounded parallelism for the same reason as v2x-core-build: a bare `-j` passes no number to
       # make, i.e. unlimited jobs - ~700 concurrent compilers for asn1_its alone would OOM the
@@ -345,10 +314,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          [ -f Scenario_Player/codec_helper/CMakeLists.txt ] || {
-            echo "::notice::codec_helper absent - skipping build"
-            exit 0
-          }
           cmake --build Scenario_Player/codec_helper/build --target cpm_encode -j $(nproc)
       # Fast pre-check ahead of pytest: if the binary is broken at all, this says so in one line
       # instead of inside a parametrized assertion dump. It encodes the SYNCED fixtures under
@@ -359,11 +324,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          [ -f Scenario_Player/codec_helper/CMakeLists.txt ] || {
-            echo "::notice::codec_helper absent - skipping --encode smoke"
-            exit 0
-          }
-
           BIN="$PWD/Scenario_Player/codec_helper/build/cpm_encode"
           if [ ! -x "$BIN" ]; then
             echo "::error::cpm_encode missing at $BIN after a successful build"
@@ -416,10 +376,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          [ -f Scenario_Player/codec_helper/CMakeLists.txt ] || {
-            echo "::notice::codec_helper absent - skipping the ENCODER_PATH pytest run"
-            exit 0
-          }
           python -m pip install -r Scenario_Player/requirements-dev.txt
           ENCODER_PATH="$PWD/Scenario_Player/codec_helper/build/cpm_encode" \
             python -m pytest Scenario_Player/tests -v
@@ -487,11 +443,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          [ -f "${CONTEXT}Dockerfile" ] || {
-            echo "::notice::${CONTEXT}Dockerfile not landed yet (5.1.5.4) - skipping build"
-            exit 0
-          }
-
           # NO --load, and NO --push here, ON PURPOSE - do not "fix" this. With --platform set and
           # neither exporter given, buildx builds the image and exports nothing, which is exactly
           # what a build-only verification wants: a linux/arm64 image cannot be --loaded into an
@@ -520,15 +471,13 @@ jobs:
           REGISTRY_USER: ${{ vars.CARSKY_REGISTRY_USER || 'kis@hackathon.fpt.com' }}
         # `pushed` gates the two verification steps below and is written exactly once, at the end,
         # rather than in each branch - one unconditional write removes any question of what a
-        # repeated key in $GITHUB_OUTPUT resolves to. It is true only past the push itself, so both
-        # skip paths correctly leave the verification unrun.
+        # repeated key in $GITHUB_OUTPUT resolves to. It is true only past the push itself, so the
+        # no-secret path correctly leaves the verification unrun.
         run: |
           set -euo pipefail
           PUSHED=false
           DIGEST=""
-          if [ ! -f "${CONTEXT}Dockerfile" ]; then
-            echo "::notice::${CONTEXT}Dockerfile not landed yet (5.1.5.4) - nothing to push"
-          elif [ -z "$ZOT_KEY" ]; then
+          if [ -z "$ZOT_KEY" ]; then
             echo "::notice::CARSKY_ZOT_API_KEY secret not set - image built but NOT pushed"
           else
             echo "$ZOT_KEY" | docker login "$REGISTRY_HOST" -u "$REGISTRY_USER" --password-stdin
@@ -667,10 +616,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          [ -f "${CONTEXT}Dockerfile" ] || {
-            echo "::notice::${CONTEXT}Dockerfile not landed yet (5.1.7.3) - skipping build"
-            exit 0
-          }
 
           # Build-only: no --load (a cross-platform image cannot enter the local store) and no
           # --push (that is the next step). See v2x-ecu-image for the full reasoning.
@@ -695,9 +640,7 @@ jobs:
           set -euo pipefail
           PUSHED=false
           DIGEST=""
-          if [ ! -f "${CONTEXT}Dockerfile" ]; then
-            echo "::notice::${CONTEXT}Dockerfile not landed yet (5.1.7.3) - nothing to push"
-          elif [ -z "$ZOT_KEY" ]; then
+          if [ -z "$ZOT_KEY" ]; then
             echo "::notice::CARSKY_ZOT_API_KEY secret not set - image built but NOT pushed"
           else
             echo "$ZOT_KEY" | docker login "$REGISTRY_HOST" -u "$REGISTRY_USER" --password-stdin
