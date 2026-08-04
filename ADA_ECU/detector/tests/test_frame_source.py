@@ -27,16 +27,32 @@ CLIP_W, CLIP_H = 64, 48
 def sample_clip(tmp_path):
     """A 40-frame 64x48 20fps mp4v clip with distinct per-frame content."""
     cv2 = pytest.importorskip("cv2")
-    path = tmp_path / "clip.mp4"
-    writer = cv2.VideoWriter(
-        str(path), cv2.VideoWriter_fourcc(*"mp4v"), CLIP_FPS, (CLIP_W, CLIP_H)
-    )
-    assert writer.isOpened()
-    for i in range(CLIP_FRAMES):
-        frame = np.full((CLIP_H, CLIP_W, 3), (i * 6) % 256, dtype=np.uint8)
-        writer.write(frame)
-    writer.release()
-    return path
+    # Codec availability differs per wheel/backend (Windows MSMF vs Linux FFmpeg builds of
+    # opencv-python-headless), so try a chain rather than assuming mp4v encodes everywhere.
+    # The container does not matter to FileFrameSource - VideoCapture decodes either.
+    candidates = [("mp4v", "clip.mp4"), ("avc1", "clip.mp4"), ("MJPG", "clip.avi"), ("XVID", "clip.avi")]
+    last = None
+    for fourcc, name in candidates:
+        path = tmp_path / name
+        writer = cv2.VideoWriter(
+            str(path), cv2.VideoWriter_fourcc(*fourcc), CLIP_FPS, (CLIP_W, CLIP_H)
+        )
+        if not writer.isOpened():
+            writer.release()
+            last = fourcc
+            continue
+        for i in range(CLIP_FRAMES):
+            frame = np.full((CLIP_H, CLIP_W, 3), (i * 6) % 256, dtype=np.uint8)
+            writer.write(frame)
+        writer.release()
+        # A writer can open yet produce an undecodable file; verify before handing it out.
+        probe = cv2.VideoCapture(str(path))
+        ok = probe.isOpened() and probe.read()[0]
+        probe.release()
+        if ok:
+            return path
+        last = fourcc
+    pytest.fail(f"no usable VideoWriter codec among {[c for c, _ in candidates]} (last tried: {last})")
 
 
 def test_stride_selects_every_nth_decoded_frame(sample_clip):
