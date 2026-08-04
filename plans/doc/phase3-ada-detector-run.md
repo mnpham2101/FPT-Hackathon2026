@@ -68,3 +68,37 @@ the evidence. Neither file is edited from this phase (HLD ownership rule).
   (min 0.39), so the constant stays; Phase 4's `d_AB` selection should prefer the
   dominant/nearest *persistent* track rather than any tracked own entry.
 
+## 12.3.5.2 — detection log and KPI record (host interim)
+
+**Paced looped run** (defaults: `DETECTOR_LOOP=true`, `DETECTOR_REALTIME_PACING=true`,
+stride 4), 60 s wall: 297 sampled frames emitted 1211 R3 lines.
+
+| Measure | Value (host) | Note |
+|---|---|---|
+| KPI 2 — decode | 50/50 declared sampled frames per pass, 0 decode errors, across 6 loops | also proved per-pass by `check_clip_spec.py` (200/200 decoded) |
+| KPI 3 — unpaced inference rate | **2.65 Hz (377 ms/frame) — below the 5 Hz floor on this host** | emulated x64-on-ARM64 host; not the criterion's venue. YOLO11n CPU reference is 56 ms at 640, so the native CI runner arm (`ada-detector-run`, unpaced) is expected to clear 5 Hz; the deployed figure is `5.3.6.2`. If the runner also falls short, the remedy is raising `DETECTOR_FRAME_STRIDE`, never the model |
+| KPI 4 — detection coverage | ≈ 100 % (297 emitting frames vs ≈ 296 released in the window) | every sampled frame carried ≥ 1 `class=vehicle`, `source=own_sensor` entry with a distance estimate |
+| KPI 5 — zero-C | `check_zero_c.py` exit 0: `detection_lines=204 own_sensor_lines=204` (single-pass log), no rule fired | rule 3 runs with the `[EVT]` stream once Phase 4's Room log exists |
+| Paced-rate check (HLD §12 K4) | **5.004 Hz** vs target `20/4 = 5.000` — within 0.1 % (bound ±2 %) | read off the run's own emit stamps |
+| Warm-up `W` (spawn → first R3 line) | 0.83 s warm-cache; 2.9–4.6 s cold-cache single-pass runs | host figure only; the value R22's `start_delay_s` ships from is the deployed one (`22.3.6.3`) |
+| Loop re-open gap | max inter-frame arrival gap 0.33 s | ≪ `TRACK_TIMEOUT_MS` 1000, so ego's own B track cannot expire between clip passes; B's id is re-minted each pass (the wrap breaks IoU continuity), each loop reading as a fresh approach |
+
+**Representative log excerpt** (retuned single pass, frame ≈ 5.6 s — B crossing the
+gate; one line per detection, schema-valid against the frozen R3 schema):
+
+```json
+{"id":"own:4","class":"vehicle","source":"own_sensor","position":{"x":30.180369663056084,"y":2.2994638481284544},"distance":30.180369663056084,"speed":3.904966320771539,"confidence":0.9108918905258179,"state":"not_tracked","timestamps":{"measured":1785851514719,"received":1785851514764,"lastUpdated":1785851514764}}
+```
+
+**Exit behaviour note.** On this host the 60 s run ends by `TerminateProcess`
+(Windows has no SIGTERM delivery), reported as returncode 1 by the driver; on POSIX
+the detector exits 0 on SIGTERM, which `detector/tests/test_main.py` asserts and the
+CI lanes rely on.
+
+## Blocked measurements (recorded here when their inputs exist)
+
+| Subtask | Waits on |
+|---|---|
+| `5.3.6.2` — deployed inference rate + clip-open proof | Phase 4 `18.4.11.1` saved `ada.log` from the isolated ADA Room |
+| `22.3.6.3` — deployed warm-up `W` → bench `start_delay_s` | same log; unblocks Phase 1 `22.1.13.4` |
+| `5.3.7.3` — media-layer digest stability + push KPIs 7/8 | two `ada-ecu-image` lane runs plus car-sky's registry push readings |
