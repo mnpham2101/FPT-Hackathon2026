@@ -1,0 +1,101 @@
+{
+  "version": 1,
+  "blueprint": {
+    "name": "ada-isolated",
+    "description": "ADA ECU exercised alone: a bench emitter stands in for the V2X ECU, a bench sink stands in for the IVI ECU, both from one image selected by ROLE. Addresses and ports match the full vehicle blueprint, so the ADA node's config is unchanged between the two. Config specification only - the Room is made by cloning baseline_phase1 and editing it on the canvas, because ETHERNET pins are rejected on import and over REST.",
+    "zones": [],
+    "nodes": [
+      {
+        "id": "eth-bridge",
+        "label": "Ethernet Bridge",
+        "nodeType": "eth-bridge",
+        "config": { "bridgeMode": "linux", "subnet": "10.99.0.0/24" },
+        "positionX": 0,
+        "positionY": -40,
+        "pins": []
+      },
+      {
+        "id": "v2x-bench-mock",
+        "label": "V2X Bench (mock)",
+        "nodeType": "container",
+        "config": {
+          "image": "registry.hackathon-2.carsky.io/m1-ada-bench:latest",
+          "command": ["./entrypoint.sh"],
+          "capabilities": ["NET_RAW"],
+          "env": {
+            "ROLE": "v2x_mock",
+            "TARGET_HOST": "10.99.0.12",
+            "TARGET_PORT": "47200",
+            "PROFILE": "approaching",
+            "RATE_HZ": "10",
+            "START_DELAY_S": "20",
+            "STATION_ID": "1201",
+            "OBJECT_ID": "7",
+            "START_DISTANCE_M": "45",
+            "MIN_DISTANCE_M": "5",
+            "CLOSING_RATE_MPS": "5",
+            "LATERAL_M": "1.2",
+            "OBJECT_SPEED_MPS": "15.2",
+            "CAPTURE_FILTER": "udp port 47200"
+          }
+        },
+        "positionX": -450,
+        "positionY": -40,
+        "pins": []
+      },
+      {
+        "id": "ada-ecu",
+        "label": "ADA ECU",
+        "nodeType": "container",
+        "config": {
+          "image": "registry.hackathon-2.carsky.io/m1-ada-ecu:latest",
+          "command": ["./entrypoint.sh"],
+          "capabilities": ["NET_RAW"],
+          "env": {
+            "V2X_LISTEN_HOST": "0.0.0.0",
+            "V2X_LISTEN_PORT": "47200",
+            "IVI_ECU_HOST": "10.99.0.13",
+            "IVI_ECU_PORT": "47300",
+            "GATE_ENTER_M": "30",
+            "GATE_EXIT_M": "35",
+            "CONFIRM_HITS": "3",
+            "TRACK_TIMEOUT_MS": "1000",
+            "FUSION_TICK_MS": "100",
+            "DETECTOR_ENABLED": "true",
+            "DETECTOR_LOOP": "true",
+            "VIDEO_CLIP_PATH": "/app/media/ego-b-occluding-c.mp4",
+            "DETECTOR_FRAME_STRIDE": "4",
+            "MODEL_PATH": "/app/models/yolo11n.onnx",
+            "CRA_ENABLED": "nlos_obstruction",
+            "RISK_NEAR_M": "60",
+            "RISK_CRITICAL_M": "30",
+            "CAPTURE_FILTER": "udp port 47300"
+          }
+        },
+        "positionX": 0,
+        "positionY": 200,
+        "pins": []
+      },
+      {
+        "id": "ivi-sink-mock",
+        "label": "IVI Sink (mock)",
+        "nodeType": "container",
+        "config": {
+          "image": "registry.hackathon-2.carsky.io/m1-ada-bench:latest",
+          "command": ["./entrypoint.sh"],
+          "capabilities": ["NET_RAW"],
+          "env": {
+            "ROLE": "ivi_mock",
+            "LISTEN_PORT": "47300",
+            "SUMMARY_EVERY_S": "10",
+            "CAPTURE_FILTER": "udp port 47300"
+          }
+        },
+        "positionX": 450,
+        "positionY": -40,
+        "pins": []
+      }
+    ],
+    "edges": []
+  }
+}
