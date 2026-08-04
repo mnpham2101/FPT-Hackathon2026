@@ -86,7 +86,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **`python-tests` collects two folders and no others:** `Scenario_Player/tests` and `ADA_ECU/detector/tests`, each guarded on its own `requirements-dev.txt`. `ADA_ECU/tools/tests/` is outside both guards, so a `tools/` test's acceptance is local — the `ADA_ECU/tools/` row of § Per-node build commands.
 
-**New lanes go in a new `.github/workflows/phase2-ci.yml`**, per the convention stated in [phase1-ci.yml](../.github/workflows/phase1-ci.yml)'s header — *a lane belongs to the phase that created it, not to the phase that last touched it*. Phase 2 creates two: `ada-ecu-image` (arm64 build + gated push) and `ada-loopback-check` (the mock-driven admission run). Phase 3 and Phase 4 create their own files for their own lanes.
+**Phase 2 creates two lanes in two files.** `ada-loopback-check` (the mock-driven admission run) goes in a new `.github/workflows/phase2-ci.yml`, per the convention stated in [phase1-ci.yml](../.github/workflows/phase1-ci.yml)'s header — *a lane belongs to the phase that created it, not to the phase that last touched it*. `ada-ecu-image` (arm64 build + gated push) goes in `.github/workflows/phase4-ci.yml`: the image built from `ADA_ECU/` carries the Phase 2 scaffold, the Phase 3 detector and the Phase 4 fusion, so its lane is filed with the node artifact rather than any single phase ([HLD §11](../ADA_ECU/doc/ada-ecu-hld.md#11-tech-stack-build-and-ci); [phase4_tasks.md § CI ruling](phase4_tasks.md) — whichever subtask lands first creates that file with the standard header, and the others add only their job). Phase 3 and Phase 4 create their own files for their own lanes.
 
 ---
 
@@ -431,13 +431,13 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 ## Task Group 2.8 — CI lanes (serves R5, R13; workflow-file edits)
 
-> New file `.github/workflows/phase2-ci.yml`, per § CI ruling. Both lanes land **before** their consumers, guarded on file existence like the Phase 0/1 jobs, so consuming subtasks have CI acceptance from day one. `.github/workflows/` is explicitly in these two subtasks' write scope and no other's in this phase.
+> Two files, per § CI ruling: `5.2.8.1` writes `.github/workflows/phase4-ci.yml` (the node-artifact lane), `13.2.8.2` creates `.github/workflows/phase2-ci.yml`. Both lanes land **before** their consumers, guarded on file existence like the Phase 0/1 jobs, so consuming subtasks have CI acceptance from day one. `.github/workflows/` is explicitly in these two subtasks' write scope and no other's in this phase.
 
-### [ ] `5.2.8.1` — `phase2-ci.yml` + lane `ada-ecu-image` *(AI)*
+### [ ] `5.2.8.1` — Lane `ada-ecu-image` in `phase4-ci.yml` *(AI)*
 
 **Objective:** arm64 image build and gated push for the ADA node image; `v2x-ecu-image` in [phase1-ci.yml](../.github/workflows/phase1-ci.yml) is the template. This lane builds `m1-ada-ecu:latest`, the image Phase 4's isolated Room deploys. No other route builds it.
 
-**Scope — create `.github/workflows/phase2-ci.yml` and one job in it:**
+**Scope — create `.github/workflows/phase4-ci.yml` (if absent) and one job in it:**
 
 1. Create the file with the same `on:` and `concurrency:` blocks as phase1-ci.yml.
 2. Add a header comment naming what the file carries and why, following the Phase 1 file's convention.
@@ -460,7 +460,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Objective:** the repeatable form of the Phase 2 "mock-driven transitions observable in logs; mock off yields no tracks" box.
 
-**Scope — a second job in `phase2-ci.yml`, its steps in this order:**
+**Scope — create `.github/workflows/phase2-ci.yml` (same `on:`/`concurrency:`/header convention as phase1-ci.yml) with one job `ada-loopback-check`, its steps in this order:**
 
 1. Build the `ada_ecu` target.
 2. Run A: start `ada_ecu` with `DETECTOR_ENABLED=true`, `DETECTOR_CMD="cat ADA_ECU/tests/fixtures/own_sensor_mock.jsonl"` and `IVI_ECU_HOST=127.0.0.1`, capturing stdout to a file.
@@ -473,7 +473,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Acceptance:** lane green on the pushed branch; run A observes at least one complete `tentative → tracked → not_tracked` cycle per source.
 
-**Dependencies:** after `13.2.6.4` + `3.2.6.3` + `18.2.6.5` + `5.2.8.1` (same file). **Commit:** `[13.2.8.2] chore: add the ADA loopback admission CI lane`
+**Dependencies:** after `13.2.6.4` + `3.2.6.3` + `18.2.6.5`. **Commit:** `[13.2.8.2] chore: add the ADA loopback admission CI lane`
 
 ---
 
@@ -550,7 +550,7 @@ CRA         14.2.5.2 ──► 14.2.5.1 (after 3.2.4.1) ──► 14.2.5.3 ─�
 observers   2.2.6.1 (after 6.2.2.2 + 3.2.2.4) ∥ 12.2.6.2 (after 13.2.2.1 + 3.2.2.4 + 18.2.2.3)
 equipment   3.2.6.3 ∥ 18.2.6.5 (after 18.2.2.3) ∥ 12.2.9.1      (anytime)
 assembly    13.2.6.4 (after 13.2.2.1 + 2.2.6.1 + 12.2.6.2 + 2.2.3.1 + 3.2.3.2 + 13.2.4.3 + 14.2.5.4)
-verify      13.2.8.2 (after 13.2.6.4 + 3.2.6.3 + 18.2.6.5 + 5.2.8.1)
+verify      13.2.8.2 (after 13.2.6.4 + 3.2.6.3 + 18.2.6.5)
 image       5.2.7.1 (after 13.2.6.4 + 5.2.8.1)
 guide       5.2.9.4 (after 13.2.2.1 + phase-3 12.3.2.1)
 ```
