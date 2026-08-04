@@ -110,7 +110,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 > The four transport- and rule-blind modules every later group depends on. Paths from [HLD §4](../ADA_ECU/doc/ada-ecu-hld.md#4-folder-structure); build/test = the ADA C++ row of § Per-node build commands. Each new module registers a static library plus a test target in `ADA_ECU/CMakeLists.txt`, following the existing `ada_contracts` / `ada_add_test()` pattern.
 
-### [ ] `13.2.2.1` — Env config loader `src/config/config.{hpp,cpp}` *(AI)*
+### [x] `13.2.2.1` — Env config loader `src/config/config.{hpp,cpp}` *(AI)*
 
 **Objective:** the node's **only** env reader ([HLD §6](../ADA_ECU/doc/ada-ecu-hld.md#6-internal-components), Data table, the `config/config` row): load + validate the core-consumed env set into an immutable `Config` struct.
 
@@ -125,6 +125,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 **Acceptance:** ADA build + ctest green on CI (`ada-core-build`); no tunable literal anywhere outside this file's defaults table.
 
 **Dependencies:** none — starts immediately. **Commit:** `[13.2.2.1] feat: add ADA ECU env config loader`
+
+**Status:** done — loader + injectable-getter tests cover defaults, every override, all rejection rules incl. the three same-quantity orderings, and the 60/30 cross-quantity positive case; build/tests deferred to CI ada-core-build.
 
 ### [ ] `6.2.2.2` — Sole socket holder `src/net/udp_socket.{hpp,cpp}` *(AI — parallel with 13.2.2.1)*
 

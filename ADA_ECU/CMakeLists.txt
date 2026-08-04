@@ -54,4 +54,10 @@ target_link_libraries(ada_r4_roundtrip_test PRIVATE ada_contracts)
 ada_add_test(ada_r4_additive_version_test tests/contracts/test_r4_additive_version.cpp)
 target_link_libraries(ada_r4_additive_version_test PRIVATE ada_contracts)
 
-# Group 0.4 C++ targets complete; remaining ADA additions come with later phases (Phase 2 HLD), not Phase 0.
+# Config loader — the node's only env reader (13.2.2.1).
+add_library(ada_config STATIC src/config/config.cpp)
+target_include_directories(ada_config PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_compile_features(ada_config PUBLIC cxx_std_17)
+
+ada_add_test(ada_config_test tests/config/test_config.cpp)
+target_link_libraries(ada_config_test PRIVATE ada_config)
