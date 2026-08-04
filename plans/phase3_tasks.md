@@ -25,9 +25,9 @@
 
 **Output (phase acceptance = the four milestone boxes):**
 
-- [ ] Detection log over the provided clip with per-frame objects and distance estimates (R12) — closed by `12.3.5.2`.
-- [ ] Entries enter the store via the same R3 interface as relayed entries, `source = own_sensor` — mock no longer required — closed by `3.3.5.3`.
-- [ ] **Zero detections labeled C** — closed by `12.3.5.1` (`tools/check_zero_c.py`) + `12.3.5.4` (the CI lane that makes it repeatable) + the structural argument in [HLD D6](../ADA_ECU/doc/ada-ecu-design-decisions.md#d6--r12-detector-frame-source-seam-inference-distance-zero-c-evidence) + the clip's own content verdict.
+- [x] Detection log over the provided clip with per-frame objects and distance estimates (R12) — closed by `12.3.5.2`.
+- [x] Entries enter the store via the same R3 interface as relayed entries, `source = own_sensor` — mock no longer required — closed by `3.3.5.3`.
+- [x] **Zero detections labeled C** — closed by `12.3.5.1` (`tools/check_zero_c.py`) + `12.3.5.4` (the CI lane that makes it repeatable) + the structural argument in [HLD D6](../ADA_ECU/doc/ada-ecu-design-decisions.md#d6--r12-detector-frame-source-seam-inference-distance-zero-c-evidence) + the clip's own content verdict.
 - [ ] Runs CPU-only on the provided clip; offline pace acceptable — closed by `12.3.5.2` (measured effective inference rate ≥ 5 Hz, i.e. ≤ 200 ms per sampled frame) on the CI Linux runner, and `5.3.6.2` (the same measurement on the deployed node — [research note KPI 3](../ADA_ECU/doc/research_notes/video-source-for-r12.md#measurable-checks-kpis)).
 
 **The clip is 10 s, a deviation from the [research note §3](../ADA_ECU/doc/research_notes/video-source-for-r12.md#3-video-input-spec-to-build-phase-3-against) 60–120 s duration row, accepted with looping as its remedy** ([provenance record § The remaining deviation](../ADA_ECU/media/ego-b-occluding-c.source.md)). B is the lead vehicle only across a 10 s window of the source. A longer run is obtained by **looping** (`DETECTOR_LOOP=true`, default), each loop reading as a fresh approach cycle with B re-appearing at ~60 m and closing again. Every duration-sensitive check in this phase and in Phase 4 is worded against a **looped** run, not a single pass.
@@ -60,7 +60,7 @@ Four constraints specific to this phase:
 
 ### Subtask discipline
 
-Identical to [phase2_tasks.md § Subtask discipline](phase2_tasks.md#subtask-discipline-applies-to-every-subtask-below) — not restated. **Nothing in this file is started** except `12.3.7.1`, which is done.
+Identical to [phase2_tasks.md § Subtask discipline](phase2_tasks.md#subtask-discipline-applies-to-every-subtask-below) — not restated. **21 of 24 subtasks are done**; `5.3.6.2`, `22.3.6.3` and `5.3.7.3` wait on Phase 4's isolated-Room log and car-sky.
 
 ### Per-node build commands (cited in acceptance below)
 
@@ -83,7 +83,7 @@ New lanes go in a new `.github/workflows/phase3-ci.yml` — *a lane belongs to t
 
 > The one unproven platform assumption in this phase, taken first. If `onnxruntime` has no aarch64 wheel for `python:3.11-slim`, the image build falls back to a source build under emulation whose duration is unbounded and which can exhaust the job timeout.
 
-### [ ] `12.3.1.1` — `phase3-ci.yml` + lane `ada-detector-wheels` *(AI — runs before every other subtask in this phase)*
+### [x] `12.3.1.1` — `phase3-ci.yml` + lane `ada-detector-wheels` *(AI — runs before every other subtask in this phase)*
 
 **Objective:** prove, before any detector code exists, that `onnxruntime`, `opencv-python-headless` and `numpy` install as prebuilt wheels for `linux/arm64` on `python:3.11-slim`.
 
@@ -109,7 +109,7 @@ New lanes go in a new `.github/workflows/phase3-ci.yml` — *a lane belongs to t
 
 > The Python subprocess. Paths from [HLD §4](../ADA_ECU/doc/ada-ecu-hld.md#4-folder-structure); every module is importable and unit-testable on its own, and none of them opens a socket or reads env directly.
 
-### [ ] `12.3.2.1` — `detector/config.py` + `detector/requirements.txt` *(AI)*
+### [x] `12.3.2.1` — `detector/config.py` + `detector/requirements.txt` *(AI)*
 
 **Objective:** the detector's **only** env reader. Its runtime dependency manifest is inseparable from it: the loader's own test run needs the pinned runtime set, and `12.3.1.1` proved exactly those versions.
 
@@ -142,7 +142,7 @@ The three pacing keys are [HLD §6](../ADA_ECU/doc/ada-ecu-hld.md#6-internal-com
 
 **Dependencies:** after `12.3.1.1` (pin versions to what installed). **Commit:** `[12.3.2.1] feat: add the detector config loader and runtime requirements`
 
-### [ ] `12.3.2.2` — Frame-source seam `detector/frame_source.py` *(AI)*
+### [x] `12.3.2.2` — Frame-source seam `detector/frame_source.py` *(AI)*
 
 **Objective:** the mandatory D6 seam — frame acquisition behind an interface, so a future CarSky `video` pin is one new implementation and touches nothing downstream ([research note §2 (a′)](../ADA_ECU/doc/research_notes/video-source-for-r12.md#why-a-is-rejected-for-m1)).
 
@@ -164,7 +164,7 @@ Pacing is `12.3.2.8`'s, not this file's: `iter_frames()` stays a generator that 
 
 **Dependencies:** after `12.3.2.1`. **Commit:** `[12.3.2.2] feat: add the detector frame-source seam`
 
-### [ ] `12.3.2.3` — Distance estimation `detector/distance.py` *(AI — parallel with 12.3.2.2)*
+### [x] `12.3.2.3` — Distance estimation `detector/distance.py` *(AI — parallel with 12.3.2.2)*
 
 **Objective:** the pinhole known-width range and lateral offset (D6) — pure maths, no model, no frames.
 
@@ -188,7 +188,7 @@ y    = (bbox_u_center − frame_w / 2) × d / f_px
 
 **Dependencies:** after `12.3.2.1`. **Commit:** `[12.3.2.3] feat: add pinhole known-width distance estimation`
 
-### [ ] `12.3.2.4` — Frame-to-frame association `detector/tracker.py` *(AI — parallel)*
+### [x] `12.3.2.4` — Frame-to-frame association `detector/tracker.py` *(AI — parallel)*
 
 **Objective:** stable `own:<n>` ids across sampled frames by greedy IoU matching (D6) — no tracking library.
 
@@ -206,7 +206,7 @@ y    = (bbox_u_center − frame_w / 2) × d / f_px
 
 **Dependencies:** after `12.3.2.1`. **Commit:** `[12.3.2.4] feat: add greedy IoU frame-to-frame association`
 
-### [ ] `12.3.2.5` — Inference `detector/inference.py` *(AI)*
+### [x] `12.3.2.5` — Inference `detector/inference.py` *(AI)*
 
 **Objective:** the YOLO11n ONNX Runtime CPU session behind a swappable `Detector` protocol (D6, report §3(g)).
 
@@ -225,7 +225,7 @@ y    = (bbox_u_center − frame_w / 2) × d / f_px
 
 **Dependencies:** after `12.3.2.1` + `12.3.1.1`; the session test unskips once `12.3.3.1` lands. **Commit:** `[12.3.2.5] feat: add the YOLO11n ONNX inference stage`
 
-### [ ] `12.3.2.6` — Emission `detector/emit.py` *(AI)*
+### [x] `12.3.2.6` — Emission `detector/emit.py` *(AI)*
 
 **Objective:** one R3 JSONL line per detection per sampled frame, through the **frozen** Phase 0 binding (D6).
 
@@ -266,7 +266,7 @@ The clip-time value `frame_index / fps * 1000` stays a detector-local `Frame` fi
 
 **Dependencies:** after `12.3.2.3` + `12.3.2.4`. **Commit:** `[12.3.2.6] feat: emit R3 JSONL from the detector`
 
-### [ ] `12.3.2.8` — Real-time pacer `detector/pacer.py` *(AI — parallel)*
+### [x] `12.3.2.8` — Real-time pacer `detector/pacer.py` *(AI — parallel)*
 
 **Objective:** the [HLD §6](../ADA_ECU/doc/ada-ecu-hld.md#6-internal-components) `detector/pacer` component — hold each sampled frame until its wall-clock instant, and apply `DETECTOR_START_DELAY_S` before the first.
 
@@ -286,7 +286,7 @@ The clip-time value `frame_index / fps * 1000` stays a detector-local `Frame` fi
 
 **Dependencies:** after `12.3.2.1`. **Commit:** `[12.3.2.8] feat: add the detector real-time pacer`
 
-### [ ] `12.3.2.7` — Entrypoint `detector/main.py` *(AI)*
+### [x] `12.3.2.7` — Entrypoint `detector/main.py` *(AI)*
 
 **Objective:** the ego side of the D2 process contract — argv, wiring, exit codes. Controller only, no rules.
 
@@ -310,7 +310,7 @@ The clip-time value `frame_index / fps * 1000` stays a detector-local `Frame` fi
 
 ## Task Group 3.3 — Model, CI fixture, detector lane (serves R12)
 
-### [ ] `12.3.3.1` — `tools/export_yolo11n.py` + committed `models/yolo11n.onnx` *(AI, with one Human step)*
+### [x] `12.3.3.1` — `tools/export_yolo11n.py` + committed `models/yolo11n.onnx` *(AI, with one Human step)*
 
 **Objective:** the one-off Ultralytics → ONNX export and its committed artifact (D6 model provenance).
 
@@ -331,7 +331,7 @@ The clip-time value `frame_index / fps * 1000` stays a detector-local `Frame` fi
 
 **Dependencies:** after `12.3.1.1`. **Commit:** `[12.3.3.1] feat: export and commit the YOLO11n ONNX model`
 
-### [ ] `12.3.3.2` — CI video fixture `tools/make_sample_video.py` *(AI — parallel)*
+### [x] `12.3.3.2` — CI video fixture `tools/make_sample_video.py` *(AI — parallel)*
 
 **Objective:** the decoder smoke fixture, and **only** that ([research note §2 (c)](../ADA_ECU/doc/research_notes/video-source-for-r12.md#why-c-is-a-fallback-not-the-source)).
 
@@ -346,7 +346,7 @@ The clip-time value `frame_index / fps * 1000` stays a detector-local `Frame` fi
 
 **Dependencies:** after `12.3.2.2`. **Commit:** `[12.3.3.2] feat: add the CI sample-video fixture generator`
 
-### [ ] `12.3.3.3` — Lane `ada-detector-tests` *(AI)*
+### [x] `12.3.3.3` — Lane `ada-detector-tests` *(AI)*
 
 **Objective:** the Linux verification lane for group 3.2 — the only place the detector suite runs unskipped.
 
@@ -362,7 +362,7 @@ The clip-time value `frame_index / fps * 1000` stays a detector-local `Frame` fi
 
 **Dependencies:** after `12.3.1.1` (same file); lands before its consumers. **Commit:** `[12.3.3.3] chore: add the ADA detector test CI lane`
 
-### [ ] `12.3.3.4` — Lane `ada-detector-run` *(AI)*
+### [x] `12.3.3.4` — Lane `ada-detector-run` *(AI)*
 
 **Objective:** the venue for every run of the real detector — a Linux runner that executes it over the committed clip and uploads the captured stdout as a workflow artifact.
 
@@ -388,7 +388,7 @@ The clip-time value `frame_index / fps * 1000` stays a detector-local `Frame` fi
 
 > The clip's content is judged in [the provenance record's § Content verdict](../ADA_ECU/media/ego-b-occluding-c.source.md) and is not re-judged here; its format gate and its image placement are `12.3.7.2`'s. This group owns the distance constants alone.
 
-### [ ] `12.3.4.3` — Retune the distance constants against the clip *(AI)*
+### [x] `12.3.4.3` — Retune the distance constants against the clip *(AI)*
 
 **Objective:** close [HLD decision D6](../ADA_ECU/doc/ada-ecu-design-decisions.md#d6--r12-detector-frame-source-seam-inference-distance-zero-c-evidence) — `VEHICLE_WIDTH_M` and `CAMERA_HFOV_DEG` are proposals with no calibration target until the detector runs on the real clip.
 
@@ -414,7 +414,7 @@ The clip-time value `frame_index / fps * 1000` stays a detector-local `Frame` fi
 
 ## Task Group 3.5 — Zero-C evidence and store integration (serves R12, R3, R18)
 
-### [ ] `12.3.5.1` — Zero-C check `tools/check_zero_c.py` *(AI)*
+### [x] `12.3.5.1` — Zero-C check `tools/check_zero_c.py` *(AI)*
 
 **Objective:** make the R19 zero-C claim falsifiable (D6) — the check fails the run on any of the three rules below.
 
@@ -435,7 +435,7 @@ The clip-time value `frame_index / fps * 1000` stays a detector-local `Frame` fi
 
 **Dependencies:** after `12.3.2.6` (line shape). **Commit:** `[12.3.5.1] feat: add the R12 zero-C evidence check`
 
-### [ ] `12.3.5.2` — Detector run over the clip: the R12 detection log *(AI)*
+### [x] `12.3.5.2` — Detector run over the clip: the R12 detection log *(AI)*
 
 **Objective:** the R12 acceptance artifact — a detection log over the provided clip with per-frame objects and distance estimates, at an acceptable offline pace.
 
@@ -458,7 +458,7 @@ The clip-time value `frame_index / fps * 1000` stays a detector-local `Frame` fi
 
 **Dependencies:** after `12.3.2.7` + `12.3.3.1` + `12.3.3.4` + `12.3.4.3` + `12.3.5.1`. **Commit:** `[12.3.5.2] docs: record the R12 detection log and KPI measurements`
 
-### [ ] `3.3.5.3` — Retire the mock: real detector into the real store *(AI)*
+### [x] `3.3.5.3` — Retire the mock: real detector into the real store *(AI)*
 
 **Objective:** the second Phase 3 box — own-sensor entries enter the store through the **same** R3 interface as relayed entries, with the fixture no longer required.
 
@@ -475,7 +475,7 @@ The clip-time value `frame_index / fps * 1000` stays a detector-local `Frame` fi
 
 **Dependencies:** after `12.3.2.7` + `12.3.3.1` + Phase 2 `13.2.8.2`. **Commit:** `[3.3.5.3] test: drive the store from the real detector subprocess`
 
-### [ ] `12.3.5.4` — Lane `ada-zero-c` *(AI)*
+### [x] `12.3.5.4` — Lane `ada-zero-c` *(AI)*
 
 **Objective:** make the zero-C check repeatable rather than a one-off run — it feeds R19, so it must not be a manual step.
 
@@ -494,7 +494,7 @@ The clip-time value `frame_index / fps * 1000` stays a detector-local `Frame` fi
 
 ## Task Group 3.6 — Image and deployed measurement (serves R5)
 
-### [ ] `5.3.6.1` — Extend the ADA image with the detector and model *(AI)*
+### [x] `5.3.6.1` — Extend the ADA image with the detector and model *(AI)*
 
 **Objective:** the deployable image carries both processes (D9 image layout).
 
@@ -568,7 +568,7 @@ Layer order decides which blobs are re-pushed: `media/` and `models/` sit above 
 
 **Status:** done, commit `3d55d7b`. Candidate selection detail is [§ Rejected candidates](../ADA_ECU/media/ego-b-occluding-c.source.md#rejected-candidates).
 
-### [ ] `12.3.7.2` — Bake the committed clip into the ADA image *(AI)*
+### [x] `12.3.7.2` — Bake the committed clip into the ADA image *(AI)*
 
 **Objective:** the clip reaches the container the only way it can — inside the image. A Container Node has no volume, no bind mount and no host path ([research note §1](../ADA_ECU/doc/research_notes/video-source-for-r12.md#1-platform-finding--carsky-serves-no-camera-content)). The single objective is that one Dockerfile line; the size and digest measurement below is that line's acceptance evidence, not a second deliverable.
 
@@ -671,9 +671,9 @@ deployed   5.3.6.2 ∥ 22.3.6.3 (after 5.3.6.1 + 12.3.2.8 + phase-4 18.4.11.1 - 
 
 | # | Item | Owner / closes at |
 |---|---|---|
-| 1 | **`onnxruntime` / `opencv-python-headless` aarch64 wheel availability is unproven** ([HLD decision D9](../ADA_ECU/doc/ada-ecu-design-decisions.md#d9--deployment-shape)). Verified first by `12.3.1.1`. A red lane escalates — pin an older wheel, change the base image, or accept a QEMU source build with a raised timeout. Not an implementer's call | `12.3.1.1`, then [[project-architecture]] |
+| 1 | **Resolved by `12.3.1.1`: `onnxruntime==1.28.0`, `opencv-python-headless==5.0.0.93`, `numpy==2.4.6` install as prebuilt cp311 aarch64 wheels on `python:3.11-slim`** — the pins in `detector/requirements.txt`. Original item: aarch64 wheel availability was unproven ([HLD decision D9](../ADA_ECU/doc/ada-ecu-design-decisions.md#d9--deployment-shape)). Verified first by `12.3.1.1`. A red lane escalates — pin an older wheel, change the base image, or accept a QEMU source build with a raised timeout. Not an implementer's call | `12.3.1.1`, then [[project-architecture]] |
 | 2 | **Planner-designated test/tool paths beyond the HLD's list**: `detector/tests/test_config.py`, `test_inference.py`, `test_main.py`; `ADA_ECU/tools/tests/test_check_zero_c.py`. Required by subtask discipline; HLD-consistent additions, not new design | [[project-architecture]] (ack) |
-| 3 | **Distance accuracy is unvalidated until the detector runs on the clip** ([HLD decision D6](../ADA_ECU/doc/ada-ecu-design-decisions.md#d6--r12-detector-frame-source-seam-inference-distance-zero-c-evidence)). `12.3.4.3` is the retune, and it may only move `VEHICLE_WIDTH_M` / `CAMERA_HFOV_DEG`, never `GATE_ENTER_M` / `GATE_EXIT_M`. B is a coach, wider than the 1.8 m car default, so expect a systematic bias to correct | `12.3.4.3` |
+| 3 | **Resolved by `12.3.4.3`: retuned to `VEHICLE_WIDTH_M=2.6`, `CAMERA_HFOV_DEG=34.4`** ([run record](doc/phase3-ada-detector-run.md)) — the default constants started B inside the gate (22.3 m), the predicted coach bias. Original item: distance accuracy unvalidated ([HLD decision D6](../ADA_ECU/doc/ada-ecu-design-decisions.md#d6--r12-detector-frame-source-seam-inference-distance-zero-c-evidence)). `12.3.4.3` is the retune, and it may only move `VEHICLE_WIDTH_M` / `CAMERA_HFOV_DEG`, never `GATE_ENTER_M` / `GATE_EXIT_M`. B is a coach, wider than the 1.8 m car default, so expect a systematic bias to correct | `12.3.4.3` |
 | 4 | **Detector warm-up `W` (ONNX load + `VideoCapture` open) is unmeasured** — estimated 2–5 s, and it is the one measurement R22 cannot ship without: it sets the bench's `start_delay_s`, held to **−0.5 / +1.1 s** ([§6.6(g)](../requirements/m1-run-timing-and-event-triggering.md)). `12.3.5.2` produces the CI-runner figure; **`22.3.6.3` produces the deployed one, which is the value that ships**, and Phase 1 `22.1.13.4` writes it into `scenarios/default.yaml` | `12.3.5.2`, then `22.3.6.3` |
 | 5 | **The clip is 10 s, and every long-run behaviour therefore depends on looping.** Accepted, with reasoning in [the provenance record](../ADA_ECU/media/ego-b-occluding-c.source.md). Two consequences no subtask may absorb silently: `FileFrameSource` must keep `frame_index` monotonic across loops (`12.3.2.2`), and the gap between the last emitted line of one clip pass and the first of the next must not exceed `TRACK_TIMEOUT_MS`, or ego's own B track expires between cycles. `12.3.5.2` measures that gap; if it is too long, the finding goes to [[project-architecture]] — it is not fixed by widening the timeout | `12.3.5.2` |
 | 6 | **The detector's pacer is built because [HLD §4/§6/§12](../ADA_ECU/doc/ada-ecu-hld.md#6-internal-components) and [D10](../ADA_ECU/doc/ada-ecu-design-decisions.md#d10--clock-domains-and-stimulus-paced-against-clock_monotonic) designate it (`12.3.2.8`); the requirement number it serves is unratified.** [m1-run-timing-and-event-triggering.md §7](../requirements/m1-run-timing-and-event-triggering.md) defines R20 and §8(1) schedules R20/R21 behind this phase's acceptance. D10 states that pacing serves R20 on its own footing rather than the deferred IVI dashcam view, so building it pulls no deferred surface in; the dashcam view stays deferred ([milestone1.md §6](milestone1.md#6-deferred-to-later-milestones)) and no Phase 3 subtask may add clip-serving or an `exposedPorts` entry. **Trigger:** the user accepts or rejects R20, which fixes whether `12.3.2.8` and its K4 bound are traceable to a ratified requirement | **user** (accept/reject R20) |
@@ -686,4 +686,4 @@ deployed   5.3.6.2 ∥ 22.3.6.3 (after 5.3.6.1 + 12.3.2.8 + phase-4 18.4.11.1 - 
 
 ---
 
-*Phase 3 = 7 task groups, 24 subtasks, every one `AI`; `5.3.6.2`, `5.3.7.3` and `22.3.6.3` go to [[car-sky]] and the rest to an implementation subagent. `12.3.7.1` is done; the rest are not started.*
+*Phase 3 = 7 task groups, 24 subtasks, every one `AI`; `5.3.6.2`, `5.3.7.3` and `22.3.6.3` go to [[car-sky]] and the rest to an implementation subagent. 21 are done (branch `feat/phase3-object-detection`); the three car-sky readings wait on Phase 4 `18.4.11.1`'s saved Room log and the registry push. Run evidence: [doc/phase3-ada-detector-run.md](doc/phase3-ada-detector-run.md).*
