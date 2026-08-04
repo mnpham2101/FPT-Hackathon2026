@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
@@ -93,6 +94,7 @@ private data class SideBarItem(val icon: ImageVector, val label: String, val mod
 private val LeftBarItems = listOf(
     SideBarItem(Icons.Filled.Home, "Home", DisplayMode.HomeView),
     SideBarItem(Icons.Filled.Menu, "Apps", DisplayMode.AppsView),
+    SideBarItem(Icons.Filled.Build, "3D HUD", DisplayMode.WarningView),
 )
 
 private val RightBarItems = listOf(
