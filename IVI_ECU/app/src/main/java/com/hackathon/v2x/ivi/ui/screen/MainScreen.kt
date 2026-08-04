@@ -247,26 +247,49 @@ private fun WarningViewContent(
 ) {
     var is3DMode by remember { mutableStateOf(true) }
 
+    val defaultMockScene = SceneGeometry(
+        egoPosition = VehiclePosition(0f, 0f),
+        vehicleBSnapshot = R3Snapshot(
+            id = "V-B-DEMO",
+            objectClass = "vehicle",
+            source = "v2x_relayed",
+            position = VehiclePosition(-3.5f, 15.0f),
+            distance = 15.4f,
+            speed = 14.2f,
+            confidence = 0.95f,
+            state = "tracked",
+            timestamps = R3Timestamps(1L, 2L, 2L)
+        ),
+        vehicleCSnapshot = R3Snapshot(
+            id = "V-C-GHOST",
+            objectClass = "vehicle",
+            source = "v2x_relayed",
+            position = VehiclePosition(2.5f, 22.0f),
+            distance = 22.1f,
+            speed = 18.5f,
+            confidence = 0.88f,
+            state = "tracked",
+            timestamps = R3Timestamps(1L, 2L, 2L)
+        )
+    )
+
     val active = uiWarningState as? WarningUiState.Active
     val scene = when {
-        latestScene == null -> null
-        active != null -> latestScene.copy(vehicleCSnapshot = active.event.objectSnapshot)
-        else -> latestScene
+        active != null -> latestScene?.copy(vehicleCSnapshot = active.event.objectSnapshot) ?: defaultMockScene
+        latestScene != null -> latestScene
+        else -> defaultMockScene
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        if (scene != null) {
-            val riskState = active?.event?.riskState ?: "low"
-            if (is3DMode) {
-                val view3D = androidx.compose.runtime.remember { com.hackathon.v2x.ivi.ui.view.Canvas3DWarningView() }
-                view3D.Render(scene = scene, riskState = riskState)
-            } else {
-                val view2D = androidx.compose.runtime.remember { com.hackathon.v2x.ivi.ui.view.CanvasWarningView() }
-                view2D.Render(scene = scene, riskState = riskState)
-            }
+        val riskState = active?.event?.riskState ?: "high"
+        if (is3DMode) {
+            val view3D = androidx.compose.runtime.remember { com.hackathon.v2x.ivi.ui.view.Canvas3DWarningView() }
+            view3D.Render(scene = scene, riskState = riskState)
         } else {
-            WarningViewPlaceholder()
+            val view2D = androidx.compose.runtime.remember { com.hackathon.v2x.ivi.ui.view.CanvasWarningView() }
+            view2D.Render(scene = scene, riskState = riskState)
         }
+
 
         // HUD 2D/3D Mode Switcher Toggle Pill
         Box(
