@@ -1,0 +1,275 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="m1-video-source-topology" id="m1-video-source-topology">
+    <mxGraphModel dx="1368" dy="788" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1320" pageHeight="1010" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" value="&lt;b&gt;&lt;font style=&quot;font-size: 22px&quot; color=&quot;#19226D&quot;&gt;M1 blueprint with the video path&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;spacingLeft=0;spacingRight=0;" vertex="1" parent="1">
+          <mxGeometry x="0" y="18" width="1320" height="26" as="geometry" />
+        </mxCell>
+        <mxCell id="subtitle" value="&lt;font style=&quot;font-size: 13px&quot; color=&quot;#3d3d46&quot;&gt;Solid = recommended and committed · dashed = optional, deferred, or rejected&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;spacingLeft=0;spacingRight=0;" vertex="1" parent="1">
+          <mxGeometry x="0" y="46" width="1320" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="bandA" value="" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#eef0f7;strokeColor=#cfd4e4;strokeWidth=1.2;align=center;verticalAlign=middle;spacingTop=6;spacingLeft=8;spacingRight=8;" vertex="1" parent="1">
+          <mxGeometry x="24" y="72" width="1272" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="bandAlbl" value="&lt;b&gt;&lt;font style=&quot;font-size: 12px&quot; color=&quot;#F37021&quot;&gt;BUILD TIME — repo to registry&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;spacingLeft=0;spacingRight=0;" vertex="1" parent="1">
+          <mxGeometry x="42" y="82" width="500" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="clip" value="&lt;b&gt;&lt;font style=&quot;font-size: 12px&quot; color=&quot;#F37021&quot;&gt;The clip — team-supplied&lt;/font&gt;&lt;/b&gt;&lt;br&gt;&lt;b&gt;&lt;font style=&quot;font-size: 13px&quot; color=&quot;#080808&quot;&gt;ADA_ECU/media/ego-b-occluding-c.mp4&lt;/font&gt;&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 12px&quot; color=&quot;#3d3d46&quot;&gt;MP4 / H.264 · 1280×720 · 20 fps · no audio&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size: 12px&quot; color=&quot;#3d3d46&quot;&gt;≤ 60 s, ≈ 30 MB · committed once&lt;/font&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#F37021;strokeWidth=1.6;align=center;verticalAlign=middle;spacingTop=6;spacingLeft=8;spacingRight=8;" vertex="1" parent="1">
+          <mxGeometry x="48" y="110" width="380" height="92" as="geometry" />
+        </mxCell>
+        <mxCell id="dockerfile" value="&lt;b&gt;&lt;font style=&quot;font-size: 12px&quot; color=&quot;#034EA2&quot;&gt;Baked in — no upload, no volume&lt;/font&gt;&lt;/b&gt;&lt;br&gt;&lt;b&gt;&lt;font style=&quot;font-size: 13px&quot; color=&quot;#080808&quot;&gt;ADA_ECU/Dockerfile&lt;/font&gt;&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 12px&quot; color=&quot;#3d3d46&quot;&gt;COPY media/ /app/media/&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size: 12px&quot; color=&quot;#3d3d46&quot;&gt;its own early layer → cached on later pushes&lt;/font&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#034EA2;strokeWidth=1.6;align=center;verticalAlign=middle;spacingTop=6;spacingLeft=8;spacingRight=8;" vertex="1" parent="1">
+          <mxGeometry x="478" y="110" width="340" height="92" as="geometry" />
+        </mxCell>
+        <mxCell id="registry" value="&lt;b&gt;&lt;font style=&quot;font-size: 12px&quot; color=&quot;#034EA2&quot;&gt;CarSky registry (Zot)&lt;/font&gt;&lt;/b&gt;&lt;br&gt;&lt;b&gt;&lt;font style=&quot;font-size: 12px&quot; color=&quot;#080808&quot;&gt;registry.hackathon-2.carsky.io/m1-ada-ecu:latest&lt;/font&gt;&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 12px&quot; color=&quot;#3d3d46&quot;&gt;docker buildx --platform linux/arm64&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size: 12px&quot; color=&quot;#3d3d46&quot;&gt;single-platform image · clip rides inside it&lt;/font&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#034EA2;strokeWidth=1.6;align=center;verticalAlign=middle;spacingTop=6;spacingLeft=8;spacingRight=8;" vertex="1" parent="1">
+          <mxGeometry x="868" y="110" width="408" height="92" as="geometry" />
+        </mxCell>
+        <mxCell id="bandB" value="" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#eef0f7;strokeColor=#cfd4e4;strokeWidth=1.2;align=center;verticalAlign=middle;spacingTop=6;spacingLeft=8;spacingRight=8;" vertex="1" parent="1">
+          <mxGeometry x="24" y="242" width="1272" height="436" as="geometry" />
+        </mxCell>
+        <mxCell id="bandBlbl" value="&lt;b&gt;&lt;font style=&quot;font-size: 12px&quot; color=&quot;#F37021&quot;&gt;CARSKY ROOM — runtime (R5 deployment · R6 network)&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;spacingLeft=0;spacingRight=0;" vertex="1" parent="1">
+          <mxGeometry x="42" y="252" width="700" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="bench" value="&lt;b&gt;&lt;font style=&quot;font-size: 12px&quot; color=&quot;#33B2C1&quot;&gt;Bench&lt;/font&gt;&lt;/b&gt;&lt;br&gt;&lt;b&gt;&lt;font style=&quot;font-size: 14px&quot; color=&quot;#080808&quot;&gt;Scenario Player&lt;/font&gt;&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 12px&quot; color=&quot;#3d3d46&quot;&gt;Container Node&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size: 12px&quot; color=&quot;#3d3d46&quot;&gt;10.99.0.10&lt;/font&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#e4f4f7;strokeColor=#33B2C1;strokeWidth=1.6;align=center;verticalAlign=middle;spacingTop=6;spacingLeft=8;spacingRight=8;" vertex="1" parent="1">
+          <mxGeometry x="48" y="278" width="200" height="104" as="geometry" />
+        </mxCell>
+        <mxCell id="v2x" value="&lt;b&gt;&lt;font style=&quot;font-size: 12px&quot; color=&quot;#034EA2&quot;&gt;Relay&lt;/font&gt;&lt;/b&gt;&lt;br&gt;&lt;b&gt;&lt;font style=&quot;font-size: 14px&quot; color=&quot;#080808&quot;&gt;V2X ECU&lt;/font&gt;&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 12px&quot; color=&quot;#3d3d46&quot;&gt;Container Node&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size: 12px&quot; color=&quot;#3d3d46&quot;&gt;10.99.0.11&lt;/font&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#e8eefb;strokeColor=#034EA2;strokeWidth=1.6;align=center;verticalAlign=middle;spacingTop=6;spacingLeft=8;spacingRight=8;" vertex="1" parent="1">
+          <mxGeometry x="272" y="278" width="200" height="104" as="geometry" />
+        </mxCell>
+        <mxCell id="ada" value="" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#19226D;strokeWidth=2.2;align=center;verticalAlign=middle;spacingTop=6;spacingLeft=8;spacingRight=8;" vertex="1" parent="1">
+          <mxGeometry x="496" y="278" width="396" height="286" as="geometry" />
+        </mxCell>
+        <mxCell id="adahdr" value="&lt;b&gt;&lt;font style=&quot;font-size: 13px&quot; color=&quot;#19226D&quot;&gt;ADA ECU — Container Node · 10.99.0.12&lt;/font&gt;&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 11px&quot; color=&quot;#3d3d46&quot;&gt;detection (R12) · store + gate (R13) · risk (R14) · warning (R15)&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;spacingLeft=0;spacingRight=0;" vertex="1" parent="1">
+          <mxGeometry x="512" y="288" width="364" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="adafile" value="&lt;b&gt;&lt;font style=&quot;font-size: 12px&quot; color=&quot;#080808&quot;&gt;/app/media/ego-b-occluding-c.mp4&lt;/font&gt;&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 11px&quot; color=&quot;#3d3d46&quot;&gt;read-only image layer — the file is already there at start&lt;/font&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#fdf0e8;strokeColor=#F37021;strokeWidth=1.4;align=center;verticalAlign=middle;spacingTop=6;spacingLeft=8;spacingRight=8;" vertex="1" parent="1">
+          <mxGeometry x="514" y="326" width="360" height="54" as="geometry" />
+        </mxCell>
+        <mxCell id="adadet" value="&lt;b&gt;&lt;font style=&quot;font-size: 12px&quot; color=&quot;#080808&quot;&gt;detector subprocess (Python)&lt;/font&gt;&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 11px&quot; color=&quot;#3d3d46&quot;&gt;OpenCV VideoCapture → YOLO11n ONNX, CPU&lt;/font&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#50B848;strokeWidth=1.4;align=center;verticalAlign=middle;spacingTop=6;spacingLeft=8;spacingRight=8;" vertex="1" parent="1">
+          <mxGeometry x="514" y="404" width="360" height="54" as="geometry" />
+        </mxCell>
+        <mxCell id="adacore" value="&lt;b&gt;&lt;font style=&quot;font-size: 12px&quot; color=&quot;#080808&quot;&gt;ADA core (C++17)&lt;/font&gt;&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 11px&quot; color=&quot;#3d3d46&quot;&gt;R3 track store · R13 gate · R14 risk · R15 emit&lt;/font&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#19226D;strokeWidth=1.4;align=center;verticalAlign=middle;spacingTop=6;spacingLeft=8;spacingRight=8;" vertex="1" parent="1">
+          <mxGeometry x="514" y="482" width="360" height="54" as="geometry" />
+        </mxCell>
+        <mxCell id="l_file_det" value="&lt;font style=&quot;font-size: 11px&quot; color=&quot;#3d3d46&quot;&gt;VIDEO_CLIP_PATH (blueprint env)&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;spacingLeft=0;spacingRight=0;" vertex="1" parent="1">
+          <mxGeometry x="706" y="382" width="200" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="l_det_core" value="&lt;font style=&quot;font-size: 11px&quot; color=&quot;#3d3d46&quot;&gt;R3 TrackedObject JSONL on stdout&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;spacingLeft=0;spacingRight=0;" vertex="1" parent="1">
+          <mxGeometry x="706" y="460" width="200" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="ivi" value="" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#19226D;strokeWidth=2.2;align=center;verticalAlign=middle;spacingTop=6;spacingLeft=8;spacingRight=8;" vertex="1" parent="1">
+          <mxGeometry x="916" y="278" width="360" height="286" as="geometry" />
+        </mxCell>
+        <mxCell id="ivihdr" value="&lt;b&gt;&lt;font style=&quot;font-size: 13px&quot; color=&quot;#19226D&quot;&gt;IVI ECU — Skycraft Node · 10.99.0.13&lt;/font&gt;&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 11px&quot; color=&quot;#3d3d46&quot;&gt;AAOS guest · team APK installed over ADB&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;spacingLeft=0;spacingRight=0;" vertex="1" parent="1">
+          <mxGeometry x="932" y="288" width="328" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="iviwarn" value="&lt;b&gt;&lt;font style=&quot;font-size: 12px&quot; color=&quot;#080808&quot;&gt;R4 ingest + warning view&lt;/font&gt;&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 11px&quot; color=&quot;#3d3d46&quot;&gt;R16 layout · R17 God view of ego, B, ghost C&lt;/font&gt;&lt;br&gt;&lt;b&gt;&lt;font style=&quot;font-size: 11px&quot; color=&quot;#50B848&quot;&gt;COMMITTED M1 SCOPE&lt;/font&gt;&lt;/b&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#50B848;strokeWidth=1.4;align=center;verticalAlign=middle;spacingTop=6;spacingLeft=8;spacingRight=8;" vertex="1" parent="1">
+          <mxGeometry x="934" y="326" width="324" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="ividash" value="&lt;b&gt;&lt;font style=&quot;font-size: 12px&quot; color=&quot;#7a8198&quot;&gt;dashcam surface (Media3)&lt;/font&gt;&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 11px&quot; color=&quot;#7a8198&quot;&gt;plays the SAME clip — over TCP 8080 from a static&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size: 11px&quot; color=&quot;#7a8198&quot;&gt;server on the ADA node, or from a local APK copy.&lt;/font&gt;&lt;br&gt;&lt;b&gt;&lt;font style=&quot;font-size: 11px&quot; color=&quot;#7a8198&quot;&gt;OPTIONAL — no M1 requirement covers it&lt;/font&gt;&lt;/b&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#f7f8fa;strokeColor=#7a8198;strokeWidth=1.4;align=center;verticalAlign=middle;spacingTop=6;spacingLeft=8;spacingRight=8;dashed=1;dashPattern=6 4;" vertex="1" parent="1">
+          <mxGeometry x="934" y="436" width="324" height="104" as="geometry" />
+        </mxCell>
+        <mxCell id="bridge" value="&lt;b&gt;&lt;font style=&quot;font-size: 14px&quot; color=&quot;#ffffff&quot;&gt;Ethernet Bridge — eth-bridge · 10.99.0.0/24  (R6)&lt;/font&gt;&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 11px&quot; color=&quot;#c9cfe8&quot;&gt;one ethernet pin per node, wired like-to-like · all inter-ECU traffic is UDP over this L2 network · no VIDEO pin is declared&lt;/font&gt;" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#19226D;strokeColor=#19226D;strokeWidth=1.6;align=center;verticalAlign=middle;spacingTop=6;spacingLeft=8;spacingRight=8;" vertex="1" parent="1">
+          <mxGeometry x="48" y="600" width="1228" height="56" as="geometry" />
+        </mxCell>
+        <mxCell id="l_bench_br" value="&lt;font style=&quot;font-size: 11px&quot; color=&quot;#3d3d46&quot;&gt;R1 CPM · UDP 47100&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;spacingLeft=0;spacingRight=0;" vertex="1" parent="1">
+          <mxGeometry x="158" y="478" width="200" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="l_v2x_br" value="&lt;font style=&quot;font-size: 11px&quot; color=&quot;#3d3d46&quot;&gt;R1 in · R2 out&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size: 11px&quot; color=&quot;#3d3d46&quot;&gt;UDP 47200&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;spacingLeft=0;spacingRight=0;" vertex="1" parent="1">
+          <mxGeometry x="382" y="470" width="200" height="36" as="geometry" />
+        </mxCell>
+        <mxCell id="l_ada_br" value="&lt;font style=&quot;font-size: 11px&quot; color=&quot;#3d3d46&quot;&gt;R2 in · R4 out · UDP 47300&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size: 11px&quot; color=&quot;#7a8198&quot;&gt;+ optional TCP 8080 (dashcam MP4)&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;spacingLeft=0;spacingRight=0;" vertex="1" parent="1">
+          <mxGeometry x="632" y="566" width="260" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="l_ivi_br" value="&lt;font style=&quot;font-size: 11px&quot; color=&quot;#3d3d46&quot;&gt;R4 in · UDP 47300&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size: 11px&quot; color=&quot;#7a8198&quot;&gt;+ optional TCP 8080&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;spacingLeft=0;spacingRight=0;" vertex="1" parent="1">
+          <mxGeometry x="1108" y="566" width="200" height="32" as="geometry" />
+        </mxCell>
+        <mxCell id="l_reg_ada" value="&lt;font style=&quot;font-size: 11px&quot; color=&quot;#034EA2&quot;&gt;the node pulls the image at deploy — clip included&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;spacingLeft=0;spacingRight=0;" vertex="1" parent="1">
+          <mxGeometry x="610" y="204" width="320" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="rejected" value="" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#fdf0e8;strokeColor=#F37021;strokeWidth=1.4;align=center;verticalAlign=middle;spacingTop=6;spacingLeft=8;spacingRight=8;" vertex="1" parent="1">
+          <mxGeometry x="24" y="698" width="1272" height="84" as="geometry" />
+        </mxCell>
+        <mxCell id="rejlbl" value="&lt;b&gt;&lt;font style=&quot;font-size: 12px&quot; color=&quot;#F37021&quot;&gt;REJECTED — fanning a live feed out over CarSky's video pin&lt;/font&gt;&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 11px&quot; color=&quot;#3d3d46&quot;&gt;Container ↔ Container: the video pin is an iceoryx2 shared-memory transport carrying raw RGBA — ≈ 70 MB/s at 720p20, with no C++ helper and an undocumented frame header.&lt;/font&gt;&lt;br&gt;&lt;font style=&quot;font-size: 11px&quot; color=&quot;#3d3d46&quot;&gt;Container → Skycraft: the guest side of a video pin is one sentence in the platform doc — no wiring example, no named counterpart, no camera HAL. Unusable inside the deadline.&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;spacingLeft=0;spacingRight=0;" vertex="1" parent="1">
+          <mxGeometry x="44" y="708" width="1240" height="66" as="geometry" />
+        </mxCell>
+        <mxCell id="legend" value="" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#19226D;strokeWidth=1.6;align=center;verticalAlign=middle;spacingTop=6;spacingLeft=8;spacingRight=8;" vertex="1" parent="1">
+          <mxGeometry x="24" y="802" width="1272" height="184" as="geometry" />
+        </mxCell>
+        <mxCell id="leghdr" value="&lt;b&gt;&lt;font style=&quot;font-size: 12px&quot; color=&quot;#19226D&quot;&gt;LEGEND — every R-number is a requirement ID from the report §2. There is no separate &quot;message&quot; numbering.&lt;/font&gt;&lt;/b&gt;&lt;br&gt;&lt;font style=&quot;font-size: 11px&quot; color=&quot;#3d3d46&quot;&gt;R1–R6 are the CONTRACT requirements: each one's deliverable is a schema or a topology — which is why &quot;the R2 message&quot; or &quot;an R3 object&quot; reads like a message name. It is shorthand for the artifact that requirement defines. R7–R19 are BEHAVIOURAL requirements: the deliverable is running code.&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;spacingLeft=0;spacingRight=0;" vertex="1" parent="1">
+          <mxGeometry x="44" y="812" width="1240" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="lg00a" value="&lt;b&gt;&lt;font style=&quot;font-size: 11px&quot; color=&quot;#19226D&quot;&gt;R1&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;spacingLeft=0;spacingRight=0;" vertex="1" parent="1">
+          <mxGeometry x="44" y="862" width="34" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="lg00b" value="&lt;b&gt;&lt;font style=&quot;font-size: 10px&quot; color=&quot;#F37021&quot;&gt;contract&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;spacingLeft=0;spacingRight=0;" vertex="1" parent="1">
+          <mxGeometry x="78" y="862" width="62" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="lg00c" value="&lt;font style=&quot;font-size: 11px&quot; color=&quot;#3d3d46&quot;&gt;ETSI CPM profile (ASN.1 UPER) — the over-the-air message&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;spacingLeft=0;spacingRight=0;" vertex="1" parent="1">
+          <mxGeometry x="142" y="862" width="300" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="lg01a" value="&lt;b&gt;&lt;font style=&quot;font-size: 11px&quot; color=&quot;#19226D&quot;&gt;R2&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;spacingLeft=0;spacingRight=0;" vertex="1" parent="1">
+          <mxGeometry x="44" y="884" width="34" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="lg01b" value="&lt;b&gt;&lt;font style=&quot;font-size: 10px&quot; color=&quot;#F37021&quot;&gt;contract&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;spacingLeft=0;spacingRight=0;" vertex="1" parent="1">
+          <mxGeometry x="78" y="884" width="62" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="lg01c" value="&lt;font style=&quot;font-size: 11px&quot; color=&quot;#3d3d46&quot;&gt;V2X ECU → ADA object message (JSON over UDP)&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;spacingLeft=0;spacingRight=0;" vertex="1" parent="1">
+          <mxGeometry x="142" y="884" width="300" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="lg02a" value="&lt;b&gt;&lt;font style=&quot;font-size: 11px&quot; color=&quot;#19226D&quot;&gt;R3&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;spacingLeft=0;spacingRight=0;" vertex="1" parent="1">
+          <mxGeometry x="44" y="906" width="34" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="lg02b" value="&lt;b&gt;&lt;font style=&quot;font-size: 10px&quot; color=&quot;#F37021&quot;&gt;contract&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;spacingLeft=0;spacingRight=0;" vertex="1" parent="1">
+          <mxGeometry x="78" y="906" width="62" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="lg02c" value="&lt;font style=&quot;font-size: 11px&quot; color=&quot;#3d3d46&quot;&gt;TrackedObject schema — one shape for every ego object&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;spacingLeft=0;spacingRight=0;" vertex="1" parent="1">
+          <mxGeometry x="142" y="906" width="300" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="lg03a" value="&lt;b&gt;&lt;font style=&quot;font-size: 11px&quot; color=&quot;#19226D&quot;&gt;R4&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;spacingLeft=0;spacingRight=0;" vertex="1" parent="1">
+          <mxGeometry x="44" y="928" width="34" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="lg03b" value="&lt;b&gt;&lt;font style=&quot;font-size: 10px&quot; color=&quot;#F37021&quot;&gt;contract&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;spacingLeft=0;spacingRight=0;" vertex="1" parent="1">
+          <mxGeometry x="78" y="928" width="62" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="lg03c" value="&lt;font style=&quot;font-size: 11px&quot; color=&quot;#3d3d46&quot;&gt;ADA → IVI warning + state message (JSON over UDP)&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;spacingLeft=0;spacingRight=0;" vertex="1" parent="1">
+          <mxGeometry x="142" y="928" width="300" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="lg10a" value="&lt;b&gt;&lt;font style=&quot;font-size: 11px&quot; color=&quot;#19226D&quot;&gt;R5&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;spacingLeft=0;spacingRight=0;" vertex="1" parent="1">
+          <mxGeometry x="459" y="862" width="34" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="lg10b" value="&lt;b&gt;&lt;font style=&quot;font-size: 10px&quot; color=&quot;#F37021&quot;&gt;contract&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;spacingLeft=0;spacingRight=0;" vertex="1" parent="1">
+          <mxGeometry x="493" y="862" width="62" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="lg10c" value="&lt;font style=&quot;font-size: 11px&quot; color=&quot;#3d3d46&quot;&gt;node deployment — one ECU = one node of one blueprint&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;spacingLeft=0;spacingRight=0;" vertex="1" parent="1">
+          <mxGeometry x="557" y="862" width="300" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="lg11a" value="&lt;b&gt;&lt;font style=&quot;font-size: 11px&quot; color=&quot;#19226D&quot;&gt;R6&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;spacingLeft=0;spacingRight=0;" vertex="1" parent="1">
+          <mxGeometry x="459" y="884" width="34" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="lg11b" value="&lt;b&gt;&lt;font style=&quot;font-size: 10px&quot; color=&quot;#F37021&quot;&gt;contract&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;spacingLeft=0;spacingRight=0;" vertex="1" parent="1">
+          <mxGeometry x="493" y="884" width="62" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="lg11c" value="&lt;font style=&quot;font-size: 11px&quot; color=&quot;#3d3d46&quot;&gt;Ethernet Bridge + one ethernet pin per node&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;spacingLeft=0;spacingRight=0;" vertex="1" parent="1">
+          <mxGeometry x="557" y="884" width="300" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="lg12a" value="&lt;b&gt;&lt;font style=&quot;font-size: 11px&quot; color=&quot;#19226D&quot;&gt;R12&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;spacingLeft=0;spacingRight=0;" vertex="1" parent="1">
+          <mxGeometry x="459" y="906" width="34" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="lg12b" value="&lt;b&gt;&lt;font style=&quot;font-size: 10px&quot; color=&quot;#50B848&quot;&gt;behaviour&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;spacingLeft=0;spacingRight=0;" vertex="1" parent="1">
+          <mxGeometry x="493" y="906" width="62" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="lg12c" value="&lt;font style=&quot;font-size: 11px&quot; color=&quot;#3d3d46&quot;&gt;object detection from video (YOLO11n ONNX, CPU)&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;spacingLeft=0;spacingRight=0;" vertex="1" parent="1">
+          <mxGeometry x="557" y="906" width="300" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="lg13a" value="&lt;b&gt;&lt;font style=&quot;font-size: 11px&quot; color=&quot;#19226D&quot;&gt;R13&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;spacingLeft=0;spacingRight=0;" vertex="1" parent="1">
+          <mxGeometry x="459" y="928" width="34" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="lg13b" value="&lt;b&gt;&lt;font style=&quot;font-size: 10px&quot; color=&quot;#50B848&quot;&gt;behaviour&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;spacingLeft=0;spacingRight=0;" vertex="1" parent="1">
+          <mxGeometry x="493" y="928" width="62" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="lg13c" value="&lt;font style=&quot;font-size: 11px&quot; color=&quot;#3d3d46&quot;&gt;track store + admission gate (30 m, hysteresis)&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;spacingLeft=0;spacingRight=0;" vertex="1" parent="1">
+          <mxGeometry x="557" y="928" width="300" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="lg20a" value="&lt;b&gt;&lt;font style=&quot;font-size: 11px&quot; color=&quot;#19226D&quot;&gt;R14&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;spacingLeft=0;spacingRight=0;" vertex="1" parent="1">
+          <mxGeometry x="874" y="862" width="34" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="lg20b" value="&lt;b&gt;&lt;font style=&quot;font-size: 10px&quot; color=&quot;#50B848&quot;&gt;behaviour&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;spacingLeft=0;spacingRight=0;" vertex="1" parent="1">
+          <mxGeometry x="908" y="862" width="62" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="lg20c" value="&lt;font style=&quot;font-size: 11px&quot; color=&quot;#3d3d46&quot;&gt;Collision Risk Assessment abstraction + NLOS plugin&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;spacingLeft=0;spacingRight=0;" vertex="1" parent="1">
+          <mxGeometry x="972" y="862" width="300" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="lg21a" value="&lt;b&gt;&lt;font style=&quot;font-size: 11px&quot; color=&quot;#19226D&quot;&gt;R15&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;spacingLeft=0;spacingRight=0;" vertex="1" parent="1">
+          <mxGeometry x="874" y="884" width="34" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="lg21b" value="&lt;b&gt;&lt;font style=&quot;font-size: 10px&quot; color=&quot;#50B848&quot;&gt;behaviour&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;spacingLeft=0;spacingRight=0;" vertex="1" parent="1">
+          <mxGeometry x="908" y="884" width="62" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="lg21c" value="&lt;font style=&quot;font-size: 11px&quot; color=&quot;#3d3d46&quot;&gt;warning output — what emits an R4 message&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;spacingLeft=0;spacingRight=0;" vertex="1" parent="1">
+          <mxGeometry x="972" y="884" width="300" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="lg22a" value="&lt;b&gt;&lt;font style=&quot;font-size: 11px&quot; color=&quot;#19226D&quot;&gt;R16&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;spacingLeft=0;spacingRight=0;" vertex="1" parent="1">
+          <mxGeometry x="874" y="906" width="34" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="lg22b" value="&lt;b&gt;&lt;font style=&quot;font-size: 10px&quot; color=&quot;#50B848&quot;&gt;behaviour&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;spacingLeft=0;spacingRight=0;" vertex="1" parent="1">
+          <mxGeometry x="908" y="906" width="62" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="lg22c" value="&lt;font style=&quot;font-size: 11px&quot; color=&quot;#3d3d46&quot;&gt;HMI layout on the AAOS node&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;spacingLeft=0;spacingRight=0;" vertex="1" parent="1">
+          <mxGeometry x="972" y="906" width="300" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="lg23a" value="&lt;b&gt;&lt;font style=&quot;font-size: 11px&quot; color=&quot;#19226D&quot;&gt;R17&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;spacingLeft=0;spacingRight=0;" vertex="1" parent="1">
+          <mxGeometry x="874" y="928" width="34" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="lg23b" value="&lt;b&gt;&lt;font style=&quot;font-size: 10px&quot; color=&quot;#50B848&quot;&gt;behaviour&lt;/font&gt;&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;spacingLeft=0;spacingRight=0;" vertex="1" parent="1">
+          <mxGeometry x="908" y="928" width="62" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="lg23c" value="&lt;font style=&quot;font-size: 11px&quot; color=&quot;#3d3d46&quot;&gt;warning view — God view of ego, B and ghost C&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;spacingLeft=0;spacingRight=0;" vertex="1" parent="1">
+          <mxGeometry x="972" y="928" width="300" height="18" as="geometry" />
+        </mxCell>
+        <mxCell id="legfoot" value="&lt;font style=&quot;font-size: 11px&quot; color=&quot;#080808&quot;&gt;ego = vehicle A, the warned car, always the frame origin (0, 0)  ·  B = the visible occluder ahead, the only vehicle A's own camera should ever detect  ·  C = the occluded car, known to A only through the relay.&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;spacingLeft=0;spacingRight=0;" vertex="1" parent="1">
+          <mxGeometry x="44" y="954" width="1240" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="e_clip_df" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;startArrow=none;startFill=0;endArrow=classic;endFill=1;strokeColor=#F37021;strokeWidth=1.8;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="428" y="156" as="sourcePoint" />
+            <mxPoint x="478" y="156" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_df_reg" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;startArrow=none;startFill=0;endArrow=classic;endFill=1;strokeColor=#034EA2;strokeWidth=1.8;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="818" y="156" as="sourcePoint" />
+            <mxPoint x="868" y="156" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_file_det" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;startArrow=none;startFill=0;endArrow=classic;endFill=1;strokeColor=#F37021;strokeWidth=1.8;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="694" y="380" as="sourcePoint" />
+            <mxPoint x="694" y="404" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_det_core" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;startArrow=none;startFill=0;endArrow=classic;endFill=1;strokeColor=#50B848;strokeWidth=1.8;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="694" y="458" as="sourcePoint" />
+            <mxPoint x="694" y="482" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_bench_br" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;startArrow=classic;startFill=1;endArrow=classic;endFill=1;strokeColor=#33B2C1;strokeWidth=1.8;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="148" y="382" as="sourcePoint" />
+            <mxPoint x="148" y="600" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_v2x_br" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;startArrow=classic;startFill=1;endArrow=classic;endFill=1;strokeColor=#034EA2;strokeWidth=1.8;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="372" y="382" as="sourcePoint" />
+            <mxPoint x="372" y="600" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_ada_br" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;startArrow=classic;startFill=1;endArrow=classic;endFill=1;strokeColor=#19226D;strokeWidth=1.8;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="620" y="564" as="sourcePoint" />
+            <mxPoint x="620" y="600" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_ivi_br" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;startArrow=classic;startFill=1;endArrow=classic;endFill=1;strokeColor=#19226D;strokeWidth=1.8;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1096" y="564" as="sourcePoint" />
+            <mxPoint x="1096" y="600" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_reg_ada" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;startArrow=none;startFill=0;endArrow=classic;endFill=1;strokeColor=#034EA2;strokeWidth=1.8;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="940" y="202" as="sourcePoint" />
+            <mxPoint x="600" y="278" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="940" y="232" />
+              <mxPoint x="600" y="232" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

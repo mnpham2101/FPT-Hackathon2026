@@ -20,7 +20,7 @@ deck: Phase 0 — Design Concepts · FPT Hackathon 2026
 
 Deck A of two — the design. The planning and execution of that design is Deck B: [phase0-task-execution-deck.html](phase0-task-execution-deck.html).
 
-Sources: [phase0_tasks.md](../../plans/phase0_tasks.md) · [milestone1.md](../../plans/milestone1.md) · [phase0-contract-freeze-hld.md](../../plans/doc/phase0-contract-freeze-hld.md) · [contracts/](../../contracts/)
+Sources: [phase0_tasks.md](../../plans/phase0_tasks.md) · [milestone1.md](../../plans/milestone1.md) · [phase0-contract-freeze-hld.md](../../deprecated/phase0-contract-freeze-hld.md) · [contracts/](../../contracts/)
 
 ---
 

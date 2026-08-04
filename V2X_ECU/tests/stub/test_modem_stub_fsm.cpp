@@ -1,4 +1,4 @@
-// R8 modem stub FSM test (subtasks 8.1.3.2 + 8.1.3.3, Phase 1 HLD D2): the
+// R8 modem stub FSM test (subtasks 8.1.3.2 + 8.1.3.3, HLD decision D2): the
 // full scripted call flow acked in order, every illegal-order call rejected
 // with its failure code and no state change, every outcome observed — plus
 // all four FAULT_PLAN values with their D2 recoveries: bounded retry-then-
@@ -93,7 +93,7 @@ class ModemStubFsmTest : public ::testing::Test {
     }
   }
 
-  RetryParams retry_{3, std::chrono::milliseconds{500}};  // HLD §6 proposal values
+  RetryParams retry_{3, std::chrono::milliseconds{500}};  // HLD §6 defaults
   std::vector<TransitionEvent> events_;
   std::vector<std::chrono::milliseconds> sleeps_;
 };

@@ -2,7 +2,7 @@
 #define V2X_ECU_PIPELINE_DEDUPER_HPP
 
 // V2X_ECU/src/pipeline/deduper.hpp — stage 3 of the R9 Rx pipeline (Phase 1
-// HLD §3 D3): duplicate drop over the key
+// HLD decision D3): duplicate drop over the key
 //   (stationId, objectId, referenceTime + measurementDeltaTime)
 // within a sliding window.
 //

@@ -1,5 +1,5 @@
 // V2X_ECU/src/pipeline/validator.cpp — profile-range checks for stage 2 of the
-// R9 Rx pipeline (Phase 1 HLD §3 D3). Bound provenance: every constant below
+// R9 Rx pipeline (HLD decision D3). Bound provenance: every constant below
 // mirrors one property of V2X_ECU/contracts/r1-cpm-content.schema.json (the
 // node-local byte-synced copy; normative home contracts/r1-cpm-profile.md §3),
 // except the F9 lower bound, which is the profile rule tightening the wire

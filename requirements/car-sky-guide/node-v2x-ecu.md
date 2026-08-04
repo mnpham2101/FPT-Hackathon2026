@@ -19,17 +19,19 @@ C++17; Vanetza ITS2 ASN.1 codec (LGPLv3, dynamic linking) behind the R7 adapter 
 ## Build & push the image
 
 ```
-docker login registry.carsky.io -u <your_carsky_username>
-docker tag v2x-ecu:latest registry.carsky.io/m1-v2x-ecu:latest
-docker push registry.carsky.io/m1-v2x-ecu:latest
+docker login registry.hackathon-2.carsky.io -u <your_carsky_username>
+docker tag v2x-ecu:latest registry.hackathon-2.carsky.io/m1-v2x-ecu:latest
+docker push registry.hackathon-2.carsky.io/m1-v2x-ecu:latest
 ```
+
+- **Registry host is `registry.hackathon-2.carsky.io`** — the host that actually serves Zot; `registry.carsky.io` does not ([zot-registry-api-key.md § Registry host caveat](zot-registry-api-key.md#registry-host-caveat-open-item-o1)). The same host must appear in the login, the tag and the `image` field below; a mismatch is the "push succeeded, node cannot pull" failure.
 
 ## Blueprint node config
 
 ```json
 {
   "container": {
-    "image": "registry.carsky.io/m1-v2x-ecu:latest",
+    "image": "registry.hackathon-2.carsky.io/m1-v2x-ecu:latest",
     "command": ["./entrypoint.sh"],
     "capabilities": ["NET_RAW"],
     "env": {
@@ -44,7 +46,7 @@ docker push registry.carsky.io/m1-v2x-ecu:latest
 
 `command` is the entrypoint that starts the tcpdump capture sidecar in the background and the ECU app in the foreground; `capabilities: ["NET_RAW"]` (flat in `config`, verified shape per [blueprint-KIS.json](../development-platform-doc/blueprint-KIS.json)) lets tcpdump open raw sockets — capture procedure and retrieval: [traffic-capture-wireshark.md](traffic-capture-wireshark.md).
 
-`LISTEN_PORT` is where the R7 modem-stub UDP channel accepts bench-originated CPMs; `ADA_ECU_HOST`/`ADA_ECU_PORT` target the ADA ECU's static address for R2 forwarding; `FAULT_PLAN` selects the R8 fault-injection scenario (`none · init_fail · configure_reject · subscription_drop`). Optional overrides (defaults + meanings in the [Phase 1 HLD §6](../../V2X_ECU/doc/phase1-v2x-ecu-comms-hld.md)): `INIT_RETRY_MAX`, `RETRY_BACKOFF_MS`, `DEDUPE_WINDOW_MS`, `EVENT_LOG_PATH`, `CAPTURE_FILTER`, `PCAP_DIR`, `CAPTURE_ROTATE_S`. All read from env, never hardcoded (CLAUDE.md governing principle 5).
+`LISTEN_PORT` is where the R7 modem-stub UDP channel accepts bench-originated CPMs; `ADA_ECU_HOST`/`ADA_ECU_PORT` target the ADA ECU's static address for R2 forwarding; `FAULT_PLAN` selects the R8 fault-injection scenario (`none · init_fail · configure_reject · subscription_drop`). Optional overrides (defaults + meanings in the [HLD §6](../../V2X_ECU/doc/v2x-ecu-hld.md#6-internal-components)): `INIT_RETRY_MAX`, `RETRY_BACKOFF_MS`, `DEDUPE_WINDOW_MS`, `EVENT_LOG_PATH`, `CAPTURE_FILTER`, `PCAP_DIR`, `CAPTURE_ROTATE_S`. All read from env, never hardcoded (CLAUDE.md governing principle 5).
 
 ## Pins
 

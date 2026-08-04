@@ -1,4 +1,4 @@
-@startuml
+@startuml video-source-flow
 title R12 video input — frame-to-track flow (M1)
 
 |User / FPT-Mentor|
@@ -35,5 +35,22 @@ repeat while (frames remaining?) is (yes)
 :Compose the scene with relayed C and emit R4 warnings;
 :Assert zero detections labeled C over the whole run;
 stop
+
+legend right
+  <b>Legend — R-numbers are requirement IDs from the report §2, not a message namespace.</b>
+  <b>R1–R6</b> are //contract// requirements (deliverable = a schema or a topology); <b>R7–R19</b> are
+  //behavioural// requirements (deliverable = running code). "An R3 object" names the artifact R3 defines.
+  ====
+  |= ID |= Kind |= Meaning on this flow |
+  | R3 | contract | <b>TrackedObject</b> schema — the JSONL line the detector emits per detection |
+  | R4 | contract | ADA → IVI warning message composed by the core |
+  | R12 | behaviour | object detection from video — the detector-subprocess lane |
+  | R13 | behaviour | admission state machine: `not_tracked → tentative → tracked` for own-sensor objects |
+  ====
+  <b>ego / B / C.</b> ego = vehicle A, the warned car · B = the visible occluder ahead, the only vehicle
+  A's own camera should ever detect · C = the occluded car, known to A only through the V2X relay.
+  <b>`source`.</b> `own_sensor` = seen by A's camera · `v2x_relayed` = received over V2X — never mixed,
+  which is what the zero-C assertion checks.
+endlegend
 
 @enduml

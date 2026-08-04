@@ -1,0 +1,99 @@
+@startuml phase5-ivi-callflow
+' Phase 5 call flow: an R4 datagram becomes a rendered God View (R4, R16, R17).
+' Companion of ivi-ecu-hld.md. Fidelity = what Phase 5 actually builds:
+' the producer is the R4 simulator; Phase 6 swaps it for the real ADA ECU
+' without changing anything to its right.
+
+title R4 warning: simulator/ADA -> UDP -> observer -> serializer -> view-model -> God View
+
+skinparam sequenceMessageAlign left
+skinparam shadowing false
+
+participant "R4 Simulator\n(ADA node, Phase 6: real ADA)" as SIM
+participant "R4ListenerService\n(:app, foreground)" as SVC
+participant "JdkDatagramSource\n(:observer)" as SRC
+participant "R4SocketObserver\n(:observer)" as OBS
+participant "R4Deserializer\n(:serializer)" as DEC
+participant "R4Repository\n(:app data)" as REPO
+participant "WarningViewModel\n(:app ui logic)" as WVM
+participant "MainViewModel\n(:app ui logic)" as MVM
+participant "MainScreen +\nCanvasWarningView (:app ui)" as UI
+
+== Startup ==
+
+SVC -> SVC : startForeground(notification)
+SVC -> OBS : start(appScope)
+OBS -> SRC : bind(0.0.0.0, config.port)
+SRC --> OBS : bound
+OBS -> OBS : linkState = Bound
+REPO -> OBS : collect(events) on appScope
+UI -> MVM : collectAsState(currentMode)
+UI -> WVM : collectAsState(uiWarningState)
+
+== Nominal warning (R17 acceptance) ==
+
+SIM -> SRC : UDP datagram\n{"schemaVersion":1,"type":"warning",...}
+note right of SIM
+  Payload built from the frozen
+  contracts/samples/r4-warning.json,
+  geometry/risk overwritten per scenario
+end note
+
+SRC -> SRC : packet.setLength(buffer.size)\nbefore every receive()
+SRC --> OBS : Received(buffer, offset, length)
+OBS -> OBS : length == buffer.size ?\n-> log truncation-suspect
+OBS -> DEC : decode(buffer, offset, length)
+DEC -> DEC : slice offset..offset+length\nstrip BOM + whitespace, UTF-8
+DEC -> DEC : R4Json.decodeFromString(R4Message.serializer())
+DEC --> OBS : Decoded(R4WarningEvent, schemaVersionAhead=false)
+OBS -> OBS : log [RX] type=warning bytes=452\nwarningType=... risk=... cSource=v2x_relayed
+OBS -> REPO : emit R4Event.Message  (SharedFlow, DROP_OLDEST)
+REPO -> REPO : lastWarning = event
+REPO -> WVM : warningEvents
+WVM -> WVM : classify(warningType) -> presentation\n(unknown -> generic, value preserved)
+WVM -> WVM : uiWarningState = Active(scene, riskState)\narm timeout(WARNING_TIMEOUT_MS)
+WVM -> MVM : Active
+MVM -> MVM : previousMode = currentMode\ncurrentMode = WarningView
+MVM --> UI : recompose (AnimatedContent)
+UI -> UI : IviWarningViewSeam.Render(scene, riskState)
+UI -> UI : SceneCoordinateMapper.mapScene(scale from config)
+UI -> UI : source guard: snapshot.source == v2x_relayed ?\nghost C : yellow [?] + log ERROR
+
+== Malformed / unknown-type datagram (receive loop survives) ==
+
+SIM -> SRC : truncated or non-JSON bytes
+SRC --> OBS : Received(...)
+OBS -> DEC : decode(...)
+DEC --> OBS : Failed(MALFORMED, detail, bounded preview)
+OBS -> OBS : log [DROP] reason=malformed preview="..."
+OBS -> REPO : emit R4Event.Dropped
+note right of OBS : loop continues; no throw crosses the loop
+REPO -> MVM : link/status counters (bottom status bar only)
+
+== Socket error -> rebind with back-off ==
+
+SRC --> OBS : SocketException
+OBS -> OBS : linkState = Rebinding\ndelay = min(delay * 2, retryMaxMs)
+OBS -> SRC : close(); bind(...) retry
+SRC --> OBS : bound
+OBS -> OBS : linkState = Bound; reset back-off
+
+== No further message -> timeout -> restore (R16) ==
+
+WVM -> WVM : timeout elapsed, no new warning
+WVM -> WVM : uiWarningState = Idle
+WVM -> MVM : Idle
+MVM -> MVM : userOverrodeDuringWarning ?\nkeep user's mode : restore previousMode
+MVM --> UI : recompose
+
+== Dev injector (I3, debug build only) ==
+
+actor "adb broadcast\nDEV_INJECT" as ADB
+ADB -> REPO : DevInjectorReceiver decodes a bundled sample\nand emits the same R4Event.Message
+note right of ADB
+  Joins downstream of the socket, upstream of
+  everything else -> same path as a real datagram.
+  Absent from the release build by source set.
+end note
+
+@enduml

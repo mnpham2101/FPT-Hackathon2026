@@ -1,0 +1,65 @@
+@startuml m1-video-source-flow
+title Video source lifecycle — from a clip on disk to R19 evidence
+
+skinparam shadowing false
+skinparam defaultTextAlignment left
+
+|User|
+start
+:Source one ego-POV clip: B ahead and occluding, C never visible in any frame;
+:Re-encode: ffmpeg -c:v libx264 -vf scale=1280:720 -r 20 -an -movflags +faststart;
+:Verify with ffprobe against the input spec, then commit it once to ADA_ECU/media/;
+
+|CI / build|
+:docker buildx build --platform linux/arm64 --provenance=false --sbom=false;
+:COPY media/ is its own early layer, so an unchanged clip is never re-uploaded;
+:docker push to registry.hackathon-2.carsky.io/m1-ada-ecu:latest;
+
+|CarSky platform|
+:Deploy the blueprint; the ADA node pulls the image;
+:Deployment Viewer reports every node Running (R5);
+
+|ADA ECU|
+:Detector opens VIDEO_CLIP_PATH through the FrameSource seam (OpenCV VideoCapture);
+:Sample every DETECTOR_FRAME_STRIDE-th frame — 5 Hz effective at stride 4;
+:YOLO11n ONNX CPU inference; pinhole known-width distance for B;
+:Emit R3 TrackedObject JSONL on stdout with source = own_sensor;
+:Core admits B via R13, fuses relayed C from R2, emits R4 to the IVI (R15);
+
+|IVI ECU|
+:Render the R17 warning view — ego, B, ghost C — from R4 alone;
+if (dashcam view accepted as additive, timeboxed scope?) then (yes)
+  :Media3 plays the same clip from DASHCAM_MEDIA_URI behind the warning overlay;
+  :Detector switches to real-time pacing so the picture and the warnings do not drift;
+else (no — M1 committed scope)
+  :Display area shows the warning view only;
+endif
+
+|Evidence|
+:check_zero_c.py confirms zero entries labelled C across the whole detection log;
+:pcap of ADA -> IVI UDP corroborates the R4 chain (R15, R19);
+:One continuous recorded run closes R19;
+stop
+
+legend right
+  <b>Legend — R-numbers are requirement IDs from the report §2, not a message namespace.</b>
+  <b>R1–R6</b> are //contract// requirements (deliverable = a schema or a topology), so
+  "an R3 object" or "the R4 warning" names the artifact that requirement defines.
+  <b>R7–R19</b> are //behavioural// requirements (deliverable = running code).
+  ====
+  |= ID |= Kind |= Meaning on this flow |
+  | R2 | contract | V2X ECU → ADA object message — the relayed C the core fuses in |
+  | R3 | contract | <b>TrackedObject</b> schema — the JSONL shape the detector emits, `source = own_sensor` |
+  | R4 | contract | ADA → IVI warning message the core sends and the IVI renders |
+  | R5 | contract | node deployment — "every node Running" is R5's acceptance check |
+  | R12 | behaviour | object detection from video — the whole detector lane |
+  | R13 | behaviour | admission state machine that promotes B into a tracked object |
+  | R15 | behaviour | the emitter of R4 — edge-triggered on a risk transition |
+  | R17 | behaviour | the IVI warning view: ego, B, ghost C |
+  | R19 | behaviour | definition of done — one continuous run, zero direct C detections |
+  ====
+  <b>ego / B / C.</b> ego = vehicle A, the warned car · B = the visible occluder ahead · C = the occluded
+  car A can never see. <b>Zero-C check</b> = R19's evidence that C never appeared to A's own camera.
+endlegend
+
+@enduml

@@ -1,0 +1,3 @@
+# Binary assets - no diffing, no line-ending translation
+*.mp4 binary
+*.onnx binary

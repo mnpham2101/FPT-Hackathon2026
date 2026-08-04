@@ -22,6 +22,7 @@ All other markdown under [requirements/](requirements/) predating 2026-07-23 is 
 3. **Scope discipline.** §1 of the report + its §4 decision record are the hard boundary. BTC's P1 chain is the committed demo; P2/P3 layers are additive and timeboxed, never gating. Flag, don't silently absorb, anything that needs a deferred item or an unratified decision.
 4. **Atomic, traceable work.** Every task/subtask maps to a requirement via task ID `X.Y.Z.W`, has a single objective, one atomic commit, and passes build + unit tests before "done". Full rule: [.claude/rules/task-planning-conventions.md](.claude/rules/task-planning-conventions.md).
 5. **No hardcoded tunables.** Gate constants, thresholds, cadences, scenario parameters — externalized configuration, never literals (report KPIs enforce this by lint).
+6. **Read on demand.** A referenced document is read when the task actually needs it, not because a spec names it. Plan a phase with no deployment work and the deploy guides stay unread; write a report and the walkthrough format is irrelevant. Specs list what is *available*; the prompt and the work decide what is *opened*.
 
 ## Roles (non-overlapping)
 
@@ -29,19 +30,24 @@ Working order: **project-researcher → project-architecture → project-planner
 
 | Agent | Owns | Does not do |
 |---|---|---|
-| [project-researcher](.claude/agents/project-researcher.md) | Requirements, feasibility, tech-stack selection | Architecture, task breakdown, code |
+| [project-researcher](.claude/agents/project-researcher.md) | Requirements, feasibility, tech-stack selection, the `*-walkthrough.md` human procedures | Architecture, task breakdown, code |
 | [project-architecture](.claude/agents/project-architecture.md) | HLD, folder structure, dependency/toolchain config, subagent definitions | Requirements research, task decomposition, implementation |
 | [project-planner](.claude/agents/project-planner.md) | Phase/task/subtask plans with `X.Y.Z.W` IDs, subagent spawning, completion tracking | Requirements research, architecture, direct implementation |
+| [car-sky](.claude/agents/car-sky.md) | Executing deploys on the platform, Room diagnostics, acceptance evidence | Authoring any document, product code |
+
+[requirements/car-sky-guide/](requirements/car-sky-guide/) holds two kinds of file, split by artifact rather than by folder. The **reference** files (`node-*.md`, blueprint and REST references — what the platform and each node *are*) are **unowned**: any agent that establishes a platform or node fact records it there, and no edit waits on another agent. Researcher owns `*-walkthrough.md` (the procedure a human *follows*) and is the only agent that writes one.
+
+**Test, verification and deployment run one fixed workflow** — researcher writes the `*-walkthrough.md`, planner decomposes tasks from it, car-sky executes its AI-marked steps: [.claude/rules/walkthrough-driven-delivery.md](.claude/rules/walkthrough-driven-delivery.md). No stage starts from the raw platform, and no stage may be skipped.
 
 ## Repository layout
 
-- **Code: one top-level folder per R5 node** — [Scenario_Player/](Scenario_Player/) (bench, R11) · [V2X_ECU/](V2X_ECU/) (R1, R7–R9; R10 deferred to a future milestone) · [ADA_ECU/](ADA_ECU/) (R3, R12–R15) · [IVI_ECU/](IVI_ECU/) (R4, R16–R17). Languages, build artifacts, and the self-contained-folder rules: [.claude/rules/node-code-layout.md](.claude/rules/node-code-layout.md); per-node deploy steps: [requirements/car-sky-guide/](requirements/car-sky-guide/).
+- **Code: one top-level folder per R5 node** — [Scenario_Player/](Scenario_Player/) (bench, R11) · [V2X_ECU/](V2X_ECU/) (R1, R7–R9; R10 deferred to a future milestone) · [ADA_ECU/](ADA_ECU/) (R3, R12–R15) · [IVI_ECU/](IVI_ECU/) (R4, R16–R17). Languages, build artifacts, and the self-contained-folder rules: [.claude/rules/node-code-layout.md](.claude/rules/node-code-layout.md); per-node deploy steps: [requirements/car-sky-guide/](requirements/car-sky-guide/) — within it, [deploy-ivi-hmi-walkthrough.md](requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md) is **authoritative for the IVI APK's build, export, install, launch and verification**; follow it rather than improvising a route.
 - [requirements/](requirements/) — researcher reports ([format](.claude/rules/research-report-format.md)); `m1-cooperative-awareness.md` is the live one; [future/m1-future-features-register.md](requirements/future/m1-future-features-register.md) mirrors its § Future developments ([Vietnamese translation](requirements/future/m1-future-features-register.vi.md) — non-authoritative; the English register wins on conflict, and changes land there first).
 - [plans/](plans/) — implementation plans; [milestone1.md](plans/milestone1.md) is the active plan: project-planner decomposes all tasks/subtasks from its phases (the `Y` segment of task IDs) and phase acceptance criteria.
-- [.claude/rules/](.claude/rules/) — standing process rules (task planning, report format, requirement quality, solution selection, HLD format).
-- [.claude/skills/](.claude/skills/) — reusable procedures (requirement analysis, HLD, environment research, markdown style).
-- [.claude/agents/](.claude/agents/) — the three agent specs. [.claude/prompts/](.claude/prompts/) — saved prompts + debate scratchpads. [.claude/references/](.claude/references/) — cached external evidence.
-- **`doc/` inside each work folder** — [plans/doc/](plans/doc/) and the four node folders' `doc/` ([Scenario_Player/doc/](Scenario_Player/doc/), `V2X_ECU/doc/`, `ADA_ECU/doc/`, `IVI_ECU/doc/`) hold report-style documents on that folder's design and rationale (HLDs, design notes, `doc/research_notes/` findings and diagrams). Agents read the target folder's `doc/` as context before working in it, and add their design/rationale write-ups there — rules in [.claude/rules/node-code-layout.md](.claude/rules/node-code-layout.md#per-folder-doc).
+- [.claude/rules/](.claude/rules/) — standing process rules (task planning, report format, requirement quality, solution selection, HLD format, walkthrough-driven delivery, reasoning visibility).
+- [.claude/skills/](.claude/skills/) — reusable procedures (requirement analysis, HLD, environment research, walkthrough authoring, markdown style).
+- [.claude/agents/](.claude/agents/) — the four agent specs. [.claude/prompts/](.claude/prompts/) — saved prompts + debate scratchpads. `.claude/references/` — cached external evidence, created when the first cache file lands.
+- **`doc/` inside each work folder** — [plans/doc/](plans/doc/) and the four node folders' `doc/` ([Scenario_Player/doc/](Scenario_Player/doc/), `V2X_ECU/doc/`, `ADA_ECU/doc/`, `IVI_ECU/doc/`) hold report-style documents on that folder's design and rationale (HLDs, design notes, `doc/research_notes/` findings and diagrams). Agents read the target folder's `doc/` as context before working in it, and add their design/rationale write-ups there — rules in [.claude/rules/node-code-layout.md](.claude/rules/node-code-layout.md#per-folder-doc). **Each node folder carries exactly one HLD**, `doc/<node-slug>-hld.md`, and it is that node's sole design authority — the mandatory section structure and the worked example, [IVI_ECU/doc/ivi-ecu-hld.md](IVI_ECU/doc/ivi-ecu-hld.md), are in [.claude/rules/hld-content-and-commit-format.md](.claude/rules/hld-content-and-commit-format.md).
 
 ## Commit & task discipline
 

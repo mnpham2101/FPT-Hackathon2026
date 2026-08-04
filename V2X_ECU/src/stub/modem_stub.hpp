@@ -2,7 +2,7 @@
 #define V2X_ECU_STUB_MODEM_STUB_HPP
 
 // V2X_ECU/src/stub/modem_stub.hpp — the R8 modem stub FSM (subtasks 8.1.3.2 +
-// 8.1.3.3, Phase 1 HLD D2): idle → initialized → configured → rx-subscribed,
+// 8.1.3.3, HLD decision D2): idle → initialized → configured → rx-subscribed,
 // acking each call with the seam's RadioResult, plus config-driven fault
 // injection with the D2 recovery table — each injected fault produces a
 // defined, observable recovery.

@@ -1,5 +1,5 @@
 // V2X_ECU/src/stub/modem_stub.cpp — R8 FSM transitions (8.1.3.2) + fault
-// injection with the D2 recovery table (8.1.3.3, Phase 1 HLD D2). Semantics
+// injection with the D2 recovery table (8.1.3.3, HLD decision D2). Semantics
 // documented in the header; every fault path here mirrors one D2 recovery row.
 
 #include "stub/modem_stub.hpp"

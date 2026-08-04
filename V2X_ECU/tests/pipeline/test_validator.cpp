@@ -1,5 +1,5 @@
 // Profile-validator test (subtask 9.1.4.1) — stage 2 of the R9 Rx pipeline
-// (Phase 1 HLD §3 D3).
+// (HLD decision D3).
 //
 // Two halves:
 //   1. The frozen golden corpus (tests/fixtures/golden/*.json, byte-synced

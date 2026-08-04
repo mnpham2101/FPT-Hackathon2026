@@ -1,0 +1,90 @@
+@startuml v2x-ecu-components
+' V2X ECU component map - source for v2x-ecu-hld.md section 3.
+' Dashed open arrow is a use dependency; a hollow triangle is realization;
+' a lollipop meeting a socket is a seam.
+
+title V2X ECU module map - R7-R9, R18; R1 consumer, R2 producer
+
+skinparam componentStyle rectangle
+skinparam shadowing false
+skinparam defaultTextAlignment center
+
+cloud "Bench - Scenario Player\n10.99.0.10\n(UPER CPM over UDP)" as BENCH
+cloud "ADA ECU\n10.99.0.12:47200\n(R2 JSON over UDP)" as ADA
+artifact "blueprint node config\nenv set (HLD section 6)" as ENV
+file "CarSky View Log\n[EVT] . [CAP] . [PCAP-...]" as VIEWLOG
+
+package "m1-v2x-ecu:latest - one image, two processes" {
+
+  component "capture.sh\ntcpdump x2, pcap base64 export" as CAP
+
+  package "v2x_ecu - C++17" as APP {
+
+    component "main\ncomposition root" as MAIN
+    component "config\nsole env reader" as CFG
+
+    interface "IRadioAdapter" as IRADIO
+    component "stub_radio_adapter\nRx socket + Rx thread" as ADAPTER
+    component "modem_stub\nR8 FSM + fault plans" as STUB
+
+    component "rx_pipeline\none datagram in, one R2 out" as PIPE
+    component "validator\nprofile ranges, F9" as VAL
+    component "deduper\nsliding window" as DED
+    component "r2_builder\nF1 . F6 . F7 derivations" as BUILD
+
+    interface "ICpmCodec" as ICODEC
+    component "vanetza_cpm_codec\nvanetza::asn1::r2::Cpm" as VCODEC
+
+    component "codec/cpm_codec\nCpmContent" as CC
+    component "contracts/r2_message\nR2Message" as R2M
+
+    component "forward/ada_forwarder\nR2 JSON tx" as FWD
+    component "net/udp_socket\nsole socket-API holder" as NET
+    component "log/event_log\n[EVT] JSONL + stage counters" as LOG
+  }
+}
+
+ENV -down-> CFG
+CFG -down-> MAIN
+
+MAIN -down-> IRADIO
+ADAPTER .up.|> IRADIO
+ADAPTER -right-> STUB : "init / configure / subscribeRx"
+ADAPTER -down-> NET : "bind LISTEN_PORT"
+BENCH -down-> NET : "one UPER CPM per datagram"
+
+ADAPTER -down-> PIPE : "RxCallback(bytes)"
+PIPE -down-> ICODEC : "decode(bytes)"
+VCODEC .up.|> ICODEC
+VCODEC -right-> CC
+PIPE -right-> VAL
+PIPE -right-> DED
+PIPE -down-> BUILD
+BUILD -right-> R2M
+PIPE -down-> FWD : "R2Sink(R2Message)"
+FWD -down-> NET : "sendTo"
+NET -down-> ADA : "one R2 JSON per datagram"
+
+PIPE -left-> LOG
+STUB -left-> LOG : "TransitionObserver"
+LOG -down-> VIEWLOG
+CAP -down-> VIEWLOG
+
+note right of NET
+  The only translation unit that includes a
+  transport header. tools/check_transport_imports.py
+  fails the build for any other file that does.
+end note
+
+note bottom of CC
+  Wire-native integers. The codec is a pure
+  representation transform - every SI conversion
+  and derivation happens above it, in r2_builder.
+end note
+
+note left of CAP
+  Runs beside the app, not under it: capture is
+  evidence, and its death never takes the node down.
+end note
+
+@enduml

@@ -1,22 +1,22 @@
 # Phase 0 HLD — Contract Freeze (R1–R6)
 
-> High-level design for [milestone1.md § Phase 0](../milestone1.md#phase-0--freeze-the-contracts-r1r6), per [hld-content-and-commit-format.md](../../.claude/rules/hld-content-and-commit-format.md). Requirement definitions, field tables, and tech stacks live in [m1-cooperative-awareness.md](../../requirements/m1-cooperative-awareness.md) §2 Contracts and §3 — referenced, never restated. Call-flow source: [phase0-contract-freeze-call-flow.puml](phase0-contract-freeze-call-flow.puml).
+> High-level design for [milestone1.md § Phase 0](../plans/milestone1.md#phase-0--freeze-the-contracts-r1r6), per [hld-content-and-commit-format.md](../.claude/rules/hld-content-and-commit-format.md). Requirement definitions, field tables, and tech stacks live in [m1-cooperative-awareness.md](../requirements/m1-cooperative-awareness.md) §2 Contracts and §3 — referenced, never restated. Call-flow source: [phase0-contract-freeze-call-flow.puml](phase0-contract-freeze-call-flow.puml).
 >
-> **Location note:** this HLD is cross-cutting (all four nodes), so it lives in `plans/doc/` per [node-code-layout.md § Per-folder doc/](../../.claude/rules/node-code-layout.md#per-folder-doc); later node-scoped HLDs (R11 bench, Phase 2 ADA) land in their own node's `doc/`.
+> **Location note:** this HLD is cross-cutting (all four nodes), so it lives in `plans/doc/` per [node-code-layout.md § Per-folder doc/](../.claude/rules/node-code-layout.md#per-folder-doc); later node-scoped HLDs (R11 bench, Phase 2 ADA) land in their own node's `doc/`.
 >
 > **Approval status:** all designations below are inside sanctioned locations (the four node folders, `plans/doc/`, the user-endorsed `tools/netcheck/`) except D1's contract source-of-truth folder `contracts/` — **approved by the user 2026-07-30** (top-level `contracts/`, the primary proposal; §3 D1, §11 item 0).
 
 ## 1. Scope
 
 - Freeze the cross-track contracts before dependent work: R1 CPM profile document + golden vectors through the Vanetza codec seam; R2/R3/R4 schema files + per-language bindings + round-trip tests + the R4 additive-version test; R5/R6 validated live by the baseline-blueprint connectivity smoke test.
-- R5/R6 topology is **already documented and live** — [carsky-4-node-blueprint.md](../../requirements/car-sky-guide/carsky-4-node-blueprint.md) + [blueprint-m1-cooperative-awareness.json](../../requirements/car-sky-guide/blueprint-m1-cooperative-awareness.json), saved on CarSky as `trial2_minh`. Phase 0 adds no topology design; it proves the deployed shape (§6).
+- R5/R6 topology is **already documented and live** — [carsky-4-node-blueprint.md](../requirements/car-sky-guide/carsky-4-node-blueprint.md) + [blueprint-m1-cooperative-awareness.json](../requirements/car-sky-guide/blueprint-m1-cooperative-awareness.json), saved on CarSky as `trial2_minh`. Phase 0 adds no topology design; it proves the deployed shape (§6).
 
 ## 2. Sourced research notes
 
 | Note | Adopted |
 |---|---|
-| [baseline-connectivity-smoke-test.md](research_notes/baseline-connectivity-smoke-test.md) | **Wholesale, as the Phase 0 smoke-test procedure**: objective, pass criteria C1–C5, `tools/netcheck/` implementation (4 files, contents included), manual steps M1–M12 + node config, troubleshooting, open items O1–O4. Its `tools/netcheck/` repo-root designation is user-endorsed (2026-07-30) — recorded here as an approved location. Nothing re-derived in this HLD. |
-| [scenario-player-v2x-callflow-messages.md](../../Scenario_Player/doc/research_notes/scenario-player-v2x-callflow-messages.md) | §4 CPM structure + R1→ASN.1 field mapping as the skeleton of the R1 profile document; findings F1–F2 and F5–F9 + the velocity-frame ambiguity resolved as profile conventions (§4 below). F3 (bench Python→codec path) stays open for the R11 HLD. |
+| [baseline-connectivity-smoke-test.md](../plans/doc/research_notes/baseline-connectivity-smoke-test.md) | **Wholesale, as the Phase 0 smoke-test procedure**: objective, pass criteria C1–C5, `tools/netcheck/` implementation (4 files, contents included), manual steps M1–M12 + node config, troubleshooting, open items O1–O4. Its `tools/netcheck/` repo-root designation is user-endorsed (2026-07-30) — recorded here as an approved location. Nothing re-derived in this HLD. |
+| [scenario-player-v2x-callflow-messages.md](../Scenario_Player/doc/research_notes/scenario-player-v2x-callflow-messages.md) | §4 CPM structure + R1→ASN.1 field mapping as the skeleton of the R1 profile document; findings F1–F2 and F5–F9 + the velocity-frame ambiguity resolved as profile conventions (§4 below). F3 (bench Python→codec path) stays open for the R11 HLD. |
 
 Notes are non-authoritative scratch; on any conflict the CLAUDE.md document-authority order wins.
 
@@ -25,7 +25,7 @@ Notes are non-authoritative scratch; on any conflict the CLAUDE.md document-auth
 ### D1 — Contract source of truth: top-level `contracts/` — **approved by user 2026-07-30**
 
 - All shared contract artifacts (R1 profile doc, R1 logical-content schema, R2/R3/R4 JSON Schemas, shared sample messages, golden vectors, sync manifest + check script) live in one folder that freezes and re-freezes as a unit: **`contracts/` at the repo root** (full tree in §5) — user-approved 2026-07-30 over the `requirements/contracts/` alternative.
-- **Why no sanctioned location fits:** these are machine-consumed artifacts shared by all four nodes — `doc/` subfolders are documentation-only ([node-code-layout.md](../../.claude/rules/node-code-layout.md#per-folder-doc)), no single node folder may own them (self-contained folders, no cross-node reads), and `plans/` holds plans. A shared artifact needed by two nodes is a *contract deliverable* (node-code-layout § Build rules) — this folder is where contract deliverables live.
+- **Why no sanctioned location fits:** these are machine-consumed artifacts shared by all four nodes — `doc/` subfolders are documentation-only ([node-code-layout.md](../.claude/rules/node-code-layout.md#per-folder-doc)), no single node folder may own them (self-contained folders, no cross-node reads), and `plans/` holds plans. A shared artifact needed by two nodes is a *contract deliverable* (node-code-layout § Build rules) — this folder is where contract deliverables live.
 - **Why top-level `contracts/`:** makes the frozen set maximally visible (contract-first, CLAUDE.md governing principle 1), keeps executable check code out of `requirements/`, and gives any future re-freeze one location + one commit. **Alternative if declined:** `requirements/contracts/` — precedent for JSON artifacts exists there (`car-sky-guide/*.json`), at the cost of placing `check_sync.py` (code) in the authority tree.
 - **Access model — copies + sync check, never cross-folder reads.** Each node folder is a self-contained Docker build context, so no node build or test reads `contracts/` at build time. Every consumer node checks in a **verbatim copy** of the schemas/fixtures it consumes (copy map in §5); `contracts/check_sync.py` walks `sync-manifest.json` and fails on any byte difference — run locally and as the CI contract-integrity gate.
 - **Binding code is per-node and handwritten**, not a synced artifact — the schema is the shared contract deliverable; wire compatibility across per-node bindings is enforced by the byte-synced shared sample fixtures parsed in every consumer's round-trip test.
@@ -53,7 +53,7 @@ Notes are non-authoritative scratch; on any conflict the CLAUDE.md document-auth
 
 ## 4. R1 profile conventions (adopted from the callflow note's findings)
 
-The R1 profile document `contracts/r1-cpm-profile.md` fixes these conventions — one line each here; full reasoning in the [note §6](../../Scenario_Player/doc/research_notes/scenario-player-v2x-callflow-messages.md):
+The R1 profile document `contracts/r1-cpm-profile.md` fixes these conventions — one line each here; full reasoning in the [note §6](../Scenario_Player/doc/research_notes/scenario-player-v2x-callflow-messages.md):
 
 | Finding | Convention frozen in the profile doc |
 |---|---|
@@ -152,7 +152,7 @@ tools/netcheck/                                 # exactly the 4 files specified 
 
 ## 6. R5/R6 smoke test
 
-- Procedure, pass criteria (C1–C5), tool implementation, node config, manual steps (M1–M12), and troubleshooting: **adopted unchanged from [baseline-connectivity-smoke-test.md](research_notes/baseline-connectivity-smoke-test.md)** — no additional design in this HLD, and no separate diagram (the note is complete).
+- Procedure, pass criteria (C1–C5), tool implementation, node config, manual steps (M1–M12), and troubleshooting: **adopted unchanged from [baseline-connectivity-smoke-test.md](../plans/doc/research_notes/baseline-connectivity-smoke-test.md)** — no additional design in this HLD, and no separate diagram (the note is complete).
 - **Startup self-run guarantee (user requirement, 2026-07-31):** on each Linux container node (bench, V2X, ADA), the image entrypoint invokes the test programs automatically at node start — `entrypoint.sh` launches `capture.sh` in the background and `netcheck.py` in the foreground, roles/ports wired purely by node-config env (note §4–§6). No manual exec, no interactive session: **node start ⇒ scripts self-run ⇒ C1–C5 observable in each node's View Log** — a Room deploy alone yields the pass evidence that traffic flows smoothly between the nodes. This is a testable acceptance statement, not an implication: any smoke-test run that needs a manual script invocation fails it.
 - **IVI hop coverage:** the AAOS Skycraft node cannot run the scripts (note §7); hop 3 (ADA → IVI) evidence uses one of the note §7 options — ADB Shell `nc -u -l` listener, ADA-side `[TX]` + `[CAP]` capture evidence, or the real R4 listener once built — and the run records which option was used.
 - Acceptance mapping: C1–C5 green on blueprint `trial2_minh` closes Phase 0's "blueprint topology documented + validated" box; the topology documents themselves pre-exist (§1).
@@ -174,7 +174,7 @@ public:
 // Sole implementation: VanetzaCpmCodec (vanetza::asn1::r2::Cpm only — F2). Consumers: gv_tool (Phase 0), R9 decode (Phase 1), R11 encode (path open, §11), R10 encode (deferred).
 ```
 
-`CpmContent` fields follow the [callflow note §4.2 mapping](../../Scenario_Player/doc/research_notes/scenario-player-v2x-callflow-messages.md) exactly — the profile doc is their normative home.
+`CpmContent` fields follow the [callflow note §4.2 mapping](../Scenario_Player/doc/research_notes/scenario-player-v2x-callflow-messages.md) exactly — the profile doc is their normative home.
 
 ## 8. Tech stack
 
@@ -206,15 +206,15 @@ Traceable to the report §3 (per-track stacks) and per-requirement tech-stack li
 | # | Item | Owner / closes at |
 |---|---|---|
 | 0 | **D1 location approval — closed 2026-07-30:** the user approved top-level `contracts/` (primary proposal; `requirements/contracts/` alternative declined). Kept for traceability. | closed (user) |
-| 1 | **Bench Python → R1 codec path** (binding, helper subprocess, or pre-encoded vectors) — standing open item in [node-code-layout.md](../../.claude/rules/node-code-layout.md#scenario_player-specifics-r11); candidates ranked in callflow note F3. Restated open — **decided in the R11 HLD, not here.** | project-architecture, R11 HLD |
+| 1 | **Bench Python → R1 codec path** (binding, helper subprocess, or pre-encoded vectors) — standing open item in [node-code-layout.md](../.claude/rules/node-code-layout.md#scenario_player-specifics-r11); candidates ranked in callflow note F3. Restated open — **decided in the R11 HLD, not here.** | project-architecture, R11 HLD |
 | 2 | Smoke-test open items **O1–O4** (registry host · `capabilities` honored · bridge MTU → feeds the CPM size budget · AAOS `nc`) | the note's M-steps; O3 feeds `coord-large`/size checks |
 | 3 | **Report erratum flag (not absorbed):** R2 sample `distance: 25.4` ≠ `hypot(25.0, 1.2) = 25.03` (F7). Profile doc + samples use the derived value; report patch is researcher's. | project-researcher |
 | 4 | **Report erratum flag:** R2 `sender.speed` has no CPM r2 source field (F1) — schema marks it nullable + derived; report wording patch is researcher's. | project-researcher |
-| 5 | **Coordination:** the IVI R4 binding + tests overlap existing phase5 subtasks `4.5.1.1`/`4.5.1.2` ([phase5_tasks.md](../phase5_tasks.md)). Planner reconciles ownership — no duplicate decomposition. | project-planner |
+| 5 | **Coordination:** the IVI R4 binding + tests overlap Phase 5's IVI contract layer. Planner reconciles ownership — no duplicate decomposition; the split is [phase0_tasks.md § IVI deliverable ownership split](../plans/phase0_tasks.md#ivi-deliverable-ownership-split-hld-11-item-5). | project-planner |
 
 ## 12. Phase 0 acceptance traceability
 
-| [Phase 0 acceptance](../milestone1.md#phase-0--freeze-the-contracts-r1r6) | Closed by |
+| [Phase 0 acceptance](../plans/milestone1.md#phase-0--freeze-the-contracts-r1r6) | Closed by |
 |---|---|
 | R1 profile committed; golden vectors encode/decode through the Vanetza seam | `r1-cpm-profile.md` + `gv_tool` + `test_cpm_golden_vectors.cpp` (D3) |
 | R2/R3/R4 schemas committed; round-trip tests pass in C++ / Python / Kotlin | schemas (D1) + the six round-trip test suites (D2, §5 paths) |

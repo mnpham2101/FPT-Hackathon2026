@@ -1,0 +1,78 @@
+@startuml phase5-ivi-components
+' Phase 5 module map for IVI_ECU (R4, R16, R17) — see ivi-ecu-hld.md §3/§4.
+' Arrows read "depends on". The graph is acyclic and one-way: nothing below
+' :app knows an Android type, and nothing knows the front end.
+
+skinparam componentStyle rectangle
+skinparam shadowing false
+skinparam defaultTextAlignment center
+
+package "IVI_ECU (Gradle multi-project 'v2x-ivi')" {
+
+  component ":contract\n<size:10>pure Kotlin/JVM — zero Android</size>" as CONTRACT
+  note right of CONTRACT
+    com.hackathon.v2x.ivi.model
+    R4Message / R4WarningEvent / R4StateMessage
+    R3Snapshot · SceneGeometry · VehiclePosition
+    R4Json (classDiscriminator="type", ignoreUnknownKeys)
+    resources: contracts/samples/*.json (byte-synced)
+  end note
+
+  component ":serializer\n<size:10>pure Kotlin/JVM</size>" as SER
+  note right of SER
+    com.hackathon.v2x.ivi.serializer
+    R4Decoder (interface) · R4Deserializer (impl)
+    buffer slice → BOM/UTF-8 → decode → R4DecodeResult
+    pure: returns typed results, never throws, never logs
+  end note
+
+  component ":observer\n<size:10>pure Kotlin/JVM</size>" as OBS
+  note right of OBS
+    com.hackathon.v2x.ivi.observer
+    R4DatagramSource (seam) · JdkDatagramSource
+    R4SocketObserver — receive loop, back-off, bind state
+    events: SharedFlow<R4Event> (DROP_OLDEST)
+    R4Logger (seam, implemented by :app)
+  end note
+
+  component ":app\n<size:10>Android APK — the only Android module</size>" as APP
+  note right of APP
+    IviApplication · IviGraph · MainActivity
+    service/R4ListenerService (foreground host)
+    data/R4Repository — last warning, last state, link state
+    warning/WarningClassifier — business rules
+    ui/WarningViewModel · ui/MainViewModel
+    ui/screen/MainScreen · ui/view/* (IviWarningViewSeam)
+    debug source set: DevInjectorReceiver (I3)
+  end note
+
+  component ":r4-simulator\n<size:10>Kotlin/JVM CLI + OCI image</size>" as SIM
+  note left of SIM
+    com.hackathon.v2x.ivi.sim
+    scenario runner over the frozen samples
+    host mode (args) · in-Room mode (env)
+    validates every payload through R4Json before send
+  end note
+}
+
+cloud "CarSky Ethernet Bridge (R6)\n10.99.0.0/24" as NET
+
+SER --> CONTRACT : models + R4Json
+OBS --> SER : R4Decoder
+APP --> OBS : events, link state
+APP ..> SER : R4DecodeResult types
+APP ..> CONTRACT : models for the UI
+SIM --> CONTRACT : same models, same Json
+
+SIM --> NET : UDP port 47300
+NET --> OBS : datagram
+
+legend right
+  |= Layer (MVC) |= Where |
+  | Data | :contract models · :app data/R4Repository |
+  | Business logic | :serializer · :observer · :app warning/ · SceneCoordinateMapper |
+  | UI logic | :app ui/WarningViewModel · ui/MainViewModel |
+  | UI | :app ui/screen · ui/view behind IviWarningViewSeam |
+endlegend
+
+@enduml

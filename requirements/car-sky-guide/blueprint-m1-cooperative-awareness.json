@@ -23,7 +23,7 @@
         "label": "Bench - Scenario Player",
         "nodeType": "container",
         "config": {
-          "image": "registry.carsky.io/m1-scenario-player:latest",
+          "image": "registry.hackathon-2.carsky.io/m1-scenario-player:latest",
           "command": ["python", "main.py"],
           "env": {
             "SCENARIO_CONFIG": "/app/scenarios/default.yaml",
@@ -40,7 +40,7 @@
         "label": "V2X ECU",
         "nodeType": "container",
         "config": {
-          "image": "registry.carsky.io/m1-v2x-ecu:latest",
+          "image": "registry.hackathon-2.carsky.io/m1-v2x-ecu:latest",
           "command": ["./v2x_ecu"],
           "env": {
             "LISTEN_PORT": "47100",
@@ -57,7 +57,7 @@
         "label": "ADA ECU",
         "nodeType": "container",
         "config": {
-          "image": "registry.carsky.io/m1-ada-ecu:latest",
+          "image": "registry.hackathon-2.carsky.io/m1-ada-ecu:latest",
           "command": ["./ada_ecu"],
           "env": {
             "V2X_LISTEN_PORT": "47200",

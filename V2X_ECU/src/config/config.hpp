@@ -1,7 +1,7 @@
 #ifndef V2X_ECU_CONFIG_CONFIG_HPP
 #define V2X_ECU_CONFIG_CONFIG_HPP
 
-// V2X_ECU/src/config/config.hpp — the app's ONLY env reader (Phase 1 HLD §4):
+// V2X_ECU/src/config/config.hpp — the app's ONLY env reader (HLD §4):
 // loads + validates the §6 app-consumed env set into an immutable Config.
 // CAPTURE_FILTER / PCAP_DIR / CAPTURE_ROTATE_S are consumed by capture.sh
 // directly and deliberately do not appear here.

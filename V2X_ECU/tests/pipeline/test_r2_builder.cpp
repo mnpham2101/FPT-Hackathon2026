@@ -1,4 +1,4 @@
-// Tests for the R9 stage-4a R2 builder (subtask 9.1.4.3, Phase 1 HLD §3 D3):
+// Tests for the R9 stage-4a R2 builder (subtask 9.1.4.3, HLD decision D3):
 // CpmContent (wire-native integers) → v2x::contracts::R2Message (SI), with the
 // F1/F6/F7 derivations cross-checked against the frozen fixtures — the nominal
 // golden vector (contracts/golden-vectors, synced to tests/fixtures/golden/)

@@ -1,6 +1,6 @@
 // R9 malformed-input corpus: the acceptance test for "malformed or unknown
 // input is rejected and counted, never crashes the node" (report §2 R9; Phase 1
-// HLD §3 D3 stage 1).
+// HLD decision D3 stage 1).
 //
 // Unlike tests/pipeline/test_rx_pipeline.cpp — which fakes the codec to test the
 // COMPOSITION — this suite wires the REAL v2x::codec::VanetzaCpmCodec behind the
