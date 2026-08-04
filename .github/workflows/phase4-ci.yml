@@ -652,3 +652,338 @@ jobs:
             exit 1
           }
           echo "[LANE] sink arms PASSED"
+
+  # The ADA end-to-end loopback lane (15.4.5.1) - the repeatable, machine-checked form of the
+  # phase's output acceptance, everything except the deployed Room. Filed here per
+  # .claude/rules/ci-lane-placement.md (on main): phase4-ci.yml is the designated home of exactly
+  # ada-e2e-loopback, ada-ecu-image, ada-bench-image and ada-bench-selfcheck, and job names are
+  # stable identities - this job is named ada-e2e-loopback and is never renamed.
+  #
+  # Two arms around one built ada_ecu binary, bracketed by the Phase 4 CI mocks on loopback
+  # (tools/mock_v2x_sender.py -> ada_ecu -> tools/mock_ivi_receiver.py):
+  #   1 - approaching: the full relay chain. check_evt_log --admission --fusion --both-tracks
+  #       --r4-schema must exit 0, the receiver's --expect-min 1 gate must pass, and
+  #       event_report must render a non-empty event list. The committed band sequence plus the
+  #       d_AC/ttc series beside it are RECORDED in the job summary, never asserted - the risk
+  #       defaults are unratified (plans/phase4_tasks.md, Open items item 2); the expected
+  #       sequence at the R22 60/30 pair is low -> medium (D11), and the recorded series is
+  #       what tells a range trigger from a TTC trigger.
+  #   2 - out-of-range: the negative control. R2 traffic is ingested but C never enters the
+  #       gate, so zero v2x_relayed track_transition and zero r4_tx - the arm that stops the
+  #       lane passing on any traffic at all.
+  #
+  # PLANNER AMENDMENT (15.4.5.1, recorded verbatim): the plan text's
+  # DETECTOR_CMD="cat <fixture>" is replaced by this paced, held in-gate replay because the
+  # fixture's final line (36 m > GATE_EXIT 35) drops B at every replay boundary and an unpaced
+  # cat replays the file thousands of times - the held line 30 (distance 11 m, in-gate) keeps B
+  # tracked deterministically for ~12 s, then the non-zero exit with DETECTOR_RESTART_MAX=0
+  # stops the replay so B times out and completes the full R13 cycle that check_evt_log
+  # --admission requires. Same fixture file, section-6 defaults otherwise.
+  # QUOTING DEVIATION from the amendment's inline form, flagged in the subtask report: the node
+  # spawns DETECTOR_CMD through detector_reader.cpp's splitArgv + execvp - whitespace
+  # tokenization, no shell, no quote handling - so the amendment's DETECTOR_CMD='sh -c "i=0;
+  # ..."' one-liner cannot survive (sh would exec the literal word '"i=0;' as its -c command).
+  # The loop therefore lives in a helper script file and DETECTOR_CMD becomes the two
+  # whitespace-free tokens "sh <script>"; the replay semantics are the amendment's, unchanged.
+  ada-e2e-loopback:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      # Same configure shape as phase0-ci.yml's ada-core-build, narrowed to the one target this
+      # lane runs: no ctest here (ada-core-build owns the unit lanes), and --target ada_ecu
+      # keeps the gtest targets out of the build.
+      - name: Configure
+        run: cmake -S ADA_ECU -B ADA_ECU/build
+      - name: Build the ada_ecu binary only
+        run: cmake --build ADA_ECU/build --target ada_ecu -j
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      # jsonschema serves the receiver's --validate and the checker's --r4-schema only; the
+      # mocks' send/receive paths stay stdlib-only and run exactly as committed.
+      - name: Install the validation dependency
+        run: python -m pip install jsonschema
+      # The detector stand-in both arms spawn (see the planner amendment in the job header):
+      # 40 x 0.3 s of fixture line 30 (own:1 at 11.0 m, in-gate), then exit 1 - which, with
+      # DETECTOR_RESTART_MAX=0, is a terminal detector_restart: no respawn, so B times out.
+      # The fixture path is relative because the child inherits ada_ecu's cwd, the repo root.
+      - name: Write the detector replay helper
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > "$RUNNER_TEMP/detector_replay.sh" <<'SH'
+          i=0
+          while [ $i -lt 40 ]; do
+            sed -n 30p ADA_ECU/tests/fixtures/own_sensor_mock.jsonl
+            sleep 0.3
+            i=$((i+1))
+          done
+          exit 1
+          SH
+      - name: Arm 1 - approaching profile through the full relay chain
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Fixed loopback-only ports (same rationale as ada-bench-selfcheck's): 47311 for the
+          # R4 sink and 47210 for the node's R2 listen, both off the blueprint's
+          # 47100/47200/47300 set so a log line is never misread as a node port.
+          RX_LOG="$RUNNER_TEMP/rx.log"
+          ADA_LOG="$RUNNER_TEMP/ada.log"
+
+          ADA_PID=""
+          RX_PID=""
+          cleanup() {
+            { [ -n "$ADA_PID" ] && kill "$ADA_PID"; } 2>/dev/null || true
+            { [ -n "$RX_PID" ] && kill "$RX_PID"; } 2>/dev/null || true
+          }
+          trap cleanup EXIT
+
+          python ADA_ECU/tools/mock_ivi_receiver.py --host 127.0.0.1 --port 47311 \
+            --validate --expect-min 1 --timeout-s 30 --out "$RUNNER_TEMP/rx.jsonl" \
+            > "$RX_LOG" 2>&1 &
+          RX_PID=$!
+
+          # Bounded readiness poll, never a bare sleep (ada-bench-selfcheck's stance): a
+          # datagram sent before the bind is silently lost.
+          READY=0
+          for _ in $(seq 1 30); do
+            if grep -q '\[RX\] listening' "$RX_LOG" 2>/dev/null; then READY=1; break; fi
+            sleep 0.2
+          done
+          if [ "$READY" -ne 1 ]; then
+            echo "::error::mock_ivi_receiver never bound 127.0.0.1:47311 within 6s"
+            cat "$RX_LOG" 2>/dev/null || true
+            exit 1
+          fi
+
+          # The node under test. Env per the 15.4.5.1 brief; every unset knob is the section-6
+          # default, which IS the R22 pair (RISK_NEAR_M 60 / RISK_CRITICAL_M 30, config.cpp).
+          # The brief's env-block quoting advice is mooted by the helper-script form of
+          # DETECTOR_CMD (see the job header): two tokens, nothing to quote.
+          V2X_LISTEN_HOST=127.0.0.1 V2X_LISTEN_PORT=47210 \
+          IVI_ECU_HOST=127.0.0.1 IVI_ECU_PORT=47311 \
+          DETECTOR_ENABLED=true DETECTOR_RESTART_MAX=0 \
+          DETECTOR_CMD="sh $RUNNER_TEMP/detector_replay.sh" \
+            ADA_ECU/build/ada_ecu > "$ADA_LOG" 2>&1 &
+          ADA_PID=$!
+
+          sleep 2   # listener up (the brief's designated settle)
+          kill -0 "$ADA_PID" 2>/dev/null || {
+            echo "::error::ada_ecu exited during startup"
+            cat "$ADA_LOG"
+            exit 1
+          }
+
+          # ~10 s to completion, 100 datagrams: C closing 70 m -> 20.5 m at 5 m/s @ 10 Hz -
+          # the bench's committed R22 geometry, read from the scenario YAML by the mock.
+          python ADA_ECU/tools/mock_v2x_sender.py --profile approaching \
+            --host 127.0.0.1 --port 47210
+
+          # C timeout -> clearing transition ~+1.3 s; B timeout ~+2 s after the replay ends.
+          sleep 6
+          kill -TERM "$ADA_PID" 2>/dev/null || true
+          ADA_EXIT=0
+          wait "$ADA_PID" || ADA_EXIT=$?
+          ADA_PID=""
+          kill -TERM "$RX_PID" 2>/dev/null || true
+          RX_EXIT=0
+          wait "$RX_PID" || RX_EXIT=$?
+          RX_PID=""
+
+          echo "::group::ada.log (approaching)"
+          cat "$ADA_LOG"
+          echo "::endgroup::"
+          echo "::group::rx.log (approaching)"
+          cat "$RX_LOG"
+          echo "::endgroup::"
+
+          # A non-zero exit here is a crash, not a shutdown: ada_ecu exits 0 on SIGTERM.
+          if [ "$ADA_EXIT" -ne 0 ]; then
+            echo "::error::ada_ecu exited $ADA_EXIT, expected a clean 0 on SIGTERM"
+            exit 1
+          fi
+
+          # Assertion 1: the composed [EVT] checks - R13 legality with a full cycle per source,
+          # the Phase 4 relay chain and edge-triggered risk/emit pairing, the four both-tracks
+          # facts, and every r4_tx body against the synced R4 schema. A zero-[EVT] log is a
+          # failure inside the checker, never a pass; non-zero exit fails the step (set -e).
+          python ADA_ECU/tools/check_evt_log.py --admission --fusion --both-tracks \
+            --r4-schema ADA_ECU/contracts/r4-ada-ivi.schema.json "$ADA_LOG"
+          echo "[LANE] check_evt_log --admission --fusion --both-tracks --r4-schema PASSED"
+
+          # Assertion 2: the receiver's own gate - >= 1 schema-valid warning arrived
+          # (--expect-min 1 under --validate is its exit code).
+          if [ "$RX_EXIT" -ne 0 ]; then
+            echo "::error::mock_ivi_receiver exited $RX_EXIT - fewer than 1 schema-valid warning arrived"
+            exit 1
+          fi
+          echo "[LANE] receiver --expect-min 1 gate PASSED"
+
+          # Assertion 3: event_report renders a non-empty event list. 'no events selected' is
+          # exit 0 by design (a report, not a checker), so >= 1 data row is asserted here:
+          # every table line carries ' | ', so >= 2 such lines = header + >= 1 data row.
+          python ADA_ECU/tools/event_report.py "$ADA_LOG" --summary > "$RUNNER_TEMP/report.txt"
+          echo "::group::event_report (approaching)"
+          cat "$RUNNER_TEMP/report.txt"
+          echo "::endgroup::"
+          TABLE_LINES=$(grep -c ' | ' "$RUNNER_TEMP/report.txt" || true)
+          if grep -q '^no events selected' "$RUNNER_TEMP/report.txt" || [ "$TABLE_LINES" -lt 2 ]; then
+            echo "::error::event_report rendered no data rows (table lines: $TABLE_LINES, need header + >= 1 row)"
+            exit 1
+          fi
+          echo "[LANE] event_report rendered $((TABLE_LINES - 1)) data row(s)"
+
+          # Non-vacuous floors on the raw stream - the phase acceptance's counts, on top of the
+          # composed checks above.
+          RT_COUNT=$(grep -c '"event":"risk_transition"' "$ADA_LOG" || true)
+          R4_COUNT=$(grep -c '"event":"r4_tx"' "$ADA_LOG" || true)
+          if [ "$RT_COUNT" -lt 1 ] || [ "$R4_COUNT" -lt 1 ]; then
+            echo "::error::approaching arm too quiet (risk_transition=$RT_COUNT r4_tx=$R4_COUNT, need >= 1 each)"
+            exit 1
+          fi
+          echo "[LANE] observed risk_transition=$RT_COUNT r4_tx=$R4_COUNT"
+
+          # RECORD ONLY - no assertion on the band sequence (unratified risk defaults; a lane
+          # requiring a fixed sequence would red on every push). Expected low -> medium at the
+          # R22 60/30 defaults; the d_AC/ttc series is recorded beside it so a reader can tell
+          # a range trigger from a TTC trigger.
+          python - "$ADA_LOG" > "$RUNNER_TEMP/bands.txt" <<'PY'
+          import json
+          import sys
+
+          rts, assessments = [], []
+          for line in open(sys.argv[1], encoding="utf-8"):
+              s = line.strip()
+              if not s.startswith("[EVT] "):
+                  continue
+              try:
+                  obj = json.loads(s[len("[EVT] "):])
+              except ValueError:
+                  continue
+              p = obj.get("payload") or {}
+              if obj.get("event") == "risk_transition":
+                  rts.append(p)
+              elif obj.get("event") == "assessment":
+                  assessments.append(p)
+          print("committed band sequence (risk_transition, stream order):")
+          for p in rts:
+              print("  %s -> %s  d_ac=%s ttc=%s rationale=%s"
+                    % (p.get("from"), p.get("to"), p.get("d_ac"), p.get("ttc"),
+                       p.get("rationale")))
+          print("d_AC / ttc series (assessment payloads, stream order):")
+          for p in assessments:
+              print("  d_ac=%s ttc=%s riskState=%s rationale=%s"
+                    % (p.get("distanceM"), p.get("ttcS"), p.get("riskState"),
+                       p.get("rationale")))
+          PY
+          {
+            echo "## ada-e2e-loopback - approaching arm (recorded, not asserted)"
+            echo '```'
+            cat "$RUNNER_TEMP/bands.txt"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          cat "$RUNNER_TEMP/bands.txt"
+          echo "[LANE] approaching arm PASSED (band sequence + d_AC/ttc series recorded in the job summary)"
+      - name: Arm 2 - out-of-range profile, the negative control
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Fresh logs; same ports, same env, same detector replay as arm 1.
+          RX_LOG="$RUNNER_TEMP/rx2.log"
+          ADA_LOG="$RUNNER_TEMP/ada2.log"
+
+          ADA_PID=""
+          RX_PID=""
+          cleanup() {
+            { [ -n "$ADA_PID" ] && kill "$ADA_PID"; } 2>/dev/null || true
+            { [ -n "$RX_PID" ] && kill "$RX_PID"; } 2>/dev/null || true
+          }
+          trap cleanup EXIT
+
+          # --expect-min 0: the arm expects NO warnings; the receiver only proves the sink was
+          # really listening while none arrived. Shorter idle timeout than arm 1 - it may
+          # self-exit (PASS) before the SIGTERM below, and both paths exit 0.
+          python ADA_ECU/tools/mock_ivi_receiver.py --host 127.0.0.1 --port 47311 \
+            --validate --expect-min 0 --timeout-s 10 --out "$RUNNER_TEMP/rx2.jsonl" \
+            > "$RX_LOG" 2>&1 &
+          RX_PID=$!
+
+          READY=0
+          for _ in $(seq 1 30); do
+            if grep -q '\[RX\] listening' "$RX_LOG" 2>/dev/null; then READY=1; break; fi
+            sleep 0.2
+          done
+          if [ "$READY" -ne 1 ]; then
+            echo "::error::mock_ivi_receiver never bound 127.0.0.1:47311 within 6s"
+            cat "$RX_LOG" 2>/dev/null || true
+            exit 1
+          fi
+
+          V2X_LISTEN_HOST=127.0.0.1 V2X_LISTEN_PORT=47210 \
+          IVI_ECU_HOST=127.0.0.1 IVI_ECU_PORT=47311 \
+          DETECTOR_ENABLED=true DETECTOR_RESTART_MAX=0 \
+          DETECTOR_CMD="sh $RUNNER_TEMP/detector_replay.sh" \
+            ADA_ECU/build/ada_ecu > "$ADA_LOG" 2>&1 &
+          ADA_PID=$!
+
+          sleep 2   # listener up
+          kill -0 "$ADA_PID" 2>/dev/null || {
+            echo "::error::ada_ecu exited during startup"
+            cat "$ADA_LOG"
+            exit 1
+          }
+
+          # ~5 s, 50 datagrams: C held static at 60 m - beyond GATE_ENTER_M 30, so the relay
+          # traffic is ingested but never admitted.
+          python ADA_ECU/tools/mock_v2x_sender.py --profile out-of-range \
+            --host 127.0.0.1 --port 47210 --count 50
+
+          sleep 2   # settle: the last datagram's ingest is on the log before the stop
+          kill -TERM "$ADA_PID" 2>/dev/null || true
+          ADA_EXIT=0
+          wait "$ADA_PID" || ADA_EXIT=$?
+          ADA_PID=""
+          kill -TERM "$RX_PID" 2>/dev/null || true
+          RX_EXIT=0
+          wait "$RX_PID" || RX_EXIT=$?
+          RX_PID=""
+
+          echo "::group::ada2.log (out-of-range)"
+          cat "$ADA_LOG"
+          echo "::endgroup::"
+          echo "::group::rx2.log (out-of-range)"
+          cat "$RX_LOG"
+          echo "::endgroup::"
+
+          if [ "$ADA_EXIT" -ne 0 ]; then
+            echo "::error::ada_ecu exited $ADA_EXIT, expected a clean 0 on SIGTERM"
+            exit 1
+          fi
+          if [ "$RX_EXIT" -ne 0 ]; then
+            echo "::error::mock_ivi_receiver exited $RX_EXIT on the --expect-min 0 arm"
+            exit 1
+          fi
+
+          # The negative-control assertions, each floored on a non-vacuous examined count:
+          # r2_ingest >= 1 proves traffic actually flowed, so the two zeros below cannot pass
+          # on a dead wire.
+          R2_COUNT=$(grep -c '"event":"r2_ingest"' "$ADA_LOG" || true)
+          V2X_TT_COUNT=$(grep -Ec '"event":"track_transition".*"source":"v2x_relayed"' "$ADA_LOG" || true)
+          R4_COUNT=$(grep -c '"event":"r4_tx"' "$ADA_LOG" || true)
+          echo "[LANE] out-of-range counts: r2_ingest=$R2_COUNT v2x_relayed-track_transition=$V2X_TT_COUNT r4_tx=$R4_COUNT"
+          if [ "$R2_COUNT" -lt 1 ]; then
+            echo "::error::negative control ingested no R2 traffic (r2_ingest=$R2_COUNT) - its zero assertions would be vacuous"
+            exit 1
+          fi
+          if [ "$V2X_TT_COUNT" -ne 0 ]; then
+            echo "::error::out-of-range profile admitted a v2x_relayed track ($V2X_TT_COUNT track_transition line(s)) - C must stay outside the gate"
+            exit 1
+          fi
+          if [ "$R4_COUNT" -ne 0 ]; then
+            echo "::error::out-of-range profile emitted $R4_COUNT r4_tx line(s) - the negative control demands zero"
+            exit 1
+          fi
+          echo "[LANE] out-of-range arm PASSED: R2 ingested ($R2_COUNT), zero v2x_relayed admissions, zero r4_tx"
