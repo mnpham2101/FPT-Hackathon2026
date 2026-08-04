@@ -265,7 +265,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Status:** done — pure step() machine realizing all eight diagram edges, thresholds as ctor params from Config, timeout evaluated first, hits reset on every erase; edge names aligned to the 13.2.4.3 reason vocabulary (self-loops distinct as counted/refreshed); test covers lifecycle both directions, promotion boundary, counter reset, timeout precedence, Schmitt band, CONFIRM_HITS==1 degenerate; build/tests deferred to CI ada-core-build.
 
-### [ ] `13.2.4.3` — Store ↔ admission integration, expiry, transition events *(AI)*
+### [x] `13.2.4.3` — Store ↔ admission integration, expiry, transition events *(AI)*
 
 **Objective:** wire the machine into the store — every ingest and every tick runs admission, every edge writes one `track_transition`, every expiry writes `track_expire`.
 
@@ -280,6 +280,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 **Acceptance:** ADA build + ctest green on CI — closes the "admitted only within `gate_enter`, dropped only beyond `gate_exit` or after `miss_limit`, no flicker" box at unit level.
 
 **Dependencies:** after `3.2.4.1` + `13.2.4.2` + `18.2.2.3`. **Commit:** `[13.2.4.3] feat: run admission and expiry inside the track store`
+
+**Status:** done — store wired to the pure machine via a thresholds-from-Config constructor and injected EventLog; per-entry monotonic stamp is the sole expiry operand (D10 pair proven in test_expiry_monotonic), lastUpdated stays realtime; five state-changing reasons emit one track_transition each, self-loops silent (planner ruling — the .puml every-edge note flagged stale to architecture), timeout adds track_expire ({id, source, distance} payload, pending ratification); boundary/flicker/expiry covered in test_admission_relayed; build/tests deferred to CI ada-core-build.
 
 ---
 

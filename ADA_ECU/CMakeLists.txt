@@ -107,10 +107,11 @@ target_compile_features(ada_input_queue INTERFACE cxx_std_17)
 ada_add_test(ada_input_queue_test tests/observer/test_input_queue.cpp)
 target_link_libraries(ada_input_queue_test PRIVATE ada_input_queue Threads::Threads)
 
-# R3 track store — id → TrackedObject map, single writer (3.2.4.1).
+# R3 track store — id → TrackedObject map, single writer (3.2.4.1);
+# admission + expiry wired in via ada_admission/ada_event_log (13.2.4.3).
 add_library(ada_store STATIC src/store/track_store.cpp)
 target_include_directories(ada_store PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(ada_store PUBLIC ada_contracts)
+target_link_libraries(ada_store PUBLIC ada_contracts ada_admission ada_event_log)
 target_compile_features(ada_store PUBLIC cxx_std_17)
 
 ada_add_test(ada_track_store_test tests/store/test_track_store.cpp)
@@ -124,6 +125,12 @@ target_compile_features(ada_admission PUBLIC cxx_std_17)
 
 ada_add_test(ada_admission_own_sensor_test tests/store/test_admission_own_sensor.cpp)
 target_link_libraries(ada_admission_own_sensor_test PRIVATE ada_admission)
+
+ada_add_test(ada_admission_relayed_test tests/store/test_admission_relayed.cpp)
+target_link_libraries(ada_admission_relayed_test PRIVATE ada_store)
+
+ada_add_test(ada_expiry_monotonic_test tests/store/test_expiry_monotonic.cpp)
+target_link_libraries(ada_expiry_monotonic_test PRIVATE ada_store)
 
 # R2 UDP listener thread — socket → input queue, no parsing (2.2.6.1).
 add_library(ada_v2x_listener STATIC src/observer/v2x_listener.cpp)
