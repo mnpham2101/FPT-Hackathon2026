@@ -202,7 +202,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Status:** done — parses through the frozen R2Message binding only; id `v2x:<stationId>:<objectId>`, null confidence → 0.0 with the wire null and position.confidence out-of-band on the result, measured = rxTime + timeOfMeasurement, lastUpdated = 0 placeholder; five typed reject reasons each counted and tested; build/tests deferred to CI ada-core-build.
 
-### [ ] `3.2.3.2` — R3 JSONL parser `src/parser/r3_parser.{hpp,cpp}` *(AI — parallel with 2.2.3.1)*
+### [x] `3.2.3.2` — R3 JSONL parser `src/parser/r3_parser.{hpp,cpp}` *(AI — parallel with 2.2.3.1)*
 
 **Objective:** map one detector JSONL line to a `TrackedObject` with `source = own_sensor`.
 
@@ -211,6 +211,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 **Acceptance:** ADA build + ctest green on CI.
 
 **Dependencies:** none. **Commit:** `[3.2.3.2] feat: add detector JSONL to TrackedObject parser`
+
+**Status:** done — parses through the frozen TrackedObject binding only; incoming state discarded for the not_tracked placeholder (D3), non-own_sensor source rejected with a typed reason (D6), malformed/missing/wrong-type/out-of-range lines rejected and counted, never fatal; the frozen sample carries source v2x_relayed, so the maps-intact case flips it to own_sensor and the verbatim sample is the source-rejection case; build/tests deferred to CI ada-core-build.
 
 ### [ ] `3.2.3.3` — Parse-reject corpus `tests/fixtures/malformed/` + counted-rejection test *(AI)*
 
