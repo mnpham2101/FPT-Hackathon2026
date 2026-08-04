@@ -95,6 +95,12 @@ WORKDIR /app
 # 5.3.6.1 BELOW this line and ABOVE the code layers.
 COPY media/ /app/media/
 
+# models/ above detector/ (5.3.6.1): detector code changes every commit while media/models
+# rarely do - layer order decides which blobs are re-pushed.
+COPY models/ /app/models/
+COPY detector/ /app/detector/
+RUN pip install --no-cache-dir -r /app/detector/requirements.txt
+
 COPY --from=build /src/build/ada_ecu ./ada_ecu
 COPY entrypoint.sh ./
 

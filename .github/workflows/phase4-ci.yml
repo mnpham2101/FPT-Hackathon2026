@@ -122,6 +122,74 @@ jobs:
           echo "== RootFS layer digests =="
           docker image inspect -f '{{json .RootFS.Layers}}' "$IMAGE"
           echo "::endgroup::"
+      # D9's in-image detector smoke (5.3.6.1), run against the LOCAL arm64 image the measure step
+      # just --load-ed into the daemon (qemu is already set up). Sanctioned deviation from D9's
+      # "inside the pulled image" wording: the pull-back start remains the verify composite's job;
+      # this step's claim is the wheels+import+model runtime path on aarch64. Two arms because a
+      # build that links and a detector that imports are two different claims - only a real emitted
+      # R3 line closes R12's runtime path. The -e values below are TEST PARAMETERS for this run,
+      # not tunables baked into the image (the image ships no ENV; defaults stay with the detector).
+      - name: In-image detector smoke (5.3.6.1)
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ -f ADA_ECU/detector/main.py ] || {
+            echo "::notice::ADA_ECU/detector/main.py not landed yet - skipping detector smoke"
+            exit 0
+          }
+
+          # Arm 1 - synthetic plumbing: 5 synthetic frames. stdout may be EMPTY (flat frames
+          # yield no detections), but every line present must parse as JSON.
+          SYN_OUT="$RUNNER_TEMP/detector-synthetic.out"
+          SYN_ERR="$RUNNER_TEMP/detector-synthetic.err"
+          rc=0
+          timeout 600 docker run --rm --platform linux/arm64 \
+            -e DETECTOR_REALTIME_PACING=false \
+            "$IMAGE" python3 /app/detector/main.py --synthetic 5 \
+            >"$SYN_OUT" 2>"$SYN_ERR" || rc=$?
+          echo "::group::synthetic arm stderr"
+          cat "$SYN_ERR"
+          echo "::endgroup::"
+          if [ "$rc" -ne 0 ]; then
+            echo "synthetic arm failed: exit $rc"
+            exit 1
+          fi
+          python3 -c 'import json,sys; [json.loads(l) for l in open(sys.argv[1]) if l.strip()]' "$SYN_OUT"
+
+          # Arm 2 - the real clip, the R3-JSONL observable: sampled frames (stride 50, no loop)
+          # through the shipped model and media. 4 sampled frames can be minutes EACH under QEMU,
+          # hence the 1800 s budget.
+          REAL_OUT="$RUNNER_TEMP/detector-real.out"
+          rc=0
+          timeout 1800 docker run --rm --platform linux/arm64 \
+            -e DETECTOR_REALTIME_PACING=false \
+            -e DETECTOR_LOOP=false \
+            -e DETECTOR_FRAME_STRIDE=50 \
+            "$IMAGE" python3 /app/detector/main.py \
+            >"$REAL_OUT" || rc=$?
+          if [ "$rc" -ne 0 ]; then
+            echo "real-clip arm failed: exit $rc"
+            exit 1
+          fi
+          python3 - "$REAL_OUT" <<'PY'
+          import json, sys
+          hits = 0
+          with open(sys.argv[1]) as f:
+              for line in f:
+                  line = line.strip()
+                  if not line:
+                      continue
+                  try:
+                      obj = json.loads(line)
+                  except ValueError:
+                      continue
+                  if obj.get("source") == "own_sensor":
+                      hits += 1
+          print(f"own_sensor R3 lines: {hits}")
+          sys.exit(0 if hits else 1)
+          PY
+          echo "synthetic stdout lines: $(wc -l < "$SYN_OUT")"
+          echo "real-clip stdout lines: $(wc -l < "$REAL_OUT")"
       - name: Push to CarSky Zot registry (skips until the secret exists)
         id: push
         shell: bash

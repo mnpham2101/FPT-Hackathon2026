@@ -29,6 +29,10 @@ schema/
 # which arrives with the detector in Phase 3.
 detector/requirements-dev.txt
 
+# pytest suites are never runtime payload; unlike the C++ tests/ tree, nothing at image-build
+# configure time references detector/tests.
+detector/tests/
+
 # Clip provenance, not clip data - the mp4 stays in the context (see header). Both patterns:
 # the committed note is media/ego-b-occluding-c.source.md; media/source/ covers a future
 # provenance folder.
