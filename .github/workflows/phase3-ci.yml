@@ -118,11 +118,19 @@ jobs:
           fi
           python -m pip install -r ADA_ECU/detector/requirements.txt -r ADA_ECU/detector/requirements-dev.txt
 
-          # `set -o pipefail` makes a pytest failure propagate through tee (the pipeline exits
-          # with pytest's status, and `set -e` ends the step on it); the grep below then adds
-          # the no-skip assertion on top of an otherwise green run. -rs prints the reason line
-          # for every skip, so a red run names the missing piece in the job output.
+          # Failures are surfaced as an ::error:: annotation carrying the pytest tail, because
+          # annotations are readable through the unauthenticated check-runs API while job logs
+          # are not - an agent session holds no GitHub token, so a red run must name its test
+          # in the annotation, not only in the log. -rs prints the reason line for every skip.
+          set +e
           python -m pytest ADA_ECU/detector/tests -q -rs | tee "$RUNNER_TEMP/pytest.out"
+          PYTEST_STATUS=${PIPESTATUS[0]}
+          set -e
+          if [ "$PYTEST_STATUS" -ne 0 ]; then
+            SUMMARY=$(tail -n 15 "$RUNNER_TEMP/pytest.out" | tr '\n' '~' | tail -c 800)
+            echo "::error::detector suite failed (exit $PYTEST_STATUS): ${SUMMARY}"
+            exit "$PYTEST_STATUS"
+          fi
 
           if grep -E 'SKIPPED|[0-9]+ skipped' "$RUNNER_TEMP/pytest.out"; then
             echo "::error::detector suite skipped tests on the full-dependency lane - a skip here means a missing dependency or artifact"
