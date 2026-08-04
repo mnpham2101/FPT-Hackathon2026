@@ -500,7 +500,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Status:** done — `.github/workflows/phase4-ci.yml` created (job `ada-ecu-image`, guard branch active while `ADA_ECU/Dockerfile` is absent); YAML parses via `yaml.safe_load`, both bash `run:` blocks `bash -n` clean, LF endings (zero CR bytes).
 
-### [ ] `13.2.8.2` — Lane `ada-loopback-check` *(AI)*
+### [x] `13.2.8.2` — Lane `ada-loopback-check` *(AI)*
 
 **Objective:** the repeatable form of the Phase 2 "mock-driven transitions observable in logs; mock off yields no tracks" box.
 
@@ -518,6 +518,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 **Acceptance:** lane green on the pushed branch; run A observes at least one complete `tentative → tracked → not_tracked` cycle per source.
 
 **Dependencies:** after `13.2.6.4` + `3.2.6.3` + `18.2.6.5`. **Commit:** `[13.2.8.2] chore: add the ADA loopback admission CI lane`
+
+**Status:** done — `.github/workflows/phase2-ci.yml` created (job `ada-loopback-check`, runs A+B with bounded polls — readiness on first `[EVT]` line, expiry on `track_expire` — and R18 checker verdicts `--admission --min-transitions 6` / `--expect-no-tracks`); run math documented from the committed scenario sources (gate crossed at datagram 80, t≈8.0 s); the fixture drive is a two-line paced wrapper (`cat <fixture>; sleep 1`) rather than bare `cat`, because the reader respawns on clean EOF without backoff; YAML parses, all run blocks `bash -n` clean, LF-only — lane verification pending the pushed-branch run.
 
 ---
 
