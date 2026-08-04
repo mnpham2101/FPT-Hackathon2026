@@ -33,6 +33,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import com.hackathon.v2x.ivi.model.R3Snapshot
+import com.hackathon.v2x.ivi.model.R3Timestamps
+import com.hackathon.v2x.ivi.model.SceneGeometry
+import com.hackathon.v2x.ivi.model.VehiclePosition
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -248,18 +252,9 @@ private fun WarningViewContent(
     var is3DMode by remember { mutableStateOf(true) }
 
     val defaultMockScene = SceneGeometry(
-        egoPosition = VehiclePosition(0f, 0f),
-        vehicleBSnapshot = R3Snapshot(
-            id = "V-B-DEMO",
-            objectClass = "vehicle",
-            source = "v2x_relayed",
-            position = VehiclePosition(-3.5f, 15.0f),
-            distance = 15.4f,
-            speed = 14.2f,
-            confidence = 0.95f,
-            state = "tracked",
-            timestamps = R3Timestamps(1L, 2L, 2L)
-        ),
+        ego = VehiclePosition(0f, 0f),
+        vehicleB = VehiclePosition(-3.5f, 15.0f),
+        vehicleC = VehiclePosition(2.5f, 22.0f),
         vehicleCSnapshot = R3Snapshot(
             id = "V-C-GHOST",
             objectClass = "vehicle",
