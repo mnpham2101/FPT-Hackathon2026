@@ -83,10 +83,10 @@ private val StyleHeader = TextStyle(color = TextMain, fontSize = 16.sp, fontFami
 private val StyleAlert = TextStyle(color = GhostCColor, fontSize = 11.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
 private val StyleBlindZone = TextStyle(color = BlindZoneColor.copy(alpha = 0.7f), fontSize = 9.sp, fontFamily = FontFamily.Monospace, letterSpacing = 1.6.sp)
 
-internal fun riskColor(riskState: String): Color = when (riskState.lowercase(Locale.US)) {
-    "low"    -> RiskLow
-    "medium" -> RiskMedium
-    else     -> RiskHigh
+internal fun cyberRiskColor(riskState: String): Color = when (riskState.lowercase(Locale.US)) {
+    "low"    -> CyberRiskLow
+    "medium" -> CyberRiskMedium
+    else     -> CyberRiskHigh
 }
 
 private const val LOG_TAG = "IVI_V2X_GODVIEW"
@@ -168,7 +168,7 @@ class Canvas3DWarningView : IviWarningViewSeam {
 
             // ── Ghost C (draw first, behind occluder B) ───────────────────────
             if (hasC) {
-                val risk = riskColor(riskState)
+                val risk = cyberRiskColor(riskState)
                 drawGhostC(cx = cX, cy = cY, glowAlpha = glowAlpha, riskColor = risk, textMeasurer = textMeasurer)
                 drawGhostBadge(cx = cX, cy = cY, dist = distAC ?: "?", riskState = riskState, textMeasurer = textMeasurer)
             }
@@ -589,7 +589,7 @@ private fun DrawScope.drawStatusBar(w: Float, h: Float, barH: Float, riskState: 
     drawLine(PanelDiv, start = Offset(0f, h - barH), end = Offset(w, h - barH), strokeWidth = 0.8f)
 
     val risk = riskState.uppercase(Locale.US)
-    val riskCol = riskColor(riskState)
+    val riskCol = cyberRiskColor(riskState)
     val statusLbl = textMeasurer.measure(AnnotatedString("● MODE: WARNING   ●  V2X LINK: BOUND · 47300   |   RISK: $risk"), StyleMuted.copy(color = riskCol))
     drawText(statusLbl, topLeft = Offset((w - statusLbl.size.width) / 2f, h - barH + (barH - statusLbl.size.height) / 2f))
 
@@ -597,4 +597,3 @@ private fun DrawScope.drawStatusBar(w: Float, h: Float, barH: Float, riskState: 
     drawText(iviLbl, topLeft = Offset(w - iviLbl.size.width - 12f, h - barH + (barH - iviLbl.size.height) / 2f))
 }
 
-internal fun cyberRiskColor(riskState: String): Color = riskColor(riskState)
