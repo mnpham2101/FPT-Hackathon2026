@@ -210,6 +210,15 @@ ada_add_test(ada_warning_builder_test tests/output/test_warning_builder.cpp)
 target_link_libraries(ada_warning_builder_test PRIVATE ada_warning_builder)
 target_compile_definitions(ada_warning_builder_test PRIVATE ADA_CONTRACTS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/contracts")
 
+# R15 IVI sender — one UDP datagram per R4 event, r4_tx evidence (15.4.2.2).
+add_library(ada_ivi_sender STATIC src/output/ivi_sender.cpp)
+target_include_directories(ada_ivi_sender PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(ada_ivi_sender PUBLIC ada_contracts ada_net ada_event_log)
+target_compile_features(ada_ivi_sender PUBLIC cxx_std_17)
+
+ada_add_test(ada_ivi_sender_test tests/output/test_ivi_sender.cpp)
+target_link_libraries(ada_ivi_sender_test PRIVATE ada_ivi_sender ada_warning_builder ada_fusion)
+
 # The ada_ecu executable — composition root, controller only (13.2.6.4).
 add_executable(ada_ecu src/main.cpp)
 target_link_libraries(ada_ecu PRIVATE
