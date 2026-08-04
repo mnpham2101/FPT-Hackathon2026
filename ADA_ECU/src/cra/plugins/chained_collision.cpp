@@ -135,7 +135,8 @@ RiskFinding ChainedCollision::assessTracked(RiskContext& context,
     working.candidateLevel = level;
     working.candidateSinceMs = context.now_ms;
   }
-  if (working.candidateLevel != record.riskState) {
+  if (working.candidateLevel != record.riskState &&
+      context.now_ms - working.candidateSinceMs >= riskDwellMs_) {
     // Cadence rule (b): a committed riskState change, either direction.
     record.riskState = working.candidateLevel;
     record.riskStateEnteredMs = context.now_ms;
@@ -170,7 +171,8 @@ RiskFinding ChainedCollision::decayToLow(RiskContext& context) {
       working.candidateLevel = kLow;
       working.candidateSinceMs = context.now_ms;
     }
-    if (record.riskState != kLow) {
+    if (record.riskState != kLow &&
+        context.now_ms - working.candidateSinceMs >= riskDwellMs_) {
       // The return to low is a committed transition like any other (D5).
       record.riskState = kLow;
       record.riskStateEnteredMs = context.now_ms;

@@ -344,3 +344,149 @@ TEST(ChainedCollisionBandTable, UpsertCadenceIsCreationCommitAndHeartbeat) {
   h.assess();  // (c) 1000 ms since the last upsert: heartbeat
   EXPECT_EQ(h.log.count(events::kAssessment), 3u);
 }
+
+// ---------------------------------------------------------------------------
+// Dwell debounce and edge-triggered transitions (14.4.1.3)
+// ---------------------------------------------------------------------------
+
+// Dwell tests: RISK_DWELL_MS 300; the heartbeat is pushed out of the way so
+// every assessment line is a creation or a committed transition.
+std::map<std::string, std::string> DwellEnv() {
+  return {{"RISK_DWELL_MS", "300"}, {"ASSESS_LOG_EVERY_MS", "100000"}};
+}
+
+TEST(ChainedCollisionDwell, FlapShorterThanDwellCommitsNothing) {
+  Harness h(DwellEnv());
+  h.putOwn(28.0);
+  h.putRelayed(25.0);  // d_AC 53: a non-low candidate appears at once
+
+  for (int i = 0; i < 8; ++i) {
+    const RiskFinding finding = h.assess();
+    EXPECT_EQ(finding.riskState, "low") << "iteration " << i;
+    h.nowMs += 100;  // each candidate lives 100 ms < the 300 ms dwell
+    h.putRelayed(i % 2 == 0 ? 33.0 : 25.0);  // flap d_AC across RISK_NEAR_M
+  }
+
+  EXPECT_EQ(h.log.count(events::kAssessment), 1u);  // the creation upsert only
+  EXPECT_EQ(h.db.get(kCId, kWarningType)->riskState, "low");
+}
+
+TEST(ChainedCollisionDwell, HeldPastDwellCommitsOnceAndOnlyOnce) {
+  Harness h(DwellEnv());
+  const std::int64_t t0 = h.nowMs;
+  h.putOwn(20.0);
+  h.putRelayed(25.0);  // d_AC 45: medium candidate from the first assess
+
+  EXPECT_EQ(h.assess().riskState, "low");  // creation; the dwell is pending
+  h.nowMs += 100;
+  EXPECT_EQ(h.assess().riskState, "low");
+  h.nowMs += 100;
+  EXPECT_EQ(h.assess().riskState, "low");
+  h.nowMs += 100;  // 300 ms after the candidate appeared
+  EXPECT_EQ(h.assess().riskState, "medium");  // commits exactly here
+  EXPECT_EQ(h.log.count(events::kAssessment), 2u);  // creation + the one commit
+
+  h.nowMs += 100;
+  EXPECT_EQ(h.assess().riskState, "medium");
+  h.nowMs += 100;
+  EXPECT_EQ(h.assess().riskState, "medium");
+  EXPECT_EQ(h.log.count(events::kAssessment), 2u);  // steady state commits nothing
+
+  EXPECT_EQ(h.db.get(kCId, kWarningType)->riskStateEnteredMs, t0 + 300);
+}
+
+TEST(ChainedCollisionDwell, FullSequenceCommitsEachTransitionExactlyOnce) {
+  // low → medium → high → medium → low, driven with 1000 ms steps so every
+  // rate stays gentle (8 m/s → ttc 6.6 > warn on the medium approach) and
+  // each candidate outlives the 300 ms dwell by the next assess.
+  Harness h(DwellEnv());
+  std::vector<std::string> committed;
+  const auto observe = [&committed](const RiskFinding& finding) {
+    if (committed.empty() || committed.back() != finding.riskState) {
+      committed.push_back(finding.riskState);
+    }
+  };
+
+  h.putOwn(28.0);
+  h.putRelayed(28.0);
+  h.putRelayed(33.0);  // d_AC 61 > 60
+  observe(h.assess()); // low (creation)
+
+  h.nowMs += 1000;
+  h.putRelayed(25.0);  // d_AC 53 ≤ 60: medium candidate
+  observe(h.assess()); // still low — dwell pending
+
+  h.nowMs += 1000;
+  observe(h.assess()); // medium commits
+
+  h.nowMs += 1000;
+  h.putOwn(10.0);
+  h.putRelayed(15.0);  // d_AC 25 ≤ 30: high candidate
+  observe(h.assess()); // still medium
+
+  h.nowMs += 1000;
+  observe(h.assess()); // high commits
+
+  h.nowMs += 1000;
+  h.putOwn(28.0);
+  h.putRelayed(25.0);  // d_AC 53, receding → ttc null: medium candidate
+  observe(h.assess()); // still high
+
+  h.nowMs += 1000;
+  observe(h.assess()); // medium commits (a downgrade is a transition too)
+
+  h.nowMs += 1000;
+  h.putRelayed(36.0);  // beyond GATE_EXIT_M: C is erased from the store
+  ASSERT_FALSE(h.store.get(kCId).has_value());
+  observe(h.assess()); // still medium — the low candidate just appeared
+
+  h.nowMs += 1000;
+  observe(h.assess()); // the committed return to low
+
+  EXPECT_EQ(committed,
+            (std::vector<std::string>{"low", "medium", "high", "medium", "low"}));
+  // One creation + four committed transitions, and nothing else.
+  EXPECT_EQ(h.log.count(events::kAssessment), 5u);
+
+  const auto record = h.db.get(kCId, kWarningType);
+  ASSERT_TRUE(record.has_value());  // the record survives the erasure
+  EXPECT_EQ(record->riskState, "low");
+  EXPECT_EQ(record->riskStateEnteredMs, h.nowMs);
+  EXPECT_EQ(record->lastSnapshot.id, kCId);
+}
+
+TEST(ChainedCollisionDwell, ClearingTransitionCarriesLastSnapshotAfterExpiry) {
+  Harness h(DwellEnv());
+  h.putOwn(20.0);
+  h.putRelayed(25.0);
+  h.assess();          // creation at low; medium candidate pending
+  h.nowMs += 300;
+  EXPECT_EQ(h.assess().riskState, "medium");  // dwell satisfied → commit
+
+  // Erase C through the store's timeout path — one large monotonic jump.
+  h.nowMs += kTrackTimeoutMs + 1;
+  EXPECT_EQ(h.store.expire(h.nowMs), 2u);  // B and C both expire on silence
+  ASSERT_FALSE(h.store.get(kCId).has_value());
+
+  RiskFinding finding = h.assess();  // low candidate appears; dwell pending
+  EXPECT_EQ(finding.riskState, "medium");
+  ASSERT_TRUE(finding.trigger.has_value());
+  EXPECT_EQ(finding.trigger->id, kCId);  // served from lastSnapshot
+
+  h.nowMs += 300;
+  finding = h.assess();  // the committed return to low
+  EXPECT_EQ(finding.riskState, "low");
+  ASSERT_TRUE(finding.trigger.has_value());
+  EXPECT_EQ(finding.trigger->id, kCId);
+  EXPECT_DOUBLE_EQ(finding.trigger->distance, 25.0);
+
+  const auto record = h.db.get(kCId, kWarningType);
+  ASSERT_TRUE(record.has_value());
+  EXPECT_EQ(record->riskState, "low");
+  EXPECT_FALSE(record->ttcS.has_value());
+  // A clearing event can still fill the required geometry.vehicleB (D5).
+  ASSERT_TRUE(record->lastKnownB.has_value());
+  EXPECT_EQ(*record->lastKnownB, (Vec2{20.0, 0.0}));
+}
+
+}  // namespace
