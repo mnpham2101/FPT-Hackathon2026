@@ -140,7 +140,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Status:** done — RAII move-only socket with poll-timeout receive and counted transient errors; loopback round-trip, bind-conflict, timeout and move tests on ephemeral ports; POSIX headers confined to the .cpp; build/tests deferred to CI ada-core-build.
 
-### [ ] `18.2.2.3` — R18 `[EVT]` JSONL event log `src/log/event_log.{hpp,cpp}` *(AI — parallel)*
+### [x] `18.2.2.3` — R18 `[EVT]` JSONL event log `src/log/event_log.{hpp,cpp}` *(AI — parallel)*
 
 **Objective:** the ADA half of the R18 evidence stream (HLD D8) — one JSONL line per event, `[EVT]`-prefixed, same line shape as the V2X ECU so one offline reader reconstructs both nodes.
 
@@ -155,6 +155,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 **Acceptance:** ADA build + ctest green on CI. The field names freeze here — `18.2.6.5`'s log checker parses them, and so do Phase 4's `event_report.py` and `check_evt_log.py --fusion`.
 
 **Dependencies:** none. **Commit:** `[18.2.2.3] feat: add ADA R18 JSONL event log writer`
+
+**Status:** done — nlohmann-only writer with both clock stamps, cumulative counters, injectable sink/clocks, stdout + optional EVENT_LOG_PATH file sink; all twelve D8 event names declared; tests cover parse-after-prefix, counter accumulation, quote/newline round-trip and the temp-dir file sink; build/tests deferred to CI ada-core-build.
 
 ### [ ] `3.2.2.4` — Bounded input queue `src/observer/input_queue.hpp` *(AI — parallel)*
 

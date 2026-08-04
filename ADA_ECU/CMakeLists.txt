@@ -69,3 +69,12 @@ target_compile_features(ada_net PUBLIC cxx_std_17)
 
 ada_add_test(ada_udp_socket_test tests/net/test_udp_socket.cpp)
 target_link_libraries(ada_udp_socket_test PRIVATE ada_net)
+
+# R18 event log — the [EVT] JSONL writer (18.2.2.3).
+add_library(ada_event_log STATIC src/log/event_log.cpp)
+target_include_directories(ada_event_log PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(ada_event_log PUBLIC nlohmann_json::nlohmann_json)
+target_compile_features(ada_event_log PUBLIC cxx_std_17)
+
+ada_add_test(ada_event_log_test tests/log/test_event_log.cpp)
+target_link_libraries(ada_event_log_test PRIVATE ada_event_log)
