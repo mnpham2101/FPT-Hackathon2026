@@ -399,7 +399,7 @@ docker buildx build --platform linux/arm64 --provenance=false --sbom=false -t m1
 | `ada-core-build` | [phase0-ci.yml](../../.github/workflows/phase0-ci.yml) | configure, build and `ctest` the C++ core on a plain runner |
 | `python-tests` | [phase0-ci.yml](../../.github/workflows/phase0-ci.yml) | the detector suite, against `SyntheticFrameSource` |
 | `contracts-gate` | [phase0-ci.yml](../../.github/workflows/phase0-ci.yml) | byte-identity of this folder's schema and sample copies (D1) |
-| `ada-ecu-image` | `.github/workflows/phase2-4-ci.yml` | the `linux/arm64` image build from context `ADA_ECU/`, pushed to Zot when `CARSKY_ZOT_API_KEY` is set |
+| `ada-ecu-image` | `.github/workflows/phase2-ci.yml` | the `linux/arm64` image build from context `ADA_ECU/`, pushed to Zot when `CARSKY_ZOT_API_KEY` is set |
 
 The image lane runs under emulation on an x86_64 runner, so its timeout matches the existing image lanes. A green image lane is not evidence that a tag reached the registry — the push step is gated on the secret ([node-code-layout § Build rules](../../.claude/rules/node-code-layout.md#build-rules-all-container-nodes)). The bench image the isolated Room needs is built by its own lane from `tools/ada-bench/` ([walkthrough §3.2](../../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#32-build-and-push-the-images-on-ci)).
 
