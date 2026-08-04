@@ -133,3 +133,13 @@ target_compile_features(ada_v2x_listener PUBLIC cxx_std_17)
 
 ada_add_test(ada_v2x_listener_test tests/observer/test_v2x_listener.cpp)
 target_link_libraries(ada_v2x_listener_test PRIVATE ada_v2x_listener)
+
+# Detector reader — spawn/read/respawn of DETECTOR_CMD, the ego side of the
+# D2 process contract (12.2.6.2).
+add_library(ada_detector_reader STATIC src/observer/detector_reader.cpp)
+target_include_directories(ada_detector_reader PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(ada_detector_reader PUBLIC ada_input_queue ada_event_log Threads::Threads)
+target_compile_features(ada_detector_reader PUBLIC cxx_std_17)
+
+ada_add_test(ada_detector_reader_test tests/observer/test_detector_reader.cpp)
+target_link_libraries(ada_detector_reader_test PRIVATE ada_detector_reader)

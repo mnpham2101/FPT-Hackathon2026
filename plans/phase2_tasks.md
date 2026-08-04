@@ -357,7 +357,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Status:** done — RAII listener thread over the sole UdpSocket, each datagram one InputItem{V2xR2, body, rxEpochMs}, receive errors counted via receiveErrorCount() (logging is the composition root's, per D2 no-logging-in-class); tests cover byte-identical delivery incl. NUL/0xFF, ordered arrival, idempotent stop, bounded join, deterministic capacity-1 drop count; build/tests deferred to CI ada-core-build.
 
-### [ ] `12.2.6.2` — Detector reader `src/observer/detector_reader.{hpp,cpp}` *(AI — parallel with 2.2.6.1)*
+### [x] `12.2.6.2` — Detector reader `src/observer/detector_reader.{hpp,cpp}` *(AI — parallel with 2.2.6.1)*
 
 **Objective:** spawn `DETECTOR_CMD` and read its stdout as R3 JSONL — the ego side of the D2 process contract (argv + exit codes + JSONL over stdout, no FFI, no RPC).
 
@@ -378,6 +378,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 **Acceptance:** ADA build + ctest green on CI; no orphaned child process after the suite.
 
 **Dependencies:** after `13.2.2.1` + `3.2.2.4` + `18.2.2.3`. **Commit:** `[12.2.6.2] feat: add the detector subprocess reader`
+
+**Status:** done — fork/exec with whitespace argv (no shell), one getline reader thread, all six D2 lifecycle rules; injectable respawn hook as the delay/bound point; RAII kill+reap+join with ECHILD zombie check in tests; class reads no env (config values injected); emits a once-per-construction `detector_disabled` line for the disabled arm — a 13th event name pending D8 ratification (see Open items); build/tests deferred to CI ada-core-build.
 
 ### [x] `3.2.6.3` — Mock drive equipment: `tests/fixtures/own_sensor_mock.jsonl` + `tools/mock_v2x_sender.py` *(AI)*
 
