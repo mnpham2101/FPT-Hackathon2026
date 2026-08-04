@@ -143,3 +143,12 @@ target_compile_features(ada_detector_reader PUBLIC cxx_std_17)
 
 ada_add_test(ada_detector_reader_test tests/observer/test_detector_reader.cpp)
 target_link_libraries(ada_detector_reader_test PRIVATE ada_detector_reader)
+
+# R14 CRA seam — frozen header-only interface, AssessmentDb forward-declared (14.2.5.1).
+add_library(ada_cra_interface INTERFACE)
+target_include_directories(ada_cra_interface INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(ada_cra_interface INTERFACE ada_store)
+target_compile_features(ada_cra_interface INTERFACE cxx_std_17)
+
+ada_add_test(ada_cra_interface_test tests/cra/test_cra_interface.cpp)
+target_link_libraries(ada_cra_interface_test PRIVATE ada_cra_interface)

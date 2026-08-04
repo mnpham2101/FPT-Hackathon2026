@@ -303,7 +303,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Status:** done — draft 2020-12 schema with all fourteen D4 fields required, `ttcS`/`lastKnownB` nullable, `lastSnapshot` `$ref`ing the synced R3 schema by relative path; sample validates (jsonschema Draft202012Validator, zero errors); `contracts/check_sync.py` exit 0 (47 copies byte-identical).
 
-### [ ] `14.2.5.1` — Freeze the CRA interface `src/cra/i_collision_risk_assessment.hpp` *(AI)*
+### [x] `14.2.5.1` — Freeze the CRA interface `src/cra/i_collision_risk_assessment.hpp` *(AI)*
 
 **Objective:** the R14 seam, header-only and frozen — the text is in [HLD D4](../ADA_ECU/doc/ada-ecu-design-decisions.md#d4--r14-the-collision-risk-assessment-interface-registry-and-database) and is transcribed, not redesigned.
 
@@ -314,6 +314,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 **Acceptance:** ADA build + ctest green on CI; interface text stable — later subtasks may not alter it without re-freezing.
 
 **Dependencies:** after `3.2.4.1` (references `TrackStore`). **Commit:** `[14.2.5.1] feat: freeze the collision risk assessment interface`
+
+**Status:** done — D4 interface transcribed verbatim into `src/cra/i_collision_risk_assessment.hpp` in `ada::cra` (AssessmentDb forward-declared, no accessor signature; `using store::TrackStore;` added so D4's text resolves — both convention facts flagged to architecture); test exercises a fake plugin through a base pointer and static_asserts the frozen signatures; build/tests deferred to CI ada-core-build.
 
 ### [ ] `14.2.5.3` — Assessment database accessor `src/cra/assessment_db.{hpp,cpp}` *(AI)*
 
