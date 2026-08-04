@@ -1,0 +1,64 @@
+# The four lanes that originate in Phase 3: ada-detector-wheels (12.3.1.1), ada-detector-tests
+# (12.3.3.3), ada-detector-run (12.3.3.4) and ada-zero-c (12.3.5.4) - the ADA detector's
+# dependency-feasibility, unit-test, measurement and zero-C-evidence lanes.
+#
+# This file carries ONLY those four. The Phase 0 lanes live in .github/workflows/phase0-ci.yml,
+# the Phase 1 lanes in phase1-ci.yml, the Phase 2 lane in phase2-ci.yml, and the node-image lanes
+# in phase4-ci.yml. All files use the same push/pull_request triggers, so every job runs on every
+# push and pull request; a lane belongs to the phase that created it, not to the phase that last
+# touched it.
+#
+# Every job block below is fully self-contained - no YAML anchors shared across jobs - and is
+# delimited by a `# ---- <job-name> (<subtask-id>) ----` comment line, so each lane can land as
+# its own commit without touching the others.
+name: phase3-ci
+
+on:
+  push:
+  pull_request:
+    branches: [main]
+
+# Superseded runs are cancelled rather than left to finish - same policy as phase0/1/2-ci.yml
+# (the fuller note is in phase1-ci.yml). Per ref, so main and a feature branch never cancel
+# each other.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ---- ada-detector-wheels (12.3.1.1) ----
+  # Dependency feasibility, proved BEFORE any detector code runs: the detector's pinned deps
+  # must install as PREBUILT wheels for linux/arm64 on python:3.11-slim - the platform and base
+  # image the ADA node ships on. --only-binary=:all: is the point of the lane: a missing aarch64
+  # wheel makes pip exit non-zero NAMING the package, instead of silently starting a multi-hour
+  # emulated source build.
+  ada-detector-wheels:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      # QEMU so the amd64 runner can execute the linux/arm64 python:3.11-slim container below.
+      - uses: docker/setup-qemu-action@v3
+      - name: Install pinned deps as prebuilt arm64 wheels, then import-smoke them
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # One container invocation does both the install and the import smoke (`sh -s` reads
+          # the script from the heredoc), so the smoke runs against exactly the site-packages
+          # the install just produced. Capture-then-assert: under `set -e` a bare failing
+          # docker run would end the step before the escalation note could print.
+          STATUS=0
+          docker run --rm -i --platform linux/arm64 python:3.11-slim sh -s <<'SH' || STATUS=$?
+          set -eu
+          python -m pip install --only-binary=:all: \
+            'onnxruntime==1.28.0' 'opencv-python-headless==5.0.0.93' 'numpy==2.4.6'
+          python -c "import onnxruntime, cv2, numpy; print('onnxruntime', onnxruntime.__version__); print('opencv', cv2.__version__); print('numpy', numpy.__version__)"
+          SH
+
+          if [ "$STATUS" -ne 0 ]; then
+            echo "::error::a pinned detector dependency has no prebuilt linux/arm64 wheel for python:3.11-slim (or fails to import there). Escalate to project-architecture - the options are: pin an older onnxruntime that ships an aarch64 wheel, switch the base image to a distro whose apt carries the package, or accept a source build with a raised timeout. The choice belongs to project-architecture, not the implementer."
+            exit "$STATUS"
+          fi
+          echo "::notice::onnxruntime 1.28.0, opencv-python-headless 5.0.0.93 and numpy 2.4.6 all install as prebuilt linux/arm64 wheels on python:3.11-slim and import cleanly"
+
