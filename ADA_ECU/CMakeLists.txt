@@ -224,4 +224,5 @@ add_executable(ada_ecu src/main.cpp)
 target_link_libraries(ada_ecu PRIVATE
   ada_config ada_store ada_assessment_db ada_cra_registry ada_parser
   ada_v2x_listener ada_detector_reader ada_event_log ada_input_queue
+  ada_fusion ada_warning_builder ada_ivi_sender
   Threads::Threads)

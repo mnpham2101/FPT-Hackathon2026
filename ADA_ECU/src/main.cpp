@@ -1,9 +1,10 @@
 // The ada_ecu composition root (HLD §8 MVC mapping; subtask 13.2.6.4) —
 // controller only. Assembles config → event log → registry → observers →
-// queue → parsers → store and runs the fusion tick. No parsing, no admission,
-// no risk rules here: each rule lives in its module, and this file only
-// routes between them. No socket header is included — socket access stays
-// inside src/net/ behind the observers (house rules).
+// queue → parsers → store → output and runs the fusion tick. No parsing, no
+// admission, no risk rules here: each rule lives in its module, and this file
+// only routes between them. No socket header is included — socket access
+// stays inside src/net/ behind the observers and the IVI sender (house
+// rules).
 //
 // Threading (D2): the two observer threads produce onto the one bounded
 // queue; this main thread is the SINGLE writer of the store and the
@@ -24,18 +25,28 @@
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
+#include <map>
 #include <optional>
 #include <string>
+#include <utility>
+#include <vector>
 
 #include <nlohmann/json.hpp>
 
 #include "config/config.hpp"
+#include "contracts/r4_message.hpp"
+#include "contracts/tracked_object.hpp"
 #include "cra/assessment_db.hpp"
+#include "cra/i_collision_risk_assessment.hpp"
 #include "cra/registry.hpp"
+#include "fusion/scene_composer.hpp"
 #include "log/event_log.hpp"
+#include "net/udp_socket.hpp"
 #include "observer/detector_reader.hpp"
 #include "observer/input_queue.hpp"
 #include "observer/v2x_listener.hpp"
+#include "output/ivi_sender.hpp"
+#include "output/warning_builder.hpp"
 #include "parser/r2_parser.hpp"
 #include "parser/r3_parser.hpp"
 #include "store/track_store.hpp"
@@ -124,6 +135,82 @@ void ingestR3(const ada::observer::InputItem& item, ada::parser::R3Parser& parse
                  {"rx_epoch_ms", item.rxEpochMs}});
 }
 
+// The assess/emit stage of the fusion tick (subtask 15.4.2.3; D2's loop:
+// expire → assess → compose → build → send). The plugin returns only
+// COMMITTED levels — D5's dwell debounces inside assess() — so an inequality
+// against lastCommitted[warningType] is exactly one committed transition per
+// edge, both directions. Per transition the emission order is risk_transition
+// first, then the r4_tx the sender emits.
+void assessAndEmit(const std::vector<ada::cra::ICollisionRiskAssessment*>& plugins,
+                   ada::store::TrackStore& store, ada::cra::AssessmentDb& assessmentDb,
+                   ada::output::IviSender& sender, ada::log::EventLog& eventLog,
+                   std::int64_t assessLogEveryMs, std::int64_t nowMonoMs,
+                   std::map<std::string, std::string>& lastCommitted,
+                   std::map<std::string, std::int64_t>& lastBUnknownEmit) {
+  for (ada::cra::ICollisionRiskAssessment* plugin : plugins) {
+    ada::cra::RiskContext context{store, assessmentDb, nowMonoMs};
+    const ada::cra::RiskFinding finding = plugin->assess(context);
+
+    if (finding.rationale == "b_unknown") {
+      // D5's no-B skip. The exact rationale string is the plugin's contract;
+      // rate-limited to one line per ASSESS_LOG_EVERY_MS per warningType so a
+      // long B-less stretch stays one heartbeat, not one line per tick.
+      const auto it = lastBUnknownEmit.find(finding.warningType);
+      if (it == lastBUnknownEmit.end() || nowMonoMs - it->second >= assessLogEveryMs) {
+        eventLog.emit(ada::log::events::kAssessSkippedBUnknown,
+                      {{"warningType", finding.warningType}, {"rationale", "b_unknown"}});
+        lastBUnknownEmit[finding.warningType] = nowMonoMs;
+      }
+    }
+
+    std::string& last = lastCommitted.try_emplace(finding.warningType, "low").first->second;
+    if (finding.riskState == last) {
+      continue;  // steady state emits nothing (D5)
+    }
+
+    // Evidence for the transition line: d_AC and TTC from the assessment
+    // record, null when no record exists for the trigger.
+    const std::optional<ada::cra::AssessmentRecord> record = assessmentDb.get(
+        finding.trigger ? finding.trigger->id : std::string{}, finding.warningType);
+
+    // Composition inputs per the composer's contract: C's STORED entry only
+    // while `tracked`; the record's remembered lastKnownB as the fallback.
+    std::optional<ada::contracts::TrackedObject> trackedC;
+    if (finding.trigger) {
+      std::optional<ada::contracts::TrackedObject> stored = store.get(finding.trigger->id);
+      if (stored && stored->state == ada::contracts::TrackState::tracked) {
+        trackedC = std::move(stored);
+      }
+    }
+    const std::optional<ada::fusion::SceneGeometry> geometry = ada::fusion::compose(
+        store, trackedC, record ? record->lastKnownB : std::nullopt);
+
+    eventLog.emit(ada::log::events::kRiskTransition,
+                  {{"id", finding.trigger ? nlohmann::json(finding.trigger->id)
+                                          : nlohmann::json(nullptr)},
+                   {"source", "v2x_relayed"},
+                   {"warningType", finding.warningType},
+                   {"from", last},
+                   {"to", finding.riskState},
+                   {"d_ac", record ? nlohmann::json(record->distanceM)
+                                   : nlohmann::json(nullptr)},
+                   {"ttc", optionalToJson(record ? record->ttcS : std::nullopt)},
+                   {"rationale", finding.rationale}});
+
+    if (finding.trigger && geometry) {
+      const ada::contracts::R4WarningEvent event = ada::output::buildWarning(finding, *geometry);
+      sender.send(event);  // emits the r4_tx line; a failure is counted inside, never thrown
+    }
+    // No datagram otherwise. D5's invariant — no medium/high is ever entered
+    // without a known B, so lastKnownB always makes the geometry composable —
+    // leaves trigger and geometry present on every real transition; the only
+    // edge reaching here is the b_unknown return to low, already carried by
+    // the risk_transition rationale above.
+
+    last = finding.riskState;
+  }
+}
+
 // Construction order fixes destruction order: the observers are destroyed
 // (threads joined) before the queue, and everything log-writing before the
 // EventLog. Returns the process exit code.
@@ -137,14 +224,13 @@ int run(const ada::config::Config& config) {
   ada::cra::Registry registry;
   ada::cra::registerBuiltinPlugins(registry, config);
   // CRA_ENABLED validation (the check config.cpp defers to registry wiring):
-  // enabled() throws on any name the registry does not carry. The Phase 2
-  // registry is empty while CRA_ENABLED defaults to "nlos_obstruction", so an
-  // unconditional call could never pass and the node could never start.
-  // Planner's ruling (13.2.6.4 brief): validate only once the registry is
-  // non-empty — Phase 4's first builtin plugin makes this check live.
-  if (registry.size() > 0) {
-    (void)registry.enabled(config.craEnabled);
-  }
+  // enabled() throws on any name the registry does not carry, and its result
+  // is the assessment order the fusion tick walks — materialized once; the
+  // enabled set never changes at runtime. Guarded on a non-empty registry so
+  // a build carrying no builtin plugin still starts (the 13.2.6.4 ruling).
+  const std::vector<ada::cra::ICollisionRiskAssessment*> enabledPlugins =
+      registry.size() > 0 ? registry.enabled(config.craEnabled)
+                          : std::vector<ada::cra::ICollisionRiskAssessment*>{};
 
   ada::observer::InputQueue queue(kInputQueueCapacity);
   ada::observer::V2xListener listener(config.v2xListenHost, config.v2xListenPort, queue,
@@ -155,16 +241,32 @@ int run(const ada::config::Config& config) {
   ada::parser::R2Parser r2Parser;
   ada::parser::R3Parser r3Parser;
 
+  // The R4 egress (15.4.2.3): the sender's one socket. Construction failure
+  // throws — the startup-failure path (exit 2), like the listener's bind.
+  ada::net::UdpSocket egressSocket;
+  ada::output::IviSender iviSender(egressSocket, config.iviEcuHost, config.iviEcuPort,
+                                   eventLog);
+
+  // Edge-detection state for assessAndEmit: the committed riskState per
+  // warningType (absent = "low", the vocabulary's floor) and the last
+  // assess_skipped_b_unknown emission per warningType (the rate limiter).
+  std::map<std::string, std::string> lastCommitted;
+  std::map<std::string, std::int64_t> lastBUnknownEmit;
+
   // The fusion tick (D2): expire() runs every FUSION_TICK_MS of monotonic
   // time whether or not anything arrived, so a track expires on silence
-  // alone. The pop timeout is the time left until the next tick — one wait
-  // serves both the tick cadence and shutdown promptness. The CRA assessment
-  // call on this tick is Phase 4's (15.4.2.3) and is deliberately absent.
+  // alone. Each tick then runs the assess/emit stage — every enabled plugin
+  // assessed, committed risk transitions emitted and sent (assessAndEmit
+  // above), still on this single-writer thread. The pop timeout is the time
+  // left until the next tick — one wait serves both the tick cadence and
+  // shutdown promptness.
   std::int64_t nextTickMonoMs = monoNowMs() + config.fusionTickMs;
   while (g_stopRequested == 0) {
     const std::int64_t nowMonoMs = monoNowMs();
     if (nowMonoMs >= nextTickMonoMs) {
       store.expire(nowMonoMs);
+      assessAndEmit(enabledPlugins, store, assessmentDb, iviSender, eventLog,
+                    config.assessLogEveryMs, nowMonoMs, lastCommitted, lastBUnknownEmit);
       // Advance in whole ticks; a stall never causes a burst of catch-up ticks.
       while (nextTickMonoMs <= nowMonoMs) {
         nextTickMonoMs += config.fusionTickMs;
