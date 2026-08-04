@@ -159,3 +159,12 @@ target_compile_features(ada_cra_interface INTERFACE cxx_std_17)
 
 ada_add_test(ada_cra_interface_test tests/cra/test_cra_interface.cpp)
 target_link_libraries(ada_cra_interface_test PRIVATE ada_cra_interface)
+
+# R14 CRA plugin registry — explicit registration, no static-init (14.2.5.4).
+add_library(ada_cra_registry STATIC src/cra/registry.cpp src/cra/builtin_plugins.cpp)
+target_include_directories(ada_cra_registry PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(ada_cra_registry PUBLIC ada_cra_interface ada_config)
+target_compile_features(ada_cra_registry PUBLIC cxx_std_17)
+
+ada_add_test(ada_cra_registry_test tests/cra/test_registry.cpp)
+target_link_libraries(ada_cra_registry_test PRIVATE ada_cra_registry)

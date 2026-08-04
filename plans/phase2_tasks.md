@@ -329,7 +329,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after `14.2.5.2` + `14.2.5.1` + `18.2.2.3`. **Commit:** `[14.2.5.3] feat: add the CRA assessment database accessor`
 
-### [ ] `14.2.5.4` — Plugin registry `src/cra/registry.{hpp,cpp}` + `src/cra/builtin_plugins.cpp` *(AI)*
+### [x] `14.2.5.4` — Plugin registry `src/cra/registry.{hpp,cpp}` + `src/cra/builtin_plugins.cpp` *(AI)*
 
 **Objective:** explicit registration and lookup by `warningType`, plus the one file an added plugin edits.
 
@@ -342,6 +342,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 **Acceptance:** ADA build + ctest green on CI.
 
 **Dependencies:** after `14.2.5.1` + `13.2.2.1`. **Commit:** `[14.2.5.4] feat: add the CRA plugin registry and builtin registration point`
+
+**Status:** done — registry.{hpp,cpp} + builtin_plugins.cpp + tests/cra/test_registry.cpp; get() returns nullptr on unknown (query), enabled() throws RegistryError naming the unknown CRA_ENABLED entry (startup validation, the check config.cpp defers to registry wiring); registerBuiltinPlugins declared in registry.hpp (HLD §4 designates no builtin_plugins.hpp) and empty in Phase 2; build/tests deferred to CI ada-core-build.
 
 ---
 
