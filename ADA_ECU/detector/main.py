@@ -30,8 +30,13 @@ from pacer import pace
 from tracker import Tracker
 
 
-class _Terminated(Exception):
-    """Raised from the signal handler to leave the frame loop promptly."""
+class _Terminated(BaseException):
+    """Raised from the signal handler to leave the frame loop promptly.
+
+    BaseException on purpose, mirroring KeyboardInterrupt: the startup blocks
+    catch ``Exception`` to map real failures onto exit code 2, and a SIGTERM
+    landing during construction must not be re-labelled a startup failure.
+    """
 
 
 # Module-level stop flag: belt to the handler's raised-exception braces.
@@ -125,41 +130,47 @@ def main(argv=None) -> int:
 
     _install_signal_handlers()
 
-    # Construction order: source before model, so a missing clip fails before
-    # (and independently of) a missing model.
+    # Everything after handler installation sits under one graceful-termination
+    # catch: a SIGTERM is a clean exit 0 wherever it lands - during source or
+    # model construction, the startup print, or the frame loop. A narrower try
+    # around run() alone leaves windows in which the raised _Terminated escapes
+    # as an unhandled traceback (exit 1), which is what the CI SIGTERM test
+    # caught on Linux.
     try:
-        if args.synthetic is not None:
-            # Synthetic frames are pre-strided; the pacer still gets the config
-            # stride/fps — fidelity does not matter on this smoke path.
-            source = SyntheticFrameSource(count=args.synthetic)
-            source_desc = f"synthetic source ({args.synthetic} frames)"
-        else:
-            source = FileFrameSource(
-                config.video_clip_path, config.frame_stride, config.loop
+        # Construction order: source before model, so a missing clip fails before
+        # (and independently of) a missing model.
+        try:
+            if args.synthetic is not None:
+                # Synthetic frames are pre-strided; the pacer still gets the config
+                # stride/fps — fidelity does not matter on this smoke path.
+                source = SyntheticFrameSource(count=args.synthetic)
+                source_desc = f"synthetic source ({args.synthetic} frames)"
+            else:
+                source = FileFrameSource(
+                    config.video_clip_path, config.frame_stride, config.loop
+                )
+                source_desc = f"file source (clip {config.video_clip_path})"
+        except Exception as exc:
+            print(f"detector: startup failure: {exc}", file=sys.stderr)
+            return 2
+
+        try:
+            detector = OnnxDetector(
+                config.model_path, config.conf_threshold, config.iou_threshold
             )
-            source_desc = f"file source (clip {config.video_clip_path})"
-    except Exception as exc:
-        print(f"detector: startup failure: {exc}", file=sys.stderr)
-        return 2
+        except Exception as exc:
+            print(
+                f"detector: startup failure: cannot load model {config.model_path}: {exc}",
+                file=sys.stderr,
+            )
+            return 2
 
-    try:
-        detector = OnnxDetector(
-            config.model_path, config.conf_threshold, config.iou_threshold
-        )
-    except Exception as exc:
-        print(
-            f"detector: startup failure: cannot load model {config.model_path}: {exc}",
-            file=sys.stderr,
-        )
-        return 2
+        tracker = Tracker(config.track_iou_min)
+        emitter = R3Emitter()
 
-    tracker = Tracker(config.track_iou_min)
-    emitter = R3Emitter()
+        print(f"detector: starting: {source_desc}; model {config.model_path}", file=sys.stderr)
+        sys.stderr.flush()
 
-    print(f"detector: starting: {source_desc}; model {config.model_path}", file=sys.stderr)
-    sys.stderr.flush()
-
-    try:
         return run(config, source, detector, tracker, emitter, sys.stdout)
     except (_Terminated, KeyboardInterrupt):
         return 0

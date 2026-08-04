@@ -130,12 +130,14 @@ def test_sigterm_terminates_promptly():
             proc.terminate()  # TerminateProcess: not graceful, no handler runs
         else:
             proc.send_signal(signal.SIGTERM)
-        proc.communicate(timeout=10)  # raises TimeoutExpired if not bounded
+        _, err = proc.communicate(timeout=10)  # raises TimeoutExpired if not bounded
         elapsed = time.monotonic() - t0
 
         assert elapsed < 10.0
         if os.name != "nt":
-            assert proc.returncode == 0
+            # Carry the child's stderr tail so a failure names the traceback in
+            # the CI annotation rather than only the exit code.
+            assert proc.returncode == 0, f"stderr tail: {err[-800:]}"
         # On Windows, TerminateProcess kills the process without running the
         # SIGTERM handler, so the graceful exit code cannot be asserted — only
         # bounded termination is checked above.
