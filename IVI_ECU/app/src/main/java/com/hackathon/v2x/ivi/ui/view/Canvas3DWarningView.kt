@@ -140,11 +140,11 @@ class Canvas3DWarningView : IviWarningViewSeam {
 
             // ── Blind zone (occlusion cone behind B) ─────────────────────────
             val egoX = roadW * 0.50f
-            val egoY = roadH * 0.82f   // ego A anchor
+            val egoY = roadH * 0.84f   // ego A anchor
             val bX   = roadW * 0.50f
-            val bY   = roadH * 0.50f   // vehicle B anchor
+            val bY   = roadH * 0.56f   // vehicle B anchor
             val cX   = roadW * 0.50f
-            val cY   = roadH * 0.22f   // ghost C anchor
+            val cY   = roadH * 0.28f   // ghost C anchor
 
             drawBlindZone(egoX, egoY, bX, bY, roadW, textMeasurer)
 
@@ -154,13 +154,13 @@ class Canvas3DWarningView : IviWarningViewSeam {
             val distAC = if (scene.vehicleC != null) formatMeters(scene.vehicleC!!) else null
 
             drawDistanceRail(
-                x1 = roadW * 0.10f, y1 = bY, y2 = egoY,
+                x1 = roadW * 0.12f, y1 = bY, y2 = egoY,
                 label = "d_AB = $distAB m",
                 dashed = false, textMeasurer = textMeasurer
             )
             if (hasC && distAC != null) {
                 drawDistanceRail(
-                    x1 = roadW * 0.90f, y1 = cY, y2 = egoY,
+                    x1 = roadW * 0.88f, y1 = cY, y2 = egoY,
                     label = "d_AC ≈ $distAC m",
                     dashed = true, textMeasurer = textMeasurer
                 )
@@ -202,35 +202,35 @@ private fun formatMeters(pos: VehiclePosition): String =
     String.format(Locale.US, "%.1f", hypot(pos.x, pos.y))
 
 // ---------------------------------------------------------------------------
-// Road — tapered perspective lane (matches SVG polygon points)
+// Road — tapered perspective lane (matches SVG polygon points: 140-460/600 & 180-420/600)
 // ---------------------------------------------------------------------------
 
 private fun DrawScope.drawRoad(roadW: Float, roadH: Float) {
-    // Road surface trapezoid
+    // Road surface trapezoid — centered at 0.50f
     val roadPath = Path().apply {
-        moveTo(roadW * 0.14f, roadH)          // bottom-left
-        lineTo(roadW * 0.46f, roadH)          // bottom-right
-        lineTo(roadW * 0.42f, roadH * 0.09f) // top-right (horizon)
-        lineTo(roadW * 0.18f, roadH * 0.09f) // top-left  (horizon)
+        moveTo(roadW * 0.233f, roadH)          // bottom-left (23.3%)
+        lineTo(roadW * 0.767f, roadH)          // bottom-right (76.7%)
+        lineTo(roadW * 0.700f, roadH * 0.09f) // top-right (70.0%)
+        lineTo(roadW * 0.300f, roadH * 0.09f) // top-left  (30.0%)
         close()
     }
     drawPath(roadPath, color = RoadColor)
 
     // Road edges
-    drawLine(RoadEdgeColor, start = Offset(roadW * 0.14f, roadH), end = Offset(roadW * 0.18f, roadH * 0.09f), strokeWidth = 2.5f)
-    drawLine(RoadEdgeColor, start = Offset(roadW * 0.46f, roadH), end = Offset(roadW * 0.42f, roadH * 0.09f), strokeWidth = 2.5f)
+    drawLine(RoadEdgeColor, start = Offset(roadW * 0.233f, roadH), end = Offset(roadW * 0.300f, roadH * 0.09f), strokeWidth = 2.5f)
+    drawLine(RoadEdgeColor, start = Offset(roadW * 0.767f, roadH), end = Offset(roadW * 0.700f, roadH * 0.09f), strokeWidth = 2.5f)
 
     // Lane dividers (dashed)
-    drawLine(LaneDivColor, start = Offset(roadW * 0.247f, roadH), end = Offset(roadW * 0.26f, roadH * 0.09f), strokeWidth = 2f, pathEffect = LaneDash)
-    drawLine(LaneDivColor, start = Offset(roadW * 0.353f, roadH), end = Offset(roadW * 0.34f, roadH * 0.09f), strokeWidth = 2f, pathEffect = LaneDash)
+    drawLine(LaneDivColor, start = Offset(roadW * 0.412f, roadH), end = Offset(roadW * 0.433f, roadH * 0.09f), strokeWidth = 2f, pathEffect = LaneDash)
+    drawLine(LaneDivColor, start = Offset(roadW * 0.588f, roadH), end = Offset(roadW * 0.567f, roadH * 0.09f), strokeWidth = 2f, pathEffect = LaneDash)
 
     // Horizon fade rect (gradient-like fade toward top)
     val fadeH = roadH * 0.22f
     val fadePath = Path().apply {
-        moveTo(roadW * 0.18f, roadH * 0.09f)
-        lineTo(roadW * 0.42f, roadH * 0.09f)
-        lineTo(roadW * 0.42f, roadH * 0.09f + fadeH)
-        lineTo(roadW * 0.18f, roadH * 0.09f + fadeH)
+        moveTo(roadW * 0.300f, roadH * 0.09f)
+        lineTo(roadW * 0.700f, roadH * 0.09f)
+        lineTo(roadW * 0.700f, roadH * 0.09f + fadeH)
+        lineTo(roadW * 0.300f, roadH * 0.09f + fadeH)
         close()
     }
     drawPath(fadePath, brush = Brush.verticalGradient(
