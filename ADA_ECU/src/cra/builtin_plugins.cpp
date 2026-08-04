@@ -7,12 +7,12 @@
 #include "cra/registry.hpp"
 
 #include "config/config.hpp"
+#include "cra/plugins/chained_collision.hpp"
 
 namespace ada::cra {
 
-void registerBuiltinPlugins(Registry& /*registry*/, const config::Config& /*config*/) {
-  // Empty in Phase 2: no builtin plugin exists yet. Phase 4 adds one
-  // registry.add(std::make_unique<ChainedCollision>(cfg)) line per plugin.
+void registerBuiltinPlugins(Registry& registry, const config::Config& config) {
+  registry.add(std::make_unique<ChainedCollision>(config));
 }
 
 }  // namespace ada::cra
