@@ -1,0 +1,55 @@
+---
+name: pull-request-review
+description: Procedure project-reviewer follows when asked to review a pull request or a delivery branch — check out the branch, establish the design and plan authorities it should have been built against, judge the modules against the HLD and the delivered features against the plan or the requirements, and commit a review document on the branch. project-reviewer only.
+---
+
+# Pull-Request Review Procedure (project-reviewer)
+
+Trigger: [[project-reviewer]] is asked to review a pull request, a delivery branch, or "the work on branch X". The artifact is one review document under [reviews/](../../../reviews/), shaped by [pull-request-review-format.md](../../rules/pull-request-review-format.md) — this skill is how it gets produced, that rule is what it must look like.
+
+The review judges **delivered work against the authorities that governed it**. Establishing those authorities is step 2 and it is not optional: a review written against the reviewer's own idea of good design is an opinion, and the author is entitled to reject it.
+
+## Procedure
+
+1. **Get the branch and fix the diff range.** Fetch the PR (`gh pr checkout <N>`, or the already-fetched `pr-<N>` branch where `gh` is unauthenticated) into a **separate worktree**, so the primary working directory stays on its own branch. Record the head SHA, the base branch, and `git merge-base base head` — every later claim is made about that range. Use `git diff base...head` (three dots), never `base..head`: the two-dot form attributes the base branch's own commits to the author.
+
+2. **Establish the authorities on the base branch, not on the PR's.** Read, from `main`:
+   - The **node HLD** for each folder the PR touches, `<Node_Folder>/doc/<node-slug>-hld.md` — its §3 component architecture, §4 folder structure, §6 internal components and §8 seams are the architecture section's row list. Its companion `doc/<node-slug>-design-decisions.md` carries the decisions a deviation is measured against.
+   - The **authoritative plan** for the phase, under [plans/](../../../plans/) — the source of truth for what a task ID means.
+   - The **requirement entries** the PR serves, in full, from [m1-cooperative-awareness.md §2](../../../requirements/m1-cooperative-awareness.md) — definition *and* acceptance. Completion is scored against the acceptance clause.
+   - The **frozen contract files** the PR's code binds against, `<Node_Folder>/contracts/*.schema.json`.
+
+   **A branch that does not contain the HLD was still governed by it.** Judge against the design on the base branch and note the absence as a finding; do not lower the bar to what the branch happened to know about.
+
+3. **Read the git history of the base branch around the same files.** A revert, a fix-forward, or a prior review of the same area is context the author may not have had, and it is often what explains a finding. `git log --oneline -20` plus the full message of any commit touching the PR's files.
+
+4. **Decide the low-level variant, from evidence.** Resolve each commit's `X.Y.Z.W` tag against the authoritative plan of step 2.
+   - Every ID resolves, and to the work the commit actually did → **Variant A**, the task-ID table.
+   - IDs absent, unresolvable, or resolving to different work — the signature of a branch carrying its own plan — → **Variant B**, the requirement table.
+
+   When the branch carries its own plan file, read it: it explains the IDs, and the divergence between the two plans is itself a finding.
+
+5. **Walk the diff file by file, and record findings against the authorities.** Read every changed file whole rather than the hunks alone — a hunk shows what moved, not what the file now does. What to look for, in the order it matters:
+   - **Contract fidelity.** Every field name, type, optionality and default against the frozen schema. A required field given a default, a type added to a frozen sealed hierarchy, or a discriminator value the schema does not define is contract drift, however small the diff.
+   - **Reachability.** Trace each new component to something that constructs or calls it. A component nothing reaches is not complete, whatever its internal quality — and this is the defect that unit tests most reliably hide.
+   - **Layer and seam.** Which layer the HLD assigns the component, and whether it stays there; whether it goes through the seam the design provides or around it.
+   - **Configuration.** Ports, addresses, thresholds and cadences against the blueprint and node guide values. A tunable that disagrees with the deployed blueprint is a defect even when both ends of the PR agree with each other.
+   - **Resource and loop correctness.** Buffers reused across iterations, sockets closed on cancellation, blocking calls inside cancellable scopes, unbounded growth.
+   - **Test coverage against the risk**, not against the line count: which of the findings above a test would have caught, and whether one exists.
+
+6. **Verify what can be verified.** Build the artifact and run the unit tests, or read the committed results if a build is already present in the worktree. Check for a CI lane covering the work, in the file [ci-lane-placement.md](../../rules/ci-lane-placement.md) designates. Record counts and outcomes as facts; where a check could not be run, say which and why rather than inferring.
+
+7. **Score each row.** Architecture rows are scored against the HLD component's stated responsibility; requirement rows against the acceptance clause. A component that exists, compiles and is wired to nothing sits well below half however polished it is — the design's unit of completion is a working path, not a file.
+
+8. **Write the review** to `reviews/pr-<N>-<slug>-review.md` per [pull-request-review-format.md](../../rules/pull-request-review-format.md): header block, architecture table, low-level table, conclusion. Write the conclusion last and check it against that rule's § The conclusion is encouragement, never a plan — the failure mode is drifting from "this falls short" into "here is how to fix it in order".
+
+9. **Commit on the reviewed branch**, `[<taskID>] docs: <subject>` where an ID applies and no tag otherwise, then report to the user: the verdict in a sentence, the findings that would block a merge, and the location of the document. Never push, never merge, never open or close the PR — and never edit the branch's code to fix what the review found.
+
+## Output
+
+- One review document at `reviews/pr-<N>-<slug>-review.md`, committed on the reviewed branch.
+- A user-facing summary carrying the verdict, the blocking findings, and the reasoning behind the low-level variant chosen.
+
+## How to apply
+
+Owned by [[project-reviewer]] — see [project-reviewer.md](../../agents/project-reviewer.md). Document shape, table columns and the conclusion rule are governed by [pull-request-review-format.md](../../rules/pull-request-review-format.md); do not restate them here.
