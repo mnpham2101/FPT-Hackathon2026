@@ -75,7 +75,7 @@ In the Room (I4, evidence) none of this applies: the ADA node and the guest shar
 | Renderer | I3 (visual) + I1 (pure math) | Coordinate mapping is unit-tested with no Android types; the drawing is verified by eye against previews |
 | End-to-end | I4 | `adb logcat -s IVI_V2X` shows the received event; the warning view is on screen |
 
-The coordinate mapper and the parse layer stay free of Android imports precisely so I1 covers them in the existing `ivi-unit-tests` CI job ([phase0-ci.yml](../../../.github/workflows/phase0-ci.yml)) with no device in the loop.
+The coordinate mapper and the parse layer stay free of Android imports precisely so I1 covers them in the existing `ivi-unit-tests` CI job ([phase5-ci.yml](../../../.github/workflows/phase5-ci.yml)) with no device in the loop.
 
 ## 5. Where the simulator lives
 

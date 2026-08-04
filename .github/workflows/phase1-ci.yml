@@ -1,21 +1,25 @@
-# The four lanes that originate in Phase 1: v2x-comms-check (9.1.12.3), sp-codec-helper (11.1.8.1),
-# and the two node-image lanes v2x-ecu-image + scenario-player-image (5.1.8.2).
+# The six lanes of the two nodes Phase 1 develops - the V2X ECU and the bench:
+#   * v2x-core-build      - full V2X build, the whole CTest suite, gv_tool determinism;
+#   * v2x-comms-check     - the D7 loopback acceptance (9.1.12.3);
+#   * v2x-ecu-image       - the V2X node's arm64 image (5.1.8.2);
+#   * sp-unit-tests       - the Scenario_Player suite on a plain Python runner;
+#   * sp-codec-helper     - cpm_encode built natively, the same suite unskipped (11.1.8.1);
+#   * scenario-player-image - the bench's arm64 image (5.1.8.2).
 #
-# This file carries ONLY those four. The six Phase 0 lanes - contracts-gate, python-tests,
-# ada-core-build, v2x-core-build, ivi-unit-tests, netcheck-image - live in
-# .github/workflows/phase0-ci.yml and are not duplicated here. Both files use the same `on:`
-# triggers, so all ten jobs run on every push and pull request exactly as they did when one file
-# held them; the split changes where a lane is maintained, never whether it executes.
+# WHERE A NEW JOB GOES: .claude/rules/ci-lane-placement.md designates the file for every lane, and
+# a lane lives with the NODE IT EXERCISES rather than the phase that wrote it. v2x-core-build and
+# sp-unit-tests are here for that reason though Phase 0 wrote them; the R7 transport-import gate
+# step 7.1.3.5 added stays in phase0-ci.yml's contracts-gate, because that job compiles nothing and
+# gates the frozen contracts across all four folders.
 #
-# Two Phase 1 subtasks edited a Phase 0 job in place rather than adding one, so their work is in
-# phase0-ci.yml and not here: 7.1.3.5 (the R7 transport-import gate step in `contracts-gate`) and
-# 11.1.1.1 (the vanetza-pin.cmake hash in `v2x-core-build`'s cache key). A lane belongs to the
-# phase that created it, not to the phase that last touched it.
+# Every phase<N>-ci.yml carries the same `on:` triggers, so a lane runs on every push and pull
+# request wherever it lives - placement decides where a lane is MAINTAINED, never whether it
+# executes.
 #
-# CROSS-FILE COUPLING: v2x-comms-check below shares ONE actions/cache entry with phase0-ci.yml's
-# v2x-core-build via byte-identical key and restore-keys. The Actions cache is scoped to the
-# repository rather than to a workflow file, so this still works - but a Vanetza re-pin must now
-# edit the key in BOTH files, and nothing local to either will tell you so.
+# ONE VANETZA CACHE, TWO LANES: v2x-core-build and v2x-comms-check share a single actions/cache
+# entry through byte-identical key and restore-keys, so the second lane never repays the ~1400-TU
+# ASN.1 compile. Both keys are in this file, so a Vanetza re-pin updates them where it is made.
+# sp-codec-helper keeps a third, deliberately separate key: it caches a different build directory.
 #
 # What the two image lanes do beyond building, and why it matters: a green build proves the image
 # compiles, NOT that the platform can run it. Each image lane therefore ends by verifying the
@@ -39,14 +43,102 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  v2x-core-build:
+    runs-on: ubuntu-latest
+    # Needed by the one-shot golden-vector publish step below, which pushes a commit back to the
+    # branch. Everything else in this job is read-only.
+    permissions:
+      contents: write
+    # Vanetza's asn1c-generated C (asn1_support + asn1_its + asn1_its_r2, ~1400 translation units)
+    # is a long first-run compile, hence the raised timeout.
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Boost (Vanetza hard dependency)
+        run: sudo apt-get update && sudo apt-get install -y libboost-dev libboost-date-time-dev
+      # The cache key carries the exact Vanetza pin, so a re-pin invalidates it. _deps holds the
+      # clone, the FetchContent stamps and Vanetza's own object files, so a cache hit skips both
+      # the clone and the ASN.1 recompile. Key and restore-keys are byte-identical to
+      # v2x-comms-check's below on purpose - the two lanes warm one tree (see the header).
+      - name: Cache Vanetza FetchContent deps
+        uses: actions/cache@v4
+        with:
+          path: V2X_ECU/build/_deps
+          key: v2x-deps-${{ runner.os }}-vanetza-fb6c5510-json-v3.11.3-gtest-v1.14.0-${{ hashFiles('V2X_ECU/CMakeLists.txt', 'V2X_ECU/cmake/vanetza-pin.cmake') }}
+          restore-keys: |
+            v2x-deps-${{ runner.os }}-vanetza-fb6c5510-json-v3.11.3-gtest-v1.14.0-
+      - name: Configure
+        run: cmake -S V2X_ECU -B V2X_ECU/build
+      # Bounded parallelism on purpose: a bare `-j` makes CMake pass `-j` with no number to make,
+      # i.e. unlimited jobs - ~700 concurrent compilers for asn1_its alone would OOM the runner.
+      - name: Build
+        run: cmake --build V2X_ECU/build -j $(nproc)
+      - name: Test
+        run: ctest --test-dir V2X_ECU/build --output-on-failure
+      - name: Generate golden vectors (run 1)
+        run: V2X_ECU/build/gv_tool "$RUNNER_TEMP/gv1"
+      - name: Generate golden vectors (run 2)
+        run: V2X_ECU/build/gv_tool "$RUNNER_TEMP/gv2"
+      # Determinism is 1.0.2.4's acceptance: the same tool run twice must emit byte-identical
+      # trees. diff exits non-zero on any difference, which fails the step.
+      - name: Golden-vector determinism check
+        run: diff -r "$RUNNER_TEMP/gv1" "$RUNNER_TEMP/gv2"
+      # The corpus is generated on Linux and handed back as an artifact; committing it into
+      # contracts/golden-vectors/ is a separate hand-off step (1.0.2.5 consumes it).
+      - name: Upload golden-vector corpus
+        uses: actions/upload-artifact@v4
+        with:
+          name: golden-vectors
+          path: ${{ runner.temp }}/gv1
+      # One-shot self-publish: artifact download needs an authenticated token the dev session does
+      # not have, so the corpus lands via CI instead. The hashFiles guard makes this fire exactly
+      # once - the moment contracts/golden-vectors/ exists in the tree, the step stops running.
+      # [skip ci] keeps the push from re-triggering this workflow.
+      - name: Publish golden-vector corpus (once, when absent)
+        if: hashFiles('contracts/golden-vectors/**') == ''
+        run: |
+          mkdir -p contracts/golden-vectors
+          cp -r "$RUNNER_TEMP/gv1/." contracts/golden-vectors/
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add contracts/golden-vectors
+          git commit -m "[1.0.2.4] feat: add gv_tool golden-vector corpus [skip ci]
+
+          Generated on Linux by V2X_ECU/tools/golden_vectors/gv_tool in this run and verified
+          byte-identical across two consecutive generations (determinism step above).
+
+          Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
+          git push origin HEAD:${{ github.ref_name }}
+
+  # The bench suite on a plain Python runner, with no cpm_encode binary present: 116 passed, 7
+  # skipped, in about a second. sp-codec-helper below runs the SAME suite with ENCODER_PATH set and
+  # reports 123 passed, 0 skipped - it is the wire-truth lane, and it pays a Vanetza build to get
+  # there. This one is the fast signal that a bench change compiles and its logic holds, available
+  # minutes before the heavy lane finishes. Any other split of those numbers means drift.
+  sp-unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Scenario_Player unit tests
+        run: |
+          if [ -f Scenario_Player/requirements-dev.txt ] && [ -d Scenario_Player/tests ]; then
+            python -m pip install -r Scenario_Player/requirements-dev.txt
+            python -m pytest Scenario_Player/tests
+          else
+            echo "Scenario_Player tests not landed yet - skipping"
+          fi
+
   # D7 (V2X HLD §3) CI-side acceptance: a bench-sent CPM is received, raises events, deserializes to
   # JSON and is forwarded as R2. No landed-file guard on purpose - V2X_ECU/src/main.cpp and
   # tools/comms_check/ are both on the tree, so the skip-with-notice pattern the Phase 0 placeholder
   # lanes use would never fire; a missing file here should fail the lane, not silently pass it.
   v2x-comms-check:
     runs-on: ubuntu-latest
-    # Same reason as phase0-ci.yml's v2x-core-build: on a cold _deps cache this pays Vanetza's
-    # ~1400-TU ASN.1 compile before it can link v2x_ecu.
+    # Same reason as v2x-core-build above: on a cold _deps cache this pays Vanetza's ~1400-TU
+    # ASN.1 compile before it can link v2x_ecu.
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
@@ -55,9 +147,9 @@ jobs:
           python-version: "3.12"
       - name: Install Boost (Vanetza hard dependency)
         run: sudo apt-get update && sudo apt-get install -y libboost-dev libboost-date-time-dev
-      # key + restore-keys are byte-identical to phase0-ci.yml's v2x-core-build on purpose: the two
-      # lanes share one warmed _deps tree, so this job never repays the ASN.1 recompile. Re-pinning
-      # Vanetza must update both - and they are now in different files (see the header).
+      # key + restore-keys are byte-identical to v2x-core-build's above on purpose: the two lanes
+      # share one warmed _deps tree, so this job never repays the ASN.1 recompile. Re-pinning
+      # Vanetza updates both keys, and both are in this file.
       - name: Cache Vanetza FetchContent deps
         uses: actions/cache@v4
         with:
@@ -208,8 +300,7 @@ jobs:
   # Bench-side codec verification (11.1.8.1). This is the only lane that proves the Scenario
   # Player's R1 encoder byte-exact: it builds the SP HLD D1 cpm_encode helper on Linux and runs
   # Scenario_Player/tests with ENCODER_PATH set, which un-skips test_encoder_golden's encoder
-  # equality cases (they skip everywhere the binary is absent, including phase0-ci.yml's
-  # python-tests lane).
+  # equality cases (they skip everywhere the binary is absent, including sp-unit-tests above).
   sp-codec-helper:
     runs-on: ubuntu-latest
     # Same reason as v2x-core-build: codec_helper is a second build context over the same Vanetza
@@ -318,7 +409,7 @@ jobs:
           echo "[LANE] --encode smoke PASSED ($COUNT vectors)"
       # The wire truth of SP HLD D2, and the human-readable evidence for it: -v prints each
       # test_encoder_matches_golden_uper[<case>] PASSED. Expected totals with the binary present:
-      # 123 passed, 0 skipped. Without it (e.g. phase0-ci.yml's python-tests lane, or a local run)
+      # 123 passed, 0 skipped. Without it (e.g. the sp-unit-tests lane above, or a local run)
       # the same suite reports 116 passed, 7 skipped - the 6 encode-equality cases plus the failure-
       # contract test. Any other split means drift: fix the cause, then update these numbers.
       - name: Scenario_Player suite with ENCODER_PATH (encoder-golden unskipped)

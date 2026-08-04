@@ -1,13 +1,23 @@
-# The lane that originates in Phase 2: ada-loopback-check (13.2.8.2) - the repeatable form of the
-# phase's "mock-driven state transitions observable in logs; toggling the mock off yields no
-# tracks" acceptance box (plans/phase2_tasks.md, Phase 2 overview).
+# The three lanes of the ADA scaffold, the node work Phase 2 develops:
+#   * ada-core-build      - configure, build and ctest the C++ core on a plain runner;
+#   * ada-detector-tests  - the detector suite against SyntheticFrameSource, no heavy wheels;
+#   * ada-loopback-check  - the repeatable form of the phase's "mock-driven state transitions
+#     observable in logs; toggling the mock off yields no tracks" acceptance box (13.2.8.2).
 #
-# This file carries ONLY that lane. The Phase 0 lanes (ada-core-build among them) live in
-# .github/workflows/phase0-ci.yml, the Phase 1 lanes in phase1-ci.yml, and Phase 2's OTHER
-# workflow subtask, 5.2.8.1, filed ada-ecu-image in phase4-ci.yml with the node artifact rather
-# than here (plans/phase2_tasks.md § CI ruling). All files use the same `on:` triggers, so every
-# job runs on every push and pull request; a lane belongs to the phase that created it, not to
-# the phase that last touched it.
+# WHERE A NEW JOB GOES: .claude/rules/ci-lane-placement.md designates the file for every lane, and
+# a lane lives with the NODE IT EXERCISES rather than the phase that wrote it. The first two are
+# here for that reason though Phase 0 wrote them. The ADA node's other lanes sit with the phase
+# whose work they verify: the detector lanes in phase3-ci.yml, and ada-ecu-image plus the fusion
+# and bench lanes in phase4-ci.yml - the image belongs to the phase that COMPLETES the node, since
+# it carries every phase's contribution.
+#
+# ada-detector-tests is not in its designated file. phase3-ci.yml holds the detector lanes, and
+# 12.3.3.3 relocates this job there and strengthens it - installing requirements.txt so the real
+# wheels are present, and failing on any dependency skip. Move it rather than adding a second one.
+#
+# Every phase<N>-ci.yml carries the same `on:` triggers, so a lane runs on every push and pull
+# request wherever it lives - placement decides where a lane is MAINTAINED, never whether it
+# executes.
 #
 # What this lane adds over ada-core-build: that job proves the ADA tree compiles and its unit
 # tests pass; this one runs the ASSEMBLED ada_ecu binary end to end on loopback - the real
@@ -30,6 +40,36 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  ada-core-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S ADA_ECU -B ADA_ECU/build
+      - name: Build
+        run: cmake --build ADA_ECU/build -j
+      - name: Test
+        run: ctest --test-dir ADA_ECU/build --output-on-failure
+
+  # The detector suite on a plain Python runner: requirements-dev.txt only, so the tests that need
+  # onnxruntime or opencv skip here rather than failing. 12.3.3.3 moves this job to phase3-ci.yml
+  # and makes those skips an error (see the header).
+  ada-detector-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: ADA_ECU detector unit tests
+        run: |
+          if [ -f ADA_ECU/detector/requirements-dev.txt ] && [ -d ADA_ECU/detector/tests ]; then
+            python -m pip install -r ADA_ECU/detector/requirements-dev.txt
+            python -m pytest ADA_ECU/detector/tests
+          else
+            echo "ADA_ECU detector tests not landed yet - skipping"
+          fi
+
   # 13.2.8.2. Two sequential runs of the same binary, one checker verdict each; any non-zero
   # exit anywhere fails the job (`set -euo pipefail` in every run block, phase1 convention).
   # No landed-file guard on purpose: ADA_ECU/src/main.cpp is on the tree, so a missing piece
@@ -44,8 +84,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      # Same setup as phase0-ci.yml's ada-core-build: no compiler or apt step - the default
-      # runner toolchain configures and builds ADA_ECU as-is.
+      # Same setup as ada-core-build above: no compiler or apt step - the default runner
+      # toolchain configures and builds ADA_ECU as-is.
       - name: Configure
         run: cmake -S ADA_ECU -B ADA_ECU/build
       # Only the app target: the test binaries belong to ada-core-build, this lane needs the

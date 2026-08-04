@@ -247,7 +247,7 @@ docker buildx build --platform linux/arm64 --provenance=false --sbom=false -t m1
 
 | CI lane | File | What it does |
 |---|---|---|
-| `python-tests` | [phase0-ci.yml](../../.github/workflows/phase0-ci.yml) | the pytest suite against the fake helper, on a plain Python runner |
+| `sp-unit-tests` | [phase1-ci.yml](../../.github/workflows/phase1-ci.yml) | the pytest suite against the fake helper, on a plain Python runner |
 | `sp-codec-helper` | [phase1-ci.yml](../../.github/workflows/phase1-ci.yml) | builds `cpm_encode` natively and runs `test_encoder_golden.py` against the real binary |
 | `scenario-player-image` | [phase1-ci.yml](../../.github/workflows/phase1-ci.yml) | the `linux/arm64` image build, pushed to Zot when `CARSKY_ZOT_API_KEY` is set |
 

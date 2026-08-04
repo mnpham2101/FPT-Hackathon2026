@@ -274,7 +274,7 @@ Build commands, from `IVI_ECU/`: `./gradlew assembleDebug` · `./gradlew :contra
 
 | CI lane | File | What it does |
 |---|---|---|
-| `ivi-unit-tests` | [phase0-ci.yml](../../.github/workflows/phase0-ci.yml) | the module tests on a plain JVM, no device |
+| `ivi-unit-tests` | [phase5-ci.yml](../../.github/workflows/phase5-ci.yml) | the module tests on a plain JVM, no device |
 | `ivi-assemble` | [phase5-ci.yml](../../.github/workflows/phase5-ci.yml) | `assembleDebug` + `lint`, uploading `app-debug.apk` under the artifact name the walkthrough references |
 | the simulator image | [phase5-ci.yml](../../.github/workflows/phase5-ci.yml) | `linux/arm64` build of `m1-r4-sim:latest` from context `IVI_ECU/`, pushed to Zot and verified by pull-back |
 

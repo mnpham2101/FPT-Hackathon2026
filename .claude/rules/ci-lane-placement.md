@@ -37,7 +37,7 @@ The one case that forces a name change is a job **split** across two files, wher
 2. Leave the job name unchanged (§ Job names are stable).
 3. Update every document that names the lane **together with its file** — the node HLD §11 CI table, the plan briefs whose write scope or acceptance names it, and the walkthrough sections that cite it. A document naming the lane alone needs no edit.
 4. Leave historical `**Status:**` and `Closed: CI run …` lines untouched — they record what happened, not where the lane lives.
-5. One commit per lane moved, `[<taskID>] chore: …`.
+5. One commit per lane moved, `[<taskID>] chore: …`. Re-filing several lanes at once, as one application of this rule, is a single commit.
 
 A lane sharing an `actions/cache` key with a lane in another file is a coupling the move should dissolve, not carry: co-locating both in one file makes a cache-key change visible where it is made.
 
