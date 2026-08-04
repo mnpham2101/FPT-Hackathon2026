@@ -408,7 +408,7 @@ Phase 2 `5.2.7.1`'s `entrypoint.sh` starts `capture.sh` when present, so no laun
 1. Build the `ada_ecu` target (reusing the `ada-core-build` configure step's shape).
 2. Start `tools/mock_ivi_receiver.py --validate --expect-min 1` on a loopback port.
 3. Start `ada_ecu` with `IVI_ECU_HOST=127.0.0.1`, `IVI_ECU_PORT=<that port>`, `DETECTOR_ENABLED=true`, `DETECTOR_CMD="cat ADA_ECU/tests/fixtures/own_sensor_mock.jsonl"`, the §6 defaults otherwise, stdout captured.
-4. Drive `tools/mock_v2x_sender.py --profile approaching` — C closing from 60 m through the gate and the risk bands.
+4. Drive `tools/mock_v2x_sender.py --profile approaching` — C closing from 70.0 m at 5.0 m/s, the bench's committed R22 geometry (`3.2.6.3`), through the gate and the risk bands.
 5. SIGTERM; then assert **all** of: `check_evt_log.py --admission --fusion --both-tracks --r4-schema ADA_ECU/contracts/r4-ada-ivi.schema.json` exit 0 · the receiver saw ≥ 1 schema-valid warning event · `event_report.py` renders a non-empty event list.
 6. Second arm with `--profile out-of-range`: C stays beyond the exit gate, so the run must produce **zero** `r4_tx` — the negative control that stops the lane passing on any traffic at all.
 
