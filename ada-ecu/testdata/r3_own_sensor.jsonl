@@ -1,2 +1,0 @@
-{"id":"own:B","class":"vehicle","source":"own_sensor","position":{"x":12.0,"y":0.2,"confidence":0.9},"distance":12.0,"speed":15.0,"confidence":0.92,"state":"tentative","timestamps":{"measured":1789000000200,"received":1789000000200,"lastUpdated":1789000000200}}
-{"id":"own:B","class":"vehicle","source":"own_sensor","position":{"x":12.0,"y":0.2,"confidence":0.9},"distance":12.0,"speed":15.0,"confidence":0.92,"state":"tracked","timestamps":{"measured":1789000000300,"received":1789000000300,"lastUpdated":1789000000300}}

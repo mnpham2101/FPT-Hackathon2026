@@ -26,8 +26,6 @@ __pycache__/
 *.pyc
 
 # ADA local runtime/test artifacts
-ada-ecu/local-data/
-ada-ecu/tools/__pycache__/
 ADA_ECU/local-data/
 ADA_ECU/tools/__pycache__/
 ADA_ECU/build-runtime/
