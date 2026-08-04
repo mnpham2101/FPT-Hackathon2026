@@ -79,6 +79,15 @@ target_compile_features(ada_event_log PUBLIC cxx_std_17)
 ada_add_test(ada_event_log_test tests/log/test_event_log.cpp)
 target_link_libraries(ada_event_log_test PRIVATE ada_event_log)
 
+# Data parsers — wire → frozen R3 model (2.2.3.1).
+add_library(ada_parser STATIC src/parser/r2_parser.cpp)
+target_include_directories(ada_parser PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(ada_parser PUBLIC ada_contracts)
+target_compile_features(ada_parser PUBLIC cxx_std_17)
+
+ada_add_test(ada_r2_parser_test tests/parser/test_r2_parser.cpp)
+target_link_libraries(ada_r2_parser_test PRIVATE ada_parser)
+
 # Bounded input queue — two producers, one consumer, header-only (3.2.2.4).
 find_package(Threads REQUIRED)
 add_library(ada_input_queue INTERFACE)

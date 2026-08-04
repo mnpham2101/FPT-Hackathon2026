@@ -176,7 +176,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 > The Data Parser block of the [component map](../ADA_ECU/doc/phase2-4-ada-ecu-components.puml). Both parsers produce the **same** `contracts::TrackedObject` and both hand it to the **same** `upsert` — that identity is the R3 acceptance box. Field authority: the synced `ADA_ECU/contracts/r2-v2x-object.schema.json` and `r3-tracked-object.schema.json`; models: the Phase 0 bindings in `ADA_ECU/src/contracts/`.
 
-### [ ] `2.2.3.1` — R2 parser `src/parser/r2_parser.{hpp,cpp}` *(AI)*
+### [x] `2.2.3.1` — R2 parser `src/parser/r2_parser.{hpp,cpp}` *(AI)*
 
 **Objective:** map one received R2 JSON datagram to a `TrackedObject` with `source = v2x_relayed` ([HLD §6](../ADA_ECU/doc/ada-ecu-hld.md#6-internal-components), controller table, the `parser/r2_parser` row; [HLD §10.1](../ADA_ECU/doc/ada-ecu-hld.md#101-r2--the-message-set-from-the-v2x-ecu-consumed)).
 
@@ -199,6 +199,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 **Acceptance:** ADA build + ctest green on CI.
 
 **Dependencies:** none (Phase 0 binding suffices). **Commit:** `[2.2.3.1] feat: add R2 to TrackedObject parser`
+
+**Status:** done — parses through the frozen R2Message binding only; id `v2x:<stationId>:<objectId>`, null confidence → 0.0 with the wire null and position.confidence out-of-band on the result, measured = rxTime + timeOfMeasurement, lastUpdated = 0 placeholder; five typed reject reasons each counted and tested; build/tests deferred to CI ada-core-build.
 
 ### [ ] `3.2.3.2` — R3 JSONL parser `src/parser/r3_parser.{hpp,cpp}` *(AI — parallel with 2.2.3.1)*
 
