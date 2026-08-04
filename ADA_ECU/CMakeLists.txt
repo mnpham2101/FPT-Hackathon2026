@@ -94,6 +94,10 @@ target_link_libraries(ada_r2_parser_test PRIVATE ada_parser)
 ada_add_test(ada_r3_parser_test tests/parser/test_r3_parser.cpp)
 target_link_libraries(ada_r3_parser_test PRIVATE ada_parser)
 
+# Parse-reject corpus — both parsers vs tests/fixtures/malformed/ (3.2.3.3).
+ada_add_test(ada_parse_reject_corpus_test tests/parser/test_parse_reject_corpus.cpp)
+target_link_libraries(ada_parse_reject_corpus_test PRIVATE ada_parser)
+
 # Bounded input queue — two producers, one consumer, header-only (3.2.2.4).
 find_package(Threads REQUIRED)
 add_library(ada_input_queue INTERFACE)

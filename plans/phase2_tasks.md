@@ -214,7 +214,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Status:** done — parses through the frozen TrackedObject binding only; incoming state discarded for the not_tracked placeholder (D3), non-own_sensor source rejected with a typed reason (D6), malformed/missing/wrong-type/out-of-range lines rejected and counted, never fatal; the frozen sample carries source v2x_relayed, so the maps-intact case flips it to own_sensor and the verbatim sample is the source-rejection case; build/tests deferred to CI ada-core-build.
 
-### [ ] `3.2.3.3` — Parse-reject corpus `tests/fixtures/malformed/` + counted-rejection test *(AI)*
+### [x] `3.2.3.3` — Parse-reject corpus `tests/fixtures/malformed/` + counted-rejection test *(AI)*
 
 **Objective:** prove both parsers reject a structurally invalid corpus with zero crashes and correct counters (HLD §4 — a local fixture, **not** a synced contract).
 
@@ -223,6 +223,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 **Acceptance:** ADA build + ctest green on CI; every case's disposition asserted explicitly.
 
 **Dependencies:** after `2.2.3.1` + `3.2.3.2`. **Commit:** `[3.2.3.3] test: reject the malformed parse corpus with zero crashes`
+
+**Status:** done — thirteen one-defect corpus files (`r2-<case>.json` / `r3-<case>.json`, empty-line cases as zero-byte files) with provenance in the test header; one parameterized suite asserts each case's exact disposition and reject reason with no either-outcome branch, both unknown-extra-field cases tolerated; the whole-corpus run proves one parser instance per side survives all cases with exact counters and still accepts the valid samples; build/tests deferred to CI ada-core-build.
 
 ---
 
