@@ -61,3 +61,11 @@ target_compile_features(ada_config PUBLIC cxx_std_17)
 
 ada_add_test(ada_config_test tests/config/test_config.cpp)
 target_link_libraries(ada_config_test PRIVATE ada_config)
+
+# UDP socket — the only socket-API holder in src/ (6.2.2.2).
+add_library(ada_net STATIC src/net/udp_socket.cpp)
+target_include_directories(ada_net PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_compile_features(ada_net PUBLIC cxx_std_17)
+
+ada_add_test(ada_udp_socket_test tests/net/test_udp_socket.cpp)
+target_link_libraries(ada_udp_socket_test PRIVATE ada_net)

@@ -128,7 +128,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Status:** done — loader + injectable-getter tests cover defaults, every override, all rejection rules incl. the three same-quantity orderings, and the 60/30 cross-quantity positive case; build/tests deferred to CI ada-core-build.
 
-### [ ] `6.2.2.2` — Sole socket holder `src/net/udp_socket.{hpp,cpp}` *(AI — parallel with 13.2.2.1)*
+### [x] `6.2.2.2` — Sole socket holder `src/net/udp_socket.{hpp,cpp}` *(AI — parallel with 13.2.2.1)*
 
 **Objective:** `net::UdpSocket` — the **only** `ADA_ECU/src` code allowed to include socket headers ([HLD §6](../ADA_ECU/doc/ada-ecu-hld.md#6-internal-components), controller table, the `net/udp_socket` row).
 
@@ -137,6 +137,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 **Acceptance:** ADA build + ctest green on CI; `<sys/socket.h>`, `<netinet/*>`, `<arpa/*>` appear only under `src/net/`.
 
 **Dependencies:** none. **Commit:** `[6.2.2.2] feat: add ADA UdpSocket sole transport holder`
+
+**Status:** done — RAII move-only socket with poll-timeout receive and counted transient errors; loopback round-trip, bind-conflict, timeout and move tests on ephemeral ports; POSIX headers confined to the .cpp; build/tests deferred to CI ada-core-build.
 
 ### [ ] `18.2.2.3` — R18 `[EVT]` JSONL event log `src/log/event_log.{hpp,cpp}` *(AI — parallel)*
 
