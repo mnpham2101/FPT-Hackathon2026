@@ -2,5 +2,7 @@
     "alwaysThinkingEnabled": true,
     "showThinkingSummaries": true,
     "effortLevel": "high",
-    "verbose": true
+    "verbose": true,
+    "viewMode": "verbose",
+    "defaultView": "transcript"
 }
