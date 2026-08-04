@@ -92,7 +92,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 ## Task Group 2.1 — Node orientation (serves R5)
 
-### [ ] `5.2.1.3` — Point `ADA_ECU/README.md` at the HLD *(AI)*
+### [x] `5.2.1.3` — Point `ADA_ECU/README.md` at the HLD *(AI)*
 
 **Objective:** the node README states what the folder is and links the design of record ([HLD §4](../ADA_ECU/doc/ada-ecu-hld.md#4-folder-structure), the `README.md` row).
 
@@ -101,6 +101,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 **Acceptance:** links resolve; no requirement text restated; the attribution line matches the sidecar character for character. Doc-only — no build target.
 
 **Dependencies:** none. **Commit:** `[5.2.1.3] docs: point the ADA README at the phase 2-4 HLD`
+
+**Status:** done — README rewritten as one-screen orientation; every link target verified present, both build commands byte-match § Per-node build commands, attribution line diffs identical against the sidecar.
 
 ---
 
