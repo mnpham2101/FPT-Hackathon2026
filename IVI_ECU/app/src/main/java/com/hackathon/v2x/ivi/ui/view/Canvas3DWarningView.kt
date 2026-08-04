@@ -160,11 +160,12 @@ class Canvas3DWarningView : IviWarningViewSeam {
                 label = "AB: ${formatMeters(scene.vehicleB)} m",
                 textMeasurer = textMeasurer,
             )
-            if (cBox != null && sceneC != null) {
+            val cPos = sceneC
+            if (cBox != null && cPos != null) {
                 drawCyberConnector(
                     from  = bBox.centerBase,
                     to    = cBox.centerBase,
-                    label = "AC: ${formatMeters(sceneC)} m",
+                    label = "AC: ${formatMeters(cPos)} m",
                     textMeasurer = textMeasurer,
                 )
             }
@@ -173,12 +174,12 @@ class Canvas3DWarningView : IviWarningViewSeam {
             drawCyberVehicle(egoBox, CyberEgo, "EGO", textMeasurer, filled = true)
             drawCyberVehicle(bBox, CyberB, "B", textMeasurer, filled = false)
 
-            if (cBox != null && sceneC != null) {
+            if (cBox != null && cPos != null) {
                 if (cSourceTrusted) {
                     drawCyberRadarPulse(cBox.centerBase, cyberRiskColor(riskState), radarAlpha)
                     drawCyberGhostVehicle(cBox, textMeasurer)
                     drawCyberV2XBadge(
-                        text = "[V2X] C · ${formatMeters(sceneC)} m · ${riskState.uppercase(Locale.US)}",
+                        text = "[V2X] C · ${formatMeters(cPos)} m · ${riskState.uppercase(Locale.US)}",
                         box  = cBox,
                         riskState = riskState,
                         textMeasurer = textMeasurer,
