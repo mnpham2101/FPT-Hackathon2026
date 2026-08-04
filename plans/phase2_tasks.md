@@ -158,7 +158,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Status:** done — nlohmann-only writer with both clock stamps, cumulative counters, injectable sink/clocks, stdout + optional EVENT_LOG_PATH file sink; all twelve D8 event names declared; tests cover parse-after-prefix, counter accumulation, quote/newline round-trip and the temp-dir file sink; build/tests deferred to CI ada-core-build.
 
-### [ ] `3.2.2.4` — Bounded input queue `src/observer/input_queue.hpp` *(AI — parallel)*
+### [x] `3.2.2.4` — Bounded input queue `src/observer/input_queue.hpp` *(AI — parallel)*
 
 **Objective:** the D2 single-consumer queue — two producer threads (V2X rx, detector reader), one consumer (the main thread), so the store has exactly one writer.
 
@@ -167,6 +167,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 **Acceptance:** ADA build + ctest green on CI; deterministic under repeat runs (no sleeps as synchronization).
 
 **Dependencies:** none. **Commit:** `[3.2.2.4] feat: add bounded input queue for the two observers`
+
+**Status:** done — header-only bounded queue (INTERFACE lib) with drop-oldest-and-count push, timeout pop, close()-wakes-consumer; tests cover per-producer FIFO, two concurrent producers (delivered + dropped accounting), capacity bound and pop-after-close, synchronized by join not sleeps; build/tests deferred to CI ada-core-build.
 
 ---
 
