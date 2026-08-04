@@ -77,7 +77,7 @@ This is the Phase 2 deliverable to send to FPT-Mentor. Every row marked *assume*
 These are R12/R19 evidence, not new requirements:
 
 1. `ffprobe` on the delivered file reports container, codec, resolution, and frame rate matching the table; a preflight step rejects a non-conforming file with the failing attribute named.
-2. OpenCV `VideoCapture` inside the `ada-ecu:latest` image opens the clip and reads ≥ 99% of the declared frame count with zero decode errors.
+2. OpenCV `VideoCapture` inside the `m1-ada-ecu:latest` image opens the clip and reads ≥ 99% of the declared frame count with zero decode errors.
 3. Effective inference rate ≥ 5 Hz measured over the whole clip on the deployed node — i.e. wall-clock ≤ 200 ms per sampled frame.
 4. Detection log contains ≥ 1 `class = vehicle`, `source = own_sensor` entry with a distance estimate for ≥ 90% of sampled frames.
 5. **Zero entries labelled C** across the full run (R12 acceptance, feeds the R19 zero-C check).
