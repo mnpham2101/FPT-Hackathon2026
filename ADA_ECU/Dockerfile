@@ -103,6 +103,7 @@ RUN pip install --no-cache-dir -r /app/detector/requirements.txt
 
 COPY --from=build /src/build/ada_ecu ./ada_ecu
 COPY entrypoint.sh ./
+COPY capture.sh /app/
 
 # chmod rather than trusting the git file mode: the mode is not guaranteed to survive every
 # checkout/context path, and entrypoint.sh IS the container command - non-executable means the
