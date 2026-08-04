@@ -1,4 +1,4 @@
-// R18 JSONL event-log tests (subtask 18.1.2.3; Phase 1 HLD D4 as amended
+// R18 JSONL event-log tests (subtask 18.1.2.3; HLD decision D4 as amended
 // 2026-08-01). Asserts the frozen [EVT] line shape the D7 checker
 // (tools/comms_check/check_v2x_log.py, subtask 9.1.12.2) parses: event /
 // mono_ms / epoch_ms / counters on every line, cpm on decode_ok, r2 on

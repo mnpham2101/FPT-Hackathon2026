@@ -1,4 +1,4 @@
-// Freeze test for the R7 IRadioAdapter seam (subtask 7.1.3.1, Phase 1 HLD D2).
+// Freeze test for the R7 IRadioAdapter seam (subtask 7.1.3.1, HLD decision D2).
 // A minimal fake implements the full interface and a scripted
 // init → configure → subscribeRx sequence compiles and runs: this proves the
 // seam is implementable and freezes the signatures — later subtasks may not

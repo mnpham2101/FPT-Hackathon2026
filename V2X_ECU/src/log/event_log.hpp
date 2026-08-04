@@ -1,7 +1,7 @@
 #ifndef V2X_ECU_LOG_EVENT_LOG_HPP
 #define V2X_ECU_LOG_EVENT_LOG_HPP
 
-// R18 JSONL evidence-stream writer (subtask 18.1.2.3; Phase 1 HLD D4 as
+// R18 JSONL evidence-stream writer (subtask 18.1.2.3; HLD decision D4 as
 // amended 2026-08-01). One line per event, `[EVT] {json}`, flushed per line —
 // stdout is the always-on sink (CarSky View Log is the live window); when
 // EVENT_LOG_PATH is non-empty the same lines are additionally appended there.

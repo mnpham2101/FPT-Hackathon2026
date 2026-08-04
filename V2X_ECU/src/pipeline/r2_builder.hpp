@@ -2,7 +2,7 @@
 #define V2X_ECU_PIPELINE_R2_BUILDER_HPP
 
 // V2X_ECU/src/pipeline/r2_builder.hpp — stage 4a of the R9 Rx pipeline (Phase 1
-// HLD §3 D3): maps a decoded CpmContent (wire-native integers, codec seam) to
+// HLD decision D3): maps a decoded CpmContent (wire-native integers, codec seam) to
 // the Phase 0 v2x::contracts::R2Message (SI units), owning EVERY derivation the
 // codec seam excludes per contracts/r1-cpm-profile.md:
 //

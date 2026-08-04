@@ -1,5 +1,5 @@
 @startuml phase2-4-ada-ecu-callflow
-' ADA ECU call flow (Phases 2-4) - source for phase2-4-ada-ecu-hld.md section 7.
+' ADA ECU call flow - source for ada-ecu-hld.md section 9 (Call flow).
 ' B detected in video -> R3 JSONL -> store; relayed C -> store; R13 admission -> R14 assessment
 ' -> R15 R4 warning -> IVI.
 

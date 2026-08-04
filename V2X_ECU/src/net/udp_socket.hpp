@@ -1,7 +1,7 @@
 #ifndef V2X_ECU_NET_UDP_SOCKET_HPP
 #define V2X_ECU_NET_UDP_SOCKET_HPP
 
-// V2X_ECU/src/net/udp_socket.hpp — the SOLE socket-API holder (Phase 1 HLD
+// V2X_ECU/src/net/udp_socket.hpp — the SOLE socket-API holder (the node HLD
 // D1): src/net/ is the only code in this node allowed to include transport
 // headers, and this header deliberately includes none of them — every POSIX
 // socket call lives in udp_socket.cpp behind a plain int fd member, so the

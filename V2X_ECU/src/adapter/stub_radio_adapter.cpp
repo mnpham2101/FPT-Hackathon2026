@@ -1,5 +1,5 @@
 // V2X_ECU/src/adapter/stub_radio_adapter.cpp — R7 seam implementation over the
-// R8 modem stub (7.1.3.4, Phase 1 HLD D2). Semantics are documented in the
+// R8 modem stub (7.1.3.4, HLD decision D2). Semantics are documented in the
 // header; this file carries only the mechanics of the Rx socket + thread and
 // the R10-deferred send().
 

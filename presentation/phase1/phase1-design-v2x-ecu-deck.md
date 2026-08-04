@@ -20,7 +20,7 @@ deck: Phase 1 — V2X ECU Design · FPT Hackathon 2026
 
 Companion to [phase1-design-deck.html](phase1-design-deck.html), which defines the terminology, the blueprint and the two messages. Nothing from it is repeated here.
 
-Source: [phase1-v2x-ecu-comms-hld.md](../../V2X_ECU/doc/phase1-v2x-ecu-comms-hld.md)
+Source: [v2x-ecu-hld.md](../../V2X_ECU/doc/v2x-ecu-hld.md)
 
 ---
 

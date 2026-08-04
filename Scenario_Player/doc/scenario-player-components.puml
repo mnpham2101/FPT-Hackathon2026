@@ -1,0 +1,61 @@
+@startuml scenario-player-components
+' Scenario Player component map - source for scenario-player-hld.md section 3.
+' Fill colour is the MVC layer; dashed open arrow is a use dependency;
+' a lollipop meeting a socket is a seam.
+
+title Scenario Player (bench) module map - R11, R1 producer side
+
+skinparam componentStyle rectangle
+skinparam shadowing false
+skinparam defaultTextAlignment center
+
+cloud "V2X ECU\n10.99.0.11:47100\n(UPER CPM over UDP)" as V2X
+artifact "SCENARIO_CONFIG\nscenarios/*.yaml" as YAML
+
+package "scenario-player:latest - one image, two processes" {
+
+  package "player - Python 3.11" as PLAYER {
+    component "main\ncomposition root" as MAIN
+    component "config\nsole env + YAML reader" as CFG
+    component "scenario\nconstant-velocity kinematics" as SCEN
+    component "generator\ndeadline-scheduled rate loop" as GEN
+    component "encoder_client\ncpm_encode stdio client" as ENC
+    component "sender\nUDP tx" as SND
+    component "contracts/cpm_content\nCpmContent dataclass" as CC
+  }
+
+  package "cpm_encode - C++17 helper subprocess" as HELPER {
+    component "main\n--stream | --encode" as HMAIN
+    interface "ICpmCodec" as ICODEC
+    component "vanetza_cpm_codec\nvanetza::asn1::r2::Cpm" as VCODEC
+  }
+}
+
+YAML -down-> CFG
+CFG -down-> MAIN
+MAIN -down-> SCEN
+MAIN -down-> GEN
+MAIN -down-> ENC
+MAIN -down-> SND
+
+GEN -down-> SCEN : "sample(t)"
+SCEN -right-> CC : "CpmContent,\nwire-native units"
+GEN -down-> ENC : "CpmContent"
+ENC -down-> HMAIN : "JSONL over stdin/stdout"
+HMAIN -down-> ICODEC
+VCODEC .up.|> ICODEC
+ENC -right-> SND : "UPER bytes"
+SND -down-> V2X : "one datagram per message"
+
+note bottom of HELPER
+  Byte-synced copies of the V2X ECU codec seam
+  (contracts/sync-manifest.json). Never edited here -
+  one codec source, two build contexts.
+end note
+
+note right of GEN
+  [TX] JSONL per datagram: seq, scenario_time_s,
+  bytes, mono_ms. The node's only observation surface.
+end note
+
+@enduml

@@ -1,6 +1,6 @@
 @startuml phase5-ivi-callflow
 ' Phase 5 call flow: an R4 datagram becomes a rendered God View (R4, R16, R17).
-' Companion of phase5-ivi-hld.md. Fidelity = what Phase 5 actually builds:
+' Companion of ivi-ecu-hld.md. Fidelity = what Phase 5 actually builds:
 ' the producer is the R4 simulator; Phase 6 swaps it for the real ADA ECU
 ' without changing anything to its right.
 

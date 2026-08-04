@@ -4,9 +4,9 @@ The AAOS head unit: renders the R16 HMI layout and the R17 warning view — the 
 
 - **Requirements:** R4, R16–R17 — [m1-cooperative-awareness.md](../requirements/m1-cooperative-awareness.md) §2; HMI layout reference [ivi-ecu.svg](../requirements/ivi-ecu.svg).
 - **Node/deploy guide:** [node-ivi-ecu.md](../requirements/car-sky-guide/node-ivi-ecu.md) — VM artifact prep, blueprint config, pins, post-deploy `adb install`, verification.
-- **Build & bring-up (authoritative):** [ivi-hmi-walkthrough.md](../requirements/car-sky-guide/ivi-hmi-walkthrough.md) — the local and CI builds, the `app-debug-apk` CI artifact, blueprint deploy, `adb install`, launch, and the verification ladder that closes R16/R17. **Today's APK has no launcher entry and cannot be started** — see that guide's banner.
+- **Build & bring-up (authoritative):** [deploy-ivi-hmi-walkthrough.md](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md) — the local and CI builds, the `app-debug-apk` CI artifact, blueprint deploy, `adb install`, launch, and the verification ladder.
 - **Layout & build rules:** [node-code-layout.md](../.claude/rules/node-code-layout.md) — Kotlin / Jetpack Compose, APK via `./gradlew assembleDebug` from this folder.
-- **Plan:** Phase 5 of [milestone1.md](../plans/milestone1.md), decomposed in [phase5_tasks.md](../plans/phase5_tasks.md); wired to real ADA output in Phase 6.
+- **Plan:** Phase 5 of [milestone1.md](../plans/milestone1.md), decomposed in [phase5_minh_tasks.md](../plans/phase5_minh_tasks.md); wired to real ADA output in Phase 6.
 
 Unlike the container nodes, this is a **Skycraft Node (AAOS guest)** — the VM artifact ships in the starter pack, and only the team APK is built here and installed post-deploy over ADB; there is no image to push to the registry.
 

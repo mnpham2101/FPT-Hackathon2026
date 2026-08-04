@@ -1,5 +1,5 @@
 // V2X_ECU/src/pipeline/deduper.cpp — stage 3 of the R9 Rx pipeline (Phase 1
-// HLD §3 D3). Semantics documented in deduper.hpp.
+// HLD decision D3). Semantics documented in deduper.hpp.
 
 #include "pipeline/deduper.hpp"
 

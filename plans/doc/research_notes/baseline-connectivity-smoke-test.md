@@ -224,7 +224,7 @@ Traffic is continuous at 1 Hz and the bench waits `START_DELAY_S=20` before its 
 
 ## 7. The IVI hop
 
-The IVI is an AAOS guest: it cannot run `netcheck.py`, and its R4 UDP listener (`R4ListenerService`, task `4.5.1.3` in [phase5_tasks.md](../../phase5_tasks.md)) is not built yet. Options, strongest first:
+The IVI is an AAOS guest: it cannot run `netcheck.py`, and its R4 UDP listener (`R4ListenerService`, a Phase 5 deliverable) is not built yet. Options, strongest first:
 
 1. **ADB Shell widget** on the Skycraft node → `nc -u -l -p 47300` (run `toybox` first to confirm the applet exists). Direct proof of hop 3.
 2. **ADA-side evidence** — ADA's `[TX] … relayed to 10.99.0.13:47300` plus its `[CAP]` tcpdump line showing the datagram on the wire. Proves the packet was sent onto the bridge, not that it was received.

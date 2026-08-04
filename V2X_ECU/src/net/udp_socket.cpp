@@ -1,5 +1,5 @@
 // V2X_ECU/src/net/udp_socket.cpp — the only translation unit in this node
-// that includes transport headers (Phase 1 HLD D1; enforced by
+// that includes transport headers (HLD decision D1; enforced by
 // tools/check_transport_imports.py). Everything POSIX stays behind this file:
 // callers see typed SocketError / RecvOutcome, never errno.
 

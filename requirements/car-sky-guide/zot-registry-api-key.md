@@ -1,6 +1,6 @@
 # Zot Registry API Key — Get & Use
 
-The CarSky container registry runs [Zot](https://registry.carsky.io/). Its API key (format `zak_...`) is the **password for `docker login`** — required for every image push in this project: the netcheck smoke-test image (steps M2–M4 of [baseline-connectivity-smoke-test.md](../../plans/doc/research_notes/baseline-connectivity-smoke-test.md)), the three team ECU images ([carsky-4-node-blueprint.md §4](carsky-4-node-blueprint.md#4-steps) step 1), and the CI push job (§ CI secret below). Source: the platform doc's "Log In to Zot Registry & Get API Key" module in [Car-Sky-Platform.html](../development-platform-doc/Car-Sky-Platform.html).
+The CarSky container registry runs [Zot](https://registry.hackathon-2.carsky.io/). Its API key (format `zak_...`) is the **password for `docker login`** — required for every image push in this project: the netcheck smoke-test image (steps M2–M4 of [baseline-connectivity-smoke-test.md](../../plans/doc/research_notes/baseline-connectivity-smoke-test.md)), the three team ECU images ([carsky-4-node-blueprint.md §4](carsky-4-node-blueprint.md#4-steps) step 1), and the CI push job (§ CI secret below). Source: the platform doc's "Log In to Zot Registry & Get API Key" module in [Car-Sky-Platform.html](../development-platform-doc/Car-Sky-Platform.html).
 
 ## Not to be confused with
 
@@ -9,14 +9,20 @@ The CarSky container registry runs [Zot](https://registry.carsky.io/). Its API k
 
 ## Get the key
 
-1. Open the registry UI: click **Registry** on the CarSky Dock, or browse to `https://registry.carsky.io/` directly.
+1. Open the registry UI: click **Registry** on the CarSky Dock, or browse to `https://registry.hackathon-2.carsky.io/` directly — that is the host serving Zot, not the `registry.carsky.io` the platform doc names (§ Registry host caveat below).
 2. Click **Sign in with A8 Keycloak**; log in with your CarSky username/password if prompted.
 3. Top-right **user icon** → **API Keys** → **Create new API key** → review name/expiry → **Create**.
 4. **Copy the `zak_...` string immediately** — Zot shows it exactly once; after the dialog closes it cannot be viewed again. Lost key = revoke it and create a new one. No **API Keys** menu = your account lacks registry access — ask the organizers.
 
 ## Registry host caveat (open item O1)
 
-The platform doc names `registry.carsky.io`, but live probing (2026-07-30, [smoke-test note § Open items](../../plans/doc/research_notes/baseline-connectivity-smoke-test.md#9-open-items)) got a **502** there while `registry.hackathon-2.carsky.io` answered with a 401 auth challenge. Use whichever host actually serves the Zot UI/login, and use **the same host** consistently in `docker login`, image tags, blueprint `image` fields, and CI — a mismatched host is the "push succeeds but image missing" / `ImagePullBackOff` failure mode.
+**Resolved — the registry host is `registry.hackathon-2.carsky.io`.** (Section title kept for the links that cite it.) The platform doc names `registry.carsky.io`; that host returns **502** and serves nothing (probed 2026-07-30, [smoke-test note § Open items](../../plans/doc/research_notes/baseline-connectivity-smoke-test.md#9-open-items)). A 502 is an origin-level failure, so it covers the Zot web UI and the `/v2/` Docker endpoint alike; there is no split where one works and the other does not.
+
+The working host is established by a full push → pull → deploy loop, not merely by a probe answering: [phase0-smoke-test-run.md](../../plans/doc/phase0-smoke-test-run.md) (2026-07-31) records the netcheck image pushed to `registry.hackathon-2.carsky.io` and three Container nodes running that exact tag in a live Room, and [phase1-comms-run.md](../../plans/doc/phase1-comms-run.md) records both ECU lanes pushing there from CI. Every live operational config in this repo — the node guides, the blueprint `image` fields, CI, and the deploy agent/preflight instructions — names that host; none still names the 502 one.
+
+**Carry the rule, not this round's value.** The registry host mirrors the round's *environment* host, exactly as the REST base URL `https://hackathon-2.carsky.io` does. `registry.carsky.io` remains a true statement about the vendor's generic documentation rather than an error in it, and the organizers may rotate environment hosts between rounds — so next round, re-derive the registry host from the environment instead of assuming `hackathon-2`.
+
+Whichever host is current, use **the same one** consistently in `docker login`, image tags, blueprint `image` fields, and CI — a mismatched host is the "push succeeds but image missing" / `ImagePullBackOff` failure mode.
 
 ## Use the key
 

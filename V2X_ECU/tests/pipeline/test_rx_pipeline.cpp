@@ -1,4 +1,4 @@
-// Rx pipeline composition tests (subtask 9.1.4.4; Phase 1 HLD §3 D3): the four
+// Rx pipeline composition tests (subtask 9.1.4.4; HLD decision D3): the four
 // stages wired together — decode → validate → dedupe → build → sink — with
 // every outcome landing on the R18 [EVT] stream and the frozen counters.
 //

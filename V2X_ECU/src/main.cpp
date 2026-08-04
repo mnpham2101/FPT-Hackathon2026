@@ -1,5 +1,5 @@
 // V2X_ECU/src/main.cpp — the V2X ECU composition root (subtask 8.1.5.1; Phase 1
-// HLD §4 "composition root — Config → stub/adapter → pipeline → run", §8 MVC
+// HLD §4 "composition root — Config → stub/adapter → pipeline → run", §3 MVC
 // mapping: main is CONTROLLER, zero business logic).
 //
 // What this file is allowed to do, and nothing else:

@@ -1,6 +1,6 @@
 # The lane that originates in Phase 5: ivi-assemble (16.5.7.1) - the IVI APK build, its unit-test
 # gate, and the `app-debug-apk` artifact that the CI route of
-# requirements/car-sky-guide/ivi-hmi-walkthrough.md depends on. A human downloads that artifact and
+# requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md depends on. A human downloads that artifact and
 # installs it onto the Skycraft AAOS guest by hand; there is no path from this workflow to the
 # platform, because the IVI node pulls no image (its VM image is the starter-pack AAOS artifact).
 #
@@ -106,7 +106,7 @@ jobs:
       - name: Upload the debug APK
         uses: actions/upload-artifact@v4
         with:
-          # STABLE NAME - do not rename. requirements/car-sky-guide/ivi-hmi-walkthrough.md tells a
+          # STABLE NAME - do not rename. requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md tells a
           # human to download exactly this artifact by this name; a rename breaks that guide, not
           # only this workflow.
           name: app-debug-apk

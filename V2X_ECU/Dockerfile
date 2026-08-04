@@ -1,4 +1,4 @@
-# V2X ECU node image (HLD section 9) - multi-stage: cmake/g++ build -> slim runtime + tcpdump.
+# V2X ECU node image (HLD section 11) - multi-stage: cmake/g++ build -> slim runtime + tcpdump.
 # Context is V2X_ECU/ ALONE (self-contained; no cross-node source imports).
 #
 # BUILD RECIPE (from the repo root):
@@ -20,7 +20,7 @@
 #     nlohmann/json, googletest are git-cloned during `cmake -S`), so the build host must reach
 #     github.com. There is no vendored/offline path.
 #
-# LICENSE POSTURE (report section 4, Scenario_Player HLD section 10 item 2): Vanetza is LGPLv3,
+# LICENSE POSTURE (report section 4, Scenario_Player decision D4): Vanetza is LGPLv3,
 # so it is linked DYNAMICALLY - -DBUILD_SHARED_LIBS=ON below, and the resulting
 # libvanetza_asn1*.so are copied into the runtime stage. Never link it statically here.
 
