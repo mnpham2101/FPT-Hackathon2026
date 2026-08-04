@@ -55,7 +55,7 @@
 
 ### Remaining work
 
-**40 of 54 subtasks are closed.** The 14 open subtasks are group 1.10's deploy and verification work, the four R11 scenario-clock subtasks of group 1.6, and group 1.13's two R22 subtasks. None of the last six closes a Phase 1 box or blocks group 1.10.
+**41 of 54 subtasks are closed.** The 13 open subtasks are group 1.10's deploy and verification work, the four R11 scenario-clock subtasks of group 1.6, and group 1.13's `22.1.13.4`. None of the last five closes a Phase 1 box or blocks group 1.10.
 
 Three CI runs verify the closed work: **`30697863324` on `16b8674`** (8 lanes green, the phase's code), **`30698630956` on `7a02fb5`** (10 lanes green, adding both node-image lanes — both images build for `linux/arm64` and push), and **`30700052056` on `31d0347`** (10 lanes green, asserting `9.1.4.5`'s ten dispositions).
 
@@ -931,22 +931,26 @@ Dissection caveat (D5): raw UPER without GN/BTP shows as UDP data, so the eviden
 >
 > Build + test = the Scenario_Player Python row of § Per-node build commands — `python -m pytest Scenario_Player/tests` locally **and** CI `python-tests`.
 
-### [ ] `11.1.13.1` — Retune `tests/test_streams_differ.py` to the R22 `default.yaml` *(agent — sequential-first in this group)*
+### [x] `11.1.13.1` — Retune the R11 acceptance tests to the R22 `default.yaml` *(agent — sequential-first in this group)*
 
-**Objective:** the R11 model-level acceptance test asserts the kinematics the committed scenario actually produces. Test-only — **no product code changes in this subtask.**
+**Objective:** the R11 model-level acceptance tests assert the kinematics the committed scenario actually produces. Test-only — **no product code changes in this subtask.**
 
-**Scope — `Scenario_Player/tests/test_streams_differ.py` only:**
+**Scope — three test files under `Scenario_Player/tests/`:**
 
-- **The sampling grid.** `TIME_GRID` is `t = 0..20 s step 1 s`, which samples past `default.yaml`'s `duration_s = 10.0` into negative object ranges the generator never emits. Replace it with a grid inside **both** committed scenarios' `duration_s` — `t = 0.0 .. 9.0 s`, step 1.0 s — and take the bound from the loaded `ScenarioConfig`s rather than a literal, so a later retune cannot silently re-break it.
+- **The sampling grid** in `test_streams_differ.py`. `TIME_GRID` is `t = 0..20 s step 1 s`, which samples past `default.yaml`'s `duration_s = 10.0` into negative object ranges the generator never emits. Replace it with a grid inside **both** committed scenarios' `duration_s` — `t = 0.0 .. 9.0 s`, step 1.0 s — and take the bound from the loaded `ScenarioConfig`s rather than a literal, so a later retune cannot silently re-break it.
 - **`test_default_x_matches_yaml_kinematics`** asserts `round((60.0 - 2.5 * t) * 100)`. The committed file is `initial_distance_m: 70.0`, `closing_speed_mps: 5.0`, so the expression is `round((70.0 - 5.0 * t) * 100)`. Derive it from the loaded `ObjectConfig` fields, not from re-typed numbers.
 - **`test_velocity_matches_each_yaml`** asserts `default.object.velocity.x == -250`. At 5.0 m/s the wire value is **`-500`** (0.01 m/s units). Derive it from `closing_speed_mps` too.
-- **`test_x_sequences_differ_at_every_positive_t`**'s docstring says both streams start at 60,0 m so `t = 0` ties. They no longer tie — default starts at 70.0 m and `c-out-of-range.yaml` at 60.0 m — so the streams differ at **every** `t` including 0. Assert that, and drop the `t > 0` guard.
-- **The module docstring** states the 20 s / 60 m grid. Restate it against the committed files, and cite [SP D7](../Scenario_Player/doc/scenario-player-design-decisions.md#d7--the-demo-cycle-is-one-clip-length-and-its-geometry-is-solved-backwards-from-the-first-warning) rather than repeating the derivation.
-- **Do not touch** `test_out_of_range_x_constant`, `test_out_of_range_x_static_beyond_exit_gate` (`c-out-of-range.yaml` is unchanged at 60.0 m static) or `test_non_kinematic_fields_identical_at_equal_t`.
+- **`test_x_sequences_differ_at_every_positive_t`** no longer states a property the two scenarios have. Default sweeps *through* the static variant's constant range — at `t = 2.0 s` it is exactly 60.0 m, so both read `6000` — and pointwise difference is therefore false at one grid point whatever the guard. Assert the invariant that does hold: the two sequences are not the same sequence, and a strictly decreasing stream meets a constant one **at most once**.
+- **`test_config.py`'s `TestCommittedScenarioVariants`** asserts `initial_distance_m == 60.0` and a final distance ≈ 10 m. Retune it to the R22 geometry, and make it the **one** place the geometry appears as literals: it pins intent (including the 30 m gate crossing landing at 8.0 s, inside R22's open interval), while `test_streams_differ.py` derives from the same files and checks only the wiring from data to wire. Without both halves the derived tests cannot catch a wrong YAML value.
+- **`test_scenario_kinematics.py`'s `_default_config()`** mirrors `default.yaml` in code and is documented as doing so. It is green but stale — 60.0 / 2.5 / 20.0 with hand-computed `6000/3500/1000` at `t = 0/10/20`. Update the values, the sample points and the docstring so the mirror is true.
+- **The module docstring** of `test_streams_differ.py` states the 20 s / 60 m grid. Restate it against the committed files, and cite [SP D7](../Scenario_Player/doc/scenario-player-design-decisions.md#d7--the-demo-cycle-is-one-clip-length-and-its-geometry-is-solved-backwards-from-the-first-warning) rather than repeating the derivation.
+- **Do not touch** `test_out_of_range_x_constant` or `test_non_kinematic_fields_identical_at_equal_t`. `test_out_of_range_x_static_beyond_exit_gate` keeps its `c-out-of-range.yaml` pairing (unchanged at 60.0 m static) but takes its expected value from the loaded config like the rest.
 
-**Acceptance:** `python -m pytest Scenario_Player/tests` green locally and on CI `python-tests`, with no assertion carrying a re-typed kinematic constant — every expected value is computed from the loaded `ScenarioConfig`.
+**Acceptance:** `python -m pytest Scenario_Player/tests` green locally and on CI `python-tests` **and** `sp-codec-helper` — the two lanes the retiming reddened. In `test_streams_differ.py` no assertion carries a re-typed kinematic constant; every expected value is computed from the loaded `ScenarioConfig`.
 
 **Dependencies:** none — the committed `default.yaml` is its only input. **Parallel** with everything in group 1.6. **Commit:** `[11.1.13.1] test: retune the stream-difference assertions to the R22 scenario geometry`
+
+**Status:** done 2026-08-04 — commit `9521d76` on `feat/phase1-bench-run-timing`. Suite 116 passed, 7 skipped locally (the count [phase1-ci.yml](../.github/workflows/phase1-ci.yml) documents without `ENCODER_PATH`). The intent/derivation split is mutation-verified: editing `initial_distance_m` in the YAML fails `test_config.py`'s geometry test and nothing else.
 
 ### [ ] `22.1.13.4` — Set `start_delay_s` in `scenarios/default.yaml` from the measured warm-up *(agent)*
 
