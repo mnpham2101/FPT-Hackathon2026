@@ -1,0 +1,4 @@
+# Runtime set for the R12 detector, pinned to the versions the arm64 wheels lane (12.3.1.1) proves; dev/test additions live in requirements-dev.txt.
+onnxruntime==1.28.0
+opencv-python-headless==5.0.0.93
+numpy==2.4.6

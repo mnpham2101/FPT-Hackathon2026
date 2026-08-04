@@ -240,6 +240,152 @@ jobs:
           # pass - the detector_disabled line is the expected single event).
           python ADA_ECU/tools/check_evt_log.py --expect-no-tracks "$LOG_B"
           echo "[LANE] run B (no tracks) PASSED"
+      # Run C - the Phase 3 mock-retirement arm (3.3.5.3). The fixture arm (run A) stays as the
+      # deterministic admission test; this arm proves the real subprocess chain - detector ->
+      # stdout JSONL -> r3_parser -> store upsert - so own-sensor entries enter the store
+      # through the same R3 interface as relayed entries, mock no longer required. Own-sensor
+      # path alone: no V2X sender.
+      - name: Run C - real detector into the real store (3.3.5.3)
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Skip-with-notice guard: keeps the lane green on rebases that predate Phase 3.
+          if [ ! -f ADA_ECU/detector/main.py ] || [ ! -f ADA_ECU/models/yolo11n.onnx ]; then
+            echo "::notice::Run C skipped - ADA_ECU/detector/main.py or ADA_ECU/models/yolo11n.onnx absent (pre-Phase 3 tree)"
+            exit 0
+          fi
+
+          python -m pip install -q -r ADA_ECU/detector/requirements.txt
+
+          LOG_C="$RUNNER_TEMP/ada_run_c.log"
+
+          # Start pattern copied from run A, with the REAL detector subprocess in place of the
+          # fixture wrapper. Only the two /app path defaults are overridden for the runner; the
+          # detector's distance defaults are the retuned config.py values and the node's gates
+          # (GATE_ENTER_M 30 / GATE_EXIT_M 35, CONFIRM_HITS 3) ride on its own defaults - no
+          # threshold overrides. DETECTOR_CMD is split on whitespace without a shell, hence one
+          # absolute, space-free script path.
+          echo "[LANE] starting ada_ecu (real detector, own-sensor arm only)"
+          DETECTOR_ENABLED=true \
+          DETECTOR_CMD="python3 $GITHUB_WORKSPACE/ADA_ECU/detector/main.py" \
+          VIDEO_CLIP_PATH="$GITHUB_WORKSPACE/ADA_ECU/media/ego-b-occluding-c.mp4" \
+          MODEL_PATH="$GITHUB_WORKSPACE/ADA_ECU/models/yolo11n.onnx" \
+          DETECTOR_LOOP=true \
+          DETECTOR_REALTIME_PACING=true \
+          IVI_ECU_HOST=127.0.0.1 \
+            ADA_ECU/build/ada_ecu > "$LOG_C" 2>&1 &
+          APP_PID=$!
+          echo "$APP_PID" > "$RUNNER_TEMP/ada_pid_run_c"
+
+          # Readiness = the first [EVT] line (detector_spawn). Bounded poll, as in run A.
+          READY=0
+          for _ in $(seq 1 40); do
+            if grep -q '^\[EVT\] ' "$LOG_C" 2>/dev/null; then READY=1; break; fi
+            sleep 0.25
+          done
+          if [ "$READY" -ne 1 ]; then
+            echo "::error::ada_ecu (run C) never emitted an [EVT] line within 10s"
+            cat "$LOG_C" || true
+            kill -TERM "$APP_PID" 2>/dev/null || true
+            exit 1
+          fi
+
+          # Bounded poll, up to ~90 s at 1 s intervals: the ONNX model load takes seconds and
+          # B's range crosses the 30 m gate late in each 10 s clip pass. Wait for BOTH at least
+          # one own_sensor_ingest AND a track_transition whose payload shows an own: id
+          # reaching "tracked". The exact payload key layout may vary, so match
+          # track_transition lines that contain both markers.
+          OK=0
+          for _ in $(seq 1 90); do
+            if grep -q '"event":"own_sensor_ingest"' "$LOG_C" 2>/dev/null \
+              && grep -E '"event":"track_transition"' "$LOG_C" 2>/dev/null | grep -F 'own:' | grep -Fq '"tracked"'; then
+              OK=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "$OK" -ne 1 ]; then
+            echo "::error::run C: no own_sensor_ingest plus own:-id-tracked track_transition within 90s"
+            cat "$LOG_C" || true
+            kill -TERM "$APP_PID" 2>/dev/null || true
+            exit 1
+          fi
+
+          echo "[LANE] stopping ada_ecu (SIGTERM)"
+          kill -TERM "$APP_PID"
+          APP_STATUS=0
+          wait "$APP_PID" || APP_STATUS=$?
+
+          echo "::group::ada_ecu run C stdout"
+          cat "$LOG_C"
+          echo "::endgroup::"
+
+          if [ "$APP_STATUS" -ne 0 ]; then
+            echo "::error::ada_ecu exited $APP_STATUS on SIGTERM (expected 0)"
+            exit 1
+          fi
+
+          # Final hard assertions on the settled capture.
+          INGESTS=$(grep -c '"event":"own_sensor_ingest"' "$LOG_C" || true)
+          echo "[LANE] own_sensor_ingest count: $INGESTS"
+          if [ "$INGESTS" -eq 0 ]; then
+            echo "::error::run C: zero own_sensor_ingest events in the final capture"
+            exit 1
+          fi
+          if ! grep -E '"event":"track_transition"' "$LOG_C" | grep -F 'own:' | grep -Fq '"tracked"'; then
+            echo "::error::run C: no track_transition with an own: id reaching \"tracked\" in the final capture"
+            exit 1
+          fi
+          echo "[LANE] run C (real detector into the real store) PASSED"
+      # Run D - import-and-plumbing smoke only: the detector runs DIRECTLY (not under
+      # ada_ecu) on synthetic flat-grey frames, which are EXPECTED to yield zero detections.
+      # Never a track, never an own_sensor_ingest assertion, never R12 evidence.
+      - name: Run D - detector synthetic import smoke (3.3.5.3)
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Same skip-with-notice guard as run C.
+          if [ ! -f ADA_ECU/detector/main.py ] || [ ! -f ADA_ECU/models/yolo11n.onnx ]; then
+            echo "::notice::Run D skipped - ADA_ECU/detector/main.py or ADA_ECU/models/yolo11n.onnx absent (pre-Phase 3 tree)"
+            exit 0
+          fi
+
+          OUT_D="$RUNNER_TEMP/detector_run_d.stdout"
+          ERR_D="$RUNNER_TEMP/detector_run_d.stderr"
+
+          echo "[LANE] running the detector directly on 40 synthetic frames"
+          DETECTOR_REALTIME_PACING=false \
+          MODEL_PATH="$GITHUB_WORKSPACE/ADA_ECU/models/yolo11n.onnx" \
+            timeout 120 python3 ADA_ECU/detector/main.py --synthetic 40 > "$OUT_D" 2> "$ERR_D"
+
+          echo "::group::detector run D stderr"
+          cat "$ERR_D"
+          echo "::endgroup::"
+
+          # Every stdout line (if any) parses as JSON; flat-grey frames yield zero
+          # detections, so an empty stdout passes.
+          python - "$OUT_D" <<'PYEOF'
+          import json, sys
+          n = 0
+          with open(sys.argv[1], encoding="utf-8") as f:
+              for line in f:
+                  line = line.strip()
+                  if not line:
+                      continue
+                  json.loads(line)
+                  n += 1
+          print(f"[LANE] run D stdout lines parsed as JSON: {n}")
+          PYEOF
+
+          # The startup diagnostic goes to stderr; an empty stderr means the detector never
+          # got as far as announcing itself.
+          if [ ! -s "$ERR_D" ]; then
+            echo "::error::run D: detector stderr empty - startup line missing"
+            exit 1
+          fi
+          echo "[LANE] run D (detector synthetic import smoke) PASSED"
       # Safety net against a hung runner: both runs kill their own process on every path above,
       # so a live pid here means a step died between fork and kill.
       - name: Kill any leftover ada_ecu
@@ -265,4 +411,7 @@ jobs:
           path: |
             ${{ runner.temp }}/ada_run_a.log
             ${{ runner.temp }}/ada_run_b.log
+            ${{ runner.temp }}/ada_run_c.log
+            ${{ runner.temp }}/detector_run_d.stdout
+            ${{ runner.temp }}/detector_run_d.stderr
           if-no-files-found: warn
