@@ -546,7 +546,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Status:** done — py_compile OK; `pytest ADA_ECU/tools/tests -q` = 12 passed, 1 skipped (ffprobe-gated); real clip exit 0: `OK ego-b-occluding-c.mp4: container=mp4 codec=h264 1280x720 20.00fps decoded=200/200 frames (100.0%) duration=10.00s size=5.02MiB probe=opencv skipped=frame_rate_constant,audio` — the two skips are honest OpenCV-fallback limits (no ffprobe on this host), never false passes. Verified with official x64 CPython 3.12.10 under WoA emulation — PyPI has no win_arm64 OpenCV wheel.
 
-### [ ] `12.2.9.2` — Send the video-input proposal to FPT-Mentor *(Human)*
+### [x] `12.2.9.2` — Send the video-input proposal to FPT-Mentor *(Human)*
 
 **Objective:** the milestone acceptance clause "video-input proposal sent to FPT-Mentor".
 
@@ -564,6 +564,8 @@ Nothing new is authored; the note is the artifact.
 **Acceptance:** step 4's record exists in `plans/doc/phase2-ada-scaffold-run.md`, carrying the date and any reply. The evidence commit is the orchestrator's, made once the person confirms the send.
 
 **Dependencies:** none — send it early; it has the longest external latency and no dependant. **Commit:** `[12.2.9.2] docs: record the video-input proposal sent to FPT-Mentor`
+
+**Status:** done — user-confirmed 2026-08-04: proposal sent to FPT-Mentor and the committed clip `ADA_ECU/media/ego-b-occluding-c.mp4` confirmed as the file to use; record in [doc/phase2-ada-scaffold-run.md](doc/phase2-ada-scaffold-run.md); evidence commit by the orchestrator.
 
 ### [ ] `5.2.9.4` — Add the §6 env rows to `node-ada-ecu.md` *(AI — writes in `requirements/car-sky-guide/`)*
 
