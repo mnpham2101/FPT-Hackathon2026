@@ -44,7 +44,7 @@ Non-authoritative scratch; on any conflict the CLAUDE.md authority order wins.
 |---|---|
 | [scenario-player-v2x-callflow-messages.md](../../Scenario_Player/doc/research_notes/scenario-player-v2x-callflow-messages.md) | §2's wire model — the bench is the sole talker, so this node binds a port and never sends on the R1 wire, and the bring-up FSM produces no packets; §4.2's ASN.1 field mapping, which the codec seam realizes; findings F1, F6 and F7 placed above the seam in `r2_builder`, F9 in `validator` |
 | [baseline-connectivity-smoke-test.md](../../plans/doc/research_notes/baseline-connectivity-smoke-test.md) | The capture technique D5 adopts — in-container tcpdump, `NET_RAW` flat in `capabilities`, the `/proc/net/dev` counter fallback — and the View-Log-as-retrieval model that both D5's pcap export and D7's on-platform check rest on; `tools/netcheck/` as the R2 observation sink (D6) |
-| [phase0-contract-freeze-hld.md](../../plans/doc/phase0-contract-freeze-hld.md) | D3's codec seam (`CpmContent` + `ICpmCodec`, wire-native units) and its rule that every conversion and derivation happens above it; D1's access model — byte-synced copies gated by `sync-manifest.json` |
+| [phase0-contract-freeze-hld.md](../../deprecated/phase0-contract-freeze-hld.md) | D3's codec seam (`CpmContent` + `ICpmCodec`, wire-native units) and its rule that every conversion and derivation happens above it; D1's access model — byte-synced copies gated by `sync-manifest.json` |
 
 ## 3. The component architecture
 
