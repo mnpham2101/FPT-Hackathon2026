@@ -405,7 +405,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Status:** done — `py_compile` clean; `--validate`: 61/61 fixture lines valid vs synced R3 schema, 100/100 approaching + 200/200 out-of-range bodies valid vs synced R2 schema (schemas loaded from `ADA_ECU/contracts/`); `--loopback`: 100+200 datagrams byte-identical on 127.0.0.1; profiles read geometry from the two committed scenario YAMLs (70.0→20.5 m @ 5.0 m/s; static 60.0 m); no hardcoded peer (env `ADA_ECU_HOST`/`ADA_ECU_PORT` or CLI).
 
-### [ ] `13.2.6.4` — Composition root `src/main.cpp` + `ada_ecu` executable *(AI)*
+### [x] `13.2.6.4` — Composition root `src/main.cpp` + `ada_ecu` executable *(AI)*
 
 **Objective:** assemble config → event log → registry → observers → queue → parsers → store, and run the fusion tick — controller only, no rules (HLD §8 MVC mapping).
 
@@ -419,6 +419,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 **Acceptance:** ADA build + ctest green on CI; the `ada_ecu` target builds and links.
 
 **Dependencies:** after `13.2.2.1` + `2.2.6.1` + `12.2.6.2` + `2.2.3.1` + `3.2.3.2` + `13.2.4.3` + `14.2.5.4`. **Commit:** `[13.2.6.4] feat: add the ada_ecu composition root`
+
+**Status:** done — composition root assembled per HLD §8/D2, single-writer loop + fusion tick + signal-clean shutdown (exit codes documented); CRA_ENABLED validated via enabled() only when the registry is non-empty (planner ruling — config.cpp:207 defers the check to wiring; Phase 4's first builtin activates it); queue capacity and listener poll timeout are file-local constexpr structural bounds flagged as planner-designated, not gate constants; build/link deferred to CI ada-core-build.
 
 ### [x] `18.2.6.5` — `[EVT]`-stream checker `tools/check_evt_log.py` *(AI)*
 

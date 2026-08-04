@@ -178,3 +178,10 @@ target_compile_features(ada_assessment_db PUBLIC cxx_std_17)
 
 ada_add_test(ada_assessment_db_test tests/cra/test_assessment_db.cpp)
 target_link_libraries(ada_assessment_db_test PRIVATE ada_assessment_db)
+
+# The ada_ecu executable — composition root, controller only (13.2.6.4).
+add_executable(ada_ecu src/main.cpp)
+target_link_libraries(ada_ecu PRIVATE
+  ada_config ada_store ada_assessment_db ada_cra_registry ada_parser
+  ada_v2x_listener ada_detector_reader ada_event_log ada_input_queue
+  Threads::Threads)
