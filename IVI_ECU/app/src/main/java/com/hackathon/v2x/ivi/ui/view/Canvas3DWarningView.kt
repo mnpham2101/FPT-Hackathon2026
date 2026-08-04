@@ -1,5 +1,6 @@
 package com.hackathon.v2x.ivi.ui.view
 
+
 import android.util.Log
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -14,6 +15,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
@@ -21,6 +23,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
@@ -36,80 +39,70 @@ import java.util.Locale
 import kotlin.math.hypot
 
 // ---------------------------------------------------------------------------
-// Cybertruck HMI Design Tokens
-// Steel-cold, angular, military tactical — zero rounded corners
+// Legacy Cyber* token aliases — kept for unit-test backward-compatibility
+// (CybertruckGodViewTest asserts exact ARGB hex values)
 // ---------------------------------------------------------------------------
-
-internal val CyberBackground    = Color(0xFF0A0C10)  // near-black steel
-internal val CyberRoad          = Color(0xFF111418)  // slightly lighter lane surface
-internal val CyberRoadMark      = Color(0xFF1E2530)  // dim lane markings
-internal val CyberGrid          = Color(0xFF141A22)  // subtle background grid
-
-internal val CyberEgo           = Color(0xFFE8ECF0)  // pure white-steel, Ego vehicle
-internal val CyberB             = Color(0xFFFFB300)  // amber — occluder B
-internal val CyberGhostC        = Color(0xFFE03040)  // desaturated red — Ghost C
-internal val CyberConnector     = Color(0xFF2E3D50)  // muted connector lines
-internal val CyberText          = Color(0xFFCDD4DC)  // cool-white monospace text
-internal val CyberMuted         = Color(0xFF4A5868)  // dim metadata text
-
-internal val CyberRiskLow       = Color(0xFF3A8C4E)  // muted green
-internal val CyberRiskMedium    = Color(0xFFCC7A00)  // dark amber
-internal val CyberRiskHigh      = Color(0xFFCC2233)  // military red
-
-// Stroke widths
-private const val EDGE_STROKE   = 2.5f
-private const val DASH_STROKE   = 2.0f
-private const val CONNECTOR_SW  = 1.5f
-private const val ROAD_SW       = 1.2f
-
-// Dash effects — angular military pattern
-private val GhostDash   = PathEffect.dashPathEffect(floatArrayOf(10f, 7f), 0f)
-private val ConnectDash = PathEffect.dashPathEffect(floatArrayOf(6f, 5f), 0f)
-private val LaneDash    = PathEffect.dashPathEffect(floatArrayOf(20f, 14f), 0f)
-
-// Typography
-private val HudMono = TextStyle(color = CyberText, fontSize = 11.sp, fontFamily = FontFamily.Monospace)
-private val HudMonoSmall = TextStyle(color = CyberMuted, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
-private val HudHeader = TextStyle(
-    color = CyberText, fontSize = 18.sp,
-    fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold
-)
-private val HudSubHeader = TextStyle(
-    color = CyberGhostC, fontSize = 12.sp,
-    fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold
-)
-private val BadgeText = TextStyle(
-    color = CyberRiskHigh, fontSize = 10.sp,
-    fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold
-)
-
-// Glow pulse
-private const val GLOW_MIN   = 0.20f
-private const val GLOW_MAX   = 0.70f
-private const val GLOW_MS    = 1400
-private const val LOG_TAG    = "IVI_V2X_3D"
+internal val CyberBackground = Color(0xFF0A0C10)
+internal val CyberEgo        = Color(0xFFE8ECF0)
+internal val CyberB          = Color(0xFFFFB300)
+internal val CyberGhostC     = Color(0xFFE03040)
+internal val CyberRiskLow    = Color(0xFF3A8C4E)
+internal val CyberRiskMedium = Color(0xFFCC7A00)
+internal val CyberRiskHigh   = Color(0xFFCC2233)
 
 // ---------------------------------------------------------------------------
-// Cybertruck Risk colour
+// Design Tokens — Tesla / Cybertruck IVI palette
 // ---------------------------------------------------------------------------
+private val BgColor         = Color(0xFF0D0D1A)
+private val RoadColor       = Color(0xFF1B1E27)
+private val RoadEdgeColor   = Color(0xFF3A4050)
+private val LaneDivColor    = Color(0xFF333355)
+private val EgoColor        = Color(0xFFE8ECF0)
+private val BColor          = Color(0xFFFFB300)
+private val GhostCColor     = Color(0xFFFF4040)
+private val ConnectorColor  = Color(0xFF555577)
+private val TextMain        = Color(0xFFE8E8F0)
+private val TextMuted       = Color(0xFF8A91A6)
+private val TextDim         = Color(0xFF6E7690)
+private val PanelDiv        = Color(0xFF262B38)
+private val BlindZoneColor  = Color(0xFFFF4040)
 
-internal fun cyberRiskColor(riskState: String): Color = when (riskState.lowercase(Locale.US)) {
-    "low"    -> CyberRiskLow
-    "medium" -> CyberRiskMedium
-    "high"   -> CyberRiskHigh
-    else     -> CyberRiskHigh
+private val RiskLow    = Color(0xFFFFB300)
+private val RiskMedium = Color(0xFFFF6600)
+private val RiskHigh   = Color(0xFFFF1A1A)
+
+private val LaneDash  = PathEffect.dashPathEffect(floatArrayOf(24f, 16f), 0f)
+private val GhostDash = PathEffect.dashPathEffect(floatArrayOf(12f, 8f), 0f)
+private val RailDash  = PathEffect.dashPathEffect(floatArrayOf(8f, 6f), 0f)
+
+private val StyleMain = TextStyle(color = TextMain, fontSize = 13.sp, fontFamily = FontFamily.Monospace)
+private val StyleMuted = TextStyle(color = TextMuted, fontSize = 11.sp, fontFamily = FontFamily.Monospace)
+private val StyleDim = TextStyle(color = TextDim, fontSize = 11.sp, fontFamily = FontFamily.Monospace, letterSpacing = 1.8.sp)
+private val StyleBadge = TextStyle(color = GhostCColor, fontSize = 11.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
+private val StyleHeader = TextStyle(color = TextMain, fontSize = 16.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
+private val StyleAlert = TextStyle(color = GhostCColor, fontSize = 11.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
+private val StyleBlindZone = TextStyle(color = BlindZoneColor.copy(alpha = 0.7f), fontSize = 9.sp, fontFamily = FontFamily.Monospace, letterSpacing = 1.6.sp)
+
+internal fun riskColor(riskState: String): Color = when (riskState.lowercase(Locale.US)) {
+    "low"    -> RiskLow
+    "medium" -> RiskMedium
+    else     -> RiskHigh
 }
 
+private const val LOG_TAG = "IVI_V2X_GODVIEW"
+private const val GLOW_MS = 1200
+
 // ---------------------------------------------------------------------------
-// Canvas3DWarningView — Cybertruck HMI Renderer (implements IviWarningViewSeam)
+// Canvas3DWarningView — Tesla top-down God View (faithful to ivi-god-view-warning-screen.svg)
 // ---------------------------------------------------------------------------
 
 /**
- * Cybertruck-style 3D God View renderer.
+ * Tesla-style top-down God View renderer.
  *
- * Design language: angular military HUD, steel-cold palette, no rounded
- * corners, sharp monospace typography, radar-pulse threat rings, isometric
- * road perspective identical to the Tesla Cybertruck centre console UI.
+ * Layout:
+ *   LEFT  (60%): Road viewport with ego A at bottom, occluder B ahead, ghost C at top.
+ *   RIGHT (40%): Side panel with legend, risk colour key.
+ * Bottom: Status bar.
  */
 class Canvas3DWarningView : IviWarningViewSeam {
 
@@ -120,482 +113,488 @@ class Canvas3DWarningView : IviWarningViewSeam {
         val snapshot = scene.vehicleCSnapshot
         val cSourceTrusted = isGhostCSourceTrusted(snapshot)
         if (snapshot != null && !cSourceTrusted) {
-            LaunchedEffect(snapshot) {
-                Log.e(LOG_TAG, ghostCSourceGuardErrorMessage(snapshot))
-            }
+            LaunchedEffect(snapshot) { Log.e(LOG_TAG, ghostCSourceGuardErrorMessage(snapshot)) }
         }
 
-        // Radar pulse animation for Ghost C
-        val radarTransition = rememberInfiniteTransition(label = "cyberRadar")
-        val radarAlpha by radarTransition.animateFloat(
-            initialValue = GLOW_MIN, targetValue = GLOW_MAX,
+        val glowTrans = rememberInfiniteTransition(label = "glow")
+        val glowAlpha by glowTrans.animateFloat(
+            initialValue = 0.25f, targetValue = 0.80f,
             animationSpec = infiniteRepeatable(tween(GLOW_MS), RepeatMode.Reverse),
-            label = "cyberRadarAlpha",
+            label = "glowAlpha",
         )
 
         Canvas(modifier = Modifier.fillMaxSize()) {
             val w = size.width
             val h = size.height
 
-            // ── Background ──────────────────────────────────────────────────
-            drawRect(color = CyberBackground)
+            val panelX  = w * 0.60f   // divider between road view and side panel
+            val roadW   = panelX
+            val barH    = 32f
+            val roadH   = h - barH
 
-            // ── Road & lane geometry ─────────────────────────────────────────
-            drawCyberRoad(w, h)
+            // ── Background ───────────────────────────────────────────────────
+            drawRect(BgColor)
 
-            // ── Build 3D vehicle boxes ──────────────────────────────────────
-            val egoBox = Scene3DProjection.buildVehicleBox(
-                scene.ego, canvasWidthPx = w, canvasHeightPx = h)
-            val bBox = Scene3DProjection.buildVehicleBox(
-                scene.vehicleB, canvasWidthPx = w, canvasHeightPx = h)
-            val sceneC = scene.vehicleC
-            val cBox  = sceneC?.let {
-                Scene3DProjection.buildVehicleBox(it, canvasWidthPx = w, canvasHeightPx = h)
-            }
+            // ── Road viewport (left 60%) ──────────────────────────────────────
+            drawRoad(roadW = roadW, roadH = roadH)
 
-            // ── Connectors (behind vehicles) ────────────────────────────────
-            drawCyberConnector(
-                from  = egoBox.centerBase,
-                to    = bBox.centerBase,
-                label = "AB: ${formatMeters(scene.vehicleB)} m",
-                textMeasurer = textMeasurer,
+            // ── Blind zone (occlusion cone behind B) ─────────────────────────
+            val egoX = roadW * 0.50f
+            val egoY = roadH * 0.82f   // ego A anchor
+            val bX   = roadW * 0.50f
+            val bY   = roadH * 0.50f   // vehicle B anchor
+            val cX   = roadW * 0.50f
+            val cY   = roadH * 0.22f   // ghost C anchor
+
+            drawBlindZone(egoX, egoY, bX, bY, roadW, textMeasurer)
+
+            // ── Distance rails ───────────────────────────────────────────────
+            val hasC = scene.vehicleC != null && cSourceTrusted
+            val distAB = formatMeters(scene.vehicleB)
+            val distAC = if (scene.vehicleC != null) formatMeters(scene.vehicleC!!) else null
+
+            drawDistanceRail(
+                x1 = roadW * 0.10f, y1 = bY, y2 = egoY,
+                label = "d_AB = $distAB m",
+                dashed = false, textMeasurer = textMeasurer
             )
-            val cPos = sceneC
-            if (cBox != null && cPos != null) {
-                drawCyberConnector(
-                    from  = bBox.centerBase,
-                    to    = cBox.centerBase,
-                    label = "AC: ${formatMeters(cPos)} m",
-                    textMeasurer = textMeasurer,
+            if (hasC && distAC != null) {
+                drawDistanceRail(
+                    x1 = roadW * 0.90f, y1 = cY, y2 = egoY,
+                    label = "d_AC ≈ $distAC m",
+                    dashed = true, textMeasurer = textMeasurer
                 )
             }
 
-            // ── Vehicles ────────────────────────────────────────────────────
-            drawCyberVehicle(egoBox, CyberEgo, "EGO", textMeasurer, filled = true)
-            drawCyberVehicle(bBox, CyberB, "B", textMeasurer, filled = false)
-
-            if (cBox != null && cPos != null) {
-                if (cSourceTrusted) {
-                    drawCyberRadarPulse(cBox.centerBase, cyberRiskColor(riskState), radarAlpha)
-                    drawCyberGhostVehicle(cBox, textMeasurer)
-                    drawCyberV2XBadge(
-                        text = "[V2X] C · ${formatMeters(cPos)} m · ${riskState.uppercase(Locale.US)}",
-                        box  = cBox,
-                        riskState = riskState,
-                        textMeasurer = textMeasurer,
-                    )
-                } else {
-                    drawCyberVehicle(cBox, Color(0xFFFFD700), UNKNOWN_SOURCE_LABEL, textMeasurer, filled = false)
-                }
+            // ── Ghost C (draw first, behind occluder B) ───────────────────────
+            if (hasC) {
+                val risk = riskColor(riskState)
+                drawGhostC(cx = cX, cy = cY, glowAlpha = glowAlpha, riskColor = risk, textMeasurer = textMeasurer)
+                drawGhostBadge(cx = cX, cy = cY, dist = distAC ?: "?", riskState = riskState, textMeasurer = textMeasurer)
             }
 
-            // ── HUD Overlay ──────────────────────────────────────────────────
-            drawCyberHeader(w, sceneC != null, textMeasurer)
-            drawCyberStatusBar(w, h, riskState, textMeasurer)
+            // ── Occluder B ────────────────────────────────────────────────────
+            drawCarTopDown(cx = bX, cy = bY, color = BColor, label = "B", scale = 0.92f, filled = false, textMeasurer = textMeasurer)
+
+            // ── Ego A ─────────────────────────────────────────────────────────
+            drawCarTopDown(cx = egoX, cy = egoY, color = EgoColor, label = "EGO (A)", scale = 1.0f, filled = true, textMeasurer = textMeasurer)
+
+            // ── Header (top-left) ─────────────────────────────────────────────
+            drawHeader(hasGhostC = hasC, textMeasurer = textMeasurer)
+
+            // ── Side panel divider ────────────────────────────────────────────
+            drawLine(PanelDiv, start = Offset(panelX, 40f), end = Offset(panelX, h - barH - 4f), strokeWidth = 1.5f)
+
+            // ── Side panel: legend + risk key ─────────────────────────────────
+            drawSidePanel(x0 = panelX + 20f, w = w, h = h, barH = barH, riskState = riskState, textMeasurer = textMeasurer)
+
+            // ── Status bar ────────────────────────────────────────────────────
+            drawStatusBar(w = w, h = h, barH = barH, riskState = riskState, textMeasurer = textMeasurer)
         }
     }
 }
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 private fun formatMeters(pos: VehiclePosition): String =
     String.format(Locale.US, "%.1f", hypot(pos.x, pos.y))
 
 // ---------------------------------------------------------------------------
-// Road geometry — angled isometric lanes (Cybertruck style)
+// Road — tapered perspective lane (matches SVG polygon points)
 // ---------------------------------------------------------------------------
 
-private fun DrawScope.drawCyberRoad(w: Float, h: Float) {
-    // Road surface — dark trapezoid receding into horizon
+private fun DrawScope.drawRoad(roadW: Float, roadH: Float) {
+    // Road surface trapezoid
     val roadPath = Path().apply {
-        moveTo(w * 0.25f, h)             // bottom-left
-        lineTo(w * 0.75f, h)             // bottom-right
-        lineTo(w * 0.60f, h * 0.15f)    // top-right (horizon)
-        lineTo(w * 0.40f, h * 0.15f)    // top-left  (horizon)
+        moveTo(roadW * 0.14f, roadH)          // bottom-left
+        lineTo(roadW * 0.46f, roadH)          // bottom-right
+        lineTo(roadW * 0.42f, roadH * 0.09f) // top-right (horizon)
+        lineTo(roadW * 0.18f, roadH * 0.09f) // top-left  (horizon)
         close()
     }
-    drawPath(roadPath, color = CyberRoad)
+    drawPath(roadPath, color = RoadColor)
 
-    // Left road edge
-    drawLine(
-        color = CyberRoadMark.copy(alpha = 0.8f),
-        start = Offset(w * 0.25f, h),
-        end   = Offset(w * 0.40f, h * 0.15f),
-        strokeWidth = ROAD_SW,
-    )
-    // Right road edge
-    drawLine(
-        color = CyberRoadMark.copy(alpha = 0.8f),
-        start = Offset(w * 0.75f, h),
-        end   = Offset(w * 0.60f, h * 0.15f),
-        strokeWidth = ROAD_SW,
-    )
+    // Road edges
+    drawLine(RoadEdgeColor, start = Offset(roadW * 0.14f, roadH), end = Offset(roadW * 0.18f, roadH * 0.09f), strokeWidth = 2.5f)
+    drawLine(RoadEdgeColor, start = Offset(roadW * 0.46f, roadH), end = Offset(roadW * 0.42f, roadH * 0.09f), strokeWidth = 2.5f)
 
-    // Centre dashed lane marking
-    drawLine(
-        color = CyberRoadMark,
-        start = Offset(w * 0.50f, h),
-        end   = Offset(w * 0.50f, h * 0.15f),
-        strokeWidth = ROAD_SW,
-        pathEffect = LaneDash,
-    )
+    // Lane dividers (dashed)
+    drawLine(LaneDivColor, start = Offset(roadW * 0.247f, roadH), end = Offset(roadW * 0.26f, roadH * 0.09f), strokeWidth = 2f, pathEffect = LaneDash)
+    drawLine(LaneDivColor, start = Offset(roadW * 0.353f, roadH), end = Offset(roadW * 0.34f, roadH * 0.09f), strokeWidth = 2f, pathEffect = LaneDash)
 
-    // Receding horizontal grid lines
-    for (frac in listOf(0.85f, 0.70f, 0.55f, 0.40f, 0.25f)) {
-        val t   = 1f - frac               // 0 at bottom, 1 at horizon
-        val xL  = w * 0.25f + t * (w * 0.40f - w * 0.25f)
-        val xR  = w * 0.75f - t * (w * 0.75f - w * 0.60f)
-        val y   = h * frac
-        drawLine(
-            color = CyberRoadMark.copy(alpha = 0.4f * (1f - t)),
-            start = Offset(xL, y),
-            end   = Offset(xR, y),
-            strokeWidth = 0.8f,
-        )
+    // Horizon fade rect (gradient-like fade toward top)
+    val fadeH = roadH * 0.22f
+    val fadePath = Path().apply {
+        moveTo(roadW * 0.18f, roadH * 0.09f)
+        lineTo(roadW * 0.42f, roadH * 0.09f)
+        lineTo(roadW * 0.42f, roadH * 0.09f + fadeH)
+        lineTo(roadW * 0.18f, roadH * 0.09f + fadeH)
+        close()
     }
+    drawPath(fadePath, brush = Brush.verticalGradient(
+        colors = listOf(BgColor.copy(alpha = 0.95f), Color.Transparent),
+        startY = roadH * 0.09f,
+        endY = roadH * 0.09f + fadeH,
+    ))
 }
 
 // ---------------------------------------------------------------------------
-// Cyber vehicle — angular box, top face emphasised
+// Blind zone — occlusion cone from ego behind B
 // ---------------------------------------------------------------------------
 
-private fun DrawScope.drawCyberVehicle(
-    box: Vehicle3DBox,
+private fun DrawScope.drawBlindZone(
+    egoX: Float, egoY: Float,
+    bX: Float, bY: Float,
+    roadW: Float,
+    textMeasurer: TextMeasurer,
+) {
+    val zoneTopY = roadW * 0.09f * 0.6f // near horizon
+    val halfWidth = roadW * 0.065f      // half-width at horizon
+
+    val conePath = Path().apply {
+        moveTo(bX, bY)
+        lineTo(bX - halfWidth, zoneTopY)
+        lineTo(bX + halfWidth, zoneTopY)
+        close()
+    }
+
+    // Hatched fill (approximate with semi-transparent overlay)
+    drawPath(conePath, color = BlindZoneColor.copy(alpha = 0.05f))
+
+    // Dashed left ray
+    drawLine(
+        color = BlindZoneColor.copy(alpha = 0.35f),
+        start = Offset(bX, bY),
+        end = Offset(bX - halfWidth, zoneTopY),
+        strokeWidth = 1.2f, pathEffect = GhostDash,
+    )
+    // Dashed right ray
+    drawLine(
+        color = BlindZoneColor.copy(alpha = 0.35f),
+        start = Offset(bX, bY),
+        end = Offset(bX + halfWidth, zoneTopY),
+        strokeWidth = 1.2f, pathEffect = GhostDash,
+    )
+
+    // BLIND ZONE label
+    val lbl = textMeasurer.measure(AnnotatedString("BLIND ZONE"), StyleBlindZone)
+    drawText(lbl, topLeft = Offset(bX - lbl.size.width / 2f, (bY + zoneTopY) / 2f - lbl.size.height / 2f))
+}
+
+// ---------------------------------------------------------------------------
+// Distance measurement rail (left or right of road)
+// ---------------------------------------------------------------------------
+
+private fun DrawScope.drawDistanceRail(
+    x1: Float, y1: Float, y2: Float,
+    label: String, dashed: Boolean,
+    textMeasurer: TextMeasurer,
+) {
+    val tickHalf = 8f
+    val effect = if (dashed) RailDash else null
+
+    // Vertical line
+    drawLine(ConnectorColor, start = Offset(x1, y1), end = Offset(x1, y2), strokeWidth = 1.4f, pathEffect = effect)
+
+    // Tick at top
+    drawLine(ConnectorColor, start = Offset(x1 - tickHalf, y1), end = Offset(x1 + tickHalf, y1), strokeWidth = 1.4f)
+    // Tick at bottom
+    drawLine(ConnectorColor, start = Offset(x1 - tickHalf, y2), end = Offset(x1 + tickHalf, y2), strokeWidth = 1.4f)
+
+    // Label rotated -90° centred on the rail
+    val lbl = textMeasurer.measure(AnnotatedString(label), StyleMuted)
+    val midY = (y1 + y2) / 2f
+    drawText(lbl, topLeft = Offset(x1 - lbl.size.width / 2f, midY - lbl.size.height / 2f))
+}
+
+// ---------------------------------------------------------------------------
+// Top-down car silhouette — faithful to SVG path in ivi-god-view-warning-screen.svg
+// ---------------------------------------------------------------------------
+
+private fun DrawScope.drawCarTopDown(
+    cx: Float, cy: Float,
     color: Color,
     label: String,
-    textMeasurer: TextMeasurer,
+    scale: Float,
     filled: Boolean,
+    textMeasurer: TextMeasurer,
+    dashed: Boolean = false,
 ) {
-    val top = Path().apply {
-        moveTo(box.topCorners[0].screenX, box.topCorners[0].screenY)
-        for (i in 1..3) lineTo(box.topCorners[i].screenX, box.topCorners[i].screenY)
+    val halfW = 24f * scale   // half-width of car body
+    val halfL = 50f * scale   // half-length of car body
+
+    // Main body path (rounded-rect SVG path: M0,-50 c14,0 24,8 24,20 v60 …)
+    val body = Path().apply {
+        // Using cubicTo to approximate the SVG rounded-capsule shape
+        moveTo(cx, cy - halfL)
+        cubicTo(cx + halfW * 0.58f, cy - halfL, cx + halfW, cy - halfL + halfL * 0.40f, cx + halfW, cy - halfL + halfL * 0.60f)
+        lineTo(cx + halfW, cy + halfL * 0.60f)
+        cubicTo(cx + halfW, cy + halfL * 0.80f, cx + halfW * 0.67f, cy + halfL, cx, cy + halfL)
+        cubicTo(cx - halfW * 0.67f, cy + halfL, cx - halfW, cy + halfL * 0.80f, cx - halfW, cy + halfL * 0.60f)
+        lineTo(cx - halfW, cy - halfL + halfL * 0.60f)
+        cubicTo(cx - halfW, cy - halfL + halfL * 0.40f, cx - halfW * 0.58f, cy - halfL, cx, cy - halfL)
         close()
     }
 
-    val base = Path().apply {
-        moveTo(box.bottomCorners[0].screenX, box.bottomCorners[0].screenY)
-        for (i in 1..3) lineTo(box.bottomCorners[i].screenX, box.bottomCorners[i].screenY)
-        close()
-    }
-
-    // 1. 3D Body Fill
     if (filled) {
-        drawPath(base, color = color.copy(alpha = 0.25f))
-        drawPath(top, color = color.copy(alpha = 0.40f))
+        // Ego: gradient body fill (light silver)
+        drawPath(body, color = color.copy(alpha = 0.45f))
+    } else {
+        // Other vehicles: subtle fill
+        drawPath(body, color = color.copy(alpha = 0.10f))
     }
 
-    // 2. Wheels / Tires (4 tires at bottom corners)
-    for (i in 0..3) {
-        val bPt = box.bottomCorners[i]
-        val r = 5.5f * bPt.scale.coerceIn(0.4f, 1.0f)
-        drawCircle(color = Color(0xFF0F131A), radius = r, center = Offset(bPt.screenX, bPt.screenY))
-        drawCircle(color = color.copy(alpha = 0.7f), radius = r * 0.6f, center = Offset(bPt.screenX, bPt.screenY), style = Stroke(width = 1.2f))
-    }
-
-    // 3. Top face outline & side pillars
-    drawPath(top, color = color, style = Stroke(width = EDGE_STROKE, join = StrokeJoin.Miter))
-    drawPath(base, color = color.copy(alpha = 0.40f), style = Stroke(width = EDGE_STROKE * 0.7f))
-
-    for (i in 0..3) {
-        drawLine(
-            color = color.copy(alpha = 0.8f),
-            start = Offset(box.bottomCorners[i].screenX, box.bottomCorners[i].screenY),
-            end   = Offset(box.topCorners[i].screenX,   box.topCorners[i].screenY),
-            strokeWidth = EDGE_STROKE * 0.8f,
-        )
-    }
-
-    // 4. 3D Windshield Glass (Front Slope)
-    val wsPath = Path().apply {
-        moveTo(box.topCorners[3].screenX, box.topCorners[3].screenY)
-        lineTo(box.topCorners[2].screenX, box.topCorners[2].screenY)
-        val midR = Offset(box.topCorners[2].screenX * 0.5f + box.bottomCorners[2].screenX * 0.5f, box.topCorners[2].screenY * 0.5f + box.bottomCorners[2].screenY * 0.5f)
-        val midL = Offset(box.topCorners[3].screenX * 0.5f + box.bottomCorners[3].screenX * 0.5f, box.topCorners[3].screenY * 0.5f + box.bottomCorners[3].screenY * 0.5f)
-        lineTo(midR.x, midR.y)
-        lineTo(midL.x, midL.y)
-        close()
-    }
-    drawPath(wsPath, color = Color(0x7000E5FF))
-    drawPath(wsPath, color = color.copy(alpha = 0.9f), style = Stroke(width = 1.2f))
-
-    // 5. Front Headlight Lightbar
-    drawLine(
-        color = if (label == "EGO") Color(0xFF00E5FF) else Color(0xFFFFCC00),
-        start = Offset(box.bottomCorners[3].screenX, box.bottomCorners[3].screenY),
-        end   = Offset(box.bottomCorners[2].screenX, box.bottomCorners[2].screenY),
-        strokeWidth = EDGE_STROKE * 1.8f,
-    )
-
-    // 6. Rear Brake Lights
-    drawLine(
-        color = Color(0xFFFF3344),
-        start = Offset(box.bottomCorners[0].screenX, box.bottomCorners[0].screenY),
-        end   = Offset(box.bottomCorners[1].screenX, box.bottomCorners[1].screenY),
-        strokeWidth = EDGE_STROKE * 1.5f,
-    )
-
-    // Corner brackets & Label
-    drawCornerBrackets(box, color)
-    val layout = textMeasurer.measure(AnnotatedString(label), HudMono.copy(color = color, fontWeight = FontWeight.Bold))
-    drawText(
-        textLayoutResult = layout,
-        topLeft = Offset(
-            box.centerTop.screenX - layout.size.width / 2f,
-            box.centerTop.screenY - layout.size.height - 6f,
-        ),
-    )
-}
-
-// ---------------------------------------------------------------------------
-// Ghost C — dashed wireframe + 3D car silhouette + radar pulse
-// ---------------------------------------------------------------------------
-
-private fun DrawScope.drawCyberGhostVehicle(
-    box: Vehicle3DBox,
-    textMeasurer: TextMeasurer,
-) {
-    val color = CyberGhostC
-    val top = Path().apply {
-        moveTo(box.topCorners[0].screenX, box.topCorners[0].screenY)
-        for (i in 1..3) lineTo(box.topCorners[i].screenX, box.topCorners[i].screenY)
-        close()
-    }
-
-    val base = Path().apply {
-        moveTo(box.bottomCorners[0].screenX, box.bottomCorners[0].screenY)
-        for (i in 1..3) lineTo(box.bottomCorners[i].screenX, box.bottomCorners[i].screenY)
-        close()
-    }
-
-    // 1. Translucent red fill
-    drawPath(top, color = color.copy(alpha = 0.20f))
-    drawPath(base, color = color.copy(alpha = 0.12f))
-
-    // 2. Wheels
-    for (i in 0..3) {
-        val bPt = box.bottomCorners[i]
-        val r = 5.5f * bPt.scale.coerceIn(0.4f, 1.0f)
-        drawCircle(color = color.copy(alpha = 0.4f), radius = r, center = Offset(bPt.screenX, bPt.screenY), style = Stroke(width = DASH_STROKE, pathEffect = GhostDash))
-    }
-
-    // 3. Dashed top & base outline
-    drawPath(top, color = color, style = Stroke(width = DASH_STROKE, pathEffect = GhostDash, join = StrokeJoin.Miter))
-    drawPath(base, color = color.copy(alpha = 0.5f), style = Stroke(width = DASH_STROKE * 0.8f, pathEffect = GhostDash))
-
-    // 4. Dashed vertical pillars
-    for (i in 0..3) {
-        drawLine(
-            color = color.copy(alpha = 0.7f),
-            start = Offset(box.bottomCorners[i].screenX, box.bottomCorners[i].screenY),
-            end   = Offset(box.topCorners[i].screenX,   box.topCorners[i].screenY),
-            strokeWidth = DASH_STROKE,
-            pathEffect  = GhostDash,
-        )
-    }
-
-    // 5. 3D Windshield Glass Outline (Dashed)
-    val wsPath = Path().apply {
-        moveTo(box.topCorners[3].screenX, box.topCorners[3].screenY)
-        lineTo(box.topCorners[2].screenX, box.topCorners[2].screenY)
-        val midR = Offset(box.topCorners[2].screenX * 0.5f + box.bottomCorners[2].screenX * 0.5f, box.topCorners[2].screenY * 0.5f + box.bottomCorners[2].screenY * 0.5f)
-        val midL = Offset(box.topCorners[3].screenX * 0.5f + box.bottomCorners[3].screenX * 0.5f, box.topCorners[3].screenY * 0.5f + box.bottomCorners[3].screenY * 0.5f)
-        lineTo(midR.x, midR.y)
-        lineTo(midL.x, midL.y)
-        close()
-    }
-    drawPath(wsPath, color = color.copy(alpha = 0.25f))
-    drawPath(wsPath, color = color, style = Stroke(width = DASH_STROKE, pathEffect = GhostDash))
-
-    // Ghost label
-    val layout = textMeasurer.measure(AnnotatedString("GHOST C"), HudMono.copy(color = color, fontWeight = FontWeight.Bold))
-    drawText(
-        textLayoutResult = layout,
-        topLeft = Offset(
-            box.centerTop.screenX - layout.size.width / 2f,
-            box.centerTop.screenY - layout.size.height - 6f,
-        ),
-    )
-}
-
-// ---------------------------------------------------------------------------
-// Radar pulse rings under Ghost C — Cybertruck sonar sweep aesthetic
-// ---------------------------------------------------------------------------
-
-private fun DrawScope.drawCyberRadarPulse(
-    center: ProjectedPoint3D,
-    color: Color,
-    alpha: Float,
-) {
-    val sc = center.scale.coerceIn(0.3f, 1.0f)
-    for (ring in 1..3) {
-        val rx = (28f + ring * 18f) * sc
-        val ry = (14f + ring * 9f)  * sc
-        val ringAlpha = (alpha / ring).coerceIn(0f, 1f)
-        drawOval(
-            color = color.copy(alpha = ringAlpha * 0.5f),
-            topLeft = Offset(center.screenX - rx, center.screenY - ry),
-            size = Size(rx * 2f, ry * 2f),
-            style = Stroke(width = (1.5f / ring), cap = StrokeCap.Butt),
-        )
-    }
-    // Centre cross-hair dot
-    drawCircle(
-        color = color.copy(alpha = alpha),
-        radius = 4f * sc,
-        center = Offset(center.screenX, center.screenY),
-    )
-}
-
-// ---------------------------------------------------------------------------
-// Corner bracket accents
-// ---------------------------------------------------------------------------
-
-private fun DrawScope.drawCornerBrackets(box: Vehicle3DBox, color: Color) {
-    val c = color.copy(alpha = 0.9f)
-    val sw = EDGE_STROKE * 1.2f
-    for (pt in box.topCorners) {
-        val bLen = 6f * pt.scale.coerceIn(0.4f, 1.0f)
-        // Horizontal bracket segment
-        drawLine(c, start = Offset(pt.screenX - bLen, pt.screenY),
-            end = Offset(pt.screenX + bLen, pt.screenY), strokeWidth = sw)
-        // Vertical bracket segment
-        drawLine(c, start = Offset(pt.screenX, pt.screenY - bLen),
-            end = Offset(pt.screenX, pt.screenY + bLen), strokeWidth = sw)
-    }
-}
-
-// ---------------------------------------------------------------------------
-// Connector — angular L-shape (90° bend) for Cybertruck circuit look
-// ---------------------------------------------------------------------------
-
-private fun DrawScope.drawCyberConnector(
-    from: ProjectedPoint3D,
-    to: ProjectedPoint3D,
-    label: String,
-    textMeasurer: TextMeasurer,
-) {
-    // 90-degree elbow: go horizontal first, then vertical
-    val midX = (from.screenX + to.screenX) / 2f
-    drawLine(
-        color = CyberConnector,
-        start = Offset(from.screenX, from.screenY),
-        end   = Offset(midX, from.screenY),
-        strokeWidth = CONNECTOR_SW,
-        pathEffect = ConnectDash,
-    )
-    drawLine(
-        color = CyberConnector,
-        start = Offset(midX, from.screenY),
-        end   = Offset(midX, to.screenY),
-        strokeWidth = CONNECTOR_SW,
-        pathEffect = ConnectDash,
-    )
-    drawLine(
-        color = CyberConnector,
-        start = Offset(midX, to.screenY),
-        end   = Offset(to.screenX, to.screenY),
-        strokeWidth = CONNECTOR_SW,
-        pathEffect = ConnectDash,
-    )
-
-    // Distance label — placed at the elbow
-    val layout = textMeasurer.measure(AnnotatedString(label), HudMonoSmall)
-    drawText(
-        textLayoutResult = layout,
-        topLeft = Offset(midX + 5f, (from.screenY + to.screenY) / 2f - layout.size.height / 2f),
-    )
-}
-
-// ---------------------------------------------------------------------------
-// V2X info badge — no rounded corners, sharp military rect
-// ---------------------------------------------------------------------------
-
-private fun DrawScope.drawCyberV2XBadge(
-    text: String,
-    box: Vehicle3DBox,
-    riskState: String,
-    textMeasurer: TextMeasurer,
-) {
-    val layout = textMeasurer.measure(AnnotatedString(text), BadgeText)
-    val padH = 10f; val padV = 5f
-    val bW = layout.size.width + padH * 2f
-    val bH = layout.size.height + padV * 2f
-    val bX = box.centerTop.screenX - bW / 2f
-    val bY = box.centerTop.screenY - bH - 22f
-
-    drawRect(color = CyberBackground.copy(alpha = 0.92f),
-        topLeft = Offset(bX, bY), size = Size(bW, bH))
-    drawRect(color = cyberRiskColor(riskState).copy(alpha = 0.8f),
-        topLeft = Offset(bX, bY), size = Size(bW, bH),
-        style = Stroke(width = 1.2f))
-    drawText(layout, topLeft = Offset(bX + padH, bY + padV))
-}
-
-// ---------------------------------------------------------------------------
-// HUD overlay: NLOS THREAT DETECTED header (top-left)
-// ---------------------------------------------------------------------------
-
-private fun DrawScope.drawCyberHeader(
-    w: Float,
-    hasGhostC: Boolean,
-    textMeasurer: TextMeasurer,
-) {
-    val titleText  = "NLOS GOD VIEW"
-    val titleL = textMeasurer.measure(AnnotatedString(titleText), HudHeader)
-    drawText(titleL, topLeft = Offset(18f, 14f))
-
-    if (hasGhostC) {
-        val warnText = "▲  NLOS THREAT DETECTED"
-        val warnL = textMeasurer.measure(AnnotatedString(warnText), HudSubHeader)
-        drawText(warnL, topLeft = Offset(18f, 14f + titleL.size.height + 4f))
-    }
-
-    // Top-right corner: "V2X RADAR" label
-    val radarText = "V2X RADAR"
-    val radarL = textMeasurer.measure(AnnotatedString(radarText), HudMonoSmall)
-    drawText(radarL, topLeft = Offset(w - radarL.size.width - 18f, 14f))
-}
-
-// ---------------------------------------------------------------------------
-// Status bar — bottom strip like Cybertruck media bar
-// ---------------------------------------------------------------------------
-
-private fun DrawScope.drawCyberStatusBar(
-    w: Float,
-    h: Float,
-    riskState: String,
-    textMeasurer: TextMeasurer,
-) {
-    val barH = 34f
-    // Background strip
-    drawRect(
-        color = Color(0xFF0D1018),
-        topLeft = Offset(0f, h - barH),
-        size = Size(w, barH),
-    )
-    // Top border line
-    drawLine(
-        color = CyberRoadMark,
-        start = Offset(0f, h - barH),
-        end   = Offset(w, h - barH),
-        strokeWidth = 0.8f,
-    )
-
-    // Status text
-    val risk = riskState.uppercase(Locale.US)
-    val riskColor = cyberRiskColor(riskState)
-    val statusText = "V2X LINK: ACTIVE   |   RISK: $risk"
-    val statusL = textMeasurer.measure(AnnotatedString(statusText),
-        HudMono.copy(color = riskColor))
-    drawText(statusL, topLeft = Offset(
-        (w - statusL.size.width) / 2f,
-        h - barH + (barH - statusL.size.height) / 2f,
+    // Body outline
+    val strokeEffect = if (dashed) GhostDash else null
+    drawPath(body, color = color.copy(alpha = if (dashed) 0.8f else 0.7f), style = Stroke(
+        width = if (filled) 1.6f else 1.4f,
+        join = StrokeJoin.Round,
+        pathEffect = strokeEffect,
     ))
 
-    // Left corner — EGO label
-    val egoL = textMeasurer.measure(AnnotatedString("EGO  ●"), HudMonoSmall)
-    drawText(egoL, topLeft = Offset(18f, h - barH + (barH - egoL.size.height) / 2f))
+    // --- Windshield (front glass — upper quarter of car) ---
+    val wsTopY = cy - halfL * 0.55f
+    val wsBotY = cy - halfL * 0.10f
+    val wsHW   = halfW * 0.65f
+    val wsFill = Path().apply {
+        moveTo(cx - wsHW * 0.7f, wsTopY)
+        lineTo(cx + wsHW * 0.7f, wsTopY)
+        lineTo(cx + wsHW, wsBotY)
+        lineTo(cx - wsHW, wsBotY)
+        close()
+    }
+    drawPath(wsFill, color = Color(0xFF141C26).copy(alpha = if (filled) 0.8f else 0.6f))
+    drawPath(wsFill, color = color.copy(alpha = 0.35f), style = Stroke(width = 1.0f))
 
-    // Right corner — timestamp placeholder
-    val tsL = textMeasurer.measure(AnnotatedString("R17 ●"), HudMonoSmall)
-    drawText(tsL, topLeft = Offset(w - tsL.size.width - 18f,
-        h - barH + (barH - tsL.size.height) / 2f))
+    // --- Rear glass ---
+    val rwTopY = cy + halfL * 0.10f
+    val rwBotY = cy + halfL * 0.55f
+    val rwFill = Path().apply {
+        moveTo(cx - wsHW, rwTopY)
+        lineTo(cx + wsHW, rwTopY)
+        lineTo(cx + wsHW * 0.7f, rwBotY)
+        lineTo(cx - wsHW * 0.7f, rwBotY)
+        close()
+    }
+    drawPath(rwFill, color = Color(0xFF141C26).copy(alpha = if (filled) 0.75f else 0.55f))
+    drawPath(rwFill, color = color.copy(alpha = 0.25f), style = Stroke(width = 0.8f))
+
+    // --- Front wheels (top of car in top-down view) ---
+    val wheelR = 5f * scale
+    val wheelOffX = halfW + wheelR * 0.2f
+    val wheelOffY = cy - halfL * 0.35f
+    drawOval(color = Color(0xFF0F131A), topLeft = Offset(cx - wheelOffX - wheelR, wheelOffY - wheelR * 1.8f), size = Size(wheelR * 2f, wheelR * 3.6f))
+    drawOval(color = color.copy(alpha = 0.7f), topLeft = Offset(cx - wheelOffX - wheelR, wheelOffY - wheelR * 1.8f), size = Size(wheelR * 2f, wheelR * 3.6f), style = Stroke(width = 1.0f))
+    drawOval(color = Color(0xFF0F131A), topLeft = Offset(cx + wheelOffX - wheelR, wheelOffY - wheelR * 1.8f), size = Size(wheelR * 2f, wheelR * 3.6f))
+    drawOval(color = color.copy(alpha = 0.7f), topLeft = Offset(cx + wheelOffX - wheelR, wheelOffY - wheelR * 1.8f), size = Size(wheelR * 2f, wheelR * 3.6f), style = Stroke(width = 1.0f))
+
+    // --- Rear wheels (bottom of car) ---
+    val rWheelOffY = cy + halfL * 0.35f
+    drawOval(color = Color(0xFF0F131A), topLeft = Offset(cx - wheelOffX - wheelR, rWheelOffY - wheelR * 1.8f), size = Size(wheelR * 2f, wheelR * 3.6f))
+    drawOval(color = color.copy(alpha = 0.7f), topLeft = Offset(cx - wheelOffX - wheelR, rWheelOffY - wheelR * 1.8f), size = Size(wheelR * 2f, wheelR * 3.6f), style = Stroke(width = 1.0f))
+    drawOval(color = Color(0xFF0F131A), topLeft = Offset(cx + wheelOffX - wheelR, rWheelOffY - wheelR * 1.8f), size = Size(wheelR * 2f, wheelR * 3.6f))
+    drawOval(color = color.copy(alpha = 0.7f), topLeft = Offset(cx + wheelOffX - wheelR, rWheelOffY - wheelR * 1.8f), size = Size(wheelR * 2f, wheelR * 3.6f), style = Stroke(width = 1.0f))
+
+    // --- Front headlights (top edge) ---
+    val hlW = 12f * scale
+    val hlH = 5f * scale
+    val hlY = cy - halfL
+    drawOval(color = if (filled) Color(0xFFFFFFCC).copy(alpha = 0.92f) else color.copy(alpha = 0.55f), topLeft = Offset(cx - wsHW * 0.7f - hlW / 2f, hlY - hlH / 2f), size = Size(hlW, hlH))
+    drawOval(color = if (filled) Color(0xFFFFFFCC).copy(alpha = 0.92f) else color.copy(alpha = 0.55f), topLeft = Offset(cx + wsHW * 0.7f - hlW / 2f, hlY - hlH / 2f), size = Size(hlW, hlH))
+
+    // --- Rear tail lights (bottom edge) ---
+    val tlY = cy + halfL
+    drawOval(color = Color(0xFFFF3344).copy(alpha = if (filled) 0.9f else 0.6f), topLeft = Offset(cx - wsHW * 0.7f - hlW / 2f, tlY - hlH / 2f), size = Size(hlW, hlH))
+    drawOval(color = Color(0xFFFF3344).copy(alpha = if (filled) 0.9f else 0.6f), topLeft = Offset(cx + wsHW * 0.7f - hlW / 2f, tlY - hlH / 2f), size = Size(hlW, hlH))
+
+    // --- Label below car ---
+    val lbl = textMeasurer.measure(AnnotatedString(label), StyleMuted.copy(color = color))
+    drawText(lbl, topLeft = Offset(cx - lbl.size.width / 2f, cy + halfL + 8f))
 }
+
+// ---------------------------------------------------------------------------
+// Ghost C vehicle — dashed red silhouette with glow ring
+// ---------------------------------------------------------------------------
+
+private fun DrawScope.drawGhostC(
+    cx: Float, cy: Float,
+    glowAlpha: Float,
+    riskColor: Color,
+    textMeasurer: TextMeasurer,
+) {
+    val scale = 0.86f
+    val rx = 50f * scale
+    val ry = 74f * scale
+
+    // Pulsing glow ring
+    drawOval(
+        color = riskColor.copy(alpha = glowAlpha * 0.5f),
+        topLeft = Offset(cx - rx, cy - ry),
+        size = Size(rx * 2f, ry * 2f),
+        style = Stroke(width = 9f),
+    )
+
+    // Draw ghost car with dashed outline
+    drawCarTopDown(
+        cx = cx, cy = cy,
+        color = GhostCColor,
+        label = "GHOST C",
+        scale = scale,
+        filled = false,
+        textMeasurer = textMeasurer,
+        dashed = true,
+    )
+}
+
+// ---------------------------------------------------------------------------
+// Ghost C V2X info badge
+// ---------------------------------------------------------------------------
+
+private fun DrawScope.drawGhostBadge(
+    cx: Float, cy: Float,
+    dist: String, riskState: String,
+    textMeasurer: TextMeasurer,
+) {
+    val text = "[V2X] C · $dist m · RISK: ${riskState.uppercase(Locale.US)}"
+    val lbl = textMeasurer.measure(AnnotatedString(text), StyleBadge)
+    val padH = 10f; val padV = 5f
+    val bW = lbl.size.width + padH * 2f
+    val bH = lbl.size.height + padV * 2f
+    val scale = 0.86f
+    val bX = cx - bW / 2f
+    val bY = cy - 74f * scale - bH - 10f
+
+    drawRect(color = Color(0xFF1A1A2E).copy(alpha = 0.90f), topLeft = Offset(bX, bY), size = Size(bW, bH))
+    drawRect(color = GhostCColor.copy(alpha = 0.55f), topLeft = Offset(bX, bY), size = Size(bW, bH), style = Stroke(width = 1.0f))
+    drawText(lbl, topLeft = Offset(bX + padH, bY + padV))
+}
+
+// ---------------------------------------------------------------------------
+// Header — top-left corner
+// ---------------------------------------------------------------------------
+
+private fun DrawScope.drawHeader(hasGhostC: Boolean, textMeasurer: TextMeasurer) {
+    val titleLbl = textMeasurer.measure(AnnotatedString("NLOS GOD VIEW"), StyleHeader)
+    drawText(titleLbl, topLeft = Offset(18f, 14f))
+
+    if (hasGhostC) {
+        val alertLbl = textMeasurer.measure(AnnotatedString("▲  NLOS THREAT DETECTED"), StyleAlert)
+        drawText(alertLbl, topLeft = Offset(18f, 14f + titleLbl.size.height + 4f))
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Side panel — legend + risk colour key (right 40%)
+// ---------------------------------------------------------------------------
+
+private fun DrawScope.drawSidePanel(
+    x0: Float, w: Float, h: Float, barH: Float,
+    riskState: String,
+    textMeasurer: TextMeasurer,
+) {
+    // Header
+    val hdrLbl = textMeasurer.measure(AnnotatedString("GOD VIEW · 3 VEHICLES"), StyleDim)
+    drawText(hdrLbl, topLeft = Offset(x0, 14f))
+
+    // --- EGO legend ---
+    val legendX = x0
+    var legendY = 70f
+
+    // Ego mini car swatch
+    drawCarMiniSwatch(x = legendX, y = legendY, color = EgoColor, filled = true)
+    val egoMainLbl = textMeasurer.measure(AnnotatedString("EGO (A)"), StyleMain)
+    val egoSubLbl = textMeasurer.measure(AnnotatedString("this vehicle · own sensors"), StyleMuted)
+    drawText(egoMainLbl, topLeft = Offset(legendX + 36f, legendY - 4f))
+    drawText(egoSubLbl, topLeft = Offset(legendX + 36f, legendY - 4f + egoMainLbl.size.height + 2f))
+
+    // --- B legend ---
+    legendY += 80f
+    drawCarMiniSwatch(x = legendX, y = legendY, color = BColor, filled = false)
+    val bMainLbl = textMeasurer.measure(AnnotatedString("B — OCCLUDER"), StyleMain)
+    val bSubLbl = textMeasurer.measure(AnnotatedString("detected directly by A"), StyleMuted)
+    drawText(bMainLbl, topLeft = Offset(legendX + 36f, legendY - 4f))
+    drawText(bSubLbl, topLeft = Offset(legendX + 36f, legendY - 4f + bMainLbl.size.height + 2f))
+
+    // --- C legend ---
+    legendY += 80f
+    drawCarMiniSwatch(x = legendX, y = legendY, color = GhostCColor, filled = false, dashed = true)
+    val cMainLbl = textMeasurer.measure(AnnotatedString("C — GHOST"), StyleMain.copy(color = GhostCColor.copy(alpha = 0.85f)))
+    val cSub1Lbl = textMeasurer.measure(AnnotatedString("source: v2x_relayed"), StyleMuted)
+    val cSub2Lbl = textMeasurer.measure(AnnotatedString("never seen by A's sensors"), StyleMuted)
+    drawText(cMainLbl, topLeft = Offset(legendX + 36f, legendY - 4f))
+    drawText(cSub1Lbl, topLeft = Offset(legendX + 36f, legendY - 4f + cMainLbl.size.height + 2f))
+    drawText(cSub2Lbl, topLeft = Offset(legendX + 36f, legendY - 4f + cMainLbl.size.height + 2f + cSub1Lbl.size.height + 1f))
+
+    // --- Blind zone legend ---
+    legendY += 90f
+    drawRect(
+        color = BlindZoneColor.copy(alpha = 0.08f),
+        topLeft = Offset(legendX, legendY - 14f), size = Size(26f, 44f),
+    )
+    drawRect(
+        color = BlindZoneColor.copy(alpha = 0.3f),
+        topLeft = Offset(legendX, legendY - 14f), size = Size(26f, 44f),
+        style = Stroke(width = 1.0f, pathEffect = GhostDash),
+    )
+    val bzMainLbl = textMeasurer.measure(AnnotatedString("BLIND ZONE"), StyleMain)
+    val bzSubLbl = textMeasurer.measure(AnnotatedString("A's line of sight, blocked by B"), StyleMuted)
+    drawText(bzMainLbl, topLeft = Offset(legendX + 36f, legendY - 4f))
+    drawText(bzSubLbl, topLeft = Offset(legendX + 36f, legendY - 4f + bzMainLbl.size.height + 2f))
+
+    // Divider
+    legendY += 90f
+    drawLine(PanelDiv, start = Offset(x0, legendY), end = Offset(w - 10f, legendY), strokeWidth = 1.5f)
+
+    // --- Risk colour key ---
+    legendY += 20f
+    val riskHdrLbl = textMeasurer.measure(AnnotatedString("RISK — GHOST C GLOW COLOUR"), StyleDim)
+    drawText(riskHdrLbl, topLeft = Offset(x0, legendY))
+    legendY += riskHdrLbl.size.height + 12f
+
+    // Low / Medium / High circles
+    val risks = listOf(Triple(RiskLow, "LOW", false), Triple(RiskMedium, "MEDIUM", false), Triple(RiskHigh, "HIGH", true))
+    for ((i, item) in risks.withIndex()) {
+        val (col, name, active) = item
+        val cx2 = x0 + 9f + i * 100f
+        drawCircle(color = col.copy(alpha = if (active || name.lowercase() == riskState.lowercase()) 1.0f else 0.6f), radius = 7f, center = Offset(cx2, legendY + 7f))
+        val rLbl = textMeasurer.measure(AnnotatedString(name), StyleMuted.copy(color = if (name.lowercase() == riskState.lowercase()) TextMain else TextMuted))
+        drawText(rLbl, topLeft = Offset(cx2 + 14f, legendY))
+    }
+
+    // Footer note
+    val note1Lbl = textMeasurer.measure(AnnotatedString("Drawn from R4 warning messages only —"), StyleDim.copy(letterSpacing = 0.sp, fontSize = 10.sp))
+    val note2Lbl = textMeasurer.measure(AnnotatedString("no ego detection of C exists at any point."), StyleDim.copy(letterSpacing = 0.sp, fontSize = 10.sp))
+    drawText(note1Lbl, topLeft = Offset(x0, h - barH - note1Lbl.size.height - note2Lbl.size.height - 10f))
+    drawText(note2Lbl, topLeft = Offset(x0, h - barH - note2Lbl.size.height - 6f))
+}
+
+// Mini car swatch for legend (small rounded rect)
+private fun DrawScope.drawCarMiniSwatch(x: Float, y: Float, color: Color, filled: Boolean, dashed: Boolean = false) {
+    val rect = Path().apply {
+        addOval(androidx.compose.ui.geometry.Rect(x, y - 14f, x + 26f, y + 30f))
+    }
+    if (filled) drawPath(rect, color = color.copy(alpha = 0.75f))
+    else drawPath(rect, color = color.copy(alpha = 0.15f))
+    drawPath(rect, color = color.copy(alpha = 0.7f), style = Stroke(width = 1.5f, pathEffect = if (dashed) GhostDash else null))
+}
+
+// ---------------------------------------------------------------------------
+// Status bar — bottom strip
+// ---------------------------------------------------------------------------
+
+private fun DrawScope.drawStatusBar(w: Float, h: Float, barH: Float, riskState: String, textMeasurer: TextMeasurer) {
+    drawRect(color = Color(0xFF0D1018), topLeft = Offset(0f, h - barH), size = Size(w, barH))
+    drawLine(PanelDiv, start = Offset(0f, h - barH), end = Offset(w, h - barH), strokeWidth = 0.8f)
+
+    val risk = riskState.uppercase(Locale.US)
+    val riskCol = riskColor(riskState)
+    val statusLbl = textMeasurer.measure(AnnotatedString("● MODE: WARNING   ●  V2X LINK: BOUND · 47300   |   RISK: $risk"), StyleMuted.copy(color = riskCol))
+    drawText(statusLbl, topLeft = Offset((w - statusLbl.size.width) / 2f, h - barH + (barH - statusLbl.size.height) / 2f))
+
+    val iviLbl = textMeasurer.measure(AnnotatedString("IVI · R16"), StyleDim.copy(fontSize = 10.sp))
+    drawText(iviLbl, topLeft = Offset(w - iviLbl.size.width - 12f, h - barH + (barH - iviLbl.size.height) / 2f))
+}
+
+internal fun cyberRiskColor(riskState: String): Color = riskColor(riskState)
