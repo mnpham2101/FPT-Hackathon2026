@@ -408,7 +408,7 @@ docker buildx build --platform linux/arm64 --provenance=false --sbom=false -t m1
 | CI lane | File | What it does |
 |---|---|---|
 | `ada-core-build` | [phase2-ci.yml](../../.github/workflows/phase2-ci.yml) | configure, build and `ctest` the C++ core on a plain runner |
-| `ada-detector-tests` | [phase2-ci.yml](../../.github/workflows/phase2-ci.yml) | the detector suite, against `SyntheticFrameSource`; moves to `phase3-ci.yml` with `12.3.3.3` |
+| `ada-detector-tests` | `phase3-ci.yml` | the detector suite, against `SyntheticFrameSource` |
 | `contracts-gate` | [phase0-ci.yml](../../.github/workflows/phase0-ci.yml) | byte-identity of this folder's schema and sample copies (D1) |
 | `ada-ecu-image` | [phase4-ci.yml](../../.github/workflows/phase4-ci.yml) | the `linux/arm64` image build from context `ADA_ECU/`, pushed to Zot when `CARSKY_ZOT_API_KEY` is set |
 

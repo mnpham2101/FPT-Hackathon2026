@@ -8,7 +8,8 @@
 # a lane lives with the NODE IT EXERCISES rather than the phase that wrote it. This file therefore
 # gains a job only when Phase 0 itself gains an artifact. The node lanes live with their nodes:
 #   * v2x-core-build, sp-unit-tests           -> phase1-ci.yml (the V2X ECU and the bench)
-#   * ada-core-build, ada-detector-tests      -> phase2-ci.yml (the ADA scaffold)
+#   * ada-core-build                          -> phase2-ci.yml (the ADA scaffold)
+#   * ada-detector-tests                      -> phase3-ci.yml (the ADA detector)
 #   * ivi-unit-tests                          -> phase5-ci.yml (the IVI ECU)
 #
 # Every phase<N>-ci.yml carries the same `on:` triggers, so a lane runs on every push and pull
