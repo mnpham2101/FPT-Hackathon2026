@@ -26,8 +26,8 @@ DEFAULTS = {
     "conf_threshold": 0.35,
     "iou_threshold": 0.45,
     "track_iou_min": 0.3,
-    "vehicle_width_m": 1.8,
-    "camera_hfov_deg": 60.0,
+    "vehicle_width_m": 2.6,
+    "camera_hfov_deg": 34.4,
 }
 
 # field -> (env key, override raw value, expected parsed value)

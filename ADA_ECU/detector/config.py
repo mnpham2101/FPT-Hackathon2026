@@ -98,8 +98,13 @@ _SPEC = {
     "conf_threshold": ("CONF_THRESHOLD", "0.35", _float_unit_interval),
     "iou_threshold": ("IOU_THRESHOLD", "0.45", _float_unit_interval),
     "track_iou_min": ("TRACK_IOU_MIN", "0.3", _float_unit_interval),
-    "vehicle_width_m": ("VEHICLE_WIDTH_M", "1.8", _float_positive),
-    "camera_hfov_deg": ("CAMERA_HFOV_DEG", "60", _float_hfov),
+    # Retuned against the committed clip (12.3.4.3, plans/doc/phase3-ada-detector-run.md):
+    # B is a coach, not a 1.8 m car, and the re-encoded footage's effective HFOV is
+    # narrower than a raw dashcam's. The pair scales B's estimated range onto the
+    # provenance record's ~60 -> ~10 m so the series crosses GATE_ENTER_M (30 m)
+    # exactly once per loop. The R13 gate itself is never retuned (D3/D6).
+    "vehicle_width_m": ("VEHICLE_WIDTH_M", "2.6", _float_positive),
+    "camera_hfov_deg": ("CAMERA_HFOV_DEG", "34.4", _float_hfov),
 }
 
 
