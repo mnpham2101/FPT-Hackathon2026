@@ -21,11 +21,23 @@ def main() -> None:
     import cv2
     import numpy as np
 
-    writer = cv2.VideoWriter(
-        args.output, cv2.VideoWriter_fourcc(*"mp4v"), args.fps, (args.width, args.height)
-    )
-    if not writer.isOpened():
-        raise SystemExit(f"cannot open cv2.VideoWriter for output path: {args.output!r}")
+    # Codec availability differs per OpenCV wheel/backend; try a chain before giving up.
+    # All three mux into the .mp4 container the CLI names (mp4 carries mjpeg fine).
+    writer = None
+    tried = []
+    for fourcc in ("mp4v", "avc1", "MJPG"):
+        tried.append(fourcc)
+        writer = cv2.VideoWriter(
+            args.output, cv2.VideoWriter_fourcc(*fourcc), args.fps, (args.width, args.height)
+        )
+        if writer.isOpened():
+            break
+        writer.release()
+        writer = None
+    if writer is None:
+        raise SystemExit(
+            f"cannot open cv2.VideoWriter for output path {args.output!r} (fourccs tried: {tried})"
+        )
     for i in range(args.frames):
         frame = np.full((args.height, args.width, 3), 96, dtype=np.uint8)
         # Deterministic per-frame variation: a centred grey rectangle whose shade tracks the frame ordinal.
