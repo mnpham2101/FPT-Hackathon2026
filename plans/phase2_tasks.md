@@ -248,7 +248,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Status:** done — upsert/get/all/allBySource/nearest/erase with injectable CLOCK_REALTIME stamp; store owns `state` (not_tracked on first insert, preserved on refresh) and restamps `lastUpdated`; 7-case test covers the nine-field round-trip, identical-upsert for both source shapes, per-source nearest with tie case, erase, and the restamp; build/tests deferred to CI ada-core-build.
 
-### [ ] `13.2.4.2` — Admission state machine `src/store/admission.{hpp,cpp}` *(AI)*
+### [x] `13.2.4.2` — Admission state machine `src/store/admission.{hpp,cpp}` *(AI)*
 
 **Objective:** the R13 machine as a **pure** function of (current state, hits, distance, elapsed) → (next state, action) — no I/O, no store access, no clock read inside.
 
@@ -262,6 +262,8 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 **Acceptance:** ADA build + ctest green on CI; every edge in the `.puml` has at least one covering case.
 
 **Dependencies:** after `13.2.2.1` (threshold types). **Commit:** `[13.2.4.2] feat: implement the R13 admission state machine`
+
+**Status:** done — pure step() machine realizing all eight diagram edges, thresholds as ctor params from Config, timeout evaluated first, hits reset on every erase; edge names aligned to the 13.2.4.3 reason vocabulary (self-loops distinct as counted/refreshed); test covers lifecycle both directions, promotion boundary, counter reset, timeout precedence, Schmitt band, CONFIRM_HITS==1 degenerate; build/tests deferred to CI ada-core-build.
 
 ### [ ] `13.2.4.3` — Store ↔ admission integration, expiry, transition events *(AI)*
 

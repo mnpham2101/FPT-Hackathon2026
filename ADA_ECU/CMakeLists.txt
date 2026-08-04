@@ -115,3 +115,12 @@ target_compile_features(ada_store PUBLIC cxx_std_17)
 
 ada_add_test(ada_track_store_test tests/store/test_track_store.cpp)
 target_link_libraries(ada_track_store_test PRIVATE ada_store)
+
+# R13 admission state machine — pure function, thresholds injected (13.2.4.2).
+add_library(ada_admission STATIC src/store/admission.cpp)
+target_include_directories(ada_admission PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(ada_admission PUBLIC ada_contracts)
+target_compile_features(ada_admission PUBLIC cxx_std_17)
+
+ada_add_test(ada_admission_own_sensor_test tests/store/test_admission_own_sensor.cpp)
+target_link_libraries(ada_admission_own_sensor_test PRIVATE ada_admission)
