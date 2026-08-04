@@ -179,6 +179,15 @@ target_compile_features(ada_assessment_db PUBLIC cxx_std_17)
 ada_add_test(ada_assessment_db_test tests/cra/test_assessment_db.cpp)
 target_link_libraries(ada_assessment_db_test PRIVATE ada_assessment_db)
 
+# Ego-frame scene composition — pure geometry over the store (15.4.1.1).
+add_library(ada_fusion STATIC src/fusion/scene_composer.cpp)
+target_include_directories(ada_fusion PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_link_libraries(ada_fusion PUBLIC ada_store)
+target_compile_features(ada_fusion PUBLIC cxx_std_17)
+
+ada_add_test(ada_scene_composer_test tests/fusion/test_scene_composer.cpp)
+target_link_libraries(ada_scene_composer_test PRIVATE ada_fusion)
+
 # The ada_ecu executable — composition root, controller only (13.2.6.4).
 add_executable(ada_ecu src/main.cpp)
 target_link_libraries(ada_ecu PRIVATE
