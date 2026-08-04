@@ -2,7 +2,7 @@
 
 > **Authority & context:**
 >
-> - **Phase content:** [milestone1.md § Phase 5](milestone1.md#phase-5--ivi-hmi-mock-driven-r16-r17--display-track-parallel-from-the-start) — its five acceptance checkboxes are the phase output.
+> - **Phase content:** [milestone1.md § Phase 5](milestone1.md#phase-5--ivi-hmi-mock-driven-r16-r17--display-track-parallel-from-the-start) — its five acceptance criteria are the phase output.
 > - **Design:** [ivi-ecu-hld.md](../IVI_ECU/doc/ivi-ecu-hld.md) — the node's sole design authority — with [phase5-ivi-components.puml](../IVI_ECU/doc/phase5-ivi-components.puml) and [phase5-ivi-callflow.puml](../IVI_ECU/doc/phase5-ivi-callflow.puml). Every target path below is cited from its **[§4](../IVI_ECU/doc/ivi-ecu-hld.md#4-folder-structure)** folder map; component responsibilities **[§6](../IVI_ECU/doc/ivi-ecu-hld.md#6-internal-components)**, seams **[§8](../IVI_ECU/doc/ivi-ecu-hld.md#8-interfaces-ports-and-the-layer-rule)**, the R4 input contract **§10**, CI **[§11](../IVI_ECU/doc/ivi-ecu-hld.md#11-tech-stack-build-and-ci)**, test configurations and log shapes **[§12](../IVI_ECU/doc/ivi-ecu-hld.md#12-test-strategy)**, decisions **D1–D12** ([§13](../IVI_ECU/doc/ivi-ecu-hld.md#13-design-decisions)). Deployment steps come from the bring-up procedure below, not from the design.
 > - **Research notes:** [phase5-r4-simulator.md](../IVI_ECU/doc/research_notes/phase5-r4-simulator.md) · [phase5-r4-parsing.md](../IVI_ECU/doc/research_notes/phase5-r4-parsing.md) — non-authoritative; the HLD wins on conflict.
 > - **Requirements:** [m1-cooperative-awareness.md §2](../requirements/m1-cooperative-awareness.md) R4, R16, R17 (plus R5, R6, R18, R19 where this phase touches them) — referenced by number, never restated.
@@ -16,19 +16,19 @@
 
 ## Phase 5 overview
 
-**Objective.** The IVI renders the R17 God View — ego, B, and ghost C — from R4 messages alone, inside the R16 layout, on a launchable APK; and an R4 simulator plus a 3-node mini-blueprint produce the traffic and the in-Room evidence that closes the phase's acceptance boxes.
+**Objective.** The IVI renders the R17 God View — ego, B, and ghost C — from R4 messages alone, inside the R16 layout, on a launchable APK; and an R4 simulator plus a 3-node mini-blueprint produce the traffic and the in-Room evidence that closes the phase's acceptance criteria.
 
 **Input (must exist before start):**
 
-- R4 frozen in Phase 0: [contracts/r4-ada-ivi.schema.json](../contracts/r4-ada-ivi.schema.json), the four samples under [contracts/samples/](../contracts/samples/), and the committed Kotlin binding + `R4RoundTripTest` / `R4AdditiveVersionTest`.
-- The Phase 5 HLD (`85387b5`) and its two research notes.
+- R4 frozen in Phase 0: [contracts/r4-ada-ivi.schema.json](../contracts/r4-ada-ivi.schema.json), the four R3/R4 samples under [contracts/samples/](../contracts/samples/), and the committed Kotlin binding + `R4RoundTripTest` / `R4AdditiveVersionTest`.
+- The IVI node's HLD, [ivi-ecu-hld.md](../IVI_ECU/doc/ivi-ecu-hld.md), and its two research notes.
 - `IVI_ECU/` as a single-module Gradle project (`:app`) carrying the contract layer (`model/`) and the drawing layer (`ui/view/`), AGP 8.13 / Kotlin 2.2.20 / Compose BOM 2024.09.03 / `minSdk 29`, `targetSdk 33`, `compileSdk 34`.
 - CarSky access with the baseline blueprint `baseline_phase1` ([carsky-4-node-blueprint.md § The blueprints on CarSky](../requirements/car-sky-guide/carsky-4-node-blueprint.md#8-the-blueprints-on-carsky)), the `AAOS` artifact (`x9oqgIwzTp1m26SWIQqJt` / `xSU_Q7YJZUxxUgDr4Ugcp`, `0.0.1`, `aarch64`), and `registry.hackathon-2.carsky.io/m1-netcheck:latest` already pushed.
 - GitHub secret `CARSKY_ZOT_API_KEY` and the reusable [verify-arm64-image](../.github/actions/verify-arm64-image) action.
 
 **The component set and every target path are [HLD §4](../IVI_ECU/doc/ivi-ecu-hld.md#4-folder-structure) and [§6](../IVI_ECU/doc/ivi-ecu-hld.md#6-internal-components).** **Briefs below cite them; they do not restate them.** A brief names the file it changes and what it must end up doing, and the reader gets the component's responsibility, its inputs and its outputs from the design's tables rather than from a sentence in each subtask.
 
-**Output (phase acceptance = the five milestone boxes):**
+**Output (phase acceptance — the five criteria of [milestone1.md § Phase 5](milestone1.md#phase-5--ivi-hmi-mock-driven-r16-r17--display-track-parallel-from-the-start)):**
 
 - [ ] The HMI runs on the AAOS node with the R16 layout; button/app areas switch what the Display area shows.
 - [ ] **(Dev)** A mock R4 warning brings the warning view up showing ego, B, and ghost C at the composed positions.
@@ -36,11 +36,11 @@
 - [ ] A newer message with an unknown `warningType` degrades gracefully (R4 additive-version test).
 - [ ] Optional paths, only if built: an ADA message wakes the separate warning app; 3D renders through the view seam.
 
-Per-subtask traceability to these five boxes: § Acceptance traceability.
+Per-subtask traceability to these five criteria: § Acceptance traceability.
 
 **Suggested branch:** `feat/phase5-ivi-hmi`. Creating, checking out and pushing it is the user's call.
 
-**If time runs short**, § Critical path is the shortest ordered set of subtasks that closes the five boxes. Everything outside it is quality work that can be dropped or deferred without failing a box; § Critical path lists the drop order.
+**If time runs short**, § Critical path is the shortest ordered set of subtasks that closes the five criteria. Everything outside it is quality work that can be dropped or deferred without failing a criterion; § Critical path lists the drop order.
 
 ### Execution labels
 
@@ -51,10 +51,11 @@ Every subtask carries one. The walkthroughs' own AI/Human work-division tables d
 | *agent* | A spawned implementation subagent. The default for code, tests and CI. |
 | *car-sky* | The [[car-sky]] agent: authenticated REST calls, `adb` commands, log reads. The planner keeps the ID and the done-tracking. |
 | *Human* | A person, at the Nydus canvas or the Devices panel. No agent performs these. The evidence-record commit is made by the orchestrating session once the person confirms. |
+| *split* | A car-sky command whose result a person judges. Both halves are named in the brief. |
 
 ### Components already in the tree
 
-These paths exist under `IVI_ECU/app/`. **Existing is not the same as correct** — § Scaffolding, not authority governs what a subtask may assume about each. Everything else the HLD names is written by the subtask that names it.
+These paths exist under `IVI_ECU/app/`. A file's presence is not evidence that it implements [HLD §6](../IVI_ECU/doc/ivi-ecu-hld.md#6-internal-components); § The three file tiers governs what a subtask may assume about each. Everything else the HLD names is written by the subtask that names it.
 
 | Path under `IVI_ECU/` | Touched by |
 |---|---|
@@ -63,7 +64,8 @@ These paths exist under `IVI_ECU/app/`. **Existing is not the same as correct** 
 | `app/src/test/resources/contracts/samples/*.json` (four) | relocated by `4.5.1.4` |
 | `contracts/r4-ada-ivi.schema.json`, `r3-tracked-object.schema.json` | untouched — their manifest targets do not move |
 | `app/src/main/java/…/ui/DisplayMode.kt` | unchanged |
-| `app/src/main/java/…/ui/MainViewModel.kt` | extended by `16.5.4.5` — see § Scaffolding, not authority |
+| `app/src/main/res/xml/network_security_config.xml` | unchanged — governs HTTP stacks only, not a raw `DatagramSocket` (D3) |
+| `app/src/main/java/…/ui/MainViewModel.kt` | extended by `16.5.4.5` — see § The three file tiers |
 | `app/src/main/java/…/ui/screen/MainScreen.kt` | **rebuilt to the design** by `16.5.5.6` |
 | `app/src/main/java/…/ui/view/IviWarningViewSeam.kt` | **rebuilt to the design** by `17.5.5.4` |
 | `app/src/main/java/…/ui/view/SceneCoordinateMapper.kt` | **rebuilt to the design** by `17.5.5.3` |
@@ -74,9 +76,11 @@ These paths exist under `IVI_ECU/app/`. **Existing is not the same as correct** 
 
 `gradle/libs.versions.toml`, the `:contract` / `:serializer` / `:observer` / `:r4-simulator` modules, `MainActivity.kt` and `IviApplication.kt` are **absent** — groups 5.1–5.6 create them.
 
-### Scaffolding, not authority
+Comments inside several of these files cite task IDs that carry a different meaning in this plan; § Open items item 9 records the collision and its owner.
 
-The `ui/` files above are **scaffolding**: placed early to keep the module compiling and to hold a shape, never built against the design as it now stands. **A file's existence is not evidence that it implements [HLD §6](../IVI_ECU/doc/ivi-ecu-hld.md#6-internal-components).** Group 5.5 therefore *builds* the renderer, the mapper, the seam, the banner and the screen to the design rather than editing and testing what is there — a subtask whose objective is "add a test to the committed X" silently ratifies whatever X currently does, and that is exactly the failure mode this phase cannot afford in the renderer, where the R19 provenance guard lives.
+### The three file tiers
+
+The `ui/` files above do not implement [HLD §6](../IVI_ECU/doc/ivi-ecu-hld.md#6-internal-components). Group 5.5 builds the renderer, the mapper, the seam, the banner and the screen to the design rather than editing and testing what is there. A subtask whose objective is "add a test to the committed X" ratifies whatever X currently does.
 
 Three tiers, and a subtask must know which one it is in:
 
@@ -106,7 +110,7 @@ Two standing constraints every `IVI_ECU/` subtask inherits:
 - **No module declares its own repositories.** `settings.gradle.kts` sets `RepositoriesMode.FAIL_ON_PROJECT_REPOS`; a module `repositories { }` block fails the build (D8).
 - **No `android.util.Log` call on a unit-tested path in `:app`.** The stubbed Android jar throws `RuntimeException("Stub!")` from every `Log` method, so a logging line inside tested logic fails the test for a reason unrelated to the logic. D2 already keeps `Log` out of `:serializer`/`:observer`; in `:app`, log through `AndroidR4Logger` (`18.5.5.1`) and inject a recording logger in tests. `testOptions { unitTests { isReturnDefaultValues = true } }` is the fallback, not the first move — it silences the symptom for the whole module.
 
-**Status tracking:** as execution proceeds each subtask gains a `**Status:**` line appended in that subtask's own atomic commit, recording done/blocked plus verification evidence. A subtask without a status line is not started. Nothing in this file is started.
+**Status tracking:** as execution proceeds each subtask gains a `**Status:**` line appended in that subtask's own atomic commit, recording done/blocked plus verification evidence. A subtask without a status line is not started.
 
 ### Build & verification commands
 
@@ -120,13 +124,14 @@ All Gradle commands run from `IVI_ECU/` (`gradlew.bat` on the Windows dev host, 
 | APK | `./gradlew assembleDebug` → `app/build/outputs/apk/debug/app-debug.apk` |
 | Lint | `./gradlew lint` |
 | Contract integrity gate | from the repo root: `python contracts/check_sync.py` → exit 0 |
-| Simulator image | `docker buildx build --platform linux/arm64 --provenance=false --sbom=false -f IVI_ECU/r4-simulator/Dockerfile -t m1-r4-sim:latest IVI_ECU/` |
+| Simulator image, local tag `m1-r4-sim:latest` | `docker buildx build --platform linux/arm64 --provenance=false --sbom=false -f IVI_ECU/r4-simulator/Dockerfile -t m1-r4-sim:latest IVI_ECU/` |
+| Simulator image, registry tag `registry.hackathon-2.carsky.io/m1-r4-sim:latest` | pushed by `5.5.7.3`; the blueprint `image` field names this tag |
 
 Until subtask `4.5.1.4` lands, the only valid test command is `./gradlew :app:testDebugUnitTest` — the other modules do not exist yet.
 
 ---
 
-## Two constants no subtask may get wrong
+## The IVI address and port
 
 The IVI's UDP port is **`47300`** and its address is **`10.99.0.13`**, frozen by R6 and the blueprint topology. Any other value reaching a class, a scenario file or a node config is a defect, whatever its source.
 
@@ -134,9 +139,11 @@ The IVI's UDP port is **`47300`** and its address is **`10.99.0.13`**, frozen by
 
 ## Test plan — levels and coverage
 
-[HLD §12](../IVI_ECU/doc/ivi-ecu-hld.md#12-test-strategy) fixes the strategy: a plain-JVM unit layer below, and above it **two Room configurations differing in exactly one component** — which realizes the `ADA-ECU` interface. Group 5.9 runs the isolated configuration against the simulator; group 5.10 runs the full one against the real producer. **Expected output is identical in both**, so a difference between the runs is a finding about the other node, never about this one.
+[HLD §12](../IVI_ECU/doc/ivi-ecu-hld.md#12-test-strategy) fixes the strategy: a plain-JVM unit layer below, and above it **two Room configurations differing in one component: the one that realizes the `ADA-ECU` interface**. Group 5.9 runs the isolated configuration against the simulator; group 5.10 runs the full one against the real producer. **Expected output is identical in both**, so a difference between the runs is a finding about the other node, never about this one.
 
 ### The four levels
+
+`I1` to `I4` below are this plan's labels for the four test levels, used nowhere else and naming no component. The walkthrough's own `V1`–`V5` rungs are separate and are cited by their own numbers.
 
 | Level | What runs | What it proves | Where | Delivered by |
 |---|---|---|---|---|
@@ -173,11 +180,11 @@ Every row is a test this plan commits to, traced to what makes it necessary. A r
 | Every non-raw payload validates through `R4Json` before sending; junk fields survive | `MessageBuilderTest` | `4.5.6.3` | D9 |
 | Different scenario files produce observably different streams | `ScenariosDifferTest` | `4.5.6.4` | D9 |
 
-**Two of these are R4's own acceptance** — the round-trip and additive-version tests — and **two are the R19 claim in code**: the guard-armed composition (`17.5.4.4`) and the guard itself (`17.5.5.4`). Losing either R19 test leaves a guard that is present, passing and disabled, which is the exact failure D12 exists to prevent. **Neither is droppable at any price.**
+**Two of these are R4's own acceptance** — the round-trip and additive-version tests — and **two are the R19 claim in code**: the guard-armed composition (`17.5.4.4`) and the guard itself (`17.5.5.4`). Losing either R19 test leaves a guard that is present, passing and disabled, which is the exact failure D12 exists to prevent. **Neither is droppable.**
 
 ### The in-Room observables
 
-[HLD §12](../IVI_ECU/doc/ivi-ecu-hld.md#12-test-strategy) names each observable and the component that produces it; [§6](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#6-expected-outputs-and-acceptance) names the four proofs they add up to. This is the checklist both Room groups work against.
+[HLD §12](../IVI_ECU/doc/ivi-ecu-hld.md#12-test-strategy) names each observable and the component that produces it; [walkthrough §6](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#6-expected-outputs-and-acceptance) names the four proofs they add up to. This is the checklist both Room groups work against.
 
 | Observable | Produced by | Rung | Owned by | Proof |
 |---|---|---|---|---|
@@ -190,13 +197,13 @@ Every row is a test this plan commits to, traced to what makes it necessary. A r
 | The God View: ego and B solid, ghost C dashed on a risk-coloured glow, nothing else | `MainScreen` → `IviWarningViewSeam` → `CanvasWarningView` | V4 | `17.5.9.13` | §6 proof 4 |
 | A `null` `vehicleC` first step renders without C, without crash or placeholder | `CanvasWarningView` | V4 | `17.5.9.13` | R17 |
 | `cause=user` on a tap; `cause=timeout` back to Idle with the previous mode restored | `MainViewModel`; `WarningViewModel`'s timeout | V4 | `16.5.9.11`, `17.5.9.13` | R16 acceptance |
-| A generic warning on an unknown `warningType`, wire value preserved in the log | `WarningClassifier`; `R4Deserializer` | V5 | `4.5.9.15`, `17.5.9.16` | box 4 |
+| A generic warning on an unknown `warningType`, wire value preserved in the log | `WarningClassifier`; `R4Deserializer` | V5 | `4.5.9.15`, `17.5.9.16` | acceptance criterion 4 |
 | `[? UNKNOWN SOURCE]` and an ERROR line on an `own_sensor` message — **the trip is the pass** | the provenance guard | V5 | `4.5.9.15`, `17.5.9.16` | R19 |
 | `[DROP] reason=malformed …` and the next valid warning still rendering | `R4Deserializer`; `R4SocketObserver` | V5 | `4.5.9.15`, `17.5.9.16` | loop survival |
 
 ### Test data
 
-One scenario file per purpose, all data (`4.5.6.4`): `approach.json` drives V4 and carries the null-C, risk-progression and timeout cases; `degrade.json` drives V5's three rows; `state-stream.json` exercises the optional R15 path, which no acceptance criterion depends on (D11). Payloads come from the frozen samples, never from a literal (D9).
+One scenario file per purpose, all data (`4.5.6.4`): `approach.json` drives V4 and carries the null-C, risk-progression and timeout cases; `degrade.json` drives V5's three rows; `state-stream.json` exercises R4's optional `state` message, which no acceptance criterion depends on (D11). Payloads come from the frozen samples, never from a literal (D9).
 
 ---
 
@@ -215,17 +222,30 @@ One scenario file per purpose, all data (`4.5.6.4`): `approach.json` drives V4 a
 - `IVI_ECU/build.gradle.kts`: restate the existing `plugins { … apply false }` block through `alias(libs.plugins.…)`, and **add** `kotlin-jvm` (needed by `:contract`, `:serializer`, `:observer`, `:r4-simulator`). Leave the Hilt line untouched here — `4.5.1.2` removes it.
 - Do not add or remove any module, and do not edit `app/build.gradle.kts` in this subtask.
 
-**Acceptance:** `./gradlew :app:testDebugUnitTest` still green; `./gradlew projects` succeeds; `libs.versions.toml` contains every version listed above and no module declares a version literal that the catalog also declares.
+**Acceptance:** `./gradlew :app:testDebugUnitTest` still green; `./gradlew projects` succeeds; `libs.versions.toml` contains every version listed above and no module declares a version literal that the catalog also declares. Record the build host's `java -version` output and its `ANDROID_HOME` value in the commit body — [walkthrough §6.1](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#61-confirm-before-relying-on-these) item 8 makes a JDK and an Android SDK on the build host an unconfirmed point, and every `./gradlew` acceptance in this phase rests on it. A missing JDK or SDK is a finding for § Open items item 11, not a reason to improvise a toolchain install.
 
 **Dependencies:** none — the first subtask of the phase, and the gate for the whole `IVI_ECU/` tree. **Commit:** `[4.5.1.1] chore: add IVI Gradle version catalog and root plugin aliases`
 
-### [ ] `4.5.1.2` — Move `:app` onto the catalog and drop Hilt *(agent)*
+### [ ] `4.5.1.2` — Move `:app` onto the catalog *(agent)*
 
-**Objective:** make `app/build.gradle.kts` resolve every plugin and dependency through the catalog, and delete the dependency-injection framework the design does not use (HLD D7).
+**Objective:** make `app/build.gradle.kts` resolve every plugin and dependency through the catalog (HLD D8).
 
 **Scope:**
 
-- Rewrite `app/build.gradle.kts`'s `plugins { }` and `dependencies { }` blocks to `alias(libs.plugins.…)` / `libs.…` references. Behaviour must not change apart from the removal below.
+- Rewrite `app/build.gradle.kts`'s `plugins { }` and `dependencies { }` blocks to `alias(libs.plugins.…)` / `libs.…` references. Behaviour must not change.
+- Leave the Hilt and KSP declarations alone — `4.5.1.6` removes them.
+- Do not add the new `buildConfigField`s here — `4.5.4.1` owns those.
+
+**Acceptance:** `./gradlew :app:testDebugUnitTest` and `./gradlew assembleDebug` both green; `app/build.gradle.kts` declares no version literal the catalog also declares.
+
+**Dependencies:** after `4.5.1.1`. **Commit:** `[4.5.1.2] refactor: put :app on the version catalog`
+
+### [ ] `4.5.1.6` — Remove the unused Hilt and KSP stack *(agent)*
+
+**Objective:** delete the dependency-injection framework the design does not use (HLD D7).
+
+**Scope:**
+
 - **Delete these four lines.** They declare **Hilt** — Google's dependency-injection framework for Android, built on Dagger, which generates object wiring from annotations at compile time. D7 wires the app by hand in `IviGraph` (`4.5.5.7`) instead, so nothing needs it:
 
   | Line | File |
@@ -237,11 +257,10 @@ One scenario file per purpose, all data (`4.5.6.4`): `approach.json` drives V4 a
 
   **Grep for `dagger` and `Hilt` under `IVI_ECU/` before committing.** The removal is safe only while no `@HiltAndroidApp` class and no `@Inject` site exists; a hit means something depends on it and the removal has to be reported, not forced.
 - KSP is the annotation processor Hilt drove. If the grep shows nothing else uses it, remove `id("com.google.devtools.ksp")` from `app/build.gradle.kts` too and say so in the commit body.
-- Do not add the new `buildConfigField`s here — `4.5.4.1` owns those.
 
 **Acceptance:** `./gradlew :app:testDebugUnitTest` and `./gradlew assembleDebug` both green; a repo-wide grep for `hilt`/`dagger` under `IVI_ECU/` returns nothing.
 
-**Dependencies:** after `4.5.1.1`. **Commit:** `[4.5.1.2] refactor: put :app on the version catalog and remove the unused Hilt stack`
+**Dependencies:** after `4.5.1.2`. **Commit:** `[4.5.1.6] refactor: remove the unused Hilt and KSP stack`
 
 ### [ ] `4.5.1.3` — Create the `:contract` module skeleton + `R4Contract.kt` *(agent)*
 
@@ -287,7 +306,7 @@ One scenario file per purpose, all data (`4.5.6.4`): `approach.json` drives V4 a
 
 ---
 
-## Task Group 5.2 — `:serializer` — datagram bytes to a typed R4 result (serves R4; injection point I1)
+## Task Group 5.2 — `:serializer` — datagram bytes to a typed R4 result (serves R4; test level I1)
 
 > HLD **D3** (de-framing is buffer slicing, not header parsing) and **§6** (the decode component), with its seam in **§8**. Pure Kotlin/JVM: **never logs, never throws across the receive loop** — it returns a result and the observer decides what to log.
 
@@ -298,7 +317,7 @@ One scenario file per purpose, all data (`4.5.6.4`): `approach.json` drives V4 a
 **Scope:**
 
 - `settings.gradle.kts`: `include(":serializer")`. New `IVI_ECU/serializer/build.gradle.kts`: `alias(libs.plugins.kotlin.jvm)`; `api(project(":contract"))`; `testImplementation(libs.junit)`; toolchain 17; no Android, no repositories block.
-- New `IVI_ECU/serializer/src/main/kotlin/com/hackathon/v2x/ivi/serializer/R4Decoder.kt` containing **exactly** HLD §6's declarations:
+- New `IVI_ECU/serializer/src/main/kotlin/com/hackathon/v2x/ivi/serializer/R4Decoder.kt` containing the declarations below, which realize the decode-component row of [HLD §6](../IVI_ECU/doc/ivi-ecu-hld.md#6-internal-components) and its seam entry in [HLD §8](../IVI_ECU/doc/ivi-ecu-hld.md#8-interfaces-ports-and-the-layer-rule):
 
   ```kotlin
   interface R4Decoder { fun decode(buffer: ByteArray, offset: Int, length: Int): R4DecodeResult }
@@ -309,7 +328,7 @@ One scenario file per purpose, all data (`4.5.6.4`): `approach.json` drives V4 a
   enum class DecodeFailure { EMPTY, UNKNOWN_MESSAGE_TYPE, MALFORMED }
   ```
 
-**Acceptance:** `./gradlew :serializer:build` green; the file's three declarations match the block above field-for-field.
+**Acceptance:** `./gradlew :serializer:build` green; the file's three declarations match the block above field-for-field, that block being the specification.
 
 **Dependencies:** after `4.5.1.4`. **Commit:** `[4.5.2.1] feat: add the :serializer module and the R4 decode contract`
 
@@ -353,7 +372,7 @@ One scenario file per purpose, all data (`4.5.6.4`): `approach.json` drives V4 a
 
 ---
 
-## Task Group 5.3 — `:observer` — socket, receive loop, back-off, event flow (serves R4, R6; injection point I2)
+## Task Group 5.3 — `:observer` — socket, receive loop, back-off, event flow (serves R4, R6; test level I2)
 
 > HLD **D5** (the loop is plain-JVM code; the service is only its lifecycle host) and **§6**. Plain Kotlin/JVM so I2 runs in CI with no device and **no Robolectric**. `:observer` never imports `android.util.Log` — it logs through the `R4Logger` seam.
 
@@ -365,7 +384,7 @@ One scenario file per purpose, all data (`4.5.6.4`): `approach.json` drives V4 a
 
 - `settings.gradle.kts`: `include(":observer")`. New `IVI_ECU/observer/build.gradle.kts`: `alias(libs.plugins.kotlin.jvm)`; `api(project(":serializer"))`; `api(libs.kotlinx.coroutines.core)`; `testImplementation(libs.junit)` + `testImplementation(libs.kotlinx.coroutines.test)`; toolchain 17; no Android.
 - `observer/src/main/kotlin/com/hackathon/v2x/ivi/observer/R4DatagramSource.kt` — the seam: `fun bind()`, `fun receive(): Received`, `fun close()`, and `data class Received(val buffer: ByteArray, val offset: Int, val length: Int)`. Interface only; `4.5.3.2` implements it.
-- `.../R4Event.kt` — **exactly** HLD §6: `sealed interface R4Event { data class Message(val message: R4Message, val receivedAtMs: Long, val bytes: Int); data class Dropped(val reason: DecodeFailure, val detail: String, val bytes: Int) }`, plus `sealed interface R4LinkState { Bound(port) | Rebinding | Error(detail) }` (the bottom status bar of `4.5.5.6` binds to this).
+- `.../R4Event.kt` — the declarations below, which realize the event types of [HLD §6](../IVI_ECU/doc/ivi-ecu-hld.md#6-internal-components): `sealed interface R4Event { data class Message(val message: R4Message, val receivedAtMs: Long, val bytes: Int); data class Dropped(val reason: DecodeFailure, val detail: String, val bytes: Int) }`, plus `sealed interface R4LinkState { Bound(port) | Rebinding | Error(detail) }` (the bottom status bar of `4.5.5.6` binds to this).
 - `.../R4ObserverConfig.kt` — `data class R4ObserverConfig(val port: Int, val bufferBytes: Int, val flowBufferEvents: Int, val retryInitialMs: Long, val retryMaxMs: Long)`. **No default values and no literals** — every field is supplied by `IviRuntimeConfig` (`4.5.4.1`).
 - `.../R4Logger.kt` — `fun interface R4Logger { fun log(level: R4LogLevel, line: String) }` plus `object NoopR4Logger : R4Logger` and an `enum class R4LogLevel { INFO, WARN, ERROR }`. `:app` supplies the real implementation in `4.5.5.1`.
 
@@ -394,7 +413,7 @@ One scenario file per purpose, all data (`4.5.6.4`): `approach.json` drives V4 a
 
 **Objective:** implement the loop of HLD §6 so N datagrams in produce N events out and one bad message never stops the next good one.
 
-**Scope:** `observer/src/main/kotlin/com/hackathon/v2x/ivi/observer/R4SocketObserver.kt` with the §6 and §8 signature verbatim:
+**Scope:** `observer/src/main/kotlin/com/hackathon/v2x/ivi/observer/R4SocketObserver.kt` with the signature below, which realizes the receive-loop row of [HLD §6](../IVI_ECU/doc/ivi-ecu-hld.md#6-internal-components) and its seam entry in [HLD §8](../IVI_ECU/doc/ivi-ecu-hld.md#8-interfaces-ports-and-the-layer-rule):
 
 ```kotlin
 class R4SocketObserver(
@@ -424,7 +443,7 @@ class R4SocketObserver(
 **Scope:**
 
 - Extend `R4SocketObserver` (no new production file): on a bind or receive error → log at ERROR, `linkState = Rebinding`, close the source, `delay(d)`, recreate through `sourceFactory()`, retry; `d` starts at `config.retryInitialMs`, doubles to a ceiling of `config.retryMaxMs`, and **resets to `retryInitialMs` on the next successful bind**. `linkState` returns to `Bound`.
-- **Make `R4LinkState.Error` reachable.** `4.5.3.1` declares it, and a declared state that nothing ever emits is a defect, not a spare: once the back-off has saturated at `retryMaxMs` (the link has been down long enough that a transient blip is ruled out), set `linkState = Error(detail)` and **keep retrying** — the observer never gives up, because a listener that stops after N attempts is worse for a recorded demo than one that keeps trying. A successful bind returns it to `Bound`. The status bar of `16.5.5.6` renders this state.
+- **Make `R4LinkState.Error` reachable.** `4.5.3.1` declares it, and a declared state that nothing ever emits is a defect, not a spare: once the back-off has saturated at `retryMaxMs` (the link has been down long enough that a transient blip is ruled out), set `linkState = Error(detail)` and **keep retrying** — R19 requires one continuous run, so the observer retries indefinitely. A successful bind returns it to `Bound`. The status bar of `16.5.5.6` renders this state.
 - `observer/src/test/kotlin/.../RetryBackoffTest.kt` using `kotlinx-coroutines-test` virtual time: a source factory that fails the first three binds then succeeds → assert the observed delays are `initial, 2×initial, 4×initial` clamped at `retryMaxMs`, that `linkState` passes `Rebinding → Bound`, and that after a later failure the delay restarts at `retryInitialMs` (reset-on-success). One further case: a factory that keeps failing past the ceiling → `linkState` reaches `Error`, retries continue, and a later success returns it to `Bound`.
 
 **Acceptance:** `./gradlew :observer:test` green; no `Thread.sleep` anywhere — the test runs on virtual time.
@@ -459,7 +478,7 @@ class R4SocketObserver(
 
 **Scope:**
 
-- `app/build.gradle.kts` `defaultConfig`: add the `buildConfigField`s of HLD D10 beside the committed `WARNING_TIMEOUT_MS`: `R4_UDP_PORT = 47300` (blueprint-frozen — **not** 5004), `R4_SOCKET_BUFFER_BYTES = 2048`, `R4_FLOW_BUFFER_EVENTS = 8`, `R4_RETRY_INITIAL_MS = 500L`, `R4_RETRY_MAX_MS = 5000L`, `SCENE_SCALE_M_PER_PX = 0.5f`.
+- `app/build.gradle.kts` `defaultConfig`: add the `buildConfigField`s of HLD D10 beside the committed `WARNING_TIMEOUT_MS`: `R4_UDP_PORT = 47300`, the value [D10](../IVI_ECU/doc/ivi-ecu-design-decisions.md) fixes and the blueprint's `ethernet` pin uses; `R4_SOCKET_BUFFER_BYTES = 2048`, `R4_FLOW_BUFFER_EVENTS = 8`, `R4_RETRY_INITIAL_MS = 500L`, `R4_RETRY_MAX_MS = 5000L`, `SCENE_SCALE_M_PER_PX = 0.5f`.
 - New `app/src/main/java/com/hackathon/v2x/ivi/config/IviRuntimeConfig.kt`: `data class IviRuntimeConfig(port, socketBufferBytes, flowBufferEvents, retryInitialMs, retryMaxMs, warningTimeoutMs, sceneScaleMetersPerPixel)` plus `fun resolve(intent: Intent?): IviRuntimeConfig` — reads the `BuildConfig` defaults and applies the D10 overrides when present: `--ei r4_port`, `--el warning_timeout_ms`, `--ef scene_scale`. Invalid or out-of-range extras (port outside 1–65535, non-positive timeout/scale) are ignored in favour of the default. Add `fun toObserverConfig(): R4ObserverConfig`. **This is the only class that reads `BuildConfig`** — every other class receives resolved values.
 - Test `app/src/test/java/com/hackathon/v2x/ivi/config/IviRuntimeConfigTest.kt`: a null intent yields the defaults; each override key is applied; an out-of-range value falls back; `toObserverConfig()` carries the resolved port and buffer sizes. (Use a plain fake for the extras lookup if `android.content.Intent` is unavailable in a unit test — extract the extras read into an internal `resolve(overrides: Map<String, Any>)` that the intent overload delegates to, and test that.)
 
@@ -491,7 +510,7 @@ class R4SocketObserver(
 
 - Declare `data class WarningPresentation(val title: String, val known: Boolean, val urgency: Urgency)` (or equivalent) in this same file — HLD §4 designates no separate file for it.
 - `fun classify(warningType: String): WarningPresentation`: `R4Contract`'s `nlos_obstruction` → the M1 NLOS presentation with `known = true`; **any other value → a generic presentation with `known = false`, and the wire value is carried through unchanged for the log** (D4 — the parser preserved it; this is where classification happens, and nothing here writes `"unknown"` back into the message).
-- `fun normaliseRisk(riskState: String): Urgency`: `low`/`medium`/`high` case-insensitively; **an unknown `riskState` maps to the highest urgency** — this must not contradict the committed `CanvasWarningView.riskColor`, which already treats unknown risk as highest (fail-safe, HLD §6).
+- `fun normaliseRisk(riskState: String): Urgency`: `low`/`medium`/`high` case-insensitively; **an unknown `riskState` maps to the highest urgency**. `17.5.5.4` applies the same fail-safe in the renderer's risk colouring ([HLD §6](../IVI_ECU/doc/ivi-ecu-hld.md#6-internal-components)), so the two cannot drift.
 - Test `app/src/test/java/com/hackathon/v2x/ivi/warning/WarningClassifierTest.kt`: `nlos_obstruction` → `known = true`; `slippery_road` (the frozen additive fixture's value) → `known = false` and the value is still readable; `"HIGH"`, `"high"`, `"" `, `"catastrophic"` all resolve, with the last two at highest urgency.
 
 **Acceptance:** `./gradlew :app:testDebugUnitTest` green; no branch in this file mutates an `R4WarningEvent`.
@@ -500,7 +519,7 @@ class R4SocketObserver(
 
 ### [ ] `17.5.4.4` — `WarningViewModel` + `WarningUiState`, **including the R19 snapshot wiring** *(agent)*
 
-**Objective:** turn warnings into `Idle ↔ Active` UI state with an auto-dismiss timeout, and **compose the scene so the renderer's provenance guard is actually armed** (HLD §6 — the single most easily-missed wiring detail in the phase).
+**Objective:** turn warnings into `Idle ↔ Active` UI state with an auto-dismiss timeout, and **compose the scene so the renderer's provenance guard is armed** ([HLD §6](../IVI_ECU/doc/ivi-ecu-hld.md#6-internal-components)).
 
 **Scope — two files:**
 
@@ -535,9 +554,9 @@ class R4SocketObserver(
 
 ---
 
-## Task Group 5.5 — `:app` UI and shell — the launchable APK (serves R16, R17, R18)
+## Task Group 5.5 — `:app` UI and shell — the launchable APK (serves R16, R17, R18 — § Open items item 8 carries R18's scope)
 
-> **This group builds its components to the design; it does not extend the scaffolding of the same name** (§ Scaffolding, not authority). The group that gives the APK its renderer, its screen, its service and its process entry. [HLD §6](../IVI_ECU/doc/ivi-ecu-hld.md#6-internal-components) fixes each component's one responsibility and [§4](../IVI_ECU/doc/ivi-ecu-hld.md#4-folder-structure) its path. **Nothing here mounts `WarningBannerOverlay`** (D11).
+> **This group builds its components to the design; it does not extend the scaffolding of the same name** (§ The three file tiers). The group that gives the APK its renderer, its screen, its service and its process entry. [HLD §6](../IVI_ECU/doc/ivi-ecu-hld.md#6-internal-components) fixes each component's one responsibility and [§4](../IVI_ECU/doc/ivi-ecu-hld.md#4-folder-structure) its path. **Nothing here mounts `WarningBannerOverlay`** (D11).
 
 ### [ ] `18.5.5.1` — `AndroidR4Logger` — the `IVI_V2X` evidence bridge *(agent)*
 
@@ -589,7 +608,7 @@ class R4SocketObserver(
   - **The provenance guard.** Ghost C is drawn **only** when its snapshot `source` is `v2x_relayed`. Any other value draws the yellow `[? UNKNOWN SOURCE]` marker instead and logs at ERROR through `AndroidR4Logger`. A `null` snapshot is treated as trusted — the guard fails open, which is exactly why `17.5.4.4` must fill it (D12).
   - Put the guard decision and its ERROR message in **`internal` top-level functions** in this file, called by the composable. A `Canvas`-drawn marker is not in the Compose semantics tree, so a composition test cannot reach a decision that stays inline; extracting it is what makes the R19 guard assertable at all.
   - Risk colouring maps an unrecognised `riskState` to the highest-urgency colour — the same fail-safe as `WarningClassifier.normaliseRisk`, so the two cannot drift.
-- Test `app/src/test/java/…/ui/view/CanvasWarningViewTest.kt` — `null` snapshot → trusted; `v2x_relayed` → trusted; `own_sensor` → **not** trusted; the error message names both the offending source and `v2x_relayed`; an unrecognised `riskState` maps to the high-urgency colour.
+- Test `app/src/test/java/…/ui/view/CanvasWarningViewTest.kt` — `null` snapshot → ghost C is drawn; `v2x_relayed` → ghost C is drawn; `own_sensor` → the `[? UNKNOWN SOURCE]` marker is drawn instead of ghost C; the error message names both the offending source and `v2x_relayed`; an unrecognised `riskState` maps to the high-urgency colour.
 
 **Acceptance:** `./gradlew assembleDebug` and `:app:testDebugUnitTest` green with all five guard cases; a grep of the file finds no legend, distance-label or badge drawing.
 
@@ -615,7 +634,7 @@ class R4SocketObserver(
 - The Display Area's Warning branch renders through `IviWarningViewSeam` when the warning state is `Active`, and shows neutral idle content when it is `Idle`. **`MainScreen` sees only `WarningUiState` and the seam** — never `CanvasWarningView` concretely ([HLD §3](../IVI_ECU/doc/ivi-ecu-hld.md#3-the-component-architecture) UI-layer rule).
 - It collects the warning state and feeds it to `MainViewModel.onWarningState`, so a message raises the view.
 - The status bar renders the live `R4LinkState`: bound with the port, rebinding, or error — the visual half of the `[LINK]` evidence. No hardcoded standby string.
-- `@Preview` functions for the idle and active states, drawn at the guest's display size once `4.5.9.2` has measured it.
+- `@Preview` functions for the idle and active states, at the committed preview size of `MainScreen.kt` (`widthDp = 1280, heightDp = 720`). `6.5.9.3` reads the guest's real display size off the live node and records it in the run doc; a preview size is an authoring convenience and closes no acceptance criterion.
 
 **Acceptance:** `./gradlew assembleDebug` and `:app:testDebugUnitTest` green; a grep of the file finds no `WarningBannerOverlay` and no literal status string.
 
@@ -652,7 +671,7 @@ class R4SocketObserver(
 
 ---
 
-## Task Group 5.6 — Test equipment: `:r4-simulator` and the dev injector (serves R4; injection points I3, I4)
+## Task Group 5.6 — Test equipment: `:r4-simulator` and the dev injector (serves R4; test levels I3 and I4)
 
 > HLD **D9** (build from the frozen samples, validate through `R4Json` before sending) and **§7**. This is sanctioned IVI test equipment inside `IVI_ECU/`, not a mock to eliminate — it cannot reach into `ADA_ECU/` (no cross-node source imports), so it reaches the same models the app parses with by depending on `:contract`.
 
@@ -718,7 +737,7 @@ class R4SocketObserver(
 
 ### [ ] `4.5.6.4` — The three scenario data files + the stream-difference test *(agent)*
 
-**Objective:** commit the scenarios the acceptance boxes need, as data files, and prove different files produce observably different streams.
+**Objective:** commit the scenarios the acceptance criteria need, as data files, and prove different files produce observably different streams.
 
 **Scope — three files under `IVI_ECU/r4-simulator/scenarios/` (HLD §4):**
 
@@ -753,13 +772,13 @@ class R4SocketObserver(
 
 - `IVI_ECU/r4-simulator/Dockerfile` — multi-stage: **build stage on `$BUILDPLATFORM`** (JVM bytecode is architecture-neutral, so no QEMU-emulated Gradle), runtime stage `linux/arm64` on a JRE 17 base. **Build context is `IVI_ECU/`** — it needs the Gradle wrapper, `settings.gradle.kts`, the catalog, `:contract` and `:r4-simulator`. This is a deliberate, HLD-flagged deviation from "own `Dockerfile` at the folder root" ([node-code-layout.md](../.claude/rules/node-code-layout.md)); self-containment is preserved because the build reads nothing outside `IVI_ECU/`. Copy the `scenarios/` folder into the image; workdir `/app`.
 - `IVI_ECU/r4-simulator/entrypoint.sh` — sleeps `START_DELAY_S` then runs the distribution; the blueprint node config's `command` is `["./entrypoint.sh"]` — **relative, not `/entrypoint.sh`** ([deploy-walkthrough-netcheck.md § 7](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#7-mistakes-already-made--check-these-first) mistake #5: it resolves against the image workdir `/app`). The same relative form is what [deploy-ivi-hmi-walkthrough.md §4.8](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging) rung **V4** carries in the evidence config. LF line endings; `chmod +x`.
-- `docker build` on this Windows dev host is unavailable — verification transfers to the CI lane `5.5.7.3`, exactly as Phase 0's `6.0.8.1` transferred to `5.0.8.2`.
+- `docker build` on this Windows dev host is unavailable — verification transfers to the CI lane `5.5.7.3`.
 
 **Acceptance:** `sh -n r4-simulator/entrypoint.sh` passes; the Dockerfile declares `FROM --platform=$BUILDPLATFORM` on the build stage only and copies `scenarios/` into `/app/scenarios/`; image build verified by `5.5.7.3`.
 
 **Dependencies:** after `4.5.6.5`. **Commit:** `[5.5.6.6] feat: add the R4 simulator Dockerfile and entrypoint`
 
-### [ ] `4.5.6.7` — `DevInjectorReceiver` — injection point I3, debug build only *(agent)*
+### [ ] `4.5.6.7` — `DevInjectorReceiver` — test level I3, debug build only *(agent)*
 
 **Objective:** let an `adb broadcast` push one frozen sample onto the same flow the socket feeds, so UI work is unblocked while the ADB/network route is still unproven.
 
@@ -767,7 +786,7 @@ class R4SocketObserver(
 
 - `app/src/debug/java/com/hackathon/v2x/ivi/debug/DevInjectorReceiver.kt` — a `BroadcastReceiver` for `com.hackathon.v2x.ivi.DEV_INJECT` reading `--es sample <name>`, loading that frozen sample from the `:contract` classpath, decoding it through `R4Deserializer`, and calling `R4Repository.inject(...)`. Because it joins **downstream of the socket and upstream of everything else**, it exercises parse → repository → view-model → Compose exactly as a real datagram does (HLD §6, §7).
 - Register it in a **`app/src/debug/AndroidManifest.xml`** — the debug source set only. **It must be absent from the release build**: a release path that can fabricate a warning would undermine the R19 claim that C came only from relayed data (HLD §7).
-- Manual invocation is rung **V3** of [deploy-ivi-hmi-walkthrough.md §4.8](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging) — the broadcast command, the expected Display-Area switch, and the `result=0`-with-no-UI-change failure that means a release build are all defined there. Record the run in the commit body.
+- Manual invocation is rung **V3** of [deploy-ivi-hmi-walkthrough.md §4.8](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging) — the broadcast command, the expected Display-Area switch, and the `result=0`-with-no-UI-change failure that means a release build are all defined there. `17.5.9.18` runs that rung and records its evidence.
 
 **Acceptance:** `./gradlew assembleDebug` and `assembleRelease` both green, and the **release** merged manifest contains no `DEV_INJECT` receiver (check `app/build/intermediates/merged_manifests/release/AndroidManifest.xml`); `:app:testDebugUnitTest` still green.
 
@@ -777,7 +796,7 @@ class R4SocketObserver(
 
 ## Task Group 5.7 — CI lanes (serves R4, R5, R16)
 
-> **Where a lane goes is decided by its origin phase**, per [phase0-ci.yml](../.github/workflows/phase0-ci.yml)'s own header rule: `ivi-unit-tests` originated in Phase 0 and is maintained there even when a Phase 5 subtask edits it; the two new lanes originate here and get their own `phase5-ci.yml`.
+> **Where a lane goes is decided by its origin phase**, per [phase0-ci.yml](../.github/workflows/phase0-ci.yml)'s own header rule: a CI lane is maintained in its origin phase's workflow file, whichever phase edits it. `ivi-unit-tests` is maintained in `phase0-ci.yml`; the two new lanes originate here and are maintained in `phase5-ci.yml`.
 
 ### [ ] `16.5.7.1` — New `phase5-ci.yml` with the `ivi-assemble` lane *(agent)*
 
@@ -787,15 +806,34 @@ class R4SocketObserver(
 
 - `ivi-assemble` — `actions/checkout@v4`, `actions/setup-java@v4` (temurin 17, `cache: gradle`), `working-directory: IVI_ECU`, `chmod +x gradlew`, `./gradlew :app:testDebugUnitTest --no-daemon` then `./gradlew assembleDebug --no-daemon`, then `actions/upload-artifact@v4` publishing `IVI_ECU/app/build/outputs/apk/debug/app-debug.apk` as `app-debug-apk` with `if-no-files-found: error`. `timeout-minutes: 30` bounds a hung dependency resolve without capping a slow cold build.
 - **The unit tests run in the same job as the build, deliberately overlapping `phase0-ci.yml`'s `ivi-unit-tests`** — this job's output is hand-installed onto a guest, so an APK must never leave the workflow unless its own tests passed in the job that produced it. It is a gate on the artifact, not a second test lane: extend `ivi-unit-tests` when test targets change, never this step.
-- Two reporting steps between assemble and upload: record the APK size as a `::notice::` (`::error::` and fail if the APK is missing after a successful assemble), and report whether the APK declares a launcher activity — the latter never fails the lane, and exists because the missing launcher entry (until `16.5.5.8`) is the most expensive surprise in the bring-up route.
+- Two reporting steps between assemble and upload: record the APK size as a `::notice::` (`::error::` and fail if the APK is missing after a successful assemble), and report whether the APK declares a launcher activity — the latter never fails the lane, and reports the missing launcher entry that [walkthrough §2.6](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#26-check-the-apk-is-launchable) exists to detect.
 - Add `android-actions/setup-android` only if the runner image's SDK/licence state turns out insufficient (HLD §11) — try without it first and record which was needed.
-- **No `lint` step in this subtask — deferred, not dropped.** The lane shipped without lint, because this project's lint findings had never been read and `ivi-assemble` is the *only* lane producing the APK: one `Error`-severity finding would block APK production for reasons unrelated to the push. **`16.5.7.4` is the re-entry**, as its own subtask rather than by reopening this one.
+- `ivi-assemble` carries no `lint` step. It is the only lane producing the APK, so one `Error`-severity finding would stop APK production for a reason unrelated to the push. `16.5.7.4` adds lint.
 
-**The shipped lane is documented by [deploy-ivi-hmi-walkthrough.md §3.1](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#31-the-workflow-its-job-and-its-triggers)** — its job name, step order, triggers, concurrency, timeout and the three notices it emits. That section and this subtask must stay in step; neither restates the other's detail.
+**The lane is documented by [deploy-ivi-hmi-walkthrough.md §3.1](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#31-the-workflow-its-job-and-its-triggers)** — its job name, step order, triggers, concurrency, timeout and the three notices it emits. That section and this subtask must stay in step; neither restates the other's detail.
 
-**Acceptance:** the lane runs green on the branch, confirmed by either route of [§3.2](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#32-check-that-the-run-finished-and-passed), and the `app-debug-apk` artifact is retrievable by either route of [§3.3](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#33-get-the-apk-off-ci); record the run ID **and the APK's size** in the status line. The size is recorded, not gated: the stale plan cites a "< 50 MB" budget which no requirement in the report carries, so a number over it is a finding to raise, not a build failure.
+**Executor split.** Authoring the workflow file and pushing it are agent work — [§5](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#5-work-division-between-ai-and-human)'s *Trigger a CI build* row is AI. Confirming the run passed ([§3.2](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#32-check-that-the-run-finished-and-passed)) and downloading `app-debug-apk` ([§3.3](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#33-get-the-apk-off-ci)) are §5's rows 2 and 3, both **Human**, and are `16.5.7.5`. §5's first qualification flips both rows to AI on a host with an authenticated `gh` CLI; without `gh auth login` they stay Human, and § Open items item 10 carries which state applies.
+
+**Acceptance:** `.github/workflows/phase5-ci.yml` is committed with the `ivi-assemble` job as scoped above, and pushed on the phase branch so the lane is triggered. The report states no APK size budget, so `16.5.7.5` records the size rather than gating on it.
 
 **Dependencies:** none beyond a pushable branch — **land this early, in parallel with group 5.1**, so an APK artifact exists for group 5.9. **Commit:** `[16.5.7.1] ci: add phase5-ci with the ivi-assemble lane`
+
+**Status:** the workflow file is committed and pushed. The checkbox above stays unticked: the run confirmation and the artifact retrieval belong to `16.5.7.5`, which is not started.
+
+### [ ] `16.5.7.5` — Confirm the `ivi-assemble` run and retrieve the APK artifact *(Human, or agent where `gh auth login` has been run)*
+
+**Objective:** produce the built APK and its run record, so the install subtasks have a build to install.
+
+**Scope — two steps, in order:**
+
+1. The person confirms the `ivi-assemble` run finished and passed, by either route of [§3.2](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#32-check-that-the-run-finished-and-passed).
+2. The person downloads and unzips the `app-debug-apk` artifact, by either route of [§3.3](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#33-get-the-apk-off-ci).
+
+Both steps are §5's rows 2 and 3. **Both flip to AI**, and this subtask is then spawned to an implementation subagent instead of handed to a person, **on a host with an authenticated `gh` CLI** — §5's first qualification, Route B of §3.2 and §3.3, which needs no browser. Without `gh auth login` they stay Human. §5's second qualification names the third route: an agent with a JDK and an Android SDK runs the local build of [§2](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#2-building-on-the-local-machine) and produces the same APK, which § Open items item 11 gates.
+
+**Acceptance:** the run ID, its conclusion, the local path of the unzipped `app-debug.apk` and the APK's size, all recorded in `plans/doc/phase5-ivi-run.md`. Evidence commit by the orchestrating session once the person confirms, or by the subagent on the `gh` route.
+
+**Dependencies:** after `16.5.7.1`, and after the push that triggered the run. **Commit:** `[16.5.7.5] docs: record the ivi-assemble run and the retrieved APK`
 
 ### [ ] `4.5.7.2` — Extend `ivi-unit-tests` to all five modules *(agent)*
 
@@ -830,16 +868,16 @@ Nothing else in that file changes. Add a one-line comment recording that this Ph
 
 ### [ ] `16.5.7.4` — Add the `lint` step to `ivi-assemble` *(agent)*
 
-**Objective:** bring the lane to [HLD §11](../IVI_ECU/doc/ivi-ecu-hld.md#11-tech-stack-build-and-ci), which defines `ivi-assemble` as `assembleDebug` + `lint`, without letting one finding block the only lane that produces the APK. This is `16.5.7.1`'s stated re-entry condition, executed.
+**Objective:** bring the lane to [HLD §11](../IVI_ECU/doc/ivi-ecu-hld.md#11-tech-stack-build-and-ci), which defines `ivi-assemble` as `assembleDebug` + `lint`, without letting one finding block the only lane that produces the APK.
 
 **Scope — in this order; the order is the whole subtask:**
 
-1. **Run `./gradlew lint` once from `IVI_ECU/` and read the report.** Record the `Error`-severity findings in the commit body — count, check id, and the file each names. This is the step `16.5.7.1` deferred, and nothing below is decided without its output.
-2. **If the run is clean, leave lint fatal.** A lane that fails on a real `Error` is the stronger gate and there is no reason to weaken it. Add the step and stop.
+1. **Run `./gradlew lint` once from `IVI_ECU/` and read the report.** Record the `Error`-severity findings in the commit body — count, check id, and the file each names. Nothing below is decided without its output.
+2. **If the run is clean, leave lint fatal.** A lane that fails on a real `Error` is the stronger gate. Add the step and stop.
 3. **If it reports `Error`-severity findings**, set `lint { abortOnError = false }` in `app/build.gradle.kts` **with a comment naming the specific findings it covers**, so it reads as a recorded exception and not a permanent opt-out. Lint still runs, still prints every finding to the run log, and still writes its report — only the build failure is suppressed. **Nothing is silenced.**
 4. Add the `./gradlew lint --no-daemon` step to the `ivi-assemble` job in `.github/workflows/phase5-ci.yml`, after `assembleDebug` and before the reporting steps, so a lint failure can never prevent the APK from being built.
 
-**Why the step matters here, and not as a style preference:** `NewApi` is what flags a call above `minSdk 29`, and the unit tests cannot catch that — they run on a desktop JVM against a stubbed Android jar, so an API-31 call compiles, passes, and then fails on the guest. The guest's actual API level is unread until `16.5.9.7` ([§6.1](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#61-confirm-before-relying-on-these) item 5), so this is the only automated guard standing until then. It also catches the manifest defects that present as "app starts, then the screen returns to the launcher" in [§4.10](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#410-troubleshooting-the-deploy-and-install).
+**What lint catches:** `NewApi` is what flags a call above `minSdk 29`, and the unit tests cannot catch that — they run on a desktop JVM against a stubbed Android jar, so an API-31 call compiles, passes, and then fails on the guest. The guest's actual API level is unread until `16.5.9.7` ([§6.1](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#61-confirm-before-relying-on-these) item 5), so this is the only automated guard standing until then. It also catches the manifest defects that present as "app starts, then the screen returns to the launcher" in [§4.10](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#410-troubleshooting-the-deploy-and-install).
 
 **Acceptance:** the lane runs green with the lint step executing and its findings visible in the run log; the APK artifact is still published; if `abortOnError = false` was set, `app/build.gradle.kts` carries the comment naming the findings. Record the run ID and the finding count.
 
@@ -847,29 +885,33 @@ Nothing else in that file changes. Add a one-line comment recording that this Ph
 
 ---
 
-## Task Group 5.9 — Isolated IVI test (serves R4, R5, R6, R16, R17, R18)
+## Task Group 5.9 — Isolated IVI test (serves R4, R5, R6, R16, R17, R18 — § Open items item 8 carries R18's scope)
 
 > The Room holds three nodes: the Ethernet Bridge, an ADA container node standing in for the ADA ECU, and the IVI Skycraft node. The stand-in runs the R4 simulator image of groups 5.6–5.7, so this test depends on neither the ADA nor the comms track. Composition and creation route: [deploy-ivi-hmi-walkthrough.md §4.11](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#411-the-mini-blueprint-route), which fixes clone-then-delete as the route, states that the mechanics are §4.2–§4.10 with only the composition differing, and makes the ADA node the only node reconfigured.
 >
-> **This group closes four of the five milestone boxes.** The verification ladder is [§4.8](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging)'s rungs **V1–V5**; the four proofs they must produce are [§6](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#6-expected-outputs-and-acceptance), which every subtask below takes its acceptance from.
+> **This group closes four of the five Phase 5 acceptance criteria.** The verification ladder is [§4.8](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging)'s rungs **V1–V5**; the four proofs they must produce are [§6](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#6-expected-outputs-and-acceptance), which every subtask below takes its acceptance from.
 >
 > **Two different things are called "install", and they fall on opposite sides of the split.** Setting a node's **image field** is a Nydus Inspector edit, because the REST API has no update route for an existing node's config, so it is *Human*. Installing the **APK** with `adb install -r` and launching it with `adb shell am start` are commands against the guest, which §5 assigns to AI, so they are *car-sky*.
 >
 > **The APK is installed twice, by two subtasks with different purposes.** `16.5.9.7` installs whatever build exists at the time, only to prove the ADB route works. `16.5.9.10` installs the finished Phase 5 build, which is the one every observation after it is made against.
 >
-> **`16.5.9.6`–`16.5.9.7` are the phase's earliest risk.** The ADB tunnel route is the organizers' own and there is only one of it, but **this team has not yet run it** ([§6.1](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#61-confirm-before-relying-on-these) item 1), and the guest's API level and `automotive` feature are unread (item 5). A negative answer on either moves every criterion below to AAOS-emulator evidence — cheap to learn early, expensive to learn late — and neither subtask needs Phase 5 code, so their dependency lines place them ahead of the code groups.
+> **`16.5.9.6`–`16.5.9.7` are the phase's earliest risk.** The ADB tunnel route is the organizers' own and there is only one of it, and it is unproven by this team ([§6.1](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#61-confirm-before-relying-on-these) item 1); the guest's API level and `automotive` feature are unread (item 5). A negative answer on either moves every criterion below to AAOS-emulator evidence. Neither subtask needs Phase 5 code, so their dependency lines place them ahead of the code groups.
 
 ### [ ] `5.5.9.1` — Compose the mini-blueprint by cloning the baseline *(Human)*
 
 **Objective:** produce a 3-node blueprint — Ethernet Bridge, ADA container node, IVI Skycraft node — that keeps the baseline's `ethernet` pins.
 
-**Scope:** in Nydus, open the blueprint list, clone **`baseline_phase1`**, rename the clone, then delete the Bench node and the V2X node on the canvas. That is the creation route of [§4.11](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#411-the-mini-blueprint-route), which also states what deleting a node does to its pin and edge. `baseline_phase1` is the sanctioned clone source for every Room after the smoke test — [carsky-4-node-blueprint.md § The blueprints on CarSky](../requirements/car-sky-guide/carsky-4-node-blueprint.md#8-the-blueprints-on-carsky) is the authority, and no other blueprint is cloned in its place.
+**Scope — the creation route of [§4.11](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#411-the-mini-blueprint-route), which fixes the clone-then-delete steps and what deleting a node does to its pin and edge. The person performs each step in Nydus:**
 
-**Clone; do not build or import one.** §4.11 states that a script-built or imported blueprint arrives without its `ethernet` pins, and usually without the Skycraft `image` block, and is rejected at deploy.
+1. The person clones **`baseline_phase1`** per §4.11, and clones no other blueprint — [carsky-4-node-blueprint.md § The blueprints on CarSky](../requirements/car-sky-guide/carsky-4-node-blueprint.md#8-the-blueprints-on-carsky) is the authority for that source.
+2. The person names the clone. **The name is the user's to pick**, and it is the only place the differentiator goes.
+3. The person deletes the Bench node on the canvas.
+4. The person deletes the V2X node on the canvas.
+5. The person records the clone's name in `plans/doc/phase5-ivi-run.md`.
 
 Three nodes are left: Ethernet Bridge `10.99.0.1` (`10.99.0.0/24`, `bridgeMode: "linux"`), ADA Container Node `10.99.0.12`, IVI Skycraft Node `10.99.0.13`. Change nothing else — addresses, the `47300` port and the pin shapes stay at the baseline values, which is what lets `4.5.9.9` later change the ADA node's image and env and nothing more.
 
-**The clone's name is the user's to pick**, and it is the only place the differentiator goes. Record it in the run doc, because every subtask after this one deploys and edits *that* blueprint — never `baseline_phase1` itself, and never a `<name>-deploy` snapshot that a deployment creates ([§4.3](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#43-deploy-the-blueprint)). Editing the snapshot by mistake is the error that costs the most time here.
+Every subtask after this one deploys and edits *that* blueprint. Do not edit `baseline_phase1` itself, and do not edit a `<name>-deploy` snapshot that a deployment creates ([§4.3](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#43-deploy-the-blueprint)).
 
 **Acceptance:** the blueprint exists with exactly three nodes and their pins intact, confirmed by `6.5.9.3`'s read-back, and recorded in `plans/doc/phase5-ivi-run.md` (created by this subtask, on the [phase0-smoke-test-run.md](doc/phase0-smoke-test-run.md) pattern). Evidence commit by the orchestrating session after the user confirms.
 
@@ -879,15 +921,18 @@ Three nodes are left: Ethernet Bridge `10.99.0.1` (`10.99.0.0/24`, `bridgeMode: 
 
 **Objective:** give the ADA node a config that proves the network hop before the simulator image exists, and confirm the IVI node can deploy at all.
 
-**Scope:** three things in the Nydus Inspector. Nothing is installed and nothing is deployed here.
+**Scope — four steps in the Nydus Inspector. Nothing is installed and nothing is deployed here. The person performs each step:**
 
-- **Click the ADA node and set its probe config** — the one [§4.8](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging) rung **V2** names: image `m1-netcheck:latest`, `NEXT_HOP_HOST=10.99.0.13`, `NEXT_HOP_PORT=47300`. Prefix the image with `registry.hackathon-2.carsky.io/` and set `capabilities: ["NET_RAW"]`, so a `[CAP]` line can corroborate the datagram on the wire (R6). This config stays until `4.5.9.9` replaces it with the simulator's.
-- **Click the IVI node and check its `image` block** — the four fields of [node-ivi-ecu.md § Blueprint node config](../requirements/car-sky-guide/node-ivi-ecu.md#blueprint-node-config). On a clone they are already right; leave them alone. [§4.2](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#42-configure-the-blueprint-and-its-ivi-node) quotes the message the deploy is rejected with when they are missing.
-- **Write down the IVI node's Part Prefix, Display Width, Height, DPI and GPU Backend**, reading each off the live node. §4.2 says not to assume them. `16.5.9.11` needs the Part Prefix to point the Screen, Log and ADB widgets at the right parts, and the display size is the resolution the committed R16 previews are drawn for.
+1. The person clicks the ADA node.
+2. The person sets the ADA node's probe config to the one [§4.8](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging) rung **V2** fixes — that rung names the image, the `NEXT_HOP_*` env pair and the port, and they are not restated here. Prefix the image reference with `registry.hackathon-2.carsky.io/` and set `capabilities: ["NET_RAW"]`, so a `[CAP]` line can corroborate the datagram on the wire (R6).
+3. The person clicks the IVI node.
+4. The person checks the IVI node's `image` block against the four fields of [node-ivi-ecu.md § Blueprint node config](../requirements/car-sky-guide/node-ivi-ecu.md#blueprint-node-config), and changes nothing. [§4.2](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#42-configure-the-blueprint-and-its-ivi-node) quotes the message the deploy is rejected with when they are missing.
 
-Setting an image field is a canvas edit, not an installation: the platform pulls the image when the Room deploys.
+The probe config stays until `4.5.9.9` replaces it with the simulator's. Setting an image field is a canvas edit, not an installation: the platform pulls the image when the Room deploys.
 
-**Acceptance:** `6.5.9.3`'s read-back shows the ADA node's probe-config image, `NEXT_HOP_*` env and `NET_RAW`, and the IVI node's four `image` fields; the measured display fields are recorded in `plans/doc/phase5-ivi-run.md`. Evidence commit by the orchestrating session after the user confirms.
+The IVI node's Part Prefix and display fields come off the read-back at `6.5.9.3`, which §5 assigns to AI.
+
+**Acceptance:** `6.5.9.3`'s read-back shows the ADA node's probe-config image, `NEXT_HOP_*` env and `NET_RAW`, and the IVI node's four `image` fields. Evidence commit by the orchestrating session after the user confirms.
 
 **Dependencies:** after `5.5.9.1`. **Commit:** `[4.5.9.2] docs: record the mini-blueprint node configuration and measured display fields`
 
@@ -900,11 +945,12 @@ Setting an image field is a canvas edit, not an installation: the platform pulls
 - one `ETHERNET` / `OUTPUT` pin on the ADA node at `10.99.0.12` and one on the IVI node at `10.99.0.13`, each edged to the bridge's single `INPUT` pin, in the shape [node-ivi-ecu.md § Pins](../requirements/car-sky-guide/node-ivi-ecu.md#pins) fixes;
 - the bridge node's `bridgeMode` and `subnet` — without them the `10.99.0.x` addresses have no network;
 - the IVI node's four Skycraft `image` fields;
-- the ADA node's image reference, `NET_RAW`, and every env value — `NEXT_HOP_PORT=47300` above all, since a wrong port produces a silent no-traffic run.
+- the ADA node's image reference, `NET_RAW`, and every env value — `NEXT_HOP_PORT=47300` above all, since a wrong port produces a silent no-traffic run;
+- the IVI node's **Part Prefix, Display Width, Height, DPI and GPU Backend**, which §5's read-back row states this same call captures. §4.2 says not to assume them. `16.5.9.11` needs the Part Prefix to point the Screen, Log and ADB widgets at the right parts, and the display size is the guest's real resolution against which `16.5.5.6`'s preview size is confirmed.
 
 `POST /api/v1/blueprints/{id}/validate` is a cheap second confirmation: it fails until every node has a pin.
 
-**Acceptance:** the read-back excerpt in `plans/doc/phase5-ivi-run.md` with every point confirmed, or the exact mismatch named and handed back to `5.5.9.1`/`4.5.9.2` for a canvas fix. A deploy does not start on an unconfirmed blueprint.
+**Acceptance:** the read-back excerpt in `plans/doc/phase5-ivi-run.md` with every point above confirmed, including the Part Prefix and the five display fields, or the exact mismatch named and handed back to `5.5.9.1`/`4.5.9.2` for a canvas fix. A deploy does not start on an unconfirmed blueprint.
 
 **Dependencies:** after `4.5.9.2`. **Commit:** `[6.5.9.3] docs: record the mini-blueprint topology read-back`
 
@@ -912,9 +958,10 @@ Setting an image field is a canvas edit, not an installation: the platform pulls
 
 **Objective:** bring up the Room the rest of this group observes.
 
-**Scope:** open the mini-blueprint `5.5.9.1` cloned in Nydus, click empty canvas to get the blueprint Inspector, click **New Deployment**, pick an **existing** Device from the dropdown, and click **Deploy**. Do not create a new Device. That is [§4.3](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#43-deploy-the-blueprint), which §5 keeps Human because choosing the Device is a judgement call and deploying spends one of the two Room slots the comms track also draws on.
+**Scope:** the person runs [§4.3](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#43-deploy-the-blueprint)'s deploy steps against the mini-blueprint `5.5.9.1` cloned. §5 keeps the row Human because choosing the Device is a judgement call and deploying spends one of the two Room slots the comms track also draws on. What is specific to this subtask:
 
-Deploy that blueprint itself, not the `-deploy` snapshot deploying creates.
+1. The subject is the mini-blueprint itself, not the `-deploy` snapshot deploying creates.
+2. The Device picked is an **existing** one; no new Device is created.
 
 Watching the node badges is not part of this subtask — `5.5.9.5` records the phases. Expect the Skycraft node to lag the containers.
 
@@ -936,27 +983,44 @@ Watching the node badges is not part of this subtask — `5.5.9.5` records the p
 
 **Objective:** leave the organizers' ADB tunnel serving a local port, so every step below can reach the Skycraft guest.
 
-**Scope:** [§4.4](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#44-get-an-adb-endpoint) — one route, not a search. §5's *Start the ADB tunnel* row assigns it to **AI**: a CLI invocation is agent-runnable. Run the `reach-backend` tunnel command exactly as §4.4 fixes it and **leave it running in its own terminal** — closing that terminal drops the tunnel, and `16.5.9.7` runs in a second one. The command and its flags stay in §4.4; they are not copied here.
+**Scope — three steps against [§4.4](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#44-get-an-adb-endpoint), which is one route rather than a search. §5's *Start the ADB tunnel* row assigns it to AI, because a CLI invocation is agent-runnable. The car-sky agent performs each step:**
 
-**Three inputs are human work and must be in hand first** — the `reach-backend` binary, the gateway URL, and the `a8k_…` derived token. All three come from the organizers, none is derivable from this repository, and §5's closing qualification keeps obtaining them a person's job; the AI row assumes they are already supplied. They are §6.1 items **2, 3 and 4**, answered when they are handed over — record where each came from, never the token value.
+1. The agent confirms the three inputs `16.5.9.19` supplies are in hand.
+2. The agent runs the `reach-backend` tunnel command as §4.4 fixes it. The command and its flags stay in §4.4 and are not copied here.
+3. The agent leaves the command running in its own terminal. Closing that terminal drops the tunnel, and `16.5.9.7` runs in a second one.
 
 **The route is mentor-supplied and unexercised by this team** (§6.1 item 1). Treat a failure as a finding, not a retry loop: §4.10's `command not found` and tunnel-exits rows say what each failure means.
 
-**Acceptance:** the CLI serving on the local port, recorded in `plans/doc/phase5-ivi-run.md` with the port used and the provenance of the three inputs — or the exact failure. `16.5.9.7` is what confirms the tunnel actually carries ADB, via §4.5's `localhost:<port>   device` line.
+**Acceptance:** the CLI serving on the local port, recorded in `plans/doc/phase5-ivi-run.md` with the port used — or the exact failure. `16.5.9.7` is what confirms the tunnel actually carries ADB, via §4.5's `localhost:<port>   device` line.
 
-**Dependencies:** after `5.5.9.5`, and after the three inputs are supplied. **Commit:** `[16.5.9.6] docs: record the ADB tunnel start against the Skycraft guest`
+**Dependencies:** after `5.5.9.5` and `16.5.9.19`. **Commit:** `[16.5.9.6] docs: record the ADB tunnel start against the Skycraft guest`
+
+### [ ] `16.5.9.19` — Obtain the tunnel CLI, its gateway URL and its token *(Human)*
+
+**Objective:** put the three organizer-supplied inputs the ADB tunnel needs into the team's hands.
+
+**Scope — three steps. No agent performs any of them: §5's third qualification states that obtaining all three is human work, and `16.5.9.6`'s AI row assumes they are already in hand:**
+
+1. The person obtains the `reach-backend` binary and installs it on the host that runs `16.5.9.6` ([§6.1](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#61-confirm-before-relying-on-these) item 2).
+2. The person obtains the gateway URL this team passes to `--gateway` (§6.1 item 3).
+3. The person obtains the `a8k_…` derived token, and establishes whether it is the CarSky API key of [§1.2](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#12-cloud-platform-access) or a separate credential (§6.1 item 4).
+
+**Acceptance:** the provenance of each of the three inputs recorded in `plans/doc/phase5-ivi-run.md`, answering §6.1 items 2, 3 and 4. **The token value is never written into the repository.** Evidence commit by the orchestrating session after the person confirms.
+
+**Dependencies:** none — needs no Phase 5 code, no image and no Room. **Commit:** `[16.5.9.19] docs: record the provenance of the ADB tunnel inputs`
 
 ### [ ] `16.5.9.7` — Prove the ADB route and read the guest's properties *(car-sky)*
 
 **Objective:** answer whether the guest is reachable and whether it will accept the APK at all — the two findings that invalidate every in-Room criterion below if negative.
 
-**Scope:** [§4.5](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#45-connect-and-check-the-guest) then [§4.6](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#46-install-the-apk), both AI rows in §5, over the tunnel `16.5.9.6` left running. Those sections carry the `adb connect`, `getprop` and `pm list features` commands, the install command, and what each failure means; none of that is restated here. What is specific to running them before the app is finished:
+**Scope — four steps against [§4.5](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#45-connect-and-check-the-guest) then [§4.6](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#46-install-the-apk), both AI rows in §5, over the tunnel `16.5.9.6` left running. Those sections carry the `adb connect`, `getprop` and `pm list features` commands, the install command, and what each failure means; none of that is restated here. The car-sky agent performs each step:**
 
-- **Install whatever build exists now** — `./gradlew assembleDebug` locally, or the `app-debug-apk` artifact of lane `16.5.7.1`. Before `16.5.5.8` lands that build has no launcher activity, so it installs and cannot be started; that is expected, because this subtask proves the **route** and `16.5.9.10` is where the finished build is installed and launched.
-- **Confirm the evidence filter streams** — `adb logcat -s IVI_V2X`, the guest-side surface [§4.8](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging) reads and the whole demo's text evidence depends on.
-- **Try the screenshot route once** — `GET /api/v1/vms/{roomId}/{nodeKey}/screenshot`, the scriptable alternative [§4.9](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#49-capture-the-evidence) offers for evidence capture. One call, recorded either way: a live route gives the later evidence subtasks a path that needs no browser.
+1. The agent connects to the guest and reads its properties, per §4.5.
+2. The agent obtains a build to install. **The agent route is a local `./gradlew assembleDebug`**, which § Open items item 11 gates on a JDK and an Android SDK being present. **The CI route is a Human hand-off** — `16.5.7.5` downloads `app-debug-apk`, because §5 rows 2 and 3 are Human.
+3. The agent installs that build, per §4.6. Before `16.5.5.8` lands the build has no launcher activity, so it installs and cannot be started; that is expected, because this subtask proves the **route** and `16.5.9.10` is where the finished build is installed and launched.
+4. The agent confirms the evidence filter streams — `adb logcat -s IVI_V2X`, the guest-side surface [§4.8](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging) reads and the whole demo's text evidence depends on.
 
-The findings this subtask produces are items **1, 5 and 9** of [§6.1](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#61-confirm-before-relying-on-these) — the tunnel route carrying ADB at all, the guest's API level and `automotive` feature, and whether the screenshot route answers here. Answer each on this deployment and write the answer down.
+The findings this subtask produces are items **1 and 5** of [§6.1](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#61-confirm-before-relying-on-these) — the tunnel route carrying ADB at all, and the guest's API level and `automotive` feature. Answer each on this deployment and write the answer down. Item 9, the screenshot route, is `16.5.9.21`.
 
 **If §4.5's connect or §4.6's install fails**, that is the finding: record it, and every criterion below degrades to **AAOS emulator** evidence on an *automotive* system image — a phone image rejects the APK on the `automotive` feature. Escalate rather than retrying blind; [§4.10](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#410-troubleshooting-the-deploy-and-install) is a troubleshooting table, not a licence to repeat a failed route.
 
@@ -964,27 +1028,46 @@ The findings this subtask produces are items **1, 5 and 9** of [§6.1](../requir
 
 **Dependencies:** after `16.5.9.6`. **This is the phase's earliest risk: it needs no Phase 5 code, so it must not wait behind groups 5.1–5.7.** **Commit:** `[16.5.9.7] docs: record the proven ADB route and AAOS guest properties`
 
-### [ ] `16.5.9.8` — Record the proven route in the IVI node guide *(agent — docs)*
+### [ ] `16.5.9.21` — Try the screenshot route once *(car-sky)*
 
-**Objective:** write the ADB facts `16.5.9.6` and `16.5.9.7` established into the per-node deploy guide, which is where node facts live.
+**Objective:** answer whether the scriptable screenshot route answers on this deployment, so the later evidence subtasks know whether a browser-free capture path exists.
 
-**Scope:** extend [node-ivi-ecu.md](../requirements/car-sky-guide/node-ivi-ecu.md) § Post-deploy with, verbatim from `16.5.9.6`'s and `16.5.9.7`'s recorded outputs, the **facts** that file owns: that [§4.4](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#44-get-an-adb-endpoint)'s tunnel carried ADB to this node, the local port it served and the `adb connect` target that answered, the guest's API level, and its automotive-feature answer. **The commands are not copied in** — install is [§4.6](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#46-install-the-apk), launch and the `--ei r4_port` override are [§4.7](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#47-open-the-screen-and-launch-the-app), and the `adb logcat -s IVI_V2X` filter is [§4.8](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging); link them. That is the division the walkthrough states about itself: the node guide owns the node's *facts*, the walkthrough owns the *doing*. If the route failed, record that instead, plus the emulator fallback. Do not restate the blueprint procedure — that is [§4.2](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#42-configure-the-blueprint-and-its-ivi-node) and [§4.11](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#411-the-mini-blueprint-route).
+**Scope — two steps. The car-sky agent performs both:**
 
-**Acceptance:** the guide's § Post-deploy carries the tunnel form that connected — or the failure — and the guest's API-level and automotive answers, and links §4.6–§4.8 for the commands instead of duplicating them; every line traces to a recorded output, with no invented values. Doc-only.
+1. The agent issues one `GET /api/v1/vms/{roomId}/{nodeKey}/screenshot` call, the scriptable alternative [§4.9](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#49-capture-the-evidence) offers for evidence capture.
+2. The agent records the outcome either way, answering [§6.1](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#61-confirm-before-relying-on-these) item 9.
 
-**Dependencies:** after `16.5.9.7` and `16.5.5.8` (the launch-override command must exist before it is documented as working). **Commit:** `[16.5.9.8] docs: record the proven ADB route and launch override in the IVI node guide`
+One call, not a retry loop. §4.9's Recorder Part and the Devices panel stay the primary capture route whatever this answers.
+
+**Acceptance:** the call's response — an image or the exact failure — recorded in `plans/doc/phase5-ivi-run.md`, with §6.1 item 9 answered there.
+
+**Dependencies:** after `5.5.9.5`, which resolves the `nodeKey`. Parallel with `16.5.9.7`. **Commit:** `[16.5.9.21] docs: record whether the VM screenshot route answers`
+
+### [ ] `16.5.9.8` — Hand the proven route to project-architecture for the IVI node guide *(agent — docs)*
+
+**Objective:** get the ADB facts `16.5.9.6` and `16.5.9.7` established into the per-node deploy guide, which is where node facts live.
+
+**Scope — a hand-off, not an edit by this subtask's subagent.** [CLAUDE.md § Roles](../CLAUDE.md) gives [[project-architecture]] the `node-*.md` reference files, and [walkthrough-driven-delivery.md § Stage 3](../.claude/rules/walkthrough-driven-delivery.md) states that the same agent records platform and node facts there. The subagent assembles the recorded outputs and hands them over; project-architecture makes the edit to [node-ivi-ecu.md § Post-deploy](../requirements/car-sky-guide/node-ivi-ecu.md#post-deploy-install-the-team-apk) and commits it, and this subtask is marked done on that commit.
+
+The hand-off carries, verbatim from `16.5.9.6`'s and `16.5.9.7`'s recorded outputs, the **facts** that file owns: that [§4.4](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#44-get-an-adb-endpoint)'s tunnel carried ADB to this node, the local port it served and the `adb connect` target that answered, the guest's API level, and its automotive-feature answer. **The commands are not copied in** — install is [§4.6](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#46-install-the-apk), launch and the `--ei r4_port` override are [§4.7](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#47-open-the-screen-and-launch-the-app), and the `adb logcat -s IVI_V2X` filter is [§4.8](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging); link them. That is the division the walkthrough states about itself: the node guide owns the node's *facts*, the walkthrough owns the *doing*. If the route failed, record that instead, plus the emulator fallback. Do not restate the blueprint procedure — that is [§4.2](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#42-configure-the-blueprint-and-its-ivi-node) and [§4.11](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#411-the-mini-blueprint-route).
+
+**Acceptance:** project-architecture's commit to [node-ivi-ecu.md](../requirements/car-sky-guide/node-ivi-ecu.md), whose § Post-deploy then carries the tunnel form that connected — or the failure — and the guest's API-level and automotive answers, and links §4.6–§4.8 for the commands instead of duplicating them; every line traces to a recorded output, with no invented values. Doc-only.
+
+**Dependencies:** after `16.5.9.7` and `16.5.5.8` (the launch-override command must exist before it is documented as working). **Commit:** the architecture commit that lands the edit; this plan records its ID against the subtask.
 
 ### [ ] `4.5.9.9` — Switch the ADA node to the R4 simulator's evidence config *(Human)*
 
 **Objective:** put the R4 simulator on the wire toward `10.99.0.13:47300`.
 
-**Scope:** open the mini-blueprint in Nydus — the blueprint itself, not the `-deploy` snapshot ([§4.3](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#43-deploy-the-blueprint)) — click the ADA node, and replace the probe config `4.5.9.2` set with the **evidence config** of [§4.8](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging) rung **V4**. That rung fixes the image, the relative `command`, and the `IVI_ECU_HOST` / `IVI_ECU_PORT` / `R4_SCENARIO` / `R4_RATE_HZ` / `START_DELAY_S` env set. Add the `registry.hackathon-2.carsky.io/` prefix to the image reference and keep `capabilities: ["NET_RAW"]`.
+**Scope — five steps. §5 assigns *Configure the ADA node's feed* to Human, because the Inspector is the only way to change an existing node's config. The person performs each step:**
+
+1. The person opens the mini-blueprint in Nydus — the blueprint itself, not the `-deploy` snapshot ([§4.3](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#43-deploy-the-blueprint)).
+2. The person clicks the ADA node.
+3. The person replaces the probe config `4.5.9.2` set with the **evidence config** of [§4.8](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging) rung **V4**. That rung fixes the image, the relative `command` and the env set. Add the `registry.hackathon-2.carsky.io/` prefix to the image reference and keep `capabilities: ["NET_RAW"]`.
+4. The person deploys again, per §4.3.
+5. The person opens the ADA node's log by either route in §4.8's log-surface table, once the node reads `Running`.
 
 Change nothing on the other two nodes. Addresses, the port and the pin shapes were fixed at the baseline, so this is the only node config that ever changes — [§4.11](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#411-the-mini-blueprint-route) is why.
-
-Then deploy again per §4.3, wait for the ADA node to read `Running`, and open its log by either route in §4.8's log-surface table.
-
-§5 assigns "Configure the ADA node's feed" to Human: the Inspector is the only way to change an existing node's config.
 
 **Acceptance:** the ADA node `Running` with restart count 0, and its log showing §4.8 V4's **link 1** — `[TX] … → 10.99.0.13:47300` at ~1 Hz — plus the `[CAP]` corroboration. Recorded in `plans/doc/phase5-ivi-run.md`. Evidence commit by the orchestrating session after the user confirms.
 
@@ -994,30 +1077,40 @@ Then deploy again per §4.3, wait for the ADA node to read `Running`, and open i
 
 **Objective:** get the Phase 5 build running on the AAOS guest, and capture the one timing number no other phase can produce.
 
-**Scope:** [§4.6](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#46-install-the-apk) then the launch half of [§4.7](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#47-open-the-screen-and-launch-the-app) — `adb install -r`, `pm path` to confirm, then `adb shell am start`, with the `--ei r4_port` override available. §5 assigns both rows to AI. The build comes from lane `16.5.7.1`, fetched per [§3.3](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#33-get-the-apk-off-ci); the tunnel is `16.5.9.6`'s, still running. [§4.1](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#41-how-the-apk-reaches-the-ivi-ecu-node) fixes the ordering — the guest must exist before anything installs into it.
+**Scope — six steps against [§4.6](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#46-install-the-apk) then the launch half of [§4.7](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#47-open-the-screen-and-launch-the-app), both AI rows in §5. Those sections carry the commands and are not restated here. The car-sky agent performs each step:**
+
+1. The agent takes the finished Phase 5 build. `16.5.7.5` hands it over — the download off CI is a Human row, so this subtask starts at the install.
+2. The agent runs `adb install -r` over the tunnel `16.5.9.6` left running, per §4.6.
+3. The agent confirms the package with `pm path`.
+4. The agent launches the app with `adb shell am start`, per §4.7, with the `--ei r4_port` override available.
+5. The agent records the two wall-clock deltas §4.7 instructs at first launch: guest boot → launcher, and launch → `[LINK] state=bound`.
+6. The agent records their sum.
+
+[§4.1](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#41-how-the-apk-reaches-the-ivi-ecu-node) fixes the ordering — the guest must exist before anything installs into it.
 
 **This installs the APK; it does not set a node image field and does not touch the canvas.** It also does not open the Screen widget — that is `16.5.9.11`, which runs after this one and needs the app already launched.
 
-**Record the boot-to-listener time.** §4.7 instructs the two wall-clock deltas at first launch. [m1-run-timing-and-event-triggering.md §9 open item 5](../requirements/m1-run-timing-and-event-triggering.md) names the elapsed time from the AAOS guest starting to boot until `[LINK] state=bound port=47300` appears on `IVI_V2X` as the one number **only Phase 5 can produce**, and as the **floor for the bench's `start_delay_s`**: the IVI is the only node whose readiness cannot be observed from a container, so the bench must not start streaming before the guest is bound. Record guest boot → launcher, launch → `[LINK] state=bound`, and their sum. If `16.5.9.7` came back negative and this runs on an emulator, say so — an emulator figure is a lower bound, not the number.
+**Why the timing values matter.** [m1-run-timing-and-event-triggering.md §9 open item 5](../requirements/m1-run-timing-and-event-triggering.md) names the elapsed time from the AAOS guest starting to boot until `[LINK] state=bound port=47300` appears on `IVI_V2X` as the one number **only Phase 5 can produce**, and as the **floor for the bench's `start_delay_s`**: the IVI is the only node whose readiness cannot be observed from a container, so the bench must not start streaming before the guest is bound. If `16.5.9.7` came back negative and this runs on an emulator, say so — an emulator figure is a lower bound, not the number.
 
 **Acceptance:** `Success` from the install and the package path from `pm path`; the app started; `[LINK] state=bound port=47300` on `IVI_V2X` — rung **V1** — and the three timing values, all in `plans/doc/phase5-ivi-run.md`. Install failures map to §4.10's table; `INSTALL_FAILED_OLDER_SDK` and the `automotive` feature error are escalations, not retries.
 
-**Dependencies:** after `4.5.9.9`, `16.5.9.7` and `16.5.5.6`. **Commit:** `[16.5.9.10] docs: record the APK install, launch and boot-to-listener time`
+**Dependencies:** after `4.5.9.9`, `16.5.9.7` and `16.5.5.8`, which delivers `MainActivity` and the launcher manifest entry `adb shell am start` resolves. **Commit:** `[16.5.9.10] docs: record the APK install, launch and boot-to-listener time`
 
 ### [ ] `16.5.9.11` — Open the device widgets and confirm the R16 layout *(Human)*
 
-**Objective:** close milestone box 1 — *the HMI runs on the AAOS node with the R16 layout; button/app areas switch what the Display area shows.*
+**Objective:** close Phase 5 acceptance criterion 1 — *the HMI runs on the AAOS node with the R16 layout; button/app areas switch what the Display area shows.*
 
-**Scope:** the app is already installed and launched by `16.5.9.10`; this subtask opens the screen and looks at it. Follow the widget half of [§4.7](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#47-open-the-screen-and-launch-the-app):
+**Scope — five steps. The widget procedure is the widget half of [§4.7](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#47-open-the-screen-and-launch-the-app), which §5 keeps Human and which is not restated here. The app is already installed and launched by `16.5.9.10`. The person performs each step:**
 
-1. Click **Devices** on the DockBar, find the device the deployment created, and click **Connect**. The dot beside the name must turn green.
-2. Click `+` and add the **Screen** widget. In its Inspector set the Video, Touch and Keyboard parts using the Part Prefix `4.5.9.2` wrote down. Without the Touch part, clicks in the browser never reach the guest.
-3. Add a **Log** widget on `<prefix>-logcat` and an **ADB** widget on `<prefix>-adb`.
-4. If the run is to be recorded, set the **Recorder Part** now. [§4.9](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#49-capture-the-evidence) needs it set before the run, not after.
+1. The person opens the Devices panel and connects to the device this deployment created, per §4.7.
+2. The person adds the Screen widget and sets its parts from the Part Prefix `6.5.9.3` read back.
+3. The person adds the Log widget and the ADB widget, on the parts §4.7 names.
+4. The person sets the **Recorder Part** before the run, which is what [§4.9](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#49-capture-the-evidence) requires for a recorded run.
+5. The person confirms the two observations below on the streaming screen.
 
-A black screen is expected to be fixable, not fatal: §4.7 gives the recovery — check the Video Part name, then Disconnect and Connect again, and wake the guest with a keyevent if the stream is up but the screen is asleep.
+§4.7 also carries the black-screen recovery, so a black screen is a step in that section rather than a failure of this subtask.
 
-Then look at the screen and confirm two things:
+The two observations:
 
 - The **V2X LINK indicator reads `BOUND :47300`**. This is rung **V1** seen on the display instead of in the log, and it proves the status bar is wired to the listener.
 - **Tapping Home, Apps and Settings changes what the Display Area shows**, with `[UI] mode=… cause=user` appearing in the Log widget. That is [§6](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#6-expected-outputs-and-acceptance)'s second table, first row.
@@ -1030,12 +1123,12 @@ Then look at the screen and confirm two things:
 
 **Objective:** produce in text three of the four proofs of [§6](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#6-expected-outputs-and-acceptance) — the incoming warning, its parsed fields, and the event raised — making no visual judgement.
 
-**Scope:** the "Read the two log surfaces" AI row of [§5](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#5-work-division-between-ai-and-human), against the two surfaces [§4.8](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging)'s table names:
+**Scope — four steps on the "Read the two log surfaces" AI row of [§5](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#5-work-division-between-ai-and-human), against the two surfaces [§4.8](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging)'s table names. The rung is §4.8 V4 with `approach.json` on the ADA node; its four links are the checklist and are not restated here. The car-sky agent performs each step:**
 
-- the ADA node's producer log, `GET /api/v1/deployments/{roomId}/logs/{nodeKey}?container=user` — **`container` is mandatory**, omitting it returns 500;
-- the guest's `adb logcat -s IVI_V2X`.
-
-The rung is §4.8 **V4** with `approach.json` on the ADA node. Its four links are the checklist and are not restated here; this subtask covers links 1–3, because link 4 is a visual judgement §5 assigns to Human — `17.5.9.13`. Note in the record the scenario's first step carrying `geometry.vehicleC: null`, so `17.5.9.13` can check it rendered without C and without a crash.
+1. The agent reads the ADA node's producer log, `GET /api/v1/deployments/{roomId}/logs/{nodeKey}?container=user`. **`container` is mandatory**, and omitting it returns 500.
+2. The agent reads the guest's `adb logcat -s IVI_V2X`.
+3. The agent captures the excerpts covering V4 links 1, 2 and 3. Link 4 is a visual judgement §5 assigns to Human, and is `17.5.9.13`.
+4. The agent notes in the record that the scenario's first step carries `geometry.vehicleC: null`, so `17.5.9.13` can check it rendered without C and without a crash.
 
 **Acceptance:** §6 proofs 1, 2 and 3 as log excerpts in `plans/doc/phase5-ivi-run.md` — one `[RX] type=warning … cSource=v2x_relayed` per datagram corroborated by the ADA's `[TX] … → 10.99.0.13:47300`, the parsed `warningType` / `risk` / `cSource` / `cPos` fields on that line, and `[UI] mode=WarningView cause=warning` carrying `cause=warning` and not `cause=user`.
 
@@ -1043,7 +1136,7 @@ The rung is §4.8 **V4** with `approach.json` on the ADA node. Its four links ar
 
 ### [ ] `17.5.9.13` — Confirm the God View on `approach.json` and capture it *(Human)*
 
-**Objective:** close milestone boxes 2 and 3 — *a mock R4 warning brings the warning view up showing ego, B and ghost C at the composed positions*, and *ghost C renders from `v2x_relayed` data only; the 2D drawing is delivered.*
+**Objective:** close Phase 5 acceptance criteria 2 and 3 — *a mock R4 warning brings the warning view up showing ego, B and ghost C at the composed positions*, and *ghost C renders from `v2x_relayed` data only; the 2D drawing is delivered.*
 
 **Scope:** start the recording, watch the Screen widget while `approach.json` plays, and check five things. The first three are [§4.8](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging) V4's **link 4** and the rows beside it; the last two belong to this scenario file.
 
@@ -1055,7 +1148,7 @@ The rung is §4.8 **V4** with `approach.json` on the ADA node. Its four links ar
 
 Recording and screenshots are taken per [§4.9](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#49-capture-the-evidence), using the Recorder Part `16.5.9.11` set.
 
-**Acceptance:** §6 proof 4 — a recording showing the God View with ghost C dashed, badged and glowing — with the null-C first step, the risk progression and the timeout-restore all observed, and `18.5.9.12`'s excerpt supplying `cSource=v2x_relayed` on every warning in text. Recorded in `plans/doc/phase5-ivi-run.md`. Evidence commit by the orchestrating session after the user confirms.
+**Acceptance:** §6 proof 4 — a recording showing the God View with ghost C dashed and glowing on its risk-coloured ground glow, with no badge, legend or distance label — with the null-C first step, the risk progression and the timeout-restore all observed, and `18.5.9.12`'s excerpt supplying `cSource=v2x_relayed` on every warning in text. Recorded in `plans/doc/phase5-ivi-run.md`. Evidence commit by the orchestrating session after the user confirms.
 
 **Dependencies:** after `18.5.9.12`. **Commit:** `[17.5.9.13] docs: record the God View evidence with v2x_relayed provenance`
 
@@ -1063,7 +1156,11 @@ Recording and screenshots are taken per [§4.9](../requirements/car-sky-guide/de
 
 **Objective:** put the degradation scenario on the wire.
 
-**Scope:** click the ADA node in Nydus, change one environment value — `R4_SCENARIO=/app/scenarios/degrade.json` — and deploy again, or restart the node. Work on the blueprint, not the `-deploy` snapshot ([§4.3](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#43-deploy-the-blueprint)). Leave the image, the `command`, the addresses and the port exactly as `4.5.9.9` set them. §5 assigns node-config edits to Human.
+**Scope — three steps. §5 assigns node-config edits to Human. The person performs each step:**
+
+1. The person clicks the ADA node in Nydus, on the blueprint rather than the `-deploy` snapshot ([§4.3](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#43-deploy-the-blueprint)).
+2. The person changes one environment value, the `R4_SCENARIO` path, to the `degrade.json` file `4.5.6.4` commits. §4.8's V5 lead-in fixes the value. Leave the image, the `command`, the addresses and the port exactly as `4.5.9.9` set them.
+3. The person deploys again, per §4.3.
 
 **Acceptance:** the ADA node `Running` with restart count 0 and its log showing `[TX]` lines for the new scenario, recorded in `plans/doc/phase5-ivi-run.md`. Evidence commit by the orchestrating session after the user confirms.
 
@@ -1071,58 +1168,96 @@ Recording and screenshots are taken per [§4.9](../requirements/car-sky-guide/de
 
 ### [ ] `4.5.9.15` — Read the degradation, guard-trip and loop-survival logs *(car-sky)*
 
-**Objective:** produce the text half of milestone box 4 — *a newer message with an unknown `warningType` degrades gracefully* — and of the two defensive paths beside it.
+**Objective:** produce the text half of Phase 5 acceptance criterion 4 — *a newer message with an unknown `warningType` degrades gracefully* — and of the two defensive paths beside it.
 
-**Scope:** both log surfaces again, against rung **V5** of [§4.8](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging). Its three rows are exactly this scenario's three steps — the unknown `warningType` with `schemaVersion: 2` and a junk field, the `object.source: "own_sensor"` guard trip, and the raw non-JSON step — each with its correct and incorrect result stated there and not restated here. The wire value must appear **preserved** in logcat, never rewritten to `unknown`; the raw step must produce `[DROP] reason=malformed …` with the next valid warning still arriving.
+**Scope — three steps, one per row of rung V5 of [§4.8](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging), read on both log surfaces. Each row's correct and incorrect result is stated there and not restated here. The car-sky agent performs each step:**
+
+1. The agent captures the unknown-`warningType` row's excerpts. The wire value must appear **preserved** in logcat, never rewritten to `unknown`.
+2. The agent captures the `object.source: "own_sensor"` guard-trip row's excerpts, including the ERROR line the trip emits.
+3. The agent captures the raw non-JSON row's excerpts: `[DROP] reason=malformed …` with the next valid warning still arriving.
 
 **Acceptance:** logcat and producer-log excerpts covering all three V5 rows, in `plans/doc/phase5-ivi-run.md`, including the ERROR line the guard trip emits.
 
 **Dependencies:** after `4.5.9.14`. **Commit:** `[4.5.9.15] docs: record the degradation and loop-survival log evidence`
 
-### [ ] `17.5.9.16` — Confirm the degradation outcomes on screen, capture, tear down *(Human)*
+### [ ] `17.5.9.16` — Confirm the degradation outcomes on screen and capture them *(Human)*
 
-**Objective:** see V5's three outcomes on the display, and release the Room slot.
+**Objective:** see V5's three outcomes on the display and capture each.
 
-**Scope:** watch the Screen widget while `degrade.json` plays, take a screenshot of each of rung **V5**'s three outcomes ([§4.8](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging)), and judge each one:
+**Scope — three steps, one per outcome of rung V5 ([§4.8](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging)), watched on the Screen widget while `degrade.json` plays. Screenshots are taken per [§4.9](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#49-capture-the-evidence). The person performs each step:**
 
-1. **Unknown warning type** — a generic warning is drawn. A `FATAL EXCEPTION` is a failure.
-2. **`object.source: "own_sensor"`** — a yellow `[? UNKNOWN SOURCE]` marker appears where ghost C would be. **Here the marker is the pass.** If ghost C is drawn normally instead, the R19 wiring `17.5.4.4` armed is broken — a blocking finding for the phase, not a display quirk. Stop and report it.
-3. **A raw non-JSON message** — the app keeps running, and the next valid warning still draws.
+1. The person confirms and captures the **unknown warning type** outcome: a generic warning is drawn. A `FATAL EXCEPTION` is a failure.
+2. The person confirms and captures the **`object.source: "own_sensor"`** outcome: a yellow `[? UNKNOWN SOURCE]` marker appears where ghost C would be. **Here the marker is the pass.** If ghost C is drawn normally instead, the R19 wiring `17.5.4.4` armed is broken — a blocking finding for the phase, not a display quirk. Stop and report it.
+3. The person confirms and captures the **raw non-JSON message** outcome: the app keeps running, and the next valid warning still draws.
 
-Screenshots are taken per [§4.9](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#49-capture-the-evidence).
+Teardown is `5.5.9.22`, which runs after this subtask and after `4.5.9.15`.
 
-**Then tear the Room down**, and only after `4.5.9.15` has saved its log excerpts — the log route returns nothing once the Room is gone. In the Deployment Viewer click **Delete Deployment** ([§4.12](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#412-tear-down)). The mini-blueprint stays and can be deployed again. The slot matters: only two Rooms run at once and the comms track needs one.
+**Acceptance:** screenshots for all three V5 rows, recorded in `plans/doc/phase5-ivi-run.md`. Evidence commit by the orchestrating session after the user confirms.
 
-**Acceptance:** screenshots for all three V5 rows and the teardown confirmed, recorded in `plans/doc/phase5-ivi-run.md`. This record closes the isolated IVI test's evidence trail. Evidence commit by the orchestrating session after the user confirms.
+**Dependencies:** after `4.5.9.15`. **Commit:** `[17.5.9.16] docs: record the degradation outcomes and the guard trip`
 
-**Dependencies:** after `4.5.9.15`. **Commit:** `[17.5.9.16] docs: record the degradation outcomes, guard trip and teardown`
+### [ ] `5.5.9.22` — Tear the mini-blueprint Room down *(Human)*
+
+**Objective:** release the Room slot the isolated IVI test holds.
+
+**Scope — two steps. §5 assigns *Tear the Room down* to Human. The person performs both:**
+
+1. The person deletes the deployment, per [§4.12](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#412-tear-down).
+2. The person records the teardown in `plans/doc/phase5-ivi-run.md`.
+
+The mini-blueprint itself stays and can be deployed again. Only two Rooms run at once and the comms track needs one, which is why this subtask exists rather than leaving the Room up.
+
+**Acceptance:** the deployment deleted and recorded in `plans/doc/phase5-ivi-run.md`. This record closes the isolated IVI test's evidence trail. Evidence commit by the orchestrating session after the user confirms.
+
+**Dependencies:** after `17.5.9.16`, `4.5.9.15` and `17.5.9.18` — every log excerpt and every in-Room observation must be saved first, because the log route returns nothing once the Room is gone. **Commit:** `[5.5.9.22] docs: record the mini-blueprint Room teardown`
 
 ### [ ] `4.5.9.17` — Rung V2: the probe datagram proving the ADA→IVI hop *(car-sky)*
 
 **Objective:** close rung **V2** of [§4.8](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging) — a datagram from the ADA node reaches the guest and the receive loop survives it — so a silent V4 can be localised to the network or to the app instead of neither.
 
-**Its ID is the highest in the group; its execution slot is not.** Take whichever of these two applies:
+**Run this before `4.5.9.9` swaps the config.** If the APK is installed and launched while `4.5.9.2`'s probe config is still on the ADA node, that is the rung's designed position: §4.8 states V2 "works before the simulator exists". Where the probe config is no longer on the node, `4.5.9.20` puts it back first, and this subtask becomes the first diagnostic when `18.5.9.12` finds no `[RX]` — the answer separates a bridge or port fault from a decode or UI fault in one observation.
 
-- **Preferred — before `4.5.9.9` swaps the config.** If the APK is installed and launched while `4.5.9.2`'s probe config is still on the ADA node, run this then. That is the rung's designed position: §4.8 states V2 "works before the simulator exists".
-- **Otherwise — as the first diagnostic when `18.5.9.12` finds no `[RX]`.** Put the probe config back on the ADA node (a Human Inspector edit), run this, and the answer separates a bridge or port fault from a decode or UI fault in one observation.
+**Scope — two steps on §4.8's log-surface table. The car-sky agent performs both:**
 
-**Scope:** read both surfaces per §4.8's log-surface table — the ADA node's log over the logs route with the mandatory `container` parameter, and `adb logcat -s IVI_V2X`. **The netcheck payload is not JSON, so a `[DROP] reason=malformed …` per datagram is the pass**: it proves the socket, the bridge hop and the loop's survival together. The producer's `[TX] … relayed to 10.99.0.13:47300` corroborates it. `[TX]` with nothing on `IVI_V2X` means the datagram is not arriving — re-check the pin address and the port before suspecting code.
+1. The agent reads the ADA node's log over the logs route, with the mandatory `container` parameter.
+2. The agent reads `adb logcat -s IVI_V2X` on the guest.
 
-**This subtask reads; it does not configure.** Any config change is a Human Inspector edit, per §5.
+**The netcheck payload is not JSON, so a `[DROP] reason=malformed …` per datagram is the pass**: it proves the socket, the bridge hop and the loop's survival together. The producer's `[TX] … relayed to 10.99.0.13:47300` corroborates it. `[TX]` with nothing on `IVI_V2X` means the datagram is not arriving — re-check the pin address and the port before suspecting code.
+
+**This subtask reads; it does not configure.** Any config change is a Human Inspector edit, per §5, and is `4.5.9.20`.
 
 **Acceptance:** paired `[TX]` and `[DROP]` excerpts in `plans/doc/phase5-ivi-run.md`, with the app still running afterwards. This closes the ADA ECU → IVI ECU network hop, which the connectivity smoke test could only check indirectly.
 
-**Dependencies:** after `16.5.9.10`, with the probe config in place. **Commit:** `[4.5.9.17] docs: record the V2 probe-datagram evidence for the ADA to IVI hop`
+**Dependencies:** after `16.5.9.10`, with the probe config in place — either still there from `4.5.9.2`, or restored by `4.5.9.20`. **Commit:** `[4.5.9.17] docs: record the V2 probe-datagram evidence for the ADA to IVI hop`
 
-### [ ] `17.5.9.18` — Rung V3: the UI comes up from an injected sample, with no network *(car-sky broadcast, Human judgement)*
+### [ ] `4.5.9.20` — Restore the probe config on the ADA node *(Human)*
+
+**Objective:** put `4.5.9.2`'s probe config back on the ADA node, so `4.5.9.17` has a probe datagram to read.
+
+**Scope — three steps. §5 assigns *Configure the ADA node's feed* to Human, because the Inspector is the only way to change an existing node's config. The person performs each step:**
+
+1. The person clicks the ADA node in Nydus, on the blueprint rather than the `-deploy` snapshot ([§4.3](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#43-deploy-the-blueprint)).
+2. The person sets the probe config of [§4.8](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging) rung **V2**, which is the same config `4.5.9.2` set.
+3. The person deploys again, per §4.3.
+
+This subtask runs only where the simulator config has already replaced the probe config. `4.5.9.9` puts the evidence config back afterwards.
+
+**Acceptance:** the ADA node `Running` with restart count 0 on the probe config, recorded in `plans/doc/phase5-ivi-run.md`. Evidence commit by the orchestrating session after the user confirms.
+
+**Dependencies:** after `4.5.9.9`, and only on the diagnostic branch `4.5.9.17` names. **Commit:** `[4.5.9.20] docs: record the probe config restored on the ADA node`
+
+### [ ] `17.5.9.18` — Rung V3: the UI comes up from an injected sample, with no network *(split)*
 
 **Objective:** close rung **V3** — prove the whole UI path independently of the producer, so a failure anywhere above can be attributed to the network rather than the app.
 
-**Scope:** [§4.8](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging) rung **V3**. Broadcast the dev-injector intent `4.5.6.7` registered, naming a frozen sample — an AI row, because it is a shell command against the guest — and watch the Screen widget, which §5 keeps Human because it is a visual judgement no log line replaces. The Display Area must switch to the Warning View **by itself** and draw the God View, judged against [HLD §6](../IVI_ECU/doc/ivi-ecu-hld.md#6-internal-components) exactly as `17.5.9.13` item 1 sets out.
+**Scope — two steps on rung V3 of [§4.8](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging), one per executor:**
+
+1. The car-sky agent broadcasts the dev-injector intent `4.5.6.7` registered, naming a frozen sample. §4.8 V3 carries the command. This is an AI row, because it is a shell command against the guest.
+2. The person watches the Screen widget and confirms the Display Area switches to the Warning View **by itself** and draws the God View, judged against [HLD §6](../IVI_ECU/doc/ivi-ecu-hld.md#6-internal-components) exactly as `17.5.9.13` item 1 sets out. §5 keeps this Human because it is a visual judgement no log line replaces.
 
 `Broadcast completed: result=0` with no UI change means the installed build is a **release** build — the injector exists in the debug build only, by design, and that is a build-selection finding rather than a UI defect.
 
-**Run it before `17.5.9.16` tears the Room down.** Its ID is later than the teardown subtask's; its execution slot is not.
+**Run this before `5.5.9.22` tears the Room down.**
 
 **Acceptance:** the broadcast command's output and a screenshot of the resulting Warning View, in `plans/doc/phase5-ivi-run.md`. If `16.5.9.7` came back negative and this runs on an emulator, record that it is emulator evidence.
 
@@ -1141,6 +1276,8 @@ Screenshots are taken per [§4.9](../requirements/car-sky-guide/deploy-ivi-hmi-w
 > **The same two senses of "install" apply here.** Setting a node's **image field** is a canvas edit and is *Human*, because [deploy-ada-ecu-walkthrough.md §7](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#7-work-division-between-ai-and-human) states the API has no update route for an existing node. Installing the **APK** with `adb install -r` is *car-sky*, an AI row of [§5](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#5-work-division-between-ai-and-human).
 >
 > **This group builds no image.** Each node's image is published by the phase that owns that node.
+>
+> **This group closes no Phase 5 acceptance criterion.** It produces the whole-topology evidence Phase 6's R19 convergence run starts from ([milestone1.md § Phase 6](milestone1.md#phase-6--convergence-real-data-end-to-end-r18-r19--r10-moved-to-the-future-plan)).
 
 ### [ ] `5.5.10.1` — Clone the baseline into the full blueprint and set every node's real image *(Human)*
 
@@ -1148,11 +1285,16 @@ Screenshots are taken per [§4.9](../requirements/car-sky-guide/deploy-ivi-hmi-w
 
 **Scope:** in Nydus, clone **`baseline_phase1`** ([carsky-4-node-blueprint.md § The blueprints on CarSky](../requirements/car-sky-guide/carsky-4-node-blueprint.md#8-the-blueprints-on-carsky)) and edit the clone on the canvas. Never edit `baseline_phase1` itself and never import a blueprint file. That is the route of [deploy-ada-ecu-walkthrough.md §5.6](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#56-the-full-blueprint-route) and [§4.1](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#41-create-the-blueprint), and §7 of that document assigns it to Human. Each node's image, config and pin are in [carsky-4-node-blueprint.md](../requirements/car-sky-guide/carsky-4-node-blueprint.md) and the per-node files it points at: [node-scenario-player.md](../requirements/car-sky-guide/node-scenario-player.md), [node-v2x-ecu.md](../requirements/car-sky-guide/node-v2x-ecu.md), [node-ada-ecu.md](../requirements/car-sky-guide/node-ada-ecu.md), [node-ivi-ecu.md](../requirements/car-sky-guide/node-ivi-ecu.md).
 
-- **Click each container node and set its image field** to that node's own real image, whatever the clone arrived carrying.
-- **Leave the IVI node's Skycraft `image` block alone** — the four fields of [node-ivi-ecu.md § Blueprint node config](../requirements/car-sky-guide/node-ivi-ecu.md#blueprint-node-config). Without them the deploy is rejected outright.
-- **Leave the ADA node's `command`, `capabilities`, env, address and port alone too.** §5.6 states they are the same in the isolated and full compositions; only the neighbours change.
-- **Confirm the ADA node still has `NET_RAW`.** Here it is not optional: the Android node runs no container, so there is no sink log, and the ADA node is the only place a `[CAP]` line can capture the outgoing warning.
-- Work on the blueprint, never on a `<name>-deploy` snapshot ([§4.3](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#43-deploy-the-blueprint)).
+The person performs each step:
+
+1. The person clones `baseline_phase1` and opens the clone on the canvas.
+2. The person clicks each container node in turn.
+3. The person sets that node's image field to its own real image, whatever the clone arrived carrying.
+4. The person confirms the ADA node still has `NET_RAW`. Here it is not optional: the Android node runs no container, so there is no sink log, and the ADA node is the only place a `[CAP]` line can capture the outgoing warning.
+5. The person leaves the IVI node's Skycraft `image` block alone — the four fields of [node-ivi-ecu.md § Blueprint node config](../requirements/car-sky-guide/node-ivi-ecu.md#blueprint-node-config). Without them the deploy is rejected outright.
+6. The person leaves the ADA node's `command`, `capabilities`, env, address and port alone. §5.6 states they are the same in the isolated and full compositions; only the neighbours change.
+
+Work on the blueprint, never on a `<name>-deploy` snapshot ([§4.3](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#43-deploy-the-blueprint)).
 
 **Acceptance:** a 5-node blueprint whose every node names its real image, confirmed by `5.5.10.2`'s read-back and recorded in `plans/doc/phase5-ivi-run.md`. Evidence commit by the orchestrating session after the user confirms.
 
@@ -1162,9 +1304,14 @@ Screenshots are taken per [§4.9](../requirements/car-sky-guide/deploy-ivi-hmi-w
 
 **Objective:** confirm from stored state that five nodes carry the right images, pins and addresses, and that every image is pullable, before a Room slot is spent.
 
-**Scope:** `GET /api/v1/blueprints/{id}` — the "Read the stored config back" AI row of [deploy-ada-ecu-walkthrough.md §7](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#7-work-division-between-ai-and-human) and the matching row of [§5](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#5-work-division-between-ai-and-human). Confirm each node's image reference, `command`, env and capabilities against its node file, and one `ETHERNET` / `OUTPUT` pin per non-bridge node at `10.99.0.10` (bench), `.11` (V2X), `.12` (ADA), `.13` (IVI), each edged to the bridge's single `INPUT` pin. Confirm the IVI node's four Skycraft `image` fields.
+**Scope — six steps on one `GET /api/v1/blueprints/{id}`, the "Read the stored config back" AI row of [deploy-ada-ecu-walkthrough.md §7](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#7-work-division-between-ai-and-human) and the matching row of [§5](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#5-work-division-between-ai-and-human). The car-sky agent performs each step:**
 
-Then confirm each image resolves in the registry. An image that cannot be pulled is the `Provisioning` hang of [§4.10](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#410-troubleshooting-the-deploy-and-install)'s image row; the catalog check is the AI row of [netcheck §5](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#5-work-division-between-ai-and-human), with the calls in the form [deploy-ada-ecu-walkthrough.md §3.3](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#33-confirm-the-run-passed-and-the-images-landed) gives.
+1. The agent confirms the Bench node's image reference, `command`, env and capabilities against [node-scenario-player.md](../requirements/car-sky-guide/node-scenario-player.md), and its `ETHERNET` / `OUTPUT` pin at `10.99.0.10` edged to the bridge's single `INPUT` pin.
+2. The agent confirms the V2X node's fields against [node-v2x-ecu.md](../requirements/car-sky-guide/node-v2x-ecu.md), and its pin at `10.99.0.11`.
+3. The agent confirms the ADA node's fields against [node-ada-ecu.md](../requirements/car-sky-guide/node-ada-ecu.md), and its pin at `10.99.0.12`.
+4. The agent confirms the IVI node's four Skycraft `image` fields against [node-ivi-ecu.md](../requirements/car-sky-guide/node-ivi-ecu.md), and its pin at `10.99.0.13`.
+5. The agent confirms the bridge node carries the single `INPUT` pin the four edges land on.
+6. The agent confirms each image resolves in the registry. An image that cannot be pulled is the `Provisioning` hang of [§4.10](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#410-troubleshooting-the-deploy-and-install)'s image row; the catalog check is the AI row of [netcheck §5](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#5-work-division-between-ai-and-human), with the calls in the form [deploy-ada-ecu-walkthrough.md §3.3](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#33-confirm-the-run-passed-and-the-images-landed) gives.
 
 **Acceptance:** the read-back excerpt in `plans/doc/phase5-ivi-run.md` with all five nodes confirmed and every image resolvable, or the exact mismatch named and handed back to `5.5.10.1`.
 
@@ -1174,11 +1321,16 @@ Then confirm each image resolves in the registry. An image that cannot be pulled
 
 **Objective:** bring up the Room the whole-system evidence is gathered in.
 
-**Scope:** open the blueprint in Nydus, click empty canvas for the blueprint Inspector, click **New Deployment**, pick an **existing** Device from the dropdown, and click **Deploy** — [§4.3](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#43-deploy-the-blueprint) and [deploy-ada-ecu-walkthrough.md §4.5](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#45-deploy). Deploy the blueprint, not its snapshot. §5.6 notes the full blueprint is one deployment like any other, so the two-Room budget still applies and the isolated IVI test's Room must be released first.
+**Scope:** the person runs [§4.3](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#43-deploy-the-blueprint)'s deploy steps, which [deploy-ada-ecu-walkthrough.md §4.5](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#45-deploy) repeats for this composition. What is specific to this subtask:
+
+1. The subject is the full blueprint `5.5.10.1` composed, not its `-deploy` snapshot.
+2. The Device picked is an **existing** one.
+
+§5.6 notes the full blueprint is one deployment like any other, so the two-Room budget still applies and the isolated IVI test's Room must be released first.
 
 **Acceptance:** the deployment exists and its Room id is recorded in `plans/doc/phase5-ivi-run.md`; `5.5.10.4` confirms the node phases. Evidence commit by the orchestrating session after the user confirms.
 
-**Dependencies:** after `5.5.10.2` and the teardown at `17.5.9.16`. **Commit:** `[5.5.10.3] docs: record the full blueprint deployment`
+**Dependencies:** after `5.5.10.2` and the teardown at `5.5.9.22`. **Commit:** `[5.5.10.3] docs: record the full blueprint deployment`
 
 ### [ ] `5.5.10.4` — Poll the five nodes to `Running` and resolve every `nodeKey` *(car-sky)*
 
@@ -1194,7 +1346,14 @@ Then confirm each image resolves in the registry. An image that cannot be pulled
 
 **Objective:** get the Phase 5 build running on the IVI node of the full topology.
 
-**Scope:** [§4.6](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#46-install-the-apk) then the launch half of [§4.7](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#47-open-the-screen-and-launch-the-app), both AI rows in [§5](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#5-work-division-between-ai-and-human), over a tunnel started as [§4.4](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#44-get-an-adb-endpoint) fixes it, in the form `16.5.9.8` recorded as working. The Room is new, so the guest is new and `adb install -r` runs again. [§4.1](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#41-how-the-apk-reaches-the-ivi-ecu-node)'s ordering holds — the node must be `Running` first.
+**Scope — four steps against [§4.6](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#46-install-the-apk) then the launch half of [§4.7](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#47-open-the-screen-and-launch-the-app), both AI rows in [§5](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#5-work-division-between-ai-and-human). The car-sky agent performs each step:**
+
+1. The agent starts a tunnel as [§4.4](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#44-get-an-adb-endpoint) fixes it, in the form `16.5.9.8` recorded as working.
+2. The agent takes the same APK `16.5.7.5` handed over — the download off CI is a Human row, so this subtask starts at the install.
+3. The agent runs `adb install -r` and confirms the package with `pm path`. The Room is new, so the guest is new and the install runs again.
+4. The agent launches the app per §4.7.
+
+[§4.1](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#41-how-the-apk-reaches-the-ivi-ecu-node)'s ordering holds — the node must be `Running` first.
 
 This is the **APK**, not a node image field: the container nodes' images were set at `5.5.10.1` and pulled at deploy.
 
@@ -1206,9 +1365,12 @@ This is the **APK**, not a node image field: the container nodes' images were se
 
 **Objective:** make the guest's display visible for the system test, with recording armed before anything is sent.
 
-**Scope:** the widget half of [§4.7](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#47-open-the-screen-and-launch-the-app), which §5 keeps Human. Click **Devices**, **Connect** to the device this deployment created, then add the **Screen** widget and set its Video, Touch and Keyboard parts from this node's Part Prefix. Add the **Log** and **ADB** widgets beside it.
+**Scope — four steps on the widget half of [§4.7](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#47-open-the-screen-and-launch-the-app), which §5 keeps Human and which is not restated here. The person performs each step:**
 
-**Set the Recorder Part before anything is sent.** The recorded evidence comes from this run, and [§4.9](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#49-capture-the-evidence) cannot capture a run that has already happened.
+1. The person opens the Devices panel and connects to the device this deployment created.
+2. The person adds the Screen widget and sets its parts from this node's Part Prefix.
+3. The person adds the Log widget and the ADB widget.
+4. The person sets the **Recorder Part** before anything is sent. The recorded evidence comes from this run, and [§4.9](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#49-capture-the-evidence) cannot capture a run that has already happened.
 
 **Acceptance:** the AAOS screen streaming live with the recorder armed, recorded in `plans/doc/phase5-ivi-run.md`. Evidence commit by the orchestrating session after the user confirms.
 
@@ -1218,100 +1380,121 @@ This is the **APK**, not a node image field: the container nodes' images were se
 
 **Objective:** produce the text evidence that the warning the IVI renders originated in a bench scenario and travelled the full relay.
 
-**Scope:** authenticate to CarSky ([carsky-deploy-preflight](../.claude/skills/carsky-deploy-preflight/SKILL.md)), then read every surface the topology exposes, with `container=user` on the logs route.
+**Scope — five steps, with `container=user` on every logs-route call. The car-sky agent performs each step:**
 
-- **Producer side:** [deploy-ada-ecu-walkthrough.md §5.1](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#51-check-1--the-relayed-message-is-received-and-raises-its-event) and [§5.2](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#52-check-2--both-vehicles-are-in-the-track-store), unchanged in this composition per [§5.6](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#56-the-full-blueprint-route) — but with the relayed traffic now originating in the real V2X ECU driven by the bench scenario, so `STATION_ID`, `OBJECT_ID` and the distance profile come from that scenario rather than from node env, and §5.5's `MIN_DISTANCE_M` lever is not available.
-- **Consumer side:** §5.6 states that **check 3 has no sink log** here — the Android node runs no container — so consumer-side evidence is the guest's own log and belongs to [§4.8](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging). Read `adb logcat -s IVI_V2X`.
-- **Wire evidence:** the ADA node's `[CAP]` line is the only capture of the outgoing warning in this composition, which is why its `NET_RAW` was required at `5.5.10.1`.
-
-Save every node log before teardown — [deploy-ada-ecu-walkthrough.md §5.7](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#57-tear-down) states the log route returns nothing once the Room is gone.
+1. The agent authenticates to CarSky ([carsky-deploy-preflight](../.claude/skills/carsky-deploy-preflight/SKILL.md)).
+2. The agent reads the producer-side checks of [deploy-ada-ecu-walkthrough.md §5.1](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#51-check-1--the-relayed-message-is-received-and-raises-its-event) and [§5.2](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#52-check-2--both-vehicles-are-in-the-track-store), unchanged in this composition per [§5.6](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#56-the-full-blueprint-route). The relayed traffic originates in the real V2X ECU driven by the bench scenario, so `STATION_ID`, `OBJECT_ID` and the distance profile come from that scenario rather than from node env, and §5.5's `MIN_DISTANCE_M` lever is not available.
+3. The agent reads `adb logcat -s IVI_V2X` for the consumer side. §5.6 states that **check 3 has no sink log** here, because the Android node runs no container, so consumer-side evidence is the guest's own log and belongs to [§4.8](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging).
+4. The agent reads the ADA node's `[CAP]` line, the only capture of the outgoing warning in this composition, which is why `5.5.10.1` requires its `NET_RAW`.
+5. The agent saves every node log before teardown. [deploy-ada-ecu-walkthrough.md §5.7](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#57-tear-down) states the log route returns nothing once the Room is gone.
 
 **Acceptance:** [§6](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#6-expected-outputs-and-acceptance) proofs 1–3 on the guest side and [deploy-ada-ecu-walkthrough.md §8](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#8-expected-outputs-and-acceptance)'s producer-side checks, with `cSource=v2x_relayed` on every rendered warning — all as excerpts in `plans/doc/phase5-ivi-run.md`, correlated across nodes by timestamp.
 
 **Dependencies:** after `16.5.10.5`. **Commit:** `[19.5.10.7] docs: record the system test log evidence across the relay`
 
-### [ ] `19.5.10.8` — Confirm the God View on live relayed data, capture it, tear down *(Human)*
+### [ ] `19.5.10.8` — Confirm the God View on live relayed data and capture it *(Human)*
 
-**Objective:** see the warning view come up from data that travelled the whole relay, capture it, and release the Room slot.
+**Objective:** see the warning view come up from data that travelled the whole relay, and capture it.
 
-**Scope:** watch the Screen widget with the recording running, and confirm the Display Area switches itself to the Warning View and draws the God View — [§4.8](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging) V4's **link 4**, captured per [§4.9](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#49-capture-the-evidence). Only the source of the data differs from the isolated IVI test, so the drawing to expect is the same one — judged against [HLD §6](../IVI_ECU/doc/ivi-ecu-hld.md#6-internal-components) per `17.5.9.13` item 1 and § Open items item 1 — and a yellow `[? UNKNOWN SOURCE]` marker where ghost C belongs is still a blocking defect.
+**Scope — three steps on [§4.8](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging) V4's link 4, captured per [§4.9](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#49-capture-the-evidence). The person performs each step:**
 
-**Then tear the Room down**, after `19.5.10.7` has saved every node log. Click **Delete Deployment** ([§4.12](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#412-tear-down), [deploy-ada-ecu-walkthrough.md §5.7](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#57-tear-down)). The blueprint stays and can be deployed again.
+1. The person watches the Screen widget with the recording running.
+2. The person confirms the Display Area switches itself to the Warning View and draws the God View. Only the source of the data differs from the isolated IVI test, so the drawing to expect is the same one, judged against [HLD §6](../IVI_ECU/doc/ivi-ecu-hld.md#6-internal-components) per `17.5.9.13` item 1 and § Open items item 1.
+3. The person confirms no yellow `[? UNKNOWN SOURCE]` marker appears where ghost C belongs. One that does is a blocking defect.
 
-**Acceptance:** a recording showing the God View drawn from live relayed data, with `19.5.10.7`'s excerpts backing it in text; recorded in `plans/doc/phase5-ivi-run.md`; the deployment deleted. Evidence commit by the orchestrating session after the user confirms.
+Teardown is `5.5.10.9`, which runs after this subtask and after `19.5.10.7`.
 
-**Dependencies:** after `19.5.10.7` and `16.5.10.6`. **Commit:** `[19.5.10.8] docs: record the system test God View evidence and teardown`
+**Acceptance:** a recording showing the God View drawn from live relayed data, with `19.5.10.7`'s excerpts backing it in text; recorded in `plans/doc/phase5-ivi-run.md`. Evidence commit by the orchestrating session after the user confirms.
+
+**Dependencies:** after `19.5.10.7` and `16.5.10.6`. **Commit:** `[19.5.10.8] docs: record the system test God View evidence`
+
+### [ ] `5.5.10.9` — Tear the full blueprint Room down *(Human)*
+
+**Objective:** release the Room slot the system test holds.
+
+**Scope — two steps. §5 assigns *Tear the Room down* to Human. The person performs both:**
+
+1. The person deletes the deployment, per [§4.12](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#412-tear-down) and [deploy-ada-ecu-walkthrough.md §5.7](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#57-tear-down).
+2. The person records the teardown in `plans/doc/phase5-ivi-run.md`.
+
+The blueprint itself stays and can be deployed again.
+
+**Acceptance:** the deployment deleted and recorded in `plans/doc/phase5-ivi-run.md`.
+
+**Dependencies:** after `19.5.10.8` and `19.5.10.7`, which saves every node log first. **Commit:** `[5.5.10.9] docs: record the full blueprint Room teardown`
 
 ---
 
 ## Execution order
 
-Dependencies are real (files, Gradle project graph, contract artifacts, deployed Rooms) — not default assumptions. **Four subtasks depend on nothing and can all be opened at once:** `4.5.1.1` (code), `5.5.9.1` (the mini-blueprint, USER), `16.5.7.1` (CI lane), and `17.5.5.3` once `4.5.1.4` has landed.
+Dependencies are real (files, Gradle project graph, contract artifacts, deployed Rooms) — not default assumptions. Execution tracks A–J below group subtasks by dependency chain; "lane" is reserved for a CI job. **Four subtasks depend on nothing and can all be opened at once:** `4.5.1.1` (code), `5.5.9.1` (the mini-blueprint, Human), `16.5.9.19` (the tunnel inputs, Human) and `16.5.7.1` (the CI lane).
 
 ```
-Lane A  foundation:   4.5.1.1 ─► 4.5.1.2 ─► 4.5.1.3 ─► 4.5.1.4 ─► 4.5.1.5
-                                                          │  (gate for lanes B–F)
-Lane B  :serializer:  4.5.2.1 ─► 4.5.2.2 ─► 4.5.2.3
-Lane C  :observer:    4.5.3.1 ─► 4.5.3.2 ─► 4.5.3.3 ─► 4.5.3.4 ─► 4.5.3.5
-                      (4.5.3.1 needs 4.5.2.1 only — starts before lane B ends)
-Lane D  app logic:    { 4.5.4.1 ∥ 4.5.4.2 ∥ 4.5.4.3 } ─► 17.5.4.4 ─► 16.5.4.5
-                      (4.5.4.1/4.5.4.2 need 4.5.3.1; 4.5.4.3 needs only 4.5.1.4)
-Lane E  app UI/shell: 18.5.5.1 ─► 4.5.5.2 ─► 4.5.5.7 ─► 16.5.5.8
-                      17.5.5.3 ─► 17.5.5.4 ─► 16.5.5.6   (16.5.5.6 also needs 16.5.4.5)
-                      17.5.5.5 ∥ everything, after 4.5.1.4      (4.5.5.7 also needs lane D through 17.5.4.4, and 17.5.5.4)
-Lane F  test equip:   4.5.6.1 ─► 4.5.6.2 ─► 4.5.6.3 ─► 4.5.6.4 ─► 4.5.6.5 ─► 5.5.6.6
-                      (needs only 4.5.1.4 — fully parallel with lanes B–E)
-                      4.5.6.7 dev injector (after 16.5.5.8 + 4.5.4.2)
-Lane G  CI:           16.5.7.1 (no dependencies, ∥ everything)   16.5.7.4 (after 16.5.5.8)   4.5.7.2 (after 4.5.6.4)   5.5.7.3 (after 5.5.6.6)
-Lane H  isolated:     5.5.9.1 (Human) ─► 4.5.9.2 (Human) ─► 6.5.9.3 ─► 5.5.9.4 (Human) ─► 5.5.9.5
-                        ─► 16.5.9.6 ─► 16.5.9.7 ─► 4.5.9.9 (Human) ─► 16.5.9.10 ─► 16.5.9.11 (Human)
-                        ─► 18.5.9.12 ─► 17.5.9.13 (Human) ─► 4.5.9.14 (Human) ─► 4.5.9.15 ─► 17.5.9.16 (Human)
-                      4.5.9.17 (V2) and 17.5.9.18 (V3) carry the group's highest IDs and the earliest slots
-                        that suit them: both run after 16.5.9.10/16.5.9.11 and before 17.5.9.16 tears the Room down
-                      (5.5.9.1 through 16.5.9.7 need no Phase 5 code and run parallel to lanes A–G;
-                       16.5.9.6 also needs the organizers' CLI, gateway URL and token in hand;
-                       16.5.9.8 branches off 16.5.9.7, also needing 16.5.5.8;
-                       4.5.9.9 needs 5.5.7.3's pushed image; 16.5.9.10 needs 16.5.5.6;
-                       4.5.9.17 wants the probe config still in place, so run it before 4.5.9.9 where the APK is ready in time)
-Lane J  system:       5.5.10.1 (Human) ─► 5.5.10.2 ─► 5.5.10.3 (Human) ─► 5.5.10.4
-                        ─► 16.5.10.5 ─► 16.5.10.6 (Human) ─► 19.5.10.7 ─► 19.5.10.8 (Human)
-                      (5.5.10.1 needs every node's real image published by its own phase;
-                       5.5.10.3 needs the Room slot lane H releases at 17.5.9.16)
+Track A  foundation:   4.5.1.1 ─► 4.5.1.2 ─► 4.5.1.6 ─► 4.5.1.3 ─► 4.5.1.4 ─► 4.5.1.5
+                                                           │  (gate for tracks B–F)
+Track B  :serializer:  4.5.2.1 ─► 4.5.2.2 ─► 4.5.2.3
+Track C  :observer:    4.5.3.1 ─► 4.5.3.2 ─► 4.5.3.3 ─► 4.5.3.4 ─► 4.5.3.5
+                       (4.5.3.1 needs 4.5.2.1 only — starts before track B ends)
+Track D  app logic:    { 4.5.4.1 ∥ 4.5.4.2 ∥ 4.5.4.3 } ─► 17.5.4.4 ─► 16.5.4.5
+                       (4.5.4.1/4.5.4.2 need 4.5.3.1; 4.5.4.3 needs only 4.5.1.4)
+Track E  app UI/shell: 18.5.5.1 ─► 4.5.5.2 ─► 4.5.5.7 ─► 16.5.5.8
+                       17.5.5.3 ─► 17.5.5.4 ─► 16.5.5.6   (16.5.5.6 also needs 16.5.4.5)
+                       17.5.5.5 ∥ everything, after 4.5.1.4   (4.5.5.7 also needs track D through 17.5.4.4, and 17.5.5.4)
+Track F  test equip:   4.5.6.1 ─► 4.5.6.2 ─► 4.5.6.3 ─► 4.5.6.4 ─► 4.5.6.5 ─► 5.5.6.6
+                       (needs only 4.5.1.4 — fully parallel with tracks B–E)
+                       4.5.6.7 dev injector (after 16.5.5.8 + 4.5.4.2)
+Track G  CI:           16.5.7.1 (no dependencies, ∥ everything) ─► 16.5.7.5 (Human, or agent on an authenticated gh CLI)
+                       16.5.7.4 (after 16.5.5.8)   4.5.7.2 (after 4.5.6.4)   5.5.7.3 (after 5.5.6.6)
+Track H  isolated:     5.5.9.1 (Human) ─► 4.5.9.2 (Human) ─► 6.5.9.3 ─► 5.5.9.4 (Human) ─► 5.5.9.5
+                         ─► 16.5.9.6 ─► 16.5.9.7 ─► 4.5.9.9 (Human) ─► 16.5.9.10 ─► 16.5.9.11 (Human)
+                         ─► 18.5.9.12 ─► 17.5.9.13 (Human) ─► 4.5.9.14 (Human) ─► 4.5.9.15 ─► 17.5.9.16 (Human)
+                         ─► 5.5.9.22 (Human, the teardown)
+                       16.5.9.19 (Human) ─► 16.5.9.6      16.5.9.21 ∥ 16.5.9.7, both after 5.5.9.5
+                       4.5.9.17 (V2) and 17.5.9.18 (V3) run after 16.5.9.10/16.5.9.11 and before 5.5.9.22
+                       4.5.9.20 (Human) only on 4.5.9.17's diagnostic branch, after 4.5.9.9
+                       (5.5.9.1 through 16.5.9.7 need no Phase 5 code and run parallel to tracks A–G;
+                        16.5.9.7 and 16.5.9.10 need an APK — 16.5.7.5's artifact, or a local assembleDebug;
+                        16.5.9.8 branches off 16.5.9.7, also needing 16.5.5.8;
+                        4.5.9.9 needs 5.5.7.3's pushed image; 16.5.9.10 needs 16.5.5.8;
+                        4.5.9.17 needs the probe config in place, so run it before 4.5.9.9 where the APK is ready in time)
+Track J  system:       5.5.10.1 (Human) ─► 5.5.10.2 ─► 5.5.10.3 (Human) ─► 5.5.10.4
+                         ─► 16.5.10.5 ─► 16.5.10.6 (Human) ─► 19.5.10.7 ─► 19.5.10.8 (Human) ─► 5.5.10.9 (Human)
+                       (5.5.10.1 needs every node's real image published by its own phase;
+                        5.5.10.3 needs the Room slot track H releases at 5.5.9.22)
 ```
 
-- **Parallel:** lanes B, D-partial, F and G against each other once `4.5.1.4` has landed; `4.5.4.1 ∥ 4.5.4.2 ∥ 4.5.4.3` inside lane D; `17.5.5.3 → 17.5.5.4 → 16.5.5.6` as its own chain; `17.5.5.5` against everything. The first seven subtasks of lane H are parallel with **all** code work by design — `5.5.9.1` through `16.5.9.7` are canvas, deploy and ADB-tunnel work that needs no Phase 5 code, and must not wait for it.
-- **Sequential:** every arrow above. Lane A is strictly sequential and gates everything (a Gradle module graph cannot be built out of order). Lanes H and J are strictly sequential — each step's evidence depends on the previous step's Room state.
-- **Lane J follows lane H on the Room budget, not on logic.** Only two Rooms run at once and the comms track holds one, so the full blueprint deploys after the mini-blueprint's Room is released. Lane J also waits on every node's real image, which its own phase publishes — nothing in Phase 5 builds them.
-- **Spawn order:** `4.5.1.1` and `16.5.7.1` go to subagents together, since neither waits on anything. Lane H opens at the same time — `5.5.9.1` waits on nothing. The rest of lane H opens once `5.5.7.3` has pushed a verified image, and lane J once every node's real image exists. The *car-sky* subtasks in both lanes are spawned to [[car-sky]] at the Room events they attach to.
+- **Parallel:** tracks B, D-partial, F and G against each other once `4.5.1.4` has landed; `4.5.4.1 ∥ 4.5.4.2 ∥ 4.5.4.3` inside track D; `17.5.5.3 → 17.5.5.4 → 16.5.5.6` as its own chain; `17.5.5.5` against everything. The first seven subtasks of track H are parallel with **all** code work by design — `5.5.9.1` through `16.5.9.7` are canvas, deploy and ADB-tunnel work that needs no Phase 5 code, and must not wait for it.
+- **Sequential:** every arrow above. Track A is strictly sequential and gates everything (a Gradle module graph cannot be built out of order). Tracks H and J are strictly sequential — each step's evidence depends on the previous step's Room state.
+- **Track J follows track H on the Room budget.** Only two Rooms run at once and the comms track holds one, so the full blueprint deploys after the mini-blueprint's Room is released. Track J also waits on every node's real image, which its own phase publishes — nothing in Phase 5 builds them.
+- **Spawn order:** `4.5.1.1` and `16.5.7.1` go to subagents together, since neither waits on anything. Track H opens at the same time — `5.5.9.1` and `16.5.9.19` wait on nothing. The rest of track H opens once `5.5.7.3` has pushed a verified image, and track J once every node's real image exists. The *car-sky* subtasks in both tracks are spawned to [[car-sky]] at the Room events they attach to; the *Human* subtasks are handed to a person.
 
 ### Critical path
 
-The shortest ordered set that closes all five acceptance boxes:
+The shortest ordered set that closes all five acceptance criteria:
 
-`4.5.1.1 → 4.5.1.2 → 4.5.1.3 → 4.5.1.4 → 4.5.2.1 → 4.5.2.2 → 4.5.3.1 → 4.5.3.2 → 4.5.3.3 → 4.5.4.1 → 4.5.4.2 → 4.5.4.3 → 17.5.4.4 → 16.5.4.5 → 18.5.5.1 → 4.5.5.2 → 4.5.5.7 → 16.5.5.8 → 16.5.5.8 → 16.5.5.6 → (lane F through 5.5.6.6) → 5.5.7.3 → 5.5.9.1 → 4.5.9.2 → 6.5.9.3 → 5.5.9.4 → 5.5.9.5 → 16.5.9.6 → 16.5.9.7 → 4.5.9.9 → 16.5.9.10 → 16.5.9.11 → 18.5.9.12 → 17.5.9.13 → 4.5.9.14 → 4.5.9.15 → 17.5.9.16`
+`4.5.1.1 → 4.5.1.2 → 4.5.1.3 → 4.5.1.4 → 4.5.2.1 → 4.5.2.2 → 4.5.3.1 → 4.5.3.2 → 4.5.3.3 → 4.5.4.1 → 4.5.4.2 → 4.5.4.3 → 17.5.4.4 → 16.5.4.5 → 18.5.5.1 → 4.5.5.2 → 17.5.5.3 → 17.5.5.4 → 16.5.5.6 → 4.5.5.7 → 16.5.5.8 → (track F through 5.5.6.6) → 5.5.7.3 → 16.5.7.5 → 5.5.9.1 → 4.5.9.2 → 6.5.9.3 → 5.5.9.4 → 5.5.9.5 → 16.5.9.19 → 16.5.9.6 → 16.5.9.7 → 4.5.9.9 → 16.5.9.10 → 16.5.9.11 → 18.5.9.12 → 17.5.9.13 → 4.5.9.14 → 4.5.9.15 → 17.5.9.16`
 
 with **`5.5.9.1` → `16.5.9.7` running alongside it**, unblocked from the start — it does not sit on the critical path but it decides whether the path's last steps are in-Room or on an emulator.
 
-**The isolated IVI test closes this path** — `4.5.9.9` through `17.5.9.16` turn a built app into the four proofs of [§6](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#6-expected-outputs-and-acceptance). Its first seven subtasks — the blueprint, the deploy and the ADB tunnel — need no APK and can be done while lanes A–F are still running; only `4.5.9.9` onward waits on `5.5.7.3`'s pushed image.
+**The isolated IVI test closes this path** — `4.5.9.9` through `17.5.9.16` turn a built app into the four proofs of [§6](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#6-expected-outputs-and-acceptance). Its first seven subtasks — the blueprint, the deploy and the ADB tunnel — need no APK and can be done while tracks A–F are still running; only `4.5.9.9` onward waits on `5.5.7.3`'s pushed image.
 
-**The system test is not on the path to the five boxes.** Every box is closed by the isolated IVI test against the R4 simulator feed, which is what "mock-driven" means for this phase. The system test waits on the other tracks' real images and produces the whole-system evidence Phase 6's convergence run builds on — valuable, and not a Phase 5 gate.
+**The system test is not on the path to the five acceptance criteria.** Every criterion is closed by the isolated IVI test against the R4 simulator feed, which is what "mock-driven" means for this phase. The system test waits on the other tracks' real images and produces the whole-system evidence Phase 6's convergence run builds on, and it is not a Phase 5 gate.
 
-**Droppable without failing a box, in this order if time runs short:** `4.5.1.5` (ProGuard rules — release build is not an acceptance target), `17.5.5.5` (the banner is built for D11's completeness and mounted nowhere), `4.5.6.7` (dev injector — only needed if the ADB/UI route is awkward), `4.5.2.3` and `4.5.3.5` (extra test depth, not extra behaviour), `state-stream.json` inside `4.5.6.4` (the periodic `state` message is optional on the producer side and no box depends on it).
+**Droppable without failing a criterion, in this order if time runs short:** `4.5.1.5` (ProGuard rules — release build is not an acceptance target), `17.5.5.5` (the banner is built for D11's completeness and mounted nowhere), `4.5.6.7` (dev injector — only needed if the ADB/UI route is awkward), `4.5.2.3` and `4.5.3.5` (extra test depth, not extra behaviour), `state-stream.json` inside `4.5.6.4` (the periodic `state` message is optional on the producer side and no criterion depends on it).
 
 ## Acceptance traceability
 
 Every Phase 5 acceptance criterion in [milestone1.md](milestone1.md#phase-5--ivi-hmi-mock-driven-r16-r17--display-track-parallel-from-the-start) maps to at least one subtask.
 
-| Milestone Phase 5 box | Closed by |
+| Phase 5 acceptance criterion | Closed by |
 |---|---|
 | The HMI runs on the AAOS node with the R16 layout; button/app areas switch the Display area | `16.5.5.6` · `16.5.5.8` (the launcher entry) · `4.5.5.7` · `16.5.4.5` · deployed by `5.5.9.1`–`5.5.9.4`, confirmed `Running` by `5.5.9.5`, the ADB tunnel started by `16.5.9.6` and proven by `16.5.9.7`, installed and launched by `16.5.9.10`, observed by `16.5.9.11` |
 | **(Dev)** A mock R4 warning brings the warning view up with ego, B and ghost C at the composed positions | `4.5.2.2` · `4.5.3.3` · `4.5.4.2` · `17.5.4.4` · `16.5.4.5` · `16.5.5.6` · simulator `4.5.6.3`/`4.5.6.4` (`approach.json`) · fed to the node by `4.5.9.9` · dev path `4.5.6.7`, exercised in the Room by `17.5.9.18` (I3) · read by `18.5.9.12` and seen by `17.5.9.13` (I4), with the network hop under it closed by `4.5.9.17` |
 | Ghost C renders from `v2x_relayed` data only; the 2D drawing is delivered | **`17.5.4.4`** (the D12 snapshot wiring that arms the guard — without it the guard silently disables) · **`17.5.5.4`** (the renderer and the guard itself, under test) · `16.5.5.6` · `17.5.5.3` · `4.5.3.3` (`cSource=` on every `[RX]`) · `degrade.json` guard-trip step in `4.5.6.4` · `cSource=v2x_relayed` on every warning evidenced in text by `18.5.9.12` and on screen by `17.5.9.13`, the guard trip gated by `17.5.9.16`, and the whole shown again from live relayed data by `19.5.10.7`/`19.5.10.8` |
 | A newer message with an unknown `warningType` degrades gracefully | `4.5.1.4` (the committed `R4AdditiveVersionTest` relocated and still green) · `4.5.2.2` (decode preserves the value, D4) · `4.5.4.3` (`WarningClassifier` generic presentation) · `4.5.6.4` (`degrade.json`) · read by `4.5.9.15` and observed by `17.5.9.16` |
-| Optional paths, only if built | **Not built in M1** — declared, not attempted. 3D stays reachable through the **`IviWarningViewSeam`** render seam ([HLD §8](../IVI_ECU/doc/ivi-ecu-hld.md#8-interfaces-ports-and-the-layer-rule)), which is what a second renderer would realize; multi-process wake-on-warning stays reachable because `4.5.5.2` chose the foreground service (D5). Recorded as "not built" in `plans/doc/phase5-ivi-run.md` by `17.5.9.16`, per [§6](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#6-expected-outputs-and-acceptance)'s instruction to record rather than leave the boxes ambiguous. |
+| Optional paths, only if built | **Not built in M1** — declared, not attempted. 3D stays reachable through the **`IviWarningViewSeam`** render seam ([HLD §8](../IVI_ECU/doc/ivi-ecu-hld.md#8-interfaces-ports-and-the-layer-rule)), which is what a second renderer would realize; multi-process wake-on-warning stays reachable because `4.5.5.2` chose the foreground service (D5). Recorded as "not built" in `plans/doc/phase5-ivi-run.md` by `17.5.9.16`, per [§6](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#6-expected-outputs-and-acceptance)'s instruction to record rather than leave the criteria ambiguous. |
 
-
-**Beyond the five boxes.** The system test (`5.5.10.1`–`19.5.10.8`) closes no Phase 5 box on its own — all five are met against the R4 simulator feed. It proves the same IVI behaviour inside the full topology with every node on its real image, and its record is what Phase 6's convergence run starts from.
+**What group 5.10 adds.** The system test (`5.5.10.1`–`5.5.10.9`) closes no Phase 5 acceptance criterion on its own — all five are met against the R4 simulator feed. It proves the same IVI behaviour inside the full topology with every node on its real image, and its record is what Phase 6's convergence run starts from.
 
 ## Open items
 
@@ -1320,26 +1503,31 @@ Carried, not decided. No Phase 5 subtask may close one of these by assuming an a
 | # | Item | Owner / closes at |
 |---|---|---|
 | 1 | **The walkthrough and the HLD disagree about what the God View draws.** [§4.8](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging) rung V4 link 4 and [§6](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#6-expected-outputs-and-acceptance) proof 4 expect a `[V2X]` badge and `d_AB`/`d_AC` distance labels; [HLD §6](../IVI_ECU/doc/ivi-ecu-hld.md#6-internal-components), D11 and **R17 itself** forbid them — R17 names that annotated figure explanatory and *not* what the IVI renders. **User decision: follow R17 and the HLD — no badge, no distance labels.** `17.5.9.13` and `19.5.10.8` judge against the HLD | Report to [[project-researcher]] to correct §4.8 and §6 — [walkthrough-driven-delivery.md](../.claude/rules/walkthrough-driven-delivery.md) forbids any other agent editing a walkthrough. **Raise before `17.5.9.13` judges a screen** |
-| 2 | **ADB reach to the Skycraft guest** — one route exists, the organizers' `reach-backend` tunnel, and this team has not yet run it ([§6.1](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#61-confirm-before-relying-on-these) item 1). Its CLI, gateway URL and token are supplied, not derived (items 2–4) | `16.5.9.6` starts it, `16.5.9.7` proves it; neither needs Phase 5 code and both are scheduled first. Negative ⇒ every later subtask in group 5.9 degrades to AAOS-emulator evidence |
+| 2 | **ADB reach to the Skycraft guest** — one route exists, the organizers' `reach-backend` tunnel, unexercised by this team ([§6.1](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#61-confirm-before-relying-on-these) item 1). Its CLI, gateway URL and token are supplied, not derived (items 2–4) | `16.5.9.19` obtains the three inputs, `16.5.9.6` starts the tunnel, `16.5.9.7` proves it; none needs Phase 5 code and all three are scheduled first. Negative ⇒ every later subtask in group 5.9 degrades to AAOS-emulator evidence |
 | 3 | **AAOS guest Android version** vs `minSdk 29`, and the `automotive` feature | `16.5.9.7`, same connection |
 | 4 | Coroutines version skew between `:observer` and what AndroidX resolves in `:app` | Mitigated by the catalog (`4.5.1.1`); a skew shows as a runtime `NoSuchMethodError`, not a build failure — watch for it at `16.5.9.10` |
-| 5 | Deployment budget: 2 concurrent Rooms | `17.5.9.16` and `19.5.10.8` tear their Rooms down; coordinate with the comms track before `5.5.9.4` deploys |
+| 5 | Deployment budget: 2 concurrent Rooms | `5.5.9.22` and `5.5.10.9` tear their Rooms down; coordinate with the comms track before `5.5.9.4` deploys |
 | 6 | MTU headroom (Phase 0 open item O3) | Non-issue for this hop — an R4 warning is ~450 B against a 2048 B buffer — but still formally open |
 | 7 | **AAOS boot-to-listener time sets the bench `start_delay_s` floor** — a number no other phase can produce ([m1-run-timing-and-event-triggering.md §9 item 5](../requirements/m1-run-timing-and-event-triggering.md)). Measured at `16.5.9.10`; consumed by the bench key `start_delay_s`, which §6.1 defines and no phase currently schedules ([phase1_tasks.md § Open items item 10](phase1_tasks.md#open-items--flags-no-phase-1-subtask-may-silently-close-them)). **No startup handshake is coming** — §4.2 rules readiness as R5's Deployment-Viewer check plus that delay, so nothing in this phase should be designed around a barrier the topology has no reverse path for | `16.5.9.10`, then **user** / Phase 6 |
+| 8 | **`18.5.5.1` and `18.5.9.12` carry `X = 18`, and R18's definition does not cover this node.** R18 defines structured JSONL event logs **on the V2X ECU and ADA**; the IVI's `key=value` logcat lines are neither JSONL nor produced on those nodes. The two IDs are published and are not renumbered ([task-planning-conventions.md § Task ID scheme](../.claude/rules/task-planning-conventions.md#task-id-scheme)), and the group headers of 5.5, 5.9 and 5.10 name R18 because those subtasks sit in them | [[project-researcher]] — either widen R18's definition to the IVI's evidence surface, or state that the IVI's log evidence traces to R4 alone. **Raise before Phase 6 reads the R18 event list** |
+| 9 | **Committed comments name task IDs this plan assigns different work to.** `IVI_ECU/app/proguard-rules.pro` and `IVI_ECU/app/src/main/java/…/model/SceneGeometry.kt` cite `4.5.1.1`; `IVI_ECU/app/build.gradle.kts` cites `4.5.1.4`; `SceneGeometry.kt` and `R3Snapshot.kt` cite `17.5.3.1` and `17.5.3.4`, which this plan does not assign at all. The IDs in this file are the live assignment. Neither set is renumbered, and `4.5.1.4` moves those files byte-identically, so its `git mv` cannot refresh the comments | [[project-planner]] — the comment in each file is corrected by the next subtask that rewrites that file for its own objective (`17.5.5.4` for `CanvasWarningView.kt`), never by a subtask opened to edit comments |
+| 10 | **`gh` CLI authentication on the execution host.** [§5](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#5-work-division-between-ai-and-human)'s first qualification flips the run-confirmation and artifact-download rows from Human to AI on a host with `gh auth login` run. Which state applies is unrecorded | **user** — the answer is recorded at `16.5.7.5`, which is where it bites, and decides whether that subtask is handed to a person or spawned to a subagent |
+| 11 | **A JDK and an Android SDK on the build host** ([§6.1](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#61-confirm-before-relying-on-these) item 8). Every `./gradlew` acceptance in groups 5.1–5.7 rests on it, and `5.5.6.6` records that `docker build` on this host is unavailable, so the host's tooling is partial | `4.5.1.1` records `java -version` and `ANDROID_HOME`. Negative ⇒ the CI route of [§3](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#3-building-on-ci) is the fallback, and `16.5.9.7`'s local-build option is unavailable |
 
-## Deliberately not in this phase
+## Out of scope for this phase
 
-Each is a decision with its reason, not an oversight.
+Each is a decision with its reason.
 
-- **3D and multi-process wake-on-warning** — optional, not committed M1 deliverables (D11). No subtask attempts either, and not even a 3D stub: six days do not justify a component whose only acceptance is that it does not crash. The optional path stays open through the `IviWarningViewSeam` render seam rather than through a reserved file path, and `4.5.5.2`'s foreground service keeps multi-process reachable.
+- **3D and multi-process wake-on-warning** — optional, not committed M1 deliverables (D11). No subtask attempts either, and no 3D stub is created. The optional path stays open through the `IviWarningViewSeam` render seam rather than through a reserved file path, and `4.5.5.2`'s foreground service keeps multi-process reachable.
+- **The ego video clip in the Display Area** — deferred by the report's §4 decision record and itemized in [milestone1.md §6](milestone1.md#6-deferred-to-later-milestones); no subtask implements any part of it, including a `DisplayMode`, a media dependency or a `video` pin.
 - **`WarningBannerOverlay` mounted in the Display Area** — forbidden by a standing user decision (D11). The God-View canvas must render unobstructed.
-- **Robolectric, a coverage threshold, and LeakCanary** — none has a basis in R4/R16/R17 acceptance; the boxes are behavioural, and D2's plain-JVM split is what removes the need for Robolectric (HLD §11, §12).
+- **Robolectric, a coverage threshold, and LeakCanary** — none has a basis in R4/R16/R17 acceptance; the acceptance criteria are behavioural, and D2's plain-JVM split is what removes the need for Robolectric (HLD §11, §12).
 - **Runtime JSON-Schema validation on the device** — the typed decode already enforces required fields and types; the schema is enforced in the round-trip tests on both sides (HLD §6).
 - **Real ADA data.** Phase 5 is mock-driven by definition; the simulator honours the real ADA node's env var *names* so Phase 6 is an image swap with no node-config edit (HLD §7).
-- **A listener that gives up after N socket errors.** `4.5.3.4`'s bounded back-off never stops retrying: a listener that stops mid-run is worse for a recorded demo than one that keeps rebinding.
+- **A listener that gives up after N socket errors.** R19 requires one continuous run, so `4.5.3.4`'s bounded back-off never stops retrying.
 - **A `--cycles`/`--interval-ms` sender CLI.** Repetition and cadence are scenario data (`loop`, `defaultRateHz`), not flags — D9's "scenarios are data, not code".
-- **A service-bind latency criterion.** Neither R4, R16 nor R17 states a latency requirement, and nothing in the acceptance boxes turns on it.
+- **A service-bind latency criterion.** Neither R4, R16 nor R17 states a latency requirement, and no acceptance criterion turns on it.
 
 ---
 
-*Decomposed by project-planner from the Phase 5 HLD (`85387b5`), its two research notes, and [milestone1.md § Phase 5](milestone1.md#phase-5--ivi-hmi-mock-driven-r16-r17--display-track-parallel-from-the-start); the in-Room tests from the walkthroughs, per stage 2 of [walkthrough-driven-delivery.md](../.claude/rules/walkthrough-driven-delivery.md). 9 task groups, 63 subtasks: 38 agent, 12 car-sky, 12 human, and one (`17.5.9.18`) split between a car-sky command and a human judgement. **There is no task group 5.8**, and the `5.8.*` IDs are never used. Nothing blocked. Nothing started except `16.5.7.1`.*
+*9 task groups, 70 subtasks: 39 agent, 13 car-sky, 17 Human, and one (`17.5.9.18`) split between a car-sky command and a human judgement. **There is no task group 5.8.** Nothing started except `16.5.7.1`.*
