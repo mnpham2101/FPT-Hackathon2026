@@ -437,7 +437,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after `18.2.2.3` (field names freeze there). **Commit:** `[18.2.6.5] feat: add the ADA EVT-stream admission checker`
 
-**Status:** done — py_compile exit 0; demonstrated exit 0 on a conforming synthetic log (full NT→TE→TR→NT cycle, band refresh) and non-zero naming the first illegal edge on each of: NT→TR jump, promotion at 2 < CONFIRM_HITS 3 hits, TR→NT drop at 33 m inside the (30, 35] band, and a zero-`[EVT]` input; `--expect-no-tracks` 0/1 arms and `--min-transitions` vacuous-pass block demonstrated; vocabulary admits `detector_disabled` as a 13th name pending D8 ratification (run-B log passes `--expect-no-tracks`, unknown names still fail); mode dispatch is an additive registry for Phase 4's `--fusion`.
+**Status:** done — py_compile exit 0; demonstrated exit 0 on a conforming synthetic log (full NT→TE→TR→NT cycle, band refresh) and non-zero naming the first illegal edge on each of: NT→TR jump, TR→NT drop at 33 m inside the (30, 35] band, and a zero-`[EVT]` input; `--expect-no-tracks` 0/1 arms and `--min-transitions` vacuous-pass block demonstrated; vocabulary admits `detector_disabled` as a 13th name pending D8 ratification; mode dispatch is an additive registry for Phase 4's `--fusion`. **Fix after the first lane run:** promotion hit-counts are not stream-observable (13.2.4.3 ruling — self-loops emit nothing), so the checker asserts chain continuity and in-gate distance on TE→TR instead of an early-promotion count; that property is owned by `test_admission_own_sensor.cpp`.
 
 ---
 

@@ -26,8 +26,12 @@ track id is a legal path through the R13 admission state machine
   state, starting from ``not_tracked``;
 * no ``not_tracked -> tracked`` jump (legal only when ``--confirm-hits`` is 1,
   where the tentative range 1..CONFIRM_HITS-1 is empty);
-* no promotion (``tentative -> tracked``) before ``--confirm-hits`` in-gate
-  updates for that id (default ``3``; the admitting update counts as hit 1);
+* the intermediate in-gate hits 2..CONFIRM_HITS-1 are the machine's silent
+  ``counted`` self-loop (``track_store.cpp``: state-changing edges emit, the
+  self-loops do not), so the hit count is NOT stream-observable and a
+  ``tentative -> tracked`` promotion is checked for chain continuity and
+  in-gate distance only -- with ``--confirm-hits`` >= 2 it legally follows the
+  admission directly in the stream;
 * no drop inside the hysteresis band: a distance-based
   ``tracked -> not_tracked`` requires distance > ``--gate-exit-m``; admissions
   and tentative holds require distance <= ``--gate-enter-m``; tracked
@@ -388,16 +392,16 @@ def apply_edge(walk: TrackWalk, t: Transition, cfg: AdmissionConfig) -> Optional
         return None
 
     if frm == "tentative" and to == "tracked":
+        # The hits between admission and promotion are the machine's silent
+        # `counted` self-loop (13.2.4.3 ruling: state-changing edges emit,
+        # self-loops do not), so the promotion count cannot be asserted from
+        # the stream -- only continuity (checked above) and the in-gate
+        # distance can.
         if d is None or d > cfg.gate_enter_m:
             resync(walk, t, cfg)
             return (f"{where} promotion {t.edge()} at distance {d} m not within "
                     f"GATE_ENTER_M {cfg.gate_enter_m} m")
-        updates = walk.hits + 1
-        if updates < cfg.confirm_hits:
-            resync(walk, t, cfg)
-            return (f"{where} early promotion {t.edge()} after {updates} in-gate "
-                    f"update(s) < CONFIRM_HITS {cfg.confirm_hits}")
-        walk.hits += 1
+        walk.hits = cfg.confirm_hits
         walk.state = "tracked"
         walk.cycle_stage = 2 if walk.cycle_stage == 1 else 0
         return None

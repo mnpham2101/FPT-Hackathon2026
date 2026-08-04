@@ -163,9 +163,11 @@ jobs:
 
           # The R18 verdict: legal R13 paths only, a full cycle per named source (own_sensor
           # AND the v2x source), and a non-vacuous stream. --min-transitions 6 is a floor, not
-          # the expectation - a nominal run emits ~50 transitions per fixture burst and ~20 on
-          # the v2x cycle; 6 merely makes an empty-ish capture an impossible pass. Gates and
-          # CONFIRM_HITS ride on the checker's defaults, which equal the node's (30/35 m, 3).
+          # the expectation - self-loops are silent (track_store.cpp, 13.2.4.3 ruling), so a
+          # nominal run emits 3 transitions per fixture burst (gate_enter, confirmed, gate_exit;
+          # ~10 bursts) plus 3 on the v2x cycle; 6 = both sources' minimal full cycles, making
+          # an empty-ish capture an impossible pass. Gates and CONFIRM_HITS ride on the
+          # checker's defaults, which equal the node's (30/35 m, 3).
           python ADA_ECU/tools/check_evt_log.py --admission --min-transitions 6 "$LOG_A"
           echo "[LANE] run A (admission) PASSED"
       # Run B - the mock-off arm. Same binary, DETECTOR_ENABLED=false, no sender: the only
