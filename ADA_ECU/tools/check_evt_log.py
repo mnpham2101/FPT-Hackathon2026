@@ -14,9 +14,14 @@ Usage::
     check_evt_log.py --admission [logfile] [--confirm-hits N]
                      [--gate-enter-m M] [--gate-exit-m M] [--min-transitions N]
     check_evt_log.py --expect-no-tracks [logfile]
+    check_evt_log.py [--admission] --fusion --both-tracks
+                     [--r4-schema PATH] [logfile]
 
-``logfile`` omitted or ``-`` reads stdin. Exactly one mode flag is required;
-the modes are additive -- Phase 4 registers ``--fusion`` beside them.
+``logfile`` omitted or ``-`` reads stdin. At least one check flag is
+required; ``--admission`` and ``--expect-no-tracks`` stay mutually
+exclusive, while the Phase 4 flags ``--fusion``, ``--both-tracks`` and
+``--r4-schema`` are additive and compose freely with ``--admission`` (the
+e2e lane passes them together).
 
 **Mode --admission** asserts the observed ``track_transition`` sequence per
 track id is a legal path through the R13 admission state machine
@@ -47,6 +52,33 @@ The first illegal edge, in stream order, is named in the failure output.
 
 **Mode --expect-no-tracks** exits non-zero if any ``track_transition``
 appears -- the "mock off yields no tracks" arm.
+
+**Mode --fusion** asserts the Phase 4 relay chain. Per relayed track id
+(id starting ``v2x:``): at least one ``r2_ingest`` in the stream (global),
+a ``track_transition`` for that id, and >= 1 ``assessment`` whose
+``trackId`` matches. Globally, the edge-triggered risk/emit pairing (D5):
+every ``risk_transition`` has exactly one matching ``r4_tx`` -- the next
+``r4_tx`` after it and before the next ``risk_transition`` -- and no
+``r4_tx`` appears without a preceding unconsumed ``risk_transition``. The
+b_unknown arm: when any ``assess_skipped_b_unknown`` appears and no
+``risk_transition`` ever does, the ``r4_tx`` count must be 0. The first
+violation is named with its line number.
+
+**Mode --both-tracks** exits 0 only when all four hold, else non-zero
+naming which is missing: (1) some own-sensor id has a ``track_transition``
+to ``tracked`` (source ``own_sensor``) AND an ``own_sensor_ingest`` whose
+``payload.object`` carries all nine R3 fields -- the tracked-state +
+full-fields evidence is a JOIN of those two lines on the track id; by
+design no single ``[EVT]`` line carries both facts; (2) some ``v2x:`` id
+has a ``track_transition`` to ``tracked`` with source ``v2x_relayed``;
+(3) >= 1 ``r4_tx`` whose embedded ``body.object`` is a full nine-field R3
+TrackedObject with source ``v2x_relayed``; (4) that same ``r4_tx`` body
+carries non-null numeric ``geometry.vehicleB`` (x, y).
+
+**Flag --r4-schema PATH** validates every ``r4_tx`` embedded ``body``
+against the JSON schema at PATH (the synced ``r4-ada-ivi.schema.json``);
+``jsonschema`` is imported lazily and only when the flag is passed, so the
+plain modes stay standard-library only.
 
 **Every mode:** zero ``[EVT]`` lines is a failure, never a pass.
 
@@ -107,6 +139,14 @@ DEFAULT_MIN_TRANSITIONS = 1
 TIMEOUT_REASON_MARKERS = ("expire", "timeout")
 
 MAX_REPORTED_PER_GROUP = 5   # keep a broken log readable; the count is stated
+
+# The nine frozen R3 TrackedObject fields (contracts/r3-tracked-object.schema.json)
+# -- what --both-tracks means by "a full R3 object".
+R3_FIELDS = ("id", "class", "source", "position", "distance", "speed",
+             "confidence", "state", "timestamps")
+
+# Relayed track ids carry this prefix (r2 adapter naming); --fusion keys on it.
+V2X_ID_PREFIX = "v2x:"
 
 
 def log(msg: str) -> None:
@@ -498,6 +538,225 @@ def run_expect_no_tracks(chk: Checker, events: list, _cfg: AdmissionConfig) -> N
               f"0 track_transition events across {len(events)} [EVT] line(s)")
 
 
+# --- Phase 4 additive checks -------------------------------------------------
+# NOTE: track_expire's payload fields ({"id", "source", "distance"}) are
+# implementation-chosen and NOT yet ratified. Every check below tolerates the
+# event by name only (it is in EVENT_NAMES) and never parses its payload.
+
+
+def event_payload(ev: Event) -> dict:
+    payload = ev.obj.get("payload")
+    return payload if isinstance(payload, dict) else {}
+
+
+def has_all_r3_fields(obj: object) -> bool:
+    return isinstance(obj, dict) and all(f in obj for f in R3_FIELDS)
+
+
+def is_finite_number(value: object) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+
+def r4_body(ev: Event) -> Optional[dict]:
+    """The embedded R4 warning-event object of an r4_tx line, or None."""
+    body = event_payload(ev).get("body")
+    return body if isinstance(body, dict) else None
+
+
+def check_fusion_chain(chk: Checker, events: list) -> None:
+    """Per relayed (v2x:) track id: r2_ingest present globally, a
+    track_transition for the id, >= 1 assessment whose trackId matches."""
+    failures: list = []
+    relayed_first: dict = {}   # id -> first track_transition Event
+    for ev in events:
+        if ev.name != "track_transition":
+            continue
+        track_id = event_payload(ev).get("id")
+        if isinstance(track_id, str) and track_id.startswith(V2X_ID_PREFIX):
+            relayed_first.setdefault(track_id, ev)
+    r2_count = sum(1 for ev in events if ev.name == "r2_ingest")
+    assessed_ids = {event_payload(ev).get("trackId")
+                    for ev in events if ev.name == "assessment"}
+    for track_id, first in sorted(relayed_first.items(),
+                                  key=lambda item: item[1].lineno):
+        if r2_count == 0:
+            failures.append(
+                f"line {first.lineno}: relayed track {track_id!r} transitions "
+                f"with zero r2_ingest events in the stream - no R2 ever ingested")
+        if track_id not in assessed_ids:
+            failures.append(
+                f"line {first.lineno}: relayed track {track_id!r} has no "
+                f"assessment whose trackId matches")
+    chk.group("fusion-chain", failures,
+              f"{len(relayed_first)} relayed (v2x:) track id(s) each covered by "
+              f"r2_ingest ({r2_count}) and a matching assessment")
+
+
+def check_fusion_pairing(chk: Checker, events: list) -> None:
+    """Edge-triggered emit pairing (D5): every risk_transition is consumed by
+    exactly one r4_tx before the next risk_transition; an r4_tx never appears
+    without a preceding unconsumed risk_transition."""
+    failures: list = []
+    pending: Optional[Event] = None   # the unconsumed risk_transition
+    for ev in events:
+        if ev.name == "risk_transition":
+            if pending is not None:
+                failures.append(
+                    f"line {pending.lineno}: risk_transition has no matching "
+                    f"r4_tx before the next risk_transition (line {ev.lineno})")
+            pending = ev
+        elif ev.name == "r4_tx":
+            if pending is None:
+                failures.append(
+                    f"line {ev.lineno}: r4_tx without a preceding unconsumed "
+                    f"risk_transition - the emit is edge-triggered (D5)")
+            else:
+                pending = None
+    if pending is not None:
+        failures.append(f"line {pending.lineno}: risk_transition has no "
+                        f"matching r4_tx before the end of the stream")
+    chk.group("fusion-pairing", failures,
+              "every risk_transition consumed by exactly one r4_tx, "
+              "no unpaired r4_tx (edge-triggered, D5)")
+
+
+def check_fusion_b_unknown(chk: Checker, events: list) -> None:
+    """The b_unknown-run arm: skips observed and no risk_transition ever ->
+    the run must have emitted zero r4_tx."""
+    skips = [ev for ev in events if ev.name == "assess_skipped_b_unknown"]
+    transitions = sum(1 for ev in events if ev.name == "risk_transition")
+    r4s = [ev for ev in events if ev.name == "r4_tx"]
+    failures = []
+    if skips and transitions == 0 and r4s:
+        failures.append(
+            f"line {r4s[0].lineno}: {len(r4s)} r4_tx event(s) in a b_unknown "
+            f"run (assess_skipped_b_unknown present, zero risk_transition) - "
+            f"expected none")
+    chk.group("fusion-b-unknown", failures,
+              f"{len(skips)} assess_skipped_b_unknown / {transitions} "
+              f"risk_transition / {len(r4s)} r4_tx consistent")
+
+
+def run_fusion(chk: Checker, events: list, _cfg: AdmissionConfig) -> None:
+    check_fusion_chain(chk, events)
+    check_fusion_pairing(chk, events)
+    check_fusion_b_unknown(chk, events)
+
+
+def run_both_tracks(chk: Checker, events: list, _cfg: AdmissionConfig) -> None:
+    """The four both-tracks facts; the missing one(s) are named. Fact (1) is a
+    JOIN on the track id of two lines -- a track_transition to 'tracked' and an
+    own_sensor_ingest with the full object -- because no single [EVT] line
+    carries both the tracked state and all nine R3 fields (see docstring)."""
+    tracked_own_ids = set()
+    tracked_v2x = False
+    ingest_full_ids = set()
+    r4_full_relayed: list = []   # r4_tx Events satisfying fact (3)
+    for ev in events:
+        payload = event_payload(ev)
+        if ev.name == "track_transition":
+            track_id = payload.get("id")
+            if payload.get("to") != "tracked" or not isinstance(track_id, str):
+                continue
+            if payload.get("source") == "own_sensor":
+                tracked_own_ids.add(track_id)
+            elif (payload.get("source") == "v2x_relayed"
+                  and track_id.startswith(V2X_ID_PREFIX)):
+                tracked_v2x = True
+        elif ev.name == "own_sensor_ingest":
+            obj = payload.get("object")
+            if has_all_r3_fields(obj):
+                ingest_full_ids.add(obj["id"])
+        elif ev.name == "r4_tx":
+            body = r4_body(ev)
+            obj = body.get("object") if body else None
+            if (has_all_r3_fields(obj)
+                    and obj.get("source") == "v2x_relayed"):
+                r4_full_relayed.append(ev)
+
+    def vehicle_b_ok(ev: Event) -> bool:
+        geometry = (r4_body(ev) or {}).get("geometry")
+        vb = geometry.get("vehicleB") if isinstance(geometry, dict) else None
+        return (isinstance(vb, dict) and is_finite_number(vb.get("x"))
+                and is_finite_number(vb.get("y")))
+
+    failures = []
+    joined = tracked_own_ids & ingest_full_ids
+    if not joined:
+        failures.append(
+            "(1) no own_sensor id both reaches state 'tracked' "
+            f"(track_transition; ids: {sorted(tracked_own_ids) or 'none'}) and "
+            f"appears in an own_sensor_ingest carrying all nine R3 fields "
+            f"(ids: {sorted(ingest_full_ids) or 'none'}) - the JOIN is empty")
+    if not tracked_v2x:
+        failures.append("(2) no v2x: id reaches state 'tracked' with source "
+                        "v2x_relayed")
+    if not r4_full_relayed:
+        failures.append("(3) no r4_tx whose body.object is a full nine-field "
+                        "R3 TrackedObject with source v2x_relayed")
+    elif not any(vehicle_b_ok(ev) for ev in r4_full_relayed):
+        failures.append(
+            f"(4) no such r4_tx carries non-null numeric geometry.vehicleB "
+            f"(x, y) - first candidate at line {r4_full_relayed[0].lineno}")
+    chk.group("both-tracks", failures,
+              f"own_sensor tracked+full join {sorted(joined)}, v2x_relayed "
+              f"tracked, {len(r4_full_relayed)} full relayed r4_tx with "
+              f"geometry.vehicleB")
+
+
+def build_r4_validator(schema_path: Path):
+    """A validator whose relative $refs (the r3 schema) resolve in
+    schema_path's directory -- the same registry/RefResolver approach as
+    mock_ivi_receiver.py. jsonschema is imported here, not at module level,
+    so every other mode stays standard-library only."""
+    try:
+        import jsonschema
+    except ImportError:
+        die("--r4-schema requires the 'jsonschema' package, which is not "
+            "installed; install it with: pip install jsonschema", 2)
+    try:
+        schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as e:
+        die(f"cannot load schema {schema_path}: {e}", 2)
+    contracts_dir = schema_path.parent
+    try:
+        # jsonschema >= 4.18: the referencing registry replaces RefResolver.
+        from referencing import Registry, Resource
+
+        resources = []
+        for path in sorted(contracts_dir.glob("*.schema.json")):
+            contents = json.loads(path.read_text(encoding="utf-8"))
+            resources.append((path.name, Resource.from_contents(contents)))
+        registry = Registry().with_resources(resources)
+        return jsonschema.Draft202012Validator(schema, registry=registry)
+    except ImportError:
+        # Older jsonschema: RefResolver rooted at the schema's directory.
+        resolver = jsonschema.RefResolver(
+            base_uri=contracts_dir.as_uri() + "/", referrer=schema)
+        return jsonschema.Draft202012Validator(schema, resolver=resolver)
+
+
+def run_r4_schema(chk: Checker, events: list, schema_path: Path) -> None:
+    validator = build_r4_validator(schema_path)
+    failures: list = []
+    checked = 0
+    for ev in events:
+        if ev.name != "r4_tx":
+            continue
+        body = r4_body(ev)
+        if body is None:
+            failures.append(f"line {ev.lineno}: r4_tx payload.body is not a "
+                            f"JSON object - nothing to validate")
+            continue
+        checked += 1
+        for error in validator.iter_errors(body):
+            loc = "/".join(str(p) for p in error.absolute_path) or "$"
+            failures.append(f"line {ev.lineno}: r4_tx body invalid at {loc}: "
+                            f"{error.message}")
+    chk.group("r4-schema", failures,
+              f"{checked} r4_tx body(ies) valid against {schema_path.name}")
+
+
 def positive_int(raw: str) -> int:
     value = int(raw)
     if value < 1:
@@ -519,11 +778,20 @@ def build_parser() -> argparse.ArgumentParser:
                     "docstring for the full contract.")
     parser.add_argument("logfile", nargs="?", default=None,
                         help="log to read; omitted or '-' reads stdin")
-    modes = parser.add_mutually_exclusive_group(required=True)
+    modes = parser.add_mutually_exclusive_group(required=False)
     modes.add_argument("--admission", action="store_true",
                        help="assert legal R13 admission paths and full cycles")
     modes.add_argument("--expect-no-tracks", action="store_true",
                        help="assert zero track_transition events")
+    parser.add_argument("--fusion", action="store_true",
+                        help="assert the Phase 4 relay chain and the "
+                             "edge-triggered risk/emit pairing (D5)")
+    parser.add_argument("--both-tracks", action="store_true",
+                        help="assert both a tracked own_sensor and a tracked "
+                             "v2x_relayed R3 object plus a full relayed r4_tx")
+    parser.add_argument("--r4-schema", type=Path, default=None, metavar="PATH",
+                        help="validate every r4_tx embedded body against the "
+                             "schema at PATH (requires the jsonschema package)")
     parser.add_argument("--confirm-hits", type=positive_int,
                         default=DEFAULT_CONFIRM_HITS,
                         help=f"CONFIRM_HITS the node ran with "
@@ -543,18 +811,23 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def select_mode(args: argparse.Namespace) -> tuple:
-    """(name, handler) for the one selected mode. Additive by design: Phase 4
-    registers its --fusion flag in build_parser() and its row here; nothing
-    else changes."""
+def select_checks(args: argparse.Namespace) -> list:
+    """[(name, handler)] for every selected check, run in registry order.
+    Additive by design: a later phase registers its flag in build_parser()
+    and its row here; nothing else changes. Every handler takes
+    (chk, events, cfg)."""
+    def r4_schema_handler(chk: Checker, events: list,
+                          _cfg: AdmissionConfig) -> None:
+        run_r4_schema(chk, events, args.r4_schema)
+
     registry: tuple = (
         ("admission", args.admission, run_admission),
         ("expect-no-tracks", args.expect_no_tracks, run_expect_no_tracks),
+        ("fusion", args.fusion, run_fusion),
+        ("both-tracks", args.both_tracks, run_both_tracks),
+        ("r4-schema", args.r4_schema is not None, r4_schema_handler),
     )
-    for name, selected, handler in registry:
-        if selected:
-            return name, handler
-    raise AssertionError("argparse required-group guarantees one mode")
+    return [(name, handler) for name, selected, handler in registry if selected]
 
 
 def main(argv: list) -> int:
@@ -567,13 +840,18 @@ def main(argv: list) -> int:
                           gate_enter_m=args.gate_enter_m,
                           gate_exit_m=args.gate_exit_m,
                           min_transitions=args.min_transitions)
-    mode, handler = select_mode(args)
+    checks = select_checks(args)
+    if not checks:
+        parser.error("at least one check flag is required: --admission, "
+                     "--expect-no-tracks, --fusion, --both-tracks or "
+                     "--r4-schema")
+    mode = "+".join(name for name, _ in checks)
 
     source, lines = read_lines(args.logfile)
     log(f"mode={mode} input={source} lines={len(lines)}"
         + (f" confirm_hits={cfg.confirm_hits} gate_enter_m={cfg.gate_enter_m}"
            f" gate_exit_m={cfg.gate_exit_m} min_transitions={cfg.min_transitions}"
-           if mode == "admission" else ""))
+           if args.admission else ""))
 
     events, malformed = extract_events(lines)
     chk = Checker()
@@ -588,7 +866,8 @@ def main(argv: list) -> int:
     check_fields(chk, events)
     check_vocabulary(chk, events)
     check_counters(chk, events)
-    handler(chk, events, cfg)
+    for _, handler in checks:
+        handler(chk, events, cfg)
 
     if chk.failures:
         log(f"FAIL: {chk.failures[0]}")
