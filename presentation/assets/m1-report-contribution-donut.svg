@@ -1,38 +1,15 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 440" width="1120" height="440" font-family="Segoe UI, Segoe UI Variable, Helvetica Neue, Arial, sans-serif">
-<rect width="1120" height="440" fill="#ffffff"/>
-<path d="M 240.00 67.00 A 145 145 0 0 1 325.23 329.31 L 291.73 283.19 A 88 88 0 0 0 240.00 124.00 Z" fill="#034EA2" stroke="#ffffff" stroke-width="2"/>
-<text x="350.3225558902378" y="182.1540286525061" font-size="17" fill="#ffffff" font-weight="700" text-anchor="middle">40%</text>
-<path d="M 325.23 329.31 A 145 145 0 0 1 102.10 256.81 L 156.31 239.19 A 88 88 0 0 0 291.73 283.19 Z" fill="#F37021" stroke="#ffffff" stroke-width="2"/>
-<text x="204.1540286525061" y="328.3225558902378" font-size="17" fill="#19226D" font-weight="700" text-anchor="middle">30%</text>
-<path d="M 102.10 256.81 A 145 145 0 0 1 117.57 134.31 L 165.70 164.85 A 88 88 0 0 0 156.31 239.19 Z" fill="#33B2C1" stroke="#ffffff" stroke-width="2"/>
-<text x="124.91469464752056" y="203.46134490654075" font-size="17" fill="#19226D" font-weight="700" text-anchor="middle">14%</text>
-<path d="M 117.57 134.31 A 145 145 0 0 1 221.83 68.14 L 228.97 124.69 A 88 88 0 0 0 165.70 164.85 Z" fill="#B03A7A" stroke="#ffffff" stroke-width="2"/>
-<text x="177.84409178243635" y="120.05796064176629" font-size="17" fill="#ffffff" font-weight="700" text-anchor="middle">14%</text>
-<path d="M 221.83 68.14 A 145 145 0 0 1 240.00 67.00 L 240.00 124.00 A 88 88 0 0 0 228.97 124.69 Z" fill="#7C8296" stroke="#ffffff" stroke-width="2"/>
-<text x="229.26282116048745" y="46.337429438765554" font-size="14" fill="#19226D" font-weight="700" text-anchor="middle">2%</text>
-<text x="240" y="208" font-size="34" fill="#19226D" font-weight="700" text-anchor="middle">100%</text>
-<text x="240" y="234" font-size="14" fill="#8a8d99" font-weight="400" text-anchor="middle">scope of work</text>
-<text x="490" y="52" font-size="12" fill="#8a8d99" font-weight="700" letter-spacing="1.4">SHARE OF TOTAL EFFORT</text>
-<rect x="490" y="72" width="20.0" height="20" rx="4" fill="#034EA2"/>
-<text x="524" y="88" font-size="20" fill="#19226D" font-weight="700">Minh</text>
-<text x="524" y="110" font-size="14" fill="#3d3d46" font-weight="400">Phases 0 and 1 · half of 3 and 4 · CI, blueprint, review, reporting</text>
-<text x="1040" y="88" font-size="24" fill="#19226D" font-weight="700" text-anchor="end">40%</text>
-<rect x="490" y="134" width="20.0" height="20" rx="4" fill="#F37021"/>
-<text x="524" y="150" font-size="20" fill="#19226D" font-weight="700">Hoang (Brian)</text>
-<text x="524" y="172" font-size="14" fill="#3d3d46" font-weight="400">Phase 2 in full · half of phases 3 and 4</text>
-<text x="1040" y="150" font-size="24" fill="#19226D" font-weight="700" text-anchor="end">30%</text>
-<rect x="490" y="196" width="20.0" height="20" rx="4" fill="#33B2C1"/>
-<text x="524" y="212" font-size="20" fill="#19226D" font-weight="700">Bach</text>
-<text x="524" y="234" font-size="14" fill="#3d3d46" font-weight="400">Phases 5 and 6 · implementation and system testing</text>
-<text x="1040" y="212" font-size="24" fill="#19226D" font-weight="700" text-anchor="end">14%</text>
-<rect x="490" y="258" width="20.0" height="20" rx="4" fill="#B03A7A"/>
-<text x="524" y="274" font-size="20" fill="#19226D" font-weight="700">Vinh</text>
-<text x="524" y="296" font-size="14" fill="#3d3d46" font-weight="400">Phases 5 and 6 · implementation and system testing</text>
-<text x="1040" y="274" font-size="24" fill="#19226D" font-weight="700" text-anchor="end">14%</text>
-<rect x="490" y="320" width="20.0" height="20" rx="4" fill="#7C8296"/>
-<text x="524" y="336" font-size="20" fill="#19226D" font-weight="700">Others</text>
-<text x="524" y="358" font-size="14" fill="#3d3d46" font-weight="400">Shared work not allocated to a named contributor</text>
-<text x="1040" y="336" font-size="24" fill="#19226D" font-weight="700" text-anchor="end">2%</text>
-<line x1="490" y1="392" x2="1120" y2="372" stroke="#DCDEE8"/>
-<text x="490" y="414" font-size="13" fill="#8a8d99" font-weight="400">Effort share, not commit count — each phase weighted by its size before the split.</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 440" width="440" height="440" font-family="Segoe UI, Segoe UI Variable, Helvetica Neue, Arial, sans-serif">
+<rect width="440" height="440" fill="#ffffff"/>
+<path d="M 220.00 72.00 A 148 148 0 0 1 306.99 339.73 L 272.90 292.81 A 90 90 0 0 0 220.00 130.00 Z" fill="#034EA2" stroke="#ffffff" stroke-width="2"/>
+<text x="333.17572543912326" y="189.22697766938126" font-size="17" fill="#ffffff" font-weight="700" text-anchor="middle">40%</text>
+<path d="M 306.99 339.73 A 148 148 0 0 1 79.24 265.73 L 134.40 247.81 A 90 90 0 0 0 272.90 292.81 Z" fill="#F37021" stroke="#ffffff" stroke-width="2"/>
+<text x="183.22697766938126" y="339.1757254391233" font-size="17" fill="#19226D" font-weight="700" text-anchor="middle">30%</text>
+<path d="M 79.24 265.73 A 148 148 0 0 1 95.04 140.70 L 144.01 171.78 A 90 90 0 0 0 134.40 247.81 Z" fill="#33B2C1" stroke="#ffffff" stroke-width="2"/>
+<text x="101.93835054357713" y="211.08534520584783" font-size="17" fill="#19226D" font-weight="700" text-anchor="middle">14%</text>
+<path d="M 95.04 140.70 A 148 148 0 0 1 201.45 73.17 L 208.72 130.71 A 90 90 0 0 0 144.01 171.78 Z" fill="#B03A7A" stroke="#ffffff" stroke-width="2"/>
+<text x="156.23661139749936" y="125.52497686526024" font-size="17" fill="#ffffff" font-weight="700" text-anchor="middle">14%</text>
+<path d="M 201.45 73.17 A 148 148 0 0 1 220.00 72.00 L 220.00 130.00 A 90 90 0 0 0 208.72 130.71 Z" fill="#7C8296" stroke="#ffffff" stroke-width="2"/>
+<text x="209.20003064095812" y="53.33940271033728" font-size="14" fill="#19226D" font-weight="700" text-anchor="middle">2%</text>
+<text x="220" y="218" font-size="36" fill="#19226D" font-weight="700" text-anchor="middle">100%</text>
+<text x="220" y="244" font-size="14" fill="#8a8d99" font-weight="400" text-anchor="middle">scope of work</text>
 </svg>
