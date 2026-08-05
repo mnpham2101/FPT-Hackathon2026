@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Phases 2-4 — ADA ECU Design</title>
-<meta name="description" content="Design deck — the terminology, the blueprint slice the ADA ECU occupies, the three contracts it consumes, owns and produces plus its node-local record schema, its protocol stack and call flows, the two-process node Phases 2, 3 and 4 built, and what Phase 5 inherits">
+<meta name="description" content="Design deck — the terminology, the blueprint slice the ADA ECU occupies, the three contracts it consumes, owns and produces plus its node-local record schema, its protocol stack and libraries, the image each blueprint node runs with the ADA node&#x27;s architecture and call flows, how the node is tested, and what Phase 5 inherits">
 <style>
   :root {
     --fpt-orange: #F37021;
@@ -194,9 +194,10 @@
       <div class="item"><div class="n">01</div><div><h3>Terminology</h3><p>every term this deck uses, before it is used</p></div></div>
       <div class="item"><div class="n">02</div><div><h3>The blueprint</h3><p>five nodes, and the one these three phases build</p></div></div>
       <div class="item"><div class="n">03</div><div><h3>The contracts</h3><p>R2 in, R3 owned, R4 out, and one node-local schema</p></div></div>
-      <div class="item"><div class="n">04</div><div><h3>Protocol stack and call flows</h3><p>three channels, three flow parts</p></div></div>
-      <div class="item"><div class="n">05</div><div><h3>The node</h3><p>what Phases 2, 3 and 4 each made of it</p></div></div>
-      <div class="item"><div class="n">06</div><div><h3>Handoff</h3><p>what Phase 5 and the demo run inherit</p></div></div>
+      <div class="item"><div class="n">04</div><div><h3>Protocol stack and libraries</h3><p>three channels, and the third parties that serve them</p></div></div>
+      <div class="item"><div class="n">05</div><div><h3>The blueprint nodes</h3><p>the image each runs, the ADA node's architecture, and its call flows</p></div></div>
+      <div class="item"><div class="n">06</div><div><h3>Testing</h3><p>the configurations that exercise the node, and the equipment they need</p></div></div>
+      <div class="item"><div class="n">07</div><div><h3>Handoff</h3><p>what Phase 5 and the demo run inherit</p></div></div>
     </div>
     <p class="lead"><em>Task groups, subtasks, execution order and CI runs are Deck B's subject.</em></p>
     <div class="footer"><span>Phases 2-4 — ADA ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
@@ -239,6 +240,7 @@
         <tr><td><strong>B</strong></td><td>The occluder directly ahead of ego, and the only vehicle ego's own camera sees.</td></tr>
         <tr><td><strong>C</strong></td><td>The vehicle beyond B, which ego's camera can never see and which reaches ego only over the V2X relay.</td></tr>
         <tr><td><strong>Bench</strong></td><td>Sanctioned test equipment sharing the Room network, standing in for the outside world.</td></tr>
+        <tr><td><strong>Isolated Room</strong></td><td>A reduced Room in which bench roles stand at the neighbouring nodes' addresses, so this node runs alone.</td></tr>
       </tbody>
     </table>
     <ul class="points">
@@ -304,24 +306,6 @@
   <section class="slide bg-light content">
     <div class="slide-head"><div class="num">02</div><h2>The ADA slice these three phases build</h2></div>
     <div class="imgbox"><img src="../assets/phase2-4-ada-slice.svg" style="height:520px" alt="The ADA node at 10.99.0.12, its two network edges, and the real node or bench stand-in that can sit at each"><div class="cap">The ADA node at 10.99.0.12, its two network edges, and the real node or bench stand-in that can sit at each</div></div>
-    <div class="footer"><span>Phases 2-4 — ADA ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
-  </section>
-  <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">02</div><h2>The four configurations, and what stands at each edge</h2></div>
-    <p class="lead">The same node binary and image in all four; only the neighbours change.</p>
-    <table class="fpt">
-      <thead><tr><th>Configuration</th><th>Upstream of R2</th><th>Downstream of R4</th><th>What it proves</th></tr></thead>
-      <tbody>
-        <tr><td><strong>Unit</strong></td><td>injected values and fixtures</td><td>assertions</td><td>Gate boundaries, the band table, the composed geometry and the pinhole arithmetic against hand-computed values</td></tr>
-        <tr><td><strong>Fixture-driven core</strong></td><td>a recorded own-sensor stream through the real reader, plus real datagrams on the real socket</td><td>a loopback receiver</td><td>The whole core runs with no model and no clip</td></tr>
-        <tr><td><strong>Isolated Room</strong></td><td>bench emitter at <code>10.99.0.11</code></td><td>bench sink at <code>10.99.0.13</code></td><td>The node deployed, on the platform's network, with both neighbours mocked</td></tr>
-        <tr><td><strong>Full blueprint</strong></td><td>the real Scenario Player and V2X ECU</td><td>the IVI Skycraft node</td><td>The same observables with nothing mocked</td></tr>
-      </tbody>
-    </table>
-    <ul class="points">
-      <li><strong>Expected output is identical in the last two</strong>, because the node's image, command, capabilities and environment are unchanged between them. A difference is a finding about a neighbour.</li>
-      <li><strong>Only the first two have been exercised.</strong> The deployed Room and the full blueprint are configurations this design is built for, not results it can report.</li>
-    </ul>
     <div class="footer"><span>Phases 2-4 — ADA ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
@@ -428,28 +412,13 @@
   </section>
   <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
     <div class="sec-num">04</div>
-    <h1>Protocol stack and call flows</h1>
+    <h1>Protocol stack and libraries</h1>
     <div class="rule"></div>
     <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
   </section>
   <section class="slide bg-light content">
     <div class="slide-head"><div class="num">04</div><h2>The node's protocol stack</h2></div>
     <div class="imgbox"><img src="../assets/phase2-4-ada-protocol-stack.svg" style="height:520px" alt="The ADA node&#x27;s protocol stack: three channels — R2 in, the detector&#x27;s R3 over standard output, R4 out — with the encoding, library, transport, network and link layers each rests on"><div class="cap">The ADA node&#x27;s protocol stack: three channels — R2 in, the detector&#x27;s R3 over standard output, R4 out — with the encoding, library, transport, network and link layers each rests on</div></div>
-    <div class="footer"><span>Phases 2-4 — ADA ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
-  </section>
-  <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">04</div><h2>Call flow, part 1 — bring-up</h2></div>
-    <div class="imgbox"><img src="../assets/phase2-4-ada-callflow-1.svg" style="height:520px" alt="Bring-up: the node configuration reaches the composition root, configuration is read once, the plugins are registered, the socket is bound, and the detector subprocess is spawned"><div class="cap">Bring-up: the node configuration reaches the composition root, configuration is read once, the plugins are registered, the socket is bound, and the detector subprocess is spawned</div></div>
-    <div class="footer"><span>Phases 2-4 — ADA ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
-  </section>
-  <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">04</div><h2>Call flow, part 2 — two perception paths, one store</h2></div>
-    <div class="imgbox"><img src="../assets/phase2-4-ada-callflow-2.svg" style="height:520px" alt="Ingest: a detector line and a relayed datagram arrive on separate threads, share one bounded queue, are parsed into the same frozen object, and meet at a single writer"><div class="cap">Ingest: a detector line and a relayed datagram arrive on separate threads, share one bounded queue, are parsed into the same frozen object, and meet at a single writer</div></div>
-    <div class="footer"><span>Phases 2-4 — ADA ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
-  </section>
-  <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">04</div><h2>Call flow, part 3 — the fusion tick and the warning</h2></div>
-    <div class="imgbox"><img src="../assets/phase2-4-ada-callflow-3.svg" style="height:520px" alt="The fusion tick: expiry, then the assessment reading the store and the record table, composing the range and the band, and the output stage building and sending one warning datagram"><div class="cap">The fusion tick: expiry, then the assessment reading the store and the record table, composing the range and the band, and the output stage building and sending one warning datagram</div></div>
     <div class="footer"><span>Phases 2-4 — ADA ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
@@ -477,13 +446,45 @@
   </section>
   <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
     <div class="sec-num">05</div>
-    <h1>The node these three phases develop</h1>
+    <h1>The blueprint nodes</h1>
     <div class="rule"></div>
     <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">05</div><h2>The component architecture</h2></div>
-    <div class="imgbox"><img src="../assets/phase2-4-ada-components.svg" style="height:520px" alt="The ADA node&#x27;s components: the C++ core in three layers with its seams, and the Python detector subprocess joined only by argument vector, exit code and standard output"><div class="cap">The ADA node&#x27;s components: the C++ core in three layers with its seams, and the Python detector subprocess joined only by argument vector, exit code and standard output</div></div>
+    <div class="slide-head"><div class="num">05</div><h2>Delivered images</h2></div>
+    <p class="lead">One row per node of the blueprint. Only the third is built by these phases; the bench below it is test equipment rather than a node.</p>
+    <table class="fpt">
+      <thead><tr><th>Node</th><th>Image</th><th>Role</th><th>Messages</th><th>State after Phases 2-4</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Scenario Player</strong></td><td><code>m1-scenario-player:latest</code></td><td>Bench — one object update every 100 ms</td><td>Produces R1</td><td>Phase 1's node, unchanged. Absent from the isolated Room</td></tr>
+        <tr><td><strong>V2X ECU</strong></td><td><code>m1-v2x-ecu:latest</code></td><td>Relay — decode, validate, deduplicate, forward</td><td>Consumes R1, produces R2</td><td>Phase 1's node, unchanged. A bench role stands at its address in the isolated Room</td></tr>
+        <tr><td><strong>ADA ECU</strong></td><td><code>m1-ada-ecu:latest</code></td><td>Perception and fusion — the node these phases build</td><td>Consumes R2, holds R3, produces R4</td><td>One image, two processes: the C++17 core and the Python detector subprocess</td></tr>
+        <tr><td><strong>IVI ECU</strong></td><td>None — an APK on the Skycraft node</td><td>Display — the god view</td><td>Consumes R4</td><td><strong>Not built here.</strong> Phase 5's work; a bench role binds its port in the isolated Room</td></tr>
+        <tr><td><strong>Ethernet Bridge</strong></td><td>None — a platform node type with no image</td><td>Joins every node's <code>ethernet</code> pin into one L2 segment</td><td>Carries all three flows</td><td>Unchanged since Phase 0</td></tr>
+        <tr><td><em>ADA bench</em></td><td><code>m1-ada-bench:latest</code>, from <code>tools/ada-bench/</code></td><td>Test equipment — two roles selected by <code>ROLE</code></td><td>Emits R2 as <code>v2x_mock</code>, receives R4 as <code>ivi_mock</code></td><td>Built by these phases. <strong>Not a node of the blueprint</strong> — it stands in for two</td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>The two stand-in roles are one image</strong>, and nothing on this node's side changes when a stand-in replaces a neighbour.</li>
+    </ul>
+    <div class="footer"><span>Phases 2-4 — ADA ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">05</div><h2>Component architecture — the data path</h2></div>
+    <div class="imgbox"><img src="../assets/phase2-4-ada-arch-a.svg" style="height:475px" alt="The ADA node&#x27;s data path: the V2X ECU interface, the detector subprocess, the observer and parsers, the R3 store, the assessment subsystem and the output stage reaching the IVI interface"><div class="cap">The ADA node&#x27;s data path: the V2X ECU interface, the detector subprocess, the observer and parsers, the R3 store, the assessment subsystem and the output stage reaching the IVI interface</div></div>
+    <div class="footer"><span>Phases 2-4 — ADA ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">05</div><h2>Component architecture — shared edges, artifacts and evidence</h2></div>
+    <div class="imgbox"><img src="../assets/phase2-4-ada-arch-b.svg" style="height:390px" alt="The rest of the node: the composition root, the sole socket holder, the configuration reader and the event writer; the capture pair; the artifacts baked into the image; and the host-side checks and the View Log outside it"><div class="cap">The rest of the node: the composition root, the sole socket holder, the configuration reader and the event writer; the capture pair; the artifacts baked into the image; and the host-side checks and the View Log outside it</div></div>
+    <div class="footer"><span>Phases 2-4 — ADA ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">05</div><h2>Reading the component diagrams</h2></div>
+    <div class="imgbox"><img src="../assets/phase1-des-arch-legend.svg" style="height:470px" alt="The legend of the component diagrams: the fill colours naming a component&#x27;s role, and the notation for dependency, realization, node frames and test equipment"><div class="cap">The legend of the component diagrams: the fill colours naming a component&#x27;s role, and the notation for dependency, realization, node frames and test equipment</div></div>
+    <ul class="points">
+      <li><strong>Both halves above are one diagram</strong>, cropped from the design's own component map. The copy in <code>ADA_ECU/doc/</code> is the authority.</li>
+    </ul>
     <div class="footer"><span>Phases 2-4 — ADA ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
@@ -500,7 +501,7 @@
     </table>
     <ul class="points">
       <li><strong>No layer is collapsed:</strong> admission cannot reach a socket, a plugin cannot send a datagram, and the detector cannot reach the store — its only route in is one line through a parser.</li>
-      <li><strong>Four named components are not placed by that table</strong> — the socket holder, the plugin registry, the frame-source seam and the detector's own configuration reader. § Open items.</li>
+      <li><strong>Four named components sit in no row above</strong> — the socket holder, the plugin registry, the frame-source seam and the detector's configuration reader. The component diagram colours the first three; the table is what is incomplete. § Open items.</li>
     </ul>
     <div class="footer"><span>Phases 2-4 — ADA ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
@@ -546,14 +547,8 @@
     </table>
     <ul class="points">
       <li><strong>The mocks are stimulus, never a branch.</strong> A recorded own-sensor stream reaches the core through the <em>real</em> reader, and mock relayed traffic arrives as real datagrams on the real socket — so there is no mock code path anywhere in <code>src/</code>.</li>
-      <li><strong>Test equipment, labelled as such:</strong> <code>ADA_ECU/tests/fixtures/own_sensor_mock.jsonl</code> and <code>ADA_ECU/tools/mock_v2x_sender.py</code>. The detector retires the first; a real V2X ECU or a bench emitter retires the second.</li>
       <li><strong>"No input yields no tracks" is a configuration</strong>, not a code path: the detector disabled and no traffic arriving.</li>
     </ul>
-    <div class="footer"><span>Phases 2-4 — ADA ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
-  </section>
-  <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">05</div><h2>Phase 3 — the detector subprocess</h2></div>
-    <div class="imgbox"><img src="../assets/phase2-4-ada-detector.svg" style="height:520px" alt="The detector: the committed clip or the synthetic fixture behind one frame-source seam, then pacing, inference, range estimation and association, emitting R3 lines on standard output"><div class="cap">The detector: the committed clip or the synthetic fixture behind one frame-source seam, then pacing, inference, range estimation and association, emitting R3 lines on standard output</div></div>
     <div class="footer"><span>Phases 2-4 — ADA ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
@@ -573,11 +568,6 @@
       <li><strong>The range estimate is calibrated, not assumed.</strong> The two camera constants ship at 2.6 m and 34.4° after a retune against this clip; the default car width put B inside the gate from the first frame. The gate itself was not moved, and never is.</li>
       <li><strong>A 10 s clip means every long-run behaviour depends on looping</strong>, and the gap across a wrap must stay under the track timeout or ego's own B track expires between cycles.</li>
     </ul>
-    <div class="footer"><span>Phases 2-4 — ADA ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
-  </section>
-  <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">05</div><h2>The R13 admission machine</h2></div>
-    <div class="imgbox"><img src="../assets/phase2-4-ada-admission.svg" style="height:520px" alt="The admission machine: absent from the store, tentative and tracked, with the enter gate, the confirm count, the wider exit gate, and the silence timeout that erases a track from either state"><div class="cap">The admission machine: absent from the store, tentative and tracked, with the enter gate, the confirm count, the wider exit gate, and the silence timeout that erases a track from either state</div></div>
     <div class="footer"><span>Phases 2-4 — ADA ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
@@ -642,7 +632,85 @@
     <div class="footer"><span>Phases 2-4 — ADA ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">05</div><h2>Test equipment, and the observation surface</h2></div>
+    <div class="slide-head"><div class="num">05</div><h2>Internal call flow, part 1 — bring-up</h2></div>
+    <div class="imgbox"><img src="../assets/phase2-4-ada-callflow-1.svg" style="height:520px" alt="Bring-up: the node configuration reaches the composition root, configuration is read once, the plugins are registered, the socket is bound, and the detector subprocess is spawned"><div class="cap">Bring-up: the node configuration reaches the composition root, configuration is read once, the plugins are registered, the socket is bound, and the detector subprocess is spawned</div></div>
+    <div class="footer"><span>Phases 2-4 — ADA ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">05</div><h2>Internal call flow, part 2 — two perception paths, one store</h2></div>
+    <div class="imgbox"><img src="../assets/phase2-4-ada-callflow-2.svg" style="height:520px" alt="Ingest: a detector line and a relayed datagram arrive on separate threads, share one bounded queue, are parsed into the same frozen object, and meet at a single writer"><div class="cap">Ingest: a detector line and a relayed datagram arrive on separate threads, share one bounded queue, are parsed into the same frozen object, and meet at a single writer</div></div>
+    <div class="footer"><span>Phases 2-4 — ADA ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">05</div><h2>The R13 admission machine</h2></div>
+    <div class="imgbox"><img src="../assets/phase2-4-ada-admission.svg" style="height:520px" alt="The admission machine: absent from the store, tentative and tracked, with the enter gate, the confirm count, the wider exit gate, and the silence timeout that erases a track from either state"><div class="cap">The admission machine: absent from the store, tentative and tracked, with the enter gate, the confirm count, the wider exit gate, and the silence timeout that erases a track from either state</div></div>
+    <div class="footer"><span>Phases 2-4 — ADA ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">05</div><h2>Internal call flow, part 3 — the fusion tick and the warning</h2></div>
+    <div class="imgbox"><img src="../assets/phase2-4-ada-callflow-3.svg" style="height:520px" alt="The fusion tick: expiry, then the assessment reading the store and the record table, composing the range and the band, and the output stage building and sending one warning datagram"><div class="cap">The fusion tick: expiry, then the assessment reading the store and the record table, composing the range and the band, and the output stage building and sending one warning datagram</div></div>
+    <div class="footer"><span>Phases 2-4 — ADA ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">05</div><h2>Internal call flow — inside the detector subprocess</h2></div>
+    <div class="imgbox"><img src="../assets/phase2-4-ada-detector.svg" style="height:520px" alt="The detector: the committed clip or the synthetic fixture behind one frame-source seam, then pacing, inference, range estimation and association, emitting R3 lines on standard output"><div class="cap">The detector: the committed clip or the synthetic fixture behind one frame-source seam, then pacing, inference, range estimation and association, emitting R3 lines on standard output</div></div>
+    <div class="footer"><span>Phases 2-4 — ADA ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">05</div><h2>The flow between the nodes</h2></div>
+    <div class="imgbox"><img src="../assets/phase2-4-ada-callflow-nodes.svg" style="height:520px" alt="This phase&#x27;s fidelity: the CPM reaches the V2X ECU, the object message reaches this node, and one warning leaves for the display"><div class="cap">This phase&#x27;s fidelity: the CPM reaches the V2X ECU, the object message reaches this node, and one warning leaves for the display</div></div>
+    <div class="footer"><span>Phases 2-4 — ADA ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">06</div>
+    <h1>Testing</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">06</div><h2>The four configurations that exercise the node</h2></div>
+    <p class="lead">The same node binary and image in all four; only the neighbours change.</p>
+    <table class="fpt">
+      <thead><tr><th>Configuration</th><th>Upstream of R2</th><th>Downstream of R4</th><th>What it proves</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Unit</strong></td><td>injected values and fixtures</td><td>assertions</td><td>Gate boundaries, the band table, the composed geometry and the pinhole arithmetic against hand-computed values</td></tr>
+        <tr><td><strong>Fixture-driven core</strong></td><td>a recorded own-sensor stream through the real reader, plus real datagrams on the real socket</td><td>a loopback receiver</td><td>The whole core runs with no model and no clip</td></tr>
+        <tr><td><strong>Isolated Room</strong></td><td>bench emitter at <code>10.99.0.11</code></td><td>bench sink at <code>10.99.0.13</code></td><td>The node deployed, on the platform's network, with both neighbours mocked</td></tr>
+        <tr><td><strong>Full blueprint</strong></td><td>the real Scenario Player and V2X ECU</td><td>the IVI Skycraft node</td><td>The same observables with nothing mocked</td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>Expected output is identical in the last two</strong>, because the node's image, command, capabilities and environment are unchanged between them. A difference is a finding about a neighbour.</li>
+      <li><strong>Only the first two have been exercised.</strong> The deployed Room and the full blueprint are configurations this design is built for, not results it can report.</li>
+      <li><strong>A fake detector cannot prove the real one detects</strong>, which is why the clip runs against the actual model rather than against the synthetic fixture.</li>
+    </ul>
+    <div class="footer"><span>Phases 2-4 — ADA ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">06</div><h2>What a run must show</h2></div>
+    <p class="lead">Each line is one component's output, and together they are the acceptance evidence.</p>
+    <table class="fpt">
+      <thead><tr><th>Observable</th><th>Produced by</th></tr></thead>
+      <tbody>
+        <tr><td><code>detector_spawn</code>, then one own-sensor ingest line per detection per sampled frame</td><td>the detector reader, and the detector's emitter</td></tr>
+        <tr><td><code>r2_ingest</code> carrying the received body, at 90 % or more of the producer's send count</td><td>the listener, the R2 parser and the event writer</td></tr>
+        <tr><td>a <code>parse_reject</code> count of zero against a conforming producer</td><td>both parsers</td></tr>
+        <tr><td>a transition to <code>tentative</code> then <code>tracked</code>, once for the relayed C and once for the own-sensor B</td><td>the admission machine</td></tr>
+        <tr><td>zero own-sensor entries claiming a relayed source, and zero relayed entries claiming an own-sensor identity</td><td>structural — neither namespace can mint the other's</td></tr>
+        <tr><td><code>assessment</code> carrying the composed range, the time to collision and the rationale</td><td>the chained-collision plugin</td></tr>
+        <tr><td><code>r4_tx</code> carrying the emitted warning body, with <code>object.source</code> <code>v2x_relayed</code></td><td>the warning builder and the sender</td></tr>
+        <tr><td>a capture line for <code>10.99.0.12</code> → <code>10.99.0.13:47300</code></td><td>the capture script</td></tr>
+        <tr><td>with C held beyond the gate: ingest still counting up, and no relayed transition at all</td><td>the gate — the negative case</td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong><code>r4_tx</code> is the strongest single line.</strong> It proves both tracks existed at the same instant, which is Phase 4's output acceptance.</li>
+      <li><strong>Six further checks read a finished run offline</strong> — the two tracks' relative ages, both stimulus rates, and the first warning's onset.</li>
+    </ul>
+    <div class="footer"><span>Phases 2-4 — ADA ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">06</div><h2>Test equipment, and the observation surface</h2></div>
     <p class="lead">None of the equipment below ships in the node image, and none of it is on the data path.</p>
     <table class="fpt">
       <thead><tr><th></th><th>What it is</th></tr></thead>
@@ -651,7 +719,7 @@
         <tr><td><strong><code>ADA_ECU/tools/mock_v2x_sender.py</code></strong></td><td>A relayed-message emitter driving the socket from the two committed bench scenarios</td></tr>
         <tr><td><strong><code>tools/ada-bench/</code></strong> at the repository root</td><td>One image, two roles: the emitter standing in at <code>10.99.0.11</code>, the checking sink standing in at <code>10.99.0.13</code></td></tr>
         <tr><td><strong><code>ADA_ECU/tools/make_sample_video.py</code></strong></td><td>A synthetic clip proving the decode path; it cannot produce detection evidence</td></tr>
-        <tr><td><strong><code>ADA_ECU/tools/</code> readers</strong></td><td>Host-side readers of this node's own output: the zero-C check, the event-stream check, the collision-risk event list, the capture extractor</td></tr>
+        <tr><td><strong><code>ADA_ECU/tools/</code> readers</strong></td><td>Host-side readers of this node's own output: the zero-C check, the run-alignment check, the collision-risk event list, the capture extractor</td></tr>
       </tbody>
     </table>
     <ul class="points">
@@ -661,32 +729,14 @@
     </ul>
     <div class="footer"><span>Phases 2-4 — ADA ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
-  <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">05</div><h2>Open items, and flagged contradictions</h2></div>
-    <p class="lead">Reported rather than resolved. Each needs a decision, not an implementation choice.</p>
-    <table class="fpt">
-      <thead><tr><th></th><th>Item</th></tr></thead>
-      <tbody>
-        <tr><td><strong>Contract versus design</strong></td><td>The frozen R4 schema says <code>geometry.vehicleC</code> is null <em>until C is first tracked</em>; this node's design says null <em>exactly when C's track has been erased</em>. Contract-first means the schema wins, and both readings are legitimate nulls — the one-sided design wording is the defect</td></tr>
-        <tr><td><strong>Awaiting ratification</strong></td><td>The five risk values, and the two admission counters, whose intent the requirement fixes but whose form this design chose</td></tr>
-        <tr><td><strong>A count became a timeout</strong></td><td>The plan's missed-update count is realized as a wall-clock timeout, because "its messages stop" is a time condition a counter cannot express. Intent unchanged, form changed — flagged, not absorbed</td></tr>
-        <tr><td><strong>Event vocabulary drift</strong></td><td>A thirteenth event name exists for the disabled-detector case, and the machine emits a transition only on a state <em>change</em> rather than on every edge as the design's diagram note states</td></tr>
-        <tr><td><strong>Payload not designated</strong></td><td>The expiry event's payload shape is implementation-chosen; the design names the event but not its fields</td></tr>
-        <tr><td><strong>Paths beyond the tree</strong></td><td>Four host-side scripts and the tests directories that hold them exist outside the designated folder tree, as design-consistent additions</td></tr>
-        <tr><td><strong>Unplaced components</strong></td><td>Four named components sit in no layer of the design's own separation table</td></tr>
-        <tr><td><strong>Requirement numbers</strong></td><td>R20, R21 and R22 are enumerated in a later report and not yet ratified; the pacer is built to this design's designation of it</td></tr>
-      </tbody>
-    </table>
-    <div class="footer"><span>Phases 2-4 — ADA ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
-  </section>
   <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
-    <div class="sec-num">06</div>
+    <div class="sec-num">07</div>
     <h1>Handoff</h1>
     <div class="rule"></div>
     <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">06</div><h2>What Phase 5 and the demo run inherit</h2></div>
+    <div class="slide-head"><div class="num">07</div><h2>What Phase 5 and the demo run inherit</h2></div>
     <p class="lead">Written as the next stage's input list.</p>
     <table class="fpt">
       <thead><tr><th></th><th>What may now be assumed</th></tr></thead>
@@ -706,7 +756,25 @@
     <div class="footer"><span>Phases 2-4 — ADA ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">06</div><h2>What deliberately did not ship</h2></div>
+    <div class="slide-head"><div class="num">07</div><h2>Open items, and flagged contradictions</h2></div>
+    <p class="lead">Reported rather than resolved. Each needs a decision, not an implementation choice.</p>
+    <table class="fpt">
+      <thead><tr><th></th><th>Item</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Contract versus design</strong></td><td>The frozen R4 schema says <code>geometry.vehicleC</code> is null <em>until C is first tracked</em>; this node's design says null <em>exactly when C's track has been erased</em>. Contract-first means the schema wins, and both readings are legitimate nulls — the one-sided design wording is the defect</td></tr>
+        <tr><td><strong>Awaiting ratification</strong></td><td>The five risk values, and the two admission counters, whose intent the requirement fixes but whose form this design chose</td></tr>
+        <tr><td><strong>A count became a timeout</strong></td><td>The plan's missed-update count is realized as a wall-clock timeout, because "its messages stop" is a time condition a counter cannot express. Intent unchanged, form changed — flagged, not absorbed</td></tr>
+        <tr><td><strong>Event vocabulary drift</strong></td><td>A thirteenth event name exists for the disabled-detector case, and the machine emits a transition only on a state <em>change</em> rather than on every edge as the design's diagram note states</td></tr>
+        <tr><td><strong>Payload not designated</strong></td><td>The expiry event's payload shape is implementation-chosen; the design names the event but not its fields</td></tr>
+        <tr><td><strong>Paths beyond the tree</strong></td><td>Four host-side scripts and the tests directories that hold them exist outside the designated folder tree, as design-consistent additions</td></tr>
+        <tr><td><strong>Placement gaps</strong></td><td>Four components the design names sit in no row of its MVC table. Its component diagram places three of them, so the two halves of the design disagree about where they belong</td></tr>
+        <tr><td><strong>Requirement numbers</strong></td><td>R20, R21 and R22 are enumerated in a later report and not yet ratified; the pacer is built to this design's designation of it</td></tr>
+      </tbody>
+    </table>
+    <div class="footer"><span>Phases 2-4 — ADA ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">07</div><h2>What deliberately did not ship</h2></div>
     <p class="lead">Stated plainly, so nothing is assumed present that is not.</p>
     <ul class="points">
       <li><strong>The periodic awareness state.</strong> The binding carries the message and the rate key is validated, but no path emits it and the default leaves it off. R15 words it optional and no acceptance criterion depends on it.</li>

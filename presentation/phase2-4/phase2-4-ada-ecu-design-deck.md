@@ -3,7 +3,7 @@ marp: true
 theme: default
 paginate: true
 title: Phases 2-4 — ADA ECU Design
-description: Design deck — the terminology, the blueprint slice the ADA ECU occupies, the three contracts it consumes, owns and produces plus its node-local record schema, its protocol stack and call flows, the two-process node Phases 2, 3 and 4 built, and what Phase 5 inherits
+description: Design deck — the terminology, the blueprint slice the ADA ECU occupies, the three contracts it consumes, owns and produces plus its node-local record schema, its protocol stack and libraries, the image each blueprint node runs with the ADA node's architecture and call flows, how the node is tested, and what Phase 5 inherits
 deck: Phases 2-4 — ADA ECU Design · FPT Hackathon 2026
 ---
 
@@ -29,9 +29,10 @@ Sources: [ada-ecu-hld.md](../../ADA_ECU/doc/ada-ecu-hld.md) · [ada-ecu-design-d
 1. **Terminology** — every term this deck uses, before it is used
 2. **The blueprint** — five nodes, and the one these three phases build
 3. **The contracts** — R2 in, R3 owned, R4 out, and one node-local schema
-4. **Protocol stack and call flows** — three channels, three flow parts
-5. **The node** — what Phases 2, 3 and 4 each made of it
-6. **Handoff** — what Phase 5 and the demo run inherit
+4. **Protocol stack and libraries** — three channels, and the third parties that serve them
+5. **The blueprint nodes** — the image each runs, the ADA node's architecture, and its call flows
+6. **Testing** — the configurations that exercise the node, and the equipment they need
+7. **Handoff** — what Phase 5 and the demo run inherit
 
 *Task groups, subtasks, execution order and CI runs are Deck B's subject.*
 
@@ -75,6 +76,7 @@ Terms this project defined or narrowed. Each carries a specific meaning here.
 | **B** | The occluder directly ahead of ego, and the only vehicle ego's own camera sees. |
 | **C** | The vehicle beyond B, which ego's camera can never see and which reaches ego only over the V2X relay. |
 | **Bench** | Sanctioned test equipment sharing the Room network, standing in for the outside world. |
+| **Isolated Room** | A reduced Room in which bench roles stand at the neighbouring nodes' addresses, so this node runs alone. |
 
 - **The god view is the display's overhead drawing of the three vehicles**, and "ghost C" is its name for the relayed one. This node composes C's position; drawing it is the IVI's work.
 
@@ -138,22 +140,6 @@ One blueprint is one vehicle — ego. Four nodes carry a role; the fifth joins t
 # The ADA slice these three phases build
 
 ![h:520 The ADA node at 10.99.0.12, its two network edges, and the real node or bench stand-in that can sit at each](../assets/phase2-4-ada-slice.svg)
-
----
-
-# The four configurations, and what stands at each edge
-
-The same node binary and image in all four; only the neighbours change.
-
-| Configuration | Upstream of R2 | Downstream of R4 | What it proves |
-| ------------- | -------------- | ---------------- | -------------- |
-| **Unit** | injected values and fixtures | assertions | Gate boundaries, the band table, the composed geometry and the pinhole arithmetic against hand-computed values |
-| **Fixture-driven core** | a recorded own-sensor stream through the real reader, plus real datagrams on the real socket | a loopback receiver | The whole core runs with no model and no clip |
-| **Isolated Room** | bench emitter at `10.99.0.11` | bench sink at `10.99.0.13` | The node deployed, on the platform's network, with both neighbours mocked |
-| **Full blueprint** | the real Scenario Player and V2X ECU | the IVI Skycraft node | The same observables with nothing mocked |
-
-- **Expected output is identical in the last two**, because the node's image, command, capabilities and environment are unchanged between them. A difference is a finding about a neighbour.
-- **Only the first two have been exercised.** The deployed Room and the full blueprint are configurations this design is built for, not results it can report.
 
 ---
 
@@ -259,31 +245,13 @@ One authority at the repository root, and a byte-identical working copy inside e
 
 ![bg](../assets/bg-navy-motif.png)
 
-# 04 · Protocol stack and call flows
+# 04 · Protocol stack and libraries
 
 ---
 
 # The node's protocol stack
 
 ![h:520 The ADA node's protocol stack: three channels — R2 in, the detector's R3 over standard output, R4 out — with the encoding, library, transport, network and link layers each rests on](../assets/phase2-4-ada-protocol-stack.svg)
-
----
-
-# Call flow, part 1 — bring-up
-
-![h:520 Bring-up: the node configuration reaches the composition root, configuration is read once, the plugins are registered, the socket is bound, and the detector subprocess is spawned](../assets/phase2-4-ada-callflow-1.svg)
-
----
-
-# Call flow, part 2 — two perception paths, one store
-
-![h:520 Ingest: a detector line and a relayed datagram arrive on separate threads, share one bounded queue, are parsed into the same frozen object, and meet at a single writer](../assets/phase2-4-ada-callflow-2.svg)
-
----
-
-# Call flow, part 3 — the fusion tick and the warning
-
-![h:520 The fusion tick: expiry, then the assessment reading the store and the record table, composing the range and the band, and the output stage building and sending one warning datagram](../assets/phase2-4-ada-callflow-3.svg)
 
 ---
 
@@ -312,13 +280,44 @@ Nine third-party dependencies, each performing one function. All open source and
 
 ![bg](../assets/bg-navy-motif.png)
 
-# 05 · The node these three phases develop
+# 05 · The blueprint nodes
 
 ---
 
-# The component architecture
+# Delivered images
 
-![h:520 The ADA node's components: the C++ core in three layers with its seams, and the Python detector subprocess joined only by argument vector, exit code and standard output](../assets/phase2-4-ada-components.svg)
+One row per node of the blueprint. Only the third is built by these phases; the bench below it is test equipment rather than a node.
+
+| Node | Image | Role | Messages | State after Phases 2-4 |
+| ---- | ----- | ---- | -------- | ---------------------- |
+| **Scenario Player** | `m1-scenario-player:latest` | Bench — one object update every 100 ms | Produces R1 | Phase 1's node, unchanged. Absent from the isolated Room |
+| **V2X ECU** | `m1-v2x-ecu:latest` | Relay — decode, validate, deduplicate, forward | Consumes R1, produces R2 | Phase 1's node, unchanged. A bench role stands at its address in the isolated Room |
+| **ADA ECU** | `m1-ada-ecu:latest` | Perception and fusion — the node these phases build | Consumes R2, holds R3, produces R4 | One image, two processes: the C++17 core and the Python detector subprocess |
+| **IVI ECU** | None — an APK on the Skycraft node | Display — the god view | Consumes R4 | **Not built here.** Phase 5's work; a bench role binds its port in the isolated Room |
+| **Ethernet Bridge** | None — a platform node type with no image | Joins every node's `ethernet` pin into one L2 segment | Carries all three flows | Unchanged since Phase 0 |
+| *ADA bench* | `m1-ada-bench:latest`, from `tools/ada-bench/` | Test equipment — two roles selected by `ROLE` | Emits R2 as `v2x_mock`, receives R4 as `ivi_mock` | Built by these phases. **Not a node of the blueprint** — it stands in for two |
+
+- **The two stand-in roles are one image**, and nothing on this node's side changes when a stand-in replaces a neighbour.
+
+---
+
+# Component architecture — the data path
+
+![h:475 The ADA node's data path: the V2X ECU interface, the detector subprocess, the observer and parsers, the R3 store, the assessment subsystem and the output stage reaching the IVI interface](../assets/phase2-4-ada-arch-a.svg)
+
+---
+
+# Component architecture — shared edges, artifacts and evidence
+
+![h:390 The rest of the node: the composition root, the sole socket holder, the configuration reader and the event writer; the capture pair; the artifacts baked into the image; and the host-side checks and the View Log outside it](../assets/phase2-4-ada-arch-b.svg)
+
+---
+
+# Reading the component diagrams
+
+![h:470 The legend of the component diagrams: the fill colours naming a component's role, and the notation for dependency, realization, node frames and test equipment](../assets/phase1-des-arch-legend.svg)
+
+- **Both halves above are one diagram**, cropped from the design's own component map. The copy in `ADA_ECU/doc/` is the authority.
 
 ---
 
@@ -334,7 +333,7 @@ Each component sits in one layer, held there by the rule in the right-hand colum
 | **View** | none — the node is headless | The rendering surface is the IVI's god view; the local observation surface is the event stream |
 
 - **No layer is collapsed:** admission cannot reach a socket, a plugin cannot send a datagram, and the detector cannot reach the store — its only route in is one line through a parser.
-- **Four named components are not placed by that table** — the socket holder, the plugin registry, the frame-source seam and the detector's own configuration reader. § Open items.
+- **Four named components sit in no row above** — the socket holder, the plugin registry, the frame-source seam and the detector's configuration reader. The component diagram colours the first three; the table is what is incomplete. § Open items.
 
 ---
 
@@ -380,14 +379,7 @@ The whole pipeline standing up before any machine learning, driven by external s
 | The composition root, the image and the entry point | One startup path; any failure becomes one logged line and a non-zero exit |
 
 - **The mocks are stimulus, never a branch.** A recorded own-sensor stream reaches the core through the *real* reader, and mock relayed traffic arrives as real datagrams on the real socket — so there is no mock code path anywhere in `src/`.
-- **Test equipment, labelled as such:** `ADA_ECU/tests/fixtures/own_sensor_mock.jsonl` and `ADA_ECU/tools/mock_v2x_sender.py`. The detector retires the first; a real V2X ECU or a bench emitter retires the second.
 - **"No input yields no tracks" is a configuration**, not a code path: the detector disabled and no traffic arriving.
-
----
-
-# Phase 3 — the detector subprocess
-
-![h:520 The detector: the committed clip or the synthetic fixture behind one frame-source seam, then pacing, inference, range estimation and association, emitting R3 lines on standard output](../assets/phase2-4-ada-detector.svg)
 
 ---
 
@@ -406,12 +398,6 @@ The detector's only input is a file inside the image. That is a platform finding
 - **The `video` pin was rejected**, and its cost is the reason: no C++ client, an undocumented frame header, and 590 Mbit/s of raw pixels for content a local file serves at 0.5 MB/s — plus an R5/R6 re-freeze.
 - **The range estimate is calibrated, not assumed.** The two camera constants ship at 2.6 m and 34.4° after a retune against this clip; the default car width put B inside the gate from the first frame. The gate itself was not moved, and never is.
 - **A 10 s clip means every long-run behaviour depends on looping**, and the gap across a wrap must stay under the track timeout or ego's own B track expires between cycles.
-
----
-
-# The R13 admission machine
-
-![h:520 The admission machine: absent from the store, tentative and tracked, with the enter gate, the confirm count, the wider exit gate, and the silence timeout that erases a track from either state](../assets/phase2-4-ada-admission.svg)
 
 ---
 
@@ -470,6 +456,88 @@ No tunable appears as a literal. The core reads its values in one place, the det
 
 ---
 
+# Internal call flow, part 1 — bring-up
+
+![h:520 Bring-up: the node configuration reaches the composition root, configuration is read once, the plugins are registered, the socket is bound, and the detector subprocess is spawned](../assets/phase2-4-ada-callflow-1.svg)
+
+---
+
+# Internal call flow, part 2 — two perception paths, one store
+
+![h:520 Ingest: a detector line and a relayed datagram arrive on separate threads, share one bounded queue, are parsed into the same frozen object, and meet at a single writer](../assets/phase2-4-ada-callflow-2.svg)
+
+---
+
+# The R13 admission machine
+
+![h:520 The admission machine: absent from the store, tentative and tracked, with the enter gate, the confirm count, the wider exit gate, and the silence timeout that erases a track from either state](../assets/phase2-4-ada-admission.svg)
+
+---
+
+# Internal call flow, part 3 — the fusion tick and the warning
+
+![h:520 The fusion tick: expiry, then the assessment reading the store and the record table, composing the range and the band, and the output stage building and sending one warning datagram](../assets/phase2-4-ada-callflow-3.svg)
+
+---
+
+# Internal call flow — inside the detector subprocess
+
+![h:520 The detector: the committed clip or the synthetic fixture behind one frame-source seam, then pacing, inference, range estimation and association, emitting R3 lines on standard output](../assets/phase2-4-ada-detector.svg)
+
+---
+
+# The flow between the nodes
+
+![h:520 This phase's fidelity: the CPM reaches the V2X ECU, the object message reaches this node, and one warning leaves for the display](../assets/phase2-4-ada-callflow-nodes.svg)
+
+---
+
+<!-- _class: lead -->
+
+![bg](../assets/bg-navy-motif.png)
+
+# 06 · Testing
+
+---
+
+# The four configurations that exercise the node
+
+The same node binary and image in all four; only the neighbours change.
+
+| Configuration | Upstream of R2 | Downstream of R4 | What it proves |
+| ------------- | -------------- | ---------------- | -------------- |
+| **Unit** | injected values and fixtures | assertions | Gate boundaries, the band table, the composed geometry and the pinhole arithmetic against hand-computed values |
+| **Fixture-driven core** | a recorded own-sensor stream through the real reader, plus real datagrams on the real socket | a loopback receiver | The whole core runs with no model and no clip |
+| **Isolated Room** | bench emitter at `10.99.0.11` | bench sink at `10.99.0.13` | The node deployed, on the platform's network, with both neighbours mocked |
+| **Full blueprint** | the real Scenario Player and V2X ECU | the IVI Skycraft node | The same observables with nothing mocked |
+
+- **Expected output is identical in the last two**, because the node's image, command, capabilities and environment are unchanged between them. A difference is a finding about a neighbour.
+- **Only the first two have been exercised.** The deployed Room and the full blueprint are configurations this design is built for, not results it can report.
+- **A fake detector cannot prove the real one detects**, which is why the clip runs against the actual model rather than against the synthetic fixture.
+
+---
+
+# What a run must show
+
+Each line is one component's output, and together they are the acceptance evidence.
+
+| Observable | Produced by |
+| ---------- | ----------- |
+| `detector_spawn`, then one own-sensor ingest line per detection per sampled frame | the detector reader, and the detector's emitter |
+| `r2_ingest` carrying the received body, at 90 % or more of the producer's send count | the listener, the R2 parser and the event writer |
+| a `parse_reject` count of zero against a conforming producer | both parsers |
+| a transition to `tentative` then `tracked`, once for the relayed C and once for the own-sensor B | the admission machine |
+| zero own-sensor entries claiming a relayed source, and zero relayed entries claiming an own-sensor identity | structural — neither namespace can mint the other's |
+| `assessment` carrying the composed range, the time to collision and the rationale | the chained-collision plugin |
+| `r4_tx` carrying the emitted warning body, with `object.source` `v2x_relayed` | the warning builder and the sender |
+| a capture line for `10.99.0.12` → `10.99.0.13:47300` | the capture script |
+| with C held beyond the gate: ingest still counting up, and no relayed transition at all | the gate — the negative case |
+
+- **`r4_tx` is the strongest single line.** It proves both tracks existed at the same instant, which is Phase 4's output acceptance.
+- **Six further checks read a finished run offline** — the two tracks' relative ages, both stimulus rates, and the first warning's onset.
+
+---
+
 # Test equipment, and the observation surface
 
 None of the equipment below ships in the node image, and none of it is on the data path.
@@ -480,7 +548,7 @@ None of the equipment below ships in the node image, and none of it is on the da
 | **`ADA_ECU/tools/mock_v2x_sender.py`** | A relayed-message emitter driving the socket from the two committed bench scenarios |
 | **`tools/ada-bench/`** at the repository root | One image, two roles: the emitter standing in at `10.99.0.11`, the checking sink standing in at `10.99.0.13` |
 | **`ADA_ECU/tools/make_sample_video.py`** | A synthetic clip proving the decode path; it cannot produce detection evidence |
-| **`ADA_ECU/tools/` readers** | Host-side readers of this node's own output: the zero-C check, the event-stream check, the collision-risk event list, the capture extractor |
+| **`ADA_ECU/tools/` readers** | Host-side readers of this node's own output: the zero-C check, the run-alignment check, the collision-risk event list, the capture extractor |
 
 - **A mock of another node does not live in that node's folder**, and the bench sits outside every node folder so it can change without rebuilding what it tests.
 - **The observable surface is the node's own standard output:** one `[EVT]` line per event, with a payload where the payload *is* the proof — the received message body, the emitted warning body, the distance and reason on a transition, the composed range and rationale on an assessment.
@@ -488,28 +556,11 @@ None of the equipment below ships in the node image, and none of it is on the da
 
 ---
 
-# Open items, and flagged contradictions
-
-Reported rather than resolved. Each needs a decision, not an implementation choice.
-
-| | Item |
-| --- | --- |
-| **Contract versus design** | The frozen R4 schema says `geometry.vehicleC` is null *until C is first tracked*; this node's design says null *exactly when C's track has been erased*. Contract-first means the schema wins, and both readings are legitimate nulls — the one-sided design wording is the defect |
-| **Awaiting ratification** | The five risk values, and the two admission counters, whose intent the requirement fixes but whose form this design chose |
-| **A count became a timeout** | The plan's missed-update count is realized as a wall-clock timeout, because "its messages stop" is a time condition a counter cannot express. Intent unchanged, form changed — flagged, not absorbed |
-| **Event vocabulary drift** | A thirteenth event name exists for the disabled-detector case, and the machine emits a transition only on a state *change* rather than on every edge as the design's diagram note states |
-| **Payload not designated** | The expiry event's payload shape is implementation-chosen; the design names the event but not its fields |
-| **Paths beyond the tree** | Four host-side scripts and the tests directories that hold them exist outside the designated folder tree, as design-consistent additions |
-| **Unplaced components** | Four named components sit in no layer of the design's own separation table |
-| **Requirement numbers** | R20, R21 and R22 are enumerated in a later report and not yet ratified; the pacer is built to this design's designation of it |
-
----
-
 <!-- _class: lead -->
 
 ![bg](../assets/bg-navy-motif.png)
 
-# 06 · Handoff
+# 07 · Handoff
 
 ---
 
@@ -528,6 +579,23 @@ Written as the next stage's input list.
 | **The tooling it inherits** | The bench sink as a stand-in for its own node, and the host-side readers of this node's output |
 
 - **Nothing carries forward from the Phase 2 mocks.** The recorded stream and the relayed-message emitter are retired by the detector and by a real upstream.
+
+---
+
+# Open items, and flagged contradictions
+
+Reported rather than resolved. Each needs a decision, not an implementation choice.
+
+| | Item |
+| --- | --- |
+| **Contract versus design** | The frozen R4 schema says `geometry.vehicleC` is null *until C is first tracked*; this node's design says null *exactly when C's track has been erased*. Contract-first means the schema wins, and both readings are legitimate nulls — the one-sided design wording is the defect |
+| **Awaiting ratification** | The five risk values, and the two admission counters, whose intent the requirement fixes but whose form this design chose |
+| **A count became a timeout** | The plan's missed-update count is realized as a wall-clock timeout, because "its messages stop" is a time condition a counter cannot express. Intent unchanged, form changed — flagged, not absorbed |
+| **Event vocabulary drift** | A thirteenth event name exists for the disabled-detector case, and the machine emits a transition only on a state *change* rather than on every edge as the design's diagram note states |
+| **Payload not designated** | The expiry event's payload shape is implementation-chosen; the design names the event but not its fields |
+| **Paths beyond the tree** | Four host-side scripts and the tests directories that hold them exist outside the designated folder tree, as design-consistent additions |
+| **Placement gaps** | Four components the design names sit in no row of its MVC table. Its component diagram places three of them, so the two halves of the design disagree about where they belong |
+| **Requirement numbers** | R20, R21 and R22 are enumerated in a later report and not yet ratified; the pacer is built to this design's designation of it |
 
 ---
 
