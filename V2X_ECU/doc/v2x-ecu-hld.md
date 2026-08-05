@@ -250,10 +250,12 @@ Both flows share every layer below the encoding row, and this node is where the 
 | Layer | Owned here by |
 |---|---|
 | Message | `codec/cpm_codec`'s `CpmContent` inbound (§10.1); `contracts/r2_message`'s `R2Message` outbound (§10.2) |
-| Encoding | `codec/vanetza_cpm_codec` behind `ICpmCodec`; the nlohmann binding inside `R2Message` |
+| Encoding | ASN.1 UPER inbound, UTF-8 JSON outbound — `codec/vanetza_cpm_codec` behind `ICpmCodec`, and the nlohmann binding inside `R2Message` |
+| Library | Vanetza serves the inbound encoding and nothing else; nlohmann/json serves the outbound one. The transport rows need no library ([§11](#11-tech-stack-build-and-ci)) |
 | Transport, network, link | `net/udp_socket` alone — the layer rule above is what keeps it there |
 
 - **No GeoNetworking and no BTP sit between the encoding and the transport row** (F5). That stack ships in the modem and is out of scope project-wide, which is why Wireshark's ITS dissector reads the R1 payload as opaque UDP data (D5).
+- **IPv4 is static and routerless.** The four nodes hold `10.99.0.10` through `.13` on one subnet, and the link layer is the CarSky Ethernet Bridge — a single layer-2 segment over `10.99.0.0/24` (R6).
 - **A hardware port replaces the bottom of the left column and nothing above it.** Everything over `IRadioAdapter` is transport-blind, so the swap touches the adapter's own files ([telux-parity-and-port-plan.md](telux-parity-and-port-plan.md)).
 - **Both flows cross this node's one interface**, which is what makes it the single capture point for R6 (D5).
 
