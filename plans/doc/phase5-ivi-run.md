@@ -36,7 +36,7 @@ Per [§4.5](../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#45-co
 - `ro.build.version.sdk` = **34** (Android 14) — clears `minSdk 29`.
 - `pm list features` carries `feature:android.hardware.type.automotive` — the guest accepts an automotive-required APK.
 - The install route itself is proven by the `Success` recorded under `16.5.9.10` below.
-- **Finding — the evidence filter streams but is empty on this build:** `adb logcat -s IVI_V2X` carries no lines. The installed debug APK logs its bind as `R4ListenerService: UDP socket open on port 47300` instead of the designed `[LINK] state=bound port=47300` on tag `IVI_V2X` ([§4.8](../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging) rung V1). Either the build predates the designed logging or the walkthrough describes a build that this APK is not — to reconcile before any V1-ladder evidence is cited.
+- **Finding — only the bind line lacks the `IVI_V2X` tag on this build:** the bind is logged as `R4ListenerService: UDP socket open on port 47300` instead of the designed `[LINK] state=bound port=47300` on `IVI_V2X` ([§4.8](../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging) rung V1). The receive path does log `[RX]`/`[DROP]` on `IVI_V2X` ([R4ListenerService.kt](../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/service/R4ListenerService.kt) receive loop), so the filter streamed empty at this point only because no datagram had yet arrived. V1's designed line is the one deviation to reconcile; rungs V2 upward filter correctly on this build.
 
 ## `16.5.9.10` — APK install, launch, boot-to-listener time (partial)
 
@@ -52,4 +52,4 @@ Not produced, so the subtask stays open:
 
 - **Guest-boot → launcher delta:** the guest had booted ~19:06Z, ~31 minutes before this install — the delta requires a fresh boot with the APK already installed, which this run did not perform. The boot-to-listener floor for the bench's `start_delay_s` is therefore still unmeasured.
 - **Rung V1 as specified:** the `[LINK] state=bound port=47300` line on `IVI_V2X` did not appear (tag finding under `16.5.9.7`); the bind is proven by the `R4ListenerService` line and the socket table instead.
-- **No warning datagram observed:** a 3-minute logcat watch after launch saw no receipt in the app log — expected, since `4.5.9.9` (the ADA-side feed configuration) has not run; warnings are edge-triggered.
+- **No warning datagram observed:** a 3-minute logcat watch after launch saw no `[RX]`/`[DROP]` in the app log. The m1-system-test Room runs the correctly configured real chain (operator-confirmed), so a missing feed does not explain the silence: either no risk transition fired in the watch window — warnings are edge-triggered — or the ADA → IVI hop (`10.99.0.13:47300`) is not carrying. To resolve by a longer watch against the ADA node's `[TX]` log.

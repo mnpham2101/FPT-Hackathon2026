@@ -1067,7 +1067,7 @@ The findings this subtask produces are items **1 and 5** of [§6.1](../requireme
 
 **Dependencies:** after `16.5.9.6`. **This is the phase's earliest risk: it needs no Phase 5 code, so it must not wait behind groups 5.1–5.7.** **Commit:** `[16.5.9.7] docs: record the proven ADB route and AAOS guest properties`
 
-**Status:** done — `localhost:5555   device`; guest SDK 34 (Android 14) clears `minSdk 29` and the `automotive` feature is present; the install route is proven by the `Success` under `16.5.9.10`. §6.1 items 1 and 5 answered in [doc/phase5-ivi-run.md](doc/phase5-ivi-run.md). Two deviations recorded there: the build installed was the team-supplied `app-debug.apk` rather than a local `gradlew` build, and the `IVI_V2X` evidence filter streams empty — this build logs its bind under `R4ListenerService`, a finding to reconcile before V-ladder evidence is cited.
+**Status:** done — `localhost:5555   device`; guest SDK 34 (Android 14) clears `minSdk 29` and the `automotive` feature is present; the install route is proven by the `Success` under `16.5.9.10`. §6.1 items 1 and 5 answered in [doc/phase5-ivi-run.md](doc/phase5-ivi-run.md). Two deviations recorded there: the build installed was the team-supplied `app-debug.apk` rather than a local `gradlew` build, and this build logs its **bind** line under `R4ListenerService` instead of V1's designed `[LINK]` on `IVI_V2X` — the receive path's `[RX]`/`[DROP]` lines do use `IVI_V2X`, so only rung V1's text evidence deviates.
 
 ### [ ] `16.5.9.21` — Try the screenshot route once *(car-sky)*
 
@@ -1139,7 +1139,7 @@ Change nothing on the other two nodes. Addresses, the port and the pin shapes we
 
 **Dependencies:** after `4.5.9.9`, `16.5.9.7` and `16.5.5.8`, which delivers `MainActivity` and the launcher manifest entry `adb shell am start` resolves. **Commit:** `[16.5.9.10] docs: record the APK install, launch and boot-to-listener time`
 
-**Status:** partial — install `Success`, package path confirmed, `MainActivity` displayed in 1.17 s, listener bound on 47300 (launch → bound ≈ 0.6 s); evidence in [doc/phase5-ivi-run.md](doc/phase5-ivi-run.md). The checkbox stays unticked: the guest-boot → launcher delta is unmeasured (the guest had been up ~31 min before the install), V1's `[LINK]` line on `IVI_V2X` is absent on this build (tag finding under `16.5.9.7`), and `4.5.9.9` has not run so no warning datagram was observed.
+**Status:** partial — install `Success`, package path confirmed, `MainActivity` displayed in 1.17 s, listener bound on 47300 (launch → bound ≈ 0.6 s); evidence in [doc/phase5-ivi-run.md](doc/phase5-ivi-run.md). The checkbox stays unticked: the guest-boot → launcher delta is unmeasured (the guest had been up ~31 min before the install), V1's `[LINK]` line on `IVI_V2X` is absent on this build (bind-line tag finding under `16.5.9.7`), and no warning datagram was observed in the watch window — a finding, not an expectation, since the m1-system-test Room runs the correctly configured real chain; under investigation against the ADA node's `[TX]` log.
 
 ### [ ] `16.5.9.11` — Open the device widgets and confirm the R16 layout *(Human)*
 
