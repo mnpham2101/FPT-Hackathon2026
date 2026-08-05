@@ -28,3 +28,13 @@ Per [§4.4](../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#44-ge
 
 The mentor-supplied route (§6.1 item 1) carried ADB on first use — no failure to record.
 
+## `16.5.9.7` — Proven ADB route and guest properties
+
+Per [§4.5](../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#45-connect-and-check-the-guest); answers §6.1 items 1 and 5.
+
+- `adb connect localhost:5555` → `connected to localhost:5555`; `adb devices` lists `localhost:5555   device`. A local emulator (`emulator-5554`) was also attached on this host, so every command was pinned with `-s localhost:5555` — the guide records the same caveat.
+- `ro.build.version.sdk` = **34** (Android 14) — clears `minSdk 29`.
+- `pm list features` carries `feature:android.hardware.type.automotive` — the guest accepts an automotive-required APK.
+- The install route itself is proven by the `Success` recorded under `16.5.9.10` below.
+- **Finding — the evidence filter streams but is empty on this build:** `adb logcat -s IVI_V2X` carries no lines. The installed debug APK logs its bind as `R4ListenerService: UDP socket open on port 47300` instead of the designed `[LINK] state=bound port=47300` on tag `IVI_V2X` ([§4.8](../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging) rung V1). Either the build predates the designed logging or the walkthrough describes a build that this APK is not — to reconcile before any V1-ladder evidence is cited.
+

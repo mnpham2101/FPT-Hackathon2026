@@ -1048,7 +1048,7 @@ Watching the node badges is not part of this subtask — `5.5.9.5` records the p
 
 **Status:** done — all three inputs in hand, provenance recorded in [doc/phase5-ivi-run.md](doc/phase5-ivi-run.md): the binary under `tools/apk uploader/` (git-ignored), the gateway is the workbench base URL itself, and the token is a per-device derived value from the Rework Local ADB dialog — not the CarSky API key — held under `secrets/`. §6.1 items 2–4 answered; the token value is not in the repository.
 
-### [ ] `16.5.9.7` — Prove the ADB route and read the guest's properties *(car-sky)*
+### [x] `16.5.9.7` — Prove the ADB route and read the guest's properties *(car-sky)*
 
 **Objective:** answer whether the guest is reachable and whether it will accept the APK at all — the two findings that invalidate every in-Room criterion below if negative.
 
@@ -1066,6 +1066,8 @@ The findings this subtask produces are items **1 and 5** of [§6.1](../requireme
 **Acceptance:** the outputs of §4.5 and §4.6 — or the exact failure — recorded in `plans/doc/phase5-ivi-run.md`, with the guest's API level against `minSdk 29`, its `automotive` answer, and the fallback decision if either is negative.
 
 **Dependencies:** after `16.5.9.6`. **This is the phase's earliest risk: it needs no Phase 5 code, so it must not wait behind groups 5.1–5.7.** **Commit:** `[16.5.9.7] docs: record the proven ADB route and AAOS guest properties`
+
+**Status:** done — `localhost:5555   device`; guest SDK 34 (Android 14) clears `minSdk 29` and the `automotive` feature is present; the install route is proven by the `Success` under `16.5.9.10`. §6.1 items 1 and 5 answered in [doc/phase5-ivi-run.md](doc/phase5-ivi-run.md). Two deviations recorded there: the build installed was the team-supplied `app-debug.apk` rather than a local `gradlew` build, and the `IVI_V2X` evidence filter streams empty — this build logs its bind under `R4ListenerService`, a finding to reconcile before V-ladder evidence is cited.
 
 ### [ ] `16.5.9.21` — Try the screenshot route once *(car-sky)*
 
