@@ -30,8 +30,9 @@ Sources: [m1-cooperative-awareness.md](../../requirements/m1-cooperative-awarene
 2. **Implementation** — progress by workstream, and what each phase delivered
 3. **Requirement coverage** — the 22 requirements and the six that deviate
 4. **Testing** — the three test layers and what each one proves
-5. **Contribution** — scope of work by contributor
-6. **Remaining work** — what is open, and what it blocks
+5. **Acceptance evidence** — the three surfaces a claim is read from
+6. **Contribution** — scope of work by contributor
+7. **Remaining work** — what is open, and what it blocks
 
 ---
 
@@ -201,7 +202,101 @@ One run of the five-node blueprint, bench to screen, with traffic observed at ev
 
 ![bg](../assets/bg-navy-motif.png)
 
-# 05 · Contribution
+# 05 · Acceptance evidence
+
+---
+
+# The three evidence surfaces
+
+Every claim in this report is read off one of three surfaces, so a run either produced it or it did not.
+
+| Surface | What it proves | Where it is captured |
+|---|---|---|
+| **The HMI screen** | The driver is warned about a vehicle this car never saw | Screen recording of the AAOS node across the run |
+| **Internal logs** | Each node did its own part — ingest, admission, risk, emission | `[EVT]` and `[RX]` streams inside the containers |
+| **The wire** | The messages the logs claim actually crossed the network | pcap on each hop of the bridge network |
+
+> **No single surface is sufficient.** A screen without a capture could be drawn from anything, and a log without a pcap is a node's own account of itself. The three together close the chain.
+
+---
+
+# HMI evidence — the idle screen
+
+![h:330 The delivered IVI home screen — Display Area Mode HOME, idle and awaiting a warning](../assets/m1-report-ivi-home-screen.png)
+
+- **`MODE: HOME`** in the status bar, with `Display Area Mode: HOME (Idle — Awaiting Warning)` in the diagnostics panel.
+- **`V2X LINK: BOUND :47300`** — the R4 listener is already up, so a later warning is not a start-up artefact.
+- **The capture must show the transition away from this screen** — the change, not the warning screen alone, is the evidence.
+
+---
+
+# HMI evidence — the warning screen
+
+![h:300 The god view — ego, B and ghost C, with the distance readout and the risk colour](../assets/m1-report-ivi-warning-screen.svg)
+
+- **Distance is on screen** — `d_AB` to the occluder and `d_AC` to the ghost, with the banner reading `[V2X] C · 35.0 m`.
+- **Risk is carried by colour** — the glow steps yellow, orange, red; the capture must catch it changing, not just show it red.
+- **Ghost C is drawn from R4 alone**, marked `source: v2x_relayed`, with the blind zone behind B.
+
+> **Accepted deviation.** The delivered screen is not the requirement's mock-up pixel for pixel. Everything the requirement asks it to convey is there — three vehicles, the distances, the risk state, the relayed provenance — and the deviation is accepted as a whole.
+
+---
+
+# Internal log capture — the surfaces
+
+![h:320 Where each log stream is captured — the isolated-test setup from the ADA design deck](../assets/phase2-4-ada-test-isolated.svg)
+
+- **Four capture points** — one per node, plus one inside the ADA container for the pcap.
+- **The ADA `[EVT]` stream is the primary record**: ingest, track transition, assessment and emission, in one file.
+- **The full system test writes the same lines**, so the two runs are compared line for line rather than by impression.
+
+---
+
+# ADA and IVI lines to capture
+
+| Evidence | Event | The line the node emits |
+|---|---|---|
+| Own-sensor detection reaches the store | `own_sensor_ingest` | `{"event":"own_sensor_ingest","payload":{"id":"own:1","source":"own_sensor"}}` |
+| Relayed object ingested from the V2X hop | `r2_ingest` | `{"event":"r2_ingest","payload":{"stationId":1201,"objectId":7}}` |
+| B confirmed from the ego's own sensors | `track_transition` | `{"event":"track_transition","id":"own:1","to":"tracked","source":"own_sensor"}` |
+| Ghost C confirmed from the relay only | `track_transition` | `{"event":"track_transition","id":"v2x:1201:7","to":"tracked","source":"v2x_relayed"}` |
+| The risk step behind the on-screen colour | `assessment` | `{"event":"assessment","risk":"high","prev":"medium","d_AC":35.0}` |
+| The warning emitted, carrying both vehicles | `r4_tx` | `{"event":"r4_tx","object":{"source":"v2x_relayed"},"geometry":{"vehicleB":[20.0,0.4]}}` |
+| The warning received and field-checked | `[RX]` · IVI | `[RX] seq=3 risk=high cSource=v2x_relayed bPos=(20.0,0.4)` |
+
+> **Shapes, not a transcript.** These are the lines each event produces and the fields a reviewer checks; the recorded run supplies the values.
+
+---
+
+# Wire capture — the five capture points
+
+![h:300 Where the captures are taken across the full blueprint — the system-test setup from the ADA design deck](../assets/phase2-4-ada-test-full.svg)
+
+- **Every hop is captured**, so no stage of the chain is inferred from the stage before it.
+- **The ADA-to-IVI hop is captured inside the container**, because that datagram is what the render is built from.
+
+---
+
+# The three contracts on the wire
+
+| Contract | Hop | Port | Encoding |
+|---|---|---|---|
+| **R1** — CPM | Scenario Player → V2X ECU | `47100` | ASN.1 UPER |
+| **R2** — object message | V2X ECU → ADA ECU | `47200` | JSON |
+| **R4** — warning | ADA ECU → IVI ECU | `47300` | JSON |
+
+- **R1, R2 and R4 are the whole wire story** — one contract per hop, and between them they cover every link from the bench to the screen.
+- **R3 is not a wire message.** The TrackedObject is the ego's internal store schema; it reaches the IVI embedded in R4's `object` field.
+- **So R3 is proven from the ADA log and from the R4 payload**, not from a capture of its own — which is why the log surface and the wire surface are both required.
+
+> **Answering the question directly: yes.** R1, R2 and R4 are the correct and complete set to capture. Adding an R3 filter would find nothing, because nothing ever sends one.
+
+---
+<!-- _class: lead -->
+
+![bg](../assets/bg-navy-motif.png)
+
+# 06 · Contribution
 
 ---
 
@@ -228,7 +323,7 @@ One run of the five-node blueprint, bench to screen, with traffic observed at ev
 
 ![bg](../assets/bg-navy-motif.png)
 
-# 06 · Remaining work
+# 07 · Remaining work
 
 ---
 

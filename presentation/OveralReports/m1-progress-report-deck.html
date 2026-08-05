@@ -201,8 +201,9 @@
       <div class="item"><div class="n">02</div><div><h3>Implementation</h3><p>progress by workstream, and what each phase delivered</p></div></div>
       <div class="item"><div class="n">03</div><div><h3>Requirement coverage</h3><p>the 22 requirements and the six that deviate</p></div></div>
       <div class="item"><div class="n">04</div><div><h3>Testing</h3><p>the three test layers and what each one proves</p></div></div>
-      <div class="item"><div class="n">05</div><div><h3>Contribution</h3><p>scope of work by contributor</p></div></div>
-      <div class="item"><div class="n">06</div><div><h3>Remaining work</h3><p>what is open, and what it blocks</p></div></div>
+      <div class="item"><div class="n">05</div><div><h3>Acceptance evidence</h3><p>the three surfaces a claim is read from</p></div></div>
+      <div class="item"><div class="n">06</div><div><h3>Contribution</h3><p>scope of work by contributor</p></div></div>
+      <div class="item"><div class="n">07</div><div><h3>Remaining work</h3><p>what is open, and what it blocks</p></div></div>
     </div>
     <div class="footer"><span>Milestone 1 — Progress Report · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
@@ -366,18 +367,113 @@
   </section>
   <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
     <div class="sec-num">05</div>
+    <h1>Acceptance evidence</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">05</div><h2>The three evidence surfaces</h2></div>
+    <p class="lead">Every claim in this report is read off one of three surfaces, so a run either produced it or it did not.</p>
+    <table class="fpt">
+      <thead><tr><th>Surface</th><th>What it proves</th><th>Where it is captured</th></tr></thead>
+      <tbody>
+        <tr><td><strong>The HMI screen</strong></td><td>The driver is warned about a vehicle this car never saw</td><td>Screen recording of the AAOS node across the run</td></tr>
+        <tr><td><strong>Internal logs</strong></td><td>Each node did its own part — ingest, admission, risk, emission</td><td><code>[EVT]</code> and <code>[RX]</code> streams inside the containers</td></tr>
+        <tr><td><strong>The wire</strong></td><td>The messages the logs claim actually crossed the network</td><td>pcap on each hop of the bridge network</td></tr>
+      </tbody>
+    </table>
+    <div class="strip"><strong>No single surface is sufficient.</strong> A screen without a capture could be drawn from anything, and a log without a pcap is a node's own account of itself. The three together close the chain.</div>
+    <div class="footer"><span>Milestone 1 — Progress Report · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">05</div><h2>HMI evidence — the idle screen</h2></div>
+    <div class="imgbox"><img src="../assets/m1-report-ivi-home-screen.png" style="height:330px" alt="The delivered IVI home screen — Display Area Mode HOME, idle and awaiting a warning"><div class="cap">The delivered IVI home screen — Display Area Mode HOME, idle and awaiting a warning</div></div>
+    <ul class="points">
+      <li><strong><code>MODE: HOME</code></strong> in the status bar, with <code>Display Area Mode: HOME (Idle — Awaiting Warning)</code> in the diagnostics panel.</li>
+      <li><strong><code>V2X LINK: BOUND :47300</code></strong> — the R4 listener is already up, so a later warning is not a start-up artefact.</li>
+      <li><strong>The capture must show the transition away from this screen</strong> — the change, not the warning screen alone, is the evidence.</li>
+    </ul>
+    <div class="footer"><span>Milestone 1 — Progress Report · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">05</div><h2>HMI evidence — the warning screen</h2></div>
+    <div class="imgbox"><img src="../assets/m1-report-ivi-warning-screen.svg" style="height:300px" alt="The god view — ego, B and ghost C, with the distance readout and the risk colour"><div class="cap">The god view — ego, B and ghost C, with the distance readout and the risk colour</div></div>
+    <ul class="points">
+      <li><strong>Distance is on screen</strong> — <code>d_AB</code> to the occluder and <code>d_AC</code> to the ghost, with the banner reading <code>[V2X] C · 35.0 m</code>.</li>
+      <li><strong>Risk is carried by colour</strong> — the glow steps yellow, orange, red; the capture must catch it changing, not just show it red.</li>
+      <li><strong>Ghost C is drawn from R4 alone</strong>, marked <code>source: v2x_relayed</code>, with the blind zone behind B.</li>
+    </ul>
+    <div class="strip"><strong>Accepted deviation.</strong> The delivered screen is not the requirement's mock-up pixel for pixel. Everything the requirement asks it to convey is there — three vehicles, the distances, the risk state, the relayed provenance — and the deviation is accepted as a whole.</div>
+    <div class="footer"><span>Milestone 1 — Progress Report · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">05</div><h2>Internal log capture — the surfaces</h2></div>
+    <div class="imgbox"><img src="../assets/phase2-4-ada-test-isolated.svg" style="height:320px" alt="Where each log stream is captured — the isolated-test setup from the ADA design deck"><div class="cap">Where each log stream is captured — the isolated-test setup from the ADA design deck</div></div>
+    <ul class="points">
+      <li><strong>Four capture points</strong> — one per node, plus one inside the ADA container for the pcap.</li>
+      <li><strong>The ADA <code>[EVT]</code> stream is the primary record</strong>: ingest, track transition, assessment and emission, in one file.</li>
+      <li><strong>The full system test writes the same lines</strong>, so the two runs are compared line for line rather than by impression.</li>
+    </ul>
+    <div class="footer"><span>Milestone 1 — Progress Report · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">05</div><h2>ADA and IVI lines to capture</h2></div>
+    <table class="fpt">
+      <thead><tr><th>Evidence</th><th>Event</th><th>The line the node emits</th></tr></thead>
+      <tbody>
+        <tr><td>Own-sensor detection reaches the store</td><td><code>own_sensor_ingest</code></td><td><code>{&quot;event&quot;:&quot;own_sensor_ingest&quot;,&quot;payload&quot;:{&quot;id&quot;:&quot;own:1&quot;,&quot;source&quot;:&quot;own_sensor&quot;}}</code></td></tr>
+        <tr><td>Relayed object ingested from the V2X hop</td><td><code>r2_ingest</code></td><td><code>{&quot;event&quot;:&quot;r2_ingest&quot;,&quot;payload&quot;:{&quot;stationId&quot;:1201,&quot;objectId&quot;:7}}</code></td></tr>
+        <tr><td>B confirmed from the ego's own sensors</td><td><code>track_transition</code></td><td><code>{&quot;event&quot;:&quot;track_transition&quot;,&quot;id&quot;:&quot;own:1&quot;,&quot;to&quot;:&quot;tracked&quot;,&quot;source&quot;:&quot;own_sensor&quot;}</code></td></tr>
+        <tr><td>Ghost C confirmed from the relay only</td><td><code>track_transition</code></td><td><code>{&quot;event&quot;:&quot;track_transition&quot;,&quot;id&quot;:&quot;v2x:1201:7&quot;,&quot;to&quot;:&quot;tracked&quot;,&quot;source&quot;:&quot;v2x_relayed&quot;}</code></td></tr>
+        <tr><td>The risk step behind the on-screen colour</td><td><code>assessment</code></td><td><code>{&quot;event&quot;:&quot;assessment&quot;,&quot;risk&quot;:&quot;high&quot;,&quot;prev&quot;:&quot;medium&quot;,&quot;d_AC&quot;:35.0}</code></td></tr>
+        <tr><td>The warning emitted, carrying both vehicles</td><td><code>r4_tx</code></td><td><code>{&quot;event&quot;:&quot;r4_tx&quot;,&quot;object&quot;:{&quot;source&quot;:&quot;v2x_relayed&quot;},&quot;geometry&quot;:{&quot;vehicleB&quot;:[20.0,0.4]}}</code></td></tr>
+        <tr><td>The warning received and field-checked</td><td><code>[RX]</code> · IVI</td><td><code>[RX] seq=3 risk=high cSource=v2x_relayed bPos=(20.0,0.4)</code></td></tr>
+      </tbody>
+    </table>
+    <div class="strip"><strong>Shapes, not a transcript.</strong> These are the lines each event produces and the fields a reviewer checks; the recorded run supplies the values.</div>
+    <div class="footer"><span>Milestone 1 — Progress Report · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">05</div><h2>Wire capture — the five capture points</h2></div>
+    <div class="imgbox"><img src="../assets/phase2-4-ada-test-full.svg" style="height:300px" alt="Where the captures are taken across the full blueprint — the system-test setup from the ADA design deck"><div class="cap">Where the captures are taken across the full blueprint — the system-test setup from the ADA design deck</div></div>
+    <ul class="points">
+      <li><strong>Every hop is captured</strong>, so no stage of the chain is inferred from the stage before it.</li>
+      <li><strong>The ADA-to-IVI hop is captured inside the container</strong>, because that datagram is what the render is built from.</li>
+    </ul>
+    <div class="footer"><span>Milestone 1 — Progress Report · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">05</div><h2>The three contracts on the wire</h2></div>
+    <table class="fpt">
+      <thead><tr><th>Contract</th><th>Hop</th><th>Port</th><th>Encoding</th></tr></thead>
+      <tbody>
+        <tr><td><strong>R1</strong> — CPM</td><td>Scenario Player → V2X ECU</td><td><code>47100</code></td><td>ASN.1 UPER</td></tr>
+        <tr><td><strong>R2</strong> — object message</td><td>V2X ECU → ADA ECU</td><td><code>47200</code></td><td>JSON</td></tr>
+        <tr><td><strong>R4</strong> — warning</td><td>ADA ECU → IVI ECU</td><td><code>47300</code></td><td>JSON</td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>R1, R2 and R4 are the whole wire story</strong> — one contract per hop, and between them they cover every link from the bench to the screen.</li>
+      <li><strong>R3 is not a wire message.</strong> The TrackedObject is the ego's internal store schema; it reaches the IVI embedded in R4's <code>object</code> field.</li>
+      <li><strong>So R3 is proven from the ADA log and from the R4 payload</strong>, not from a capture of its own — which is why the log surface and the wire surface are both required.</li>
+    </ul>
+    <div class="strip"><strong>Answering the question directly: yes.</strong> R1, R2 and R4 are the correct and complete set to capture. Adding an R3 filter would find nothing, because nothing ever sends one.</div>
+    <div class="footer"><span>Milestone 1 — Progress Report · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">06</div>
     <h1>Contribution</h1>
     <div class="rule"></div>
     <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">05</div><h2>Scope of work by contributor</h2></div>
+    <div class="slide-head"><div class="num">06</div><h2>Scope of work by contributor</h2></div>
     <div class="imgbox"><img src="../assets/m1-report-contribution-donut.svg" style="height:400px" alt="Contribution as a share of total weighted effort"><div class="cap">Contribution as a share of total weighted effort</div></div>
     <div class="strip">Shares are <strong>effort, not commit count</strong> — each workstream is weighted by its size first, then split between the people who did it.</div>
     <div class="footer"><span>Milestone 1 — Progress Report · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">05</div><h2>Contribution per workstream</h2></div>
+    <div class="slide-head"><div class="num">06</div><h2>Contribution per workstream</h2></div>
     <div class="imgbox"><img src="../assets/m1-report-contribution-rows.svg" style="height:345px" alt="Who delivered each workstream, with that workstream&#x27;s scope weight"><div class="cap">Who delivered each workstream, with that workstream&#x27;s scope weight</div></div>
     <ul class="points">
       <li><strong>Minh</strong> — phases 0 and 1, half of phases 3 and 4, and the cross-cutting work: CI, blueprint, review, reporting.</li>
@@ -388,13 +484,13 @@
     <div class="footer"><span>Milestone 1 — Progress Report · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
-    <div class="sec-num">06</div>
+    <div class="sec-num">07</div>
     <h1>Remaining work</h1>
     <div class="rule"></div>
     <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">06</div><h2>The work board</h2></div>
+    <div class="slide-head"><div class="num">07</div><h2>The work board</h2></div>
     <div class="imgbox"><img src="../assets/m1-report-remaining-board.svg" style="height:400px" alt="Remaining work — one test layer in progress, five items to do"><div class="cap">Remaining work — one test layer in progress, five items to do</div></div>
     <ul class="points">
       <li><strong>Nothing on the board blocks the demonstration.</strong> The delivered system runs today without any of it.</li>
@@ -403,7 +499,7 @@
     <div class="footer"><span>Milestone 1 — Progress Report · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">06</div><h2>Remaining items in detail</h2></div>
+    <div class="slide-head"><div class="num">07</div><h2>Remaining items in detail</h2></div>
     <table class="fpt">
       <thead><tr><th>Item</th><th>What it covers</th><th>Where it lands</th></tr></thead>
       <tbody>
