@@ -237,25 +237,25 @@
         <tr><td><strong>Frozen</strong></td><td>Changed only by re-freezing across every consumer at once. A contract edited by one node alone is broken, not updated.</td></tr>
         <tr><td><strong>Seam</strong></td><td>A boundary positioned so one side can be replaced without modifying the other.</td></tr>
         <tr><td><strong>Ego</strong></td><td>The vehicle the system runs in — vehicle A, whose driver is warned.</td></tr>
-        <tr><td><strong>B</strong></td><td>The occluder directly ahead of ego, and the only vehicle ego's own camera sees.</td></tr>
-        <tr><td><strong>C</strong></td><td>The vehicle beyond B, which ego's camera can never see and which reaches ego only over the V2X relay.</td></tr>
+        <tr><td><strong>VehicleB</strong></td><td>The occluder directly ahead of ego, and the only vehicle ego's own camera sees.</td></tr>
+        <tr><td><strong>VehicleC</strong></td><td>The vehicle beyond VehicleB, which ego's camera can never see and which reaches ego only over the V2X relay.</td></tr>
         <tr><td><strong>Bench</strong></td><td>Sanctioned test equipment sharing the Room network, standing in for the outside world.</td></tr>
         <tr><td><strong>Isolated Room</strong></td><td>A reduced Room in which bench roles stand at the neighbouring nodes' addresses, so this node runs alone.</td></tr>
       </tbody>
     </table>
     <ul class="points">
-      <li><strong>The god view is the display's overhead drawing of the three vehicles</strong>, and "ghost C" is its name for the relayed one. This node composes C's position; drawing it is the IVI's work.</li>
+      <li><strong>The god view is the display's overhead drawing of the three vehicles</strong>, and "ghost VehicleC" is its name for the relayed one. This node composes VehicleC's position; drawing it is the IVI's work.</li>
     </ul>
     <div class="footer"><span>Phases 2-4 — ADA ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">01</div><h2>The requirement numbers this node serves</h2></div>
-    <p class="lead">An <code>R</code>-number is an identifier from the requirements report, never a name.</p>
+    <div class="slide-head"><div class="num">01</div><h2>The requirement this node serves</h2></div>
+    <p class="lead">An <code>R</code>-number is an identifier from the requirements  list.</p>
     <table class="fpt">
       <thead><tr><th></th><th>What it is</th></tr></thead>
       <tbody>
         <tr><td><strong>R3</strong></td><td>The <code>TrackedObject</code> schema — the shape every ego-side track obeys, whatever produced it</td></tr>
-        <tr><td><strong>R12</strong></td><td>Object detection from provided video files, with a distance estimate and zero detections labelled C</td></tr>
+        <tr><td><strong>R12</strong></td><td>Object detection from provided video files, with a distance estimate and zero detections labelled VehicleC</td></tr>
         <tr><td><strong>R13</strong></td><td>The track store and its admission state machine, with a proximity gate on the reported distance</td></tr>
         <tr><td><strong>R14</strong></td><td>The Collision Risk Assessment abstraction — risk logic behind one interface, plus the record schema it reads and writes</td></tr>
         <tr><td><strong>R15</strong></td><td>The warning output to the IVI ECU, edge-triggered on each risk transition</td></tr>
@@ -265,8 +265,7 @@
       </tbody>
     </table>
     <ul class="points">
-      <li><strong>R1, R2 and R4 are contracts rather than behaviour this node owns.</strong> R1 is the V2X message on the air — a Collective Perception Message, or CPM, encoded with the ASN.1 packing rules called UPER — and this node never sees one; R2 and R4 are the JSON messages it consumes and produces.</li>
-      <li><strong>R5 and R6 are the platform and the network</strong>: the node deployment, and the one Ethernet-bridge segment every node sits on.</li>
+      <li><strong>R1, R2 and R4 also used in this presentation are contracts (messages), not behavior requirements</strong> R1 is the V2X message on the air — a Collective Perception Message, or CPM, encoded with the ASN.1 packing rules called UPER — and this node never sees one; R2 and R4 are the JSON messages it consumes and produces.</li>
     </ul>
     <div class="footer"><span>Phases 2-4 — ADA ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
@@ -276,10 +275,11 @@
     <table class="fpt">
       <thead><tr><th>Term</th><th>Definition</th></tr></thead>
       <tbody>
-        <tr><td><strong>Track</strong></td><td>One entry in the store: an identity, a position, a range, a provenance and a state.</td></tr>
+        <tr><td><strong>ADA Core</strong></td><td>The C++17 process that owns the sockets, the track store and the output stage. The detector runs beside it as a separate Python process.</td></tr>
+        <tr><td><strong>Track</strong></td><td>One entry in the track store: an identity, a position, a range, a provenance and a state.</td></tr>
         <tr><td><strong>Update</strong></td><td>One admission-relevant observation of a track — one relayed message, or one detector line.</td></tr>
         <tr><td><strong>Gate</strong></td><td>The proximity threshold pair that admits and drops a track, with hysteresis between them.</td></tr>
-        <tr><td><strong>Composed range</strong></td><td><code>d_AC = d_AB + d_BC</code> — ego's own estimate of B plus B's reported range to C.</td></tr>
+        <tr><td><strong>Composed range</strong></td><td><code>d_AC = d_AB + d_BC</code> — ego's own estimate of VehicleB plus VehicleB's reported range to VehicleC.</td></tr>
         <tr><td><strong>Risk band</strong></td><td>A level — <code>low</code>, <code>medium</code>, <code>high</code> — that a total, ordered condition table assigns to the composed range and its rate of change.</td></tr>
         <tr><td><strong>Plugin</strong></td><td>One risk rule realizing the assessment interface, found by its registry key.</td></tr>
         <tr><td><strong>Dwell</strong></td><td>The interval a risk change must hold before it is committed and emitted.</td></tr>
@@ -299,7 +299,7 @@
     <p class="lead">One blueprint is one vehicle — ego. Four nodes carry a role; the fifth joins them into a network.</p>
     <div class="imgbox"><img src="../assets/m1-blueprint-5-nodes.svg" style="height:420px" alt="Milestone 1 blueprint: five nodes, three contract-labelled UDP flows, one Ethernet Bridge"><div class="cap">Milestone 1 blueprint: five nodes, three contract-labelled UDP flows, one Ethernet Bridge</div></div>
     <ul class="points">
-      <li><strong>Addresses are static by design</strong>, injected through node configuration, never written as literals in source.</li>
+      <li><strong>IP Addresses are static by design</strong>, injected through node configuration, never written as literals in source code.</li>
     </ul>
     <div class="footer"><span>Phases 2-4 — ADA ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
@@ -315,7 +315,7 @@
     <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">03</div><h2>R2 — the object message consumed</h2></div>
+    <div class="slide-head"><div class="num">03</div><h2>R2 — the message from V2X-ECU</h2></div>
     <p class="lead">What the V2X ECU passes inward once it has decoded the air message.</p>
     <table class="fpt">
       <thead><tr><th><strong>Direction</strong></th><th>V2X ECU → ADA ECU, one way, UDP to <code>10.99.0.12:47200</code>, one message per datagram</th></tr></thead>
@@ -327,67 +327,76 @@
       </tbody>
     </table>
     <ul class="points">
-      <li><strong><code>object.distance</code> is the admission input, and the V2X ECU derives it.</strong> This node reads the field as received and never recomputes it.</li>
-      <li><strong>Two fields are nullable and need a rule.</strong> A null class confidence maps to the lowest confidence, because the R3 field is required; a null sender speed is read for evidence only, and no rule depends on it.</li>
-      <li><strong><code>position.confidence</code> is a position accuracy in metres, not a probability</strong>, and has no R3 home — it is carried in the ingest event and dropped from the track.</li>
+      <li><strong><code>object.distance</code> is the admission input, and the V2X ECU derives it and forward to ADA-ECU</strong> This node reads the field as received and never recomputes it.</li>
+      <li><strong><code>position.confidence</code> is a position accuracy in metres</strong> is not used by ADA's internal logic and is dropped</li>
+      <li><strong><code>object.confidence</code> in an R2 message is recorded as <code>0.0</code> in R3</strong> when it arrives as JSON <code>null</code>, because the R3 field is required</li>
     </ul>
     <div class="footer"><span>Phases 2-4 — ADA ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">03</div><h2>R3 — the track schema owned</h2></div>
-    <p class="lead">Not a datagram. The one shape every ego-side object obeys, whatever produced it.</p>
+    <div class="slide-head"><div class="num">03</div><h2>R3 — ADA internal message</h2></div>
+    <p class="lead">The record type held by <code>store/track_store</code>. It addresses no node, so it has no direction: it is serialized on one internal link and nested inside R4.</p>
     <table class="fpt">
-      <thead><tr><th><strong>Role</strong></th><th>Perception sources are interchangeable because they conform to one schema</th></tr></thead>
+      <thead><tr><th><strong>Role</strong></th><th>The single record type for a tracked object. Both perception sources emit it, so <code>store/track_store</code> holds one type and no downstream rule branches on origin</th></tr></thead>
       <tbody>
-        <tr><td><strong>Crossing points</strong></td><td>The detector's standard output, and the <code>object</code> field of every R4 warning</td></tr>
+        <tr><td><strong>Producers</strong></td><td><code>detector/emit</code> serializes <code>own_sensor</code> entries onto standard output · <code>parser/r2_parser</code> constructs <code>v2x_relayed</code> instances from R2 · <code>parser/r3_parser</code> constructs <code>own_sensor</code> instances from the detector's lines</td></tr>
+        <tr><td><strong>Consumers</strong></td><td><code>store/track_store</code> holds every instance and is the sole writer of <code>state</code> · <code>output/warning_builder</code> nests a R3 data object in each R4 warning</td></tr>
+        <tr><td><strong>Serialized on</strong></td><td>Two links: the detector-to-ADA-Core pipe, one JSON object per line; and the <code>object</code> field of an R4 datagram</td></tr>
+        <tr><td><strong>Never serialized</strong></td><td>Inside the ADA Core. It is a C++ object, handed to the main loop through a bounded queue and never re-encoded</td></tr>
         <tr><td><strong>Required fields</strong></td><td><code>id</code> · <code>class</code> · <code>source</code> · <code>position</code> · <code>distance</code> · <code>speed</code> · <code>confidence</code> · <code>state</code> · <code>timestamps</code> (measured, received, lastUpdated)</td></tr>
         <tr><td><strong>Normative file</strong></td><td><code>contracts/r3-tracked-object.schema.json</code> — <strong>frozen</strong></td></tr>
-        <tr><td><strong>Node copies</strong></td><td><code>ADA_ECU/contracts/r3-tracked-object.schema.json</code>, bound twice: <code>src/contracts/tracked_object</code> in the core and <code>detector/contracts/tracked_object</code> in the detector</td></tr>
+        <tr><td><strong>Node copy</strong></td><td><code>ADA_ECU/contracts/r3-tracked-object.schema.json</code>, copied byte-for-byte from the normative file</td></tr>
+        <tr><td><strong>Bound by</strong></td><td><code>src/contracts/tracked_object</code> in the ADA Core, and <code>detector/contracts/tracked_object</code> in the detector — code written against that copy, not a copy of it</td></tr>
       </tbody>
     </table>
+    <div class="footer"><span>Phases 2-4 — ADA ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">03</div><h2>R3 — field rules beyond the schema</h2></div>
+    <p class="lead">Four rules the JSON Schema cannot state, because each names the module that owns a field rather than the field's type.</p>
     <ul class="points">
       <li><strong><code>source</code> is an enumeration of exactly two values</strong> — <code>own_sensor</code> and <code>v2x_relayed</code> — and it is what the whole cooperative-awareness claim rests on.</li>
-      <li><strong>The store is the sole writer of <code>state</code>.</strong> An arriving object carries <code>not_tracked</code> by convention and that value is discarded.</li>
-      <li><strong>Track identity is namespaced by source:</strong> <code>own:&lt;n&gt;</code> from the detector's own association, <code>v2x:&lt;stationId&gt;:&lt;objectId&gt;</code> from the relay. Neither side can mint the other's.</li>
-      <li><strong>Expiry does not read <code>lastUpdated</code>.</strong> The wire stamps are wall-clock; expiry compares a monotonic stamp the store keeps beside each entry.</li>
+      <li><strong><code>store/track_store</code>, the consumer above, is the sole writer of <code>state</code>.</strong> A record arriving from either parser carries <code>not_tracked</code> by convention, and the store discards that value rather than reading it.</li>
+      <li><strong>Track identity is namespaced by source:</strong> <code>own:&lt;n&gt;</code> from the detector's own association, <code>v2x:&lt;stationId&gt;:&lt;objectId&gt;</code> from the relay. Neither producer can mint the other's identifier.</li>
+      <li><strong>Expiry does not read <code>lastUpdated</code>.</strong> The serialized stamps are wall-clock; expiry compares a monotonic stamp <code>store/track_store</code> keeps beside each entry.</li>
     </ul>
     <div class="footer"><span>Phases 2-4 — ADA ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">03</div><h2>R4 — the warning message produced</h2></div>
-    <p class="lead">The warning, and everything the display needs to draw the scene.</p>
+    <div class="slide-head"><div class="num">03</div><h2>R4 — ADA output message</h2></div>
+    <p class="lead">The ADA output warning, and everything the display needs to draw the scene.</p>
     <table class="fpt">
       <thead><tr><th><strong>Direction</strong></th><th>ADA ECU → IVI ECU, one way, UDP to <code>10.99.0.13:47300</code>, no framing header</th></tr></thead>
       <tbody>
         <tr><td><strong>Encoding</strong></td><td>UTF-8 JSON; two message kinds discriminated by <code>type</code>, the schema being a <code>oneOf</code></td></tr>
-        <tr><td><strong>Warning event</strong></td><td><code>schemaVersion</code> · <code>type</code> · <code>warningType</code> · <code>riskState</code> · <code>object</code> — a whole R3 snapshot of C — · <code>geometry</code> with <code>ego</code>, <code>vehicleB</code> and a nullable <code>vehicleC</code></td></tr>
+        <tr><td><strong>Warning event</strong></td><td><code>schemaVersion</code> · <code>type</code> · <code>warningType</code> · <code>riskState</code> · <code>object</code> — a whole R3 snapshot of VehicleC — · <code>geometry</code> with <code>ego</code>, <code>vehicleB</code> and a nullable <code>vehicleC</code></td></tr>
         <tr><td><strong>Awareness state</strong></td><td><code>schemaVersion</code> · <code>type</code> · <code>seq</code> · <code>vehicles</code>, last-value-wins by sequence number. Optional in R15</td></tr>
         <tr><td><strong>Normative file</strong></td><td><code>contracts/r4-ada-ivi.schema.json</code> — <strong>frozen</strong>, embedding the R3 schema by reference</td></tr>
-        <tr><td><strong>Node copy</strong></td><td><code>ADA_ECU/contracts/r4-ada-ivi.schema.json</code>; <code>output/warning_builder</code> is the node's only producer</td></tr>
+        <tr><td><strong>Node copy</strong></td><td><code>ADA_ECU/contracts/r4-ada-ivi.schema.json</code>, copied byte-for-byte from the normative file</td></tr>
+        <tr><td><strong>Bound by</strong></td><td><code>src/contracts/r4_message</code>; <code>output/warning_builder</code> is the node's only producer of these messages</td></tr>
       </tbody>
     </table>
     <ul class="points">
-      <li><strong><code>object.source</code> is <code>v2x_relayed</code> on every warning this node emits</strong>, because only a relayed track can be C. The display's provenance guard renders the ghost on that value alone.</li>
-      <li><strong><code>warningType</code> and <code>riskState</code> are plain strings in the schema</strong>, so an unknown value degrades at the consumer rather than being rejected. The <code>low</code> / <code>medium</code> / <code>high</code> vocabulary is fixed by the schema's description and by the record schema's enumeration, not by an enumeration in R4.</li>
-      <li><strong><code>geometry.vehicleB</code> is required and never null;</strong> <code>geometry.vehicleC</code> is nullable — and the exact null rule is a flagged contradiction, § Open items.</li>
+      <li><strong><code>object.source</code> is <code>v2x_relayed</code> on every warning this node emits</strong>, because only a relayed track can be VehicleC. The display's provenance guard renders the ghost on that value alone.</li>
+      <li><strong><code>warningType</code> and <code>riskState</code> are plain strings in the schema</strong>, so an unknown value degrades at the consumer rather than being rejected. The <code>low</code> / <code>medium</code> / <code>high</code> vocabulary is used.</li>
+      <li><strong><code>geometry.vehicleB</code> is required and never null;</strong> <code>geometry.vehicleC</code> is nullable in R4 messages.</li>
     </ul>
     <div class="footer"><span>Phases 2-4 — ADA ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">03</div><h2>The CRA assessment record — node-local, not a contract</h2></div>
+    <div class="slide-head"><div class="num">03</div><h2>The CRA assessment record — node-local database</h2></div>
     <p class="lead">R14's acceptance names the schema the assessment reads and writes as a committed artifact. This is that artifact.</p>
     <table class="fpt">
       <thead><tr><th><strong>File</strong></th><th><code>ADA_ECU/schema/cra-assessment-record.schema.json</code></th></tr></thead>
       <tbody>
-        <tr><td><strong>Status</strong></td><td><strong>Node-local and deliberately outside <code>contracts/</code></strong> — it crosses no node boundary, so the sync manifest does not govern it</td></tr>
         <tr><td><strong>Shape</strong></td><td>One record per assessed track: 14 required fields, keyed by <code>trackId</code> plus <code>warningType</code></td></tr>
-        <tr><td><strong>What it carries</strong></td><td>The last committed risk state and when it was entered · the assessment's lifetime · the last and prior composed range · the derived closing rate and time to collision · the last R3 snapshot · the last known B position · an emitted count and a rationale</td></tr>
+        <tr><td><strong>What it carries</strong></td><td>The last committed risk state and when it was entered · the assessment's lifetime · the last and prior composed range · the derived closing rate and time to collision · the last R3 snapshot · the last known VehicleB position · an emitted count and a rationale</td></tr>
         <tr><td><strong>Where it lives at run time</strong></td><td>In process, behind a typed accessor. Every write is also appended to the <code>[EVT]</code> stream, so the table is reconstructible offline</td></tr>
       </tbody>
     </table>
     <ul class="points">
-      <li><strong>Two of its fields exist to survive an erasure.</strong> The last snapshot and the last known B position are what let a <em>clearing</em> warning still carry a required <code>object</code> and a required <code>vehicleB</code> after the track is gone.</li>
-      <li><strong>A database engine was rejected.</strong> SQLite adds a dependency and a file lifecycle to a node with no volume, and buys nothing over an append that already leaves the node through its only egress.</li>
+      <li><strong>Two of its fields exist to survive an erasure.</strong> The last snapshot and the last known VehicleB position are what let a <em>clearing</em> warning still carry a required <code>object</code> and a required <code>vehicleB</code> after the track is gone.</li>
+      <li><strong>A database engine was rejected.</strong> SQLite would add a dependency and a file lifecycle to a node with no volume, and buy nothing over the <code>[EVT]</code> append the node already makes. The table is C++ objects in memory; the committed JSON file is its schema, not its contents.</li>
     </ul>
     <div class="footer"><span>Phases 2-4 — ADA ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
@@ -418,7 +427,7 @@
   </section>
   <section class="slide bg-light content">
     <div class="slide-head"><div class="num">04</div><h2>The node's protocol stack</h2></div>
-    <div class="imgbox"><img src="../assets/phase2-4-ada-protocol-stack.svg" style="height:520px" alt="The ADA node&#x27;s protocol stack: three channels — R2 in, the detector&#x27;s R3 over standard output, R4 out — with the encoding, library, transport, network and link layers each rests on"><div class="cap">The ADA node&#x27;s protocol stack: three channels — R2 in, the detector&#x27;s R3 over standard output, R4 out — with the encoding, library, transport, network and link layers each rests on</div></div>
+    <div class="imgbox"><img src="../assets/phase2-4-ada-protocol-stack.svg" style="height:520px" alt="The ADA node&#x27;s protocol stack: the two network channels over four OSI layers — JSON through nlohmann/json, UDP, IPv4, and the simulated Ethernet segment — with the detector&#x27;s pipe shown outside the stack"><div class="cap">The ADA node&#x27;s protocol stack: the two network channels over four OSI layers — JSON through nlohmann/json, UDP, IPv4, and the simulated Ethernet segment — with the detector&#x27;s pipe shown outside the stack</div></div>
     <div class="footer"><span>Phases 2-4 — ADA ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
@@ -427,13 +436,13 @@
     <table class="fpt">
       <thead><tr><th>Library</th><th>Version</th><th>Licence</th><th>What it serves</th></tr></thead>
       <tbody>
-        <tr><td><strong>nlohmann/json</strong></td><td>v3.11.3</td><td>MIT</td><td>R2 in, R3 in the store, R4 out — every JSON binding in the core</td></tr>
+        <tr><td><strong>nlohmann/json</strong></td><td>v3.11.3</td><td>MIT</td><td>R2 in, R3 in the store, R4 out — every JSON binding in the ADA Core</td></tr>
         <tr><td><strong>ONNX Runtime</strong></td><td>1.28.0</td><td>MIT</td><td>The detector's inference session, CPU execution provider only</td></tr>
         <tr><td><strong>OpenCV</strong> (<code>opencv-python-headless</code>)</td><td>5.0.0.93</td><td>Apache-2.0</td><td>Video decode behind the frame-source seam</td></tr>
         <tr><td><strong>NumPy</strong></td><td>2.4.6</td><td>BSD-3-Clause</td><td>The detector's array arithmetic</td></tr>
         <tr><td><strong>YOLO11n weights</strong></td><td>—</td><td>AGPL-3.0</td><td>The detection model, exported once to ONNX and committed</td></tr>
         <tr><td><strong>Python standard-library <code>json</code></strong></td><td>3.11</td><td>PSF</td><td>The detector's R3 output lines</td></tr>
-        <tr><td><strong>GoogleTest</strong></td><td>v1.14.0</td><td>BSD-3-Clause</td><td>The core's unit suites, driven by CTest</td></tr>
+        <tr><td><strong>GoogleTest</strong></td><td>v1.14.0</td><td>BSD-3-Clause</td><td>The ADA Core's unit suites, driven by CTest</td></tr>
         <tr><td><strong>pytest</strong> · <strong>jsonschema</strong></td><td>≥ 8 · ≥ 4.18</td><td>MIT</td><td>The detector's suites, and schema validation in test</td></tr>
       </tbody>
     </table>
@@ -458,7 +467,7 @@
       <tbody>
         <tr><td><strong>Scenario Player</strong></td><td><code>m1-scenario-player:latest</code></td><td>Bench — one object update every 100 ms</td><td>Produces R1</td><td>Phase 1's node, unchanged. Absent from the isolated Room</td></tr>
         <tr><td><strong>V2X ECU</strong></td><td><code>m1-v2x-ecu:latest</code></td><td>Relay — decode, validate, deduplicate, forward</td><td>Consumes R1, produces R2</td><td>Phase 1's node, unchanged. A bench role stands at its address in the isolated Room</td></tr>
-        <tr><td><strong>ADA ECU</strong></td><td><code>m1-ada-ecu:latest</code></td><td>Perception and fusion — the node these phases build</td><td>Consumes R2, holds R3, produces R4</td><td>One image, two processes: the C++17 core and the Python detector subprocess</td></tr>
+        <tr><td><strong>ADA ECU</strong></td><td><code>m1-ada-ecu:latest</code></td><td>Perception and fusion — the node these phases build</td><td>Consumes R2, holds R3, produces R4</td><td>One image, two processes: the C++17 ADA Core and the Python detector subprocess</td></tr>
         <tr><td><strong>IVI ECU</strong></td><td>None — an APK on the Skycraft node</td><td>Display — the god view</td><td>Consumes R4</td><td><strong>Not built here.</strong> Phase 5's work; a bench role binds its port in the isolated Room</td></tr>
         <tr><td><strong>Ethernet Bridge</strong></td><td>None — a platform node type with no image</td><td>Joins every node's <code>ethernet</code> pin into one L2 segment</td><td>Carries all three flows</td><td>Unchanged since Phase 0</td></tr>
         <tr><td><em>ADA bench</em></td><td><code>m1-ada-bench:latest</code>, from <code>tools/ada-bench/</code></td><td>Test equipment — two roles selected by <code>ROLE</code></td><td>Emits R2 as <code>v2x_mock</code>, receives R4 as <code>ivi_mock</code></td><td>Built by these phases. <strong>Not a node of the blueprint</strong> — it stands in for two</td></tr>
@@ -488,7 +497,7 @@
     <div class="footer"><span>Phases 2-4 — ADA ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">05</div><h2>MVC separation, and the layer rule</h2></div>
+    <div class="slide-head"><div class="num">05</div><h2>Component layer separation</h2></div>
     <p class="lead">Each component sits in one layer, held there by the rule in the right-hand column.</p>
     <table class="fpt">
       <thead><tr><th>Layer</th><th>Components</th><th>The rule that keeps it separate</th></tr></thead>
@@ -496,39 +505,11 @@
         <tr><td><strong>Data</strong></td><td>the frozen bindings, the track store, the assessment table with its schema, the configuration reader, the event log</td><td>Models and stores hold no rules: the store keeps, refreshes and erases entries but never decides what a distance means</td></tr>
         <tr><td><strong>Business logic</strong></td><td>admission, the chained-collision plugin, the scene composer, and the detector's inference, distance and association</td><td>Pure functions of their inputs. None opens a socket, reads the environment or formats a wire message</td></tr>
         <tr><td><strong>Controller</strong></td><td>the composition root, both observers, both parsers, the warning builder, the sender, and the detector's entry point, pacer and emitter</td><td>The controller owns the clock, the threads, the subprocess and the sockets, and holds no rules</td></tr>
-        <tr><td><strong>View</strong></td><td>none — the node is headless</td><td>The rendering surface is the IVI's god view; the local observation surface is the event stream</td></tr>
       </tbody>
     </table>
     <ul class="points">
-      <li><strong>No layer is collapsed:</strong> admission cannot reach a socket, a plugin cannot send a datagram, and the detector cannot reach the store — its only route in is one line through a parser.</li>
+      <li><strong>Each layer lacks a capability another layer holds, and the code enforces it.</strong> Admission decides and never transmits — <code>output/ivi_sender</code> is the node's only sender. A risk plugin returns a finding and never formats a message — <code>output/warning_builder</code> is the only R4 producer. The detector cannot write to the store at all: it is a separate process, so its detections enter as JSON lines through <code>parser/r3_parser</code>, the same entry the relayed path uses.</li>
       <li><strong>Four named components sit in no row above</strong> — the socket holder, the plugin registry, the frame-source seam and the detector's configuration reader. The component diagram colours the first three; the table is what is incomplete. § Open items.</li>
-    </ul>
-    <div class="footer"><span>Phases 2-4 — ADA ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
-  </section>
-  <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">05</div><h2>Abridged folder structure</h2></div>
-    <pre class="log">ADA_ECU/
-├── Dockerfile · entrypoint.sh · capture.sh   two stages on one base image, single-platform arm64
-├── CMakeLists.txt                            the executable, one library per module, the test targets
-├── contracts/                                byte-synced R2 · R3 · R4 schema copies
-├── schema/                                   the assessment-record schema — node-local
-├── src/
-│   ├── main.cpp                              the composition root
-│   ├── config/ · net/ · log/                 sole environment reader · sole socket holder · the event stream
-│   ├── observer/                             the two readers and the one bounded queue
-│   ├── parser/                               wire and line to the frozen object
-│   ├── store/                                the R3 store · the admission machine
-│   ├── cra/                                  the interface · registry · record table · plugins/
-│   ├── fusion/ · output/                     the composed geometry · the warning builder and sender
-│   └── contracts/                            the frozen R2 / R3 / R4 bindings
-├── detector/                                 the Python pipeline, its bindings, its pinned wheels, its tests
-├── models/ · media/                          the exported model · the demo clip and its provenance record
-├── tools/                                    host-side readers of this node&#x27;s own output — no image, no data path
-├── tests/                                    GoogleTest suites mirroring src/, plus the malformed corpus
-└── doc/                                      the design, the decision record, the diagrams, research notes</pre>
-    <ul class="points">
-      <li><strong>The image workdir mirrors this folder</strong>, so a path here is a path inside the container.</li>
-      <li><strong>Test directories mirror source directories</strong>, so the suite covering a module is always at the matching path.</li>
     </ul>
     <div class="footer"><span>Phases 2-4 — ADA ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
@@ -538,7 +519,7 @@
     <table class="fpt">
       <thead><tr><th>What Phase 2 made</th><th>Why it is shaped that way</th></tr></thead>
       <tbody>
-        <tr><td>The core's holders — one configuration reader, one socket holder, one event writer, one bounded queue</td><td>Each concern has exactly one place it can be changed, and the socket header appears in one translation unit</td></tr>
+        <tr><td>The ADA Core's holders — one configuration reader, one socket holder, one event writer, one bounded queue</td><td>Each concern has exactly one place it can be changed, and the socket header appears in one translation unit</td></tr>
         <tr><td>Both parsers, and a corpus of one-defect malformed inputs</td><td>Every rejection is counted by reason and none is fatal; a conforming producer must yield a zero reject count</td></tr>
         <tr><td>The R3 store and the R13 admission machine</td><td>The machine is pure and source-agnostic, parameterized only by what counts as an update</td></tr>
         <tr><td>The assessment interface, its registry and its record schema</td><td>Frozen in Phase 2 so Phase 4's plugin proves the claim that adding one is one new file plus one line</td></tr>
@@ -546,7 +527,7 @@
       </tbody>
     </table>
     <ul class="points">
-      <li><strong>The mocks are stimulus, never a branch.</strong> A recorded own-sensor stream reaches the core through the <em>real</em> reader, and mock relayed traffic arrives as real datagrams on the real socket — so there is no mock code path anywhere in <code>src/</code>.</li>
+      <li><strong>The mocks are stimulus, never a branch.</strong> A recorded own-sensor stream reaches the ADA Core through the <em>real</em> reader, and mock relayed traffic arrives as real datagrams on the real socket — so there is no mock code path anywhere in <code>src/</code>.</li>
       <li><strong>"No input yields no tracks" is a configuration</strong>, not a code path: the detector disabled and no traffic arriving.</li>
     </ul>
     <div class="footer"><span>Phases 2-4 — ADA ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
@@ -558,25 +539,25 @@
       <thead><tr><th><strong>The clip</strong></th><th><code>ADA_ECU/media/ego-b-occluding-c.mp4</code> — 1280×720, 20 fps constant, 200 frames, 10.0 s, ~5 MB</th></tr></thead>
       <tbody>
         <tr><td><strong>Provenance</strong></td><td>Openly-licensed dashcam footage, Pexels License — commercial use and modification permitted; credited in <code>media/ego-b-occluding-c.source.md</code></td></tr>
-        <tr><td><strong>Content</strong></td><td>B is the frontmost in-lane vehicle in every sampled frame, closing from roughly 60 m to 10 m. C is never in the footage</td></tr>
+        <tr><td><strong>Content</strong></td><td>VehicleB is the frontmost in-lane vehicle in every sampled frame, closing from roughly 60 m to 10 m. VehicleC is never in the footage</td></tr>
         <tr><td><strong>How it reaches the node</strong></td><td>One image layer. A Container Node has no volume, no bind mount and no file-injection field</td></tr>
         <tr><td><strong>Sampling</strong></td><td>Every fourth decoded frame — 5 Hz effective, against a budget of 200 ms per sampled frame</td></tr>
       </tbody>
     </table>
     <ul class="points">
       <li><strong>The <code>video</code> pin was rejected</strong>, and its cost is the reason: no C++ client, an undocumented frame header, and 590 Mbit/s of raw pixels for content a local file serves at 0.5 MB/s — plus an R5/R6 re-freeze.</li>
-      <li><strong>The range estimate is calibrated, not assumed.</strong> The two camera constants ship at 2.6 m and 34.4° after a retune against this clip; the default car width put B inside the gate from the first frame. The gate itself was not moved, and never is.</li>
-      <li><strong>A 10 s clip means every long-run behaviour depends on looping</strong>, and the gap across a wrap must stay under the track timeout or ego's own B track expires between cycles.</li>
+      <li><strong>The range estimate is calibrated, not assumed.</strong> The two camera constants ship at 2.6 m and 34.4° after a retune against this clip; the default car width put VehicleB inside the gate from the first frame. The gate itself was not moved, and never is.</li>
+      <li><strong>A 10 s clip means every long-run behaviour depends on looping</strong>, and the gap across a wrap must stay under the track timeout or ego's own VehicleB track expires between cycles.</li>
     </ul>
     <div class="footer"><span>Phases 2-4 — ADA ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
     <div class="slide-head"><div class="num">05</div><h2>Phase 4 — fusion and emission</h2></div>
-    <p class="lead">Live relayed traffic becomes a tracked C, an assessed risk, and one warning on the wire.</p>
+    <p class="lead">Live relayed traffic becomes a tracked VehicleC, an assessed risk, and one warning on the wire.</p>
     <table class="fpt">
       <thead><tr><th>Component</th><th>Its single responsibility</th></tr></thead>
       <tbody>
-        <tr><td><strong>Scene composer</strong></td><td>B from the nearest own-sensor track, C at <code>d_AB + d_BC</code> longitudinally and offset laterally component-wise, ego at the origin</td></tr>
+        <tr><td><strong>Scene composer</strong></td><td>VehicleB from the nearest own-sensor track, VehicleC at <code>d_AB + d_BC</code> longitudinally and offset laterally component-wise, ego at the origin</td></tr>
         <tr><td><strong>Chained-collision plugin</strong></td><td>The M1 non-line-of-sight rules: the composed range, its closing rate and time to collision against three bands, debounced</td></tr>
         <tr><td><strong>Assessment record table</strong></td><td>The prior record every edge trigger and closing rate needs, and the snapshots a clearing warning needs</td></tr>
         <tr><td><strong>Warning builder</strong></td><td>The node's only R4 producer — a risk finding plus the composed geometry onto the frozen binding</td></tr>
@@ -585,7 +566,7 @@
     </table>
     <ul class="points">
       <li><strong>The plugin never emits.</strong> It returns a finding; the output stage decides transport. That is what keeps a rule replaceable without touching the wire.</li>
-      <li><strong><code>d_AC</code> needs <code>d_AB</code>, so with no own-sensor B there is no chain.</strong> The assessment returns <code>low</code> with an explicit rationale and logs that it was skipped — which is also why a <em>clearing</em> warning can always fill the required <code>vehicleB</code> from the last known position.</li>
+      <li><strong><code>d_AC</code> needs <code>d_AB</code>, so with no own-sensor VehicleB there is no chain.</strong> The assessment returns <code>low</code> with an explicit rationale and logs that it was skipped — which is also why a <em>clearing</em> warning can always fill the required <code>vehicleB</code> from the last known position.</li>
       <li><strong>Adding a future plugin is one new file plus one line</strong> in <code>src/cra/builtin_plugins.cpp</code>, with no edit to the interface, the store, the emitter or any existing plugin. Registration is explicit rather than static, because a linker discards unreferenced registrars in a static library.</li>
     </ul>
     <div class="footer"><span>Phases 2-4 — ADA ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
@@ -596,14 +577,14 @@
     <table class="fpt">
       <thead><tr><th></th><th>Band</th><th>Condition</th></tr></thead>
       <tbody>
-        <tr><td><strong>1</strong></td><td><code>high</code></td><td>C tracked <strong>and</strong> (composed range ≤ 30 m <strong>or</strong> time to collision ≤ 3 s)</td></tr>
-        <tr><td><strong>2</strong></td><td><code>medium</code></td><td>C tracked <strong>and</strong> (composed range ≤ 60 m <strong>or</strong> time to collision ≤ 6 s)</td></tr>
-        <tr><td><strong>3</strong></td><td><code>low</code></td><td>everything else — no tracked C, no known B, or a tracked C neither near nor closing fast</td></tr>
+        <tr><td><strong>1</strong></td><td><code>high</code></td><td>VehicleC tracked <strong>and</strong> (composed range ≤ 30 m <strong>or</strong> time to collision ≤ 3 s)</td></tr>
+        <tr><td><strong>2</strong></td><td><code>medium</code></td><td>VehicleC tracked <strong>and</strong> (composed range ≤ 60 m <strong>or</strong> time to collision ≤ 6 s)</td></tr>
+        <tr><td><strong>3</strong></td><td><code>low</code></td><td>everything else — no tracked VehicleC, no known VehicleB, or a tracked VehicleC neither near nor closing fast</td></tr>
       </tbody>
     </table>
     <ul class="points">
       <li><strong>The bands threshold the composed range; the gate thresholds the relayed range alone.</strong> They measure different quantities, so no ordering holds between them and the loader asserts none — a check relating the two would collapse the risk level into track identity.</li>
-      <li><strong>60 m and 30 m put the first warning on a comparison rather than a derivative.</strong> The composed range at C's admission is about 47 m, so the range clause commits the transition on its own with 13 m of margin, tolerating a range-estimate bias up to 1.7×. At 25 m the transition would ride entirely on a time to collision derived from the noisiest quantity in the node.</li>
+      <li><strong>60 m and 30 m put the first warning on a comparison rather than a derivative.</strong> The composed range at VehicleC's admission is about 47 m, so the range clause commits the transition on its own with 13 m of margin, tolerating a range-estimate bias up to 1.7×. At 25 m the transition would ride entirely on a time to collision derived from the noisiest quantity in the node.</li>
       <li><strong>Every committed change emits exactly one warning, in both directions</strong>, and steady state emits nothing. R4 carries no clear message, so the transition back down is the only way the display learns to stop warning.</li>
       <li><strong>These five risk values are architecture proposals awaiting ratification.</strong> They are externalized, so ratifying or retuning is a node-configuration edit.</li>
     </ul>
@@ -611,7 +592,7 @@
   </section>
   <section class="slide bg-light content">
     <div class="slide-head"><div class="num">05</div><h2>Configuration — every value the deployment injects</h2></div>
-    <p class="lead">No tunable appears as a literal. The core reads its values in one place, the detector in one other.</p>
+    <p class="lead">No tunable appears as a literal. The ADA Core reads its values in one place, the detector in one other.</p>
     <table class="fpt">
       <thead><tr><th>Core</th><th>Default</th><th>Meaning</th></tr></thead>
       <tbody>
@@ -674,7 +655,7 @@
       <thead><tr><th>Configuration</th><th>Upstream of R2</th><th>Downstream of R4</th><th>What it proves</th></tr></thead>
       <tbody>
         <tr><td><strong>Unit</strong></td><td>injected values and fixtures</td><td>assertions</td><td>Gate boundaries, the band table, the composed geometry and the pinhole arithmetic against hand-computed values</td></tr>
-        <tr><td><strong>Fixture-driven core</strong></td><td>a recorded own-sensor stream through the real reader, plus real datagrams on the real socket</td><td>a loopback receiver</td><td>The whole core runs with no model and no clip</td></tr>
+        <tr><td><strong>Fixture-driven ADA Core</strong></td><td>a recorded own-sensor stream through the real reader, plus real datagrams on the real socket</td><td>a loopback receiver</td><td>The whole ADA Core runs with no model and no clip</td></tr>
         <tr><td><strong>Isolated Room</strong></td><td>bench emitter at <code>10.99.0.11</code></td><td>bench sink at <code>10.99.0.13</code></td><td>The node deployed, on the platform's network, with both neighbours mocked</td></tr>
         <tr><td><strong>Full blueprint</strong></td><td>the real Scenario Player and V2X ECU</td><td>the IVI Skycraft node</td><td>The same observables with nothing mocked</td></tr>
       </tbody>
@@ -695,12 +676,12 @@
         <tr><td><code>detector_spawn</code>, then one own-sensor ingest line per detection per sampled frame</td><td>the detector reader, and the detector's emitter</td></tr>
         <tr><td><code>r2_ingest</code> carrying the received body, at 90 % or more of the producer's send count</td><td>the listener, the R2 parser and the event writer</td></tr>
         <tr><td>a <code>parse_reject</code> count of zero against a conforming producer</td><td>both parsers</td></tr>
-        <tr><td>a transition to <code>tentative</code> then <code>tracked</code>, once for the relayed C and once for the own-sensor B</td><td>the admission machine</td></tr>
+        <tr><td>a transition to <code>tentative</code> then <code>tracked</code>, once for the relayed VehicleC and once for the own-sensor VehicleB</td><td>the admission machine</td></tr>
         <tr><td>zero own-sensor entries claiming a relayed source, and zero relayed entries claiming an own-sensor identity</td><td>structural — neither namespace can mint the other's</td></tr>
         <tr><td><code>assessment</code> carrying the composed range, the time to collision and the rationale</td><td>the chained-collision plugin</td></tr>
         <tr><td><code>r4_tx</code> carrying the emitted warning body, with <code>object.source</code> <code>v2x_relayed</code></td><td>the warning builder and the sender</td></tr>
         <tr><td>a capture line for <code>10.99.0.12</code> → <code>10.99.0.13:47300</code></td><td>the capture script</td></tr>
-        <tr><td>with C held beyond the gate: ingest still counting up, and no relayed transition at all</td><td>the gate — the negative case</td></tr>
+        <tr><td>with VehicleC held beyond the gate: ingest still counting up, and no relayed transition at all</td><td>the gate — the negative case</td></tr>
       </tbody>
     </table>
     <ul class="points">
@@ -715,11 +696,11 @@
     <table class="fpt">
       <thead><tr><th></th><th>What it is</th></tr></thead>
       <tbody>
-        <tr><td><strong><code>ADA_ECU/tests/fixtures/own_sensor_mock.jsonl</code></strong></td><td>A recorded own-sensor stream the real reader replays, so the core runs with no model and no clip</td></tr>
+        <tr><td><strong><code>ADA_ECU/tests/fixtures/own_sensor_mock.jsonl</code></strong></td><td>A recorded own-sensor stream the real reader replays, so the ADA Core runs with no model and no clip</td></tr>
         <tr><td><strong><code>ADA_ECU/tools/mock_v2x_sender.py</code></strong></td><td>A relayed-message emitter driving the socket from the two committed bench scenarios</td></tr>
         <tr><td><strong><code>tools/ada-bench/</code></strong> at the repository root</td><td>One image, two roles: the emitter standing in at <code>10.99.0.11</code>, the checking sink standing in at <code>10.99.0.13</code></td></tr>
         <tr><td><strong><code>ADA_ECU/tools/make_sample_video.py</code></strong></td><td>A synthetic clip proving the decode path; it cannot produce detection evidence</td></tr>
-        <tr><td><strong><code>ADA_ECU/tools/</code> readers</strong></td><td>Host-side readers of this node's own output: the zero-C check, the run-alignment check, the collision-risk event list, the capture extractor</td></tr>
+        <tr><td><strong><code>ADA_ECU/tools/</code> readers</strong></td><td>Host-side readers of this node's own output: the zero-VehicleC check, the run-alignment check, the collision-risk event list, the capture extractor</td></tr>
       </tbody>
     </table>
     <ul class="points">
@@ -741,7 +722,7 @@
     <table class="fpt">
       <thead><tr><th></th><th>What may now be assumed</th></tr></thead>
       <tbody>
-        <tr><td><strong>The message it consumes</strong></td><td>R4 is frozen and this node is its only producer. Every warning carries a whole R3 snapshot of C with <code>source</code> <code>v2x_relayed</code>, a required numeric B position, and a nullable C position</td></tr>
+        <tr><td><strong>The message it consumes</strong></td><td>R4 is frozen and this node is its only producer. Every warning carries a whole R3 snapshot of VehicleC with <code>source</code> <code>v2x_relayed</code>, a required numeric VehicleB position, and a nullable VehicleC position</td></tr>
         <tr><td><strong>When a warning arrives</strong></td><td>Edge-triggered on a committed risk change, in both directions, after the debounce. Steady state is silent, and there is no clear message — the downgrade is the clear</td></tr>
         <tr><td><strong>The vocabulary it renders</strong></td><td>Three risk levels and one warning type, <code>nlos_obstruction</code>; an unknown value must degrade rather than be rejected</td></tr>
         <tr><td><strong>The address it binds</strong></td><td>UDP <code>47300</code> at <code>10.99.0.13</code>, one message per datagram, no framing header</td></tr>
@@ -761,7 +742,7 @@
     <table class="fpt">
       <thead><tr><th></th><th>Item</th></tr></thead>
       <tbody>
-        <tr><td><strong>Contract versus design</strong></td><td>The frozen R4 schema says <code>geometry.vehicleC</code> is null <em>until C is first tracked</em>; this node's design says null <em>exactly when C's track has been erased</em>. Contract-first means the schema wins, and both readings are legitimate nulls — the one-sided design wording is the defect</td></tr>
+        <tr><td><strong>Contract versus design</strong></td><td>The frozen R4 schema says <code>geometry.vehicleC</code> is null <em>until VehicleC is first tracked</em>; this node's design says null <em>exactly when VehicleC's track has been erased</em>. Contract-first means the schema wins, and both readings are legitimate nulls — the one-sided design wording is the defect</td></tr>
         <tr><td><strong>Awaiting ratification</strong></td><td>The five risk values, and the two admission counters, whose intent the requirement fixes but whose form this design chose</td></tr>
         <tr><td><strong>A count became a timeout</strong></td><td>The plan's missed-update count is realized as a wall-clock timeout, because "its messages stop" is a time condition a counter cannot express. Intent unchanged, form changed — flagged, not absorbed</td></tr>
         <tr><td><strong>Event vocabulary drift</strong></td><td>A thirteenth event name exists for the disabled-detector case, and the machine emits a transition only on a state <em>change</em> rather than on every edge as the design's diagram note states</td></tr>

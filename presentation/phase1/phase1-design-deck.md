@@ -122,7 +122,7 @@ Both were frozen in Phase 0. Phase 1 is the first phase to produce and consume t
 
 ---
 
-# The air message
+# The air V2X message
 
 The V2X message as it exists on the air. The only message in the milestone that is not JSON.
 
@@ -139,7 +139,7 @@ The V2X message as it exists on the air. The only message in the milestone that 
 
 ---
 
-# The structure of the air message
+# The structure of the air V2X message
 
 ![h:500 The message structure: header and payload, two containers, one perceived object, with the fields the object carries and the wire format](../assets/phase1-des-cpm-structure.svg)
 
