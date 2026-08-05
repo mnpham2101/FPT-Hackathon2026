@@ -54,11 +54,14 @@ jobs:
           distribution: temurin
           java-version: "17"
           cache: gradle
+      # Extended by 4.5.7.2 (adapted): the module split delivered :contract and :r4-simulator
+      # beside :app - the designed :serializer and :observer do not exist yet, so the five-module
+      # command of the plan runs as three until they land.
       - name: IVI_ECU Gradle unit tests
         working-directory: IVI_ECU
         run: |
           chmod +x gradlew
-          ./gradlew :app:testDebugUnitTest --no-daemon
+          ./gradlew :contract:test :r4-simulator:test :app:testDebugUnitTest --no-daemon
 
   ivi-assemble:
     runs-on: ubuntu-latest
