@@ -42,28 +42,28 @@
       "source": "contracts/samples/r3-tracked-object.json",
       "targets": [
         "ADA_ECU/tests/fixtures/samples/r3-tracked-object.json",
-        "IVI_ECU/app/src/test/resources/contracts/samples/r3-tracked-object.json"
+        "IVI_ECU/contract/src/main/resources/contracts/samples/r3-tracked-object.json"
       ]
     },
     {
       "source": "contracts/samples/r4-warning.json",
       "targets": [
         "ADA_ECU/tests/fixtures/samples/r4-warning.json",
-        "IVI_ECU/app/src/test/resources/contracts/samples/r4-warning.json"
+        "IVI_ECU/contract/src/main/resources/contracts/samples/r4-warning.json"
       ]
     },
     {
       "source": "contracts/samples/r4-state.json",
       "targets": [
         "ADA_ECU/tests/fixtures/samples/r4-state.json",
-        "IVI_ECU/app/src/test/resources/contracts/samples/r4-state.json"
+        "IVI_ECU/contract/src/main/resources/contracts/samples/r4-state.json"
       ]
     },
     {
       "source": "contracts/samples/r4-unknown-warning.json",
       "targets": [
         "ADA_ECU/tests/fixtures/samples/r4-unknown-warning.json",
-        "IVI_ECU/app/src/test/resources/contracts/samples/r4-unknown-warning.json"
+        "IVI_ECU/contract/src/main/resources/contracts/samples/r4-unknown-warning.json"
       ]
     },
     {

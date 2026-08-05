@@ -73,6 +73,8 @@ kotlin {
 }
 
 dependencies {
+    // The frozen R4/R3 wire binding and the shared contract samples (:contract, HLD D1/D6).
+    implementation(project(":contract"))
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
 
