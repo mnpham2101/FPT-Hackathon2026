@@ -30,9 +30,9 @@ Sources: [m1-cooperative-awareness.md](../../requirements/m1-cooperative-awarene
 2. **Implementation** — progress by workstream, and what each phase delivered
 3. **Requirement coverage** — the 22 requirements and the six that deviate
 4. **Testing** — the three test layers and what each one proves
-5. **Acceptance evidence** — the three surfaces a claim is read from
+5. **Acceptance evidence** — the three surfaces evidence is read from
 6. **Contribution** — scope of work by contributor
-7. **Remaining work** — what is open, what is optional, and what it blocks
+7. **Remaining work** — the open items, the optional items, and their impact
 
 ---
 
@@ -46,14 +46,14 @@ Sources: [m1-cooperative-awareness.md](../../requirements/m1-cooperative-awarene
 
 # Headline status
 
-The system does the thing the milestone was defined by: **vehicle A warns its driver about vehicle C, which A's own sensors never see.**
+The milestone's defining behaviour is realised: **vehicle A warns its driver of vehicle C, which A's own sensors never detect.**
 
 ![h:190 Four headline measures as of 05 August 2026](../assets/m1-report-status-tiles.svg)
 
 - **Implementation is complete** across all seven phases, including Phase 6 convergence on real data.
-- **The system test passed** — the warning screen renders on the IVI, and traffic was observed from every node in the blueprint.
-- **One test layer is open** — the isolated per-node runs. It gates no delivered function.
-- **Six requirements deviate** from the enumerated list; every deviation is a recorded scope decision.
+- **The system test passed** — the warning view renders on the IVI, with traffic observed at every node of the blueprint.
+- **One test layer remains open** — the isolated per-node runs, which gate no delivered function.
+- **Six requirements deviate** from the enumerated set; each deviation is a recorded scope decision.
 
 ---
 
@@ -61,12 +61,12 @@ The system does the thing the milestone was defined by: **vehicle A warns its dr
 
 Percentages here come from **observable system behaviour**, not from a task board.
 
-- **Delivered means seen working.** A function counts once it is observed in a deployed run, end to end.
-- **Closed tickets are not the measure.** A closed subtask that changes nothing observable adds no percentage, and an open one whose behaviour is already live subtracts none.
-- **Phases are weighted before they are combined.** They are not equal in size, so an unweighted average would flatter the small ones and hide the large ones.
-- **Manual testing is counted as work.** It is the expensive part of the later phases, and the weights carry it rather than treating it as free.
+- **Delivered means observed.** A function is counted once it has been exercised end to end in a deployed run.
+- **Closed work items are not the measure.** A closed subtask with no observable effect contributes nothing, and an open subtask whose behaviour is already deployed deducts nothing.
+- **Phases are weighted before they are combined.** They differ in size, so an unweighted mean over-represents the small workstreams and under-represents the large ones.
+- **Manual verification is included in the effort model.** It dominates the later phases, and the weights account for it rather than treating it as zero-cost.
 
-| Workstream | Weight | Why it carries that weight |
+| Workstream | Weight | Basis of the weight |
 |---|---|---|
 | Phase 0 · contracts | 4% | Contract documents, schemas, and a single connectivity smoke test |
 | Phase 1 · comms | 12% | Two node folders in two languages, plus the shared codec seam |
@@ -74,7 +74,7 @@ Percentages here come from **observable system behaviour**, not from a task boar
 | Phase 3 · detection | 12% | Detector export, video decode, distance estimation, subprocess contract |
 | Phase 4 · fusion | 14% | Relayed-object fusion, risk abstraction, warning emission, isolated bench |
 | Phase 5 · IVI HMI | 17% | The HMI, the warning view, and the manual system testing built around it |
-| Phase 6 · convergence | 11% | Small to build, but it carries the manual end-to-end testing and the recorded run |
+| Phase 6 · convergence | 11% | Low build effort; carries the manual end-to-end verification and the recorded run |
 | Cross-cutting | 11% | CI lanes, blueprint design, code review, management and reporting |
 | Shared work | 2% | Team sessions, support, and effort not allocated to one contributor |
 
@@ -92,7 +92,7 @@ Percentages here come from **observable system behaviour**, not from a task boar
 
 ![h:385 Weighted completion by workstream](../assets/m1-report-phase-progress.svg)
 
-> **Every workstream is complete.** The chart's shape carries the second message: phases 2 and 5 are more than four times Phase 0, so "seven phases done" and "the whole system done" are only the same statement once the phases are weighted.
+> **Every workstream is complete.** The bar lengths carry the second result: phases 2 and 5 each exceed four times the effort of Phase 0, so phase count and delivered scope are equivalent measures only after weighting.
 
 ---
 
@@ -103,7 +103,7 @@ Percentages here come from **observable system behaviour**, not from a task boar
 - **Phase 0 gated everything.** Nothing downstream could start until the six contracts were frozen.
 - **Three lanes then ran in parallel** — comms, the ADA scaffold, and the IVI HMI — sharing only contracts.
 - **Phases 3 and 4 ran in parallel** against the same ADA scaffold, one on detection and one on fusion.
-- **Phase 6 was a swap, not a build** — every mock replaced by real data, then the run recorded.
+- **Phase 6 was a substitution, not new construction** — every mock replaced by real data, then the run recorded.
 
 ---
 
@@ -114,12 +114,12 @@ Percentages here come from **observable system behaviour**, not from a task boar
 | **0** | Six frozen contracts, the blueprint topology, the smoke test | Every node reachable on the bridge network |
 | **1** | V2X ECU receive path and the bench that feeds it | Scenario-driven CPMs decoded into object messages |
 | **2** | ADA track store and the admission state machine | Tracks admitted and dropped by configured gates, no flicker |
-| **3** | Detector on the recorded clip, distance estimation | Vehicle B found per frame; zero detections labelled C |
+| **3** | Detector on the recorded clip, distance estimation | VehicleB detected per frame; zero detections labelled C |
 | **4** | Relayed-C fusion, risk assessment, warning emission | Ghost C tracked from the relay alone; warnings emitted |
-| **5** | The AAOS HMI and the warning view | Ego, B and ghost C drawn on screen from warning messages alone |
+| **5** | The AAOS HMI and the warning view | Ego, VehicleB and ghost C rendered from warning messages alone |
 | **6** | Real data end to end, and the recorded run | One continuous run with no mock anywhere in the ego path |
 
-> **The definition of done is the last row.** Ghost C reaches the driver's screen having never been seen by the ego vehicle's own sensors — only relayed from B over V2X.
+> **The definition of done is the last row.** Ghost C reaches the driver's display without ever being detected by the ego vehicle's own sensors, having been relayed from VehicleB over V2X.
 
 ---
 
@@ -136,14 +136,14 @@ Percentages here come from **observable system behaviour**, not from a task boar
 ![h:370 Requirement status — 16 as specified, 5 with a deviation, 1 not implemented](../assets/m1-report-requirements.svg)
 
 - **Sixteen are delivered as specified**, including every contract and the end-to-end run that defines done.
-- **Five carry a deviation** — delivered and working, but narrower than the requirement's full text.
+- **Five carry a deviation** — delivered and functional, but narrower in scope than the requirement text.
 - **One is not implemented** — R10 ego transmission, deferred to a future milestone by decision.
 
 ---
 
 # Deviation register
 
-Each of the six is a decision on the record, not an implementation that fell short.
+Each of the six is a recorded scope decision, not an incomplete implementation.
 
 | Requirement | Deviation | Why |
 |---|---|---|
@@ -151,8 +151,8 @@ Each of the six is a decision on the record, not an implementation that fell sho
 | **R10** — ego Tx | Not implemented | Deferred by decision; the V2X ECU is receive-only in this milestone |
 | **R12** — object detection | Runs on a recorded clip at an offline pace, looped for longer runs | Live detection at road speed is future scope; CPU-only was the platform constraint |
 | **R15** — warning output | Edge-triggered warnings only; no periodic awareness state | The periodic state was optional in the phase's own acceptance |
-| **R16** — HMI | Warning view in the Display area; no ego dashcam clip | Deferred by user decision, 2026-08-02; the design is on the shelf, unbuilt |
-| **R17** — warning view | 2D canvas delivered; no 3D SceneView | 3D was optional throughout; the view seam still admits it unchanged |
+| **R16** — HMI | Warning view in the Display area; no ego dashcam clip | Deferred by user decision, 2026-08-02; the design is specified but not implemented |
+| **R17** — warning view | 2D canvas delivered; no 3D SceneView | 3D was optional throughout; the view seam admits it without modification |
 
 > **None of the six blocks the demonstration.** The milestone's definition of done needs the relay, the fusion and the render — all three are delivered as specified.
 
@@ -176,25 +176,25 @@ Each of the six is a decision on the record, not an implementation that fell sho
 | **Isolated node tests** | 0% — in progress | Which node is at fault when the chain misbehaves, by exercising each one alone |
 | **System test** | 100% — closed | The whole chain produces the warning a driver actually sees |
 
-- **The open layer is diagnostic, not gating.** It shortens fault-finding; it does not stand between the system and its acceptance.
+- **The open layer is diagnostic, not gating.** It shortens fault isolation; it does not gate acceptance.
 
 ---
 
 # System test result
 
-One run of the five-node blueprint, bench to screen, with traffic observed at every node.
+One run of the five-node blueprint, bench to display, with traffic captured at every node.
 
 | Node | Address | What it contributed to the run |
 |---|---|---|
 | **Scenario Player** (bench) | `10.99.0.10` | Scenario-driven CPMs describing vehicle C, on UDP `47100` |
 | **V2X ECU** | `10.99.0.11` | Decoded and validated CPMs, forwarded as object messages on `47200` |
-| **ADA ECU** | `10.99.0.12` | Vehicle B from its own detector, ghost C from the relay, warnings on `47300` |
-| **IVI ECU** (AAOS) | `10.99.0.13` | The warning screen — ego, B and ghost C drawn from the warning message alone |
+| **ADA ECU** | `10.99.0.12` | VehicleB from its own detector, ghost C from the relay, warnings on `47300` |
+| **IVI ECU** (AAOS) | `10.99.0.13` | The warning view — ego, VehicleB and ghost C drawn from the warning message alone |
 | **Ethernet Bridge** | `10.99.0.1` | The L2 network every node's pin attaches to |
 
-- **The warning screen came up** with ghost C at its composed position, from relayed data only.
-- **Traffic was seen on every hop**, so no stage of the chain is inferred from the stage before it.
-- **Zero detections labelled C** in the ego vehicle's own perception for the whole run — the claim the demonstration rests on.
+- **The warning view was rendered** with ghost C at its composed position, from relayed data only.
+- **Traffic was captured on every hop**, so no stage of the chain is inferred from its predecessor.
+- **Zero detections labelled C** in the ego vehicle's own perception for the duration of the run — the claim on which the demonstration depends.
 
 ---
 
@@ -208,15 +208,15 @@ One run of the five-node blueprint, bench to screen, with traffic observed at ev
 
 # The three evidence surfaces
 
-Every claim in this report is read off one of three surfaces, so a run either produced it or it did not.
+Every claim in this report is read from one of three surfaces, so a run either produced the evidence or it did not.
 
 | Surface | What it proves | Where it is captured |
 |---|---|---|
-| **The HMI screen** | The driver is warned about a vehicle this car never saw | Screen recording of the AAOS node across the run |
+| **The HMI display** | The driver is warned of a vehicle this vehicle never detected | Screen recording of the AAOS node across the run |
 | **Internal logs** | Each node did its own part — ingest, admission, risk, emission | `[EVT]` and `[RX]` streams inside the containers |
-| **The wire** | The messages the logs claim actually crossed the network | pcap on each hop of the bridge network |
+| **The network** | The messages reported in the logs were transmitted | pcap on each hop of the bridge network |
 
-> **No single surface is sufficient.** A screen without a capture could be drawn from anything, and a log without a pcap is a node's own account of itself. The three together close the chain.
+> **No single surface is sufficient.** A screen recording alone does not establish the data source, and a log alone is self-reported by the node under test. The three together close the evidence chain.
 
 ---
 
@@ -230,7 +230,7 @@ Every claim in this report is read off one of three surfaces, so a run either pr
 
 - **The transition is the evidence.** The idle screen shows `MODE: HOME` with the R4 listener already bound on `47300`, so the warning that follows is not a start-up artefact.
 - **Distance is on screen** — `d_AB` to the occluder and `d_AC` to the ghost, with the banner reading `[V2X] C · 35.0 m`.
-- **Risk is carried by colour** — the glow steps yellow, orange, red; the capture must catch it changing, not just show it red.
+- **Risk is encoded as colour** — the glow steps yellow, orange, red; the capture must record the transition, not a single high-risk frame.
 - **Ghost C is drawn from R4 alone**, marked `source: v2x_relayed`, with the blind zone behind VehicleB.
 
 ---
@@ -239,9 +239,9 @@ Every claim in this report is read off one of three surfaces, so a run either pr
 
 ![h:320 Where each log stream is captured — the isolated-test setup from the ADA design deck](../assets/phase2-4-ada-test-isolated.svg)
 
-- **Four capture points** — one per node, plus one inside the ADA container for the pcap.
+- **Four capture points** — one per node, plus one inside the ADA container for the packet capture.
 - **The ADA `[EVT]` stream is the primary record**: ingest, track transition, assessment and emission, in one file.
-- **The full system test writes the same lines**, so the two runs are compared line for line rather than by impression.
+- **The full system test emits the same lines**, so the two runs are compared line for line.
 
 ---
 
@@ -263,7 +263,7 @@ Every claim in this report is read off one of three surfaces, so a run either pr
 
 ![h:300 Where the captures are taken across the full blueprint — the system-test setup from the ADA design deck](../assets/phase2-4-ada-test-full.svg)
 
-- **Every hop is captured**, so no stage of the chain is inferred from the stage before it.
+- **Every hop is captured**, so no stage of the chain is inferred from its predecessor.
 - **The ADA-to-IVI hop is captured inside the container**, because that datagram is what the render is built from.
 
 ---
@@ -276,11 +276,11 @@ Every claim in this report is read off one of three surfaces, so a run either pr
 | **R2** — object message | V2X ECU → ADA ECU | `47200` | JSON |
 | **R4** — warning | ADA ECU → IVI ECU | `47300` | JSON |
 
-- **R1, R2 and R4 are the whole wire story** — one contract per hop, and between them they cover every link from the bench to the screen.
+- **R1, R2 and R4 are the complete set of transmitted messages** — one contract per hop, covering every link from the bench to the display.
 - **R3 is not a wire message.** The TrackedObject is the ego's internal store schema; it reaches the IVI embedded in R4's `object` field.
-- **So R3 is proven from the ADA log and from the R4 payload**, not from a capture of its own — which is why the log surface and the wire surface are both required.
+- **R3 is therefore verified from the ADA log and the R4 payload**, not from a capture of its own, which is why both the log surface and the network surface are required.
 
-> **Answering the question directly: yes.** R1, R2 and R4 are the correct and complete set to capture. Adding an R3 filter would find nothing, because nothing ever sends one.
+> **R1, R2 and R4 are the correct and complete capture set.** An R3 capture filter matches nothing, since no R3 message is ever transmitted.
 
 ---
 <!-- _class: lead -->
@@ -295,7 +295,7 @@ Every claim in this report is read off one of three surfaces, so a run either pr
 
 ![h:400 Contribution as a share of total weighted effort](../assets/m1-report-contribution-donut.svg)
 
-> Shares are **effort, not commit count** — each workstream is weighted by its size first, then split between the people who did it.
+> Shares are **weighted effort, not commit count** — each workstream is weighted by its size, then apportioned between its contributors.
 
 ---
 
@@ -305,8 +305,8 @@ Every claim in this report is read off one of three surfaces, so a run either pr
 
 - **Minh** — phases 0 and 1, half of phases 3 and 4, and the cross-cutting work: CI, blueprint, review, reporting.
 - **Hoang (Brian)** — the whole of Phase 2, the largest single phase, and half of phases 3 and 4.
-- **Bach and Vinh** — phases 5 and 6 together, implementing and system testing, including the manual test time.
-- **Others** — the residue of shared work belonging to no single name.
+- **Bach and Vinh** — phases 5 and 6 jointly, implementation and system testing, including the manual verification effort.
+- **Others** — shared effort not attributable to an individual contributor.
 
 ---
 
@@ -320,11 +320,11 @@ Every claim in this report is read off one of three surfaces, so a run either pr
 
 # The work board
 
-![h:330 Remaining work — one test layer in progress, five items to do and two optional explorations](../assets/m1-report-remaining-board.svg)
+![h:330 Remaining work — one test layer in progress, five open items and two optional feasibility studies](../assets/m1-report-remaining-board.svg)
 
-- **Nothing on the board blocks the demonstration.** The delivered system runs today without any of it.
-- **Three of the five to-do items are reports** — the design, what the project taught us, and what the architecture can absorb next.
-- **The two optional items are explorations**, carried as ideas with a stated cost rather than as commitments.
+- **No open item gates the demonstration.** The delivered system operates without any of them.
+- **Three of the five open items are reports** — the delivered design, the knowledge captured, and the extension capability of the architecture.
+- **The two optional items are feasibility studies**, recorded as candidate work with an estimated cost rather than as commitments.
 
 ---
 

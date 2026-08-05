@@ -1,68 +1,68 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 520" width="1120" height="520" font-family="Segoe UI, Segoe UI Variable, Helvetica Neue, Arial, sans-serif">
 <rect width="1120" height="520" fill="#ffffff"/>
-<rect x="220" y="22" width="16.0" height="16" rx="3" fill="#034EA2"/>
-<text x="244" y="35" font-size="14" fill="#3d3d46" font-weight="600">Minh</text>
-<rect x="348" y="22" width="16.0" height="16" rx="3" fill="#F37021"/>
-<text x="372" y="35" font-size="14" fill="#3d3d46" font-weight="600">Hoang (Brian)</text>
-<rect x="476" y="22" width="16.0" height="16" rx="3" fill="#33B2C1"/>
-<text x="500" y="35" font-size="14" fill="#3d3d46" font-weight="600">Bach</text>
-<rect x="604" y="22" width="16.0" height="16" rx="3" fill="#B03A7A"/>
-<text x="628" y="35" font-size="14" fill="#3d3d46" font-weight="600">Vinh</text>
-<rect x="732" y="22" width="16.0" height="16" rx="3" fill="#7C8296"/>
-<text x="756" y="35" font-size="14" fill="#3d3d46" font-weight="600">Others</text>
-<text x="1010" y="35" font-size="12" fill="#8a8d99" font-weight="700" text-anchor="end" letter-spacing="1.4">SCOPE WEIGHT</text>
-<text x="0" y="75" font-size="16" fill="#19226D" font-weight="700">Phase 0</text>
-<text x="0" y="92" font-size="11.5" fill="#8a8d99" font-weight="400">Contracts frozen, smoke test</text>
-<rect x="220" y="62" width="718.0" height="28" rx="4" fill="#034EA2"/>
-<text x="579.0" y="81" font-size="14" fill="#ffffff" font-weight="700" text-anchor="middle">Minh 100%</text>
-<text x="1010" y="81" font-size="16" fill="#19226D" font-weight="700" text-anchor="end">4%</text>
-<text x="0" y="125" font-size="16" fill="#19226D" font-weight="700">Phase 1</text>
-<text x="0" y="142" font-size="11.5" fill="#8a8d99" font-weight="400">Comms bring-up: V2X ECU + bench</text>
-<rect x="220" y="112" width="718.0" height="28" rx="4" fill="#034EA2"/>
-<text x="579.0" y="131" font-size="14" fill="#ffffff" font-weight="700" text-anchor="middle">Minh 100%</text>
-<text x="1010" y="131" font-size="16" fill="#19226D" font-weight="700" text-anchor="end">12%</text>
-<text x="0" y="175" font-size="16" fill="#19226D" font-weight="700">Phase 2</text>
-<text x="0" y="192" font-size="11.5" fill="#8a8d99" font-weight="400">ADA scaffold: store + state machine</text>
-<rect x="220" y="162" width="718.0" height="28" rx="4" fill="#F37021"/>
-<text x="579.0" y="181" font-size="14" fill="#19226D" font-weight="700" text-anchor="middle">Hoang 100%</text>
-<text x="1010" y="181" font-size="16" fill="#19226D" font-weight="700" text-anchor="end">17%</text>
-<text x="0" y="225" font-size="16" fill="#19226D" font-weight="700">Phase 3</text>
-<text x="0" y="242" font-size="11.5" fill="#8a8d99" font-weight="400">Object detection from video</text>
-<rect x="220" y="212" width="358.0" height="28" rx="4" fill="#034EA2"/>
-<text x="399.0" y="231" font-size="14" fill="#ffffff" font-weight="700" text-anchor="middle">Minh 50%</text>
-<rect x="580.0" y="212" width="358.0" height="28" rx="4" fill="#F37021"/>
-<text x="759.0" y="231" font-size="14" fill="#19226D" font-weight="700" text-anchor="middle">Hoang 50%</text>
-<text x="1010" y="231" font-size="16" fill="#19226D" font-weight="700" text-anchor="end">12%</text>
-<text x="0" y="275" font-size="16" fill="#19226D" font-weight="700">Phase 4</text>
-<text x="0" y="292" font-size="11.5" fill="#8a8d99" font-weight="400">Fusion, risk and R4 warning</text>
-<rect x="220" y="262" width="358.0" height="28" rx="4" fill="#034EA2"/>
-<text x="399.0" y="281" font-size="14" fill="#ffffff" font-weight="700" text-anchor="middle">Minh 50%</text>
-<rect x="580.0" y="262" width="358.0" height="28" rx="4" fill="#F37021"/>
-<text x="759.0" y="281" font-size="14" fill="#19226D" font-weight="700" text-anchor="middle">Hoang 50%</text>
-<text x="1010" y="281" font-size="16" fill="#19226D" font-weight="700" text-anchor="end">14%</text>
-<text x="0" y="325" font-size="16" fill="#19226D" font-weight="700">Phase 5</text>
-<text x="0" y="342" font-size="11.5" fill="#8a8d99" font-weight="400">IVI HMI, warning view, manual testing</text>
-<rect x="220" y="312" width="358.0" height="28" rx="4" fill="#33B2C1"/>
-<text x="399.0" y="331" font-size="14" fill="#19226D" font-weight="700" text-anchor="middle">Bach 50%</text>
-<rect x="580.0" y="312" width="358.0" height="28" rx="4" fill="#B03A7A"/>
-<text x="759.0" y="331" font-size="14" fill="#ffffff" font-weight="700" text-anchor="middle">Vinh 50%</text>
-<text x="1010" y="331" font-size="16" fill="#19226D" font-weight="700" text-anchor="end">17%</text>
-<text x="0" y="375" font-size="16" fill="#19226D" font-weight="700">Phase 6</text>
-<text x="0" y="392" font-size="11.5" fill="#8a8d99" font-weight="400">Convergence and the recorded run</text>
-<rect x="220" y="362" width="358.0" height="28" rx="4" fill="#33B2C1"/>
-<text x="399.0" y="381" font-size="14" fill="#19226D" font-weight="700" text-anchor="middle">Bach 50%</text>
-<rect x="580.0" y="362" width="358.0" height="28" rx="4" fill="#B03A7A"/>
-<text x="759.0" y="381" font-size="14" fill="#ffffff" font-weight="700" text-anchor="middle">Vinh 50%</text>
-<text x="1010" y="381" font-size="16" fill="#19226D" font-weight="700" text-anchor="end">11%</text>
-<text x="0" y="425" font-size="16" fill="#19226D" font-weight="700">Cross-cutting</text>
-<text x="0" y="442" font-size="11.5" fill="#8a8d99" font-weight="400">CI, blueprint, review, reporting</text>
-<rect x="220" y="412" width="718.0" height="28" rx="4" fill="#034EA2"/>
-<text x="579.0" y="431" font-size="14" fill="#ffffff" font-weight="700" text-anchor="middle">Minh 100%</text>
-<text x="1010" y="431" font-size="16" fill="#19226D" font-weight="700" text-anchor="end">11%</text>
-<text x="0" y="475" font-size="16" fill="#19226D" font-weight="700">Shared work</text>
-<text x="0" y="492" font-size="11.5" fill="#8a8d99" font-weight="400">Team sessions, support, unattributed effort</text>
-<rect x="220" y="462" width="718.0" height="28" rx="4" fill="#7C8296"/>
-<text x="579.0" y="481" font-size="14" fill="#ffffff" font-weight="700" text-anchor="middle">Others 100%</text>
-<text x="1010" y="481" font-size="16" fill="#19226D" font-weight="700" text-anchor="end">2%</text>
+<rect x="268" y="22" width="16.0" height="16" rx="3" fill="#034EA2"/>
+<text x="292" y="35" font-size="14" fill="#3d3d46" font-weight="600">Minh</text>
+<rect x="396" y="22" width="16.0" height="16" rx="3" fill="#F37021"/>
+<text x="420" y="35" font-size="14" fill="#3d3d46" font-weight="600">Hoang (Brian)</text>
+<rect x="524" y="22" width="16.0" height="16" rx="3" fill="#33B2C1"/>
+<text x="548" y="35" font-size="14" fill="#3d3d46" font-weight="600">Bach</text>
+<rect x="652" y="22" width="16.0" height="16" rx="3" fill="#B03A7A"/>
+<text x="676" y="35" font-size="14" fill="#3d3d46" font-weight="600">Vinh</text>
+<rect x="780" y="22" width="16.0" height="16" rx="3" fill="#7C8296"/>
+<text x="804" y="35" font-size="14" fill="#3d3d46" font-weight="600">Others</text>
+<text x="1065" y="35" font-size="12" fill="#8a8d99" font-weight="700" text-anchor="end" letter-spacing="1.4">SCOPE WEIGHT</text>
+<text x="55" y="75" font-size="16" fill="#19226D" font-weight="700">Phase 0</text>
+<text x="55" y="92" font-size="11.5" fill="#8a8d99" font-weight="400">Contracts frozen, smoke test</text>
+<rect x="268" y="62" width="718.0" height="28" rx="4" fill="#034EA2"/>
+<text x="627.0" y="81" font-size="14" fill="#ffffff" font-weight="700" text-anchor="middle">Minh 100%</text>
+<text x="1065" y="81" font-size="16" fill="#19226D" font-weight="700" text-anchor="end">4%</text>
+<text x="55" y="125" font-size="16" fill="#19226D" font-weight="700">Phase 1</text>
+<text x="55" y="142" font-size="11.5" fill="#8a8d99" font-weight="400">Comms bring-up: V2X ECU + bench</text>
+<rect x="268" y="112" width="718.0" height="28" rx="4" fill="#034EA2"/>
+<text x="627.0" y="131" font-size="14" fill="#ffffff" font-weight="700" text-anchor="middle">Minh 100%</text>
+<text x="1065" y="131" font-size="16" fill="#19226D" font-weight="700" text-anchor="end">12%</text>
+<text x="55" y="175" font-size="16" fill="#19226D" font-weight="700">Phase 2</text>
+<text x="55" y="192" font-size="11.5" fill="#8a8d99" font-weight="400">ADA scaffold: store + state machine</text>
+<rect x="268" y="162" width="718.0" height="28" rx="4" fill="#F37021"/>
+<text x="627.0" y="181" font-size="14" fill="#19226D" font-weight="700" text-anchor="middle">Hoang 100%</text>
+<text x="1065" y="181" font-size="16" fill="#19226D" font-weight="700" text-anchor="end">17%</text>
+<text x="55" y="225" font-size="16" fill="#19226D" font-weight="700">Phase 3</text>
+<text x="55" y="242" font-size="11.5" fill="#8a8d99" font-weight="400">Object detection from video</text>
+<rect x="268" y="212" width="358.0" height="28" rx="4" fill="#034EA2"/>
+<text x="447.0" y="231" font-size="14" fill="#ffffff" font-weight="700" text-anchor="middle">Minh 50%</text>
+<rect x="628.0" y="212" width="358.0" height="28" rx="4" fill="#F37021"/>
+<text x="807.0" y="231" font-size="14" fill="#19226D" font-weight="700" text-anchor="middle">Hoang 50%</text>
+<text x="1065" y="231" font-size="16" fill="#19226D" font-weight="700" text-anchor="end">12%</text>
+<text x="55" y="275" font-size="16" fill="#19226D" font-weight="700">Phase 4</text>
+<text x="55" y="292" font-size="11.5" fill="#8a8d99" font-weight="400">Fusion, risk and R4 warning</text>
+<rect x="268" y="262" width="358.0" height="28" rx="4" fill="#034EA2"/>
+<text x="447.0" y="281" font-size="14" fill="#ffffff" font-weight="700" text-anchor="middle">Minh 50%</text>
+<rect x="628.0" y="262" width="358.0" height="28" rx="4" fill="#F37021"/>
+<text x="807.0" y="281" font-size="14" fill="#19226D" font-weight="700" text-anchor="middle">Hoang 50%</text>
+<text x="1065" y="281" font-size="16" fill="#19226D" font-weight="700" text-anchor="end">14%</text>
+<text x="55" y="325" font-size="16" fill="#19226D" font-weight="700">Phase 5</text>
+<text x="55" y="342" font-size="11.5" fill="#8a8d99" font-weight="400">IVI HMI, warning view, manual testing</text>
+<rect x="268" y="312" width="358.0" height="28" rx="4" fill="#33B2C1"/>
+<text x="447.0" y="331" font-size="14" fill="#19226D" font-weight="700" text-anchor="middle">Bach 50%</text>
+<rect x="628.0" y="312" width="358.0" height="28" rx="4" fill="#B03A7A"/>
+<text x="807.0" y="331" font-size="14" fill="#ffffff" font-weight="700" text-anchor="middle">Vinh 50%</text>
+<text x="1065" y="331" font-size="16" fill="#19226D" font-weight="700" text-anchor="end">17%</text>
+<text x="55" y="375" font-size="16" fill="#19226D" font-weight="700">Phase 6</text>
+<text x="55" y="392" font-size="11.5" fill="#8a8d99" font-weight="400">Convergence and the recorded run</text>
+<rect x="268" y="362" width="358.0" height="28" rx="4" fill="#33B2C1"/>
+<text x="447.0" y="381" font-size="14" fill="#19226D" font-weight="700" text-anchor="middle">Bach 50%</text>
+<rect x="628.0" y="362" width="358.0" height="28" rx="4" fill="#B03A7A"/>
+<text x="807.0" y="381" font-size="14" fill="#ffffff" font-weight="700" text-anchor="middle">Vinh 50%</text>
+<text x="1065" y="381" font-size="16" fill="#19226D" font-weight="700" text-anchor="end">11%</text>
+<text x="55" y="425" font-size="16" fill="#19226D" font-weight="700">Cross-cutting</text>
+<text x="55" y="442" font-size="11.5" fill="#8a8d99" font-weight="400">CI, blueprint, review, reporting</text>
+<rect x="268" y="412" width="718.0" height="28" rx="4" fill="#034EA2"/>
+<text x="627.0" y="431" font-size="14" fill="#ffffff" font-weight="700" text-anchor="middle">Minh 100%</text>
+<text x="1065" y="431" font-size="16" fill="#19226D" font-weight="700" text-anchor="end">11%</text>
+<text x="55" y="475" font-size="16" fill="#19226D" font-weight="700">Shared work</text>
+<text x="55" y="492" font-size="11.5" fill="#8a8d99" font-weight="400">Team sessions and support</text>
+<rect x="268" y="462" width="718.0" height="28" rx="4" fill="#7C8296"/>
+<text x="627.0" y="481" font-size="14" fill="#ffffff" font-weight="700" text-anchor="middle">Others 100%</text>
+<text x="1065" y="481" font-size="16" fill="#19226D" font-weight="700" text-anchor="end">2%</text>
 <line x1="0" y1="502" x2="1120" y2="502" stroke="#DCDEE8"/>
 </svg>

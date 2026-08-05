@@ -16,23 +16,23 @@
 <rect x="490" y="72" width="20.0" height="20" rx="4" fill="#034EA2"/>
 <text x="524" y="88" font-size="20" fill="#19226D" font-weight="700">Minh</text>
 <text x="524" y="110" font-size="14" fill="#3d3d46" font-weight="400">Phases 0 and 1 · half of 3 and 4 · CI, blueprint, review, reporting</text>
-<text x="1120" y="88" font-size="24" fill="#19226D" font-weight="700" text-anchor="end">40%</text>
+<text x="1040" y="88" font-size="24" fill="#19226D" font-weight="700" text-anchor="end">40%</text>
 <rect x="490" y="134" width="20.0" height="20" rx="4" fill="#F37021"/>
 <text x="524" y="150" font-size="20" fill="#19226D" font-weight="700">Hoang (Brian)</text>
 <text x="524" y="172" font-size="14" fill="#3d3d46" font-weight="400">Phase 2 in full · half of phases 3 and 4</text>
-<text x="1120" y="150" font-size="24" fill="#19226D" font-weight="700" text-anchor="end">30%</text>
+<text x="1040" y="150" font-size="24" fill="#19226D" font-weight="700" text-anchor="end">30%</text>
 <rect x="490" y="196" width="20.0" height="20" rx="4" fill="#33B2C1"/>
 <text x="524" y="212" font-size="20" fill="#19226D" font-weight="700">Bach</text>
 <text x="524" y="234" font-size="14" fill="#3d3d46" font-weight="400">Phases 5 and 6 · implementation and system testing</text>
-<text x="1120" y="212" font-size="24" fill="#19226D" font-weight="700" text-anchor="end">14%</text>
+<text x="1040" y="212" font-size="24" fill="#19226D" font-weight="700" text-anchor="end">14%</text>
 <rect x="490" y="258" width="20.0" height="20" rx="4" fill="#B03A7A"/>
 <text x="524" y="274" font-size="20" fill="#19226D" font-weight="700">Vinh</text>
 <text x="524" y="296" font-size="14" fill="#3d3d46" font-weight="400">Phases 5 and 6 · implementation and system testing</text>
-<text x="1120" y="274" font-size="24" fill="#19226D" font-weight="700" text-anchor="end">14%</text>
+<text x="1040" y="274" font-size="24" fill="#19226D" font-weight="700" text-anchor="end">14%</text>
 <rect x="490" y="320" width="20.0" height="20" rx="4" fill="#7C8296"/>
 <text x="524" y="336" font-size="20" fill="#19226D" font-weight="700">Others</text>
 <text x="524" y="358" font-size="14" fill="#3d3d46" font-weight="400">Shared work not allocated to a named contributor</text>
-<text x="1120" y="336" font-size="24" fill="#19226D" font-weight="700" text-anchor="end">2%</text>
+<text x="1040" y="336" font-size="24" fill="#19226D" font-weight="700" text-anchor="end">2%</text>
 <line x1="490" y1="392" x2="1120" y2="372" stroke="#DCDEE8"/>
 <text x="490" y="414" font-size="13" fill="#8a8d99" font-weight="400">Effort share, not commit count — each phase weighted by its size before the split.</text>
 </svg>

@@ -50,10 +50,10 @@
 <text x="262" y="409" font-size="15" fill="#ffffff" font-weight="700">11%</text>
 <text x="663.1764705882352" y="409" font-size="14" fill="#2E7D27" font-weight="700">100% delivered</text>
 <text x="238" y="449" font-size="16" fill="#19226D" font-weight="700" text-anchor="end">Shared work</text>
-<text x="238" y="466" font-size="12.5" fill="#8a8d99" font-weight="400" text-anchor="end">Team sessions, support, unattributed effort</text>
+<text x="238" y="466" font-size="12.5" fill="#8a8d99" font-weight="400" text-anchor="end">Team sessions and support</text>
 <rect x="250" y="436" width="72.9" height="28" rx="4" fill="#2E7D27"/>
 <text x="262" y="455" font-size="15" fill="#ffffff" font-weight="700">2%</text>
 <text x="334.94117647058823" y="455" font-size="14" fill="#2E7D27" font-weight="700">100% delivered</text>
 <line x1="0" y1="486" x2="1120" y2="486" stroke="#DCDEE8"/>
-<text x="0" y="507" font-size="13" fill="#8a8d99" font-weight="400">Bar length = that workstream's share of total effort · full fill = delivered and observed on the running system.</text>
+<text x="0" y="507" font-size="13" fill="#8a8d99" font-weight="400">Bar length = that workstream's share of total effort · full fill = delivered and observed on the deployed system.</text>
 </svg>

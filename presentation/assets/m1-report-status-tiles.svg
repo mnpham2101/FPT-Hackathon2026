@@ -5,19 +5,19 @@
 <text x="22" y="52" font-size="12.5" fill="#8a8d99" font-weight="700" letter-spacing="1.6">IMPLEMENTATION</text>
 <text x="22" y="116" font-size="54" fill="#2E7D27" font-weight="700">100%</text>
 <text x="22" y="146" font-size="15.5" fill="#19226D" font-weight="600">All seven phases delivered</text>
-<text x="22" y="170" font-size="13.5" fill="#8a8d99" font-weight="400">Measured on the running system</text>
+<text x="22" y="170" font-size="13.5" fill="#8a8d99" font-weight="400">Measured on the deployed system</text>
 <rect x="286" y="10" width="262.0" height="180" rx="10" fill="#F8F9FC" stroke="#DCDEE8" stroke-width="1"/>
 <rect x="296" y="10" width="242.0" height="5" rx="0" fill="#2E7D27"/>
 <text x="308" y="52" font-size="12.5" fill="#8a8d99" font-weight="700" letter-spacing="1.6">SYSTEM TEST</text>
 <text x="308" y="116" font-size="54" fill="#2E7D27" font-weight="700">100%</text>
 <text x="308" y="146" font-size="15.5" fill="#19226D" font-weight="600">Warning screen on the IVI</text>
-<text x="308" y="170" font-size="13.5" fill="#8a8d99" font-weight="400">Traffic seen from every node</text>
+<text x="308" y="170" font-size="13.5" fill="#8a8d99" font-weight="400">Traffic observed at every node</text>
 <rect x="572" y="10" width="262.0" height="180" rx="10" fill="#F8F9FC" stroke="#DCDEE8" stroke-width="1"/>
 <rect x="582" y="10" width="242.0" height="5" rx="0" fill="#9A5A00"/>
 <text x="594" y="52" font-size="12.5" fill="#8a8d99" font-weight="700" letter-spacing="1.6">ISOLATED NODE TESTS</text>
 <text x="594" y="116" font-size="54" fill="#9A5A00" font-weight="700">0%</text>
 <text x="594" y="146" font-size="15.5" fill="#19226D" font-weight="600">Per-node runs in progress</text>
-<text x="594" y="170" font-size="13.5" fill="#8a8d99" font-weight="400">The one open test layer</text>
+<text x="594" y="170" font-size="13.5" fill="#8a8d99" font-weight="400">The single open test layer</text>
 <rect x="858" y="10" width="262.0" height="180" rx="10" fill="#F8F9FC" stroke="#DCDEE8" stroke-width="1"/>
 <rect x="868" y="10" width="242.0" height="5" rx="0" fill="#19226D"/>
 <text x="880" y="52" font-size="12.5" fill="#8a8d99" font-weight="700" letter-spacing="1.6">DAYS TO DEADLINE</text>

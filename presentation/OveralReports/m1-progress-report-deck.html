@@ -201,9 +201,9 @@
       <div class="item"><div class="n">02</div><div><h3>Implementation</h3><p>progress by workstream, and what each phase delivered</p></div></div>
       <div class="item"><div class="n">03</div><div><h3>Requirement coverage</h3><p>the 22 requirements and the six that deviate</p></div></div>
       <div class="item"><div class="n">04</div><div><h3>Testing</h3><p>the three test layers and what each one proves</p></div></div>
-      <div class="item"><div class="n">05</div><div><h3>Acceptance evidence</h3><p>the three surfaces a claim is read from</p></div></div>
+      <div class="item"><div class="n">05</div><div><h3>Acceptance evidence</h3><p>the three surfaces evidence is read from</p></div></div>
       <div class="item"><div class="n">06</div><div><h3>Contribution</h3><p>scope of work by contributor</p></div></div>
-      <div class="item"><div class="n">07</div><div><h3>Remaining work</h3><p>what is open, what is optional, and what it blocks</p></div></div>
+      <div class="item"><div class="n">07</div><div><h3>Remaining work</h3><p>the open items, the optional items, and their impact</p></div></div>
     </div>
     <div class="footer"><span>Milestone 1 — Progress Report · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
@@ -215,13 +215,13 @@
   </section>
   <section class="slide bg-light content">
     <div class="slide-head"><div class="num">01</div><h2>Headline status</h2></div>
-    <p class="lead">The system does the thing the milestone was defined by: <strong>vehicle A warns its driver about vehicle C, which A's own sensors never see.</strong></p>
+    <p class="lead">The milestone's defining behaviour is realised: <strong>vehicle A warns its driver of vehicle C, which A's own sensors never detect.</strong></p>
     <div class="imgbox"><img src="../assets/m1-report-status-tiles.svg" style="height:190px" alt="Four headline measures as of 05 August 2026"><div class="cap">Four headline measures as of 05 August 2026</div></div>
     <ul class="points">
       <li><strong>Implementation is complete</strong> across all seven phases, including Phase 6 convergence on real data.</li>
-      <li><strong>The system test passed</strong> — the warning screen renders on the IVI, and traffic was observed from every node in the blueprint.</li>
-      <li><strong>One test layer is open</strong> — the isolated per-node runs. It gates no delivered function.</li>
-      <li><strong>Six requirements deviate</strong> from the enumerated list; every deviation is a recorded scope decision.</li>
+      <li><strong>The system test passed</strong> — the warning view renders on the IVI, with traffic observed at every node of the blueprint.</li>
+      <li><strong>One test layer remains open</strong> — the isolated per-node runs, which gate no delivered function.</li>
+      <li><strong>Six requirements deviate</strong> from the enumerated set; each deviation is a recorded scope decision.</li>
     </ul>
     <div class="footer"><span>Milestone 1 — Progress Report · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
@@ -229,13 +229,13 @@
     <div class="slide-head"><div class="num">01</div><h2>Basis of the completion figures</h2></div>
     <p class="lead">Percentages here come from <strong>observable system behaviour</strong>, not from a task board.</p>
     <ul class="points">
-      <li><strong>Delivered means seen working.</strong> A function counts once it is observed in a deployed run, end to end.</li>
-      <li><strong>Closed tickets are not the measure.</strong> A closed subtask that changes nothing observable adds no percentage, and an open one whose behaviour is already live subtracts none.</li>
-      <li><strong>Phases are weighted before they are combined.</strong> They are not equal in size, so an unweighted average would flatter the small ones and hide the large ones.</li>
-      <li><strong>Manual testing is counted as work.</strong> It is the expensive part of the later phases, and the weights carry it rather than treating it as free.</li>
+      <li><strong>Delivered means observed.</strong> A function is counted once it has been exercised end to end in a deployed run.</li>
+      <li><strong>Closed work items are not the measure.</strong> A closed subtask with no observable effect contributes nothing, and an open subtask whose behaviour is already deployed deducts nothing.</li>
+      <li><strong>Phases are weighted before they are combined.</strong> They differ in size, so an unweighted mean over-represents the small workstreams and under-represents the large ones.</li>
+      <li><strong>Manual verification is included in the effort model.</strong> It dominates the later phases, and the weights account for it rather than treating it as zero-cost.</li>
     </ul>
     <table class="fpt">
-      <thead><tr><th>Workstream</th><th>Weight</th><th>Why it carries that weight</th></tr></thead>
+      <thead><tr><th>Workstream</th><th>Weight</th><th>Basis of the weight</th></tr></thead>
       <tbody>
         <tr><td>Phase 0 · contracts</td><td>4%</td><td>Contract documents, schemas, and a single connectivity smoke test</td></tr>
         <tr><td>Phase 1 · comms</td><td>12%</td><td>Two node folders in two languages, plus the shared codec seam</td></tr>
@@ -243,7 +243,7 @@
         <tr><td>Phase 3 · detection</td><td>12%</td><td>Detector export, video decode, distance estimation, subprocess contract</td></tr>
         <tr><td>Phase 4 · fusion</td><td>14%</td><td>Relayed-object fusion, risk abstraction, warning emission, isolated bench</td></tr>
         <tr><td>Phase 5 · IVI HMI</td><td>17%</td><td>The HMI, the warning view, and the manual system testing built around it</td></tr>
-        <tr><td>Phase 6 · convergence</td><td>11%</td><td>Small to build, but it carries the manual end-to-end testing and the recorded run</td></tr>
+        <tr><td>Phase 6 · convergence</td><td>11%</td><td>Low build effort; carries the manual end-to-end verification and the recorded run</td></tr>
         <tr><td>Cross-cutting</td><td>11%</td><td>CI lanes, blueprint design, code review, management and reporting</td></tr>
         <tr><td>Shared work</td><td>2%</td><td>Team sessions, support, and effort not allocated to one contributor</td></tr>
       </tbody>
@@ -259,7 +259,7 @@
   <section class="slide bg-light content">
     <div class="slide-head"><div class="num">02</div><h2>Progress by workstream</h2></div>
     <div class="imgbox"><img src="../assets/m1-report-phase-progress.svg" style="height:385px" alt="Weighted completion by workstream"><div class="cap">Weighted completion by workstream</div></div>
-    <div class="strip"><strong>Every workstream is complete.</strong> The chart's shape carries the second message: phases 2 and 5 are more than four times Phase 0, so "seven phases done" and "the whole system done" are only the same statement once the phases are weighted.</div>
+    <div class="strip"><strong>Every workstream is complete.</strong> The bar lengths carry the second result: phases 2 and 5 each exceed four times the effort of Phase 0, so phase count and delivered scope are equivalent measures only after weighting.</div>
     <div class="footer"><span>Milestone 1 — Progress Report · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
@@ -269,7 +269,7 @@
       <li><strong>Phase 0 gated everything.</strong> Nothing downstream could start until the six contracts were frozen.</li>
       <li><strong>Three lanes then ran in parallel</strong> — comms, the ADA scaffold, and the IVI HMI — sharing only contracts.</li>
       <li><strong>Phases 3 and 4 ran in parallel</strong> against the same ADA scaffold, one on detection and one on fusion.</li>
-      <li><strong>Phase 6 was a swap, not a build</strong> — every mock replaced by real data, then the run recorded.</li>
+      <li><strong>Phase 6 was a substitution, not new construction</strong> — every mock replaced by real data, then the run recorded.</li>
     </ul>
     <div class="footer"><span>Milestone 1 — Progress Report · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
@@ -281,13 +281,13 @@
         <tr><td><strong>0</strong></td><td>Six frozen contracts, the blueprint topology, the smoke test</td><td>Every node reachable on the bridge network</td></tr>
         <tr><td><strong>1</strong></td><td>V2X ECU receive path and the bench that feeds it</td><td>Scenario-driven CPMs decoded into object messages</td></tr>
         <tr><td><strong>2</strong></td><td>ADA track store and the admission state machine</td><td>Tracks admitted and dropped by configured gates, no flicker</td></tr>
-        <tr><td><strong>3</strong></td><td>Detector on the recorded clip, distance estimation</td><td>Vehicle B found per frame; zero detections labelled C</td></tr>
+        <tr><td><strong>3</strong></td><td>Detector on the recorded clip, distance estimation</td><td>VehicleB detected per frame; zero detections labelled C</td></tr>
         <tr><td><strong>4</strong></td><td>Relayed-C fusion, risk assessment, warning emission</td><td>Ghost C tracked from the relay alone; warnings emitted</td></tr>
-        <tr><td><strong>5</strong></td><td>The AAOS HMI and the warning view</td><td>Ego, B and ghost C drawn on screen from warning messages alone</td></tr>
+        <tr><td><strong>5</strong></td><td>The AAOS HMI and the warning view</td><td>Ego, VehicleB and ghost C rendered from warning messages alone</td></tr>
         <tr><td><strong>6</strong></td><td>Real data end to end, and the recorded run</td><td>One continuous run with no mock anywhere in the ego path</td></tr>
       </tbody>
     </table>
-    <div class="strip"><strong>The definition of done is the last row.</strong> Ghost C reaches the driver's screen having never been seen by the ego vehicle's own sensors — only relayed from B over V2X.</div>
+    <div class="strip"><strong>The definition of done is the last row.</strong> Ghost C reaches the driver's display without ever being detected by the ego vehicle's own sensors, having been relayed from VehicleB over V2X.</div>
     <div class="footer"><span>Milestone 1 — Progress Report · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
@@ -301,14 +301,14 @@
     <div class="imgbox"><img src="../assets/m1-report-requirements.svg" style="height:370px" alt="Requirement status — 16 as specified, 5 with a deviation, 1 not implemented"><div class="cap">Requirement status — 16 as specified, 5 with a deviation, 1 not implemented</div></div>
     <ul class="points">
       <li><strong>Sixteen are delivered as specified</strong>, including every contract and the end-to-end run that defines done.</li>
-      <li><strong>Five carry a deviation</strong> — delivered and working, but narrower than the requirement's full text.</li>
+      <li><strong>Five carry a deviation</strong> — delivered and functional, but narrower in scope than the requirement text.</li>
       <li><strong>One is not implemented</strong> — R10 ego transmission, deferred to a future milestone by decision.</li>
     </ul>
     <div class="footer"><span>Milestone 1 — Progress Report · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
     <div class="slide-head"><div class="num">03</div><h2>Deviation register</h2></div>
-    <p class="lead">Each of the six is a decision on the record, not an implementation that fell short.</p>
+    <p class="lead">Each of the six is a recorded scope decision, not an incomplete implementation.</p>
     <table class="fpt">
       <thead><tr><th>Requirement</th><th>Deviation</th><th>Why</th></tr></thead>
       <tbody>
@@ -316,8 +316,8 @@
         <tr><td><strong>R10</strong> — ego Tx</td><td>Not implemented</td><td>Deferred by decision; the V2X ECU is receive-only in this milestone</td></tr>
         <tr><td><strong>R12</strong> — object detection</td><td>Runs on a recorded clip at an offline pace, looped for longer runs</td><td>Live detection at road speed is future scope; CPU-only was the platform constraint</td></tr>
         <tr><td><strong>R15</strong> — warning output</td><td>Edge-triggered warnings only; no periodic awareness state</td><td>The periodic state was optional in the phase's own acceptance</td></tr>
-        <tr><td><strong>R16</strong> — HMI</td><td>Warning view in the Display area; no ego dashcam clip</td><td>Deferred by user decision, 2026-08-02; the design is on the shelf, unbuilt</td></tr>
-        <tr><td><strong>R17</strong> — warning view</td><td>2D canvas delivered; no 3D SceneView</td><td>3D was optional throughout; the view seam still admits it unchanged</td></tr>
+        <tr><td><strong>R16</strong> — HMI</td><td>Warning view in the Display area; no ego dashcam clip</td><td>Deferred by user decision, 2026-08-02; the design is specified but not implemented</td></tr>
+        <tr><td><strong>R17</strong> — warning view</td><td>2D canvas delivered; no 3D SceneView</td><td>3D was optional throughout; the view seam admits it without modification</td></tr>
       </tbody>
     </table>
     <div class="strip"><strong>None of the six blocks the demonstration.</strong> The milestone's definition of done needs the relay, the fusion and the render — all three are delivered as specified.</div>
@@ -341,27 +341,27 @@
       </tbody>
     </table>
     <ul class="points">
-      <li><strong>The open layer is diagnostic, not gating.</strong> It shortens fault-finding; it does not stand between the system and its acceptance.</li>
+      <li><strong>The open layer is diagnostic, not gating.</strong> It shortens fault isolation; it does not gate acceptance.</li>
     </ul>
     <div class="footer"><span>Milestone 1 — Progress Report · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
     <div class="slide-head"><div class="num">04</div><h2>System test result</h2></div>
-    <p class="lead">One run of the five-node blueprint, bench to screen, with traffic observed at every node.</p>
+    <p class="lead">One run of the five-node blueprint, bench to display, with traffic captured at every node.</p>
     <table class="fpt">
       <thead><tr><th>Node</th><th>Address</th><th>What it contributed to the run</th></tr></thead>
       <tbody>
         <tr><td><strong>Scenario Player</strong> (bench)</td><td><code>10.99.0.10</code></td><td>Scenario-driven CPMs describing vehicle C, on UDP <code>47100</code></td></tr>
         <tr><td><strong>V2X ECU</strong></td><td><code>10.99.0.11</code></td><td>Decoded and validated CPMs, forwarded as object messages on <code>47200</code></td></tr>
-        <tr><td><strong>ADA ECU</strong></td><td><code>10.99.0.12</code></td><td>Vehicle B from its own detector, ghost C from the relay, warnings on <code>47300</code></td></tr>
-        <tr><td><strong>IVI ECU</strong> (AAOS)</td><td><code>10.99.0.13</code></td><td>The warning screen — ego, B and ghost C drawn from the warning message alone</td></tr>
+        <tr><td><strong>ADA ECU</strong></td><td><code>10.99.0.12</code></td><td>VehicleB from its own detector, ghost C from the relay, warnings on <code>47300</code></td></tr>
+        <tr><td><strong>IVI ECU</strong> (AAOS)</td><td><code>10.99.0.13</code></td><td>The warning view — ego, VehicleB and ghost C drawn from the warning message alone</td></tr>
         <tr><td><strong>Ethernet Bridge</strong></td><td><code>10.99.0.1</code></td><td>The L2 network every node's pin attaches to</td></tr>
       </tbody>
     </table>
     <ul class="points">
-      <li><strong>The warning screen came up</strong> with ghost C at its composed position, from relayed data only.</li>
-      <li><strong>Traffic was seen on every hop</strong>, so no stage of the chain is inferred from the stage before it.</li>
-      <li><strong>Zero detections labelled C</strong> in the ego vehicle's own perception for the whole run — the claim the demonstration rests on.</li>
+      <li><strong>The warning view was rendered</strong> with ghost C at its composed position, from relayed data only.</li>
+      <li><strong>Traffic was captured on every hop</strong>, so no stage of the chain is inferred from its predecessor.</li>
+      <li><strong>Zero detections labelled C</strong> in the ego vehicle's own perception for the duration of the run — the claim on which the demonstration depends.</li>
     </ul>
     <div class="footer"><span>Milestone 1 — Progress Report · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
@@ -373,16 +373,16 @@
   </section>
   <section class="slide bg-light content">
     <div class="slide-head"><div class="num">05</div><h2>The three evidence surfaces</h2></div>
-    <p class="lead">Every claim in this report is read off one of three surfaces, so a run either produced it or it did not.</p>
+    <p class="lead">Every claim in this report is read from one of three surfaces, so a run either produced the evidence or it did not.</p>
     <table class="fpt">
       <thead><tr><th>Surface</th><th>What it proves</th><th>Where it is captured</th></tr></thead>
       <tbody>
-        <tr><td><strong>The HMI screen</strong></td><td>The driver is warned about a vehicle this car never saw</td><td>Screen recording of the AAOS node across the run</td></tr>
+        <tr><td><strong>The HMI display</strong></td><td>The driver is warned of a vehicle this vehicle never detected</td><td>Screen recording of the AAOS node across the run</td></tr>
         <tr><td><strong>Internal logs</strong></td><td>Each node did its own part — ingest, admission, risk, emission</td><td><code>[EVT]</code> and <code>[RX]</code> streams inside the containers</td></tr>
-        <tr><td><strong>The wire</strong></td><td>The messages the logs claim actually crossed the network</td><td>pcap on each hop of the bridge network</td></tr>
+        <tr><td><strong>The network</strong></td><td>The messages reported in the logs were transmitted</td><td>pcap on each hop of the bridge network</td></tr>
       </tbody>
     </table>
-    <div class="strip"><strong>No single surface is sufficient.</strong> A screen without a capture could be drawn from anything, and a log without a pcap is a node's own account of itself. The three together close the chain.</div>
+    <div class="strip"><strong>No single surface is sufficient.</strong> A screen recording alone does not establish the data source, and a log alone is self-reported by the node under test. The three together close the evidence chain.</div>
     <div class="footer"><span>Milestone 1 — Progress Report · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
@@ -395,7 +395,7 @@
     <ul class="points">
       <li><strong>The transition is the evidence.</strong> The idle screen shows <code>MODE: HOME</code> with the R4 listener already bound on <code>47300</code>, so the warning that follows is not a start-up artefact.</li>
       <li><strong>Distance is on screen</strong> — <code>d_AB</code> to the occluder and <code>d_AC</code> to the ghost, with the banner reading <code>[V2X] C · 35.0 m</code>.</li>
-      <li><strong>Risk is carried by colour</strong> — the glow steps yellow, orange, red; the capture must catch it changing, not just show it red.</li>
+      <li><strong>Risk is encoded as colour</strong> — the glow steps yellow, orange, red; the capture must record the transition, not a single high-risk frame.</li>
       <li><strong>Ghost C is drawn from R4 alone</strong>, marked <code>source: v2x_relayed</code>, with the blind zone behind VehicleB.</li>
     </ul>
     <div class="footer"><span>Milestone 1 — Progress Report · FPT Hackathon 2026</span><span class="page"></span></div>
@@ -404,9 +404,9 @@
     <div class="slide-head"><div class="num">05</div><h2>Internal log capture — the surfaces</h2></div>
     <div class="imgbox"><img src="../assets/phase2-4-ada-test-isolated.svg" style="height:320px" alt="Where each log stream is captured — the isolated-test setup from the ADA design deck"><div class="cap">Where each log stream is captured — the isolated-test setup from the ADA design deck</div></div>
     <ul class="points">
-      <li><strong>Four capture points</strong> — one per node, plus one inside the ADA container for the pcap.</li>
+      <li><strong>Four capture points</strong> — one per node, plus one inside the ADA container for the packet capture.</li>
       <li><strong>The ADA <code>[EVT]</code> stream is the primary record</strong>: ingest, track transition, assessment and emission, in one file.</li>
-      <li><strong>The full system test writes the same lines</strong>, so the two runs are compared line for line rather than by impression.</li>
+      <li><strong>The full system test emits the same lines</strong>, so the two runs are compared line for line.</li>
     </ul>
     <div class="footer"><span>Milestone 1 — Progress Report · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
@@ -430,7 +430,7 @@
     <div class="slide-head"><div class="num">05</div><h2>Wire capture — the five capture points</h2></div>
     <div class="imgbox"><img src="../assets/phase2-4-ada-test-full.svg" style="height:300px" alt="Where the captures are taken across the full blueprint — the system-test setup from the ADA design deck"><div class="cap">Where the captures are taken across the full blueprint — the system-test setup from the ADA design deck</div></div>
     <ul class="points">
-      <li><strong>Every hop is captured</strong>, so no stage of the chain is inferred from the stage before it.</li>
+      <li><strong>Every hop is captured</strong>, so no stage of the chain is inferred from its predecessor.</li>
       <li><strong>The ADA-to-IVI hop is captured inside the container</strong>, because that datagram is what the render is built from.</li>
     </ul>
     <div class="footer"><span>Milestone 1 — Progress Report · FPT Hackathon 2026</span><span class="page"></span></div>
@@ -446,11 +446,11 @@
       </tbody>
     </table>
     <ul class="points">
-      <li><strong>R1, R2 and R4 are the whole wire story</strong> — one contract per hop, and between them they cover every link from the bench to the screen.</li>
+      <li><strong>R1, R2 and R4 are the complete set of transmitted messages</strong> — one contract per hop, covering every link from the bench to the display.</li>
       <li><strong>R3 is not a wire message.</strong> The TrackedObject is the ego's internal store schema; it reaches the IVI embedded in R4's <code>object</code> field.</li>
-      <li><strong>So R3 is proven from the ADA log and from the R4 payload</strong>, not from a capture of its own — which is why the log surface and the wire surface are both required.</li>
+      <li><strong>R3 is therefore verified from the ADA log and the R4 payload</strong>, not from a capture of its own, which is why both the log surface and the network surface are required.</li>
     </ul>
-    <div class="strip"><strong>Answering the question directly: yes.</strong> R1, R2 and R4 are the correct and complete set to capture. Adding an R3 filter would find nothing, because nothing ever sends one.</div>
+    <div class="strip"><strong>R1, R2 and R4 are the correct and complete capture set.</strong> An R3 capture filter matches nothing, since no R3 message is ever transmitted.</div>
     <div class="footer"><span>Milestone 1 — Progress Report · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
@@ -462,7 +462,7 @@
   <section class="slide bg-light content">
     <div class="slide-head"><div class="num">06</div><h2>Scope of work by contributor</h2></div>
     <div class="imgbox"><img src="../assets/m1-report-contribution-donut.svg" style="height:400px" alt="Contribution as a share of total weighted effort"><div class="cap">Contribution as a share of total weighted effort</div></div>
-    <div class="strip">Shares are <strong>effort, not commit count</strong> — each workstream is weighted by its size first, then split between the people who did it.</div>
+    <div class="strip">Shares are <strong>weighted effort, not commit count</strong> — each workstream is weighted by its size, then apportioned between its contributors.</div>
     <div class="footer"><span>Milestone 1 — Progress Report · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
@@ -471,8 +471,8 @@
     <ul class="points">
       <li><strong>Minh</strong> — phases 0 and 1, half of phases 3 and 4, and the cross-cutting work: CI, blueprint, review, reporting.</li>
       <li><strong>Hoang (Brian)</strong> — the whole of Phase 2, the largest single phase, and half of phases 3 and 4.</li>
-      <li><strong>Bach and Vinh</strong> — phases 5 and 6 together, implementing and system testing, including the manual test time.</li>
-      <li><strong>Others</strong> — the residue of shared work belonging to no single name.</li>
+      <li><strong>Bach and Vinh</strong> — phases 5 and 6 jointly, implementation and system testing, including the manual verification effort.</li>
+      <li><strong>Others</strong> — shared effort not attributable to an individual contributor.</li>
     </ul>
     <div class="footer"><span>Milestone 1 — Progress Report · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
@@ -484,11 +484,11 @@
   </section>
   <section class="slide bg-light content">
     <div class="slide-head"><div class="num">07</div><h2>The work board</h2></div>
-    <div class="imgbox"><img src="../assets/m1-report-remaining-board.svg" style="height:330px" alt="Remaining work — one test layer in progress, five items to do and two optional explorations"><div class="cap">Remaining work — one test layer in progress, five items to do and two optional explorations</div></div>
+    <div class="imgbox"><img src="../assets/m1-report-remaining-board.svg" style="height:330px" alt="Remaining work — one test layer in progress, five open items and two optional feasibility studies"><div class="cap">Remaining work — one test layer in progress, five open items and two optional feasibility studies</div></div>
     <ul class="points">
-      <li><strong>Nothing on the board blocks the demonstration.</strong> The delivered system runs today without any of it.</li>
-      <li><strong>Three of the five to-do items are reports</strong> — the design, what the project taught us, and what the architecture can absorb next.</li>
-      <li><strong>The two optional items are explorations</strong>, carried as ideas with a stated cost rather than as commitments.</li>
+      <li><strong>No open item gates the demonstration.</strong> The delivered system operates without any of them.</li>
+      <li><strong>Three of the five open items are reports</strong> — the delivered design, the knowledge captured, and the extension capability of the architecture.</li>
+      <li><strong>The two optional items are feasibility studies</strong>, recorded as candidate work with an estimated cost rather than as commitments.</li>
     </ul>
     <div class="footer"><span>Milestone 1 — Progress Report · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
