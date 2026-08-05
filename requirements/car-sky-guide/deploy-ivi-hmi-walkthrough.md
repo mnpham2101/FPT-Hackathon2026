@@ -56,7 +56,7 @@ Three platforms appear anywhere near this guide. **Only two of them are on the p
 
 Where the two CarSky credentials come from, and how to verify one: [carsky-deploy-preflight](../../.claude/skills/carsky-deploy-preflight/SKILL.md).
 
-**The ADB tunnel needs a third thing: the organizers' `reach-backend` CLI**, plus a gateway URL and a key to pass it. Obtain all three from the organizers before §4.4 — this project does not build the CLI, and no value for it is derivable from anything in this repository (§6.1).
+**The ADB tunnel needs a third thing: the organizers' `reach-backend` CLI**, plus a gateway URL and a per-device token to pass it. The CLI sits unpacked in the working tree at `tools/apk uploader/reach_be/reach/` — the folder is git-ignored, and its operator guide is [tools/apk uploader/README.md](../../tools/apk%20uploader/README.md). The gateway URL and the token are read from the platform as §4.4 states.
 
 **Zot is not in the path for an APK.** The registry holds **container images**, which is what a *Container* node pulls at deploy time. The IVI node is a **Skycraft** node: it takes its VM image from the CarSky **artifact store** ([node-ivi-ecu.md § Prepare the VM artifact](node-ivi-ecu.md#prepare-the-vm-artifact-once-per-team-not-per-deploy)), and it pulls nothing else. Nothing in §1–§6 runs `docker login`, `docker push`, or tags an image.
 
@@ -377,11 +377,13 @@ Each entry carries `{displayName, name, nodeType, phase, message}`. `name` is th
 
 **Run this as soon as the node is Running** — until ADB reaches the guest, nothing below it can be done in-Room.
 
-The Skycraft pod exposes ADB behind the CarSky gateway, and `reach-backend` — the CLI the organizers provide — forwards a local port to it. Three values must be in hand first, and none of them comes from this repository:
+The Skycraft pod exposes ADB behind the CarSky gateway, and `reach-backend` — the CLI the organizers provide — forwards a local port to it. Three values must be in hand first, and each has a known source:
 
-- **The `reach-backend` binary** — the organizers' tunnel CLI. This project neither builds nor ships it.
-- **`YOUR_GATEWAY_URL`** — the gateway the tunnel dials.
-- **`a8k_YOUR_DERIVED_TOKEN`** — the token the CLI authenticates with. It carries the same `a8k_` shape as the CarSky API key of §1.2; whether it *is* that key is unconfirmed (§6.1).
+- **The `reach-backend` binary** — organizer-supplied as a zip, kept unpacked at `tools/apk uploader/reach_be/reach/`: `reach-backend.exe` for a Windows host, a POSIX `reach-backend` build beside it. The folder is git-ignored; only its operator guide, [tools/apk uploader/README.md](../../tools/apk%20uploader/README.md), is committed. This project neither builds nor ships the CLI.
+- **`YOUR_GATEWAY_URL`** — **the workbench base URL itself**, `https://hackathon-2.carsky.io`. There is no separate sslip.io gateway host on this deployment.
+- **`a8k_YOUR_DERIVED_TOKEN`** — a **per-device derived token, not the CarSky API key of §1.2**: the token is single-segment `a8k_<value>`, where the API key is `a8k_<prefix>_<secret>`. A redeploy may mint a new one, so re-open the dialog below after every redeploy. Keep the value in a git-ignored file — never write it into the repository.
+
+The gateway URL and the token are read from the Rework **Connect from Terminal** dialog: **Devices** → the deployment's device → the ADB widget's tab in the panel below the Stage → **ADB SHELL** panel → the **Local ADB** button at its top-right. The dialog shows the full tunnel command **ready-made** — the command below with both placeholders filled in — and the `adb connect localhost:5555` line of §4.5. The step-by-step click path with screenshots is [tools/apk uploader/README.md](../../tools/apk%20uploader/README.md) step 1.
 
 Start the tunnel:
 
@@ -410,7 +412,9 @@ localhost:5555   device
 
 `offline` or an empty list means the tunnel is not serving — go to §4.10 rather than retrying blind.
 
-Two guest properties decide whether the APK can be installed at all, and both are unknown until you read them:
+**`adb devices` may list other devices beside the guest** — a local emulator, a phone over USB — so pin every command with `-s localhost:5555` rather than relying on a single-device default.
+
+Two guest properties decide whether the APK can be installed at all. On the starter-pack AAOS guest both pass — `ro.build.version.sdk` is **34** (Android 14) and `android.hardware.type.automotive` is present — read them back on the deployment you are using:
 
 ```bash
 adb shell getprop ro.build.version.sdk
@@ -492,6 +496,8 @@ Every link has its own observable, and they come from **two different log surfac
 | **CarSky node log** (the ADA container) | Deployment Viewer → the ADA node → **View Log**; or `GET /api/v1/deployments/{roomId}/logs/{nodeKey}?container=user` — **`container` is mandatory**, omitting it returns 500 | The producer's `[TX]` lines, and `[CAP]` tcpdump lines when the node has `NET_RAW` |
 | **Guest logcat** (the IVI app) | The **Log** widget, or `adb logcat -s IVI_V2X` | Everything the app does: `[LINK]`, `[RX]`, `[DROP]`, `[UI]` |
 
+**Known build/design discrepancy on the currently-installed team debug build:** it logs its listener bind as `R4ListenerService: UDP socket open on port 47300`, and the designed `[LINK] state=bound port=47300` line on tag `IVI_V2X` does not appear — so `adb logcat -s IVI_V2X` streams empty on that build. The bind itself is proven by the `R4ListenerService` line and `/proc/net/udp` showing `*:47300`. The ladder below describes the **designed** logging; reconcile the build against it before citing any V-rung text evidence (§6.1).
+
 Work up the ladder — each rung needs less to exist than the one below it, so start at the highest rung your build supports.
 
 #### V1 — the socket is bound
@@ -557,8 +563,8 @@ Switch the ADA node to `R4_SCENARIO=/app/scenarios/degrade.json`.
 | Symptom | Meaning | Action |
 |---|---|---|
 | Deploy rejected: `skycraft requires 'image' config with VM image artifact details` | The IVI node has no `image` block | [node-ivi-ecu.md § Blueprint node config](node-ivi-ecu.md#blueprint-node-config); §4.2 |
-| `reach-backend: command not found` | The organizers' tunnel CLI is not installed on this machine | Obtain and install it — §1.2, §4.4 |
-| The tunnel exits instead of serving, or `adb connect` answers `failed to connect` | Wrong gateway URL or key, port 5555 already taken, or the tunnel's terminal was closed | Re-check the three values of §4.4 and restart the tunnel; free port 5555, or pass a different `--port` and connect to that port |
+| `reach-backend: command not found` | The CLI is not on `PATH` and was not invoked from its folder | Run it from `tools/apk uploader/reach_be/reach/` — §4.4 |
+| The tunnel exits instead of serving, or `adb connect` answers `failed to connect` | Wrong gateway URL or key, port 5555 already taken, or the tunnel's terminal was closed | Re-check the three values of §4.4 — a stale token after a redeploy is re-read from the **Local ADB** dialog — and restart the tunnel; free port 5555, or pass a different `--port` and connect to that port |
 | `INSTALL_FAILED_OLDER_SDK` | Guest below API 29 (§4.5) | Blocking finding — escalate; the in-Room plan changes |
 | `INSTALL_FAILED_MISSING_SHARED_LIBRARY`, or a feature error naming `automotive` | Not an automotive system image | Same — escalate |
 | `INSTALL_FAILED_UPDATE_INCOMPATIBLE` | An older build with a different signature is installed | `adb uninstall com.hackathon.v2x.ivi`, then install again |
@@ -613,7 +619,7 @@ Three qualifications on the rows above, none of which changes the default:
 
 - **Rows 2 and 3 flip to AI** on a machine with an authenticated `gh` CLI — Route B of §3.2 and §3.3 needs no browser. Without `gh auth login`, they stay human.
 - **The local build of §2 is the AI-side alternative to the first three rows**: an agent with a JDK and an Android SDK produces the same APK without touching a browser at all.
-- **Obtaining the tunnel CLI, its gateway URL and its key is human work.** All three come from the organizers (§4.4); the AI row above assumes they are already in hand.
+- **Reading the tunnel's gateway URL and token is human work** — the **Local ADB** dialog of §4.4 is a browser step, and a redeploy may mint a new token. The AI tunnel row assumes the binary and both values are already in hand.
 
 ---
 
@@ -646,15 +652,11 @@ Each point below can make a step fail without this guide being wrong. Confirm it
 
 | # | Point | Where it bites |
 |---|---|---|
-| 1 | The tunnel route as a whole — supplied by the organizers, and not yet exercised by this team | §4.4, §4.5 — the whole in-Room evidence plan |
-| 2 | Where the `reach-backend` CLI is obtained, and how it is installed | §4.4 — nothing runs without the binary |
-| 3 | Which gateway URL this team passes to `--gateway` | §4.4 |
-| 4 | How the `a8k_…` derived token is generated, and whether it is the CarSky API key of §1.2 or a separate credential | §4.4 |
-| 5 | The AAOS guest's API level and its `automotive` feature | §4.5 — either one blocks the install |
-| 6 | The IVI node's Part Prefix, display size and GPU backend | §4.2, §4.7 — a widget may ask which part to use |
-| 7 | Whether the guest display sleeps, and that `KEYCODE_WAKEUP` wakes it | §4.7 |
-| 8 | A JDK and an Android SDK being present on the build host | §1.1, §2 — §3 is the route that needs neither |
-| 9 | Whether `GET /api/v1/vms/{roomId}/{nodeKey}/screenshot` answers on this deployment | §4.9 — a convenience path, not the primary one |
-| 10 | The `ubuntu-latest` runner image's Android SDK and licence state staying sufficient for `compileSdk 34` | §3.1 |
-| 11 | That a clone of `baseline_phase1` arrives with every `ethernet` pin and edge intact, and that deleting a node on the canvas leaves the survivors' pins alone | §1.4, §4.2 — a clone that lost its pins has to be re-wired by hand before anything deploys |
-| 12 | What the ADA node carries on the clone. `baseline_phase1` is defined by its bench and V2X images; the ADA node's image is set per Room by §4.8 and is never assumed | §4.8 — a stale image there is the difference between traffic and silence |
+| 1 | The IVI node's Part Prefix, display size and GPU backend | §4.2, §4.7 — a widget may ask which part to use |
+| 2 | Whether the guest display sleeps, and that `KEYCODE_WAKEUP` wakes it | §4.7 |
+| 3 | That the installed build logs the designed `[LINK]`, `[RX]`, `[DROP]` and `[UI]` lines on tag `IVI_V2X` — the current team debug build logs `R4ListenerService: …` instead, so `adb logcat -s IVI_V2X` streams empty on it (§4.8) | §4.8, §4.9, §6 — every text observable filters on that tag |
+| 4 | A JDK and an Android SDK being present on the build host | §1.1, §2 — §3 is the route that needs neither |
+| 5 | Whether `GET /api/v1/vms/{roomId}/{nodeKey}/screenshot` answers on this deployment | §4.9 — a convenience path, not the primary one |
+| 6 | The `ubuntu-latest` runner image's Android SDK and licence state staying sufficient for `compileSdk 34` | §3.1 |
+| 7 | That a clone of `baseline_phase1` arrives with every `ethernet` pin and edge intact, and that deleting a node on the canvas leaves the survivors' pins alone | §1.4, §4.2 — a clone that lost its pins has to be re-wired by hand before anything deploys |
+| 8 | What the ADA node carries on the clone. `baseline_phase1` is defined by its bench and V2X images; the ADA node's image is set per Room by §4.8 and is never assumed | §4.8 — a stale image there is the difference between traffic and silence |
