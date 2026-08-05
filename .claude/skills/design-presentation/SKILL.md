@@ -1,6 +1,6 @@
 ---
 name: design-presentation
-description: Procedure project-architecture follows to present a phase's design to humans — a markdown + HTML deck under presentation/phase<N>/ explaining the vocabulary, the blueprint and the slice this phase implements, the contracts, the protocol stack and its libraries, the nodes built, and what the next phase inherits, illustrated with hand-authored draw.io/SVG diagrams. project-architecture only.
+description: Procedure project-architecture follows to present a phase's design to humans — a markdown + HTML deck under presentation/phase<N>/ explaining the vocabulary, the blueprint and the slice this phase implements, the contracts, the protocol stack and its libraries, the images each node runs with its architecture and call flows, how the phase was tested, and what the next phase inherits, illustrated with draw.io/SVG diagrams derived from the HLDs. project-architecture only.
 ---
 
 # Design Presentation (project-architecture)
@@ -45,7 +45,7 @@ Ship test: could someone who has never opened the requirements report say what t
 2. **Source, do not recall.** Read the phase plan, the contracts under `contracts/`, and the requirements report sections the phase serves. Every number, port, path and licence on a slide is read at authoring time, not remembered.
 3. **Outline against the structure rule.** Fix the sections and their order first, and decide then — not later — which sections warrant a companion deck.
 4. **Draft the terminology section before any other slide.** It is the constraint every later slide is written against: a term that turns out to be undefined means the terminology section was wrong, not the slide that used it.
-5. **Author the diagrams.** Required set in [design-presentation-structure.md](../../rules/design-presentation-structure.md) § 4; file authoring and the four verification checks in [drawio-svg-pairs.md](../task-planning-presentation/references/drawio-svg-pairs.md).
+5. **Collect the diagrams before drawing any.** The required set is in [design-presentation-structure.md](../../rules/design-presentation-structure.md) §§ 2, 4 and 5; each node's HLD supplies its component diagram and call flow, so the work is deriving deck copies (that rule's § Diagrams come from the HLD) and authoring only what no HLD holds. File authoring, the render box and the four verification checks are in [drawio-svg-pairs.md](../task-planning-presentation/references/drawio-svg-pairs.md).
 6. **Write the remaining slides**, then the handoff last, as the next phase's input list.
 7. **Build, verify, ship** — § Before shipping, then § Output.
 
@@ -53,10 +53,13 @@ Ship test: could someone who has never opened the requirements report say what t
 
 Required, not decorative — a protocol stack and a call flow cannot be read from prose.
 
+- **Take the diagram from the HLD wherever the HLD has one.** A node's component diagram and call flow were decided there; a deck that redraws a simplified version has created a second, unauthored design. Derive a trimmed copy instead — the rule is [design-presentation-structure.md § Diagrams come from the HLD](../../rules/design-presentation-structure.md), the mechanics are [drawio-svg-pairs.md § The render box](../task-planning-presentation/references/drawio-svg-pairs.md).
+- **Every asset lives in [presentation/assets/](../../../presentation/assets/)** as a `.drawio` + `.svg` pair, prefixed `phase<N>-` when phase-specific. A slide never reaches into a node folder for a picture, and a derived copy names its source in a header comment.
 - **One idea per diagram, one diagram per slide.** A single picture of a whole phase is unreadable at projector scale; split it instead of shrinking it.
+- **Check the rendered type size, not the file.** `scale = min(1152 / width, 520 / height)`; below ~8 px of rendered type the slide is decoration. Trim, then split, before accepting it.
 - **Segmented connectors, never diagonals.** Route runs on separate trunks so no two cross, and verify by rasterising — crossings look deliberate in source and wrong on screen.
 - **Draw this phase's fidelity.** Illustrating a phase with a later phase's design misrepresents what shipped; a Phase 1 call flow does not belong in a Phase 0 deck.
-- **A `.drawio` + `.svg` pair per diagram**, in [presentation/assets/](../../../presentation/assets/), prefixed `phase<N>-` when phase-specific. Generate both from one shape list so they cannot drift.
+- **Generate both halves from one shape list** so they cannot drift.
 
 ## Before shipping
 
