@@ -23,7 +23,7 @@ Cooperative Vehicle Awareness · Milestone 1
 2. **Docker** — images, containers, registries, and the two verbs that matter
 3. **The workflow file** — its shape, its syntax, and where the real documentation lives
 4. **Image identity** — name, tag and digest, and which of them a build chooses
-5. **Limitation in this project** — one push, two builds, one tag
+5. **Limitation in this project** — one push, two runs, one tag, and the group that settles it
 
 ---
 
@@ -234,7 +234,53 @@ on:
 - **Each run builds its own image.** Container builds are not byte-identical — timestamps and layer ordering differ — so the two images have **two different digests**.
 - **Both upload under the same name and tag**, `m1-v2x-ecu:latest`, because the tag is written into `-t` as a constant.
 
-> A tag points at one image. The second upload to finish wins it; the first run's image stays in the registry with nothing pointing at it.
+> A tag points at one image. The second upload to finish wins it, and the first run's image is left in the registry with nothing pointing at it — the condition the next two slides remove.
+
+---
+
+# The concurrency group that did not group
+
+Every workflow file already carried a block whose purpose is to stop runs racing. It never covered this case.
+
+```yaml
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+```
+
+Two runs share a group only when the group string is identical. `github.ref` names whatever triggered the run, and the two events name it differently.
+
+| Event | `github.ref` resolves to | Group |
+|---|---|---|
+| `push` to the branch | `refs/heads/feat/phase5-ivi-hmi-dev` | `phase4-ci-refs/heads/feat/phase5-ivi-hmi-dev` |
+| `pull_request` from it | `refs/pull/2/merge` | `phase4-ci-refs/pull/2/merge` |
+
+- **Two different strings are two different groups**, so neither run cancelled the other and both executed the whole file.
+- **The block did do its intended job** — a second push to the same branch cancels the first — and missed the duplication that looked like the same problem.
+
+---
+
+# The correction
+
+One expression change, applied to all six workflow files. Nothing else in them moves.
+
+```yaml
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+```
+
+| Event | `github.head_ref` | `github.ref_name` | Group resolves to |
+|---|---|---|---|
+| `push` to the branch | empty | `feat/phase5-ivi-hmi-dev` | `phase4-ci-feat/phase5-ivi-hmi-dev` |
+| `pull_request` from it | `feat/phase5-ivi-hmi-dev` | `2/merge` | `phase4-ci-feat/phase5-ivi-hmi-dev` |
+
+- **`head_ref` is the source branch on a pull request and empty on a push**, so the fallback supplies the branch name in both cases.
+- **`ref_name` is the bare branch name** where `github.ref` is the full ref — that difference is what split the two events apart.
+- **One group means one run reaches the registry**: the pull-request run cancels the push run seconds after starting, and only one image is uploaded per commit.
+- **A push to `main` is unaffected** — no pull request, so `head_ref` is empty and the group is the branch name, as before.
+
+> The failure this removes: on 2026-08-05 the two runs of one commit pushed `m1-ada-bench:latest` three seconds apart with different digests. The losing manifest lost the tag, Zot garbage-collected it, and the lane failed with HTTP 404 on the image it had itself pushed successfully.
 
 ---
 

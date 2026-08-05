@@ -54,7 +54,7 @@ on:
 # (the fuller note is in phase1-ci.yml). Per ref, so main and a feature branch never cancel
 # each other.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
 jobs:

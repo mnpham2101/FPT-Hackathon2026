@@ -201,7 +201,7 @@
       <div class="item"><div class="n">02</div><div><h3>Docker</h3><p>images, containers, registries, and the two verbs that matter</p></div></div>
       <div class="item"><div class="n">03</div><div><h3>The workflow file</h3><p>its shape, its syntax, and where the real documentation lives</p></div></div>
       <div class="item"><div class="n">04</div><div><h3>Image identity</h3><p>name, tag and digest, and which of them a build chooses</p></div></div>
-      <div class="item"><div class="n">05</div><div><h3>Limitation in this project</h3><p>one push, two builds, one tag</p></div></div>
+      <div class="item"><div class="n">05</div><div><h3>Limitation in this project</h3><p>one push, two runs, one tag, and the group that settles it</p></div></div>
     </div>
     <div class="footer"><span>Knowledge Base · CI workflows, YAML and GitHub Actions</span><span class="page"></span></div>
   </section>
@@ -392,7 +392,49 @@ jobs:                           # WHAT it runs
       <li><strong>Each run builds its own image.</strong> Container builds are not byte-identical — timestamps and layer ordering differ — so the two images have <strong>two different digests</strong>.</li>
       <li><strong>Both upload under the same name and tag</strong>, <code>m1-v2x-ecu:latest</code>, because the tag is written into <code>-t</code> as a constant.</li>
     </ul>
-    <div class="strip">A tag points at one image. The second upload to finish wins it; the first run's image stays in the registry with nothing pointing at it.</div>
+    <div class="strip">A tag points at one image. The second upload to finish wins it, and the first run's image is left in the registry with nothing pointing at it — the condition the next two slides remove.</div>
+    <div class="footer"><span>Knowledge Base · CI workflows, YAML and GitHub Actions</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">04</div><h2>The concurrency group that did not group</h2></div>
+    <p class="lead">Every workflow file already carried a block whose purpose is to stop runs racing. It never covered this case.</p>
+    <pre class="log">concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true</pre>
+    <p class="lead">Two runs share a group only when the group string is identical. <code>github.ref</code> names whatever triggered the run, and the two events name it differently.</p>
+    <table class="fpt">
+      <thead><tr><th>Event</th><th><code>github.ref</code> resolves to</th><th>Group</th></tr></thead>
+      <tbody>
+        <tr><td><code>push</code> to the branch</td><td><code>refs/heads/feat/phase5-ivi-hmi-dev</code></td><td><code>phase4-ci-refs/heads/feat/phase5-ivi-hmi-dev</code></td></tr>
+        <tr><td><code>pull_request</code> from it</td><td><code>refs/pull/2/merge</code></td><td><code>phase4-ci-refs/pull/2/merge</code></td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>Two different strings are two different groups</strong>, so neither run cancelled the other and both executed the whole file.</li>
+      <li><strong>The block did do its intended job</strong> — a second push to the same branch cancels the first — and missed the duplication that looked like the same problem.</li>
+    </ul>
+    <div class="footer"><span>Knowledge Base · CI workflows, YAML and GitHub Actions</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">04</div><h2>The correction</h2></div>
+    <p class="lead">One expression change, applied to all six workflow files. Nothing else in them moves.</p>
+    <pre class="log">concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true</pre>
+    <table class="fpt">
+      <thead><tr><th>Event</th><th><code>github.head_ref</code></th><th><code>github.ref_name</code></th><th>Group resolves to</th></tr></thead>
+      <tbody>
+        <tr><td><code>push</code> to the branch</td><td>empty</td><td><code>feat/phase5-ivi-hmi-dev</code></td><td><code>phase4-ci-feat/phase5-ivi-hmi-dev</code></td></tr>
+        <tr><td><code>pull_request</code> from it</td><td><code>feat/phase5-ivi-hmi-dev</code></td><td><code>2/merge</code></td><td><code>phase4-ci-feat/phase5-ivi-hmi-dev</code></td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong><code>head_ref</code> is the source branch on a pull request and empty on a push</strong>, so the fallback supplies the branch name in both cases.</li>
+      <li><strong><code>ref_name</code> is the bare branch name</strong> where <code>github.ref</code> is the full ref — that difference is what split the two events apart.</li>
+      <li><strong>One group means one run reaches the registry</strong>: the pull-request run cancels the push run seconds after starting, and only one image is uploaded per commit.</li>
+      <li><strong>A push to <code>main</code> is unaffected</strong> — no pull request, so <code>head_ref</code> is empty and the group is the branch name, as before.</li>
+    </ul>
+    <div class="strip">The failure this removes: on 2026-08-05 the two runs of one commit pushed <code>m1-ada-bench:latest</code> three seconds apart with different digests. The losing manifest lost the tag, Zot garbage-collected it, and the lane failed with HTTP 404 on the image it had itself pushed successfully.</div>
     <div class="footer"><span>Knowledge Base · CI workflows, YAML and GitHub Actions</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">

@@ -40,7 +40,7 @@ on:
 # Superseded runs are cancelled rather than left to finish - same reasoning as the other two files.
 # Per ref, so main and a feature branch never cancel each other.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
 jobs:

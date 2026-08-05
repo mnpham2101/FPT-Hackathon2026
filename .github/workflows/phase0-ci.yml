@@ -22,11 +22,12 @@ on:
   pull_request:
     branches: [main]
 
-# Superseded runs are cancelled rather than left to finish - see the fuller note in phase1-ci.yml.
+# Superseded runs are cancelled rather than left to finish, and one push to a branch with an open
+# pull request produces ONE run rather than two - see the fuller note in phase1-ci.yml.
 # Cheap here (netcheck-image is a ~40 s build), but it keeps the workflow files behaving alike, and
 # it stops stacked pushes racing to overwrite the one mutable m1-netcheck:latest tag.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
 jobs:

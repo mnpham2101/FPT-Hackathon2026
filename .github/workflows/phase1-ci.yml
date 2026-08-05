@@ -37,9 +37,21 @@ on:
 # minutes start three FULL sets of the emulated arm64 image builds - observed 2026-08-02, eight
 # concurrent ~20-minute builds across four runs - and they then race to overwrite the same two
 # mutable :latest tags in the registry, so the tag ends up holding whichever run finished last
-# rather than the newest commit. Per ref, so main and a feature branch never cancel each other.
+# rather than the newest commit. Per branch, so main and a feature branch never cancel each other.
+#
+# THE KEY IS head_ref || ref_name, NEVER github.ref. On a branch carrying an open pull request one
+# push fires this workflow TWICE - once as `push`, once as `pull_request` - and github.ref differs
+# between the two events (refs/heads/<branch> against refs/pull/<n>/merge), so the runs landed in
+# different groups and both proceeded. They then pushed the same :latest tags seconds apart, each
+# carrying a different manifest digest because buildx stamps a fresh created timestamp, and the run
+# that lost the tag had its manifest garbage-collected out of Zot before its own digest-addressed
+# verification could read it: a 404 on an image the same job had just pushed successfully
+# (ada-bench-image, 2026-08-05, PR #2). github.head_ref is the source branch on a pull_request and
+# empty on a push, and github.ref_name is the bare branch name, so both events resolve to the same
+# string and the pull_request run cancels the push run. Reasoned through in
+# presentation/KnowledgeBase/ci-yml-github-actions-deck.md section 05.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
