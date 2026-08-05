@@ -52,4 +52,20 @@ Not produced, so the subtask stays open:
 
 - **Guest-boot → launcher delta:** the guest had booted ~19:06Z, ~31 minutes before this install — the delta requires a fresh boot with the APK already installed, which this run did not perform. The boot-to-listener floor for the bench's `start_delay_s` is therefore still unmeasured.
 - **Rung V1 as specified:** the `[LINK] state=bound port=47300` line on `IVI_V2X` did not appear (tag finding under `16.5.9.7`); the bind is proven by the `R4ListenerService` line and the socket table instead.
-- **No warning datagram observed:** a 3-minute logcat watch after launch saw no `[RX]`/`[DROP]` in the app log. The m1-system-test Room runs the correctly configured real chain (operator-confirmed), so a missing feed does not explain the silence: either no risk transition fired in the watch window — warnings are edge-triggered — or the ADA → IVI hop (`10.99.0.13:47300`) is not carrying. To resolve by a longer watch against the ADA node's `[TX]` log.
+- **No warning datagram observed:** a 3-minute logcat watch after launch saw no `[RX]`/`[DROP]` in the app log. The m1-system-test Room runs the correctly configured real chain (operator-confirmed), so a missing feed does not explain the silence — resolved by the hop investigation below.
+
+## ADA → IVI hop investigation — the warning dies before the wire
+
+Evidence gathered 2026-08-05T20:14–20:20Z against the m1-system-test Room (roomId `zvpi8tzdj8s08wmxaaye2`), 13 minutes of guest watch plus the ADA node's `user`-container log over REST. Each link of the chain, with its verdict:
+
+| Link | Verdict | Evidence |
+|---|---|---|
+| App receive path (socket → deserializer → `IVI_V2X` log) | **Good** | A loopback probe injected in the guest (`echo probe-not-json \| nc -u 127.0.0.1 47300`) produced `[DROP] Skipping bad packet: Malformed R4 payload …` on `IVI_V2X` — the walkthrough's "a drop is the pass" observable, via loopback instead of the bridge |
+| ADA warning production | **Good** | `r4_tx` events at ~1 per 3 s (counter 62 → 90 across the watch), each a well-formed R4 warning (`type=warning`, `warningType=nlos_obstruction`, ghost C `source=v2x_relayed`, 515 bytes) with `"dest":"10.99.0.13:47300","send_ok":true` |
+| ADA node config | **Good** | Blueprint read-back: env `IVI_ECU_HOST=10.99.0.13`, `IVI_ECU_PORT=47300`; ADA pin `10.99.0.12`, IVI pin `10.99.0.13`; `CAPTURE_FILTER` unset → default `udp`, unfiltered by port |
+| The warning on the wire | **Never appears** | ADA's tcpdump (`-i any`, filter `udp`) captures inbound V2X → ADA traffic and even other nodes' bridge traffic (promiscuous `P` lines, bench → V2X), but shows **zero** packets toward `10.99.0.13` and zero `Out` lines across a window holding 67 `r4_tx` events |
+| The guest's addressing | **No bridge presence** | `ip addr` in the guest shows only `buried_eth0` `10.0.2.15/24` and `wlan0` `10.0.2.96/24` (cuttlefish NAT) — no `10.99.0.x` interface; the guest's interface RX counters are near zero |
+
+**Reading:** `send_ok=true` with nothing captured is consistent with an unanswered ARP — UDP `sendto` is fire-and-forget, the kernel holds the datagram while ARP for `10.99.0.13` goes unanswered, and ARP is invisible to a `udp` capture filter. Nothing on the Room bridge answers for `10.99.0.13`: the Skycraft node's ethernet pin does not put an ARP-answering `10.99.0.13` on the wire, and even if it did, the guest sits behind cuttlefish NAT with no visible forward of UDP 47300 into the VM.
+
+**Open question for the organizers (BTC):** how is a Skycraft node's ethernet pin supposed to deliver UDP into the AAOS guest — does the sidecar forward it, and does that require the pin's `port` field (currently `null`) or other config? Until answered, the ADA → IVI hop is the one link of the R19 chain with no proven route, and the loopback injection above is the only way to exercise the app's warning path in-Room.
