@@ -1137,6 +1137,8 @@ Change nothing on the other two nodes. Addresses, the port and the pin shapes we
 
 **Dependencies:** after `4.5.9.9`, `16.5.9.7` and `16.5.5.8`, which delivers `MainActivity` and the launcher manifest entry `adb shell am start` resolves. **Commit:** `[16.5.9.10] docs: record the APK install, launch and boot-to-listener time`
 
+**Status:** partial — install `Success`, package path confirmed, `MainActivity` displayed in 1.17 s, listener bound on 47300 (launch → bound ≈ 0.6 s); evidence in [doc/phase5-ivi-run.md](doc/phase5-ivi-run.md). The checkbox stays unticked: the guest-boot → launcher delta is unmeasured (the guest had been up ~31 min before the install), V1's `[LINK]` line on `IVI_V2X` is absent on this build (tag finding under `16.5.9.7`), and `4.5.9.9` has not run so no warning datagram was observed.
+
 ### [ ] `16.5.9.11` — Open the device widgets and confirm the R16 layout *(Human)*
 
 **Objective:** close Phase 5 acceptance criterion 1 — *the HMI runs on the AAOS node with the R16 layout; button/app areas switch what the Display area shows.*
