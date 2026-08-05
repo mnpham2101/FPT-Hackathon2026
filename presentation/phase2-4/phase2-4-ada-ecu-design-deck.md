@@ -28,7 +28,7 @@ Sources: [ada-ecu-hld.md](../../ADA_ECU/doc/ada-ecu-hld.md) · [ada-ecu-design-d
 
 1. **Terminology** — every term this deck uses, before it is used
 2. **The blueprint** — five nodes, and the one these three phases build
-3. **The contracts** — R2 in, R3 owned, R4 out, and one node-local schema
+3. **The contracts** — the object message (R2) in, the track record (R3) owned, the warning message (R4) out, and one node-local schema
 4. **Protocol stack and libraries** — three channels, and the third parties that serve them
 5. **The blueprint nodes** — the image each runs, the ADA node's architecture, and its call flows
 6. **Testing** — the configurations that exercise the node, and the equipment they need
@@ -82,25 +82,6 @@ Terms this project defined or narrowed. Each carries a specific meaning here.
 
 ---
 
-# The requirement this node serves
-
-An `R`-number is an identifier from the requirements  list.
-
-| | What it is |
-| --- | ---------- |
-| **R3** | The `TrackedObject` schema — the shape every ego-side track obeys, whatever produced it |
-| **R12** | Object detection from provided video files, with a distance estimate and zero detections labelled VehicleC |
-| **R13** | The track store and its admission state machine, with a proximity gate on the reported distance |
-| **R14** | The Collision Risk Assessment abstraction — risk logic behind one interface, plus the record schema it reads and writes |
-| **R15** | The warning output to the IVI ECU, edge-triggered on each risk transition |
-| **R18** | Structured event logs that reconstruct a full run offline |
-| **R19** | The end-to-end recorded run — the milestone's definition of done |
-| **R20-R22** | Real-time paced stimulus, run alignment, and the choreography that places the first warning after the eighth second |
-
-- **R1, R2 and R4 also used in this presentation are contracts (messages), not behavior requirements** R1 is the V2X message on the air — a Collective Perception Message, or CPM, encoded with the ASN.1 packing rules called UPER — and this node never sees one; R2 and R4 are the JSON messages it consumes and produces.
-
----
-
 # The node's own vocabulary
 
 Coined or narrowed by this design. Every diagram label below is one of these.
@@ -131,7 +112,7 @@ Coined or narrowed by this design. Every diagram label below is one of these.
 
 One blueprint is one vehicle — ego. Four nodes carry a role; the fifth joins them into a network.
 
-![h:420 Milestone 1 blueprint: five nodes, three contract-labelled UDP flows, one Ethernet Bridge](../assets/m1-blueprint-5-nodes.svg)
+![h:420 Milestone 1 blueprint: five nodes, three message flows, one Ethernet Bridge](../assets/phase2-4-blueprint-5-nodes.svg)
 
 - **IP Addresses are static by design**, injected through node configuration, never written as literals in source code.
 
@@ -151,9 +132,9 @@ One blueprint is one vehicle — ego. Four nodes carry a role; the fifth joins t
 
 ---
 
-# R2 — the message from V2X-ECU
+# The object message (R2) — from the V2X ECU
 
-What the V2X ECU passes inward once it has decoded the air message.
+What the V2X ECU passes inward once it has decoded the air message (R1).
 
 | | |
 | --- | --- |
@@ -165,20 +146,20 @@ What the V2X ECU passes inward once it has decoded the air message.
 
 - **`object.distance` is the admission input, and the V2X ECU derives it and forward to ADA-ECU** This node reads the field as received and never recomputes it.
 - **`position.confidence` is a position accuracy in metres** is not used by ADA's internal logic and is dropped
-- **`object.confidence` in an R2 message is recorded as `0.0` in R3** when it arrives as JSON `null`, because the R3 field is required
+- **`object.confidence` in an object message is recorded as `0.0` in the track record** when it arrives as JSON `null`, because the track record's field is required
 
 ---
 
-# R3 — ADA internal message
+# The track record (R3) — the ADA node's internal message
 
-The record type held by `store/track_store`. It addresses no node, so it has no direction: it is serialized on one internal link and nested inside R4.
+The record type held by `store/track_store`. It addresses no node, so it has no direction: it is serialized on one internal link and nested inside the warning message.
 
 | | |
 | --- | --- |
 | **Role** | The single record type for a tracked object. Both perception sources emit it, so `store/track_store` holds one type and no downstream rule branches on origin |
-| **Producers** | `detector/emit` serializes `own_sensor` entries onto standard output · `parser/r2_parser` constructs `v2x_relayed` instances from R2 · `parser/r3_parser` constructs `own_sensor` instances from the detector's lines |
-| **Consumers** | `store/track_store` holds every instance and is the sole writer of `state` · `output/warning_builder` nests a R3 data object in each R4 warning |
-| **Serialized on** | Two links: the detector-to-ADA-Core pipe, one JSON object per line; and the `object` field of an R4 datagram |
+| **Producers** | `detector/emit` serializes `own_sensor` entries onto standard output · `parser/r2_parser` constructs `v2x_relayed` instances from the object message · `parser/r3_parser` constructs `own_sensor` instances from the detector's lines |
+| **Consumers** | `store/track_store` holds every instance and is the sole writer of `state` · `output/warning_builder` nests a track record in each warning message |
+| **Serialized on** | Two links: the detector-to-ADA-Core pipe, one JSON object per line; and the `object` field of a warning datagram |
 | **Never serialized** | Inside the ADA Core. It is a C++ object, handed to the main loop through a bounded queue and never re-encoded |
 | **Required fields** | `id` · `class` · `source` · `position` · `distance` · `speed` · `confidence` · `state` · `timestamps` (measured, received, lastUpdated) |
 | **Normative file** | `contracts/r3-tracked-object.schema.json` — **frozen** |
@@ -187,7 +168,7 @@ The record type held by `store/track_store`. It addresses no node, so it has no 
 
 ---
 
-# R3 — field rules beyond the schema
+# The track record (R3) — field rules beyond the schema
 
 Four rules the JSON Schema cannot state, because each names the module that owns a field rather than the field's type.
 
@@ -198,7 +179,7 @@ Four rules the JSON Schema cannot state, because each names the module that owns
 
 ---
 
-# R4 — ADA output message
+# The warning message (R4) — the ADA node's output
 
 The ADA output warning, and everything the display needs to draw the scene.
 
@@ -206,27 +187,27 @@ The ADA output warning, and everything the display needs to draw the scene.
 | --- | --- |
 | **Direction** | ADA ECU → IVI ECU, one way, UDP to `10.99.0.13:47300`, no framing header |
 | **Encoding** | UTF-8 JSON; two message kinds discriminated by `type`, the schema being a `oneOf` |
-| **Warning event** | `schemaVersion` · `type` · `warningType` · `riskState` · `object` — a whole R3 snapshot of VehicleC — · `geometry` with `ego`, `vehicleB` and a nullable `vehicleC` |
-| **Awareness state** | `schemaVersion` · `type` · `seq` · `vehicles`, last-value-wins by sequence number. Optional in R15 |
-| **Normative file** | `contracts/r4-ada-ivi.schema.json` — **frozen**, embedding the R3 schema by reference |
+| **Warning event** | `schemaVersion` · `type` · `warningType` · `riskState` · `object` — a whole track-record snapshot of VehicleC — · `geometry` with `ego`, `vehicleB` and a nullable `vehicleC` |
+| **Awareness state** | `schemaVersion` · `type` · `seq` · `vehicles`, last-value-wins by sequence number. Optional in the design |
+| **Normative file** | `contracts/r4-ada-ivi.schema.json` — **frozen**, embedding the track-record schema by reference |
 | **Node copy** | `ADA_ECU/contracts/r4-ada-ivi.schema.json`, copied byte-for-byte from the normative file |
 | **Bound by** | `src/contracts/r4_message`; `output/warning_builder` is the node's only producer of these messages |
 
 - **`object.source` is `v2x_relayed` on every warning this node emits**, because only a relayed track can be VehicleC. The display's provenance guard renders the ghost on that value alone.
 - **`warningType` and `riskState` are plain strings in the schema**, so an unknown value degrades at the consumer rather than being rejected. The `low` / `medium` / `high` vocabulary is used.
-- **`geometry.vehicleB` is required and never null;** `geometry.vehicleC` is nullable in R4 messages.
+- **`geometry.vehicleB` is required and never null;** `geometry.vehicleC` is nullable in warning messages.
 
 ---
 
 # The CRA assessment record — node-local database
 
-R14's acceptance names the schema the assessment reads and writes as a committed artifact. This is that artifact.
+The collision-risk assessment reads and writes one committed schema. This is that artifact.
 
 | | |
 | --- | --- |
 | **File** | `ADA_ECU/schema/cra-assessment-record.schema.json` |
 | **Shape** | One record per assessed track: 14 required fields, keyed by `trackId` plus `warningType` |
-| **What it carries** | The last committed risk state and when it was entered · the assessment's lifetime · the last and prior composed range · the derived closing rate and time to collision · the last R3 snapshot · the last known VehicleB position · an emitted count and a rationale |
+| **What it carries** | The last committed risk state and when it was entered · the assessment's lifetime · the last and prior composed range · the derived closing rate and time to collision · the last track-record snapshot · the last known VehicleB position · an emitted count and a rationale |
 | **Where it lives at run time** | In process, behind a typed accessor. Every write is also appended to the `[EVT]` stream, so the table is reconstructible offline |
 
 - **Two of its fields exist to survive an erasure.** The last snapshot and the last known VehicleB position are what let a *clearing* warning still carry a required `object` and a required `vehicleB` after the track is gone.
@@ -240,8 +221,8 @@ One authority at the repository root, and a byte-identical working copy inside e
 
 | Location | Holds |
 | -------- | ----- |
-| **`contracts/`** | The frozen originals — all four schemas, the R1 profile, the reference vectors and the samples |
-| **`ADA_ECU/contracts/`** | R2, R3, R4 |
+| **`contracts/`** | The frozen originals — all four schemas, the air-message profile (R1), the reference vectors and the samples |
+| **`ADA_ECU/contracts/`** | the object message (R2), the track record (R3), the warning message (R4) |
 | **`ADA_ECU/schema/`** | The assessment record — node-local, not part of the manifest |
 | **`ADA_ECU/tests/fixtures/samples/`** | The shared samples, synced the same way |
 
@@ -271,12 +252,12 @@ Nine third-party dependencies, each performing one function. All open source and
 
 | Library | Version | Licence | What it serves |
 | ------- | ------- | ------- | -------------- |
-| **nlohmann/json** | v3.11.3 | MIT | R2 in, R3 in the store, R4 out — every JSON binding in the ADA Core |
+| **nlohmann/json** | v3.11.3 | MIT | the object message in, the track record in the store, the warning message out — every JSON binding in the ADA Core |
 | **ONNX Runtime** | 1.28.0 | MIT | The detector's inference session, CPU execution provider only |
 | **OpenCV** (`opencv-python-headless`) | 5.0.0.93 | Apache-2.0 | Video decode behind the frame-source seam |
 | **NumPy** | 2.4.6 | BSD-3-Clause | The detector's array arithmetic |
 | **YOLO11n weights** | — | AGPL-3.0 | The detection model, exported once to ONNX and committed |
-| **Python standard-library `json`** | 3.11 | PSF | The detector's R3 output lines |
+| **Python standard-library `json`** | 3.11 | PSF | The detector's track-record output lines |
 | **GoogleTest** | v1.14.0 | BSD-3-Clause | The ADA Core's unit suites, driven by CTest |
 | **pytest** · **jsonschema** | ≥ 8 · ≥ 4.18 | MIT | The detector's suites, and schema validation in test |
 
@@ -313,13 +294,29 @@ One row per node of the blueprint. Only the third is built by these phases; the 
 
 # Component architecture — the data path
 
-![h:475 The ADA node's data path: the V2X ECU interface, the detector subprocess, the observer and parsers, the R3 store, the assessment subsystem and the output stage reaching the IVI interface](../assets/phase2-4-ada-arch-a.svg)
+<div class="chain flat">
+<div class="link"><span>v2x_listener</span><small>object msg · udp :47200</small></div>
+<div class="arr">→</div>
+<div class="link"><span>input_queue</span><small>two producers</small></div>
+<div class="arr">→</div>
+<div class="link"><span>parsers</span><small>→ TrackedObject</small></div>
+<div class="arr">→</div>
+<div class="link hot"><span>track_store</span><small>admit · refresh · expire</small></div>
+<div class="arr">→</div>
+<div class="link"><span>cra plugin</span><small>risk band</small></div>
+<div class="arr">→</div>
+<div class="link"><span>fusion</span><small>composed range</small></div>
+<div class="arr">→</div>
+<div class="link"><span>output</span><small>warning · udp :47300</small></div>
+</div>
+
+![h:475 The ADA node's data path: the V2X ECU interface, the detector subprocess, the observer and parsers, the track store, the assessment subsystem and the output stage reaching the IVI interface](../assets/phase2-4-ada-arch-a.svg)
 
 ---
 
-# Component architecture — shared edges, artifacts and evidence
+# ADA architecture — utility and supporting modules
 
-![h:390 The rest of the node: the composition root, the sole socket holder, the configuration reader and the event writer; the capture pair; the artifacts baked into the image; and the host-side checks and the View Log outside it](../assets/phase2-4-ada-arch-b.svg)
+![h:390 The node's utility and supporting modules: the composition root, the sole socket holder, the configuration reader and the event writer; the capture pair; the artifacts baked into the image; and the host-side checks and the View Log outside it](../assets/phase2-4-ada-arch-b.svg)
 
 ---
 
@@ -342,7 +339,7 @@ Each component sits in one layer, held there by the rule in the right-hand colum
 | **Controller** | the composition root, both observers, both parsers, the warning builder, the sender, and the detector's entry point, pacer and emitter | The controller owns the clock, the threads, the subprocess and the sockets, and holds no rules |
 
 
-- **Each layer lacks a capability another layer holds, and the code enforces it.** Admission decides and never transmits — `output/ivi_sender` is the node's only sender. A risk plugin returns a finding and never formats a message — `output/warning_builder` is the only R4 producer. The detector cannot write to the store at all: it is a separate process, so its detections enter as JSON lines through `parser/r3_parser`, the same entry the relayed path uses.
+- **Each layer lacks a capability another layer holds, and the code enforces it.** Admission decides and never transmits — `output/ivi_sender` is the node's only sender. A risk plugin returns a finding and never formats a message — `output/warning_builder` is the only producer of warning messages. The detector cannot write to the store at all: it is a separate process, so its detections enter as JSON lines through `parser/r3_parser`, the same entry the relayed path uses.
 - **Four named components sit in no row above** — the socket holder, the plugin registry, the frame-source seam and the detector's configuration reader. The component diagram colours the first three; the table is what is incomplete. § Open items.
 
 ---
@@ -355,7 +352,7 @@ The whole pipeline standing up before any machine learning, driven by external s
 | ----------------- | ------------------------- |
 | The ADA Core's holders — one configuration reader, one socket holder, one event writer, one bounded queue | Each concern has exactly one place it can be changed, and the socket header appears in one translation unit |
 | Both parsers, and a corpus of one-defect malformed inputs | Every rejection is counted by reason and none is fatal; a conforming producer must yield a zero reject count |
-| The R3 store and the R13 admission machine | The machine is pure and source-agnostic, parameterized only by what counts as an update |
+| The track store and the admission machine | The machine is pure and source-agnostic, parameterized only by what counts as an update |
 | The assessment interface, its registry and its record schema | Frozen in Phase 2 so Phase 4's plugin proves the claim that adding one is one new file plus one line |
 | The composition root, the image and the entry point | One startup path; any failure becomes one logged line and a non-zero exit |
 
@@ -376,7 +373,7 @@ The detector's only input is a file inside the image. That is a platform finding
 | **How it reaches the node** | One image layer. A Container Node has no volume, no bind mount and no file-injection field |
 | **Sampling** | Every fourth decoded frame — 5 Hz effective, against a budget of 200 ms per sampled frame |
 
-- **The `video` pin was rejected**, and its cost is the reason: no C++ client, an undocumented frame header, and 590 Mbit/s of raw pixels for content a local file serves at 0.5 MB/s — plus an R5/R6 re-freeze.
+- **The `video` pin was rejected**, and its cost is the reason: no C++ client, an undocumented frame header, and 590 Mbit/s of raw pixels for content a local file serves at 0.5 MB/s — plus a re-freeze of the platform and network contracts.
 - **The range estimate is calibrated, not assumed.** The two camera constants ship at 2.6 m and 34.4° after a retune against this clip; the default car width put VehicleB inside the gate from the first frame. The gate itself was not moved, and never is.
 - **A 10 s clip means every long-run behaviour depends on looping**, and the gap across a wrap must stay under the track timeout or ego's own VehicleB track expires between cycles.
 
@@ -391,7 +388,7 @@ Live relayed traffic becomes a tracked VehicleC, an assessed risk, and one warni
 | **Scene composer** | VehicleB from the nearest own-sensor track, VehicleC at `d_AB + d_BC` longitudinally and offset laterally component-wise, ego at the origin |
 | **Chained-collision plugin** | The M1 non-line-of-sight rules: the composed range, its closing rate and time to collision against three bands, debounced |
 | **Assessment record table** | The prior record every edge trigger and closing rate needs, and the snapshots a clearing warning needs |
-| **Warning builder** | The node's only R4 producer — a risk finding plus the composed geometry onto the frozen binding |
+| **Warning builder** | The node's only producer of warning messages — a risk finding plus the composed geometry onto the frozen binding |
 | **IVI sender** | The node's only outbound socket — one datagram per event, and one event line carrying the body |
 
 - **The plugin never emits.** It returns a finding; the output stage decides transport. That is what keeps a rule replaceable without touching the wire.
@@ -412,7 +409,7 @@ The table is total and ordered — the first matching row wins, so no state matc
 
 - **The bands threshold the composed range; the gate thresholds the relayed range alone.** They measure different quantities, so no ordering holds between them and the loader asserts none — a check relating the two would collapse the risk level into track identity.
 - **60 m and 30 m put the first warning on a comparison rather than a derivative.** The composed range at VehicleC's admission is about 47 m, so the range clause commits the transition on its own with 13 m of margin, tolerating a range-estimate bias up to 1.7×. At 25 m the transition would ride entirely on a time to collision derived from the noisiest quantity in the node.
-- **Every committed change emits exactly one warning, in both directions**, and steady state emits nothing. R4 carries no clear message, so the transition back down is the only way the display learns to stop warning.
+- **Every committed change emits exactly one warning, in both directions**, and steady state emits nothing. The message set carries no explicit clear event, so the transition back down is the only way the display learns to stop warning.
 - **These five risk values are architecture proposals awaiting ratification.** They are externalized, so ratifying or retuning is a node-configuration edit.
 
 ---
@@ -449,7 +446,7 @@ No tunable appears as a literal. The ADA Core reads its values in one place, the
 
 ---
 
-# The R13 admission machine
+# The admission machine
 
 ![h:520 The admission machine: absent from the store, tentative and tracked, with the enter gate, the confirm count, the wider exit gate, and the silence timeout that erases a track from either state](../assets/phase2-4-ada-admission.svg)
 
@@ -463,7 +460,7 @@ No tunable appears as a literal. The ADA Core reads its values in one place, the
 
 # Internal call flow — inside the detector subprocess
 
-![h:520 The detector: the committed clip or the synthetic fixture behind one frame-source seam, then pacing, inference, range estimation and association, emitting R3 lines on standard output](../assets/phase2-4-ada-detector.svg)
+![h:520 The detector: the committed clip or the synthetic fixture behind one frame-source seam, then pacing, inference, range estimation and association, emitting track-record lines on standard output](../assets/phase2-4-ada-detector.svg)
 
 ---
 
@@ -481,59 +478,35 @@ No tunable appears as a literal. The ADA Core reads its values in one place, the
 
 ---
 
-# The four configurations that exercise the node
+# Acceptance evidence
 
-The same node binary and image in all four; only the neighbours change.
+Each is read from a named surface, so a run either produced it or did not.
 
-| Configuration | Upstream of R2 | Downstream of R4 | What it proves |
-| ------------- | -------------- | ---------------- | -------------- |
-| **Unit** | injected values and fixtures | assertions | Gate boundaries, the band table, the composed geometry and the pinhole arithmetic against hand-computed values |
-| **Fixture-driven ADA Core** | a recorded own-sensor stream through the real reader, plus real datagrams on the real socket | a loopback receiver | The whole ADA Core runs with no model and no clip |
-| **Isolated Room** | bench emitter at `10.99.0.11` | bench sink at `10.99.0.13` | The node deployed, on the platform's network, with both neighbours mocked |
-| **Full blueprint** | the real Scenario Player and V2X ECU | the IVI Skycraft node | The same observables with nothing mocked |
-
-- **Expected output is identical in the last two**, because the node's image, command, capabilities and environment are unchanged between them. A difference is a finding about a neighbour.
-- **Only the first two have been exercised.** The deployed Room and the full blueprint are configurations this design is built for, not results it can report.
-- **A fake detector cannot prove the real one detects**, which is why the clip runs against the actual model rather than against the synthetic fixture.
-
----
-
-# What a run must show
-
-Each line is one component's output, and together they are the acceptance evidence.
-
-| Observable | Produced by |
-| ---------- | ----------- |
-| `detector_spawn`, then one own-sensor ingest line per detection per sampled frame | the detector reader, and the detector's emitter |
-| `r2_ingest` carrying the received body, at 90 % or more of the producer's send count | the listener, the R2 parser and the event writer |
-| a `parse_reject` count of zero against a conforming producer | both parsers |
-| a transition to `tentative` then `tracked`, once for the relayed VehicleC and once for the own-sensor VehicleB | the admission machine |
-| zero own-sensor entries claiming a relayed source, and zero relayed entries claiming an own-sensor identity | structural — neither namespace can mint the other's |
-| `assessment` carrying the composed range, the time to collision and the rationale | the chained-collision plugin |
-| `r4_tx` carrying the emitted warning body, with `object.source` `v2x_relayed` | the warning builder and the sender |
-| a capture line for `10.99.0.12` → `10.99.0.13:47300` | the capture script |
-| with VehicleC held beyond the gate: ingest still counting up, and no relayed transition at all | the gate — the negative case |
-
-- **`r4_tx` is the strongest single line.** It proves both tracks existed at the same instant, which is Phase 4's output acceptance.
-- **Six further checks read a finished run offline** — the two tracks' relative ages, both stimulus rates, and the first warning's onset.
+| Evidence | Surface | Example |
+| -------- | ------- | ------- |
+| Own-sensor detections reach the store | ADA log · `[EVT]` | `{"event":"own_sensor_ingest","payload":{"id":"own:1",…}}` |
+| Relayed objects ingested at ≥ 90 % of the sender's count, none rejected | ADA log · `[EVT]` | `{"event":"r2_ingest","payload":{"stationId":1201,…}}` |
+| Both tracks confirmed, one per source | ADA log · `[EVT]` | `{"event":"track_transition","id":"v2x:1201:7","to":"tracked"}` |
+| A warning carrying both vehicles — the strongest line, both tracks alive at one instant | ADA log · `[EVT]` | `{"event":"r4_tx","object":{"source":"v2x_relayed"},"geometry":{…}}` |
+| The warning datagram on the wire | ADA container · pcap | `[CAP] IP 10.99.0.12.51044 > 10.99.0.13.47300: UDP` |
+| The warning received and field-checked | sink log · `[RX]` | `[RX] seq=3 … risk=medium cSource=v2x_relayed bPos=(11.0,0.4)` |
+| Nothing ego saw claims to be VehicleC | host check | `tools/check_zero_c.py` → 0 across its three rules |
+| Pacing and warning onset within bounds | host check | `tools/check_run_alignment.py` → K1–K6 |
+| The gate holds VehicleC out — the negative case | ADA log · `[EVT]` | ingest still rising, zero `track_transition` |
 
 ---
 
-# Test equipment, and the observation surface
+# Test setup — the isolated test
 
-None of the equipment below ships in the node image, and none of it is on the data path.
+![h:495 The isolated Room: the ADA node between two bench roles on one bridge, each node's image and its build lane, and the five places evidence is captured](../assets/phase2-4-ada-test-isolated.svg)
 
-| | What it is |
-| --- | --- |
-| **`ADA_ECU/tests/fixtures/own_sensor_mock.jsonl`** | A recorded own-sensor stream the real reader replays, so the ADA Core runs with no model and no clip |
-| **`ADA_ECU/tools/mock_v2x_sender.py`** | A relayed-message emitter driving the socket from the two committed bench scenarios |
-| **`tools/ada-bench/`** at the repository root | One image, two roles: the emitter standing in at `10.99.0.11`, the checking sink standing in at `10.99.0.13` |
-| **`ADA_ECU/tools/make_sample_video.py`** | A synthetic clip proving the decode path; it cannot produce detection evidence |
-| **`ADA_ECU/tools/` readers** | Host-side readers of this node's own output: the zero-VehicleC check, the run-alignment check, the collision-risk event list, the capture extractor |
+---
 
-- **A mock of another node does not live in that node's folder**, and the bench sits outside every node folder so it can change without rebuilding what it tests.
-- **The observable surface is the node's own standard output:** one `[EVT]` line per event, with a payload where the payload *is* the proof — the received message body, the emitted warning body, the distance and reason on a transition, the composed range and rationale on an assessment.
-- **The node captures its own egress.** Traffic toward the display is evidence the V2X ECU's capture point cannot see, so the entry point starts a capture and then replaces itself with the binary — which is why the capture capability is unconditional in this node's configuration.
+# Test setup — the full system test
+
+Two configurations run before this one: unit tests over the pure modules against hand-computed values, and a fixture-driven ADA Core replaying a recorded own-sensor stream through the real reader — no model, no clip, and no branch inside `src/` that knows the difference.
+
+![h:420 The full blueprint: four role nodes on one bridge, each running the image its own phase built, and the five places evidence is captured](../assets/phase2-4-ada-test-full.svg)
 
 ---
 
@@ -551,7 +524,7 @@ Written as the next stage's input list.
 
 | | What may now be assumed |
 | --- | --- |
-| **The message it consumes** | R4 is frozen and this node is its only producer. Every warning carries a whole R3 snapshot of VehicleC with `source` `v2x_relayed`, a required numeric VehicleB position, and a nullable VehicleC position |
+| **The message it consumes** | The warning message is frozen and this node is its only producer. Every warning carries a whole track-record snapshot of VehicleC with `source` `v2x_relayed`, a required numeric VehicleB position, and a nullable VehicleC position |
 | **When a warning arrives** | Edge-triggered on a committed risk change, in both directions, after the debounce. Steady state is silent, and there is no clear message — the downgrade is the clear |
 | **The vocabulary it renders** | Three risk levels and one warning type, `nlos_obstruction`; an unknown value must degrade rather than be rejected |
 | **The address it binds** | UDP `47300` at `10.99.0.13`, one message per datagram, no framing header |
@@ -563,31 +536,13 @@ Written as the next stage's input list.
 
 ---
 
-# Open items, and flagged contradictions
-
-Reported rather than resolved. Each needs a decision, not an implementation choice.
-
-| | Item |
-| --- | --- |
-| **Contract versus design** | The frozen R4 schema says `geometry.vehicleC` is null *until VehicleC is first tracked*; this node's design says null *exactly when VehicleC's track has been erased*. Contract-first means the schema wins, and both readings are legitimate nulls — the one-sided design wording is the defect |
-| **Awaiting ratification** | The five risk values, and the two admission counters, whose intent the requirement fixes but whose form this design chose |
-| **A count became a timeout** | The plan's missed-update count is realized as a wall-clock timeout, because "its messages stop" is a time condition a counter cannot express. Intent unchanged, form changed — flagged, not absorbed |
-| **Event vocabulary drift** | A thirteenth event name exists for the disabled-detector case, and the machine emits a transition only on a state *change* rather than on every edge as the design's diagram note states |
-| **Payload not designated** | The expiry event's payload shape is implementation-chosen; the design names the event but not its fields |
-| **Paths beyond the tree** | Four host-side scripts and the tests directories that hold them exist outside the designated folder tree, as design-consistent additions |
-| **Placement gaps** | Four components the design names sit in no row of its MVC table. Its component diagram places three of them, so the two halves of the design disagree about where they belong |
-| **Requirement numbers** | R20, R21 and R22 are enumerated in a later report and not yet ratified; the pacer is built to this design's designation of it |
-
----
-
 # What deliberately did not ship
 
 Stated plainly, so nothing is assumed present that is not.
 
-- **The periodic awareness state.** The binding carries the message and the rate key is validated, but no path emits it and the default leaves it off. R15 words it optional and no acceptance criterion depends on it.
+- **The periodic awareness state.** The binding carries the message and the rate key is validated, but no path emits it and the default leaves it off. The design words it optional and no acceptance criterion depends on it.
 - **The run-alignment checker.** The design designates a host-side checker for the six timing checks; it is not written, because two of its inputs — the bench's monotonic stamp and the detector's line shape — are other phases' to land first.
 - **The deployed measurements.** The detector's warm-up interval and its inference rate on the platform's own processor are unmeasured, and the warm-up is the one value the demo choreography cannot be aligned without.
-- **The deployed Room and the full blueprint.** Both are designed for and neither has been run, so no observable on the platform is reported here.
 - **The annotated video export** with per-event risk labels, optional in the plan and built by nothing.
 - **Every part of the display's dashcam view** — no clip serving, no exposed port, no media player and no video pin. A worked design for it exists; reading it is not permission to build it.
 - **The radar and live-camera inputs** drawn in the requirement's own figure. There is no radar and no camera bring-up in this milestone, and frame acquisition sits behind a seam so a live source arrives later as one more implementation.
