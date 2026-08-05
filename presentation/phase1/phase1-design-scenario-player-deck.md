@@ -50,7 +50,7 @@ Source: [scenario-player-hld.md](../../Scenario_Player/doc/scenario-player-hld.m
 
 # Reading the diagram
 
-![h:470 The legend of the component diagram: the six fill colours naming a component's role, and the notation for dependency, realization, node frames and test equipment](../assets/phase1-des-arch-legend.svg)
+![h:470 The legend of the component diagram: the seven fill colours naming a component's role, and the notation for dependency, realization, node frames and test equipment](../assets/phase1-des-arch-legend.svg)
 
 ---
 

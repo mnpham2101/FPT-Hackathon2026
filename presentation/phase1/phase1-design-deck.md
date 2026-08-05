@@ -241,7 +241,7 @@ Three container images run in the phase's Room. Two of them are Phase 1 delivera
 
 # Reading the component diagrams
 
-![h:470 The legend of both component diagrams: the six fill colours naming a component's role, and the notation for dependency, realization, node frames and test equipment](../assets/phase1-des-arch-legend.svg)
+![h:470 The legend of both component diagrams: the seven fill colours naming a component's role, and the notation for dependency, realization, node frames and test equipment](../assets/phase1-des-arch-legend.svg)
 
 ---
 

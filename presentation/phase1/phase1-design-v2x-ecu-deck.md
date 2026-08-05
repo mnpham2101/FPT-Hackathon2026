@@ -51,7 +51,7 @@ Source: [v2x-ecu-hld.md](../../V2X_ECU/doc/v2x-ecu-hld.md)
 
 # Reading the diagram
 
-![h:470 The legend of the component diagram: the six fill colours naming a component's role, and the notation for dependency, realization, node frames and test equipment](../assets/phase1-des-arch-legend.svg)
+![h:470 The legend of the component diagram: the seven fill colours naming a component's role, and the notation for dependency, realization, node frames and test equipment](../assets/phase1-des-arch-legend.svg)
 
 ---
 
