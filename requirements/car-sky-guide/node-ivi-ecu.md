@@ -88,6 +88,8 @@ adb connect localhost:5555        # answers: localhost:5555   device
 
 The install command is [§4.6](deploy-ivi-hmi-walkthrough.md#46-install-the-apk), the launch command and its `--ei r4_port` override are [§4.7](deploy-ivi-hmi-walkthrough.md#47-open-the-screen-and-launch-the-app), and the `adb logcat -s IVI_V2X` evidence filter is [§4.8](deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging).
 
+**The guest does not sit on the Room bridge.** Inside the AAOS guest the only interfaces are cuttlefish NAT addresses (`buried_eth0` `10.0.2.15/24`, `wlan0` `10.0.2.96/24`) — the node's `ethernet` pin address `10.99.0.13` appears nowhere in the guest, and nothing on the bridge answers ARP for it (verified on the m1-system-test Room: the ADA node's warnings to `10.99.0.13:47300` report `send_ok` yet never appear on any captured interface, while a loopback datagram injected inside the guest does reach the app). How the platform intends ethernet-pin UDP to reach the guest — sidecar forwarding, a pin `port` field, or something else — is an open question for the organizers; until it is answered, in-guest loopback injection is the only proven way to feed the app in-Room.
+
 ## Verification (feeds R16, R17 acceptance)
 
 - HMI runs on the AAOS node with the report's layout (central Display area + button/app areas); button/app areas switch what the Display area shows.
