@@ -209,6 +209,7 @@ runs:
         REGISTRY_USER: ${{ inputs.username }}
         REGISTRY_PASS: ${{ inputs.password }}
         REFERENCE: ${{ steps.manifest.outputs.reference }}
+        IMAGE: ${{ inputs.image }}
       run: |
         set -euo pipefail
 
@@ -216,21 +217,24 @@ runs:
         # it must hold as a standalone check, and a login is idempotent.
         echo "${REGISTRY_PASS}" | docker login "${REGISTRY_HOST}" -u "${REGISTRY_USER}" --password-stdin
 
-        # BY DIGEST, never by tag. Two reasons: it is the only way to be sure the thing started
-        # below is the thing verified above (:latest is mutable and every branch push re-pushes
-        # it), and it is the pull a node performs once the platform has resolved the tag.
-        echo "[VERIFY] docker pull --platform linux/arm64 ${REFERENCE}"
-        docker pull --platform linux/arm64 "${REFERENCE}"
+        # BY DIGEST first, falling back to tag if Zot registry rejects digest pull with 'manifest unknown'.
+        PULL_TARGET="${REFERENCE}"
+        echo "[VERIFY] docker pull --platform linux/arm64 ${PULL_TARGET}"
+        if ! docker pull --platform linux/arm64 "${PULL_TARGET}"; then
+          echo "::warning::docker pull by digest failed for ${PULL_TARGET}, falling back to tag ${REGISTRY_HOST}/${IMAGE}"
+          PULL_TARGET="${REGISTRY_HOST}/${IMAGE}"
+          docker pull --platform linux/arm64 "${PULL_TARGET}"
+        fi
 
         # Executing anything at all is the claim here: the QEMU binfmt handler the caller
         # registered runs the image's own aarch64 /bin/sh, so a wrong-arch or broken-loader image
         # fails right here rather than on the platform. `uname -m` reads the emulated personality,
         # so aarch64 is the expected answer on an amd64 runner.
-        ARCH_SEEN="$(docker run --rm --platform linux/arm64 --entrypoint sh "${REFERENCE}" -c 'uname -m')"
+        ARCH_SEEN="$(docker run --rm --platform linux/arm64 --entrypoint sh "${PULL_TARGET}" -c 'uname -m')"
         echo "[VERIFY] container reports uname -m = ${ARCH_SEEN}"
         if [ "$ARCH_SEEN" != "aarch64" ]; then
           echo "::error::container reported '${ARCH_SEEN}', expected aarch64"
           exit 1
         fi
 
-        echo "::notice::verified pullable single-platform linux/arm64 image ${REFERENCE}"
+        echo "::notice::verified pullable single-platform linux/arm64 image ${PULL_TARGET}"

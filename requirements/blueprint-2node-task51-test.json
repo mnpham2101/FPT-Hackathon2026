@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "exportedAt": "2026-07-30T14:00:00.000Z",
+  "blueprint": {
+    "name": "task51-2node-test",
+    "description": "Minimal 2-node blueprint for Task 5.1 testing. Node 1 = Mock R4 Sender (Container, fires UDP R4 warning events on port 5004). Node 2 = IVI ECU (Skycraft AAOS, renders Warning View HMI). Both wired through one Ethernet Bridge. NOTE: ETHERNET pins/edges must be added manually in Nydus UI canvas after import.",
+    "zones": [],
+    "nodes": [
+      {
+        "id": "mock-r4-sender-node-001",
+        "label": "Mock R4 Sender",
+        "nodeType": "container",
+        "config": {
+          "image": "registry.carsky.io/m1-mock-r4-sender:latest",
+          "command": ["python", "mock_r4_sender.py"],
+          "env": {
+            "IVI_ECU_HOST": "10.88.0.12",
+            "IVI_ECU_PORT": "5004",
+            "INTERVAL_MS": "2000",
+            "CYCLES": "20",
+            "SCHEMA_VERSION": "1"
+          }
+        },
+        "positionX": 400,
+        "positionY": 0,
+        "pins": []
+      },
+      {
+        "id": "eth-bridge-2node-test-001",
+        "label": "Ethernet Bridge",
+        "nodeType": "eth-bridge",
+        "config": null,
+        "positionX": 0,
+        "positionY": 0,
+        "pins": []
+      },
+      {
+        "id": "ivi-ecu-node-001",
+        "label": "IVI ECU",
+        "nodeType": "skycraft",
+        "config": {
+          "prefix": "ivi",
+          "gpuBackend": "virglrenderer",
+          "displayWidth": 1280,
+          "displayHeight": 720
+        },
+        "positionX": -400,
+        "positionY": 0,
+        "pins": []
+      }
+    ],
+    "edges": []
+  }
+}

@@ -9,6 +9,9 @@ import kotlinx.serialization.json.Json
  * `contracts/r4-ada-ivi.schema.json`): an [R4WarningEvent] or an
  * [R4StateMessage], discriminated on the wire by `"type": "warning" | "state"`
  * (see [R4Json]).
+ *
+ * NOTE: [R4ServiceError] is intentionally NOT a subtype — it is transport-only
+ * state, has no wire representation, and must not be serializable.
  */
 @Serializable
 sealed class R4Message {
@@ -29,9 +32,13 @@ data class R4WarningEvent(
     @SerialName("object") val objectSnapshot: R3Snapshot,
     val geometry: SceneGeometry,
 ) : R4Message() {
+
+    val trackedObject: R3Snapshot get() = objectSnapshot
+
     companion object {
-        /** M1 warning registry (frozen R4 schema); unknown values must degrade gracefully (HLD D4). */
+        const val TYPE_KEY = "warning"
         const val WARNING_TYPE_NLOS_OBSTRUCTION = "nlos_obstruction"
+        const val UNKNOWN_WARNING_TYPE = "unknown"
     }
 }
 
@@ -42,7 +49,31 @@ data class R4StateMessage(
     override val schemaVersion: Int,
     val seq: Long,
     val vehicles: R4Vehicles,
-) : R4Message()
+) : R4Message() {
+    companion object {
+        const val TYPE_KEY = "state"
+    }
+}
+
+/**
+ * Transport-only sentinel emitted by [com.hackathon.v2x.ivi.service.R4ListenerService]
+ * when it encounters unrecoverable errors.
+ *
+ * §4.3 fix: this is NOT a subtype of [R4Message] and is NOT @Serializable. A transport-
+ * level condition must not be a wire message type — "error" does not exist in
+ * r4-ada-ivi.schema.json, and a @Serializable subclass could be accidentally emitted
+ * on the wire. Transport state belongs outside the wire message hierarchy.
+ */
+data class R4ServiceError(
+    val message: String = "Service Error",
+)
+
+/** Minimal vehicle state carried inside the R4 state heartbeat. */
+@Serializable
+data class VehicleState(
+    @SerialName("position") val position: VehiclePosition,
+    @SerialName("speed") val speed: Float,
+)
 
 /** Vehicle positions of the state message; [vehicleC] absent-or-null until C is relayed. */
 @Serializable
@@ -57,3 +88,5 @@ val R4Json: Json = Json {
     classDiscriminator = "type"
     ignoreUnknownKeys = true
 }
+
+

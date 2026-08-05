@@ -1,0 +1,17 @@
+{
+  "java.home": "C:\\Program Files\\Android\\Android Studio\\jbr",
+  "java.jdt.ls.java.home": "C:\\Program Files\\Android\\Android Studio\\jbr",
+  "java.import.gradle.java.home": "C:\\Program Files\\Android\\Android Studio\\jbr",
+  "java.import.gradle.directories": ["IVI_ECU"],
+  "java.configuration.updateBuildConfiguration": "automatic",
+  "java.configuration.runtimes": [
+    {
+      "name": "JavaSE-17",
+      "path": "C:\\Program Files\\Android\\Android Studio\\jbr",
+      "default": true
+    }
+  ],
+  "kotlin.java.home": "C:\\Program Files\\Android\\Android Studio\\jbr",
+  "kotlin.compiler.jvm.target": "17",
+  "kotlin.languageServer.enabled": true
+}

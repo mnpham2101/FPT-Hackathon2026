@@ -10,11 +10,32 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- R4ListenerService (4.5.1.3) runs as a foreground service. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
+        android:name=".IviApplication"
         android:label="V2X IVI"
         android:networkSecurityConfig="@xml/network_security_config"
-        android:supportsRtl="true">
+        android:supportsRtl="true"
+        android:theme="@style/Theme.V2xIvi">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:theme="@style/Theme.V2xIvi">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- R4 UDP listener foreground service (4.5.1.3). -->
+        <service
+            android:name=".service.R4ListenerService"
+            android:foregroundServiceType="dataSync"
+            android:exported="false" />
+
     </application>
 
 </manifest>
