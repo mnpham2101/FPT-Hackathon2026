@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 424" width="1120" height="424" font-family="Segoe UI, Segoe UI Variable, Helvetica Neue, Arial, sans-serif">
+<rect width="1120" height="424" fill="#ffffff"/>
+<rect x="0" y="0" width="356.0" height="42" rx="8" fill="#2E7D27"/>
+<text x="18" y="27" font-size="14" fill="#ffffff" font-weight="700" letter-spacing="1.2">DONE</text>
+<text x="338" y="27" font-size="17" fill="#ffffff" font-weight="700" text-anchor="end">3</text>
+<rect x="0" y="58" width="356.0" height="62" rx="8" fill="#F8F9FC" stroke="#DCDEE8" stroke-width="1"/>
+<rect x="0" y="58" width="5.0" height="62" rx="2" fill="#2E7D27"/>
+<text x="18" y="84" font-size="16" fill="#19226D" font-weight="700">Implementation</text>
+<text x="18" y="105" font-size="12.5" fill="#8a8d99" font-weight="400">All seven phases, on the running system</text>
+<rect x="0" y="130" width="356.0" height="62" rx="8" fill="#F8F9FC" stroke="#DCDEE8" stroke-width="1"/>
+<rect x="0" y="130" width="5.0" height="62" rx="2" fill="#2E7D27"/>
+<text x="18" y="156" font-size="16" fill="#19226D" font-weight="700">Smoke test</text>
+<text x="18" y="177" font-size="12.5" fill="#8a8d99" font-weight="400">Baseline connectivity, Phase 0</text>
+<rect x="0" y="202" width="356.0" height="62" rx="8" fill="#F8F9FC" stroke="#DCDEE8" stroke-width="1"/>
+<rect x="0" y="202" width="5.0" height="62" rx="2" fill="#2E7D27"/>
+<text x="18" y="228" font-size="16" fill="#19226D" font-weight="700">System test</text>
+<text x="18" y="249" font-size="12.5" fill="#8a8d99" font-weight="400">Five-node run, warning screen reached</text>
+<rect x="382" y="0" width="356.0" height="42" rx="8" fill="#C2740A"/>
+<text x="400" y="27" font-size="14" fill="#19226D" font-weight="700" letter-spacing="1.2">IN PROGRESS</text>
+<text x="720" y="27" font-size="17" fill="#19226D" font-weight="700" text-anchor="end">1</text>
+<rect x="382" y="58" width="356.0" height="62" rx="8" fill="#F8F9FC" stroke="#DCDEE8" stroke-width="1"/>
+<rect x="382" y="58" width="5.0" height="62" rx="2" fill="#C2740A"/>
+<text x="400" y="84" font-size="16" fill="#19226D" font-weight="700">Isolated node tests</text>
+<text x="400" y="105" font-size="12.5" fill="#8a8d99" font-weight="400">Each node alone against bench stand-ins</text>
+<rect x="764" y="0" width="356.0" height="42" rx="8" fill="#6E7488"/>
+<text x="782" y="27" font-size="14" fill="#ffffff" font-weight="700" letter-spacing="1.2">TO DO</text>
+<text x="1102" y="27" font-size="17" fill="#ffffff" font-weight="700" text-anchor="end">5</text>
+<rect x="764" y="58" width="356.0" height="62" rx="8" fill="#F8F9FC" stroke="#DCDEE8" stroke-width="1"/>
+<rect x="764" y="58" width="5.0" height="62" rx="2" fill="#6E7488"/>
+<text x="782" y="84" font-size="16" fill="#19226D" font-weight="700">Design report deck</text>
+<text x="782" y="105" font-size="12.5" fill="#8a8d99" font-weight="400">The design presented as a report</text>
+<rect x="764" y="130" width="356.0" height="62" rx="8" fill="#F8F9FC" stroke="#DCDEE8" stroke-width="1"/>
+<rect x="764" y="130" width="5.0" height="62" rx="2" fill="#6E7488"/>
+<text x="782" y="156" font-size="16" fill="#19226D" font-weight="700">Knowledge base</text>
+<text x="782" y="177" font-size="12.5" fill="#8a8d99" font-weight="400">Platform and node know-how written up</text>
+<rect x="764" y="202" width="356.0" height="62" rx="8" fill="#F8F9FC" stroke="#DCDEE8" stroke-width="1"/>
+<rect x="764" y="202" width="5.0" height="62" rx="2" fill="#6E7488"/>
+<text x="782" y="228" font-size="16" fill="#19226D" font-weight="700">ADA code improvements</text>
+<text x="782" y="249" font-size="12.5" fill="#8a8d99" font-weight="400">Clean-up behind the delivered behaviour</text>
+<rect x="764" y="274" width="356.0" height="62" rx="8" fill="#F8F9FC" stroke="#DCDEE8" stroke-width="1"/>
+<rect x="764" y="274" width="5.0" height="62" rx="2" fill="#6E7488"/>
+<text x="782" y="300" font-size="16" fill="#19226D" font-weight="700">IVI code improvements</text>
+<text x="782" y="321" font-size="12.5" fill="#8a8d99" font-weight="400">Clean-up behind the delivered screen</text>
+<rect x="764" y="346" width="356.0" height="62" rx="8" fill="#F8F9FC" stroke="#DCDEE8" stroke-width="1"/>
+<rect x="764" y="346" width="5.0" height="62" rx="2" fill="#6E7488"/>
+<text x="782" y="372" font-size="16" fill="#19226D" font-weight="700">IVI layout improvement</text>
+<text x="782" y="393" font-size="12.5" fill="#8a8d99" font-weight="400">Possible rework of the warning view layout</text>
+<line x1="0" y1="398" x2="1120" y2="398" stroke="#DCDEE8"/>
+</svg>

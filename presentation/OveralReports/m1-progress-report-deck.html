@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Milestone 1 — Progress Report</title>
+<meta name="description" content="Project progress report — implementation complete across all seven phases, requirement coverage and its deviations, the three test layers, contribution by scope of work, and the work still outstanding">
+<style>
+  :root {
+    --fpt-orange: #F37021;
+    --fpt-green: #50B848;
+    --fpt-blue: #034EA2;
+    --fpt-teal: #33B2C1;
+    --fpt-navy: #19226D;
+    --navy-deep: #0E1540;
+    --ink: #080808;
+    --ink-soft: #3d3d46;
+    --paper: #f4f4f6;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; background: #14183a; font-family: "Segoe UI", "Segoe UI Variable", "Helvetica Neue", Arial, sans-serif; }
+
+  .deck { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+
+  .slide {
+    width: 1280px; height: 720px;
+    position: absolute;
+    display: none;
+    flex-direction: column;
+    transform-origin: center center;
+    background: var(--paper);
+    color: var(--ink);
+    box-shadow: 0 18px 60px rgba(0,0,0,.45);
+    overflow: hidden;
+  }
+  .slide.active { display: flex; }
+
+  /* ---------- backgrounds ---------- */
+  .bg-light { background: linear-gradient(135deg, #f6f6f8 0%, #ececef 55%, #e0e1e6 100%); }
+  .bg-light::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720"><g fill="none" stroke-width="2"><g transform="skewX(-16)"><rect x="240" y="60" width="380" height="460" rx="70" stroke="rgba(255,255,255,0.85)"/><rect x="1010" y="210" width="400" height="470" rx="75" stroke="rgba(25,34,109,0.05)"/><rect x="520" y="400" width="330" height="380" rx="60" stroke="rgba(25,34,109,0.06)"/></g><line x1="880" y1="-40" x2="640" y2="780" stroke="rgba(255,255,255,0.9)"/><line x1="1180" y1="-40" x2="940" y2="780" stroke="rgba(25,34,109,0.05)"/></g></svg>');
+    background-size: cover;
+  }
+  .bg-navy { background: linear-gradient(135deg, #10173f 0%, #151d55 45%, var(--fpt-navy) 100%); color: #fff; }
+  .bg-navy::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720"><g fill="none" stroke-width="2"><g transform="skewX(-16)"><rect x="240" y="60" width="380" height="460" rx="70" stroke="rgba(120,180,255,0.20)"/><rect x="1010" y="210" width="400" height="470" rx="75" stroke="rgba(255,255,255,0.10)"/><rect x="520" y="400" width="330" height="380" rx="60" stroke="rgba(120,180,255,0.10)"/></g><line x1="880" y1="-40" x2="640" y2="780" stroke="rgba(120,180,255,0.30)"/><line x1="1180" y1="-40" x2="940" y2="780" stroke="rgba(120,180,255,0.16)"/></g></svg>');
+    background-size: cover;
+  }
+
+  /* cover / divider / thanks carry their photo as an inline background-image */
+  .cover-photo { background-size: cover; background-position: center; color: #fff; }
+  .divider { background-size: cover; background-position: center; color: #fff; justify-content: center; padding: 0 110px; }
+  .divider .sec-num { font-size: 120px; font-weight: 700; color: var(--fpt-orange); line-height: 1; opacity: .95; }
+  .divider h1 { font-size: 56px; font-weight: 700; color: #fff; margin-top: 10px; }
+  .divider .rule { width: 110px; height: 6px; background: var(--fpt-orange); border-radius: 3px; margin-top: 26px; }
+  .thanks { background-size: cover; background-position: center 20%; color: #fff; justify-content: center; align-items: center; text-align: center; }
+  .thanks h1 { font-size: 84px; font-weight: 700; }
+  .thanks .rule { width: 130px; height: 6px; background: var(--fpt-orange); border-radius: 3px; margin: 30px auto; }
+  .thanks p { font-size: 22px; color: #cdd6f7; }
+
+  /* ---------- title / closing text ---------- */
+  .cover { justify-content: center; padding: 0 110px; }
+  .cover .eyebrow { font-size: 20px; letter-spacing: .35em; text-transform: uppercase; color: var(--fpt-orange); font-weight: 600; margin-bottom: 26px; }
+  .cover h1 { font-size: 66px; line-height: 1.08; font-weight: 700; color: #fff; max-width: 900px; }
+  .cover .rule { width: 130px; height: 6px; background: var(--fpt-orange); border-radius: 3px; margin: 30px 0; }
+  .cover .tagline { font-size: 30px; font-weight: 300; color: #dfe6ff; margin-bottom: 14px; }
+  .cover .meta { font-size: 18px; color: #b9c2ea; }
+  .cover .meta a { color: #b9c2ea; }
+  .cover .accents, .divider .accents, .thanks .accents { position: absolute; bottom: 0; left: 0; right: 0; height: 8px; display: flex; }
+  .accents span { flex: 1; }
+
+  /* ---------- content slide chrome ---------- */
+  .content { padding: 44px 64px 58px; position: relative; }
+  .content > * { position: relative; }
+  .slide-head { display: flex; align-items: baseline; gap: 18px; border-bottom: 3px solid transparent; padding-bottom: 12px; margin-bottom: 18px;
+    border-image: linear-gradient(90deg, var(--fpt-orange) 0 90px, rgba(25,34,109,.15) 90px 100%) 1; }
+  .slide-head .num { font-size: 40px; font-weight: 700; color: var(--fpt-orange); line-height: 1; }
+  .slide-head h2 { font-size: 31px; font-weight: 700; color: var(--fpt-navy); line-height: 1.15; }
+  .lead { font-size: 19px; color: var(--ink-soft); margin-bottom: 16px; }
+  .lead:last-of-type { margin-bottom: 0; }
+  .lead strong, .lead b { color: var(--ink); }
+  .content a { color: var(--fpt-blue); }
+
+  .footer { position: absolute; left: 64px; right: 64px; bottom: 18px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #8a8d99; }
+  .footer .page { background: var(--fpt-navy); color: #fff; border-radius: 4px; padding: 2px 10px; font-weight: 600; }
+
+  ul.points { list-style: none; display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
+  ul.points:last-child { margin-bottom: 0; }
+  ul.points li { font-size: 18.5px; line-height: 1.42; color: var(--ink-soft); padding-left: 26px; position: relative; }
+  ul.points li::before { content: ""; position: absolute; left: 0; top: 9px; width: 12px; height: 12px; background: var(--fpt-orange); border-radius: 3px; transform: skewX(-12deg); }
+  ul.points li strong { color: var(--fpt-navy); }
+  ul.points li code, .content code { font-family: "Consolas", "Courier New", monospace; font-size: .92em; background: rgba(25,34,109,.07); border-radius: 4px; padding: 1px 6px; }
+
+  .imgbox { display: flex; flex-direction: column; align-items: center; gap: 8px; margin: 6px 0 14px; }
+  .imgbox img { border-radius: 10px; box-shadow: 0 6px 22px rgba(15,20,60,.16); background: #fff; max-width: 100%; }
+  .imgbox .cap { font-size: 13.5px; color: #8a8d99; font-style: italic; }
+  .imgbox img.flat { box-shadow: none; background: transparent; }
+
+  .cols { display: flex; gap: 34px; align-items: center; }
+
+  /* TOC */
+  .toc { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 26px; margin-top: 8px; }
+  .toc .item { display: flex; gap: 18px; align-items: baseline; background: #fff; border-radius: 10px; padding: 18px 22px; box-shadow: 0 5px 18px rgba(15,20,60,.10); border-left: 6px solid var(--fpt-orange); height: 100%; }
+  .toc .item:nth-child(2) { border-left-color: var(--fpt-green); }
+  .toc .item:nth-child(3) { border-left-color: var(--fpt-blue); }
+  .toc .item:nth-child(4) { border-left-color: var(--fpt-teal); }
+  .toc .item:nth-child(5) { border-left-color: var(--fpt-navy); }
+  .toc .item:nth-child(6) { border-left-color: var(--fpt-orange); }
+  .toc .n { font-size: 34px; font-weight: 700; color: var(--fpt-orange); min-width: 52px; }
+  .toc .item:nth-child(2) .n { color: var(--fpt-green); }
+  .toc .item:nth-child(3) .n { color: var(--fpt-blue); }
+  .toc .item:nth-child(4) .n { color: var(--fpt-teal); }
+  .toc .item:nth-child(5) .n { color: var(--fpt-navy); }
+  .toc h3 { font-size: 21px; color: var(--fpt-navy); margin-bottom: 4px; }
+  .toc p { font-size: 15px; color: var(--ink-soft); line-height: 1.35; }
+
+  /* cards */
+  .cards3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin: 6px 0 18px; }
+  .card { background: #fff; border-radius: 10px; padding: 16px 18px 14px; box-shadow: 0 5px 18px rgba(15,20,60,.10); border-top: 5px solid var(--fpt-orange); }
+  .card.g { border-top-color: var(--fpt-green); }
+  .card.b { border-top-color: var(--fpt-blue); }
+  .card h3 { font-size: 19px; color: var(--fpt-navy); margin-bottom: 6px; }
+  .card p { font-size: 15.5px; line-height: 1.4; color: var(--ink-soft); }
+
+  /* tables */
+  table.fpt { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 5px 18px rgba(15,20,60,.10); margin-bottom: 14px; }
+  table.fpt th { background: var(--fpt-navy); color: #fff; text-align: left; font-size: 16px; padding: 9px 16px; }
+  table.fpt td { font-size: 15.5px; line-height: 1.35; padding: 8.5px 16px; border-bottom: 1px solid #e7e8ee; color: var(--ink-soft); vertical-align: top; }
+  table.fpt tr:last-child td { border-bottom: none; }
+  table.fpt td strong { color: var(--fpt-navy); white-space: nowrap; }
+  .tag { display: inline-block; padding: 1px 9px; border-radius: 4px; color: #fff; font-size: 14px; font-weight: 600; }
+  .tag.o { background: var(--fpt-orange); } .tag.b { background: var(--fpt-blue); } .tag.t { background: var(--fpt-teal); } .tag.g { background: var(--fpt-green); } .tag.n { background: var(--fpt-navy); }
+
+  /* seam cards */
+  .seams { display: flex; flex-direction: column; gap: 13px; margin-bottom: 16px; }
+  .seam { background: #fff; border-radius: 8px; border-left: 6px solid var(--fpt-orange); box-shadow: 0 4px 14px rgba(15,20,60,.09); padding: 12px 18px; display: flex; gap: 16px; align-items: baseline; }
+  .seam.b { border-left-color: var(--fpt-blue); } .seam.t { border-left-color: var(--fpt-teal); }
+  .seam .who { font-weight: 700; color: var(--fpt-navy); font-size: 17.5px; white-space: nowrap; min-width: 200px; }
+  .seam p { font-size: 16px; line-height: 1.4; color: var(--ink-soft); }
+  .strip { background: linear-gradient(90deg, var(--fpt-navy), #2a35a0); color: #dfe6ff; border-radius: 8px; padding: 12px 20px; font-size: 15.5px; line-height: 1.45; margin-bottom: 14px; }
+  .strip strong { color: #fff; }
+  .strip:last-child { margin-bottom: 0; }
+
+  /* chain visual */
+  .chain { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 10px 0 22px; flex-wrap: nowrap; }
+  .chain .link { background: var(--fpt-navy); color: #fff; font-size: 16.5px; font-weight: 600; padding: 9px 20px; border-radius: 7px; transform: skewX(-10deg); box-shadow: 0 4px 12px rgba(15,20,60,.18); }
+  .chain .link > span { display: inline-block; transform: skewX(10deg); }
+  .chain .link.hot { background: var(--fpt-orange); }
+  .chain .arr { color: var(--fpt-orange); font-size: 22px; font-weight: 700; }
+  .chain .link small { display: block; font-size: 12px; font-weight: 400; opacity: .8; transform: skewX(10deg); }
+  /* flat modifier: upright rectangles instead of skewed links, for a dense data-path strip */
+  .chain.flat { gap: 7px; margin: 0 0 6px; }
+  .chain.flat .link { transform: none; font-size: 14.5px; padding: 5px 12px; text-align: center; line-height: 1.25; }
+  .chain.flat .link > span, .chain.flat .link small { transform: none; }
+  .chain.flat .link small { font-size: 11px; opacity: .85; }
+  .chain.flat .arr { font-size: 17px; }
+
+  .badges { display: flex; gap: 10px; justify-content: center; margin: 0 0 20px; flex-wrap: wrap; }
+  .badge { border: 2px solid var(--fpt-orange); color: #b34e0e; background: rgba(243,112,33,.07); font-size: 14.5px; font-weight: 600; padding: 5px 14px; border-radius: 999px; }
+  .badge.g { border-color: var(--fpt-green); color: #2c7a25; background: rgba(80,184,72,.09); }
+
+  /* terminal / log evidence */
+  pre.log { background: var(--navy-deep); color: #cfd6f5; font-family: "Consolas", "Courier New", monospace; font-size: 13.5px; line-height: 1.5; border-radius: 8px; padding: 14px 18px; overflow: hidden; margin-bottom: 14px; }
+  pre.log .ok { color: #7ee787; }
+  pre.log .dim { color: #7f88ad; }
+
+  /* ---------- controls ---------- */
+  .hint { position: fixed; left: 18px; bottom: 12px; color: rgba(255,255,255,.45); font-size: 12.5px; z-index: 50; }
+  .hud { position: fixed; right: 18px; bottom: 14px; z-index: 50; display: flex; gap: 8px; align-items: center; font-family: inherit; }
+  .hud button { background: rgba(255,255,255,.12); color: #fff; border: 1px solid rgba(255,255,255,.25); border-radius: 6px; padding: 5px 12px; font-size: 15px; cursor: pointer; }
+  .hud button:hover { background: var(--fpt-orange); border-color: var(--fpt-orange); }
+  .hud .ctr { color: rgba(255,255,255,.75); font-size: 14px; min-width: 60px; text-align: center; }
+  .progress { position: fixed; left: 0; bottom: 0; height: 4px; background: var(--fpt-orange); width: 0; z-index: 60; transition: width .25s ease; }
+
+  @media print {
+    html, body { background: #fff; height: auto; }
+    .deck { position: static; display: block; }
+    .slide { display: flex !important; position: relative; transform: none !important; box-shadow: none; page-break-after: always; margin: 0 auto; }
+    .hud, .progress, .hint { display: none !important; }
+    @page { size: 13.55in 7.65in; margin: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="deck">
+  <section class="slide cover-photo cover active" style="background-image: linear-gradient(90deg, rgba(8,12,38,.92) 0%, rgba(8,12,38,.72) 40%, rgba(8,12,38,.18) 100%), url('../assets/bg-title-city.jpg')">
+    <div class="eyebrow">Cooperative Vehicle Awareness — FPT Hackathon 2026</div>
+    <h1>Milestone 1 — Progress Report</h1>
+    <div class="rule"></div>
+    <div class="tagline">Implementation complete · system test passed · three days to the deadline</div>
+    <div class="meta">Reported 05 August 2026 · hard deadline 08 August 2026 · four contributors<br>Sources: <a href="../../requirements/m1-cooperative-awareness.md">m1-cooperative-awareness.md</a> · <a href="../../plans/milestone1.md">milestone1.md</a> · the recorded system-test run</div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">§</div><h2>Table of contents</h2></div>
+    <div class="toc">
+      <div class="item"><div class="n">01</div><div><h3>Status at a glance</h3><p>the headline numbers and how they are measured</p></div></div>
+      <div class="item"><div class="n">02</div><div><h3>Implementation</h3><p>progress by workstream, and what each phase delivered</p></div></div>
+      <div class="item"><div class="n">03</div><div><h3>Requirement coverage</h3><p>the 22 requirements and the six that deviate</p></div></div>
+      <div class="item"><div class="n">04</div><div><h3>Testing</h3><p>the three test layers and what each one proves</p></div></div>
+      <div class="item"><div class="n">05</div><div><h3>Contribution</h3><p>scope of work by contributor</p></div></div>
+      <div class="item"><div class="n">06</div><div><h3>Remaining work</h3><p>what is open, and what it blocks</p></div></div>
+    </div>
+    <div class="footer"><span>Milestone 1 — Progress Report · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">01</div>
+    <h1>Status at a glance</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">01</div><h2>Headline status</h2></div>
+    <p class="lead">The system does the thing the milestone was defined by: <strong>vehicle A warns its driver about vehicle C, which A's own sensors never see.</strong></p>
+    <div class="imgbox"><img src="../assets/m1-report-status-tiles.svg" style="height:190px" alt="Four headline measures as of 05 August 2026"><div class="cap">Four headline measures as of 05 August 2026</div></div>
+    <ul class="points">
+      <li><strong>Implementation is complete</strong> across all seven phases, including Phase 6 convergence on real data.</li>
+      <li><strong>The system test passed</strong> — the warning screen renders on the IVI, and traffic was observed from every node in the blueprint.</li>
+      <li><strong>One test layer is open</strong> — the isolated per-node runs. It gates no delivered function.</li>
+      <li><strong>Six requirements deviate</strong> from the enumerated list; every deviation is a recorded scope decision.</li>
+    </ul>
+    <div class="footer"><span>Milestone 1 — Progress Report · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">01</div><h2>Basis of the completion figures</h2></div>
+    <p class="lead">Percentages here come from <strong>observable system behaviour</strong>, not from a task board.</p>
+    <ul class="points">
+      <li><strong>Delivered means seen working.</strong> A function counts once it is observed in a deployed run, end to end.</li>
+      <li><strong>Closed tickets are not the measure.</strong> A closed subtask that changes nothing observable adds no percentage, and an open one whose behaviour is already live subtracts none.</li>
+      <li><strong>Phases are weighted before they are combined.</strong> They are not equal in size, so an unweighted average would flatter the small ones and hide the large ones.</li>
+      <li><strong>Manual testing is counted as work.</strong> It is the expensive part of the later phases, and the weights carry it rather than treating it as free.</li>
+    </ul>
+    <table class="fpt">
+      <thead><tr><th>Workstream</th><th>Weight</th><th>Why it carries that weight</th></tr></thead>
+      <tbody>
+        <tr><td>Phase 0 · contracts</td><td>4%</td><td>Contract documents, schemas, and a single connectivity smoke test</td></tr>
+        <tr><td>Phase 1 · comms</td><td>12%</td><td>Two node folders in two languages, plus the shared codec seam</td></tr>
+        <tr><td>Phase 2 · ADA scaffold</td><td>17%</td><td>The ADA skeleton, the track store, and the admission state machine</td></tr>
+        <tr><td>Phase 3 · detection</td><td>12%</td><td>Detector export, video decode, distance estimation, subprocess contract</td></tr>
+        <tr><td>Phase 4 · fusion</td><td>14%</td><td>Relayed-object fusion, risk abstraction, warning emission, isolated bench</td></tr>
+        <tr><td>Phase 5 · IVI HMI</td><td>17%</td><td>The HMI, the warning view, and the manual system testing built around it</td></tr>
+        <tr><td>Phase 6 · convergence</td><td>11%</td><td>Small to build, but it carries the manual end-to-end testing and the recorded run</td></tr>
+        <tr><td>Cross-cutting</td><td>11%</td><td>CI lanes, blueprint design, code review, management and reporting</td></tr>
+        <tr><td>Shared work</td><td>2%</td><td>Team sessions, support, and effort not allocated to one contributor</td></tr>
+      </tbody>
+    </table>
+    <div class="footer"><span>Milestone 1 — Progress Report · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">02</div>
+    <h1>Implementation</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">02</div><h2>Progress by workstream</h2></div>
+    <div class="imgbox"><img src="../assets/m1-report-phase-progress.svg" style="height:385px" alt="Weighted completion by workstream"><div class="cap">Weighted completion by workstream</div></div>
+    <div class="strip"><strong>Every workstream is complete.</strong> The chart's shape carries the second message: phases 2 and 5 are more than four times Phase 0, so "seven phases done" and "the whole system done" are only the same statement once the phases are weighted.</div>
+    <div class="footer"><span>Milestone 1 — Progress Report · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">02</div><h2>Phase dependency and parallelism</h2></div>
+    <div class="imgbox"><img src="../assets/m1-report-phase-flow.svg" style="height:300px" alt="Phase order — three lanes opened behind the frozen contracts, converging on Phase 6"><div class="cap">Phase order — three lanes opened behind the frozen contracts, converging on Phase 6</div></div>
+    <ul class="points">
+      <li><strong>Phase 0 gated everything.</strong> Nothing downstream could start until the six contracts were frozen.</li>
+      <li><strong>Three lanes then ran in parallel</strong> — comms, the ADA scaffold, and the IVI HMI — sharing only contracts.</li>
+      <li><strong>Phases 3 and 4 ran in parallel</strong> against the same ADA scaffold, one on detection and one on fusion.</li>
+      <li><strong>Phase 6 was a swap, not a build</strong> — every mock replaced by real data, then the run recorded.</li>
+    </ul>
+    <div class="footer"><span>Milestone 1 — Progress Report · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">02</div><h2>What each phase delivered</h2></div>
+    <table class="fpt">
+      <thead><tr><th>Phase</th><th>Delivered</th><th>Observable in the running system</th></tr></thead>
+      <tbody>
+        <tr><td><strong>0</strong></td><td>Six frozen contracts, the blueprint topology, the smoke test</td><td>Every node reachable on the bridge network</td></tr>
+        <tr><td><strong>1</strong></td><td>V2X ECU receive path and the bench that feeds it</td><td>Scenario-driven CPMs decoded into object messages</td></tr>
+        <tr><td><strong>2</strong></td><td>ADA track store and the admission state machine</td><td>Tracks admitted and dropped by configured gates, no flicker</td></tr>
+        <tr><td><strong>3</strong></td><td>Detector on the recorded clip, distance estimation</td><td>Vehicle B found per frame; zero detections labelled C</td></tr>
+        <tr><td><strong>4</strong></td><td>Relayed-C fusion, risk assessment, warning emission</td><td>Ghost C tracked from the relay alone; warnings emitted</td></tr>
+        <tr><td><strong>5</strong></td><td>The AAOS HMI and the warning view</td><td>Ego, B and ghost C drawn on screen from warning messages alone</td></tr>
+        <tr><td><strong>6</strong></td><td>Real data end to end, and the recorded run</td><td>One continuous run with no mock anywhere in the ego path</td></tr>
+      </tbody>
+    </table>
+    <div class="strip"><strong>The definition of done is the last row.</strong> Ghost C reaches the driver's screen having never been seen by the ego vehicle's own sensors — only relayed from B over V2X.</div>
+    <div class="footer"><span>Milestone 1 — Progress Report · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">03</div>
+    <h1>Requirement coverage</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">03</div><h2>Coverage across the 22 requirements</h2></div>
+    <div class="imgbox"><img src="../assets/m1-report-requirements.svg" style="height:370px" alt="Requirement status — 16 as specified, 5 with a deviation, 1 not implemented"><div class="cap">Requirement status — 16 as specified, 5 with a deviation, 1 not implemented</div></div>
+    <ul class="points">
+      <li><strong>Sixteen are delivered as specified</strong>, including every contract and the end-to-end run that defines done.</li>
+      <li><strong>Five carry a deviation</strong> — delivered and working, but narrower than the requirement's full text.</li>
+      <li><strong>One is not implemented</strong> — R10 ego transmission, deferred to a future milestone by decision.</li>
+    </ul>
+    <div class="footer"><span>Milestone 1 — Progress Report · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">03</div><h2>Deviation register</h2></div>
+    <p class="lead">Each of the six is a decision on the record, not an implementation that fell short.</p>
+    <table class="fpt">
+      <thead><tr><th>Requirement</th><th>Deviation</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td><strong>R7</strong> — radio adapter seam</td><td>The seam declares <code>send</code>; nothing calls it</td><td>Ego transmission moved to a future milestone, so the send path has no caller</td></tr>
+        <tr><td><strong>R10</strong> — ego Tx</td><td>Not implemented</td><td>Deferred by decision; the V2X ECU is receive-only in this milestone</td></tr>
+        <tr><td><strong>R12</strong> — object detection</td><td>Runs on a recorded clip at an offline pace, looped for longer runs</td><td>Live detection at road speed is future scope; CPU-only was the platform constraint</td></tr>
+        <tr><td><strong>R15</strong> — warning output</td><td>Edge-triggered warnings only; no periodic awareness state</td><td>The periodic state was optional in the phase's own acceptance</td></tr>
+        <tr><td><strong>R16</strong> — HMI</td><td>Warning view in the Display area; no ego dashcam clip</td><td>Deferred by user decision, 2026-08-02; the design is on the shelf, unbuilt</td></tr>
+        <tr><td><strong>R17</strong> — warning view</td><td>2D canvas delivered; no 3D SceneView</td><td>3D was optional throughout; the view seam still admits it unchanged</td></tr>
+      </tbody>
+    </table>
+    <div class="strip"><strong>None of the six blocks the demonstration.</strong> The milestone's definition of done needs the relay, the fusion and the render — all three are delivered as specified.</div>
+    <div class="footer"><span>Milestone 1 — Progress Report · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">04</div>
+    <h1>Testing</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">04</div><h2>The three test layers</h2></div>
+    <div class="imgbox"><img src="../assets/m1-report-testing.svg" style="height:270px" alt="Test progress by layer — smoke and system closed, isolated node tests open"><div class="cap">Test progress by layer — smoke and system closed, isolated node tests open</div></div>
+    <table class="fpt">
+      <thead><tr><th>Layer</th><th>State</th><th>What it proves that the others cannot</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Smoke test</strong></td><td>100% — closed in Phase 0</td><td>The network and the deployment work before any product code is judged</td></tr>
+        <tr><td><strong>Isolated node tests</strong></td><td>0% — in progress</td><td>Which node is at fault when the chain misbehaves, by exercising each one alone</td></tr>
+        <tr><td><strong>System test</strong></td><td>100% — closed</td><td>The whole chain produces the warning a driver actually sees</td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>The open layer is diagnostic, not gating.</strong> It shortens fault-finding; it does not stand between the system and its acceptance.</li>
+    </ul>
+    <div class="footer"><span>Milestone 1 — Progress Report · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">04</div><h2>System test result</h2></div>
+    <p class="lead">One run of the five-node blueprint, bench to screen, with traffic observed at every node.</p>
+    <table class="fpt">
+      <thead><tr><th>Node</th><th>Address</th><th>What it contributed to the run</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Scenario Player</strong> (bench)</td><td><code>10.99.0.10</code></td><td>Scenario-driven CPMs describing vehicle C, on UDP <code>47100</code></td></tr>
+        <tr><td><strong>V2X ECU</strong></td><td><code>10.99.0.11</code></td><td>Decoded and validated CPMs, forwarded as object messages on <code>47200</code></td></tr>
+        <tr><td><strong>ADA ECU</strong></td><td><code>10.99.0.12</code></td><td>Vehicle B from its own detector, ghost C from the relay, warnings on <code>47300</code></td></tr>
+        <tr><td><strong>IVI ECU</strong> (AAOS)</td><td><code>10.99.0.13</code></td><td>The warning screen — ego, B and ghost C drawn from the warning message alone</td></tr>
+        <tr><td><strong>Ethernet Bridge</strong></td><td><code>10.99.0.1</code></td><td>The L2 network every node's pin attaches to</td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>The warning screen came up</strong> with ghost C at its composed position, from relayed data only.</li>
+      <li><strong>Traffic was seen on every hop</strong>, so no stage of the chain is inferred from the stage before it.</li>
+      <li><strong>Zero detections labelled C</strong> in the ego vehicle's own perception for the whole run — the claim the demonstration rests on.</li>
+    </ul>
+    <div class="footer"><span>Milestone 1 — Progress Report · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">05</div>
+    <h1>Contribution</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">05</div><h2>Scope of work by contributor</h2></div>
+    <div class="imgbox"><img src="../assets/m1-report-contribution-donut.svg" style="height:400px" alt="Contribution as a share of total weighted effort"><div class="cap">Contribution as a share of total weighted effort</div></div>
+    <div class="strip">Shares are <strong>effort, not commit count</strong> — each workstream is weighted by its size first, then split between the people who did it.</div>
+    <div class="footer"><span>Milestone 1 — Progress Report · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">05</div><h2>Contribution per workstream</h2></div>
+    <div class="imgbox"><img src="../assets/m1-report-contribution-rows.svg" style="height:345px" alt="Who delivered each workstream, with that workstream&#x27;s scope weight"><div class="cap">Who delivered each workstream, with that workstream&#x27;s scope weight</div></div>
+    <ul class="points">
+      <li><strong>Minh</strong> — phases 0 and 1, half of phases 3 and 4, and the cross-cutting work: CI, blueprint, review, reporting.</li>
+      <li><strong>Hoang (Brian)</strong> — the whole of Phase 2, the largest single phase, and half of phases 3 and 4.</li>
+      <li><strong>Bach and Vinh</strong> — phases 5 and 6 together, implementing and system testing, including the manual test time.</li>
+      <li><strong>Others</strong> — the residue of shared work belonging to no single name.</li>
+    </ul>
+    <div class="footer"><span>Milestone 1 — Progress Report · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">06</div>
+    <h1>Remaining work</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">06</div><h2>The work board</h2></div>
+    <div class="imgbox"><img src="../assets/m1-report-remaining-board.svg" style="height:400px" alt="Remaining work — one test layer in progress, five items to do"><div class="cap">Remaining work — one test layer in progress, five items to do</div></div>
+    <ul class="points">
+      <li><strong>Nothing on the board blocks the demonstration.</strong> The delivered system runs today without any of it.</li>
+      <li><strong>The open items are consolidation</strong> — documenting what was built, and improving code that already behaves correctly.</li>
+    </ul>
+    <div class="footer"><span>Milestone 1 — Progress Report · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">06</div><h2>Remaining items in detail</h2></div>
+    <table class="fpt">
+      <thead><tr><th>Item</th><th>What it covers</th><th>Where it lands</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Isolated node tests</strong></td><td>Each node exercised alone against bench stand-ins for its neighbours</td><td>The node folders and their walkthroughs</td></tr>
+        <tr><td><strong>Design report</strong></td><td>The delivered design presented as a report, not as phase decks</td><td><a href="../">presentation/</a></td></tr>
+        <tr><td><strong>Knowledge base</strong></td><td>Platform, node and CI know-how written up for reuse</td><td><a href="../KnowledgeBase/">presentation/KnowledgeBase/</a></td></tr>
+        <tr><td><strong>ADA code improvements</strong></td><td>Clean-up behind behaviour that already works</td><td><a href="../../ADA_ECU/">ADA_ECU/</a></td></tr>
+        <tr><td><strong>IVI code improvements</strong></td><td>Clean-up behind the delivered screen</td><td><a href="../../IVI_ECU/">IVI_ECU/</a></td></tr>
+        <tr><td><strong>IVI layout improvement</strong></td><td>Possible rework of the warning-view layout, subject to review</td><td><a href="../../IVI_ECU/">IVI_ECU/</a></td></tr>
+      </tbody>
+    </table>
+    <div class="strip"><strong>Three days remain.</strong> The sequence that fits them: close the isolated node tests, then the written record — design report and knowledge base — with code improvements taken only as far as the remaining time safely allows.</div>
+    <div class="footer"><span>Milestone 1 — Progress Report · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide thanks" style="background-image: linear-gradient(rgba(8,12,38,.66), rgba(14,21,64,.86)), url('../assets/bg-fpt-tower.jpg')">
+    <h1>Thank you</h1>
+    <div class="rule"></div>
+    <p>Milestone 1 — Cooperative Vehicle Awareness · FPT Hackathon 2026</p>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+</div>
+
+<div class="hint">← → navigate · F fullscreen · print for PDF</div>
+<div class="hud">
+  <button id="prev" aria-label="Previous slide">‹</button>
+  <span class="ctr" id="ctr"></span>
+  <button id="next" aria-label="Next slide">›</button>
+</div>
+<div class="progress" id="prog"></div>
+
+<script>
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  slides.forEach((sl, i) => { const p = sl.querySelector('.page'); if (p) p.textContent = i + 1; });
+  let cur = 0;
+
+  function fit() {
+    const s = Math.min(innerWidth / 1280, innerHeight / 720);
+    slides.forEach(sl => sl.style.transform = `scale(${s})`);
+  }
+  function show(i) {
+    cur = Math.max(0, Math.min(slides.length - 1, i));
+    slides.forEach((sl, k) => sl.classList.toggle('active', k === cur));
+    document.getElementById('ctr').textContent = `${cur + 1} / ${slides.length}`;
+    document.getElementById('prog').style.width = `${(cur + 1) / slides.length * 100}%`;
+    location.hash = cur ? `#${cur + 1}` : '';
+  }
+  addEventListener('resize', fit);
+  addEventListener('keydown', e => {
+    if (['ArrowRight', 'PageDown', ' ', 'Enter'].includes(e.key)) { e.preventDefault(); show(cur + 1); }
+    else if (['ArrowLeft', 'PageUp', 'Backspace'].includes(e.key)) { e.preventDefault(); show(cur - 1); }
+    else if (e.key === 'Home') show(0);
+    else if (e.key === 'End') show(slides.length - 1);
+    else if (e.key.toLowerCase() === 'f') document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+  });
+  document.getElementById('prev').onclick = () => show(cur - 1);
+  document.getElementById('next').onclick = () => show(cur + 1);
+  let tx = null;
+  addEventListener('touchstart', e => tx = e.touches[0].clientX);
+  addEventListener('touchend', e => { if (tx !== null) { const dx = e.changedTouches[0].clientX - tx; if (Math.abs(dx) > 50) show(cur + (dx < 0 ? 1 : -1)); tx = null; } });
+
+  const h = parseInt((location.hash || '').slice(1), 10);
+  fit(); show(isNaN(h) ? 0 : h - 1);
+</script>
+
+</body>
+</html>

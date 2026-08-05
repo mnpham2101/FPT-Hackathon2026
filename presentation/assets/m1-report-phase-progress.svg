@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 516" width="1120" height="516" font-family="Segoe UI, Segoe UI Variable, Helvetica Neue, Arial, sans-serif">
+<rect width="1120" height="516" fill="#ffffff"/>
+<text x="250" y="34" font-size="12" fill="#8a8d99" font-weight="700" letter-spacing="1.4">SHARE OF TOTAL EFFORT (%)</text>
+<line x1="250.0" y1="52" x2="250.0" y2="470" stroke="#DCDEE8" stroke-width="1"/>
+<text x="250.0" y="46" font-size="12" fill="#8a8d99" font-weight="600" text-anchor="middle">0</text>
+<line x1="432.4" y1="52" x2="432.4" y2="470" stroke="#DCDEE8" stroke-width="1"/>
+<text x="432.3529411764706" y="46" font-size="12" fill="#8a8d99" font-weight="600" text-anchor="middle">5</text>
+<line x1="614.7" y1="52" x2="614.7" y2="470" stroke="#DCDEE8" stroke-width="1"/>
+<text x="614.7058823529412" y="46" font-size="12" fill="#8a8d99" font-weight="600" text-anchor="middle">10</text>
+<line x1="797.1" y1="52" x2="797.1" y2="470" stroke="#DCDEE8" stroke-width="1"/>
+<text x="797.0588235294117" y="46" font-size="12" fill="#8a8d99" font-weight="600" text-anchor="middle">15</text>
+<text x="238" y="81" font-size="16" fill="#19226D" font-weight="700" text-anchor="end">Phase 0</text>
+<text x="238" y="98" font-size="12.5" fill="#8a8d99" font-weight="400" text-anchor="end">Contracts frozen, smoke test</text>
+<rect x="250" y="68" width="145.9" height="28" rx="4" fill="#2E7D27"/>
+<text x="262" y="87" font-size="15" fill="#ffffff" font-weight="700">4%</text>
+<text x="407.88235294117646" y="87" font-size="14" fill="#2E7D27" font-weight="700">100% delivered</text>
+<text x="238" y="127" font-size="16" fill="#19226D" font-weight="700" text-anchor="end">Phase 1</text>
+<text x="238" y="144" font-size="12.5" fill="#8a8d99" font-weight="400" text-anchor="end">Comms bring-up: V2X ECU + bench</text>
+<rect x="250" y="114" width="437.6" height="28" rx="4" fill="#2E7D27"/>
+<text x="262" y="133" font-size="15" fill="#ffffff" font-weight="700">12%</text>
+<text x="699.6470588235294" y="133" font-size="14" fill="#2E7D27" font-weight="700">100% delivered</text>
+<text x="238" y="173" font-size="16" fill="#19226D" font-weight="700" text-anchor="end">Phase 2</text>
+<text x="238" y="190" font-size="12.5" fill="#8a8d99" font-weight="400" text-anchor="end">ADA scaffold: store + state machine</text>
+<rect x="250" y="160" width="620.0" height="28" rx="4" fill="#2E7D27"/>
+<text x="262" y="179" font-size="15" fill="#ffffff" font-weight="700">17%</text>
+<text x="882.0" y="179" font-size="14" fill="#2E7D27" font-weight="700">100% delivered</text>
+<text x="238" y="219" font-size="16" fill="#19226D" font-weight="700" text-anchor="end">Phase 3</text>
+<text x="238" y="236" font-size="12.5" fill="#8a8d99" font-weight="400" text-anchor="end">Object detection from video</text>
+<rect x="250" y="206" width="437.6" height="28" rx="4" fill="#2E7D27"/>
+<text x="262" y="225" font-size="15" fill="#ffffff" font-weight="700">12%</text>
+<text x="699.6470588235294" y="225" font-size="14" fill="#2E7D27" font-weight="700">100% delivered</text>
+<text x="238" y="265" font-size="16" fill="#19226D" font-weight="700" text-anchor="end">Phase 4</text>
+<text x="238" y="282" font-size="12.5" fill="#8a8d99" font-weight="400" text-anchor="end">Fusion, risk and R4 warning</text>
+<rect x="250" y="252" width="510.6" height="28" rx="4" fill="#2E7D27"/>
+<text x="262" y="271" font-size="15" fill="#ffffff" font-weight="700">14%</text>
+<text x="772.5882352941176" y="271" font-size="14" fill="#2E7D27" font-weight="700">100% delivered</text>
+<text x="238" y="311" font-size="16" fill="#19226D" font-weight="700" text-anchor="end">Phase 5</text>
+<text x="238" y="328" font-size="12.5" fill="#8a8d99" font-weight="400" text-anchor="end">IVI HMI, warning view, manual testing</text>
+<rect x="250" y="298" width="620.0" height="28" rx="4" fill="#2E7D27"/>
+<text x="262" y="317" font-size="15" fill="#ffffff" font-weight="700">17%</text>
+<text x="882.0" y="317" font-size="14" fill="#2E7D27" font-weight="700">100% delivered</text>
+<text x="238" y="357" font-size="16" fill="#19226D" font-weight="700" text-anchor="end">Phase 6</text>
+<text x="238" y="374" font-size="12.5" fill="#8a8d99" font-weight="400" text-anchor="end">Convergence and the recorded run</text>
+<rect x="250" y="344" width="401.2" height="28" rx="4" fill="#2E7D27"/>
+<text x="262" y="363" font-size="15" fill="#ffffff" font-weight="700">11%</text>
+<text x="663.1764705882352" y="363" font-size="14" fill="#2E7D27" font-weight="700">100% delivered</text>
+<text x="238" y="403" font-size="16" fill="#19226D" font-weight="700" text-anchor="end">Cross-cutting</text>
+<text x="238" y="420" font-size="12.5" fill="#8a8d99" font-weight="400" text-anchor="end">CI, blueprint, review, reporting</text>
+<rect x="250" y="390" width="401.2" height="28" rx="4" fill="#2E7D27"/>
+<text x="262" y="409" font-size="15" fill="#ffffff" font-weight="700">11%</text>
+<text x="663.1764705882352" y="409" font-size="14" fill="#2E7D27" font-weight="700">100% delivered</text>
+<text x="238" y="449" font-size="16" fill="#19226D" font-weight="700" text-anchor="end">Shared work</text>
+<text x="238" y="466" font-size="12.5" fill="#8a8d99" font-weight="400" text-anchor="end">Team sessions, support, unattributed effort</text>
+<rect x="250" y="436" width="72.9" height="28" rx="4" fill="#2E7D27"/>
+<text x="262" y="455" font-size="15" fill="#ffffff" font-weight="700">2%</text>
+<text x="334.94117647058823" y="455" font-size="14" fill="#2E7D27" font-weight="700">100% delivered</text>
+<line x1="0" y1="486" x2="1120" y2="486" stroke="#DCDEE8"/>
+<text x="0" y="507" font-size="13" fill="#8a8d99" font-weight="400">Bar length = that workstream's share of total effort · full fill = delivered and observed on the running system.</text>
+</svg>

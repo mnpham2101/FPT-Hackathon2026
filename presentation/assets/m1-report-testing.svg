@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 340" width="1120" height="340" font-family="Segoe UI, Segoe UI Variable, Helvetica Neue, Arial, sans-serif">
+<rect width="1120" height="340" fill="#ffffff"/>
+<text x="0" y="78" font-size="18" fill="#19226D" font-weight="700">Smoke test</text>
+<text x="0" y="98" font-size="12.5" fill="#8a8d99" font-weight="400">Baseline connectivity across the deployed blueprint</text>
+<rect x="300" y="64" width="640.0" height="32" rx="4" fill="#E4E6EE"/>
+<rect x="300" y="64" width="640.0" height="32" rx="4" fill="#2E7D27"/>
+<text x="314" y="86" font-size="16" fill="#ffffff" font-weight="700">100%</text>
+<text x="960" y="86" font-size="14.5" fill="#2E7D27" font-weight="700">Phase 0 · closed</text>
+<text x="0" y="168" font-size="18" fill="#19226D" font-weight="700">Isolated node tests</text>
+<text x="0" y="188" font-size="12.5" fill="#8a8d99" font-weight="400">Each node run alone against bench stand-ins</text>
+<rect x="300" y="154" width="640.0" height="32" rx="4" fill="#E4E6EE"/>
+<rect x="300" y="154" width="640" height="32" rx="4" fill="none" stroke="#9A5A00" stroke-width="2" stroke-dasharray="7 5"/>
+<text x="314" y="176" font-size="16" fill="#9A5A00" font-weight="700">0%</text>
+<text x="960" y="176" font-size="14.5" fill="#9A5A00" font-weight="700">In progress</text>
+<text x="0" y="258" font-size="18" fill="#19226D" font-weight="700">System test</text>
+<text x="0" y="278" font-size="12.5" fill="#8a8d99" font-weight="400">Five-node blueprint, bench to IVI in one run</text>
+<rect x="300" y="244" width="640.0" height="32" rx="4" fill="#E4E6EE"/>
+<rect x="300" y="244" width="640.0" height="32" rx="4" fill="#2E7D27"/>
+<text x="314" y="266" font-size="16" fill="#ffffff" font-weight="700">100%</text>
+<text x="960" y="266" font-size="14.5" fill="#2E7D27" font-weight="700">Closed</text>
+<line x1="0" y1="306" x2="1120" y2="306" stroke="#DCDEE8"/>
+<text x="0" y="328" font-size="13" fill="#8a8d99" font-weight="400">Two of the three layers are closed. The isolated layer is the only test work still open, and it gates no delivered function.</text>
+</svg>
