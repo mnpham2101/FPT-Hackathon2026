@@ -54,7 +54,7 @@ class R4ListenerService : Service() {
     @Volatile
     private var datagramSocket: DatagramSocket? = null
 
-    private val _r4EventFlow = MutableSharedFlow<R4Message>(extraBufferCapacity = 64)
+    private val _r4EventFlow = MutableSharedFlow<R4Message>(replay = 1, extraBufferCapacity = 64)
     /** Public API — collect in [R4Repository]. */
     val r4EventFlow: SharedFlow<R4Message> = _r4EventFlow
 

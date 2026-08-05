@@ -27,7 +27,7 @@ import javax.inject.Singleton
 @Singleton
 class R4Repository @Inject constructor() {
 
-    private val _warningEvents = MutableSharedFlow<R4WarningEvent>(extraBufferCapacity = 32)
+    private val _warningEvents = MutableSharedFlow<R4WarningEvent>(replay = 1, extraBufferCapacity = 32)
     val warningEvents: SharedFlow<R4WarningEvent> = _warningEvents.asSharedFlow()
 
     private val _currentState = MutableStateFlow<R4StateMessage?>(null)
