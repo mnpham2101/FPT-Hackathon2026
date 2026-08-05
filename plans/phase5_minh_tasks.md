@@ -1076,11 +1076,11 @@ The findings this subtask produces are items **1 and 5** of [§6.1](../requireme
 **Scope — two steps. The car-sky agent performs both:**
 
 1. The agent issues one `GET /api/v1/vms/{roomId}/{nodeKey}/screenshot` call, the scriptable alternative [§4.9](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#49-capture-the-evidence) offers for evidence capture.
-2. The agent records the outcome either way, answering [§6.1](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#61-confirm-before-relying-on-these) item 9.
+2. The agent records the outcome either way, answering [§6.1](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#61-confirm-before-relying-on-these) item 5.
 
 One call, not a retry loop. §4.9's Recorder Part and the Devices panel stay the primary capture route whatever this answers.
 
-**Acceptance:** the call's response — an image or the exact failure — recorded in `plans/doc/phase5-ivi-run.md`, with §6.1 item 9 answered there.
+**Acceptance:** the call's response — an image or the exact failure — recorded in `plans/doc/phase5-ivi-run.md`, with §6.1 item 5 answered there.
 
 **Dependencies:** after `5.5.9.5`, which resolves the `nodeKey`. Parallel with `16.5.9.7`. **Commit:** `[16.5.9.21] docs: record whether the VM screenshot route answers`
 
