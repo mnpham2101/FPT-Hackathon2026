@@ -2,17 +2,11 @@
 
 Evidence for [phase1_tasks.md § Task Group 1.10](../phase1_tasks.md). Each section closes one subtask; sections stay in the plan's order and are filled as the work happens. Deployment procedure is not restated here — it lives in [deploy-walkthrough-netcheck.md](../../requirements/car-sky-guide/deploy-walkthrough-netcheck.md), which the ECU nodes follow with different images and env.
 
-## To do
+## What is still open
 
-Five items close out Phase 1, cheapest first. Items 1–3 need a **live Room**; 4–5 need only a saved View Log.
+The outstanding subtasks, their executors and what each still needs are [phase1_tasks.md § Remaining work](../phase1_tasks.md#remaining-work) — the authority for the work list, including which subtask ID owns each step. This record holds only the evidence those subtasks produce, section by section below.
 
-1. **`11.1.10.4` — scenario swap.** Set the bench node's `SCENARIO_CONFIG` to `/app/scenarios/c-out-of-range.yaml`, redeploy, and compare against the `default.yaml` baseline in § `2.1.10.3`: a static beyond-gate distance instead of the 0.25 m-per-message approach. Config-only, no rebuild — that is R11's point.
-2. **`5.1.10.2` — confirm node status.** Read the per-node `Running` badges and restart counts in the Deployment Viewer, not the summary header (which read `Pending — 0/0 nodes ready` while traffic flowed normally). The R5 box's wording is "every node Running".
-3. **`2.1.10.3` — capture the R8 bring-up.** The `[EVT] stub_transition` sequence (`init` → `configure` → `subscribeRx`) only prints once at node start, and scrolled away before it was recorded. Restart the V2X node and grab the first seconds of its log.
-4. **`2.1.10.3` — scripted `[EVT]` check.** Download the V2X View Log and run `python tools/comms_check/check_v2x_log.py <saved.log>` in stream mode. Exit 0 replaces the manual read of the Rx chain.
-5. **`6.1.10.5` — pcap → Wireshark.** Needs a View Log download that contains a `[PCAP-BEGIN]`/`[PCAP-END]` block, so the Room must have run at least one `CAPTURE_ROTATE_S` period. Then `V2X_ECU/tools/extract_pcap.sh <saved.log>` and open the `.pcap`. Expect UDP data, not an ITS protocol tree (D5) — the evidence is payload-byte correlation.
-
-Sequencing note: items 3–5 all read the V2X node's log, so one restart plus one sufficiently long download can serve all three.
+One fact belongs here rather than there: **the `default.yaml` baseline recorded under § `2.1.10.3` was taken against the pre-R22 scenario geometry.** The committed file now carries the R22 demo cycle ([SP D7](../../Scenario_Player/doc/scenario-player-design-decisions.md#d7--the-demo-cycle-is-one-clip-length-and-its-geometry-is-solved-backwards-from-the-first-warning)), so the bench image the next Room pulls emits a different approach. A fresh `default.yaml` baseline is captured before `11.1.10.4` compares the swapped stream against it.
 
 ## `5.1.10.1` — Images in the registry
 
@@ -54,7 +48,7 @@ Node config per [phase1_tasks.md § Task Group 1.10](../phase1_tasks.md), with t
 - `FAULT_PLAN` may be omitted on V2X; [config.cpp](../../V2X_ECU/src/config/config.cpp) treats unset-or-empty as `FaultPlan::None`.
 - Baseline netcheck leftovers (`ROLE`, `GATE_*_M`, `V2X_LISTEN_PORT`, `IVI_ECU_*`) are inert on all three nodes — no image reads them. `IVI_ECU_HOST`/`IVI_ECU_PORT` in particular cannot turn the sink into a relay, because netcheck relays only on `NEXT_HOP_HOST`/`NEXT_HOP_PORT`.
 
-**Residual:** the Deployment Viewer header read `Pending — 0/0 nodes ready` while logs streamed normally. Confirm per-node `Running` + restart 0 before treating the R5 box's deploy clause as closed.
+**Residual:** the Deployment Viewer header read `Pending — 0/0 nodes ready` while logs streamed normally. Per-node `Running` + restart 0 is `5.1.10.6`'s read-back, and the R5 box's deploy clause is not closed until it records them.
 
 ## `2.1.10.3` — R2 observed at the ADA ECU
 
@@ -73,7 +67,7 @@ Node config per [phase1_tasks.md § Task Group 1.10](../phase1_tasks.md), with t
 Four independent checks pass on this excerpt:
 
 - **Not constants** (the R2 box's actual wording): `distance` and `position.x` change every message, decreasing monotonically 50.26 → 45.27 over the observed window.
-- **Kinematics match the scenario**: exactly **0.25 m per message**, and `rxTime` advances ~100 ms — i.e. 2.5 m/s at 10 Hz, precisely `closing_speed_mps: 2.5` and `cpm_rate_hz: 10` from [default.yaml](../../Scenario_Player/scenarios/default.yaml).
+- **Kinematics match the scenario as deployed**: exactly **0.25 m per message**, and `rxTime` advances ~100 ms — i.e. 2.5 m/s at 10 Hz, precisely the `closing_speed_mps: 2.5` and `cpm_rate_hz: 10` the bench image carried on this run. `cpm_rate_hz` is unchanged in the committed [default.yaml](../../Scenario_Player/scenarios/default.yaml); the closing speed and start distance are now the R22 values, 5.0 m/s from 70.0 m, so a re-run reads 0.5 m per message.
 - **The F7 derivation is arithmetically correct.** *F7 is a numbered freeze note in [contracts/r1-cpm-profile.md](../../contracts/r1-cpm-profile.md): `R2 object.distance = hypot(object.position.x, object.position.y)` in metres — a value the CPM never carries, computed at the V2X ECU because the wire format only gives x/y offsets.* Check: `hypot(50.25, 1.2) = 50.26432631…`, matching the logged `distance` to every printed digit. So the field is genuinely derived from the decoded position, not copied through.
 - **Every scenario field survives the round trip**: `objectId 7`, `y 1.2` (`lateral_offset_m`), `confidence 0.95` (from wire 95), `classification "vehicle"` (from wire code 5), `stationId 1201`, sender pose `21.028511 / 105.804817 / heading 90.0`.
 
@@ -85,11 +79,11 @@ V2X ECU counters over the same run — the D7 chain with nothing lost or rejecte
 
 `rx_datagram` = `decode_ok` = `r2_forwarded`, `decode_reject: 0`, `dedupe_drop: 0`. Sequence numbers ran contiguously past **#6500** with no gaps, sustained for minutes at 10 Hz.
 
-**Residual:** `check_v2x_log.py` has not been run against a saved View Log export, and the `[EVT] stub_transition` bring-up sequence (R8 live evidence) scrolled past before capture — re-read it from a full log download or a restart.
+**Residual:** `check_v2x_log.py` has not been run against a saved View Log export — that is `9.1.10.7` — and the `[EVT] stub_transition` bring-up sequence scrolled past before capture, which is `8.1.10.8`'s evidence. Both read the V2X node's log, so one restart plus one long enough download serves them.
 
 ## `11.1.10.4` — Scenario swap
 
-*Pending.* Baseline for comparison is the `default.yaml` approach above: distance decreasing 0.25 m per message from 60 m.
+*Pending.* The comparison needs a `default.yaml` baseline from the same bench image as the swapped run. The approach recorded above predates the R22 retime, so it is not that baseline: the committed file now closes from 70.0 m at 5.0 m/s, 0.5 m per message at 10 Hz. Capture the fresh baseline first, then the `c-out-of-range.yaml` stream, and compare the pair.
 
 ## `6.1.10.5` — Capture retrieval → Wireshark
 

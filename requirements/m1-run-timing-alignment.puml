@@ -1,48 +1,51 @@
 @startuml
-' Scenario-time alignment over one bench cycle.
-' Values from Scenario_Player/scenarios/default.yaml (cpm_rate_hz 10, duration_s 20, loop true),
-' the Phase 1 run record (60 m start, 2.5 m/s closing), and R13 (gate_enter 30 m, gate_exit 35 m).
-' Horizontal axis is bench scenario time t in seconds.
+' Run-time alignment over one cycle, measured from T0 = the ADA detector's first emitted R3 frame.
+' Values from Scenario_Player/scenarios/default.yaml (cpm_rate_hz 10, duration_s 10, loop true,
+' C at 70.0 m closing 5.0 m/s), ADA_ECU/media/ego-b-occluding-c.mp4 (10.0 s, B ~60 m -> ~10 m),
+' R13 (gate_enter 30 m, gate_exit 35 m, CONFIRM_HITS 3) and R14 (RISK_DWELL_MS 300).
+' Horizontal axis is run time from T0, in tenths of a second.
 
-title One 20 s bench cycle — the 12.0 s lead-in is what absorbs start misalignment
+title One 10 s cycle from T0 - the normal screen holds until the first R4 at 8.5-8.9 s
 
-concise "Bench scenario time t [s]" as T
-concise "C reported distance (R2 object.distance)" as D
+concise "Run time from T0 [0.1 s]" as T
+concise "C relayed range d_BC (R2 object.distance)" as D
 concise "B track state (own_sensor, R13)" as B
 concise "C track state (v2x_relayed, R13)" as C
-concise "R4 warning to IVI" as W
+concise "IVI display mode" as W
 
 @0
-T is "t = 0 — cycle start"
-D is "60 m"
-B is "detector warm-up"
+T is "T0 - detector frame 0, bench cycle start"
+D is "70 m"
+B is not_tracked
 C is not_tracked
-W is silent
+W is "HomeView (normal screen)"
 
 @1
 T is {hidden}
 
-@5
-B is "tracked (B confirmed)"
+@60
+B is tentative
 
-@10
-D is "35 m — gate_exit level"
+@66
+B is tracked
 
-@12
-D is "30 m — gate_enter crossed"
+@80
+D is "30 m - gate_enter crossed"
 C is tentative
 
-@13
+@83
 C is tracked
-W is "warning emitted"
 
-@20
-T is "t = 0 — loop restarts"
-D is "60 m"
+@87
+W is "WarningView (risk medium)"
+
+@100
+T is "T0 + 10.0 s - clip and bench wrap together"
+D is "70 m"
+B is not_tracked
 C is not_tracked
-W is silent
 
-highlight 0 to 12 #LightGreen : lead-in — 12.0 s of slack for detector warm-up + B confirmation
-highlight 12 to 20 #Gold : C in gate — 8.0 s of warning window per cycle
+highlight 0 to 83 #LightGreen : B admitted at 6.6 s - 1.7 s ahead of C
+highlight 85 to 100 #Gold : warning window - first R4 at 8.5-8.9 s, and the view holds across the wrap
 
 @enduml

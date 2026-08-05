@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1,
+  "type": "v2x_object",
+  "stationId": 1201,
+  "rxTime": 1789000000123,
+  "sender": { "lat": 21.028511, "lon": 105.804817, "heading": 90.0, "speed": 16.7 }
+}

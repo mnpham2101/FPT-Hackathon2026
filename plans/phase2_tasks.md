@@ -2,9 +2,9 @@
 
 > **Authority & context:**
 > - **Phase content:** [milestone1.md § Phase 2](milestone1.md#phase-2--ada-scaffolding-store--state-machine-no-detector-r3-r13) — its six acceptance checkboxes are the phase output.
-> - **Design:** [ada-ecu-hld.md](../ADA_ECU/doc/ada-ecu-hld.md) — §4 folder structure, §6 components and env tables, §12 test strategy, and the [decision record](../ADA_ECU/doc/ada-ecu-design-decisions.md) D1–D10. Every `ADA_ECU/` path below is cited from its §4; diagrams [components](../ADA_ECU/doc/phase2-4-ada-ecu-components.puml) · [call flow](../ADA_ECU/doc/phase2-4-ada-ecu-callflow.puml) · [admission](../ADA_ECU/doc/phase2-4-ada-ecu-admission.puml).
+> - **Design:** [ada-ecu-hld.md](../ADA_ECU/doc/ada-ecu-hld.md) — §4 folder structure, §6 components, env tables and § Startup validation, §12 test strategy, and the [decision record](../ADA_ECU/doc/ada-ecu-design-decisions.md) D1–D11. Every `ADA_ECU/` path below is cited from its §4; diagrams [components](../ADA_ECU/doc/phase2-4-ada-ecu-components.puml) · [call flow](../ADA_ECU/doc/phase2-4-ada-ecu-callflow.puml) · [admission](../ADA_ECU/doc/phase2-4-ada-ecu-admission.puml).
 > - **Requirements:** [m1-cooperative-awareness.md §2](../requirements/m1-cooperative-awareness.md) R2, R3, R5, R6, R12–R14, R18 — referenced by number, never restated.
-> - **Run timing:** [m1-run-timing-and-event-triggering.md §6.2](../requirements/m1-run-timing-and-event-triggering.md) — the clock-domain ruling that `2.2.3.1` and `13.2.4.3` implement.
+> - **Run timing:** [m1-run-timing-and-event-triggering.md](../requirements/m1-run-timing-and-event-triggering.md) — §6.2's clock-domain ruling, which `2.2.3.1` and `13.2.4.3` implement; §6.1's env values and §6.6's R22 choreography, which `13.2.2.1` loads (HLD [D10](../ADA_ECU/doc/ada-ecu-design-decisions.md#d10--clock-domains-and-stimulus-paced-against-clock_monotonic), [D11](../ADA_ECU/doc/ada-ecu-design-decisions.md#d11--r22-run-choreography-the-run-origin-the-paced-clip-and-the-risk-band-pair)).
 > - **Phase 0 baseline (present on `main`, do not re-plan):** `contracts/` frozen + `sync-manifest.json` + `check_sync.py`; `ADA_ECU/contracts/` synced schema copies; `ADA_ECU/src/contracts/{tracked_object,r2_message,r4_message}.{hpp,cpp}` bindings; `ADA_ECU/detector/contracts/tracked_object.py`; `ADA_ECU/tests/contracts/` round-trip tests; `ADA_ECU/CMakeLists.txt` with the `ada_add_test()` helper.
 > - **Deploy guide:** [node-ada-ecu.md](../requirements/car-sky-guide/node-ada-ecu.md) — its § Blueprint node config carries `command: ["./entrypoint.sh"]`, `capabilities: ["NET_RAW"]` and the `registry.hackathon-2.carsky.io` host; `5.2.9.4` adds only the §6 env rows.
 > - **Rules:** [task-planning-conventions.md](../.claude/rules/task-planning-conventions.md) (`X.Y.Z.W`; subtask discipline restated once in § Subtask discipline below); [node-code-layout.md](../.claude/rules/node-code-layout.md).
@@ -25,12 +25,12 @@ Nothing in this phase waits on a person before it can start.
 
 **Output (phase acceptance = the six milestone boxes):**
 
-- [ ] The store exposes all R3 fields; detector-shaped and relayed-shaped entries enter through the identical interface (R3) — closed by `3.2.4.1` + `2.2.3.1` + `3.2.3.2` (both parsers call the same `upsert`).
-- [ ] Mock-driven state transitions are observable in logs and match the R13 diagram; toggling the mock off yields no tracks — closed by `13.2.4.2` + `13.2.4.3` + `13.2.8.2` (loopback lane, `DETECTOR_ENABLED=false` arm).
-- [ ] Mock C is admitted only within `gate_enter` and dropped only beyond `gate_exit` or after `miss_limit` — no add/remove flicker — closed by `13.2.4.3` boundary cases at 30 m / 35 m plus `TRACK_TIMEOUT_MS` expiry. **`miss_limit` is realized as wall-clock, flagged not absorbed** — § Open items item 1.
-- [ ] Gate constants are read from configuration — no literals — closed by `13.2.2.1` (the node's only env reader).
-- [ ] CRA database schema committed; video-input proposal sent to FPT-Mentor — closed by `14.2.5.2` (schema) + `12.2.9.2` (the send).
-- [ ] **Demo:** build + CI round-trip tests green on the frozen contracts (golden vectors) — closed by `ada-core-build` staying green across every subtask plus `5.2.8.1` / `13.2.8.2`.
+- [x] The store exposes all R3 fields; detector-shaped and relayed-shaped entries enter through the identical interface (R3) — closed by `3.2.4.1` + `2.2.3.1` + `3.2.3.2` (both parsers call the same `upsert`).
+- [x] Mock-driven state transitions are observable in logs and match the R13 diagram; toggling the mock off yields no tracks — closed by `13.2.4.2` + `13.2.4.3` + `13.2.8.2` (loopback lane, `DETECTOR_ENABLED=false` arm).
+- [x] Mock C is admitted only within `gate_enter` and dropped only beyond `gate_exit` or after `miss_limit` — no add/remove flicker — closed by `13.2.4.3` boundary cases at 30 m / 35 m plus `TRACK_TIMEOUT_MS` expiry. **`miss_limit` is realized as wall-clock, flagged not absorbed** — § Open items item 1.
+- [x] Gate constants are read from configuration — no literals — closed by `13.2.2.1` (the node's only env reader).
+- [x] CRA database schema committed; video-input proposal sent to FPT-Mentor — closed by `14.2.5.2` (schema) + `12.2.9.2` (the send).
+- [x] **Demo:** build + CI round-trip tests green on the frozen contracts (golden vectors) — closed by `ada-core-build` staying green across every subtask plus `5.2.8.1` / `13.2.8.2`.
 
 **Suggested branch (suggestion only — creation is the user's call):** `feat/phase2-ada-scaffold`, branched from `main`. One branch for the whole phase; implementation subtasks commit onto it. Docs-only subtasks and evidence records commit straight to `main`.
 
@@ -78,7 +78,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 | `contracts/` gate | `python contracts/check_sync.py` → exit 0 | local + CI `contracts-gate` |
 | ADA image | `docker buildx build --platform linux/arm64 --provenance=false --sbom=false -t m1-ada-ecu:latest ADA_ECU/` | CI `ada-ecu-image` (`5.2.8.1`) |
 
-**Image tags, stated separately.** The local build tag is `m1-ada-ecu:latest` ([HLD D9](../ADA_ECU/doc/ada-ecu-design-decisions.md#d9--deployment-shape)). The registry tag is `registry.hackathon-2.carsky.io/m1-ada-ecu:latest` ([node-ada-ecu.md § Blueprint node config](../requirements/car-sky-guide/node-ada-ecu.md), which is also the blueprint `image` value). A third form for this node's artifact appears in [node-code-layout.md](../.claude/rules/node-code-layout.md) — § Open items item 7.
+**Image tags, stated separately.** The local build tag is `m1-ada-ecu:latest` ([HLD D9](../ADA_ECU/doc/ada-ecu-design-decisions.md#d9--deployment-shape)). The registry tag is `registry.hackathon-2.carsky.io/m1-ada-ecu:latest` ([node-ada-ecu.md § Blueprint node config](../requirements/car-sky-guide/node-ada-ecu.md), which is also the blueprint `image` value).
 
 ### CI ruling — extend or add?
 
@@ -86,13 +86,13 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **`python-tests` collects two folders and no others:** `Scenario_Player/tests` and `ADA_ECU/detector/tests`, each guarded on its own `requirements-dev.txt`. `ADA_ECU/tools/tests/` is outside both guards, so a `tools/` test's acceptance is local — the `ADA_ECU/tools/` row of § Per-node build commands.
 
-**New lanes go in a new `.github/workflows/phase2-ci.yml`**, per the convention stated in [phase1-ci.yml](../.github/workflows/phase1-ci.yml)'s header — *a lane belongs to the phase that created it, not to the phase that last touched it*. Phase 2 creates two: `ada-ecu-image` (arm64 build + gated push) and `ada-loopback-check` (the mock-driven admission run). Phase 3 and Phase 4 create their own files for their own lanes.
+**Phase 2 creates two lanes in two files.** `ada-loopback-check` (the mock-driven admission run) goes in a new `.github/workflows/phase2-ci.yml`, per the convention stated in [phase1-ci.yml](../.github/workflows/phase1-ci.yml)'s header — *a lane belongs to the phase that created it, not to the phase that last touched it*. `ada-ecu-image` (arm64 build + gated push) goes in `.github/workflows/phase4-ci.yml`: the image built from `ADA_ECU/` carries the Phase 2 scaffold, the Phase 3 detector and the Phase 4 fusion, so its lane is filed with the node artifact rather than any single phase ([HLD §11](../ADA_ECU/doc/ada-ecu-hld.md#11-tech-stack-build-and-ci); [phase4_tasks.md § CI ruling](phase4_tasks.md) — whichever subtask lands first creates that file with the standard header, and the others add only their job). Phase 3 and Phase 4 create their own files for their own lanes.
 
 ---
 
 ## Task Group 2.1 — Node orientation (serves R5)
 
-### [ ] `5.2.1.3` — Point `ADA_ECU/README.md` at the HLD *(AI)*
+### [x] `5.2.1.3` — Point `ADA_ECU/README.md` at the HLD *(AI)*
 
 **Objective:** the node README states what the folder is and links the design of record ([HLD §4](../ADA_ECU/doc/ada-ecu-hld.md#4-folder-structure), the `README.md` row).
 
@@ -102,28 +102,33 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none. **Commit:** `[5.2.1.3] docs: point the ADA README at the phase 2-4 HLD`
 
+**Status:** done — README rewritten as one-screen orientation; every link target verified present, both build commands byte-match § Per-node build commands, attribution line diffs identical against the sidecar.
+
 ---
 
 ## Task Group 2.2 — Core foundation: config, socket, event log, input queue (serves R13, R6, R18, R3)
 
 > The four transport- and rule-blind modules every later group depends on. Paths from [HLD §4](../ADA_ECU/doc/ada-ecu-hld.md#4-folder-structure); build/test = the ADA C++ row of § Per-node build commands. Each new module registers a static library plus a test target in `ADA_ECU/CMakeLists.txt`, following the existing `ada_contracts` / `ada_add_test()` pattern.
 
-### [ ] `13.2.2.1` — Env config loader `src/config/config.{hpp,cpp}` *(AI)*
+### [x] `13.2.2.1` — Env config loader `src/config/config.{hpp,cpp}` *(AI)*
 
 **Objective:** the node's **only** env reader ([HLD §6](../ADA_ECU/doc/ada-ecu-hld.md#6-internal-components), Data table, the `config/config` row): load + validate the core-consumed env set into an immutable `Config` struct.
 
 **Scope:**
 
-- Fields + defaults exactly per the **Env — core** table of [HLD §6](../ADA_ECU/doc/ada-ecu-hld.md#6-internal-components): `V2X_LISTEN_PORT` (47200) · `V2X_LISTEN_HOST` (`0.0.0.0`) · `IVI_ECU_HOST` (`10.99.0.13`) · `IVI_ECU_PORT` (47300) · `GATE_ENTER_M` (30) · `GATE_EXIT_M` (35) · `CONFIRM_HITS` (3) · `TRACK_TIMEOUT_MS` (1000) · `FUSION_TICK_MS` (100) · `DETECTOR_ENABLED` (true) · `DETECTOR_CMD` (`python3 /app/detector/main.py`) · `DETECTOR_RESTART_MAX` (5) · `CRA_ENABLED` (`nlos_obstruction`) · `RISK_NEAR_M` (25) · `RISK_CRITICAL_M` (15) · `RISK_TTC_WARN_S` (6) · `RISK_TTC_CRITICAL_S` (3) · `RISK_DWELL_MS` (300) · `STATE_RATE_HZ` (0) · `EVENT_LOG_PATH` (empty) · `ASSESS_LOG_EVERY_MS` (1000). The Phase 4 risk values are loaded now and unused until then — one loader, one table, no second env read later.
+- Fields + defaults exactly per the **Env — core** table of [HLD §6](../ADA_ECU/doc/ada-ecu-hld.md#6-internal-components): `V2X_LISTEN_PORT` (47200) · `V2X_LISTEN_HOST` (`0.0.0.0`) · `IVI_ECU_HOST` (`10.99.0.13`) · `IVI_ECU_PORT` (47300) · `GATE_ENTER_M` (30) · `GATE_EXIT_M` (35) · `CONFIRM_HITS` (3) · `TRACK_TIMEOUT_MS` (1000) · `FUSION_TICK_MS` (100) · `DETECTOR_ENABLED` (true) · `DETECTOR_CMD` (`python3 /app/detector/main.py`) · `DETECTOR_RESTART_MAX` (5) · `CRA_ENABLED` (`nlos_obstruction`) · `RISK_NEAR_M` (60) · `RISK_CRITICAL_M` (30) · `RISK_TTC_WARN_S` (6) · `RISK_TTC_CRITICAL_S` (3) · `RISK_DWELL_MS` (300) · `STATE_RATE_HZ` (0) · `EVENT_LOG_PATH` (empty) · `ASSESS_LOG_EVERY_MS` (1000). The Phase 4 risk values are loaded now and unused until then — one loader, one table, no second env read later.
 - **Not read here:** `VIDEO_CLIP_PATH`, `DETECTOR_FRAME_STRIDE`, `DETECTOR_LOOP`, `DETECTOR_REALTIME_PACING`, `DETECTOR_CLIP_FPS`, `DETECTOR_START_DELAY_S`, `MODEL_PATH`, `CONF_THRESHOLD`, `IOU_THRESHOLD`, `TRACK_IOU_MIN`, `VEHICLE_WIDTH_M`, `CAMERA_HFOV_DEG` — the **Env — detector** table of HLD §6, read by `detector/config.py` in Phase 3. Each key is read in exactly one place, which that section states as a rule. Also not read here: `CAPTURE_FILTER`, `PCAP_DIR` and `CAPTURE_ROTATE_S`, consumed by `capture.sh` directly in Phase 4.
-- Validation: ports 1–65535; non-empty hosts; `GATE_EXIT_M > GATE_ENTER_M`; `CONFIRM_HITS ≥ 1`; positive `TRACK_TIMEOUT_MS`/`FUSION_TICK_MS`; `RISK_CRITICAL_M < RISK_NEAR_M < GATE_ENTER_M` (D5 — the risk band must never alias the R13 gate); non-negative `STATE_RATE_HZ`. Invalid value → descriptive exception, caller exits non-zero. Env read through an injectable getter so tests never mutate process env.
-- Test `tests/config/test_config.cpp`: defaults when unset; each override parsed; each rejection case, including the two ordering rules.
+- Validation: exactly the rules of the **Startup validation** table of [HLD §6](../ADA_ECU/doc/ada-ecu-hld.md#6-internal-components) and nothing beyond them — ports 1–65535; non-empty hosts; `CRA_ENABLED` naming registered plugins only; `0 < GATE_ENTER_M < GATE_EXIT_M`; `0 < RISK_CRITICAL_M < RISK_NEAR_M`; `0 < RISK_TTC_CRITICAL_S < RISK_TTC_WARN_S`; `CONFIRM_HITS ≥ 1`; positive `TRACK_TIMEOUT_MS`/`FUSION_TICK_MS`; `RISK_DWELL_MS ≥ 0`; non-negative `STATE_RATE_HZ`; `DETECTOR_RESTART_MAX ≥ 0`. Invalid value → descriptive exception naming the offending key, caller exits non-zero. Env read through an injectable getter so tests never mutate process env.
+- **No assertion may relate a risk threshold to a gate threshold.** `RISK_NEAR_M`/`RISK_CRITICAL_M` are thresholds on the composed range `d_AC`; `GATE_ENTER_M`/`GATE_EXIT_M` are thresholds on one source's own range (`d_BC` relayed, `d_AB` estimated). Comparing them orders two different quantities, and the pair R22 requires — 60 / 30 — is above `GATE_ENTER_M` by design ([D5](../ADA_ECU/doc/ada-ecu-design-decisions.md#d5--risk-vocabulary-and-edge-triggered-emission), [D11](../ADA_ECU/doc/ada-ecu-design-decisions.md#d11--r22-run-choreography-the-run-origin-the-paced-clip-and-the-risk-band-pair)). A loader that rejects the pair exits the node at startup, and a node that has exited emits nothing.
+- Test `tests/config/test_config.cpp`: defaults when unset; each override parsed; each rejection case, including the three same-quantity ordering rules — gate, risk range, risk TTC — and a positive case proving `RISK_NEAR_M = 60` with `GATE_ENTER_M = 30` loads without error.
 
 **Acceptance:** ADA build + ctest green on CI (`ada-core-build`); no tunable literal anywhere outside this file's defaults table.
 
 **Dependencies:** none — starts immediately. **Commit:** `[13.2.2.1] feat: add ADA ECU env config loader`
 
-### [ ] `6.2.2.2` — Sole socket holder `src/net/udp_socket.{hpp,cpp}` *(AI — parallel with 13.2.2.1)*
+**Status:** done — loader + injectable-getter tests cover defaults, every override, all rejection rules incl. the three same-quantity orderings, and the 60/30 cross-quantity positive case; build/tests deferred to CI ada-core-build.
+
+### [x] `6.2.2.2` — Sole socket holder `src/net/udp_socket.{hpp,cpp}` *(AI — parallel with 13.2.2.1)*
 
 **Objective:** `net::UdpSocket` — the **only** `ADA_ECU/src` code allowed to include socket headers ([HLD §6](../ADA_ECU/doc/ada-ecu-hld.md#6-internal-components), controller table, the `net/udp_socket` row).
 
@@ -133,7 +138,9 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none. **Commit:** `[6.2.2.2] feat: add ADA UdpSocket sole transport holder`
 
-### [ ] `18.2.2.3` — R18 `[EVT]` JSONL event log `src/log/event_log.{hpp,cpp}` *(AI — parallel)*
+**Status:** done — RAII move-only socket with poll-timeout receive and counted transient errors; loopback round-trip, bind-conflict, timeout and move tests on ephemeral ports; POSIX headers confined to the .cpp; build/tests deferred to CI ada-core-build.
+
+### [x] `18.2.2.3` — R18 `[EVT]` JSONL event log `src/log/event_log.{hpp,cpp}` *(AI — parallel)*
 
 **Objective:** the ADA half of the R18 evidence stream (HLD D8) — one JSONL line per event, `[EVT]`-prefixed, same line shape as the V2X ECU so one offline reader reconstructs both nodes.
 
@@ -149,7 +156,9 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none. **Commit:** `[18.2.2.3] feat: add ADA R18 JSONL event log writer`
 
-### [ ] `3.2.2.4` — Bounded input queue `src/observer/input_queue.hpp` *(AI — parallel)*
+**Status:** done — nlohmann-only writer with both clock stamps, cumulative counters, injectable sink/clocks, stdout + optional EVENT_LOG_PATH file sink; all twelve D8 event names declared; tests cover parse-after-prefix, counter accumulation, quote/newline round-trip and the temp-dir file sink; build/tests deferred to CI ada-core-build.
+
+### [x] `3.2.2.4` — Bounded input queue `src/observer/input_queue.hpp` *(AI — parallel)*
 
 **Objective:** the D2 single-consumer queue — two producer threads (V2X rx, detector reader), one consumer (the main thread), so the store has exactly one writer.
 
@@ -159,13 +168,15 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none. **Commit:** `[3.2.2.4] feat: add bounded input queue for the two observers`
 
+**Status:** done — header-only bounded queue (INTERFACE lib) with drop-oldest-and-count push, timeout pop, close()-wakes-consumer; tests cover per-producer FIFO, two concurrent producers (delivered + dropped accounting), capacity bound and pop-after-close, synchronized by join not sleeps; build/tests deferred to CI ada-core-build.
+
 ---
 
 ## Task Group 2.3 — Data parsers: wire → frozen R3 model (serves R2, R3)
 
 > The Data Parser block of the [component map](../ADA_ECU/doc/phase2-4-ada-ecu-components.puml). Both parsers produce the **same** `contracts::TrackedObject` and both hand it to the **same** `upsert` — that identity is the R3 acceptance box. Field authority: the synced `ADA_ECU/contracts/r2-v2x-object.schema.json` and `r3-tracked-object.schema.json`; models: the Phase 0 bindings in `ADA_ECU/src/contracts/`.
 
-### [ ] `2.2.3.1` — R2 parser `src/parser/r2_parser.{hpp,cpp}` *(AI)*
+### [x] `2.2.3.1` — R2 parser `src/parser/r2_parser.{hpp,cpp}` *(AI)*
 
 **Objective:** map one received R2 JSON datagram to a `TrackedObject` with `source = v2x_relayed` ([HLD §6](../ADA_ECU/doc/ada-ecu-hld.md#6-internal-components), controller table, the `parser/r2_parser` row; [HLD §10.1](../ADA_ECU/doc/ada-ecu-hld.md#101-r2--the-message-set-from-the-v2x-ecu-consumed)).
 
@@ -189,7 +200,9 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none (Phase 0 binding suffices). **Commit:** `[2.2.3.1] feat: add R2 to TrackedObject parser`
 
-### [ ] `3.2.3.2` — R3 JSONL parser `src/parser/r3_parser.{hpp,cpp}` *(AI — parallel with 2.2.3.1)*
+**Status:** done — parses through the frozen R2Message binding only; id `v2x:<stationId>:<objectId>`, null confidence → 0.0 with the wire null and position.confidence out-of-band on the result, measured = rxTime + timeOfMeasurement, lastUpdated = 0 placeholder; five typed reject reasons each counted and tested; build/tests deferred to CI ada-core-build.
+
+### [x] `3.2.3.2` — R3 JSONL parser `src/parser/r3_parser.{hpp,cpp}` *(AI — parallel with 2.2.3.1)*
 
 **Objective:** map one detector JSONL line to a `TrackedObject` with `source = own_sensor`.
 
@@ -199,7 +212,9 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none. **Commit:** `[3.2.3.2] feat: add detector JSONL to TrackedObject parser`
 
-### [ ] `3.2.3.3` — Parse-reject corpus `tests/fixtures/malformed/` + counted-rejection test *(AI)*
+**Status:** done — parses through the frozen TrackedObject binding only; incoming state discarded for the not_tracked placeholder (D3), non-own_sensor source rejected with a typed reason (D6), malformed/missing/wrong-type/out-of-range lines rejected and counted, never fatal; the frozen sample carries source v2x_relayed, so the maps-intact case flips it to own_sensor and the verbatim sample is the source-rejection case; build/tests deferred to CI ada-core-build.
+
+### [x] `3.2.3.3` — Parse-reject corpus `tests/fixtures/malformed/` + counted-rejection test *(AI)*
 
 **Objective:** prove both parsers reject a structurally invalid corpus with zero crashes and correct counters (HLD §4 — a local fixture, **not** a synced contract).
 
@@ -209,13 +224,15 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after `2.2.3.1` + `3.2.3.2`. **Commit:** `[3.2.3.3] test: reject the malformed parse corpus with zero crashes`
 
+**Status:** done — thirteen one-defect corpus files (`r2-<case>.json` / `r3-<case>.json`, empty-line cases as zero-byte files) with provenance in the test header; one parameterized suite asserts each case's exact disposition and reject reason with no either-outcome branch, both unknown-extra-field cases tolerated; the whole-corpus run proves one parser instance per side survives all cases with exact counters and still accepts the valid samples; build/tests deferred to CI ada-core-build.
+
 ---
 
 ## Task Group 2.4 — R3 store + R13 admission state machine (serves R3, R13)
 
 > The "Current Input" block. The state machine realizes [phase2-4-ada-ecu-admission.puml](../ADA_ECU/doc/phase2-4-ada-ecu-admission.puml) exactly — **one machine, both sources**, parameterized only by what counts as an update (D3). `not_tracked` means **absent from the store**: a drop erases the entry, it does not leave one flagged.
 
-### [ ] `3.2.4.1` — Track store `src/store/track_store.{hpp,cpp}` *(AI)*
+### [x] `3.2.4.1` — Track store `src/store/track_store.{hpp,cpp}` *(AI)*
 
 **Objective:** the R3 store — an `id → TrackedObject` map with `upsert / get / all / nearest / erase`, single-writer, exposing every R3 field.
 
@@ -229,7 +246,9 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none (uses the Phase 0 binding). **Commit:** `[3.2.4.1] feat: add the R3 track store`
 
-### [ ] `13.2.4.2` — Admission state machine `src/store/admission.{hpp,cpp}` *(AI)*
+**Status:** done — upsert/get/all/allBySource/nearest/erase with injectable CLOCK_REALTIME stamp; store owns `state` (not_tracked on first insert, preserved on refresh) and restamps `lastUpdated`; 7-case test covers the nine-field round-trip, identical-upsert for both source shapes, per-source nearest with tie case, erase, and the restamp; build/tests deferred to CI ada-core-build.
+
+### [x] `13.2.4.2` — Admission state machine `src/store/admission.{hpp,cpp}` *(AI)*
 
 **Objective:** the R13 machine as a **pure** function of (current state, hits, distance, elapsed) → (next state, action) — no I/O, no store access, no clock read inside.
 
@@ -244,7 +263,9 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after `13.2.2.1` (threshold types). **Commit:** `[13.2.4.2] feat: implement the R13 admission state machine`
 
-### [ ] `13.2.4.3` — Store ↔ admission integration, expiry, transition events *(AI)*
+**Status:** done — pure step() machine realizing all eight diagram edges, thresholds as ctor params from Config, timeout evaluated first, hits reset on every erase; edge names aligned to the 13.2.4.3 reason vocabulary (self-loops distinct as counted/refreshed); test covers lifecycle both directions, promotion boundary, counter reset, timeout precedence, Schmitt band, CONFIRM_HITS==1 degenerate; build/tests deferred to CI ada-core-build.
+
+### [x] `13.2.4.3` — Store ↔ admission integration, expiry, transition events *(AI)*
 
 **Objective:** wire the machine into the store — every ingest and every tick runs admission, every edge writes one `track_transition`, every expiry writes `track_expire`.
 
@@ -260,13 +281,15 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after `3.2.4.1` + `13.2.4.2` + `18.2.2.3`. **Commit:** `[13.2.4.3] feat: run admission and expiry inside the track store`
 
+**Status:** done — store wired to the pure machine via a thresholds-from-Config constructor and injected EventLog; per-entry monotonic stamp is the sole expiry operand (D10 pair proven in test_expiry_monotonic), lastUpdated stays realtime; five state-changing reasons emit one track_transition each, self-loops silent (planner ruling — the .puml every-edge note flagged stale to architecture), timeout adds track_expire ({id, source, distance} payload, pending ratification); boundary/flicker/expiry covered in test_admission_relayed; build/tests deferred to CI ada-core-build.
+
 ---
 
 ## Task Group 2.5 — R14 CRA abstraction, database schema, registry (serves R14)
 
 > R14's acceptance is **the code plus the database schema** — the interface, the registry, and a committed schema the assessment reads and writes. Phase 2 lands all three empty of rules; Phase 4's `chained_collision` is the first plugin and the proof that adding one is *one new file plus one line* (D4).
 
-### [ ] `14.2.5.2` — CRA assessment-record schema `schema/cra-assessment-record.schema.json` *(AI — first in the group)*
+### [x] `14.2.5.2` — CRA assessment-record schema `schema/cra-assessment-record.schema.json` *(AI — first in the group)*
 
 **Objective:** the committed R14 database schema — one of the two artifacts R14's acceptance names, and a Phase 2 acceptance box on its own.
 
@@ -280,7 +303,9 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none. **Commit:** `[14.2.5.2] feat: commit the CRA assessment-record schema`
 
-### [ ] `14.2.5.1` — Freeze the CRA interface `src/cra/i_collision_risk_assessment.hpp` *(AI)*
+**Status:** done — draft 2020-12 schema with all fourteen D4 fields required, `ttcS`/`lastKnownB` nullable, `lastSnapshot` `$ref`ing the synced R3 schema by relative path; sample validates (jsonschema Draft202012Validator, zero errors); `contracts/check_sync.py` exit 0 (47 copies byte-identical).
+
+### [x] `14.2.5.1` — Freeze the CRA interface `src/cra/i_collision_risk_assessment.hpp` *(AI)*
 
 **Objective:** the R14 seam, header-only and frozen — the text is in [HLD D4](../ADA_ECU/doc/ada-ecu-design-decisions.md#d4--r14-the-collision-risk-assessment-interface-registry-and-database) and is transcribed, not redesigned.
 
@@ -292,7 +317,9 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after `3.2.4.1` (references `TrackStore`). **Commit:** `[14.2.5.1] feat: freeze the collision risk assessment interface`
 
-### [ ] `14.2.5.3` — Assessment database accessor `src/cra/assessment_db.{hpp,cpp}` *(AI)*
+**Status:** done — D4 interface transcribed verbatim into `src/cra/i_collision_risk_assessment.hpp` in `ada::cra` (AssessmentDb forward-declared, no accessor signature; `using store::TrackStore;` added so D4's text resolves — both convention facts flagged to architecture); test exercises a fake plugin through a base pointer and static_asserts the frozen signatures; build/tests deferred to CI ada-core-build.
+
+### [x] `14.2.5.3` — Assessment database accessor `src/cra/assessment_db.{hpp,cpp}` *(AI)*
 
 **Objective:** the typed in-process accessor over the D4 schema — the seam a future milestone swaps for real persistence.
 
@@ -302,7 +329,9 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after `14.2.5.2` + `14.2.5.1` + `18.2.2.3`. **Commit:** `[14.2.5.3] feat: add the CRA assessment database accessor`
 
-### [ ] `14.2.5.4` — Plugin registry `src/cra/registry.{hpp,cpp}` + `src/cra/builtin_plugins.cpp` *(AI)*
+**Status:** done — AssessmentRecord mirrors the schema's fourteen fields by name (`ttcS`/`lastKnownB` as optionals); AssessmentDb defines the 14.2.5.1 forward declaration in `ada::cra`, keyed (trackId, warningType) per D4's field table (Open item 5 noted at the signature), every upsert mirrored as one `assessment` [EVT] line; test validates the serialized record against `schema/cra-assessment-record.schema.json` loaded from disk (minimal in-test validator over the features the schema uses) and round-trips the committed sample; build/tests deferred to CI ada-core-build. The implementing agent's report was lost to a session limit — files verified by planner inspection instead.
+
+### [x] `14.2.5.4` — Plugin registry `src/cra/registry.{hpp,cpp}` + `src/cra/builtin_plugins.cpp` *(AI)*
 
 **Objective:** explicit registration and lookup by `warningType`, plus the one file an added plugin edits.
 
@@ -316,13 +345,15 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after `14.2.5.1` + `13.2.2.1`. **Commit:** `[14.2.5.4] feat: add the CRA plugin registry and builtin registration point`
 
+**Status:** done — registry.{hpp,cpp} + builtin_plugins.cpp + tests/cra/test_registry.cpp; get() returns nullptr on unknown (query), enabled() throws RegistryError naming the unknown CRA_ENABLED entry (startup validation, the check config.cpp defers to registry wiring); registerBuiltinPlugins declared in registry.hpp (HLD §4 designates no builtin_plugins.hpp) and empty in Phase 2; build/tests deferred to CI ada-core-build.
+
 ---
 
 ## Task Group 2.6 — Observers, composition root, mock drive (serves R2, R12, R13, R18)
 
 > The input edges and the controller. **No mock branch exists inside `src/`** (D2): Phase 2's mock own-sensor input is the *real* detector-reader pointed at a JSONL fixture via `DETECTOR_CMD`, and mock R2 traffic is a real datagram on the real socket. "Toggling the mock off" is `DETECTOR_ENABLED=false` plus no bench traffic.
 
-### [ ] `2.2.6.1` — V2X listener `src/observer/v2x_listener.{hpp,cpp}` *(AI)*
+### [x] `2.2.6.1` — V2X listener `src/observer/v2x_listener.{hpp,cpp}` *(AI)*
 
 **Objective:** the R2 ingress thread — bind `V2X_LISTEN_HOST:V2X_LISTEN_PORT`, receive datagrams, push onto the input queue.
 
@@ -332,7 +363,9 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after `6.2.2.2` + `3.2.2.4`. **Commit:** `[2.2.6.1] feat: add the R2 UDP listener thread`
 
-### [ ] `12.2.6.2` — Detector reader `src/observer/detector_reader.{hpp,cpp}` *(AI — parallel with 2.2.6.1)*
+**Status:** done — RAII listener thread over the sole UdpSocket, each datagram one InputItem{V2xR2, body, rxEpochMs}, receive errors counted via receiveErrorCount() (logging is the composition root's, per D2 no-logging-in-class); tests cover byte-identical delivery incl. NUL/0xFF, ordered arrival, idempotent stop, bounded join, deterministic capacity-1 drop count; build/tests deferred to CI ada-core-build.
+
+### [x] `12.2.6.2` — Detector reader `src/observer/detector_reader.{hpp,cpp}` *(AI — parallel with 2.2.6.1)*
 
 **Objective:** spawn `DETECTOR_CMD` and read its stdout as R3 JSONL — the ego side of the D2 process contract (argv + exit codes + JSONL over stdout, no FFI, no RPC).
 
@@ -354,21 +387,25 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after `13.2.2.1` + `3.2.2.4` + `18.2.2.3`. **Commit:** `[12.2.6.2] feat: add the detector subprocess reader`
 
-### [ ] `3.2.6.3` — Mock drive equipment: `tests/fixtures/own_sensor_mock.jsonl` + `tools/mock_v2x_sender.py` *(AI)*
+**Status:** done — fork/exec with whitespace argv (no shell), one getline reader thread, all six D2 lifecycle rules; injectable respawn hook as the delay/bound point; RAII kill+reap+join with ECHILD zombie check in tests; class reads no env (config values injected); emits a once-per-construction `detector_disabled` line for the disabled arm — a 13th event name pending D8 ratification (see Open items); build/tests deferred to CI ada-core-build.
+
+### [x] `3.2.6.3` — Mock drive equipment: `tests/fixtures/own_sensor_mock.jsonl` + `tools/mock_v2x_sender.py` *(AI)*
 
 **Objective:** the two Phase 2 stimulus sources — both outside `src/`.
 
 **Scope:**
 
 - `ADA_ECU/tests/fixtures/own_sensor_mock.jsonl`: a hand-written R3 JSONL stream for one own-sensor track `own:1` at ~5 Hz timestamps, distance walking 40 → 8 m and back out past 35 m, every line validating against the synced `contracts/r3-tracked-object.schema.json`, `source: own_sensor`, `state: not_tracked`. Content chosen to traverse the full R13 lifecycle in both directions.
-- `ADA_ECU/tools/mock_v2x_sender.py`: Python 3 stdlib only; sends R2 JSON datagrams to a target `host:port` from CLI args/env (**no hardcoded peer**); a `--profile approaching|out-of-range` selecting a distance ramp 60 → 10 m or a static 60 m, mirroring the bench's two committed scenarios (`Scenario_Player/scenarios/default.yaml`, `c-out-of-range.yaml`); configurable rate and count; one stdout line per datagram for correlation. Bodies validate against the synced `contracts/r2-v2x-object.schema.json`.
+- `ADA_ECU/tools/mock_v2x_sender.py`: Python 3 stdlib only; sends R2 JSON datagrams to a target `host:port` from CLI args/env (**no hardcoded peer**); a `--profile approaching|out-of-range` selecting a distance ramp 70.0 → 20.5 m at 5.0 m/s or a static 60.0 m, mirroring the bench's two committed scenarios (`Scenario_Player/scenarios/default.yaml`, `c-out-of-range.yaml`) — the approach values are the R22 demo geometry those files carry ([SP D7](../Scenario_Player/doc/scenario-player-design-decisions.md#d7--the-demo-cycle-is-one-clip-length-and-its-geometry-is-solved-backwards-from-the-first-warning)), read from the YAML rather than re-derived; configurable rate and count; one stdout line per datagram for correlation. Bodies validate against the synced `contracts/r2-v2x-object.schema.json`.
 - Test equipment only — never enters the image (`.dockerignore`, `5.2.7.1`).
 
 **Acceptance:** `python -m py_compile ADA_ECU/tools/mock_v2x_sender.py` passes; the script's `--validate` self-check reports every fixture line valid against the synced R3 schema and every generated body valid against the synced R2 schema (both loaded from `ADA_ECU/contracts/`, never restated); a loopback self-check receives every datagram byte-identical — evidence in the Status line.
 
 **Dependencies:** none. **Commit:** `[3.2.6.3] feat: add the Phase 2 mock own-sensor fixture and R2 sender`
 
-### [ ] `13.2.6.4` — Composition root `src/main.cpp` + `ada_ecu` executable *(AI)*
+**Status:** done — `py_compile` clean; `--validate`: 61/61 fixture lines valid vs synced R3 schema, 100/100 approaching + 200/200 out-of-range bodies valid vs synced R2 schema (schemas loaded from `ADA_ECU/contracts/`); `--loopback`: 100+200 datagrams byte-identical on 127.0.0.1; profiles read geometry from the two committed scenario YAMLs (70.0→20.5 m @ 5.0 m/s; static 60.0 m); no hardcoded peer (env `ADA_ECU_HOST`/`ADA_ECU_PORT` or CLI).
+
+### [x] `13.2.6.4` — Composition root `src/main.cpp` + `ada_ecu` executable *(AI)*
 
 **Objective:** assemble config → event log → registry → observers → queue → parsers → store, and run the fusion tick — controller only, no rules (HLD §8 MVC mapping).
 
@@ -383,7 +420,9 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after `13.2.2.1` + `2.2.6.1` + `12.2.6.2` + `2.2.3.1` + `3.2.3.2` + `13.2.4.3` + `14.2.5.4`. **Commit:** `[13.2.6.4] feat: add the ada_ecu composition root`
 
-### [ ] `18.2.6.5` — `[EVT]`-stream checker `tools/check_evt_log.py` *(AI)*
+**Status:** done — composition root assembled per HLD §8/D2, single-writer loop + fusion tick + signal-clean shutdown (exit codes documented); CRA_ENABLED validated via enabled() only when the registry is non-empty (planner ruling — config.cpp:207 defers the check to wiring; Phase 4's first builtin activates it); queue capacity and listener poll timeout are file-local constexpr structural bounds flagged as planner-designated, not gate constants; build/link deferred to CI ada-core-build.
+
+### [x] `18.2.6.5` — `[EVT]`-stream checker `tools/check_evt_log.py` *(AI)*
 
 **Objective:** the scripted assertion that turns a saved `[EVT]` stream into a pass/fail — the ADA counterpart of `tools/comms_check/check_v2x_log.py`, reused on-platform and in CI.
 
@@ -398,11 +437,13 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after `18.2.2.3` (field names freeze there). **Commit:** `[18.2.6.5] feat: add the ADA EVT-stream admission checker`
 
+**Status:** done — py_compile exit 0; demonstrated exit 0 on a conforming synthetic log (full NT→TE→TR→NT cycle, band refresh) and non-zero naming the first illegal edge on each of: NT→TR jump, TR→NT drop at 33 m inside the (30, 35] band, and a zero-`[EVT]` input; `--expect-no-tracks` 0/1 arms and `--min-transitions` vacuous-pass block demonstrated; vocabulary admits `detector_disabled` as a 13th name pending D8 ratification; mode dispatch is an additive registry for Phase 4's `--fusion`. **Fix after the first lane run:** promotion hit-counts are not stream-observable (13.2.4.3 ruling — self-loops emit nothing), so the checker asserts chain continuity and in-gate distance on TE→TR instead of an early-promotion count; that property is owned by `test_admission_own_sensor.cpp`.
+
 ---
 
 ## Task Group 2.7 — Image and entrypoint (serves R5; HLD D9)
 
-### [ ] `5.2.7.1` — `ADA_ECU/Dockerfile` + `entrypoint.sh` + `.dockerignore` *(AI)*
+### [x] `5.2.7.1` — `ADA_ECU/Dockerfile` + `entrypoint.sh` + `.dockerignore` *(AI)*
 
 **Objective:** the deployable `m1-ada-ecu:latest` image — two stages, **one base**, single-platform `linux/arm64` (D9).
 
@@ -426,17 +467,19 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** after `13.2.6.4` + `5.2.8.1` (the lane must exist to verify). **Commit:** `[5.2.7.1] feat: add the ADA ECU Dockerfile and entrypoint`
 
+**Status:** done — Dockerfile (one base `python:3.11-slim`, two stages, target-scoped `--target ada_ecu`, layer slot reserved for Phase 3 media/models/detector) + entrypoint.sh (`sh -n`/`bash -n` clean, LF, capture guard + `exec ./ada_ecu`) + .dockerignore; **divergence, implemented working form:** `tests/` stays in the build context (`ada_add_test` resolves sources at configure time, no toggle exists) and never reaches the runtime stage — the scope bullet's `.dockerignore keeps tests/ out` line is thereby overridden; exec bit recorded via `git update-index --chmod=+x`; image build pending CI `ada-ecu-image` on the pushed branch.
+
 ---
 
 ## Task Group 2.8 — CI lanes (serves R5, R13; workflow-file edits)
 
-> New file `.github/workflows/phase2-ci.yml`, per § CI ruling. Both lanes land **before** their consumers, guarded on file existence like the Phase 0/1 jobs, so consuming subtasks have CI acceptance from day one. `.github/workflows/` is explicitly in these two subtasks' write scope and no other's in this phase.
+> Two files, per § CI ruling: `5.2.8.1` writes `.github/workflows/phase4-ci.yml` (the node-artifact lane), `13.2.8.2` creates `.github/workflows/phase2-ci.yml`. Both lanes land **before** their consumers, guarded on file existence like the Phase 0/1 jobs, so consuming subtasks have CI acceptance from day one. `.github/workflows/` is explicitly in these two subtasks' write scope and no other's in this phase.
 
-### [ ] `5.2.8.1` — `phase2-ci.yml` + lane `ada-ecu-image` *(AI)*
+### [x] `5.2.8.1` — Lane `ada-ecu-image` in `phase4-ci.yml` *(AI)*
 
 **Objective:** arm64 image build and gated push for the ADA node image; `v2x-ecu-image` in [phase1-ci.yml](../.github/workflows/phase1-ci.yml) is the template. This lane builds `m1-ada-ecu:latest`, the image Phase 4's isolated Room deploys. No other route builds it.
 
-**Scope — create `.github/workflows/phase2-ci.yml` and one job in it:**
+**Scope — create `.github/workflows/phase4-ci.yml` (if absent) and one job in it:**
 
 1. Create the file with the same `on:` and `concurrency:` blocks as phase1-ci.yml.
 2. Add a header comment naming what the file carries and why, following the Phase 1 file's convention.
@@ -455,11 +498,13 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none — lands immediately. **Commit:** `[5.2.8.1] chore: add the ADA ECU image build-push CI lane`
 
-### [ ] `13.2.8.2` — Lane `ada-loopback-check` *(AI)*
+**Status:** done — `.github/workflows/phase4-ci.yml` created (job `ada-ecu-image`, guard branch active while `ADA_ECU/Dockerfile` is absent); YAML parses via `yaml.safe_load`, both bash `run:` blocks `bash -n` clean, LF endings (zero CR bytes).
+
+### [x] `13.2.8.2` — Lane `ada-loopback-check` *(AI)*
 
 **Objective:** the repeatable form of the Phase 2 "mock-driven transitions observable in logs; mock off yields no tracks" box.
 
-**Scope — a second job in `phase2-ci.yml`, its steps in this order:**
+**Scope — create `.github/workflows/phase2-ci.yml` (same `on:`/`concurrency:`/header convention as phase1-ci.yml) with one job `ada-loopback-check`, its steps in this order:**
 
 1. Build the `ada_ecu` target.
 2. Run A: start `ada_ecu` with `DETECTOR_ENABLED=true`, `DETECTOR_CMD="cat ADA_ECU/tests/fixtures/own_sensor_mock.jsonl"` and `IVI_ECU_HOST=127.0.0.1`, capturing stdout to a file.
@@ -472,7 +517,9 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Acceptance:** lane green on the pushed branch; run A observes at least one complete `tentative → tracked → not_tracked` cycle per source.
 
-**Dependencies:** after `13.2.6.4` + `3.2.6.3` + `18.2.6.5` + `5.2.8.1` (same file). **Commit:** `[13.2.8.2] chore: add the ADA loopback admission CI lane`
+**Dependencies:** after `13.2.6.4` + `3.2.6.3` + `18.2.6.5`. **Commit:** `[13.2.8.2] chore: add the ADA loopback admission CI lane`
+
+**Status:** done — `.github/workflows/phase2-ci.yml` created (job `ada-loopback-check`, runs A+B with bounded polls — readiness on first `[EVT]` line, expiry on `track_expire` — and R18 checker verdicts `--admission --min-transitions 6` / `--expect-no-tracks`); run math documented from the committed scenario sources (gate crossed at datagram 80, t≈8.0 s); the fixture drive is a two-line paced wrapper (`cat <fixture>; sleep 1`) rather than bare `cat`, because the reader respawns on clean EOF without backoff; YAML parses, all run blocks `bash -n` clean, LF-only — lane verification pending the pushed-branch run.
 
 ---
 
@@ -480,7 +527,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 > The clip is an input, not a deliverable of this group: `ADA_ECU/media/ego-b-occluding-c.mp4` with its provenance sidecar, committed by Phase 3 `12.3.7.1`. This group owns the machine-checkable preflight over it, the delivery of the spec proposal that closes a milestone box, and the node guide's env rows.
 
-### [ ] `12.2.9.1` — Clip preflight `tools/check_clip_spec.py` *(AI)*
+### [x] `12.2.9.1` — Clip preflight `tools/check_clip_spec.py` *(AI)*
 
 **Objective:** the [research note KPI 1](../ADA_ECU/doc/research_notes/video-source-for-r12.md#measurable-checks-kpis) made executable — reject a non-conforming clip naming the failing attribute, and pass on the committed one.
 
@@ -497,7 +544,9 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Dependencies:** none. **Commit:** `[12.2.9.1] feat: add the R12 clip preflight checker`
 
-### [ ] `12.2.9.2` — Send the video-input proposal to FPT-Mentor *(Human)*
+**Status:** done — py_compile OK; `pytest ADA_ECU/tools/tests -q` = 12 passed, 1 skipped (ffprobe-gated); real clip exit 0: `OK ego-b-occluding-c.mp4: container=mp4 codec=h264 1280x720 20.00fps decoded=200/200 frames (100.0%) duration=10.00s size=5.02MiB probe=opencv skipped=frame_rate_constant,audio` — the two skips are honest OpenCV-fallback limits (no ffprobe on this host), never false passes. Verified with official x64 CPython 3.12.10 under WoA emulation — PyPI has no win_arm64 OpenCV wheel.
+
+### [x] `12.2.9.2` — Send the video-input proposal to FPT-Mentor *(Human)*
 
 **Objective:** the milestone acceptance clause "video-input proposal sent to FPT-Mentor".
 
@@ -516,13 +565,15 @@ Nothing new is authored; the note is the artifact.
 
 **Dependencies:** none — send it early; it has the longest external latency and no dependant. **Commit:** `[12.2.9.2] docs: record the video-input proposal sent to FPT-Mentor`
 
+**Status:** done — user-confirmed 2026-08-04: proposal sent to FPT-Mentor and the committed clip `ADA_ECU/media/ego-b-occluding-c.mp4` confirmed as the file to use; record in [doc/phase2-ada-scaffold-run.md](doc/phase2-ada-scaffold-run.md); evidence commit by the orchestrator.
+
 ### [ ] `5.2.9.4` — Add the §6 env rows to `node-ada-ecu.md` *(AI — writes in `requirements/car-sky-guide/`)*
 
 **Objective:** the guide's § Blueprint node config carries the full HLD §6 env set, so a human configures the node once from one table.
 
 **Scope — [node-ada-ecu.md](../requirements/car-sky-guide/node-ada-ecu.md) § Blueprint node config only, additive:**
 
-- Env rows added to the existing five: `V2X_LISTEN_HOST`, `CONFIRM_HITS`, `TRACK_TIMEOUT_MS`, `FUSION_TICK_MS`, `DETECTOR_ENABLED`, `DETECTOR_CMD`, `DETECTOR_LOOP`, `DETECTOR_RESTART_MAX`, `VIDEO_CLIP_PATH` (`/app/media/ego-b-occluding-c.mp4`), `DETECTOR_FRAME_STRIDE` (`4`), `MODEL_PATH`, `CONF_THRESHOLD`, `IOU_THRESHOLD`, `TRACK_IOU_MIN`, `VEHICLE_WIDTH_M`, `CAMERA_HFOV_DEG`, `CRA_ENABLED`, `RISK_NEAR_M`, `RISK_CRITICAL_M`, `RISK_TTC_WARN_S`, `RISK_TTC_CRITICAL_S`, `RISK_DWELL_MS`, `STATE_RATE_HZ`, `EVENT_LOG_PATH`, `ASSESS_LOG_EVERY_MS`, `CAPTURE_FILTER`, `PCAP_DIR`, `CAPTURE_ROTATE_S`. Values = the [HLD §6](../ADA_ECU/doc/ada-ecu-hld.md#6-internal-components) defaults; the table there is the authority and is referenced, not duplicated in prose.
+- Env rows added to the existing five: `V2X_LISTEN_HOST`, `CONFIRM_HITS`, `TRACK_TIMEOUT_MS`, `FUSION_TICK_MS`, `DETECTOR_ENABLED`, `DETECTOR_CMD`, `DETECTOR_LOOP`, `DETECTOR_RESTART_MAX`, `VIDEO_CLIP_PATH` (`/app/media/ego-b-occluding-c.mp4`), `DETECTOR_FRAME_STRIDE` (`4`), `DETECTOR_REALTIME_PACING` (`true`), `DETECTOR_CLIP_FPS` (`20.0`), `DETECTOR_START_DELAY_S` (`0.0`), `MODEL_PATH`, `CONF_THRESHOLD`, `IOU_THRESHOLD`, `TRACK_IOU_MIN`, `VEHICLE_WIDTH_M`, `CAMERA_HFOV_DEG`, `CRA_ENABLED`, `RISK_NEAR_M`, `RISK_CRITICAL_M`, `RISK_TTC_WARN_S`, `RISK_TTC_CRITICAL_S`, `RISK_DWELL_MS`, `STATE_RATE_HZ`, `EVENT_LOG_PATH`, `ASSESS_LOG_EVERY_MS`, `CAPTURE_FILTER`, `PCAP_DIR`, `CAPTURE_ROTATE_S`. Values = the [HLD §6](../ADA_ECU/doc/ada-ecu-hld.md#6-internal-components) defaults; the table there is the authority and is referenced, not duplicated in prose.
 - **Change nothing else.** The guide carries `command: ["./entrypoint.sh"]`, `capabilities: ["NET_RAW"]` and the `registry.hackathon-2.carsky.io` host. Leave them unchanged. Pins unchanged: exactly one `ethernet` `OUTPUT` pin at `10.99.0.12`, **no `video` pin** (the clip is baked into the image; [research note §1](../ADA_ECU/doc/research_notes/video-source-for-r12.md#1-platform-finding--carsky-serves-no-camera-content)). No frozen contract moves.
 
 **This subtask blocks nothing.** The env values a human types into the isolated Room come from `5.4.9.1`'s `blueprint-ada-isolated.json` and are diffed by `5.4.10.6`, not from this guide.
@@ -549,7 +600,7 @@ CRA         14.2.5.2 ──► 14.2.5.1 (after 3.2.4.1) ──► 14.2.5.3 ─�
 observers   2.2.6.1 (after 6.2.2.2 + 3.2.2.4) ∥ 12.2.6.2 (after 13.2.2.1 + 3.2.2.4 + 18.2.2.3)
 equipment   3.2.6.3 ∥ 18.2.6.5 (after 18.2.2.3) ∥ 12.2.9.1      (anytime)
 assembly    13.2.6.4 (after 13.2.2.1 + 2.2.6.1 + 12.2.6.2 + 2.2.3.1 + 3.2.3.2 + 13.2.4.3 + 14.2.5.4)
-verify      13.2.8.2 (after 13.2.6.4 + 3.2.6.3 + 18.2.6.5 + 5.2.8.1)
+verify      13.2.8.2 (after 13.2.6.4 + 3.2.6.3 + 18.2.6.5)
 image       5.2.7.1 (after 13.2.6.4 + 5.2.8.1)
 guide       5.2.9.4 (after 13.2.2.1 + phase-3 12.3.2.1)
 ```
@@ -584,8 +635,7 @@ guide       5.2.9.4 (after 13.2.2.1 + phase-3 12.3.2.1)
 | 4 | **The relayed `measured` timestamp — mapped, nothing outstanding.** `2.2.3.1` maps `timestamps.measured = rxTime + object.timeOfMeasurement`, per [HLD §10.2](../ADA_ECU/doc/ada-ecu-hld.md#102-r3--the-object-model-of-the-store-owned) and [m1-run-timing-and-event-triggering.md §6.2](../requirements/m1-run-timing-and-event-triggering.md). Frozen `contracts/r2-v2x-object.schema.json` bounds `object.timeOfMeasurement` as a −2048..2047 ms delta and `V2X_ECU/src/pipeline/r2_builder.cpp` emits it in that form, so the sum is the only reading the contract admits. No contract change and no HLD amendment is outstanding. The rest of §6.2 — realtime for stamps, monotonic for intervals including expiry, no arithmetic across two nodes' clocks — is implemented at `2.2.3.1`, `18.2.2.3`, `3.2.4.1` and `13.2.4.3` | none — recorded for traceability |
 | 5 | **D4's accessor signature against its own field table.** [D4](../ADA_ECU/doc/ada-ecu-design-decisions.md#d4--r14-the-collision-risk-assessment-interface-registry-and-database) words the accessor `get(trackId)` and calls the table "keyed by track id"; its field table names `trackId, warningType` as the key. `14.2.5.2` and `14.2.5.3` build the composite form. **Trigger:** reconcile before Phase 4's first plugin compiles against the seam (`14.4.1.2`) | [[project-architecture]] |
 | 6 | **Research-note §3's duration row reads 60–120 s.** The committed clip is 10.0 s and the run length comes from `DETECTOR_LOOP`, so `12.2.9.1` defaults to 10–120 s in the interim. **Trigger:** reconcile §3 before `12.2.9.2` sends it | [[project-researcher]] |
-| 7 | **The ADA image tag in [node-code-layout.md](../.claude/rules/node-code-layout.md).** Its node table lists this node's artifact as `ada-ecu:latest`, while [HLD §11](../ADA_ECU/doc/ada-ecu-hld.md#11-tech-stack-build-and-ci) and D9 build `m1-ada-ecu:latest`, and [node-ada-ecu.md](../requirements/car-sky-guide/node-ada-ecu.md) tags `registry.hackathon-2.carsky.io/m1-ada-ecu:latest` from a local `ada-ecu:latest`. This plan uses the HLD's local tag and the guide's registry tag (§ Per-node build commands). **Trigger:** reconcile the rule row and the guide's tag command; no subtask waits on it | [[project-architecture]] |
-| 8 | **Which component honours `DETECTOR_LOOP`.** [D2](../ADA_ECU/doc/ada-ecu-design-decisions.md#d2--process-thread-and-mock-model) gates the core's EOF respawn on `DETECTOR_LOOP=true`, while [HLD §6](../ADA_ECU/doc/ada-ecu-hld.md#6-internal-components) places the key in the **Env — detector** table under the rule that each key is read in exactly one place, and D6 gives it to `FileFrameSource`. `12.2.6.2` follows §6: it respawns on any clean EOF and reads no detector key. **Trigger:** reconcile D2's wording with §6's placement before Phase 3 `12.3.2.1` writes `detector/config.py` | [[project-architecture]] |
+| 7 | **Which component honours `DETECTOR_LOOP`.** [D2](../ADA_ECU/doc/ada-ecu-design-decisions.md#d2--process-thread-and-mock-model) gates the core's EOF respawn on `DETECTOR_LOOP=true`, while [HLD §6](../ADA_ECU/doc/ada-ecu-hld.md#6-internal-components) places the key in the **Env — detector** table under the rule that each key is read in exactly one place, and D6 gives it to `FileFrameSource`. `12.2.6.2` follows §6: it respawns on any clean EOF and reads no detector key. **Trigger:** reconcile D2's wording with §6's placement before Phase 3 `12.3.2.1` writes `detector/config.py` | [[project-architecture]] |
 
 ---
 

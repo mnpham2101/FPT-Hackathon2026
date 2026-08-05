@@ -45,7 +45,7 @@ Hard constraints ([solution-selection-criteria.md](../../../.claude/rules/soluti
 
 ### Why (c) is a fallback, not the source
 
-`ada-ecu/tools/make_sample_video.py` writes 12 frames of 640×360 at 10 fps, `mp4v` (MPEG-4 Part 2), containing a flat grey rectangle labelled "B" on a dark background. That is a **decoder-and-contract smoke fixture**: it proves `VideoCapture` opens, frames are read, and R3 JSONL leaves stdout. A pretrained COCO detector will not classify a labelled rectangle as `car`, so it cannot produce R12's acceptance evidence ("detection log over the provided clip with per-frame objects and distance estimates"). Keep it for CI; never demo from it.
+`ADA_ECU/tools/make_sample_video.py` writes 12 frames of 640×360 at 10 fps, `mp4v` (MPEG-4 Part 2), containing a flat grey rectangle labelled "B" on a dark background. That is a **decoder-and-contract smoke fixture**: it proves `VideoCapture` opens, frames are read, and R3 JSONL leaves stdout. A pretrained COCO detector will not classify a labelled rectangle as `car`, so it cannot produce R12's acceptance evidence ("detection log over the provided clip with per-frame objects and distance estimates"). Keep it for CI; never demo from it.
 
 ### Why (b) wins
 
@@ -77,7 +77,7 @@ This is the Phase 2 deliverable to send to FPT-Mentor. Every row marked *assume*
 These are R12/R19 evidence, not new requirements:
 
 1. `ffprobe` on the delivered file reports container, codec, resolution, and frame rate matching the table; a preflight step rejects a non-conforming file with the failing attribute named.
-2. OpenCV `VideoCapture` inside the `ada-ecu:latest` image opens the clip and reads ≥ 99% of the declared frame count with zero decode errors.
+2. OpenCV `VideoCapture` inside the `m1-ada-ecu:latest` image opens the clip and reads ≥ 99% of the declared frame count with zero decode errors.
 3. Effective inference rate ≥ 5 Hz measured over the whole clip on the deployed node — i.e. wall-clock ≤ 200 ms per sampled frame.
 4. Detection log contains ≥ 1 `class = vehicle`, `source = own_sensor` entry with a distance estimate for ≥ 90% of sampled frames.
 5. **Zero entries labelled C** across the full run (R12 acceptance, feeds the R19 zero-C check).
@@ -119,13 +119,13 @@ Adding two env vars to the ADA node config is additive to [node-ada-ecu.md § Bl
 
 Flags for the decision owner (user), not silently absorbed:
 
-- **Two ADA folders exist.** `ADA_ECU/` (canonical per [node-code-layout.md](../../../.claude/rules/node-code-layout.md), holds the frozen R2/R3/R4 contracts) and a lowercase `ada-ecu/` carrying a parallel implementation including `tools/video_detector.py` and `tools/make_sample_video.py`. Only `ADA_ECU/` is sanctioned. Consolidation is [[project-architecture]]'s call; this note assumes paths under `ADA_ECU/`.
+- **ADA folder is consolidated.** `ADA_ECU/` is the canonical node folder per [node-code-layout.md](../../../.claude/rules/node-code-layout.md). Detector tools and runtime live under `ADA_ECU/`; no lowercase ADA runtime should be used for build, test, demo, or Docker context.
 - **The §3 numbers are proposals.** They become authoritative only when FPT-Mentor confirms them or supplies a clip; until then Phase 3 builds against them and re-encodes if a delivered clip differs.
 - **No GPU** (report §4). If a delivered clip is 1080p at 30 fps, the stride is raised rather than the model changed.
 
 ## 6. Decision for the planner
 
-**The R12 video source is a user-supplied ego-POV clip baked into the ADA ECU image — CarSky supplies no camera or dashcam content, only an unused RGBA shared-memory `video` pin, so there is nothing to consume from the platform.** Build Phase 3's detector against MP4 / H.264 High, 1280×720, 20 fps constant, 60–120 s, ~4 Mbit/s (≤ 60 MB), read from `/app/media/ego-b-occluding-c.mp4` via the `VIDEO_CLIP_PATH` env var with a `DETECTOR_FRAME_STRIDE` of 4 giving 5 Hz effective inference — every one of those numbers is a proposal to confirm with FPT-Mentor, and none of them is binding on the design as long as the frame acquisition sits behind a seam. The user must hand over exactly one artifact: a clip at `ADA_ECU/media/ego-b-occluding-c.mp4` in which vehicle B is visible and occluding the lane ahead at roughly 10–40 m and vehicle C is **never** visible in any frame; `ada-ecu/tools/make_sample_video.py` stays a CI smoke fixture and must not be used as the demo source. No frozen contract changes: R6 keeps one `ethernet` pin per node, and R5 gains only two env vars on the ADA node.
+**The R12 video source is a user-supplied ego-POV clip baked into the ADA ECU image — CarSky supplies no camera or dashcam content, only an unused RGBA shared-memory `video` pin, so there is nothing to consume from the platform.** Build Phase 3's detector against MP4 / H.264 High, 1280×720, 20 fps constant, 60–120 s, ~4 Mbit/s (≤ 60 MB), read from `/app/media/ego-b-occluding-c.mp4` via the `VIDEO_CLIP_PATH` env var with a `DETECTOR_FRAME_STRIDE` of 4 giving 5 Hz effective inference — every one of those numbers is a proposal to confirm with FPT-Mentor, and none of them is binding on the design as long as the frame acquisition sits behind a seam. The user must hand over exactly one artifact: a clip at `ADA_ECU/media/ego-b-occluding-c.mp4` in which vehicle B is visible and occluding the lane ahead at roughly 10–40 m and vehicle C is **never** visible in any frame; `ADA_ECU/tools/make_sample_video.py` stays a CI smoke fixture and must not be used as the demo source. No frozen contract changes: R6 keeps one `ethernet` pin per node, and R5 gains only two env vars on the ADA node.
 
 ## Sources
 

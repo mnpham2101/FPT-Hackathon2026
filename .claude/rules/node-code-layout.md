@@ -10,7 +10,7 @@ The repo has exactly four **node** code folders — one per node in the R5 bluep
 |---|---|---|---|---|---|
 | [Scenario_Player/](../../Scenario_Player/) | Container Node (bench) | R11 | Python | OCI image `scenario-player:latest` | [node-scenario-player.md](../../requirements/car-sky-guide/node-scenario-player.md) |
 | [V2X_ECU/](../../V2X_ECU/) | Container Node | R1, R7–R9 (R10 deferred) | C++17 (Vanetza codec in-process) | OCI image `v2x-ecu:latest` | [node-v2x-ecu.md](../../requirements/car-sky-guide/node-v2x-ecu.md) |
-| [ADA_ECU/](../../ADA_ECU/) | Container Node | R3, R12–R15 | C++17 core + Python detector subprocess | OCI image `ada-ecu:latest` | [node-ada-ecu.md](../../requirements/car-sky-guide/node-ada-ecu.md) |
+| [ADA_ECU/](../../ADA_ECU/) | Container Node | R3, R12–R15 | C++17 core + Python detector subprocess | OCI image `m1-ada-ecu:latest` | [node-ada-ecu.md](../../requirements/car-sky-guide/node-ada-ecu.md) |
 | [IVI_ECU/](../../IVI_ECU/) | Skycraft Node (AAOS) | R4, R16–R17 | Kotlin / Jetpack Compose | APK via Gradle | [node-ivi-ecu.md](../../requirements/car-sky-guide/node-ivi-ecu.md) |
 
 - **Bench ≠ V2X ECU.** The Scenario Player is a separate node with its own folder and its own image — it is sanctioned test equipment sharing the Room network (CLAUDE.md governing principle 2), not a module of `V2X_ECU/`. R11 code never lands in `V2X_ECU/`.
@@ -45,7 +45,7 @@ The boundary — this carves out test equipment, it does not weaken the product-
 
 ## Per-folder `doc/`
 
-Each work folder — the four node folders above plus [plans/](../../plans/) — carries a `doc/` subfolder holding **report-style documents about that folder's design and rationale**: HLDs, design notes, decision rationale, and `doc/research_notes/` for investigation findings and their diagrams (`.puml`/`.svg`/`.drawio`). Existing examples: [Scenario_Player/doc/research_notes/](../../Scenario_Player/doc/research_notes/), [plans/doc/research_notes/](../../plans/doc/research_notes/).
+Each work folder — the four node folders above plus [plans/](../../plans/) — carries a `doc/` subfolder holding **report-style documents about that folder's design and rationale**: HLDs, design notes, decision rationale, the versioned pull-request reviews of that node ([pull-request-review-format.md](pull-request-review-format.md)), and `doc/research_notes/` for investigation findings and their diagrams (`.puml`/`.svg`/`.drawio`). Existing examples: [Scenario_Player/doc/research_notes/](../../Scenario_Player/doc/research_notes/), [plans/doc/research_notes/](../../plans/doc/research_notes/).
 
 - **Read before writing.** Any agent working in a folder reads that folder's `doc/` first — it is the local context (why the design is what it is, what was already investigated and rejected) that the requirements report and plan do not carry.
 - **Write design & rationale there, not in code comments or the plan.** Design/rationale output for a node lands in that node's `doc/`; the HLD content and commit rules still apply ([hld-content-and-commit-format.md](hld-content-and-commit-format.md)).

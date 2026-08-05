@@ -1,28 +1,20 @@
-# The six lanes that originate in Phase 0 (subtask 1.0.7.2 and the group 0.2/0.4/0.8 lanes) - the
-# project's Linux build/test path while the dev host has no Docker/WSL. Live, and running on every
-# push: this file is the Phase 0 half of a deliberate two-file split, not an archive.
+# The two lanes that are Phase 0's OWN artifacts, and the only two this file holds:
+#   * contracts-gate - the repo-wide static gate over the frozen R1-R6 contracts (1.0.7.1);
+#   * netcheck-image - the smoke-test tool's arm64 image (5.0.8.2; the tool itself is 6.0.8.1).
+# Neither exercises a node. The gate is a source check spanning all four folders, and netcheck is
+# test equipment that stands in for no node at all.
 #
-# WHERE A NEW JOB GOES. By the lane's ORIGIN phase, not by the date it is written:
-#   * a lane originating in Phase 0 -> here;
-#   * a lane originating in Phase 1 -> .github/workflows/phase1-ci.yml (v2x-comms-check,
-#     sp-codec-helper, v2x-ecu-image, scenario-player-image);
-#   * a lane originating in a later phase -> its own phase<N>-ci.yml.
-# The two files share the same `on:` triggers, so all ten jobs still run on every push and PR -
-# the split changes where a lane is maintained, never whether it executes.
+# WHERE A NEW JOB GOES: .claude/rules/ci-lane-placement.md designates the file for every lane, and
+# a lane lives with the NODE IT EXERCISES rather than the phase that wrote it. This file therefore
+# gains a job only when Phase 0 itself gains an artifact. The node lanes live with their nodes:
+#   * v2x-core-build, sp-unit-tests           -> phase1-ci.yml (the V2X ECU and the bench)
+#   * ada-core-build                          -> phase2-ci.yml (the ADA scaffold)
+#   * ada-detector-tests                      -> phase3-ci.yml (the ADA detector)
+#   * ivi-unit-tests                          -> phase5-ci.yml (the IVI ECU)
 #
-# A PHASE 1 SUBTASK MAY STILL EDIT A JOB HERE, and two did - a lane belongs to the phase that
-# created it, not to the phase that last touched it:
-#   * 7.1.3.5 added the R7 transport-import gate step to `contracts-gate`;
-#   * 11.1.1.1 extended `v2x-core-build`'s cache key to hash V2X_ECU/cmake/vanetza-pin.cmake.
-# Both are carried below. The untouched Phase 0 original is commit 5e75920 if the exact state that
-# produced the run IDs cited in plans/phase0_tasks.md is ever needed.
-#
-# CROSS-FILE COUPLING, the one thing the split makes easy to break: `v2x-core-build` below and
-# `v2x-comms-check` in phase1-ci.yml share ONE actions/cache entry by using byte-identical key and
-# restore-keys. That still works - the Actions cache is scoped to the repository, not to a workflow
-# file - but a Vanetza re-pin must now update the key in BOTH files, and nothing local to either
-# file will tell you so. There is a third, deliberately separate key: sp-codec-helper's, which
-# caches a different build directory.
+# Every phase<N>-ci.yml carries the same `on:` triggers, so a lane runs on every push and pull
+# request wherever it lives - placement decides where a lane is MAINTAINED, never whether it
+# executes. A lane is never duplicated into a second file to make it run.
 name: phase0-ci
 
 on:
@@ -31,14 +23,22 @@ on:
     branches: [main]
 
 # Superseded runs are cancelled rather than left to finish - see the fuller note in phase1-ci.yml.
-# Cheaper here (netcheck-image is a ~40 s build), but it keeps the two files behaving alike and
-# stops a queue of redundant v2x-core-build compiles. Safe for the one-shot golden-vector publish
-# step below: it is guarded on contracts/golden-vectors/ being absent, which it no longer is.
+# Cheap here (netcheck-image is a ~40 s build), but it keeps the workflow files behaving alike, and
+# it stops stacked pushes racing to overwrite the one mutable m1-netcheck:latest tag.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  # Both steps are static source checks over the frozen contracts, which is why they sit together
+  # here rather than with a node: check_sync.py compares every node-local contract copy against its
+  # master across all four folders, and the R7 gate (7.1.3.5) is a grep over V2X sources that
+  # compiles nothing. A lane that BUILDS a node belongs to that node's phase file.
+  #
+  # No landed-file guard on either step, the convention phase1/2/5-ci.yml state: both scripts are on
+  # the tree, so a `[ -f ... ]` test can no longer mean "not written yet" - it can only mean the
+  # script was deleted, and it would turn that into a green run. This job is what holds the R1-R6
+  # freeze; it must fail loudly when its checker is missing.
   contracts-gate:
     runs-on: ubuntu-latest
     steps:
@@ -46,138 +46,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Contract byte-identity gate (lands with 1.0.7.1)
-        run: |
-          if [ -f contracts/check_sync.py ]; then
-            python contracts/check_sync.py
-          else
-            echo "contracts/check_sync.py not landed yet (subtask 1.0.7.1) - skipping"
-          fi
-      - name: R7 transport-import gate (lands with 7.1.3.5)
-        run: |
-          if [ -f V2X_ECU/tools/check_transport_imports.py ]; then
-            python V2X_ECU/tools/check_transport_imports.py
-          else
-            echo "V2X_ECU/tools/check_transport_imports.py not landed yet (subtask 7.1.3.5) - skipping"
-          fi
-
-  python-tests:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Scenario_Player unit tests (lands with 1.0.5.1)
-        run: |
-          if [ -f Scenario_Player/requirements-dev.txt ] && [ -d Scenario_Player/tests ]; then
-            python -m pip install -r Scenario_Player/requirements-dev.txt
-            python -m pytest Scenario_Player/tests
-          else
-            echo "Scenario_Player tests not landed yet - skipping"
-          fi
-      - name: ADA_ECU detector unit tests (lands with 3.0.4.5)
-        run: |
-          if [ -f ADA_ECU/detector/requirements-dev.txt ] && [ -d ADA_ECU/detector/tests ]; then
-            python -m pip install -r ADA_ECU/detector/requirements-dev.txt
-            python -m pytest ADA_ECU/detector/tests
-          else
-            echo "ADA_ECU detector tests not landed yet - skipping"
-          fi
-
-  ada-core-build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Configure
-        run: cmake -S ADA_ECU -B ADA_ECU/build
-      - name: Build
-        run: cmake --build ADA_ECU/build -j
-      - name: Test
-        run: ctest --test-dir ADA_ECU/build --output-on-failure
-
-  v2x-core-build:
-    runs-on: ubuntu-latest
-    # Needed by the one-shot golden-vector publish step below, which pushes a commit back to the
-    # branch. Everything else in this job is read-only.
-    permissions:
-      contents: write
-    # Vanetza's asn1c-generated C (asn1_support + asn1_its + asn1_its_r2, ~1400 translation units)
-    # is a long first-run compile, hence the raised timeout.
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install Boost (Vanetza hard dependency)
-        run: sudo apt-get update && sudo apt-get install -y libboost-dev libboost-date-time-dev
-      # The cache key carries the exact Vanetza pin, so a re-pin invalidates it. _deps holds the
-      # clone, the FetchContent stamps and Vanetza's own object files, so a cache hit skips both
-      # the clone and the ASN.1 recompile.
-      # SHARED WITH phase1-ci.yml's v2x-comms-check - key and restore-keys are byte-identical there
-      # on purpose, so the two lanes warm one tree. A re-pin must edit both files (see the header).
-      - name: Cache Vanetza FetchContent deps
-        uses: actions/cache@v4
-        with:
-          path: V2X_ECU/build/_deps
-          key: v2x-deps-${{ runner.os }}-vanetza-fb6c5510-json-v3.11.3-gtest-v1.14.0-${{ hashFiles('V2X_ECU/CMakeLists.txt', 'V2X_ECU/cmake/vanetza-pin.cmake') }}
-          restore-keys: |
-            v2x-deps-${{ runner.os }}-vanetza-fb6c5510-json-v3.11.3-gtest-v1.14.0-
-      - name: Configure
-        run: cmake -S V2X_ECU -B V2X_ECU/build
-      # Bounded parallelism on purpose: a bare `-j` makes CMake pass `-j` with no number to make,
-      # i.e. unlimited jobs - ~700 concurrent compilers for asn1_its alone would OOM the runner.
-      - name: Build
-        run: cmake --build V2X_ECU/build -j $(nproc)
-      - name: Test
-        run: ctest --test-dir V2X_ECU/build --output-on-failure
-      - name: Generate golden vectors (run 1)
-        run: V2X_ECU/build/gv_tool "$RUNNER_TEMP/gv1"
-      - name: Generate golden vectors (run 2)
-        run: V2X_ECU/build/gv_tool "$RUNNER_TEMP/gv2"
-      # Determinism is 1.0.2.4's acceptance: the same tool run twice must emit byte-identical
-      # trees. diff exits non-zero on any difference, which fails the step.
-      - name: Golden-vector determinism check
-        run: diff -r "$RUNNER_TEMP/gv1" "$RUNNER_TEMP/gv2"
-      # The corpus is generated on Linux and handed back as an artifact; committing it into
-      # contracts/golden-vectors/ is a separate hand-off step (1.0.2.5 consumes it).
-      - name: Upload golden-vector corpus
-        uses: actions/upload-artifact@v4
-        with:
-          name: golden-vectors
-          path: ${{ runner.temp }}/gv1
-      # One-shot self-publish: artifact download needs an authenticated token the dev session does
-      # not have, so the corpus lands via CI instead. The hashFiles guard makes this fire exactly
-      # once - the moment contracts/golden-vectors/ exists in the tree, the step stops running.
-      # [skip ci] keeps the push from re-triggering this workflow.
-      - name: Publish golden-vector corpus (once, when absent)
-        if: hashFiles('contracts/golden-vectors/**') == ''
-        run: |
-          mkdir -p contracts/golden-vectors
-          cp -r "$RUNNER_TEMP/gv1/." contracts/golden-vectors/
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add contracts/golden-vectors
-          git commit -m "[1.0.2.4] feat: add gv_tool golden-vector corpus [skip ci]
-
-          Generated on Linux by V2X_ECU/tools/golden_vectors/gv_tool in this run and verified
-          byte-identical across two consecutive generations (determinism step above).
-
-          Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
-          git push origin HEAD:${{ github.ref_name }}
-
-  ivi-unit-tests:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "17"
-          cache: gradle
-      - name: IVI_ECU Gradle unit tests
-        working-directory: IVI_ECU
-        run: |
-          chmod +x gradlew
-          ./gradlew :app:testDebugUnitTest --no-daemon
+      - name: Contract byte-identity gate (1.0.7.1)
+        run: python contracts/check_sync.py
+      - name: R7 transport-import gate (7.1.3.5)
+        run: python V2X_ECU/tools/check_transport_imports.py
 
   netcheck-image:
     runs-on: ubuntu-latest

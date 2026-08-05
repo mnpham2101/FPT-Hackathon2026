@@ -1,0 +1,989 @@
+# The node-artifact lane for the ADA ECU image: ada-ecu-image (5.2.8.1). Filed here rather than in
+# a phase2 file because the image built from ADA_ECU/ carries the Phase 2 scaffold, the Phase 3
+# detector and the Phase 4 fusion - it is the node's artifact rather than any single phase's
+# (ADA_ECU/doc/ada-ecu-hld.md #11). Phase 4's own jobs (ada-e2e-loopback, ada-bench-image, etc.)
+# land here later and add only their job; this header stays.
+#
+# The lane mirrors phase1-ci.yml's v2x-ecu-image step for step - qemu + buildx, single-platform
+# arm64, attestations off, its own type=gha cache scope, push gated on the CARSKY_ZOT_API_KEY
+# secret, then the shared pull-back verification through .github/actions/verify-arm64-image. The
+# per-line rationale lives on that job and is not repeated here. One deliberate difference: no
+# application-smoke step yet. D9's in-image check (start detector/main.py --synthetic inside the
+# pulled image, observe R3 JSONL) lands with the Phase 3 subtask that first puts the detector in
+# the image (5.3.6.1); until then the composite's pull-back-and-start is the whole post-push claim.
+#
+# Same `on:` triggers as phase0-ci.yml and phase1-ci.yml, so this job runs on every push and PR
+# alongside theirs - a lane belongs to the phase file that created it, never to a shared file.
+name: phase4-ci
+
+on:
+  push:
+  pull_request:
+    branches: [main]
+
+# Superseded runs are cancelled rather than left to finish - see the fuller note in phase1-ci.yml:
+# stacked pushes would otherwise queue multiple full emulated arm64 builds racing for one mutable
+# :latest tag. Per ref, so main and a feature branch never cancel each other.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # The ADA node image (5.2.8.1). This lane is the only route that builds m1-ada-ecu:latest - the
+  # image Phase 4's isolated Room deploys.
+  ada-ecu-image:
+    runs-on: ubuntu-latest
+    env:
+      # Live host per the O1 probe (2026-07-31): registry.carsky.io 502s, hackathon-2 answers.
+      REGISTRY_HOST: registry.hackathon-2.carsky.io
+      IMAGE: m1-ada-ecu:latest
+      # arm64 only: a CarSky Container node rejects a multi-platform manifest index and hangs in
+      # Provisioning (plans/doc/phase0-smoke-test-run.md, standing requirement), so exactly one
+      # platform goes in the buildx invocation.
+      PLATFORMS: linux/arm64
+      # Build context = the node folder, self-contained by the node-code-layout rule. Trailing
+      # slash carried netcheck-image style, hence "${CONTEXT}Dockerfile" below with no separator.
+      CONTEXT: ADA_ECU/
+      # One cache scope PER IMAGE, never a shared one - two big layer sets in one scope evict each
+      # other under the repo-wide gha cache budget (see the note on v2x-ecu-image's scope).
+      CACHE_SCOPE: ada-ecu-image
+    # Emulated arm64 builds are roughly an order of magnitude slower than native; 360 is the
+    # largest useful value (GitHub hard-caps a hosted-runner job at 6 h). Reruns are minutes once
+    # the type=gha cache is warm.
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      # ACTIONS_CACHE_URL / ACTIONS_RESULTS_URL / ACTIONS_RUNTIME_TOKEN are handed to *actions*,
+      # not to `run:` steps, so a plain `docker buildx build --cache-to type=gha` cannot see them.
+      # Re-exporting through GITHUB_ENV is what makes the cache work outside
+      # docker/build-push-action - see the fuller note on v2x-ecu-image's copy of this step.
+      - name: Expose the Actions cache runtime to the buildx gha cache
+        uses: actions/github-script@v7
+        with:
+          script: |
+            for (const name of ['ACTIONS_CACHE_URL', 'ACTIONS_RESULTS_URL', 'ACTIONS_RUNTIME_TOKEN']) {
+              const value = process.env[name];
+              if (value) {
+                core.exportVariable(name, value);
+              }
+            }
+      - name: Build ADA ECU node image (arm64)
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ -f "${CONTEXT}Dockerfile" ] || {
+            echo "::notice::${CONTEXT}Dockerfile not landed yet (5.2.7.1) - skipping build"
+            exit 0
+          }
+
+          # NO --load and NO --push here, on purpose: with --platform set and neither exporter
+          # given, buildx builds and exports nothing - exactly what a build-only verification
+          # wants, since a linux/arm64 image cannot be --loaded into an amd64 runner's store. The
+          # push step below is where an exporter belongs. ignore-error on --cache-to: a
+          # cache-service hiccup must not turn a successful multi-hour emulated build red.
+          echo "::group::docker buildx build $IMAGE ($PLATFORMS) from $CONTEXT"
+          docker buildx build \
+            --platform "$PLATFORMS" \
+            --provenance=false --sbom=false \
+            --cache-from "type=gha,scope=$CACHE_SCOPE" \
+            --cache-to "type=gha,mode=max,scope=$CACHE_SCOPE,ignore-error=true" \
+            -t "$IMAGE" \
+            "$CONTEXT"
+          echo "::endgroup::"
+          echo "::notice::built $IMAGE ($PLATFORMS) - not pushed by this step"
+      # These measurement steps are 12.3.7.2's write scope in this file; the build and push steps
+      # are not edited. Rebuild WITH --load from the same gha cache scope - a cache hit, no
+      # recompile - because the build step above deliberately exports nothing an inspect could
+      # read. Expected media delta is ~5.0 MB (H.264 is already compressed - gzip gains ~0%).
+      # The media layer digest in the RootFS.Layers list is read positionally against the
+      # `docker history` table; KPI 7's cross-build digest comparison reads this output from two
+      # runs.
+      - name: Measure the media layer (12.3.7.2)
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ -d ADA_ECU/media ] || { echo "::notice::no media/ - nothing to measure"; exit 0; }
+          docker buildx build \
+            --platform "$PLATFORMS" \
+            --provenance=false --sbom=false \
+            --cache-from "type=gha,scope=$CACHE_SCOPE" \
+            --load \
+            -t "$IMAGE" \
+            "$CONTEXT"
+          echo "::group::media layer measurement (12.3.7.2)"
+          echo "== total image size (bytes) =="
+          docker image inspect -f '{{.Size}}' "$IMAGE"
+          echo "== docker history (size / created-by) =="
+          docker history --format '{{.Size}}\t{{.CreatedBy}}' "$IMAGE"
+          echo "== media layer row =="
+          docker history --format '{{.Size}}\t{{.CreatedBy}}' "$IMAGE" | grep 'COPY media/'
+          echo "== RootFS layer digests =="
+          docker image inspect -f '{{json .RootFS.Layers}}' "$IMAGE"
+          echo "::endgroup::"
+      # D9's in-image detector smoke (5.3.6.1), run against the LOCAL arm64 image the measure step
+      # just --load-ed into the daemon (qemu is already set up). Sanctioned deviation from D9's
+      # "inside the pulled image" wording: the pull-back start remains the verify composite's job;
+      # this step's claim is the wheels+import+model runtime path on aarch64. Two arms because a
+      # build that links and a detector that imports are two different claims - only a real emitted
+      # R3 line closes R12's runtime path. The -e values below are TEST PARAMETERS for this run,
+      # not tunables baked into the image (the image ships no ENV; defaults stay with the detector).
+      - name: In-image detector smoke (5.3.6.1)
+        shell: bash
+        run: |
+          set -euo pipefail
+          [ -f ADA_ECU/detector/main.py ] || {
+            echo "::notice::ADA_ECU/detector/main.py not landed yet - skipping detector smoke"
+            exit 0
+          }
+
+          # Arm 1 - synthetic plumbing: 5 synthetic frames. stdout may be EMPTY (flat frames
+          # yield no detections), but every line present must parse as JSON.
+          SYN_OUT="$RUNNER_TEMP/detector-synthetic.out"
+          SYN_ERR="$RUNNER_TEMP/detector-synthetic.err"
+          rc=0
+          timeout 600 docker run --rm --platform linux/arm64 \
+            -e DETECTOR_REALTIME_PACING=false \
+            "$IMAGE" python3 /app/detector/main.py --synthetic 5 \
+            >"$SYN_OUT" 2>"$SYN_ERR" || rc=$?
+          echo "::group::synthetic arm stderr"
+          cat "$SYN_ERR"
+          echo "::endgroup::"
+          if [ "$rc" -ne 0 ]; then
+            echo "synthetic arm failed: exit $rc"
+            exit 1
+          fi
+          python3 -c 'import json,sys; [json.loads(l) for l in open(sys.argv[1]) if l.strip()]' "$SYN_OUT"
+
+          # Arm 2 - the real clip, the R3-JSONL observable: sampled frames (stride 50, no loop)
+          # through the shipped model and media. 4 sampled frames can be minutes EACH under QEMU,
+          # hence the 1800 s budget.
+          REAL_OUT="$RUNNER_TEMP/detector-real.out"
+          rc=0
+          timeout 1800 docker run --rm --platform linux/arm64 \
+            -e DETECTOR_REALTIME_PACING=false \
+            -e DETECTOR_LOOP=false \
+            -e DETECTOR_FRAME_STRIDE=50 \
+            "$IMAGE" python3 /app/detector/main.py \
+            >"$REAL_OUT" || rc=$?
+          if [ "$rc" -ne 0 ]; then
+            echo "real-clip arm failed: exit $rc"
+            exit 1
+          fi
+          python3 - "$REAL_OUT" <<'PY'
+          import json, sys
+          hits = 0
+          with open(sys.argv[1]) as f:
+              for line in f:
+                  line = line.strip()
+                  if not line:
+                      continue
+                  try:
+                      obj = json.loads(line)
+                  except ValueError:
+                      continue
+                  if obj.get("source") == "own_sensor":
+                      hits += 1
+          print(f"own_sensor R3 lines: {hits}")
+          sys.exit(0 if hits else 1)
+          PY
+          echo "synthetic stdout lines: $(wc -l < "$SYN_OUT")"
+          echo "real-clip stdout lines: $(wc -l < "$REAL_OUT")"
+      - name: Push to CarSky Zot registry (skips until the secret exists)
+        id: push
+        shell: bash
+        env:
+          ZOT_KEY: ${{ secrets.CARSKY_ZOT_API_KEY }}
+          # Registry account (not a secret) - verified live 2026-07-31. Override with the
+          # CARSKY_REGISTRY_USER repo variable if the account changes.
+          REGISTRY_USER: ${{ vars.CARSKY_REGISTRY_USER || 'kis@hackathon.fpt.com' }}
+        # `pushed`/`digest` written exactly once, at the end - one unconditional write removes any
+        # question of what a repeated key in $GITHUB_OUTPUT resolves to. `pushed` is true only past
+        # the push itself, so both skip paths correctly leave the verification unrun.
+        run: |
+          set -euo pipefail
+          PUSHED=false
+          DIGEST=""
+          if [ ! -f "${CONTEXT}Dockerfile" ]; then
+            echo "::notice::${CONTEXT}Dockerfile not landed yet (5.2.7.1) - nothing to push"
+          elif [ -z "$ZOT_KEY" ]; then
+            echo "::notice::CARSKY_ZOT_API_KEY secret not set - image built but NOT pushed"
+          else
+            echo "$ZOT_KEY" | docker login "$REGISTRY_HOST" -u "$REGISTRY_USER" --password-stdin
+            # THE SAME CACHE SCOPE as the build step above, deliberately: every layer this build
+            # needs was just written there, so this invocation is a cache hit that only re-resolves
+            # the graph and uploads - minutes instead of a second full emulated compile.
+            # --metadata-file: buildx reports the digest it actually pushed; that digest, not the
+            # mutable tag, is what the verification step checks.
+            docker buildx build \
+              --platform "$PLATFORMS" \
+              --provenance=false --sbom=false \
+              --cache-from "type=gha,scope=$CACHE_SCOPE" \
+              --cache-to "type=gha,mode=max,scope=$CACHE_SCOPE,ignore-error=true" \
+              -t "$REGISTRY_HOST/$IMAGE" \
+              --push \
+              --metadata-file "$RUNNER_TEMP/push-metadata.json" \
+              "$CONTEXT"
+            DIGEST=$(jq -r '."containerimage.digest" // empty' "$RUNNER_TEMP/push-metadata.json")
+            echo "::notice::pushed $REGISTRY_HOST/$IMAGE ($PLATFORMS) digest=${DIGEST:-unreported}"
+            PUSHED=true
+          fi
+          {
+            echo "pushed=$PUSHED"
+            echo "digest=$DIGEST"
+          } >> "$GITHUB_OUTPUT"
+      - name: Verify the pushed image is pullable and single-platform arm64
+        id: verify
+        if: steps.push.outputs.pushed == 'true'
+        uses: ./.github/actions/verify-arm64-image
+        with:
+          registry-host: ${{ env.REGISTRY_HOST }}
+          image: ${{ env.IMAGE }}
+          username: ${{ vars.CARSKY_REGISTRY_USER || 'kis@hackathon.fpt.com' }}
+          password: ${{ secrets.CARSKY_ZOT_API_KEY }}
+          digest: ${{ steps.push.outputs.digest }}
+
+  # The bench image (5.4.9.5), per deploy-ada-ecu-walkthrough.md section 3.2. ONE image,
+  # m1-ada-bench:latest, which TWO of the isolated Room's three nodes run - the V2X bench mock
+  # under ROLE=v2x_mock and the IVI sink mock under ROLE=ivi_mock. One build, one push, one tag,
+  # deployed twice: the roles are an env-var selection inside entrypoint.sh (5.4.9.4), not
+  # separate artifacts, so this lane must never grow a second bench-image job. Mirrors
+  # phase1-ci.yml's v2x-ecu-image step for step; the per-line rationale lives there and is not
+  # repeated here.
+  ada-bench-image:
+    runs-on: ubuntu-latest
+    env:
+      # Live host per the O1 probe (2026-07-31): registry.carsky.io 502s, hackathon-2 answers.
+      REGISTRY_HOST: registry.hackathon-2.carsky.io
+      IMAGE: m1-ada-bench:latest
+      # arm64 only: a CarSky Container node rejects a multi-platform manifest index and hangs in
+      # Provisioning, so exactly one platform goes in the buildx invocation.
+      PLATFORMS: linux/arm64
+      # Build context = the test-equipment folder. node-code-layout's build rules apply to
+      # tools/ folders unchanged: self-contained, nothing outside the folder enters the build.
+      CONTEXT: tools/ada-bench/
+      # One cache scope PER IMAGE, never a shared one - see the eviction note on v2x-ecu-image's
+      # scope in phase1-ci.yml.
+      CACHE_SCOPE: ada-bench-image
+    # NOT 360 like the sibling image lanes: this image is Alpine plus python3 and tcpdump and
+    # builds in about a minute even under emulation (walkthrough section 3.2), so 30 minutes
+    # covers a cold runner and slow pulls while still failing fast if the build wedges.
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      # ACTIONS_CACHE_URL / ACTIONS_RESULTS_URL / ACTIONS_RUNTIME_TOKEN are handed to *actions*,
+      # not to `run:` steps - re-exporting through GITHUB_ENV is what lets a plain
+      # `docker buildx build --cache-to type=gha` reach the Actions cache. Fuller note on
+      # v2x-ecu-image's copy of this step in phase1-ci.yml.
+      - name: Expose the Actions cache runtime to the buildx gha cache
+        uses: actions/github-script@v7
+        with:
+          script: |
+            for (const name of ['ACTIONS_CACHE_URL', 'ACTIONS_RESULTS_URL', 'ACTIONS_RUNTIME_TOKEN']) {
+              const value = process.env[name];
+              if (value) {
+                core.exportVariable(name, value);
+              }
+            }
+      - name: Build ADA bench image (arm64)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Belt-and-braces guard kept for symmetry with the sibling image lanes; 5.4.9.4's
+          # Dockerfile is on the tree, so the expected path is a real build and this never fires.
+          [ -f "${CONTEXT}Dockerfile" ] || {
+            echo "::notice::${CONTEXT}Dockerfile not landed yet (5.4.9.4) - skipping build"
+            exit 0
+          }
+
+          # NO --load and NO --push here, on purpose: with --platform set and neither exporter
+          # given, buildx builds and exports nothing - a linux/arm64 image cannot be --loaded
+          # into an amd64 runner's store, and the push step below is where an exporter belongs.
+          # ignore-error on --cache-to: a cache-service hiccup must not turn a good build red.
+          echo "::group::docker buildx build $IMAGE ($PLATFORMS) from $CONTEXT"
+          docker buildx build \
+            --platform "$PLATFORMS" \
+            --provenance=false --sbom=false \
+            --cache-from "type=gha,scope=$CACHE_SCOPE" \
+            --cache-to "type=gha,mode=max,scope=$CACHE_SCOPE,ignore-error=true" \
+            -t "$IMAGE" \
+            "$CONTEXT"
+          echo "::endgroup::"
+          echo "::notice::built $IMAGE ($PLATFORMS) - not pushed by this step"
+      - name: Push to CarSky Zot registry (skips until the secret exists)
+        id: push
+        shell: bash
+        env:
+          ZOT_KEY: ${{ secrets.CARSKY_ZOT_API_KEY }}
+          # Registry account (not a secret) - verified live 2026-07-31. Override with the
+          # CARSKY_REGISTRY_USER repo variable if the account changes.
+          REGISTRY_USER: ${{ vars.CARSKY_REGISTRY_USER || 'kis@hackathon.fpt.com' }}
+        # `pushed`/`digest` written exactly once, at the end - see v2x-ecu-image's push step.
+        # `pushed` is true only past the push itself, so both skip paths leave verification unrun.
+        run: |
+          set -euo pipefail
+          PUSHED=false
+          DIGEST=""
+          if [ ! -f "${CONTEXT}Dockerfile" ]; then
+            echo "::notice::${CONTEXT}Dockerfile not landed yet (5.4.9.4) - nothing to push"
+          elif [ -z "$ZOT_KEY" ]; then
+            echo "::notice::CARSKY_ZOT_API_KEY secret not set - image built but NOT pushed"
+          else
+            echo "$ZOT_KEY" | docker login "$REGISTRY_HOST" -u "$REGISTRY_USER" --password-stdin
+            # THE SAME CACHE SCOPE as the build step above, deliberately: this invocation is a
+            # cache hit that only re-resolves the graph and uploads. --metadata-file: the
+            # verification step checks the digest actually pushed, not the mutable tag.
+            docker buildx build \
+              --platform "$PLATFORMS" \
+              --provenance=false --sbom=false \
+              --cache-from "type=gha,scope=$CACHE_SCOPE" \
+              --cache-to "type=gha,mode=max,scope=$CACHE_SCOPE,ignore-error=true" \
+              -t "$REGISTRY_HOST/$IMAGE" \
+              --push \
+              --metadata-file "$RUNNER_TEMP/push-metadata.json" \
+              "$CONTEXT"
+            DIGEST=$(jq -r '."containerimage.digest" // empty' "$RUNNER_TEMP/push-metadata.json")
+            echo "::notice::pushed $REGISTRY_HOST/$IMAGE ($PLATFORMS) digest=${DIGEST:-unreported}"
+            PUSHED=true
+          fi
+          {
+            echo "pushed=$PUSHED"
+            echo "digest=$DIGEST"
+          } >> "$GITHUB_OUTPUT"
+      - name: Verify the pushed image is pullable and single-platform arm64
+        id: verify
+        if: steps.push.outputs.pushed == 'true'
+        uses: ./.github/actions/verify-arm64-image
+        with:
+          registry-host: ${{ env.REGISTRY_HOST }}
+          image: ${{ env.IMAGE }}
+          username: ${{ vars.CARSKY_REGISTRY_USER || 'kis@hackathon.fpt.com' }}
+          password: ${{ secrets.CARSKY_ZOT_API_KEY }}
+          digest: ${{ steps.push.outputs.digest }}
+
+  # The bench loopback self-check (2.4.9.7) - proves walkthrough section 8.1 item 5 (the bench
+  # scripts, their env names and their log-line shapes) off-platform, before a Room slot is spent
+  # on them. Plain runner: no Docker, no registry, no platform. Four arms, each asserting a
+  # non-zero examined-datagram count so the lane cannot pass vacuously:
+  #   A - emitter (PROFILE=approaching) against an inline UDP recorder; every received body must
+  #       validate against ADA_ECU/contracts/r2-v2x-object.schema.json - the parse_reject
+  #       failure mode of walkthrough section 6, caught here rather than in a Room;
+  #   B - emitter (PROFILE=out_of_range): every [TX] line holds distance at START_DISTANCE_M,
+  #       which is what makes the deployed negative case meaningful;
+  #   C - sink fed the committed contracts/samples R4 bodies plus a null-vehicleC variant:
+  #       [RX]/[CHECK]/[SUMMARY] shapes under the exact greps the deployed checks use, ending
+  #       rejected=0;
+  #   D - sink fed one malformed datagram then one valid one: rejected increments and the sink
+  #       survives. The malformed probe is its own sink instance, so arm C's rejected=0 and arm
+  #       D's rejected>=1 are both unambiguous.
+  # The emitter deliberately never targets the sink: mock_v2x emits R2 v2x_object bodies (the
+  # ADA node's INPUT) while mock_ivi accepts only R4 warning/state (the ADA node's OUTPUT), so
+  # wiring them directly would count every emitter datagram as a type rejection and destroy both
+  # rejected assertions. The two scripts meet only through the ADA node they bracket.
+  ada-bench-selfcheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      # jsonschema serves this lane's validation harness only; the two bench scripts stay
+      # stdlib-only and run exactly as committed.
+      - name: Install the validation harness dependency
+        run: python -m pip install jsonschema
+      - name: Emitter arms - R2 schema validation and the out_of_range hold
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Fixed ports are safe here: the whole lane is loopback-only inside a fresh runner
+          # (same note as phase1-ci.yml's v2x-comms-check). 47320 is outside the blueprint's
+          # 47100/47200/47300 set so a log line can never be misread as a node port.
+          REC_PORT=47320
+          TX_LOG="$RUNNER_TEMP/tx.log"
+          OUT_LOG="$RUNNER_TEMP/out.log"
+          CAPTURED="$RUNNER_TEMP/captured.jsonl"
+          REC_ERR="$RUNNER_TEMP/recorder.err"
+
+          # Inline UDP recorder: one body per stdout line - the emitter's wire shape is compact
+          # JSON with no newlines, so JSONL is lossless. Readiness goes to stderr so stdout
+          # stays pure bodies.
+          cat > "$RUNNER_TEMP/recorder.py" <<'PY'
+          import socket
+          import sys
+
+          sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+          sock.bind(("127.0.0.1", int(sys.argv[1])))
+          print("[REC] bound port=%s" % sys.argv[1], file=sys.stderr, flush=True)
+          while True:                                   # runs until the arm kills it
+              data, _ = sock.recvfrom(65535)
+              sys.stdout.write(data.decode("utf-8", "replace") + "\n")
+              sys.stdout.flush()
+          PY
+          python "$RUNNER_TEMP/recorder.py" "$REC_PORT" > "$CAPTURED" 2> "$REC_ERR" &
+          REC_PID=$!
+
+          # Bounded readiness poll, never a bare sleep: a datagram sent before the bind is
+          # simply lost and would surface as a confusing count mismatch.
+          READY=0
+          for _ in $(seq 1 30); do
+            if grep -q '\[REC\] bound' "$REC_ERR" 2>/dev/null; then READY=1; break; fi
+            sleep 0.2
+          done
+          if [ "$READY" -ne 1 ]; then
+            echo "::error::recorder never bound 127.0.0.1:$REC_PORT within 6s"
+            exit 1
+          fi
+
+          # Arm A: a ~3 s approaching burst at 10 Hz. START_DELAY_S=1 keeps the deployed
+          # listen-first semantics in play without the blueprint's 20 s wait; every other knob
+          # is the script's documented default (the blueprint's values).
+          echo "[LANE] arm A: PROFILE=approaching burst at the recorder"
+          TARGET_HOST=127.0.0.1 TARGET_PORT="$REC_PORT" START_DELAY_S=1 \
+          PROFILE=approaching RATE_HZ=10 \
+            python tools/ada-bench/mock_v2x.py > "$TX_LOG" 2>&1 &
+          TX_PID=$!
+          sleep 4
+          kill -TERM "$TX_PID" 2>/dev/null || true
+          wait "$TX_PID" 2>/dev/null || true
+
+          # Arm B: out_of_range holds the distance. START_DISTANCE_M passed explicitly (its
+          # default value) so the env value and the assertion below are visibly the same number.
+          echo "[LANE] arm B: PROFILE=out_of_range burst at the recorder"
+          TARGET_HOST=127.0.0.1 TARGET_PORT="$REC_PORT" START_DELAY_S=0 \
+          PROFILE=out_of_range RATE_HZ=10 START_DISTANCE_M=45 \
+            python tools/ada-bench/mock_v2x.py > "$OUT_LOG" 2>&1 &
+          TX_PID=$!
+          sleep 2
+          kill -TERM "$TX_PID" 2>/dev/null || true
+          wait "$TX_PID" 2>/dev/null || true
+          # The recorder is idle by now (the emitter is dead), so its last JSONL line is complete.
+          kill -TERM "$REC_PID" 2>/dev/null || true
+          wait "$REC_PID" 2>/dev/null || true
+
+          echo "::group::tx.log (approaching)"
+          cat "$TX_LOG"
+          echo "::endgroup::"
+          echo "::group::out.log (out_of_range)"
+          cat "$OUT_LOG"
+          echo "::endgroup::"
+
+          # SIGTERM can truncate the one line in flight when it lands mid-print, so the final
+          # line of each emitter log is dropped before the every-line shape equality - with
+          # 20-40 [TX] lines per burst the >=5 floors keep the check far from vacuous.
+          head -n -1 "$TX_LOG" > "$TX_LOG.trim"
+          head -n -1 "$OUT_LOG" > "$OUT_LOG.trim"
+
+          # The exact grep the deployed emitter check uses - the lane fails if a prefix or a
+          # field name drifts. EVERY [TX] line must carry the full shape, not merely some.
+          TX_TOTAL=$(grep -c '^\[TX\]' "$TX_LOG.trim" || true)
+          TX_SHAPE=$(grep -Ec '^\[TX\] seq=[0-9]+ objectId=.+ distance=.+ bytes=[0-9]+ -> ' "$TX_LOG.trim" || true)
+          echo "[LANE] approaching [TX] lines: $TX_TOTAL, matching the deployed grep: $TX_SHAPE"
+          if [ "$TX_TOTAL" -lt 5 ] || [ "$TX_TOTAL" -ne "$TX_SHAPE" ]; then
+            echo "::error::[TX] shape drift or too few lines (total=$TX_TOTAL shape=$TX_SHAPE, need >=5 and equal)"
+            exit 1
+          fi
+
+          OUT_TOTAL=$(grep -c '^\[TX\]' "$OUT_LOG.trim" || true)
+          OUT_SHAPE=$(grep -Ec '^\[TX\] seq=[0-9]+ objectId=.+ distance=.+ bytes=[0-9]+ -> ' "$OUT_LOG.trim" || true)
+          OUT_HELD=$(grep -c '^\[TX\] .*distance=45\.0 ' "$OUT_LOG.trim" || true)
+          echo "[LANE] out_of_range [TX] lines: $OUT_TOTAL, shape: $OUT_SHAPE, holding distance=45.0: $OUT_HELD"
+          if [ "$OUT_TOTAL" -lt 5 ] || [ "$OUT_TOTAL" -ne "$OUT_SHAPE" ] || [ "$OUT_TOTAL" -ne "$OUT_HELD" ]; then
+            echo "::error::out_of_range distance walked or shape drifted (total=$OUT_TOTAL shape=$OUT_SHAPE held=$OUT_HELD)"
+            exit 1
+          fi
+
+          # Every captured body - both arms; out_of_range bodies are equally bound by the
+          # contract - must validate against the ADA node's R2 schema copy. Zero bodies is a
+          # failure, never a pass.
+          python - "$CAPTURED" ADA_ECU/contracts/r2-v2x-object.schema.json <<'PY'
+          import json
+          import sys
+
+          import jsonschema
+
+          lines = [l for l in open(sys.argv[1], encoding="utf-8") if l.strip()]
+          schema = json.load(open(sys.argv[2], encoding="utf-8"))
+          validator = jsonschema.Draft202012Validator(schema)
+          count = 0
+          for line in lines:
+              body = json.loads(line)
+              errors = sorted(validator.iter_errors(body), key=str)
+              if errors:
+                  print("::error::emitter datagram %d fails the R2 schema: %s"
+                        % (count + 1, errors[0].message))
+                  sys.exit(1)
+              count += 1
+          if count == 0:
+              print("::error::recorder captured zero emitter datagrams")
+              sys.exit(1)
+          print("[LANE] validated %d emitter datagrams against r2-v2x-object.schema.json" % count)
+          PY
+          echo "[LANE] emitter arms PASSED"
+      - name: Sink arms - valid R4 feed, then the malformed probe
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Fixed loopback-only port, distinct from the emitter step's 47320 and from the
+          # blueprint's node ports for the same misread-avoidance reason.
+          SINK_PORT=47310
+          SINK_LOG="$RUNNER_TEMP/sink.log"
+          SINK2_LOG="$RUNNER_TEMP/sink2.log"
+
+          wait_boot() {
+            for _ in $(seq 1 30); do
+              if grep -q '\[BOOT\] mock_ivi' "$1" 2>/dev/null; then return 0; fi
+              sleep 0.2
+            done
+            echo "::error::mock_ivi never logged [BOOT] within 6s"
+            cat "$1" 2>/dev/null || true
+            return 1
+          }
+
+          # Arm C - the valid feed: the two committed contracts/samples bodies plus a
+          # null-vehicleC variant built inline (legitimate before C is first tracked, so it must
+          # read both_vehicles=no, never a rejection). SUMMARY_EVERY_S=2 keeps the wait short.
+          echo "[LANE] arm C: valid R4 feed"
+          LISTEN_PORT="$SINK_PORT" SUMMARY_EVERY_S=2 \
+            python tools/ada-bench/mock_ivi.py > "$SINK_LOG" 2>&1 &
+          SINK_PID=$!
+          wait_boot "$SINK_LOG"
+
+          python - "$SINK_PORT" <<'PY'
+          import json
+          import socket
+          import sys
+          import time
+
+          tx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+          port = int(sys.argv[1])
+          warning = open("contracts/samples/r4-warning.json", "rb").read()
+          state = open("contracts/samples/r4-state.json", "rb").read()
+          null_c = json.loads(warning)
+          null_c["geometry"]["vehicleC"] = None
+          for payload in (warning, state,
+                          json.dumps(null_c, separators=(",", ":")).encode()):
+              tx.sendto(payload, ("127.0.0.1", port))
+              time.sleep(0.3)   # keeps the sink's seq deterministic for the per-seq asserts
+          print("[LANE] fed warning, state and null-vehicleC bodies", flush=True)
+          PY
+
+          # One summary period plus slack, so the final [SUMMARY] reflects all three datagrams.
+          sleep 3
+          kill -TERM "$SINK_PID" 2>/dev/null || true
+          wait "$SINK_PID" 2>/dev/null || true
+
+          echo "::group::sink.log (valid arm)"
+          cat "$SINK_LOG"
+          echo "::endgroup::"
+
+          # The exact greps the deployed checks use - fail on any prefix or field-name drift.
+          # Exactly ONE yes/yes [CHECK]: the r4-warning body. The state body reads
+          # c_source_relayed=no (it carries no object) and the null-vehicleC body reads
+          # both_vehicles=no, so a second match would itself be drift.
+          YES_YES=$(grep -c '\[CHECK\] .*both_vehicles=yes c_source_relayed=yes' "$SINK_LOG" || true)
+          SUM_SHAPE=$(grep -c '\[SUMMARY\] received=.* rejected=' "$SINK_LOG" || true)
+          if [ "$YES_YES" -ne 1 ]; then
+            echo "::error::expected exactly 1 both_vehicles=yes c_source_relayed=yes [CHECK] (the r4-warning body), got $YES_YES"
+            exit 1
+          fi
+          grep -q '\[CHECK\] seq=3 both_vehicles=no ' "$SINK_LOG" || {
+            echo "::error::null-vehicleC body did not read both_vehicles=no"
+            exit 1
+          }
+          if [ "$SUM_SHAPE" -lt 1 ]; then
+            echo "::error::no [SUMMARY] line matched the deployed grep"
+            exit 1
+          fi
+          LAST_SUM=$(grep '\[SUMMARY\] received=.* rejected=' "$SINK_LOG" | tail -1)
+          echo "[LANE] final summary (valid arm): $LAST_SUM"
+          echo "$LAST_SUM" | grep -q 'received=3 warnings=2 both_vehicles=2 rejected=0' || {
+            echo "::error::valid arm's final [SUMMARY] drifted from received=3 warnings=2 both_vehicles=2 rejected=0"
+            exit 1
+          }
+
+          # Arm D - the malformed probe, on its own sink instance so arm C's rejected=0 stays
+          # unambiguous. A valid body follows the malformed one to prove the sink survived it.
+          echo "[LANE] arm D: malformed probe"
+          LISTEN_PORT="$SINK_PORT" SUMMARY_EVERY_S=2 \
+            python tools/ada-bench/mock_ivi.py > "$SINK2_LOG" 2>&1 &
+          SINK_PID=$!
+          wait_boot "$SINK2_LOG"
+
+          python - "$SINK_PORT" <<'PY'
+          import socket
+          import sys
+          import time
+
+          tx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+          port = int(sys.argv[1])
+          tx.sendto(b"this is not json {", ("127.0.0.1", port))
+          time.sleep(0.3)
+          tx.sendto(open("contracts/samples/r4-warning.json", "rb").read(),
+                    ("127.0.0.1", port))
+          print("[LANE] fed 1 malformed + 1 valid datagram", flush=True)
+          PY
+
+          sleep 3
+          kill -TERM "$SINK_PID" 2>/dev/null || true
+          wait "$SINK_PID" 2>/dev/null || true
+
+          echo "::group::sink2.log (malformed arm)"
+          cat "$SINK2_LOG"
+          echo "::endgroup::"
+
+          grep -q '\[REJECT\] seq=1 .*reason=not_json' "$SINK2_LOG" || {
+            echo "::error::malformed datagram produced no [REJECT] line"
+            exit 1
+          }
+          grep -q '\[CHECK\] seq=2 both_vehicles=yes c_source_relayed=yes' "$SINK2_LOG" || {
+            echo "::error::sink did not process the valid datagram after the malformed one"
+            exit 1
+          }
+          LAST_SUM2=$(grep '\[SUMMARY\] received=.* rejected=' "$SINK2_LOG" | tail -1)
+          echo "[LANE] final summary (malformed arm): $LAST_SUM2"
+          echo "$LAST_SUM2" | grep -Eq 'received=2 .*rejected=1' || {
+            echo "::error::malformed arm's final [SUMMARY] drifted from received=2 ... rejected=1"
+            exit 1
+          }
+          echo "[LANE] sink arms PASSED"
+
+  # The ADA end-to-end loopback lane (15.4.5.1) - the repeatable, machine-checked form of the
+  # phase's output acceptance, everything except the deployed Room. Filed here per
+  # .claude/rules/ci-lane-placement.md (on main): phase4-ci.yml is the designated home of exactly
+  # ada-e2e-loopback, ada-ecu-image, ada-bench-image and ada-bench-selfcheck, and job names are
+  # stable identities - this job is named ada-e2e-loopback and is never renamed.
+  #
+  # Two arms around one built ada_ecu binary, bracketed by the Phase 4 CI mocks on loopback
+  # (tools/mock_v2x_sender.py -> ada_ecu -> tools/mock_ivi_receiver.py):
+  #   1 - approaching: the full relay chain. check_evt_log --admission --fusion --both-tracks
+  #       --r4-schema must exit 0, the receiver's --expect-min 1 gate must pass, and
+  #       event_report must render a non-empty event list. The committed band sequence plus the
+  #       d_AC/ttc series beside it are RECORDED in the job summary, never asserted - the risk
+  #       defaults are unratified (plans/phase4_tasks.md, Open items item 2); the expected
+  #       sequence at the R22 60/30 pair is low -> medium (D11), and the recorded series is
+  #       what tells a range trigger from a TTC trigger.
+  #   2 - out-of-range: the negative control. R2 traffic is ingested but C never enters the
+  #       gate, so zero v2x_relayed track_transition and zero r4_tx - the arm that stops the
+  #       lane passing on any traffic at all.
+  #
+  # PLANNER AMENDMENT (15.4.5.1, recorded verbatim): the plan text's
+  # DETECTOR_CMD="cat <fixture>" is replaced by this paced, held in-gate replay because the
+  # fixture's final line (36 m > GATE_EXIT 35) drops B at every replay boundary and an unpaced
+  # cat replays the file thousands of times - the held line 30 (distance 11 m, in-gate) keeps B
+  # tracked deterministically for ~12 s, then the non-zero exit with DETECTOR_RESTART_MAX=0
+  # stops the replay so B times out and completes the full R13 cycle that check_evt_log
+  # --admission requires. Same fixture file, section-6 defaults otherwise.
+  # QUOTING DEVIATION from the amendment's inline form, flagged in the subtask report: the node
+  # spawns DETECTOR_CMD through detector_reader.cpp's splitArgv + execvp - whitespace
+  # tokenization, no shell, no quote handling - so the amendment's DETECTOR_CMD='sh -c "i=0;
+  # ..."' one-liner cannot survive (sh would exec the literal word '"i=0;' as its -c command).
+  # The loop therefore lives in a helper script file and DETECTOR_CMD becomes the two
+  # whitespace-free tokens "sh <script>"; the replay semantics are the amendment's, unchanged.
+  ada-e2e-loopback:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      # Same configure shape as phase0-ci.yml's ada-core-build, narrowed to the one target this
+      # lane runs: no ctest here (ada-core-build owns the unit lanes), and --target ada_ecu
+      # keeps the gtest targets out of the build.
+      - name: Configure
+        run: cmake -S ADA_ECU -B ADA_ECU/build
+      - name: Build the ada_ecu binary only
+        run: cmake --build ADA_ECU/build --target ada_ecu -j
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      # jsonschema serves the receiver's --validate and the checker's --r4-schema only; the
+      # mocks' send/receive paths stay stdlib-only and run exactly as committed.
+      - name: Install the validation dependency
+        run: python -m pip install jsonschema
+      # The detector stand-in both arms spawn (see the planner amendment in the job header):
+      # 40 x 0.3 s of fixture line 30 (own:1 at 11.0 m, in-gate), then exit 1 - which, with
+      # DETECTOR_RESTART_MAX=0, is a terminal detector_restart: no respawn, so B times out.
+      # The fixture path is relative because the child inherits ada_ecu's cwd, the repo root.
+      - name: Write the detector replay helper
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > "$RUNNER_TEMP/detector_replay.sh" <<'SH'
+          i=0
+          while [ $i -lt 40 ]; do
+            sed -n 30p ADA_ECU/tests/fixtures/own_sensor_mock.jsonl
+            sleep 0.3
+            i=$((i+1))
+          done
+          exit 1
+          SH
+      - name: Arm 1 - approaching profile through the full relay chain
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Fixed loopback-only ports (same rationale as ada-bench-selfcheck's): 47311 for the
+          # R4 sink and 47210 for the node's R2 listen, both off the blueprint's
+          # 47100/47200/47300 set so a log line is never misread as a node port.
+          RX_LOG="$RUNNER_TEMP/rx.log"
+          ADA_LOG="$RUNNER_TEMP/ada.log"
+
+          ADA_PID=""
+          RX_PID=""
+          cleanup() {
+            { [ -n "$ADA_PID" ] && kill "$ADA_PID"; } 2>/dev/null || true
+            { [ -n "$RX_PID" ] && kill "$RX_PID"; } 2>/dev/null || true
+          }
+          trap cleanup EXIT
+
+          python ADA_ECU/tools/mock_ivi_receiver.py --host 127.0.0.1 --port 47311 \
+            --validate --expect-min 1 --timeout-s 30 --out "$RUNNER_TEMP/rx.jsonl" \
+            > "$RX_LOG" 2>&1 &
+          RX_PID=$!
+
+          # Bounded readiness poll, never a bare sleep (ada-bench-selfcheck's stance): a
+          # datagram sent before the bind is silently lost.
+          READY=0
+          for _ in $(seq 1 30); do
+            if grep -q '\[RX\] listening' "$RX_LOG" 2>/dev/null; then READY=1; break; fi
+            sleep 0.2
+          done
+          if [ "$READY" -ne 1 ]; then
+            echo "::error::mock_ivi_receiver never bound 127.0.0.1:47311 within 6s"
+            cat "$RX_LOG" 2>/dev/null || true
+            exit 1
+          fi
+
+          # The node under test. Env per the 15.4.5.1 brief; every unset knob is the section-6
+          # default, which IS the R22 pair (RISK_NEAR_M 60 / RISK_CRITICAL_M 30, config.cpp).
+          # The brief's env-block quoting advice is mooted by the helper-script form of
+          # DETECTOR_CMD (see the job header): two tokens, nothing to quote.
+          V2X_LISTEN_HOST=127.0.0.1 V2X_LISTEN_PORT=47210 \
+          IVI_ECU_HOST=127.0.0.1 IVI_ECU_PORT=47311 \
+          DETECTOR_ENABLED=true DETECTOR_RESTART_MAX=0 \
+          DETECTOR_CMD="sh $RUNNER_TEMP/detector_replay.sh" \
+            ADA_ECU/build/ada_ecu > "$ADA_LOG" 2>&1 &
+          ADA_PID=$!
+
+          sleep 2   # listener up (the brief's designated settle)
+          kill -0 "$ADA_PID" 2>/dev/null || {
+            echo "::error::ada_ecu exited during startup"
+            cat "$ADA_LOG"
+            exit 1
+          }
+
+          # ~10 s to completion, 100 datagrams: C closing 70 m -> 20.5 m at 5 m/s @ 10 Hz -
+          # the bench's committed R22 geometry, read from the scenario YAML by the mock.
+          python ADA_ECU/tools/mock_v2x_sender.py --profile approaching \
+            --host 127.0.0.1 --port 47210
+
+          # C timeout -> clearing transition ~+1.3 s; B timeout ~+2 s after the replay ends.
+          sleep 6
+          kill -TERM "$ADA_PID" 2>/dev/null || true
+          ADA_EXIT=0
+          wait "$ADA_PID" || ADA_EXIT=$?
+          ADA_PID=""
+          kill -TERM "$RX_PID" 2>/dev/null || true
+          RX_EXIT=0
+          wait "$RX_PID" || RX_EXIT=$?
+          RX_PID=""
+
+          echo "::group::ada.log (approaching)"
+          cat "$ADA_LOG"
+          echo "::endgroup::"
+          echo "::group::rx.log (approaching)"
+          cat "$RX_LOG"
+          echo "::endgroup::"
+
+          # A non-zero exit here is a crash, not a shutdown: ada_ecu exits 0 on SIGTERM.
+          if [ "$ADA_EXIT" -ne 0 ]; then
+            echo "::error::ada_ecu exited $ADA_EXIT, expected a clean 0 on SIGTERM"
+            exit 1
+          fi
+
+          # Assertion 1: the composed [EVT] checks - R13 legality with a full cycle per source,
+          # the Phase 4 relay chain and edge-triggered risk/emit pairing, the four both-tracks
+          # facts, and every r4_tx body against the synced R4 schema. A zero-[EVT] log is a
+          # failure inside the checker, never a pass; non-zero exit fails the step (set -e).
+          python ADA_ECU/tools/check_evt_log.py --admission --fusion --both-tracks \
+            --r4-schema ADA_ECU/contracts/r4-ada-ivi.schema.json "$ADA_LOG"
+          echo "[LANE] check_evt_log --admission --fusion --both-tracks --r4-schema PASSED"
+
+          # Assertion 2: the receiver's own gate - >= 1 schema-valid warning arrived
+          # (--expect-min 1 under --validate is its exit code).
+          if [ "$RX_EXIT" -ne 0 ]; then
+            echo "::error::mock_ivi_receiver exited $RX_EXIT - fewer than 1 schema-valid warning arrived"
+            exit 1
+          fi
+          echo "[LANE] receiver --expect-min 1 gate PASSED"
+
+          # Assertion 3: event_report renders a non-empty event list. 'no events selected' is
+          # exit 0 by design (a report, not a checker), so >= 1 data row is asserted here:
+          # every table line carries ' | ', so >= 2 such lines = header + >= 1 data row.
+          python ADA_ECU/tools/event_report.py "$ADA_LOG" --summary > "$RUNNER_TEMP/report.txt"
+          echo "::group::event_report (approaching)"
+          cat "$RUNNER_TEMP/report.txt"
+          echo "::endgroup::"
+          TABLE_LINES=$(grep -c ' | ' "$RUNNER_TEMP/report.txt" || true)
+          if grep -q '^no events selected' "$RUNNER_TEMP/report.txt" || [ "$TABLE_LINES" -lt 2 ]; then
+            echo "::error::event_report rendered no data rows (table lines: $TABLE_LINES, need header + >= 1 row)"
+            exit 1
+          fi
+          echo "[LANE] event_report rendered $((TABLE_LINES - 1)) data row(s)"
+
+          # Non-vacuous floors on the raw stream - the phase acceptance's counts, on top of the
+          # composed checks above.
+          RT_COUNT=$(grep -c '"event":"risk_transition"' "$ADA_LOG" || true)
+          R4_COUNT=$(grep -c '"event":"r4_tx"' "$ADA_LOG" || true)
+          if [ "$RT_COUNT" -lt 1 ] || [ "$R4_COUNT" -lt 1 ]; then
+            echo "::error::approaching arm too quiet (risk_transition=$RT_COUNT r4_tx=$R4_COUNT, need >= 1 each)"
+            exit 1
+          fi
+          echo "[LANE] observed risk_transition=$RT_COUNT r4_tx=$R4_COUNT"
+
+          # RECORD ONLY - no assertion on the band sequence (unratified risk defaults; a lane
+          # requiring a fixed sequence would red on every push). Expected low -> medium at the
+          # R22 60/30 defaults; the d_AC/ttc series is recorded beside it so a reader can tell
+          # a range trigger from a TTC trigger.
+          python - "$ADA_LOG" > "$RUNNER_TEMP/bands.txt" <<'PY'
+          import json
+          import sys
+
+          rts, assessments = [], []
+          for line in open(sys.argv[1], encoding="utf-8"):
+              s = line.strip()
+              if not s.startswith("[EVT] "):
+                  continue
+              try:
+                  obj = json.loads(s[len("[EVT] "):])
+              except ValueError:
+                  continue
+              p = obj.get("payload") or {}
+              if obj.get("event") == "risk_transition":
+                  rts.append(p)
+              elif obj.get("event") == "assessment":
+                  assessments.append(p)
+          print("committed band sequence (risk_transition, stream order):")
+          for p in rts:
+              print("  %s -> %s  d_ac=%s ttc=%s rationale=%s"
+                    % (p.get("from"), p.get("to"), p.get("d_ac"), p.get("ttc"),
+                       p.get("rationale")))
+          print("d_AC / ttc series (assessment payloads, stream order):")
+          for p in assessments:
+              print("  d_ac=%s ttc=%s riskState=%s rationale=%s"
+                    % (p.get("distanceM"), p.get("ttcS"), p.get("riskState"),
+                       p.get("rationale")))
+          PY
+          {
+            echo "## ada-e2e-loopback - approaching arm (recorded, not asserted)"
+            echo '```'
+            cat "$RUNNER_TEMP/bands.txt"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          cat "$RUNNER_TEMP/bands.txt"
+          echo "[LANE] approaching arm PASSED (band sequence + d_AC/ttc series recorded in the job summary)"
+      - name: Arm 2 - out-of-range profile, the negative control
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Fresh logs; same ports, same env, same detector replay as arm 1.
+          RX_LOG="$RUNNER_TEMP/rx2.log"
+          ADA_LOG="$RUNNER_TEMP/ada2.log"
+
+          ADA_PID=""
+          RX_PID=""
+          cleanup() {
+            { [ -n "$ADA_PID" ] && kill "$ADA_PID"; } 2>/dev/null || true
+            { [ -n "$RX_PID" ] && kill "$RX_PID"; } 2>/dev/null || true
+          }
+          trap cleanup EXIT
+
+          # --expect-min 0: the arm expects NO warnings; the receiver only proves the sink was
+          # really listening while none arrived. Shorter idle timeout than arm 1 - it may
+          # self-exit (PASS) before the SIGTERM below, and both paths exit 0.
+          python ADA_ECU/tools/mock_ivi_receiver.py --host 127.0.0.1 --port 47311 \
+            --validate --expect-min 0 --timeout-s 10 --out "$RUNNER_TEMP/rx2.jsonl" \
+            > "$RX_LOG" 2>&1 &
+          RX_PID=$!
+
+          READY=0
+          for _ in $(seq 1 30); do
+            if grep -q '\[RX\] listening' "$RX_LOG" 2>/dev/null; then READY=1; break; fi
+            sleep 0.2
+          done
+          if [ "$READY" -ne 1 ]; then
+            echo "::error::mock_ivi_receiver never bound 127.0.0.1:47311 within 6s"
+            cat "$RX_LOG" 2>/dev/null || true
+            exit 1
+          fi
+
+          V2X_LISTEN_HOST=127.0.0.1 V2X_LISTEN_PORT=47210 \
+          IVI_ECU_HOST=127.0.0.1 IVI_ECU_PORT=47311 \
+          DETECTOR_ENABLED=true DETECTOR_RESTART_MAX=0 \
+          DETECTOR_CMD="sh $RUNNER_TEMP/detector_replay.sh" \
+            ADA_ECU/build/ada_ecu > "$ADA_LOG" 2>&1 &
+          ADA_PID=$!
+
+          sleep 2   # listener up
+          kill -0 "$ADA_PID" 2>/dev/null || {
+            echo "::error::ada_ecu exited during startup"
+            cat "$ADA_LOG"
+            exit 1
+          }
+
+          # ~5 s, 50 datagrams: C held static at 60 m - beyond GATE_ENTER_M 30, so the relay
+          # traffic is ingested but never admitted.
+          python ADA_ECU/tools/mock_v2x_sender.py --profile out-of-range \
+            --host 127.0.0.1 --port 47210 --count 50
+
+          sleep 2   # settle: the last datagram's ingest is on the log before the stop
+          kill -TERM "$ADA_PID" 2>/dev/null || true
+          ADA_EXIT=0
+          wait "$ADA_PID" || ADA_EXIT=$?
+          ADA_PID=""
+          kill -TERM "$RX_PID" 2>/dev/null || true
+          RX_EXIT=0
+          wait "$RX_PID" || RX_EXIT=$?
+          RX_PID=""
+
+          echo "::group::ada2.log (out-of-range)"
+          cat "$ADA_LOG"
+          echo "::endgroup::"
+          echo "::group::rx2.log (out-of-range)"
+          cat "$RX_LOG"
+          echo "::endgroup::"
+
+          if [ "$ADA_EXIT" -ne 0 ]; then
+            echo "::error::ada_ecu exited $ADA_EXIT, expected a clean 0 on SIGTERM"
+            exit 1
+          fi
+          if [ "$RX_EXIT" -ne 0 ]; then
+            echo "::error::mock_ivi_receiver exited $RX_EXIT on the --expect-min 0 arm"
+            exit 1
+          fi
+
+          # The negative-control assertions, each floored on a non-vacuous examined count:
+          # r2_ingest >= 1 proves traffic actually flowed, so the two zeros below cannot pass
+          # on a dead wire.
+          R2_COUNT=$(grep -c '"event":"r2_ingest"' "$ADA_LOG" || true)
+          V2X_TT_COUNT=$(grep -Ec '"event":"track_transition".*"source":"v2x_relayed"' "$ADA_LOG" || true)
+          R4_COUNT=$(grep -c '"event":"r4_tx"' "$ADA_LOG" || true)
+          echo "[LANE] out-of-range counts: r2_ingest=$R2_COUNT v2x_relayed-track_transition=$V2X_TT_COUNT r4_tx=$R4_COUNT"
+          if [ "$R2_COUNT" -lt 1 ]; then
+            echo "::error::negative control ingested no R2 traffic (r2_ingest=$R2_COUNT) - its zero assertions would be vacuous"
+            exit 1
+          fi
+          if [ "$V2X_TT_COUNT" -ne 0 ]; then
+            echo "::error::out-of-range profile admitted a v2x_relayed track ($V2X_TT_COUNT track_transition line(s)) - C must stay outside the gate"
+            exit 1
+          fi
+          if [ "$R4_COUNT" -ne 0 ]; then
+            echo "::error::out-of-range profile emitted $R4_COUNT r4_tx line(s) - the negative control demands zero"
+            exit 1
+          fi
+          echo "[LANE] out-of-range arm PASSED: R2 ingested ($R2_COUNT), zero v2x_relayed admissions, zero r4_tx"

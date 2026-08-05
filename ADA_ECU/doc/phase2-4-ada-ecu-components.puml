@@ -13,7 +13,7 @@ cloud "V2X ECU\n(R2 JSON over UDP)" as V2X
 artifact "media/ego-b-occluding-c.mp4\n(baked into the image)" as CLIP
 cloud "IVI ECU\n(R4 JSON over UDP)" as IVI
 
-package "ada-ecu:latest - one image, two processes" {
+package "m1-ada-ecu:latest - one image, two processes" {
 
   package "detector subprocess - Python 3.11 (R12)" as DET {
     component "frame_source\n(seam: file | synthetic | future video pin)" as FS

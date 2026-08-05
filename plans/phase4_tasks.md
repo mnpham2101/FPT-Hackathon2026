@@ -2,8 +2,8 @@
 
 > **Authority & context:**
 > - **Phase content:** [milestone1.md § Phase 4](milestone1.md#phase-4--obscured-object-fusion-relayed-c--risk--warning-r13r15--runs--with-phase-3) — its acceptance checkboxes are the phase output, plus the output-evidence criterion this plan sharpens (§ Phase 4 output acceptance).
-> - **Design:** [ada-ecu-hld.md](../ADA_ECU/doc/ada-ecu-hld.md) — §4 folder structure, §6 env tables; and in the [decision record](../ADA_ECU/doc/ada-ecu-design-decisions.md) **D4** (CRA interface, registry, database), **D5** (risk vocabulary, thresholds, edge-triggered emission, composition), **D7** (output stage), **D8** (evidence stream), **D9** (capture on this node).
-> - **Requirements:** [m1-cooperative-awareness.md §2](../requirements/m1-cooperative-awareness.md) R2, R4, R5, R6, R13, R14, R15, R18 — referenced by number, never restated.
+> - **Design:** [ada-ecu-hld.md](../ADA_ECU/doc/ada-ecu-hld.md) — §4 folder structure, §6 env tables, §12 test strategy; and in the [decision record](../ADA_ECU/doc/ada-ecu-design-decisions.md) **D4** (CRA interface, registry, database), **D5** (risk vocabulary, thresholds, edge-triggered emission, composition), **D7** (output stage), **D8** (evidence stream), **D9** (capture on this node), **D10** (clock domains), **D11** (the R22 band pair).
+> - **Requirements:** [m1-cooperative-awareness.md §2](../requirements/m1-cooperative-awareness.md) R2, R4, R5, R6, R13, R14, R15, R18 and [m1-run-timing-and-event-triggering.md §7](../requirements/m1-run-timing-and-event-triggering.md) R21, R22 — referenced by number, never restated.
 > - **Deployment & verification procedure (groups 4.9–4.11):** [deploy-ada-ecu-walkthrough.md](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md) — the stage-1 artifact those groups are decomposed from, per [walkthrough-driven-delivery.md](../.claude/rules/walkthrough-driven-delivery.md). Its [§7 work division](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#7-work-division-between-ai-and-human) fixes each subtask's executor and its [§8 expected outputs and acceptance](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#8-expected-outputs-and-acceptance) fixes each check's criteria. **Cite, never restate** — commands stay in the walkthrough.
 > - **Capture (port, do not reinvent):** [traffic-capture-wireshark.md](../requirements/car-sky-guide/traffic-capture-wireshark.md) is the host-side procedure; `V2X_ECU/capture.sh` and `V2X_ECU/tools/extract_pcap.sh` on `main` are the working pair this phase's ADA copies are ported from, and their `[PCAP-BEGIN]` marker format is frozen.
 > - **Phase 2 baseline (do not re-plan):** [phase2_tasks.md § Output](phase2_tasks.md#phase-2-overview) — store, R13 machine, `ICollisionRiskAssessment`, `registry` + `builtin_plugins.cpp`, `assessment_db` + its schema, `event_log`, `udp_socket`, `main.cpp` fusion tick, `tools/check_evt_log.py`, the image and `entrypoint.sh`'s capture hook.
@@ -43,11 +43,11 @@ This phase runs two Rooms: the [isolated ADA Room](#task-group-410--isolated-ada
 
 Identical to [phase2_tasks.md § Execution labels](phase2_tasks.md#execution-labels) — *agent* · *car-sky* · *Human*. The split is not a preference: it comes from [walkthrough §7](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#7-work-division-between-ai-and-human), and the reasons are structural. REST has no `ETHERNET` pin type, no update route for an existing node's config, and no delete operation; picking a Device spends one of two Room slots; and an agent session holds no browser and no GitHub token.
 
-**Phase 4 is 20 *agent*, 9 *car-sky*, 9 *Human* subtasks.** Every *Human* row is in groups 4.10, 4.11 and 4.12. Groups 4.1–4.5 and 4.9 are entirely *agent*; group 4.6 is one *car-sky* subtask.
+**Phase 4 is 21 *agent*, 9 *car-sky*, 9 *Human* subtasks.** Every *Human* row is in groups 4.10, 4.11 and 4.12. Groups 4.1–4.5 and 4.9 are entirely *agent*; group 4.6 is one *car-sky* subtask.
 
 | Where | AI does | A person does |
 |---|---|---|
-| Groups 4.1–4.5 (fusion code, tools, CI) | everything — 13 *agent* subtasks | nothing |
+| Groups 4.1–4.5 (fusion code, tools, CI) | everything — 14 *agent* subtasks | nothing |
 | Group 4.6 (pcap evidence) | extract and decode the capture (*car-sky*, diverging from §7's Human row — `15.4.6.5`) | nothing required; opening the pcap in Wireshark is optional confirmation |
 | Group 4.9 (bench image, lanes, blueprint file) | everything — 7 *agent* subtasks | nothing |
 | Group 4.10 (create and deploy the Room) | registry confirmation, cloning `baseline_phase1` over REST, config read-back diff, phase polling (*car-sky* ×4) | confirm the CI jobs went green · reduce the clone and draw the sink's ethernet pin on the canvas · type each node's image and env in the Inspector · click Deploy (*Human* ×4) |
@@ -60,13 +60,13 @@ Identical to [phase2_tasks.md § Execution labels](phase2_tasks.md#execution-lab
 
 ### Subtask discipline and build commands
 
-Identical to [phase2_tasks.md § Subtask discipline](phase2_tasks.md#subtask-discipline-applies-to-every-subtask-below); the [§ Per-node build commands](phase2_tasks.md#per-node-build-commands-cited-in-acceptance-below) table applies unchanged. Every C++ subtask's build/tests acceptance is **CI `ada-core-build` green on the pushed branch**. **Nothing in this file is started.**
+Identical to [phase2_tasks.md § Subtask discipline](phase2_tasks.md#subtask-discipline-applies-to-every-subtask-below); the [§ Per-node build commands](phase2_tasks.md#per-node-build-commands-cited-in-acceptance-below) table applies unchanged. Every C++ subtask's build/tests acceptance is **CI `ada-core-build` green on the pushed branch**.
 
 ### CI ruling for this phase
 
-New lane in a new `.github/workflows/phase4-ci.yml` — *a lane belongs to the phase that created it*. Three jobs: `ada-e2e-loopback` (`15.4.5.1`), `ada-bench-image` (`5.4.9.5`) and `ada-bench-selfcheck` (`2.4.9.7`). Whichever of the three lands first creates the file with the standard `on:`/`concurrency:`/header block; **the three edits are sequenced against each other** and are the only shared-file contention inside this phase. `ada-core-build` (phase0-ci.yml), `ada-ecu-image` (`phase2-ci.yml` — checked against the walkthrough's build table by `5.4.9.6`, never re-created) and the Phase 3 lanes are reused, never duplicated.
+New lane in a new `.github/workflows/phase4-ci.yml` — *a lane belongs to the phase that created it*. Four jobs: `ada-e2e-loopback` (`15.4.5.1`), `ada-ecu-image`, `ada-bench-image` (`5.4.9.5`) and `ada-bench-selfcheck` (`2.4.9.7`). Whichever lands first creates the file with the standard `on:`/`concurrency:`/header block; **the edits are sequenced against each other** and are the only shared-file contention inside this phase. `ada-core-build` (phase0-ci.yml) and the Phase 3 lanes are reused, never duplicated; `ada-ecu-image` is checked against the walkthrough's build table by `5.4.9.6`.
 
-**The ADA image lane's file is `.github/workflows/phase2-ci.yml`**, created by Phase 2 `5.2.8.1`. Every reference to that lane in this plan names that file.
+**The ADA image lane's file is `.github/workflows/phase4-ci.yml`**, alongside the phase's other jobs. Every reference to that lane in this plan names that file. The image built from `ADA_ECU/` carries the Phase 2 scaffold, the Phase 3 detector and the Phase 4 fusion, so it is the node's artifact rather than any single phase's.
 
 ### Image build and push
 
@@ -76,7 +76,7 @@ New lane in a new `.github/workflows/phase4-ci.yml` — *a lane belongs to the p
 |---|---|---|---|---|---|---|
 | `m1-ada-bench:latest` | **V2X Bench mock**, `10.99.0.11` | `ROLE=v2x_mock` | `tools/ada-bench/` | `ada-bench-image` | `phase4-ci.yml` | `5.4.9.4` (image), `5.4.9.5` (lane) |
 | `m1-ada-bench:latest` | **IVI Sink mock**, `10.99.0.13` | `ROLE=ivi_mock` | `tools/ada-bench/` | `ada-bench-image` — *the same job, the same tag, pushed once* | `phase4-ci.yml` | as above |
-| `m1-ada-ecu:latest` | **ADA ECU**, `10.99.0.12` — the node under test | — | `ADA_ECU/` | `ada-ecu-image` | `phase2-ci.yml` | Phase 2 `5.2.8.1` (lane); contents by Phase 2 `5.2.7.1` + this phase's `6.4.4.1` + Phase 3 `12.3.7.2` / `5.3.6.1` |
+| `m1-ada-ecu:latest` | **ADA ECU**, `10.99.0.12` — the node under test | — | `ADA_ECU/` | `ada-ecu-image` | `phase4-ci.yml` | Phase 2 `5.2.8.1` (lane); contents by Phase 2 `5.2.7.1` + this phase's `6.4.4.1` + Phase 3 `12.3.7.2` / `5.3.6.1` |
 
 Every tag above is a **registry** tag, carrying the `m1-` prefix and pushed to `registry.hackathon-2.carsky.io`. A node's `image` field takes the registry tag; a local build tag never appears in a blueprint.
 
@@ -139,7 +139,7 @@ Run the three configurations in that order. Configuration 2 closes this phase's 
 
 > The business-logic half. `scene_composer` is geometry, `chained_collision` is rules; neither opens a socket, reads env, or formats a wire message ([HLD §3](../ADA_ECU/doc/ada-ecu-hld.md#mvc-separation)).
 
-### [ ] `15.4.1.1` — Scene composer `src/fusion/scene_composer.{hpp,cpp}` *(agent)*
+### [x] `15.4.1.1` — Scene composer `src/fusion/scene_composer.{hpp,cpp}` *(agent)*
 
 **Objective:** compose the ego-frame scene from the store — the D5 geometry, rebuilt against the frozen types.
 
@@ -156,35 +156,39 @@ Run the three configurations in that order. Configuration 2 closes this phase's 
 
 **Dependencies:** after Phase 2 `3.2.4.1`. **Commit:** `[15.4.1.1] feat: add ego-frame scene composition`
 
-### [ ] `14.4.1.2` — NLOS plugin `src/cra/plugins/chained_collision.{hpp,cpp}` + registration *(agent)*
+**Status:** done — commit `fcf832a`; CI `ada-core-build` green on branch head `9a1d652` (run 30919076468).
+
+### [x] `14.4.1.2` — NLOS plugin `src/cra/plugins/chained_collision.{hpp,cpp}` + registration *(agent)*
 
 **Objective:** the M1 plugin — the SVG's "Chained Collision", registering under the frozen R4 registry key `nlos_obstruction` (D4).
 
 **Scope:**
 
 - Implements `ICollisionRiskAssessment`: `name() == "nlos_obstruction"`; `assess(RiskContext&)` reads the store and the `AssessmentDb`, returns a `RiskFinding`. **The plugin never emits** — the output stage decides transport.
-- Band table exactly [D5](../ADA_ECU/doc/ada-ecu-design-decisions.md#d5--risk-vocabulary-and-edge-triggered-emission), quoted row for row:
+- Band table exactly [D5](../ADA_ECU/doc/ada-ecu-design-decisions.md#d5--risk-vocabulary-and-edge-triggered-emission) — **total and ordered, first matching row wins**, evaluated in this order:
 
-  | `riskState` | Condition |
-  |---|---|
-  | `low` | no `tracked` C, **or** `d_AC > RISK_NEAR_M` and (`ttc` null or `ttc > RISK_TTC_WARN_S`) |
-  | `medium` | C `tracked`, `d_AC ≤ RISK_NEAR_M`, and not `high` |
-  | `high` | C `tracked` and (`d_AC ≤ RISK_CRITICAL_M` **or** `ttc ≤ RISK_TTC_CRITICAL_S`) |
+  | # | `riskState` | Condition |
+  |---|---|---|
+  | 1 | `high` | C is `tracked` **and** (`d_AC ≤ RISK_CRITICAL_M` **or** `ttc ≤ RISK_TTC_CRITICAL_S`) |
+  | 2 | `medium` | C is `tracked` **and** (`d_AC ≤ RISK_NEAR_M` **or** `ttc ≤ RISK_TTC_WARN_S`) |
+  | 3 | `low` | every other state — no `tracked` C, `b_unknown`, or C `tracked` with `d_AC > RISK_NEAR_M` and (`ttc` null or `ttc > RISK_TTC_WARN_S`) |
 
-- **One case the three rows leave unassigned**: `d_AC > RISK_NEAR_M` with `RISK_TTC_CRITICAL_S < ttc ≤ RISK_TTC_WARN_S`. It matches no row as written. Report it to [[project-architecture]] against D5 and implement the band D5 assigns once the row is amended — § Open items item 9. Do not invent a band for it in this subtask.
+  **The table leaves no state unassigned.** `d_AC > RISK_NEAR_M` with `RISK_TTC_CRITICAL_S < ttc ≤ RISK_TTC_WARN_S` resolves to row 2 on its TTC clause — that clause is `RISK_TTC_WARN_S`'s whole effect: a track closing fast enough is `medium` before its range reaches `RISK_NEAR_M`.
 - `RISK_TTC_WARN_S` is a designated configuration key with default `6` ([HLD §6](../ADA_ECU/doc/ada-ecu-hld.md#6-internal-components)); the plugin reads it from config like every other threshold.
 - Derived values: `closingRateMps = -(d_AC(t) − d_AC(t−Δ)) / Δ` from the record's `previousDistanceM`/`lastUpdatedMs`; `ttcS = d_AC / closingRate` when the rate is positive, otherwise **null**.
 - **`b_unknown` path:** with no own-sensor B and no `lastKnownB`, `d_AC` does not exist — return `low` with rationale `b_unknown` and log `assess_skipped_b_unknown`. Consequence to preserve: no `medium`/`high` is ever entered without a known B, so a clearing event can always fill the required `geometry.vehicleB` from `lastKnownB`.
 - DB writes on every assessment: `riskState`, `distanceM`/`previousDistanceM`, `closingRateMps`, `ttcS`, `lastSnapshot` (C's R3 snapshot, carried past its erasure), `lastKnownB`, `lastUpdatedMs`, `rationale`.
-- **Risk thresholds are separate constants from the R13 gate and must never alias it** (D5) — aliasing them collapses R14 into R13, leaving the assessment with nothing of its own to decide. `13.2.2.1`'s validator enforces `RISK_CRITICAL_M < RISK_NEAR_M < GATE_ENTER_M`.
+- **Risk thresholds are separate constants from the R13 gate and must never alias it** (D5) — aliasing them collapses R14 into R13, leaving the assessment with nothing of its own to decide. They also measure a **different quantity**: the bands threshold the composed range `d_AC`, the gate thresholds one source's own range, so no ordering holds between the two and `13.2.2.1`'s validator asserts none. At the R22 defaults `RISK_NEAR_M` 60 sits above `GATE_ENTER_M` 30 by design ([D11](../ADA_ECU/doc/ada-ecu-design-decisions.md#d11--r22-run-choreography-the-run-origin-the-paced-clip-and-the-risk-band-pair)).
 - **Registration: one line** — `registry.add(std::make_unique<ChainedCollision>(cfg))` in `src/cra/builtin_plugins.cpp`. No edit to the interface, the store, the emitter, or any other plugin. That diff *is* R14's acceptance evidence and should be visible in the commit.
-- Test `tests/cra/test_chained_collision.cpp` (band-table half): every row of the D5 table above, with both `high` triggers and both `low` branches (`ttc` null, and `ttc > RISK_TTC_WARN_S`) exercised separately; `ttc` null when not closing; `b_unknown` returns `low` with the rationale; the record round-trips through the DB with the composed values.
+- Test `tests/cra/test_chained_collision.cpp` (band-table half): every row of the D5 table, with both `high` triggers, both `medium` triggers and both `low` branches (`ttc` null, and `ttc > RISK_TTC_WARN_S`) exercised separately; **row order — a state satisfying rows 1 and 2 resolves to `high`**; `ttc` null when not closing; `b_unknown` returns `low` with the rationale; the record round-trips through the DB with the composed values.
 
 **Acceptance:** ADA build + ctest green on CI; the commit touches exactly one new module plus one line of `builtin_plugins.cpp`.
 
 **Dependencies:** after `15.4.1.1` + Phase 2 `14.2.5.1` + `14.2.5.3` + `14.2.5.4`. **Commit:** `[14.4.1.2] feat: add the NLOS chained-collision risk plugin`
 
-### [ ] `14.4.1.3` — Dwell debounce and edge-triggered transitions *(agent)*
+**Status:** done — commits `c5b0c92` and `eecfd25` (the Phase 2 registry test's empty-registry expectation updated for the first builtin plugin — anticipated evolution, not regression); CI `ada-core-build` green on branch head `9a1d652` (run 30919076468).
+
+### [x] `14.4.1.3` — Dwell debounce and edge-triggered transitions *(agent)*
 
 **Objective:** exactly one committed transition per real risk change, in **both** directions (D5).
 
@@ -199,13 +203,15 @@ Run the three configurations in that order. Configuration 2 closes this phase's 
 
 **Dependencies:** after `14.4.1.2` + Phase 2 `18.2.2.3`. **Commit:** `[14.4.1.3] feat: debounce and edge-trigger risk transitions`
 
+**Status:** done — commit `8b34401`; CI `ada-core-build` green on branch head `9a1d652` (run 30919076468).
+
 ---
 
 ## Task Group 4.2 — R15 output stage (serves R15)
 
 > Controller layer ([D7](../ADA_ECU/doc/ada-ecu-design-decisions.md#d7--r15-output-stage) / [HLD §3](../ADA_ECU/doc/ada-ecu-hld.md#mvc-separation)): model → the view model the IVI consumes. `warning_builder` is **the only R4 producer in the node**, so the wire shape cannot drift from the schema the Phase 0 round-trip tests cover.
 
-### [ ] `15.4.2.1` — Warning builder `src/output/warning_builder.{hpp,cpp}` *(agent)*
+### [x] `15.4.2.1` — Warning builder `src/output/warning_builder.{hpp,cpp}` *(agent)*
 
 **Objective:** map `RiskFinding` + `SceneGeometry` onto the frozen `contracts::R4WarningEvent` and serialize through its binding.
 
@@ -213,13 +219,15 @@ Run the three configurations in that order. Configuration 2 closes this phase's 
 
 - Field mapping: `schemaVersion` = the frozen version · `type: "warning"` · `warningType` = the finding's (== the plugin name == the R4 registry key) · `riskState` = the finding's (`low|medium|high`) · `object` = the finding's `trigger` (C's R3 snapshot, from `lastSnapshot` when C's track was erased) · `geometry` = `15.4.1.1`'s composition, `vehicleC` null whenever C has no `tracked` entry.
 - Serialization **only** through `src/contracts/r4_message.hpp` — no hand-built JSON anywhere.
-- Test `tests/output/test_warning_builder.cpp`: the emitted object **validates against the synced `ADA_ECU/contracts/r4-ada-ivi.schema.json`** (loaded from disk) for a `medium` case, a `high` case, and both **null-`vehicleC`** cases (before C is first tracked, and after its track is erased); `geometry.vehicleB` is always present and non-null (the `b_unknown` invariant); `object` carries all nine R3 fields.
+- Test `tests/output/test_warning_builder.cpp`: the emitted object **validates against the synced `ADA_ECU/contracts/r4-ada-ivi.schema.json`** (loaded from disk, by schema-guided structural assertion — required sets, consts and field types read from the schema file at test run; full JSON-Schema wire validation is `15.4.5.1`'s receiver `--validate`) for a `medium` case, a `high` case, and both **null-`vehicleC`** cases (before C is first tracked, and after its track is erased); `geometry.vehicleB` is always present and non-null (the `b_unknown` invariant); `object` carries all nine R3 fields.
 
 **Acceptance:** ADA build + ctest green on CI; every emitted shape schema-validated in-test.
 
 **Dependencies:** after `15.4.1.1` + `14.4.1.2`. **Commit:** `[15.4.2.1] feat: build R4 warning events from risk findings`
 
-### [ ] `15.4.2.2` — IVI sender `src/output/ivi_sender.{hpp,cpp}` *(agent)*
+**Status:** done — commit `1b38e00`; CI `ada-core-build` green on branch head `9a1d652` (run 30919076468).
+
+### [x] `15.4.2.2` — IVI sender `src/output/ivi_sender.{hpp,cpp}` *(agent)*
 
 **Objective:** one UDP datagram per R4 event to `IVI_ECU_HOST:IVI_ECU_PORT`, with the payload-carrying `r4_tx` event.
 
@@ -235,7 +243,9 @@ Run the three configurations in that order. Configuration 2 closes this phase's 
 
 **Dependencies:** after `15.4.2.1` + Phase 2 `6.2.2.2` + `18.2.2.3`. **Commit:** `[15.4.2.2] feat: add the R4 UDP sender to the IVI`
 
-### [ ] `15.4.2.3` — Wire assessment and emission into the fusion tick *(agent)*
+**Status:** done — commit `fc97c01`; CI `ada-core-build` green on branch head `9a1d652` (run 30919076468).
+
+### [x] `15.4.2.3` — Wire assessment and emission into the fusion tick *(agent)*
 
 **Objective:** complete the D2 loop in `src/main.cpp` — expire → assess → compose → build → send, on the main thread only.
 
@@ -244,6 +254,8 @@ Run the three configurations in that order. Configuration 2 closes this phase's 
 **Acceptance:** ADA build + ctest green on CI; `ada_ecu` links; `15.4.5.1`'s lane observes at least one `r4_tx`.
 
 **Dependencies:** after `14.4.1.3` + `15.4.2.2`. **Commit:** `[15.4.2.3] feat: assess and emit on the fusion tick`
+
+**Status:** done — commit `6f87abb`; CI `ada-core-build` green on branch head `9a1d652` (run 30919076468); `ada-e2e-loopback` observed ≥ 1 `r4_tx` (phase4-ci run 30919076595).
 
 ### [ ] `15.4.2.4` — OPTIONAL: periodic awareness state (`STATE_RATE_HZ`) *(agent — build only if time permits)*
 
@@ -255,11 +267,13 @@ Run the three configurations in that order. Configuration 2 closes this phase's 
 
 **Dependencies:** after `15.4.2.3`. **OPTIONAL — skip without penalty; it closes no acceptance criterion and the warning event alone triggers and renders the M1 demo.** **Commit:** `[15.4.2.4] feat: add the optional periodic awareness state stream`
 
+**Status:** skipped — optional by R15 and this plan; closes no acceptance criterion; `STATE_RATE_HZ` stays `0` and no state path is wired.
+
 ---
 
 ## Task Group 4.3 — R18 evidence tooling (serves R18)
 
-### [ ] `18.4.3.1` — R4 loopback sink `tools/mock_ivi_receiver.py` *(agent)*
+### [x] `18.4.3.1` — R4 loopback sink `tools/mock_ivi_receiver.py` *(agent)*
 
 **Objective:** the IVI stand-in for loopback and CI runs — receive R4 datagrams and make them checkable.
 
@@ -278,7 +292,9 @@ Run the three configurations in that order. Configuration 2 closes this phase's 
 
 **Dependencies:** none. **Commit:** `[18.4.3.1] feat: add the R4 loopback receiver`
 
-### [ ] `18.4.3.2` — Collision-risk event list `tools/event_report.py` *(agent)*
+**Status:** done — commit `98409e4`; py_compile + loopback self-check pass (positive run exit 0 with byte-identical JSONL, empty run exit 1); exercised live by the `ada-e2e-loopback` lane (phase4-ci run 30919076595).
+
+### [x] `18.4.3.2` — Collision-risk event list `tools/event_report.py` *(agent)*
 
 **Objective:** the §1 demo-table artifact (D8) — render an `[EVT]` stream as the collision-risk event list a human reads.
 
@@ -305,14 +321,16 @@ Run the three configurations in that order. Configuration 2 closes this phase's 
 
 **Dependencies:** after `14.4.1.3` + `15.4.2.2` (event vocabulary complete). **Commit:** `[18.4.3.2] feat: add the collision-risk event report tool`
 
-### [ ] `18.4.3.3` — Extend `tools/check_evt_log.py` with the Phase 4 chain *(agent)*
+**Status:** done — commit `a9f824f`; py_compile + synthetic full-run render with matching row and R4 counts; runs live over the lane's `ada.log` (phase4-ci run 30919076595).
+
+### [x] `18.4.3.3` — Extend `tools/check_evt_log.py` with the Phase 4 chain *(agent)*
 
 **Objective:** scripted assertion of the full ADA chain, including the **both-tracks** check the phase's output acceptance rests on.
 
 **Scope — additive modes on Phase 2's script:**
 
 - `--fusion`: per relayed track, `r2_ingest → track_transition → assessment → risk_transition → r4_tx` is complete; every `risk_transition` has exactly one matching `r4_tx`; no `r4_tx` without a preceding `risk_transition` (edge-triggered, D5); a `b_unknown` run produces `assess_skipped_b_unknown` and **no** `r4_tx`.
-- `--both-tracks`: exits 0 only when the log contains **a `tracked` `own_sensor` TrackedObject (B) with all nine R3 fields and a `tracked` `v2x_relayed` TrackedObject (C) with all nine R3 fields**, plus at least one `r4_tx` whose embedded body carries C's R3 object in `object` and a non-null `geometry.vehicleB`. Non-zero exit naming which of the four is missing.
+- `--both-tracks`: exits 0 only when the log contains **a `tracked` `own_sensor` TrackedObject (B) with all nine R3 fields and a `tracked` `v2x_relayed` TrackedObject (C) with all nine R3 fields**, plus at least one `r4_tx` whose embedded body carries C's R3 object in `object` and a non-null `geometry.vehicleB`. Non-zero exit naming which of the four is missing. B's tracked-state-plus-full-fields evidence is a join — no single `[EVT]` line carries B's full R3 object in `tracked` state — of an `own_sensor_ingest` (all nine fields) with a `track_transition` to `tracked` for the same id; C's full object reads directly from the `r4_tx` body.
 - `--r4-schema <path>`: validate every embedded `r4_tx` body against the synced R4 schema.
 - An empty input stays a non-zero exit, as Phase 2 established.
 
@@ -320,13 +338,46 @@ Run the three configurations in that order. Configuration 2 closes this phase's 
 
 **Dependencies:** after `15.4.2.3` + Phase 2 `18.2.6.5`. **Commit:** `[18.4.3.3] feat: assert the fusion chain and both-tracks evidence in the EVT checker`
 
+**Status:** done — commit `5dff2b9`; py_compile; exit 0 on the synthetic complete log and non-zero on all five planted defects; exit 0 live in the `ada-e2e-loopback` lane (phase4-ci run 30919076595).
+
+### [ ] `21.4.3.4` — Run-alignment checker `tools/check_run_alignment.py` — K1–K6 *(agent — parallel with `18.4.3.2`/`18.4.3.3`)*
+
+**Objective:** the post-run verifier R20, R21 and R22 are measured by — [HLD §12](../ADA_ECU/doc/ada-ecu-hld.md#12-test-strategy)'s K1–K6 table made executable ([D10](../ADA_ECU/doc/ada-ecu-design-decisions.md#d10--clock-domains-and-stimulus-paced-against-clock_monotonic), [D11](../ADA_ECU/doc/ada-ecu-design-decisions.md#d11--r22-run-choreography-the-run-origin-the-paced-clip-and-the-risk-band-pair)). **A checker, never a trigger** — it reads logs after a run, is never on the ego data path, and is sanctioned test equipment rather than product code.
+
+**Scope — `ADA_ECU/tools/check_run_alignment.py`, Python 3 stdlib only:**
+
+- Three inputs, each optional, each read from **one** clock domain so no check compares two nodes' clocks: `--evt <ada.log>` (the ADA `[EVT]` JSONL, K1–K3 and K6), `--detector <r3.jsonl>` (K4), `--bench <tx.jsonl>` (the bench `[TX]` JSONL, K5). A check whose input is absent is reported **skipped**, never silently passed.
+- The six checks, bounds exactly [HLD §12](../ADA_ECU/doc/ada-ecu-hld.md#12-test-strategy) — no bound invented here:
+
+  | # | Check | Bound |
+  |---|---|---|
+  | K1 | at every `r4_tx`, a `tracked` `own_sensor` B entry exists whose `lastUpdated` is within `TRACK_TIMEOUT_MS` | pass |
+  | K2 | the first `own_sensor` → `tracked` transition precedes the first `v2x_relayed` → `tracked` transition | ≥ 1.0 s |
+  | K3 | `max │lastUpdated(own_sensor B) − lastUpdated(v2x_relayed C)│` over all `r4_tx` | ≤ 1000 ms |
+  | K4 | detector frame-index advance against its own emit-timestamp advance, over ≥ 60 s | ±2 % of `DETECTOR_CLIP_FPS / DETECTOR_FRAME_STRIDE` |
+  | K5 | bench `scenario_time_s` advance against its `mono_ms` advance, over ≥ 60 s | ±1 % |
+  | K6 | `T0` — the run's **first `own_sensor` R3 line** — to the first `r4_tx` | 8.0 s ≤ Δ < 10.0 s |
+
+- Every bound, and `TRACK_TIMEOUT_MS`, `DETECTOR_CLIP_FPS` and `DETECTOR_FRAME_STRIDE`, come from CLI flags with those defaults — **no literal thresholds** (CLAUDE.md principle 5).
+- Intervals are computed from `mono_ms`; `epoch_ms` and `lastUpdated` are read only where the check's own definition names them. **No arithmetic mixes two nodes' stamps.**
+- Output: one line per check — `PASS`/`FAIL`/`SKIP`, the measured value and the bound. Exit 1 if any executed check failed; exit non-zero with `nothing examined` if every input was absent, so a vacuous pass is impossible.
+- Test `ADA_ECU/tools/tests/test_check_run_alignment.py` (planner-designated path, § Open items item 3): a synthetic conforming triple exits 0 with six `PASS`; one planted violation per check exits 1 naming that check; a missing input reports `SKIP` and does not count as a pass; an empty `--evt` exits non-zero.
+
+**Out of scope: K7.** It is read from the guest's logcat and the screen recording, not from any file this script takes ([HLD §12](../ADA_ECU/doc/ada-ecu-hld.md#12-test-strategy); [ivi-ecu-hld.md §12](../IVI_ECU/doc/ivi-ecu-hld.md#12-test-strategy)). Adding a logcat input here is a defect.
+
+**Acceptance:** `python -m py_compile` passes; the test passes locally and on CI `python-tests`; the six checks and their bounds match the HLD §12 table character for character.
+
+**Dependencies:** after `14.4.1.3` + `15.4.2.2` (the `risk_transition`/`r4_tx` vocabulary), Phase 3 `12.3.2.6` (the detector's R3 line shape) and Phase 1 `11.1.6.12` (the bench `[TX]` line gains `mono_ms`). **Parallel** with the rest of group 4.3. **Commit:** `[21.4.3.4] feat: add the K1-K6 run-alignment checker`
+
+**Status:** blocked — Phase 1 `11.1.6.12` (bench `[TX]` `mono_ms`) and Phase 3 `12.3.2.6` (detector R3 line shape) are not on `main`; the K4/K5 input shapes are theirs to fix first.
+
 ---
 
 ## Task Group 4.4 — ADA→IVI traffic capture (serves R6, R15, R19; HLD D9)
 
 > The V2X ECU's capture point cannot see this hop, so this node carries its own capture. The scripts are **duplicated per folder, not shared** — self-contained build contexts, no cross-node imports ([node-code-layout.md](../.claude/rules/node-code-layout.md)); the host-side procedure is the shared [traffic-capture-wireshark.md](../requirements/car-sky-guide/traffic-capture-wireshark.md).
 
-### [ ] `6.4.4.1` — In-container capture `ADA_ECU/capture.sh` *(agent)*
+### [x] `6.4.4.1` — In-container capture `ADA_ECU/capture.sh` *(agent)*
 
 **Objective:** live `[CAP]` text plus a rotating pcap exported through View Log — the ADA copy of the proven `V2X_ECU/capture.sh` (`[6.1.5.2]`).
 
@@ -351,7 +402,9 @@ Phase 2 `5.2.7.1`'s `entrypoint.sh` starts `capture.sh` when present, so no laun
 
 **Dependencies:** after Phase 2 `5.2.7.1`. **Commit:** `[6.4.4.1] feat: add the ADA to IVI tcpdump capture script`
 
-### [ ] `6.4.4.2` — Host-side extraction `ADA_ECU/tools/extract_pcap.sh` *(agent — parallel)*
+**Status:** done — commit `b87e7c7`; `sh -n`/`bash -n` clean, LF, exec bit committed, `--export-one` round-trip byte-identical; `ada-ecu-image` lane green with `capture.sh` in the image (phase4-ci run 30919076595).
+
+### [x] `6.4.4.2` — Host-side extraction `ADA_ECU/tools/extract_pcap.sh` *(agent — parallel)*
 
 **Objective:** saved View Log in → `.pcap` files out, for the ADA node — the ADA copy of `V2X_ECU/tools/extract_pcap.sh` (`[6.1.5.3]`).
 
@@ -366,11 +419,13 @@ Phase 2 `5.2.7.1`'s `entrypoint.sh` starts `capture.sh` when present, so no laun
 
 **Dependencies:** none (marker format is frozen by the Phase 1 pair). **Commit:** `[6.4.4.2] feat: add the host-side ADA pcap extraction script`
 
+**Status:** done — commit `07d0f53`; `bash -n` clean; round-trip through `6.4.4.1`'s producer extracts byte-identically (`cmp` clean).
+
 ---
 
 ## Task Group 4.5 — End-to-end loopback CI lane (serves R15, R18)
 
-### [ ] `15.4.5.1` — `phase4-ci.yml` + lane `ada-e2e-loopback` *(agent)*
+### [x] `15.4.5.1` — `phase4-ci.yml` + lane `ada-e2e-loopback` *(agent)*
 
 **Objective:** the repeatable, machine-checked form of the phase's output acceptance — everything except the deployed Room.
 
@@ -378,14 +433,16 @@ Phase 2 `5.2.7.1`'s `entrypoint.sh` starts `capture.sh` when present, so no laun
 
 1. Build the `ada_ecu` target (reusing the `ada-core-build` configure step's shape).
 2. Start `tools/mock_ivi_receiver.py --validate --expect-min 1` on a loopback port.
-3. Start `ada_ecu` with `IVI_ECU_HOST=127.0.0.1`, `IVI_ECU_PORT=<that port>`, `DETECTOR_ENABLED=true`, `DETECTOR_CMD="cat ADA_ECU/tests/fixtures/own_sensor_mock.jsonl"`, the §6 defaults otherwise, stdout captured.
-4. Drive `tools/mock_v2x_sender.py --profile approaching` — C closing from 60 m through the gate and the risk bands.
+3. Start `ada_ecu` with `IVI_ECU_HOST=127.0.0.1`, `IVI_ECU_PORT=<that port>`, `DETECTOR_ENABLED=true`, `DETECTOR_RESTART_MAX=0`, and `DETECTOR_CMD` running a paced replay helper that emits an in-gate line of `ADA_ECU/tests/fixtures/own_sensor_mock.jsonl` every 0.3 s for ~12 s and then exits non-zero, the §6 defaults otherwise, stdout captured. A raw `cat` of the fixture is not used: the fixture ends out-of-gate (36 m > `GATE_EXIT_M`), so every replay boundary would drop B, and an unpaced replay is unpaced stimulus — the held in-gate line keeps B `tracked` deterministically and the terminal non-zero exit lets B time out, completing the full R13 cycle `--admission` requires.
+4. Drive `tools/mock_v2x_sender.py --profile approaching` — C closing from 70.0 m at 5.0 m/s, the bench's committed R22 geometry (`3.2.6.3`), through the gate and the risk bands.
 5. SIGTERM; then assert **all** of: `check_evt_log.py --admission --fusion --both-tracks --r4-schema ADA_ECU/contracts/r4-ada-ivi.schema.json` exit 0 · the receiver saw ≥ 1 schema-valid warning event · `event_report.py` renders a non-empty event list.
 6. Second arm with `--profile out-of-range`: C stays beyond the exit gate, so the run must produce **zero** `r4_tx` — the negative control that stops the lane passing on any traffic at all.
 
-**Acceptance:** lane green on the pushed branch, both arms; the approaching arm observes ≥ 1 committed `risk_transition` and ≥ 1 `r4_tx`, and records the observed band sequence in the job summary. The band sequence is recorded, not asserted — the risk defaults are unratified (§ Open items item 2), so a lane requiring a fixed sequence would red on every push if the composed range never enters `RISK_CRITICAL_M`.
+**Acceptance:** lane green on the pushed branch, both arms; the approaching arm observes ≥ 1 committed `risk_transition` and ≥ 1 `r4_tx`, and records in the job summary the observed band sequence **plus the composed `d_AC` and `ttc` series beside it**. The band sequence is recorded, not asserted — the risk defaults are unratified (§ Open items item 2), so a lane requiring a fixed sequence would red on every push. **Expect `low → medium`**: at the R22 pair — `RISK_NEAR_M` 60, `RISK_CRITICAL_M` 30 — `high` needs `d_AC ≤ 30 m` **or** `ttc ≤ 3 s` (D5 row 1, both clauses), which this profile's composed range does not reach ([D11](../ADA_ECU/doc/ada-ecu-design-decisions.md#d11--r22-run-choreography-the-run-origin-the-paced-clip-and-the-risk-band-pair)). Recording the series is what lets a reader tell a range trigger from a TTC trigger; a lane asserting `high` would red on correct behaviour.
 
 **Dependencies:** after `15.4.2.3` + `18.4.3.1` + `18.4.3.2` + `18.4.3.3`. **Commit:** `[15.4.5.1] chore: add the ADA end-to-end loopback CI lane`
+
+**Status:** done — commit `9a1d652`; lane green on its first live run, both arms (phase4-ci run 30919076595); band sequence recorded `low → medium` per D11, not asserted.
 
 ---
 
@@ -427,7 +484,7 @@ Phase 2 `5.2.7.1`'s `entrypoint.sh` starts `capture.sh` when present, so no laun
 >
 > **Run doc:** `plans/doc/phase4-ada-isolated-room-run.md`, created by `5.4.9.1` and appended by every subtask after it. It is the single record for this phase's deployed evidence.
 
-### [ ] `5.4.9.1` — Author `requirements/car-sky-guide/blueprint-ada-isolated.json` and the run doc *(agent — day one, blocks nothing else in this group)*
+### [x] `5.4.9.1` — Author `requirements/car-sky-guide/blueprint-ada-isolated.json` and the run doc *(agent — day one, blocks nothing else in this group)*
 
 **Objective:** land the blueprint definition [§2.2](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#22-the-blueprint-definition-and-where-it-lives) designates but which [§8.1 item 8](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#81-confirm-before-relying-on-these) records as not yet created, plus the empty run doc every later subtask appends to.
 
@@ -443,7 +500,9 @@ Also create `plans/doc/phase4-ada-isolated-room-run.md` as the empty run doc, wi
 
 **Dependencies:** none — starts immediately. **Commit:** `[5.4.9.1] docs: add the isolated ADA blueprint definition and run doc`
 
-### [ ] `2.4.9.2` — Bench emitter `tools/ada-bench/mock_v2x.py` *(agent)*
+**Status:** done — commit `44f4589`; JSON parses, byte-identical to §2.2's block, §9 cross-check clean; run doc created with all section headings.
+
+### [x] `2.4.9.2` — Bench emitter `tools/ada-bench/mock_v2x.py` *(agent)*
 
 **Objective:** the `ROLE=v2x_mock` role of [§2.3](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#23-the-bench-image--one-image-two-roles) — a relayed-object emitter standing in for the V2X ECU **at its output edge only**, performing no decoding and sending no encoded frames.
 
@@ -460,7 +519,9 @@ Also create `plans/doc/phase4-ada-isolated-room-run.md` as the empty run doc, wi
 
 **Dependencies:** none. Parallel with `4.4.9.3`. **Commit:** `[2.4.9.2] feat: add the V2X bench relayed-object emitter`
 
-### [ ] `4.4.9.3` — Bench sink `tools/ada-bench/mock_ivi.py` *(agent)*
+**Status:** done — commit `0b23abf`; py_compile; loopback datagrams of both profiles validate against `ADA_ECU/contracts/r2-v2x-object.schema.json`; repeatable form green in `ada-bench-selfcheck` (phase4-ci run 30919076595).
+
+### [x] `4.4.9.3` — Bench sink `tools/ada-bench/mock_ivi.py` *(agent)*
 
 **Objective:** the `ROLE=ivi_mock` role of [§2.3](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#23-the-bench-image--one-image-two-roles) — bind `0.0.0.0:LISTEN_PORT`, log and check every warning datagram. It stands in for the Android node and is a Linux container precisely so it can do what the real node cannot: log, check and capture ([§2.1](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#21-topology)).
 
@@ -475,7 +536,9 @@ Also create `plans/doc/phase4-ada-isolated-room-run.md` as the empty run doc, wi
 
 **Dependencies:** none. Parallel with `2.4.9.2`. **Commit:** `[4.4.9.3] feat: add the IVI bench warning sink and checker`
 
-### [ ] `5.4.9.4` — Bench image `tools/ada-bench/{entrypoint.sh,capture.sh,Dockerfile}` *(agent)*
+**Status:** done — commit `7e9a28f`; py_compile; §2.3 line shapes verified (`both_vehicles` yes/no on the sample and null-`vehicleC` bodies, `rejected=0`); repeatable form green in `ada-bench-selfcheck` (phase4-ci run 30919076595).
+
+### [x] `5.4.9.4` — Bench image `tools/ada-bench/{entrypoint.sh,capture.sh,Dockerfile}` *(agent)*
 
 **Objective:** one image serving both roles — [§2.3](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#23-the-bench-image--one-image-two-roles)'s five-file table completed, so **a deploy alone produces evidence and no shell session is ever needed** ([§3.1](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#31-write-the-bench-scripts)).
 
@@ -490,7 +553,9 @@ Also create `plans/doc/phase4-ada-isolated-room-run.md` as the empty run doc, wi
 
 **Dependencies:** after `2.4.9.2` + `4.4.9.3` (the two files it `exec`s must exist). **Commit:** `[5.4.9.4] feat: add the ADA bench image entrypoint, capture and Dockerfile`
 
-### [ ] `5.4.9.5` — CI lane `ada-bench-image` *(agent)*
+**Status:** done — commit `e0241b0`; `sh -n`/`bash -n` clean, LF, exec bits committed; image built green by `ada-bench-image` (phase4-ci run 30919076595).
+
+### [x] `5.4.9.5` — CI lane `ada-bench-image` *(agent)*
 
 **Objective:** the first of the two jobs [§3.2](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#32-build-and-push-the-images-on-ci) requires — **the lane that makes a push build and publish the bench image**, which nothing else in the repository does.
 
@@ -503,6 +568,8 @@ Also create `plans/doc/phase4-ada-isolated-room-run.md` as the empty run doc, wi
 **Acceptance:** workflow YAML valid; run-blocks `bash -n` clean; the lane is green on the pushed branch and the build step completes in roughly a minute (§3.2: Alpine plus two packages under emulation).
 
 **Dependencies:** after `5.4.9.4`. **Commit:** `[5.4.9.5] chore: add the ADA bench image build-push CI lane`
+
+**Status:** done — commit `ee311ef`; lane green — image built, pushed and digest-verified single-platform arm64 (phase4-ci run 30919076595).
 
 ### [ ] `5.4.9.6` — Confirm the `ada-ecu-image` lane matches §3.2's table *(agent)*
 
@@ -517,11 +584,13 @@ Also create `plans/doc/phase4-ada-isolated-room-run.md` as the empty run doc, wi
 - Confirm the image the lane produces carries all four ADA runtime deliverables — `ada_ecu`, `entrypoint.sh`, `capture.sh`, `detector/` + `models/` + `media/` — since a Room deployed from an image missing the detector cannot close `13.4.11.3`'s own-sensor half.
 - Any mismatch is fixed in the `.yml` in this same commit. A clean check produces no code change and the commit is the record; the findings are recorded in `5.4.9.1`'s run doc.
 
-**Acceptance:** every row of §3.2's table confirmed against the live workflow and recorded in the run doc, with any correction applied; the run doc names the two job files (`phase2-ci.yml` for the ADA image, `phase4-ci.yml` for the bench image) so no later reader hunts for them. **Lane green is not this subtask's criterion** — `5.4.10.1` is where both image jobs' conclusions are confirmed, and §7 marks that a Human row.
+**Acceptance:** every row of §3.2's table confirmed against the live workflow and recorded in the run doc, with any correction applied; the run doc names the job file (`phase4-ci.yml`, which carries both the ADA and the bench image jobs) so no later reader hunts for it. **Lane green is not this subtask's criterion** — `5.4.10.1` is where both image jobs' conclusions are confirmed, and §7 marks that a Human row.
 
 **Dependencies:** after Phase 2 `5.2.8.1` + `6.4.4.1` + Phase 3 `5.3.6.1` (the image must carry everything before its contents are confirmed). Parallel with `5.4.9.5`. **Commit:** `[5.4.9.6] docs: confirm the ADA ECU image lane against the walkthrough build table`
 
-### [ ] `2.4.9.7` — CI lane `ada-bench-selfcheck` — emitter → sink loopback *(agent)*
+**Status:** blocked — Phase 3 `5.3.6.1` has not landed, so the image cannot yet carry the detector deliverables §3.2's table requires confirmed.
+
+### [x] `2.4.9.7` — CI lane `ada-bench-selfcheck` — emitter → sink loopback *(agent)*
 
 **Objective:** prove [§8.1 item 5](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#81-confirm-before-relying-on-these) — *"the bench image, its two roles, its env names and its log-line shapes … not yet written"* — **before a Room slot is spent on them**. An unproven route is proved ahead of the work depending on it; this is the cheapest place that can happen, and the only check in this group that runs without the platform.
 
@@ -537,6 +606,8 @@ Also create `plans/doc/phase4-ada-isolated-room-run.md` as the empty run doc, wi
 **Acceptance:** lane green on the pushed branch, with a non-zero examined-datagram count asserted so the lane cannot pass vacuously.
 
 **Dependencies:** after `2.4.9.2` + `4.4.9.3` + `5.4.9.5` (same file). **Commit:** `[2.4.9.7] chore: add the ADA bench loopback self-check CI lane`
+
+**Status:** done — commit `33ad7b5`; lane green with non-zero examined-datagram counts (phase4-ci run 30919076595).
 
 ---
 
@@ -770,7 +841,7 @@ Also record, per [§8](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.
 
 **Objective:** [§5.5](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#55-retune-when-no-warning-is-emitted) — get the assessed risk level to **change**, which is what emits a warning, using node config and a redeploy. **No rebuild.**
 
-**Scope:** §5.5's four numbered steps and its three-row lever table (`MIN_DISTANCE_M` down on the bench, `RISK_NEAR_M` up or `RISK_CRITICAL_M` up on the ADA node). §5.5's step 2 carries the fact that makes this likely rather than exotic: **the composed range is ego-to-B plus B-to-C, so it is always larger than the distance the bench emits** — and the risk defaults are set against a scenario rather than against this clip's actual ego-to-B range, which is [§8.1 item 10](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#81-confirm-before-relying-on-these)'s warning that §5.5 may be on the critical path rather than a fallback.
+**Scope:** §5.5's four numbered steps and its three-row lever table (`MIN_DISTANCE_M` down on the bench, `RISK_NEAR_M` up or `RISK_CRITICAL_M` up on the ADA node). §5.5's step 2 carries the fact that makes this likely rather than exotic: **the composed range is ego-to-B plus B-to-C, so it is always larger than the distance the bench emits**. The 60/30 pair is sized against `d_AC` at C's admission and tolerates a detector range bias up to `k ≤ 1.70` ([D11](../ADA_ECU/doc/ada-ecu-design-decisions.md#d11--r22-run-choreography-the-run-origin-the-paced-clip-and-the-risk-band-pair)); a bias beyond that on the real clip is what [§8.1 item 10](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#81-confirm-before-relying-on-these) warns can still put §5.5 on the critical path.
 
 - **Pick one lever and change only it** (§5.5 step 3), then re-run `13.4.11.3` and `15.4.11.4`.
 - **Never retune the admission gate** — §5.5's closing rule, restated at `13.4.11.5`.
@@ -853,6 +924,7 @@ Track A (fusion code and tooling - agent only, no platform, no person)
   output     15.4.2.1 (after 15.4.1.1 + 14.4.1.2) ──► 15.4.2.2 ──► 15.4.2.3 (after 14.4.1.3)
                                                         └──► 15.4.2.4 (OPTIONAL)
   evidence   18.4.3.2 (after 14.4.1.3 + 15.4.2.2) ∥ 18.4.3.3 (after 15.4.2.3)
+             21.4.3.4 (after 14.4.1.3 + 15.4.2.2 + phase-3 12.3.2.6 + phase-1 11.1.6.12)
   CI         15.4.5.1 (after 15.4.2.3 + 18.4.3.1 + 18.4.3.2 + 18.4.3.3)
 
 Track B (isolated ADA test - starts day one, never blocks track A)
@@ -871,7 +943,7 @@ Track B (isolated ADA test - starts day one, never blocks track A)
               └─ re-runs 18.4.11.1 -> 2.4.11.2 against the swapped scenario
 ```
 
-**Recommended runtime order (single tree):** 18.4.3.1 → 6.4.4.1 → 6.4.4.2 → 15.4.1.1 → 14.4.1.2 → 14.4.1.3 → 15.4.2.1 → 15.4.2.2 → 15.4.2.3 → 18.4.3.2 → 18.4.3.3 → 15.4.5.1 → 15.4.2.4 *(if time)* → **group 4.9 → 4.10 → 4.11 → 4.12**.
+**Recommended runtime order (single tree):** 18.4.3.1 → 6.4.4.1 → 6.4.4.2 → 15.4.1.1 → 14.4.1.2 → 14.4.1.3 → 15.4.2.1 → 15.4.2.2 → 15.4.2.3 → 18.4.3.2 → 18.4.3.3 → 21.4.3.4 → 15.4.5.1 → 15.4.2.4 *(if time)* → **group 4.9 → 4.10 → 4.11 → 4.12**.
 
 **Group 4.9 runs beside track A from day one.** `5.4.9.1` (a JSON file), `2.4.9.2` and `4.4.9.3` (two standalone Python scripts) touch no file track A touches. The bench is an unproven dependency of the acceptance run and is proved before any Room step.
 
@@ -891,6 +963,7 @@ Track B (isolated ADA test - starts day one, never blocks track A)
 | The event list reconstructs a full run offline (R18) | `18.4.3.2` (tool) · `18.4.3.3` (checker) · `13.4.11.3` (run over a real node's log) · **real relay `13.4.12.1`** | isolated Room; *"bench scenarios live"* in full at group 4.12 |
 | **Demo:** ADA logs — collision-risk event list | `18.4.3.2` · `13.4.11.3` | isolated Room. The criterion's optional annotated video export is not planned — § Open items item 5 |
 | **Output check:** B's and C's TrackedObjects reach the IVI path, by log **and** pcap | **path A** `13.4.11.3` (both full R3 objects + `r4_tx`) · **path B** `15.4.6.5` (C's full R3 object + B's position on the wire) | isolated Room; caveat in § Phase 4 output acceptance |
+| *(no milestone criterion)* R21's K1–K3 and R22's K6 are measurable on a saved run | `21.4.3.4` (the checker) — the run it verifies is [phase5_minh_tasks.md](phase5_minh_tasks.md) `22.5.10.10` | system test |
 
 ### Walkthrough acceptance traceability (isolated Room)
 
@@ -910,17 +983,18 @@ Each row of [deploy-ada-ecu-walkthrough.md §8](../requirements/car-sky-guide/de
 | # | Item | Owner |
 |---|---|---|
 | 1 | **The frozen R4 carries C's full TrackedObject and B's *position*, not B's TrackedObject.** This plan accepts that and proves B's full object from the `[EVT]` log — reasoning in § Phase 4 output acceptance. **Adding an optional `trackedObjects` array is out of scope and no subtask implements it**: it changes a frozen contract and forces a re-freeze across the ADA binding, the ADA emitter, the golden samples, both synced copy sets, the IVI Kotlin binding and both languages' round-trip tests, days from the deadline. Recorded so the decision is visible, not so the work is queued | **user** (if they want it, it becomes new work, planned then) |
-| 2 | **`(proposal)` risk defaults await ratification** — `RISK_NEAR_M=25`, `RISK_CRITICAL_M=15`, `RISK_TTC_WARN_S=6`, `RISK_TTC_CRITICAL_S=3`, `RISK_DWELL_MS=300`, `ASSESS_LOG_EVERY_MS=1000`. Chosen so an approach produces a visible `low → medium → high` progression and an out-of-range profile never leaves `low`. Externalized, so ratification is a node-config edit. **They have not been checked against the real clip's ego-to-B range**, which is why `14.4.11.6` exists. **Trigger:** `15.4.5.1` and `13.4.11.3` record the band sequence they observe; the user ratifies or retunes against that record. Until then no subtask asserts a fixed band sequence as a pass criterion | **user** (ratify or retune) |
-| 3 | **Planner-designated paths and types beyond the HLD's lists**: `tests/output/test_ivi_sender.cpp`; `ADA_ECU/tools/mock_ivi_receiver.py`; the `SceneGeometry` struct `15.4.1.1` returns, which reuses the name the frozen R4 schema gives the IVI-side model; the `--fusion` / `--both-tracks` / `--r4-schema` modes of `tools/check_evt_log.py`. HLD-consistent additions, not new design | [[project-architecture]] (ack) |
+| 2 | **The risk defaults awaiting ratification are `RISK_NEAR_M=60`, `RISK_CRITICAL_M=30`, `RISK_TTC_WARN_S=6`, `RISK_TTC_CRITICAL_S=3`, `RISK_DWELL_MS=300`, `ASSESS_LOG_EVERY_MS=1000`.** The 60/30 pair is R22's requirement, and the argument is **which clause fires**, not whether a warning appears. The bands threshold the **composed** range `d_AC = d_AB + d_BC`, ≈ 47 m at C's admission. At 25/15 the range clause of D5's `medium` row never fires there, so the transition is reachable only through that row's second clause, `ttc ≤ RISK_TTC_WARN_S` — `4.7 ≤ 6`, which does hold. The onset would then be set by `ttc`, a numerical derivative of the *estimated* `d_AB` and the noisiest quantity in the node, surviving the `RISK_DWELL_MS` debounce. At 60/30 the **range clause alone** commits the same transition at the same instant (`47.0 ≤ 60`), tolerating a detector range bias up to `k ≤ 1.70`. The rescale moves the trigger off a derivative and onto one direct range comparison ([D5](../ADA_ECU/doc/ada-ecu-design-decisions.md#d5--risk-vocabulary-and-edge-triggered-emission), [D11](../ADA_ECU/doc/ada-ecu-design-decisions.md#d11--r22-run-choreography-the-run-origin-the-paced-clip-and-the-risk-band-pair)). The pair produces `low → medium`, and `14.4.11.6` is the contingency if the clip's real ego-to-B range still leaves no transition. Externalized, so ratification is a node-config edit. **Trigger:** `15.4.5.1` and `13.4.11.3` record the band sequence they observe; the user ratifies or retunes against that record. Until then no subtask asserts a fixed band sequence as a pass criterion | **user** (ratify or retune) |
+| 3 | **Planner-designated paths and types beyond the HLD's lists**: `tests/output/test_ivi_sender.cpp`; `ADA_ECU/tools/mock_ivi_receiver.py`; `ADA_ECU/tools/tests/test_check_run_alignment.py`; the `SceneGeometry` struct `15.4.1.1` returns, which reuses the name the frozen R4 schema gives the IVI-side model; the `--fusion` / `--both-tracks` / `--r4-schema` modes of `tools/check_evt_log.py`; the designated `[EVT]` payload shapes — `risk_transition` `{id, source, warningType, from, to, d_ac, ttc, rationale}`, `r4_tx` `{body, bytes, dest, send_ok}`, `assess_skipped_b_unknown` `{warningType, rationale}` — with `RiskContext.now_ms` and every assessment-record `*Ms` stamp in the CLOCK_MONOTONIC domain (D10), and the assessment-upsert cadence (record creation, committed change, `ASSESS_LOG_EVERY_MS` heartbeat) reconciling D4's database writes with D8's anti-burial rule. HLD-consistent additions, not new design | [[project-architecture]] (ack) |
 | 4 | **This phase closes its own acceptance criteria; only the rendering half waits on Phase 5.** *"With bench scenarios live"* means the real Scenario Player and V2X ECU upstream, and group 4.12 supplies exactly that with the sink still mocked — so no Phase 4 criterion depends on the IVI app. What does wait on Phase 5 is the **God view drawing ghost C**, which is R16/R17 and R19, recorded in [phase5_minh_tasks.md group 5.10](phase5_minh_tasks.md#task-group-510--system-verification-test-serves-r4-r5-r6-r16-r17-r18-r19) and re-recorded in Phase 6's continuous run. **A subtask may not claim an acceptance criterion at a configuration that cannot close it** — the isolated Room closes them at node level, group 4.12 at their full wording | [[project-planner]] (scheduling) |
 | 5 | **Two optional deliverables this phase does not commit to.** `15.4.2.4` (periodic awareness state) may be dropped without affecting any acceptance criterion — R15 words it optional and the warning event alone renders the M1 demo; it must stay off by default (`STATE_RATE_HZ=0`), asserted in test. The Demo criterion's **annotated video export with per-event risk labels** is optional in [milestone1.md § Phase 4](milestone1.md#phase-4--obscured-object-fusion-relayed-c--risk--warning-r13r15--runs--with-phase-3) and **no subtask in this plan builds it** | Phase 4, if time permits |
-| 6 | **R20/R21 are not planned and no subtask implements them.** [m1-run-timing-and-event-triggering.md §8(1)](../requirements/m1-run-timing-and-event-triggering.md) schedules them behind every Phase 3 and Phase 4 acceptance criterion, they gate none of them, and **the user has not accepted them**. That covers: bench deadline scheduling and `mono_ms` on the `[TX]` line; detector real-time pacing and its `DETECTOR_REALTIME_PACING` / `DETECTOR_CLIP_FPS` / `DETECTOR_START_DELAY_S` keys; bench `start_delay_s` / `reference_time_epoch`; the `[EVT] ready` readiness line; and the K1–K5 run-alignment checker. If the user accepts R20/R21 they become new work with new IDs, planned then | **user** (accept/reject per §8(1)) |
+| 6 | **R20–R22 are planned, and each half sits in the phase that owns the file.** The bench's scenario keys, its `CLOCK_MONOTONIC` deadline scheduling, its `referenceTime` epoch stamp and `mono_ms` on `[TX]` — [phase1_tasks.md](phase1_tasks.md) group 1.6, `11.1.6.9`–`11.1.6.12`; the R22 cycle's `start_delay_s` value and its model-level test — group 1.13. Detector real-time pacing and its three keys — [phase3_tasks.md](phase3_tasks.md) `12.3.2.8`; the warm-up measurement `W` — `22.3.6.3`. The K1–K6 run-alignment checker — `21.4.3.4` here. R22's run-level evidence — [phase5_minh_tasks.md](phase5_minh_tasks.md) `22.5.10.10`. **Still outside every phase:** the `[EVT] ready` readiness line of the §4.2 B-1 pick ([phase1_tasks.md open item 11](phase1_tasks.md#open-items--flags-no-phase-1-subtask-may-silently-close-them)). **Still unratified:** R20 itself, which `12.3.2.8` is built to the HLD's designation of rather than to a ratified requirement number ([phase3_tasks.md open item 6](phase3_tasks.md#open-items--flags-no-phase-3-subtask-may-silently-close-them)) | **user** |
 | 7 | **Room quota — two concurrent deployments across the whole account, contended four ways.** This phase's isolated Room (groups 4.10–4.11) and its real-upstream Room (group 4.12), Phase 5's isolated IVI Room (group 5.9) and Phase 5's system test (group 5.10). Phase 3's `5.3.6.2` books none — it reads this phase's log. **The two Phase 4 Rooms are sequential, not concurrent**: `13.4.12.1` takes the slot `5.4.11.7` releases, so this phase holds one slot at a time. Tear each down — `5.4.11.7` here, `17.5.9.16` and `19.5.10.8` in Phase 5 | [[project-planner]] (scheduling) |
 | 8 | **[§8.1](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#81-confirm-before-relying-on-these) items that authoring cannot retire, and where each first bites.** Item 1 (the whole route is unexercised) — the lane as a whole. Item 2 (the §1.3 ADA deliverables) — group 4.10's entry condition; Phases 2–4 work planned above. Item 4 (the `[EVT]` names are design, not observation) — `2.4.11.2`, `13.4.11.3`. Item 6 (arm64 wheels for the detector) — Phase 3 `12.3.1.1`, and `5.4.9.6`'s 360-minute timeout check. Item 9 (the clone-and-reduce route: `/clone` returning intact pins, deleting a node leaving the survivors' pins alone, a hand-drawn pin on a new node validating) — `5.4.10.3` and `6.4.10.4`, whose `validate` pass is the first proof of it. Item 10 (the defaults may produce no risk transition) — `13.4.11.3`, contingency `14.4.11.6`. Item 11 (detector frame rate on the Room's CPU) — Phase 3 `5.3.6.2`. Item 12 (whether the platform **honours** a requested `NET_RAW`) — `15.4.11.4`'s `[CAP]` criterion and `15.4.6.5`'s pcap. **None is filled in by guessing; each is reported from the subtask that hits it** | per subtask |
-| 9 | **The D5 band table leaves one case unassigned**: `d_AC > RISK_NEAR_M` with `RISK_TTC_CRITICAL_S < ttc ≤ RISK_TTC_WARN_S` matches neither the `low` row's condition nor `medium`'s nor `high`'s. `14.4.1.2` quotes the three rows as written and does not invent a band for the gap. **Trigger:** `14.4.1.2` reports it before implementing the plugin; the amended row is what it then implements | [[project-architecture]] (amend D5) |
+| 9 | **Settled — nothing open.** D5's band table is **total and ordered**, first matching row wins, so every state resolves to exactly one band. The case `d_AC > RISK_NEAR_M` with `RISK_TTC_CRITICAL_S < ttc ≤ RISK_TTC_WARN_S` resolves to `medium` on row 2's TTC clause. `14.4.1.2` implements the three rows in that order and invents nothing | — |
 | 10 | **The `geometry.vehicleC` null rule differs between the frozen contract and the ADA HLD.** [`contracts/r4-ada-ivi.schema.json`](../contracts/r4-ada-ivi.schema.json) states *"null until C is first tracked"*; [HLD §10.3](../ADA_ECU/doc/ada-ecu-hld.md#103-r4--the-message-set-to-the-ivi-ecu-produced) and D5 state *"null exactly when C's track has been erased"*. **This plan follows the contract** — contract-first is [CLAUDE.md](../CLAUDE.md) governing principle 1 — so `15.4.1.1`, `15.4.2.1`, `4.4.9.3` and `15.4.11.4` all treat a null `vehicleC` as legitimate both before C is first admitted and after its track is erased. The HLD's one-sided wording is reported, not followed | [[project-architecture]] (reconcile §10.3 and D5 with the contract) |
-| 11 | **Three inbound links point at anchors this file does not carry.** Its heading anchors are `#phase-4-output-acceptance`, `#acceptance-criteria-and-their-closing-configuration` and `#image-build-and-push`; [milestone1.md § Phase 4](milestone1.md#phase-4--obscured-object-fusion-relayed-c--risk--warning-r13r15--runs--with-phase-3) links two longer forms and Phase 2's plan may link the third. **Trigger:** the next edit to `milestone1.md` repoints those links; this plan edits no other file | [[project-planner]] (cross-file link repair) |
+| 11 | **The `track_expire` payload `{id, source, distance}` is implementation-chosen, not ratified.** D8 names the event but not its payload. No Phase 4 checker parses its payload fields (`18.4.3.3` tolerates the event by name only), so nothing downstream binds to the shape yet | [[project-architecture]] (ratify or redesignate) |
+| 12 | **The R2 schema's `distance` description and walkthrough §2.3 disagree.** The schema describes `distance` as `hypot(position.x, position.y)`; §2.3 walks `distance` and `position.x` together with `position.y = LATERAL_M`, a ≤ 0.14 m divergence at the 5 m minimum. The bench emitter (`2.4.9.2`) implements §2.3 literally and documents the choice in its docstring; schema validation passes either way | [[project-researcher]] (reconcile §2.3 or the schema description) |
 
 ---
 
-*Phase 4 = 10 task groups, 38 subtasks — 20 *agent* (1 optional), 9 *car-sky*, 9 *Human*. Nothing started. Retired IDs, never reused: `5.4.6.1`, `5.4.6.2`, `13.4.6.3`, `18.4.6.4`, `4.4.7.1`–`4.4.7.4`, `20.4.8.1`, `21.4.8.2`.*
+*Phase 4 = 10 task groups, 39 subtasks — 21 *agent* (1 optional), 9 *car-sky*, 9 *Human*. Off-platform *agent* work: 18 subtasks done with Status lines above; `15.4.2.4` skipped (optional); `21.4.3.4` and `5.4.9.6` blocked on Phase 1/Phase 3 landings; groups 4.6 and 4.10–4.12 await the deployed Room — Phase 3 in the image, then the §7 Human rows. Retired IDs, never reused: `5.4.6.1`, `5.4.6.2`, `13.4.6.3`, `18.4.6.4`, `4.4.7.1`–`4.4.7.4`, `20.4.8.1`, `21.4.8.2`.*

@@ -2,8 +2,8 @@
 
 Runs via ``python -m pytest Scenario_Player/tests`` from the repo root (the CI invocation).
 The config below mirrors ``scenarios/default.yaml`` in code (frozen-sample family values), so the
-hand-computed wire values are exact: 60,0 m closing at 2,5 m/s -> x wire 6000/3500/1000 at
-t = 0/10/20 s. Covers the section-4.2 conversions (lat/lon 1e-7 degree, heading 0,1 degree,
+hand-computed wire values are exact: 70,0 m closing at 5,0 m/s -> x wire 7000/4500/2500 at
+t = 0/5/9 s. Covers the section-4.2 conversions (lat/lon 1e-7 degree, heading 0,1 degree,
 position 0,01 m, velocity 0,01 m/s), pass-through fields, the F9 |mdt| <= 2047 bound (both
 signs), and determinism.
 """
@@ -31,7 +31,7 @@ def _default_config() -> ScenarioConfig:
     return ScenarioConfig(
         name="c-approaching",
         cpm_rate_hz=10.0,
-        duration_s=20.0,
+        duration_s=10.0,
         loop=True,
         sender=SenderConfig(
             station_id=1201,
@@ -41,8 +41,8 @@ def _default_config() -> ScenarioConfig:
         ),
         object=ObjectConfig(
             object_id=7,
-            initial_distance_m=60.0,
-            closing_speed_mps=2.5,
+            initial_distance_m=70.0,
+            closing_speed_mps=5.0,
             lateral_offset_m=1.2,
             classification=5,
             confidence=95,
@@ -57,32 +57,32 @@ def scenario() -> Scenario:
 
 @pytest.mark.parametrize(
     ("t", "expected_x_wire"),
-    [(0.0, 6000), (10.0, 3500), (20.0, 1000)],
-    ids=["t0-start", "t10-mid", "t20-late"],
+    [(0.0, 7000), (5.0, 4500), (9.0, 2500)],
+    ids=["t0-start", "t5-mid", "t9-late"],
 )
 def test_position_x_matches_hand_computed(scenario: Scenario, t: float, expected_x_wire: int):
-    """x(t) = 60,0 m - 2,5 m/s * t, converted to 0,01 m wire units exactly."""
+    """x(t) = 70,0 m - 5,0 m/s * t, converted to 0,01 m wire units exactly."""
     content = scenario.sample(t, REFERENCE_TIME_MS)
     assert content.object.position.x == expected_x_wire
 
 
 def test_lateral_offset_constant_across_time(scenario: Scenario):
     """y is the fixed lateral_offset_m (1,2 m -> 120 in 0,01 m units) at every t."""
-    for t in (0.0, 10.0, 20.0):
+    for t in (0.0, 5.0, 9.0):
         assert scenario.sample(t, REFERENCE_TIME_MS).object.position.y == 120
 
 
 def test_velocity_wire_units(scenario: Scenario):
-    """Velocity x = -closing_speed_mps in B's frame (-2,5 m/s -> -250 in 0,01 m/s); y = 0."""
-    for t in (0.0, 10.0, 20.0):
+    """Velocity x = -closing_speed_mps in B's frame (-5,0 m/s -> -500 in 0,01 m/s); y = 0."""
+    for t in (0.0, 5.0, 9.0):
         velocity = scenario.sample(t, REFERENCE_TIME_MS).object.velocity
-        assert velocity.x == -250
+        assert velocity.x == -500
         assert velocity.y == 0
 
 
 def test_sender_pose_wire_conversions_exact(scenario: Scenario):
     """Static sender pose: lat/lon -> 1e-7 degree, heading -> 0,1 degree, identical at every t."""
-    for t in (0.0, 10.0, 20.0):
+    for t in (0.0, 5.0, 9.0):
         content = scenario.sample(t, REFERENCE_TIME_MS)
         assert content.referencePosition.latitude == 210285110
         assert content.referencePosition.longitude == 1058048170

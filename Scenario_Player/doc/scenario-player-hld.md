@@ -1,6 +1,6 @@
 # Scenario Player — high-level design (R11; R1 producer side)
 
-> **The bench node's HLD, and the sole design authority for `Scenario_Player/`.** Every component this node runs, its role, input and output, where it lives, and how the components connect. Decision record: [scenario-player-design-decisions.md](scenario-player-design-decisions.md) (D1–D6). Frozen contract: [r1-cpm-profile.md](../../contracts/r1-cpm-profile.md) with [r1-cpm-content.schema.json](../../contracts/r1-cpm-content.schema.json). Node facts: [node-scenario-player.md](../../requirements/car-sky-guide/node-scenario-player.md).
+> **The bench node's HLD, and the sole design authority for `Scenario_Player/`.** Every component this node runs, its role, input and output, where it lives, and how the components connect. Decision record: [scenario-player-design-decisions.md](scenario-player-design-decisions.md) (D1–D7). Frozen contract: [r1-cpm-profile.md](../../contracts/r1-cpm-profile.md) with [r1-cpm-content.schema.json](../../contracts/r1-cpm-content.schema.json). Node facts: [node-scenario-player.md](../../requirements/car-sky-guide/node-scenario-player.md).
 >
 > Diagrams: [scenario-player-module-architecture.svg](research_notes/scenario-player-module-architecture.svg) (components, paired with its `.drawio`) · [scenario-player-components.puml](scenario-player-components.puml) (module graph) · [phase1-scenario-player-callflow.puml](phase1-scenario-player-callflow.puml) (sequence).
 
@@ -29,7 +29,7 @@
 |---|---|
 | [m1-cooperative-awareness.md](../../requirements/m1-cooperative-awareness.md) — **the authority** | R11 whole — definition, dependency, acceptance, tech stack. R1: the message family and the codec source this node shares. R5/R6: node type, bridge, address, port. §1: the bench emulates the modem connection point and simulates B. §3(c): the self-written Python generator. §4: the standing decisions, restated in D6 |
 | [r1-cpm-profile.md](../../contracts/r1-cpm-profile.md) · [r1-cpm-content.schema.json](../../contracts/r1-cpm-content.schema.json) | The frozen output contract, field for field, with conventions F1, F2, F5, F8, F9 and VF (§10) |
-| [m1-run-timing-and-event-triggering.md](../../requirements/m1-run-timing-and-event-triggering.md) | R20 obliges this node with the bench half of paced stimulus: scenario time advances on `CLOCK_MONOTONIC` deadlines, `start_delay_s` and `reference_time_epoch` are configuration, and `[TX]` carries `mono_ms` (D5). R21's run start is the operator restarting this node — no orchestrator, no trigger message, no clock exchange |
+| [m1-run-timing-and-event-triggering.md](../../requirements/m1-run-timing-and-event-triggering.md) | R20 obliges this node with the bench half of paced stimulus: scenario time advances on `CLOCK_MONOTONIC` deadlines, `start_delay_s` and `reference_time_epoch` are configuration, and `[TX]` carries `mono_ms` (D5). R21's run start is the operator restarting this node — no orchestrator, no trigger message, no clock exchange. R22 fixes the demo cycle this node emits: §6.6's geometry, the cycle period matched to the ego clip, and `start_delay_s` set to the ADA detector's warm-up (D7) |
 | [milestone1.md](../../plans/milestone1.md) | §4's R13 gate values, which the committed scenarios are authored against (D3); Phase 1's bench acceptance |
 | [node-scenario-player.md](../../requirements/car-sky-guide/node-scenario-player.md) | Image tag, blueprint `command`, env set, pin and address |
 
@@ -40,7 +40,7 @@ Non-authoritative scratch; on any conflict the CLAUDE.md authority order wins.
 | Note | Adopted here |
 |---|---|
 | [scenario-player-v2x-callflow-messages.md](research_notes/scenario-player-v2x-callflow-messages.md) | §2's wire model — the bench is the sole talker and the wire is unidirectional, so no listener and no reply path exists here; §4's M1 CPM profile as the content the generator produces; F3's ranked codec-path candidates, from which D1 picks the helper subprocess |
-| [phase0-contract-freeze-hld.md](../../plans/doc/phase0-contract-freeze-hld.md) | D3's codec seam (`CpmContent` + `ICpmCodec`, wire-native units) as the exact source this bench reuses; D1's access model — byte-synced copies under `sync-manifest.json`, extended to the codec sources by D2 |
+| [phase0-contract-freeze-hld.md](../../deprecated/phase0-contract-freeze-hld.md) | D3's codec seam (`CpmContent` + `ICpmCodec`, wire-native units) as the exact source this bench reuses; D1's access model — byte-synced copies under `sync-manifest.json`, extended to the codec sources by D2 |
 
 ## 3. The component architecture
 
@@ -90,7 +90,7 @@ Scenario_Player/
 │
 ├── contracts/r1-cpm-content.schema.json   byte-synced schema copy
 ├── scenarios/                      scenario data (D3)
-│   ├── default.yaml                C approaching: 60 m closing at 2.5 m/s
+│   ├── default.yaml                C approaching: 70 m closing at 5.0 m/s over a 10.0 s cycle (D7)
 │   └── c-out-of-range.yaml         C static at 60 m, beyond the R13 exit gate
 │
 ├── tests/
@@ -165,8 +165,8 @@ Every runtime value the deployment wires enters through env; every value the *co
 |---|---|---|
 | `name` | — | the scenario's identity |
 | `cpm_rate_hz` | `10.0` | tick rate; period `1/cpm_rate_hz` (F8) |
-| `duration_s` · `loop` | — · — | cycle length and whether scenario time restarts at its end |
-| `start_delay_s` | `0.0` | grace from process start before the first CPM; set above the AAOS boot-to-listener time for a demo run (D5) |
+| `duration_s` · `loop` | — · — | cycle length and whether scenario time restarts at its end; a demo cycle's length is the ego clip's length (D7) |
+| `start_delay_s` | `0.0` | grace from process start before the first CPM; a demo run sets it to the measured ADA detector warm-up (D5, D7) |
 | `reference_time_epoch` | `its` | the epoch `referenceTime` is stamped against (D5) |
 | `sender` | — | B's `station_id`, `lat`, `lon`, `heading_deg` |
 | `object` | — | C's `object_id`, `initial_distance_m`, `closing_speed_mps`, `lateral_offset_m`, `classification`, `confidence` |
@@ -200,8 +200,6 @@ No layer is collapsed: the scenario model cannot reach the socket, the sender ca
 ## 9. Call flow
 
 [phase1-scenario-player-callflow.puml](phase1-scenario-player-callflow.puml) — PlantUML sequence: config load, helper spawn, then the rate loop sample → encode → send → `[TX]`, with the encode-error, helper-restart and scenario-loop branches.
-
-> **Note, not a requirement.** The ego clip runs 10 s and B does not hold the ego lane until about its 3rd second, so the relayed C stream is wanted from roughly the 5th second of playback — plus whatever the ADA node spends booting and opening the clip. `start_delay_s` is where that offset goes (D5); no value is fixed here.
 
 ## 10. The contract — R1, the message set this node produces
 
@@ -249,7 +247,7 @@ docker buildx build --platform linux/arm64 --provenance=false --sbom=false -t m1
 
 | CI lane | File | What it does |
 |---|---|---|
-| `python-tests` | [phase0-ci.yml](../../.github/workflows/phase0-ci.yml) | the pytest suite against the fake helper, on a plain Python runner |
+| `sp-unit-tests` | [phase1-ci.yml](../../.github/workflows/phase1-ci.yml) | the pytest suite against the fake helper, on a plain Python runner |
 | `sp-codec-helper` | [phase1-ci.yml](../../.github/workflows/phase1-ci.yml) | builds `cpm_encode` natively and runs `test_encoder_golden.py` against the real binary |
 | `scenario-player-image` | [phase1-ci.yml](../../.github/workflows/phase1-ci.yml) | the `linux/arm64` image build, pushed to Zot when `CARSKY_ZOT_API_KEY` is set |
 
@@ -277,9 +275,10 @@ Three configurations exercise the same node, differing only in what stands behin
 | Two committed scenarios producing different `CpmContent` sequences | `test_streams_differ.py` — R11's acceptance at model level |
 | The V2X ECU's `[EVT]` `rx_datagram` → `decode_ok` chain changing when `SCENARIO_CONFIG` is swapped | R11's acceptance at Room level, read on the consumer's log |
 | `scenario_time_s` advancing within ±1 % of `mono_ms` over ≥ 60 s | `generator`'s deadline scheduling — R20's K5 (D5) |
+| `scenario_time_s` restarting at `duration_s`, one cycle per clip length of wall time | `generator`'s loop handling — the bench half of R22 (D7) |
 
 R11's acceptance is closed by the last two together: the model-level test proves the streams differ by construction, and the consumer's log proves the difference reaches the wire.
 
 ## 13. Design decisions
 
-[scenario-player-design-decisions.md](scenario-player-design-decisions.md) — D1–D6, binding on implementation and cited by number throughout this document: the codec path (D1), the synced codec sources (D2), scenarios as data (D3), the runtime composition and the image (D4), the scenario clock and its configuration (D5), and the standing decisions (D6).
+[scenario-player-design-decisions.md](scenario-player-design-decisions.md) — D1–D7, binding on implementation and cited by number throughout this document: the codec path (D1), the synced codec sources (D2), scenarios as data (D3), the runtime composition and the image (D4), the scenario clock and its configuration (D5), the standing decisions (D6), and the R22 demo cycle (D7).

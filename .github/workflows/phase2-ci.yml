@@ -1,0 +1,417 @@
+# The two lanes of the ADA scaffold, the node work Phase 2 develops:
+#   * ada-core-build      - configure, build and ctest the C++ core on a plain runner;
+#   * ada-loopback-check  - the repeatable form of the phase's "mock-driven state transitions
+#     observable in logs; toggling the mock off yields no tracks" acceptance box (13.2.8.2).
+#
+# WHERE A NEW JOB GOES: .claude/rules/ci-lane-placement.md designates the file for every lane, and
+# a lane lives with the NODE IT EXERCISES rather than the phase that wrote it. ada-core-build is
+# here for that reason though Phase 0 wrote it. The ADA node's other lanes sit with the phase whose
+# work they verify: the detector lanes - ada-detector-tests among them - in phase3-ci.yml, and
+# ada-ecu-image plus the fusion and bench lanes in phase4-ci.yml. The image belongs to the phase
+# that COMPLETES the node, since it carries every phase's contribution.
+#
+# Every phase<N>-ci.yml carries the same `on:` triggers, so a lane runs on every push and pull
+# request wherever it lives - placement decides where a lane is MAINTAINED, never whether it
+# executes.
+#
+# What this lane adds over ada-core-build: that job proves the ADA tree compiles and its unit
+# tests pass; this one runs the ASSEMBLED ada_ecu binary end to end on loopback - the real
+# DetectorReader respawn path fed by the committed R3 fixture, the real UDP listener fed by the
+# mock V2X sender - and asserts the resulting [EVT] stream with the R18 checker
+# (ADA_ECU/tools/check_evt_log.py). Both arms of the acceptance box run: admission (run A) and
+# detector-disabled-yields-no-tracks (run B).
+name: phase2-ci
+
+on:
+  push:
+  pull_request:
+    branches: [main]
+
+# Superseded runs are cancelled rather than left to finish - same policy as phase0/phase1-ci.yml
+# (see the fuller note in phase1-ci.yml). Cheap here, but it keeps the workflow files behaving
+# alike. Per ref, so main and a feature branch never cancel each other.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ada-core-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S ADA_ECU -B ADA_ECU/build
+      - name: Build
+        run: cmake --build ADA_ECU/build -j
+      - name: Test
+        run: ctest --test-dir ADA_ECU/build --output-on-failure
+
+  # 13.2.8.2. Two sequential runs of the same binary, one checker verdict each; any non-zero
+  # exit anywhere fails the job (`set -euo pipefail` in every run block, phase1 convention).
+  # No landed-file guard on purpose: ADA_ECU/src/main.cpp is on the tree, so a missing piece
+  # here should fail the lane, not silently pass it (the v2x-comms-check precedent).
+  ada-loopback-check:
+    runs-on: ubuntu-latest
+    # The ADA build is small (nlohmann_json + GoogleTest via FetchContent, no ASN.1); the two
+    # runs together are ~20-25 s. 30 minutes is generous headroom, not a budget.
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      # Same setup as ada-core-build above: no compiler or apt step - the default runner
+      # toolchain configures and builds ADA_ECU as-is.
+      - name: Configure
+        run: cmake -S ADA_ECU -B ADA_ECU/build
+      # Only the app target: the test binaries belong to ada-core-build, this lane needs the
+      # executable at the pinned path ADA_ECU/build/ada_ecu. Bounded parallelism per the
+      # phase1 convention (a bare `-j` is unlimited jobs).
+      - name: Build ada_ecu
+        run: cmake --build ADA_ECU/build --target ada_ecu -j $(nproc)
+      # Run A - the admission arm. Mock detector on (fixture through the real clean-EOF respawn
+      # path), mock V2X sender on loopback, then the R18 checker over the captured [EVT] stream.
+      - name: Run A - loopback admission (mock detector + mock V2X sender)
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Defaults per ADA_ECU/src/config/config.cpp (HLD 6): V2X_LISTEN_PORT 47200,
+          # GATE_ENTER_M 30 / GATE_EXIT_M 35, CONFIRM_HITS 3, TRACK_TIMEOUT_MS 1000,
+          # FUSION_TICK_MS 100. The port is restated once here for the sender invocation; a
+          # fixed value is safe because the whole lane is loopback-only inside a fresh runner.
+          LISTEN_PORT=47200
+          LOG_A="$RUNNER_TEMP/ada_run_a.log"
+          FIXTURE="$GITHUB_WORKSPACE/ADA_ECU/tests/fixtures/own_sensor_mock.jsonl"
+
+          [ -f "$FIXTURE" ] || {
+            echo "::error::R3 fixture missing at $FIXTURE"
+            exit 1
+          }
+
+          # The detector stand-in: the committed fixture through the REAL DetectorReader path
+          # (spawn -> JSONL lines -> clean EOF -> detector_eof -> respawn). main.cpp passes no
+          # respawn hook, so clean-EOF respawns are unlimited and immediate - a bare
+          # `cat <fixture>` as DETECTOR_CMD would cycle at fork/exec speed (hundreds of bursts
+          # per second), flooding the shared 1024-item input queue next to the 10 Hz R2 stream
+          # and growing the capture by megabytes per second. This wrapper keeps the burst
+          # byte-identical (each pass is a full not_tracked -> tentative -> tracked ->
+          # not_tracked cycle for source own_sensor: admit at 30 m, promote on the 3rd in-gate
+          # hit, drop at the final 36 m line > GATE_EXIT_M 35) and paces respawns at ~1
+          # cycle/s. The sleep is pacing, never synchronization - no assertion depends on it.
+          # DETECTOR_CMD is exec'd without a shell (detector_reader.cpp splits on whitespace),
+          # hence one absolute, space-free script path.
+          cat > "$RUNNER_TEMP/fixture_cycle.sh" <<EOF
+          #!/usr/bin/env bash
+          cat "$FIXTURE"
+          sleep 1
+          EOF
+
+          echo "[LANE] starting ada_ecu (mock detector on, listen $LISTEN_PORT)"
+          DETECTOR_ENABLED=true \
+          DETECTOR_CMD="bash $RUNNER_TEMP/fixture_cycle.sh" \
+          V2X_LISTEN_PORT="$LISTEN_PORT" \
+          IVI_ECU_HOST=127.0.0.1 \
+            ADA_ECU/build/ada_ecu > "$LOG_A" 2>&1 &
+          APP_PID=$!
+          echo "$APP_PID" > "$RUNNER_TEMP/ada_pid_run_a"
+
+          # Readiness = the first [EVT] line (detector_spawn). main.cpp constructs the UDP
+          # listener BEFORE the detector reader, so an [EVT] line also means the R2 socket is
+          # up. Bounded poll, loud failure - never a naked sleep of guessy length.
+          READY=0
+          for _ in $(seq 1 40); do
+            if grep -q '^\[EVT\] ' "$LOG_A" 2>/dev/null; then READY=1; break; fi
+            sleep 0.25
+          done
+          if [ "$READY" -ne 1 ]; then
+            echo "::error::ada_ecu never emitted an [EVT] line within 10s"
+            cat "$LOG_A" || true
+            kill -TERM "$APP_PID" 2>/dev/null || true
+            exit 1
+          fi
+
+          # The v2x admission math (geometry read by the sender from
+          # Scenario_Player/scenarios/default.yaml, never restated in code): C starts at
+          # 70.0 m closing at 5.0 m/s, 10 Hz for 10 s -> 100 datagrams, distance
+          # 70.0 -> 20.5 m. GATE_ENTER_M 30 is crossed at datagram 80 (t = (70-30)/5 =
+          # 8.0 s); CONFIRM_HITS 3 admits on datagrams 80-82, so the v2x track reaches
+          # `tracked` at ~8.2 s and refreshes until the last datagram (~9.9 s, 20.5 m).
+          # No --rate/--count overrides: the scenario defaults ARE those numbers, and they
+          # put the whole job's runtime in the planned 20-40 s window.
+          echo "[LANE] driving the approaching profile at 127.0.0.1:$LISTEN_PORT (100 datagrams @ 10 Hz)"
+          python ADA_ECU/tools/mock_v2x_sender.py --profile approaching --host 127.0.0.1 --port "$LISTEN_PORT"
+
+          # Sender done -> silence on the R2 path. TRACK_TIMEOUT_MS 1000 plus one FUSION_TICK_MS
+          # 100 tick expires the v2x track ~1.1 s later, emitting a timeout track_transition
+          # plus one track_expire (track_store.cpp). track_expire can only come from the v2x
+          # track: every own_sensor burst ends in the distance drop at 36 m, never by timeout.
+          # Bounded poll on that event, not a blind sleep.
+          EXPIRED=0
+          for _ in $(seq 1 40); do
+            if grep -q '"event":"track_expire"' "$LOG_A" 2>/dev/null; then EXPIRED=1; break; fi
+            sleep 0.25
+          done
+          if [ "$EXPIRED" -ne 1 ]; then
+            echo "::error::no track_expire within 10s of the sender completing - the v2x track never expired by silence"
+            cat "$LOG_A" || true
+            kill -TERM "$APP_PID" 2>/dev/null || true
+            exit 1
+          fi
+
+          echo "[LANE] stopping ada_ecu (SIGTERM)"
+          kill -TERM "$APP_PID"
+          APP_STATUS=0
+          wait "$APP_PID" || APP_STATUS=$?
+
+          # Dump the capture BEFORE any assertion, so a red run is diagnosable from the job
+          # output alone (it also ships as an artifact below).
+          echo "::group::ada_ecu run A stdout"
+          cat "$LOG_A"
+          echo "::endgroup::"
+
+          # main.cpp exit codes: 0 = clean SIGTERM shutdown; 1 = invalid config; 2 = startup
+          # failure.
+          if [ "$APP_STATUS" -ne 0 ]; then
+            echo "::error::ada_ecu exited $APP_STATUS on SIGTERM (expected 0)"
+            exit 1
+          fi
+
+          # The R18 verdict: legal R13 paths only, a full cycle per named source (own_sensor
+          # AND the v2x source), and a non-vacuous stream. --min-transitions 6 is a floor, not
+          # the expectation - self-loops are silent (track_store.cpp, 13.2.4.3 ruling), so a
+          # nominal run emits 3 transitions per fixture burst (gate_enter, confirmed, gate_exit;
+          # ~10 bursts) plus 3 on the v2x cycle; 6 = both sources' minimal full cycles, making
+          # an empty-ish capture an impossible pass. Gates and CONFIRM_HITS ride on the
+          # checker's defaults, which equal the node's (30/35 m, 3).
+          python ADA_ECU/tools/check_evt_log.py --admission --min-transitions 6 "$LOG_A"
+          echo "[LANE] run A (admission) PASSED"
+      # Run B - the mock-off arm. Same binary, DETECTOR_ENABLED=false, no sender: the only
+      # [EVT] line expected is detector_disabled, and zero track_transition events.
+      - name: Run B - detector disabled yields no tracks
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          LOG_B="$RUNNER_TEMP/ada_run_b.log"
+
+          echo "[LANE] starting ada_ecu (detector disabled, no sender)"
+          DETECTOR_ENABLED=false \
+          IVI_ECU_HOST=127.0.0.1 \
+            ADA_ECU/build/ada_ecu > "$LOG_B" 2>&1 &
+          APP_PID=$!
+          echo "$APP_PID" > "$RUNNER_TEMP/ada_pid_run_b"
+
+          # Readiness = the detector_disabled [EVT] line, emitted once by the DetectorReader
+          # disabled arm at construction (no spawn). Bounded poll, as in run A.
+          READY=0
+          for _ in $(seq 1 40); do
+            if grep -q '^\[EVT\] ' "$LOG_B" 2>/dev/null; then READY=1; break; fi
+            sleep 0.25
+          done
+          if [ "$READY" -ne 1 ]; then
+            echo "::error::ada_ecu (disabled arm) never emitted an [EVT] line within 10s"
+            cat "$LOG_B" || true
+            kill -TERM "$APP_PID" 2>/dev/null || true
+            exit 1
+          fi
+
+          # Observation window: ~30 fusion ticks in which anything wrongly ingested or admitted
+          # would surface as [EVT] lines. A fixed duration is correct here - it is the length
+          # of the observed window, not a wait for a condition (there is no event to poll for
+          # in a run whose expected output is nothing).
+          sleep 3
+
+          echo "[LANE] stopping ada_ecu (SIGTERM)"
+          kill -TERM "$APP_PID"
+          APP_STATUS=0
+          wait "$APP_PID" || APP_STATUS=$?
+
+          echo "::group::ada_ecu run B stdout"
+          cat "$LOG_B"
+          echo "::endgroup::"
+
+          if [ "$APP_STATUS" -ne 0 ]; then
+            echo "::error::ada_ecu exited $APP_STATUS on SIGTERM (expected 0)"
+            exit 1
+          fi
+
+          # Zero track_transition events; zero [EVT] lines would also fail (never a vacuous
+          # pass - the detector_disabled line is the expected single event).
+          python ADA_ECU/tools/check_evt_log.py --expect-no-tracks "$LOG_B"
+          echo "[LANE] run B (no tracks) PASSED"
+      # Run C - the Phase 3 mock-retirement arm (3.3.5.3). The fixture arm (run A) stays as the
+      # deterministic admission test; this arm proves the real subprocess chain - detector ->
+      # stdout JSONL -> r3_parser -> store upsert - so own-sensor entries enter the store
+      # through the same R3 interface as relayed entries, mock no longer required. Own-sensor
+      # path alone: no V2X sender.
+      - name: Run C - real detector into the real store (3.3.5.3)
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Skip-with-notice guard: keeps the lane green on rebases that predate Phase 3.
+          if [ ! -f ADA_ECU/detector/main.py ] || [ ! -f ADA_ECU/models/yolo11n.onnx ]; then
+            echo "::notice::Run C skipped - ADA_ECU/detector/main.py or ADA_ECU/models/yolo11n.onnx absent (pre-Phase 3 tree)"
+            exit 0
+          fi
+
+          python -m pip install -q -r ADA_ECU/detector/requirements.txt
+
+          LOG_C="$RUNNER_TEMP/ada_run_c.log"
+
+          # Start pattern copied from run A, with the REAL detector subprocess in place of the
+          # fixture wrapper. Only the two /app path defaults are overridden for the runner; the
+          # detector's distance defaults are the retuned config.py values and the node's gates
+          # (GATE_ENTER_M 30 / GATE_EXIT_M 35, CONFIRM_HITS 3) ride on its own defaults - no
+          # threshold overrides. DETECTOR_CMD is split on whitespace without a shell, hence one
+          # absolute, space-free script path.
+          echo "[LANE] starting ada_ecu (real detector, own-sensor arm only)"
+          DETECTOR_ENABLED=true \
+          DETECTOR_CMD="python3 $GITHUB_WORKSPACE/ADA_ECU/detector/main.py" \
+          VIDEO_CLIP_PATH="$GITHUB_WORKSPACE/ADA_ECU/media/ego-b-occluding-c.mp4" \
+          MODEL_PATH="$GITHUB_WORKSPACE/ADA_ECU/models/yolo11n.onnx" \
+          DETECTOR_LOOP=true \
+          DETECTOR_REALTIME_PACING=true \
+          IVI_ECU_HOST=127.0.0.1 \
+            ADA_ECU/build/ada_ecu > "$LOG_C" 2>&1 &
+          APP_PID=$!
+          echo "$APP_PID" > "$RUNNER_TEMP/ada_pid_run_c"
+
+          # Readiness = the first [EVT] line (detector_spawn). Bounded poll, as in run A.
+          READY=0
+          for _ in $(seq 1 40); do
+            if grep -q '^\[EVT\] ' "$LOG_C" 2>/dev/null; then READY=1; break; fi
+            sleep 0.25
+          done
+          if [ "$READY" -ne 1 ]; then
+            echo "::error::ada_ecu (run C) never emitted an [EVT] line within 10s"
+            cat "$LOG_C" || true
+            kill -TERM "$APP_PID" 2>/dev/null || true
+            exit 1
+          fi
+
+          # Bounded poll, up to ~90 s at 1 s intervals: the ONNX model load takes seconds and
+          # B's range crosses the 30 m gate late in each 10 s clip pass. Wait for BOTH at least
+          # one own_sensor_ingest AND a track_transition whose payload shows an own: id
+          # reaching "tracked". The exact payload key layout may vary, so match
+          # track_transition lines that contain both markers.
+          OK=0
+          for _ in $(seq 1 90); do
+            if grep -q '"event":"own_sensor_ingest"' "$LOG_C" 2>/dev/null \
+              && grep -E '"event":"track_transition"' "$LOG_C" 2>/dev/null | grep -F 'own:' | grep -Fq '"tracked"'; then
+              OK=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "$OK" -ne 1 ]; then
+            echo "::error::run C: no own_sensor_ingest plus own:-id-tracked track_transition within 90s"
+            cat "$LOG_C" || true
+            kill -TERM "$APP_PID" 2>/dev/null || true
+            exit 1
+          fi
+
+          echo "[LANE] stopping ada_ecu (SIGTERM)"
+          kill -TERM "$APP_PID"
+          APP_STATUS=0
+          wait "$APP_PID" || APP_STATUS=$?
+
+          echo "::group::ada_ecu run C stdout"
+          cat "$LOG_C"
+          echo "::endgroup::"
+
+          if [ "$APP_STATUS" -ne 0 ]; then
+            echo "::error::ada_ecu exited $APP_STATUS on SIGTERM (expected 0)"
+            exit 1
+          fi
+
+          # Final hard assertions on the settled capture.
+          INGESTS=$(grep -c '"event":"own_sensor_ingest"' "$LOG_C" || true)
+          echo "[LANE] own_sensor_ingest count: $INGESTS"
+          if [ "$INGESTS" -eq 0 ]; then
+            echo "::error::run C: zero own_sensor_ingest events in the final capture"
+            exit 1
+          fi
+          if ! grep -E '"event":"track_transition"' "$LOG_C" | grep -F 'own:' | grep -Fq '"tracked"'; then
+            echo "::error::run C: no track_transition with an own: id reaching \"tracked\" in the final capture"
+            exit 1
+          fi
+          echo "[LANE] run C (real detector into the real store) PASSED"
+      # Run D - import-and-plumbing smoke only: the detector runs DIRECTLY (not under
+      # ada_ecu) on synthetic flat-grey frames, which are EXPECTED to yield zero detections.
+      # Never a track, never an own_sensor_ingest assertion, never R12 evidence.
+      - name: Run D - detector synthetic import smoke (3.3.5.3)
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Same skip-with-notice guard as run C.
+          if [ ! -f ADA_ECU/detector/main.py ] || [ ! -f ADA_ECU/models/yolo11n.onnx ]; then
+            echo "::notice::Run D skipped - ADA_ECU/detector/main.py or ADA_ECU/models/yolo11n.onnx absent (pre-Phase 3 tree)"
+            exit 0
+          fi
+
+          OUT_D="$RUNNER_TEMP/detector_run_d.stdout"
+          ERR_D="$RUNNER_TEMP/detector_run_d.stderr"
+
+          echo "[LANE] running the detector directly on 40 synthetic frames"
+          DETECTOR_REALTIME_PACING=false \
+          MODEL_PATH="$GITHUB_WORKSPACE/ADA_ECU/models/yolo11n.onnx" \
+            timeout 120 python3 ADA_ECU/detector/main.py --synthetic 40 > "$OUT_D" 2> "$ERR_D"
+
+          echo "::group::detector run D stderr"
+          cat "$ERR_D"
+          echo "::endgroup::"
+
+          # Every stdout line (if any) parses as JSON; flat-grey frames yield zero
+          # detections, so an empty stdout passes.
+          python - "$OUT_D" <<'PYEOF'
+          import json, sys
+          n = 0
+          with open(sys.argv[1], encoding="utf-8") as f:
+              for line in f:
+                  line = line.strip()
+                  if not line:
+                      continue
+                  json.loads(line)
+                  n += 1
+          print(f"[LANE] run D stdout lines parsed as JSON: {n}")
+          PYEOF
+
+          # The startup diagnostic goes to stderr; an empty stderr means the detector never
+          # got as far as announcing itself.
+          if [ ! -s "$ERR_D" ]; then
+            echo "::error::run D: detector stderr empty - startup line missing"
+            exit 1
+          fi
+          echo "[LANE] run D (detector synthetic import smoke) PASSED"
+      # Safety net against a hung runner: both runs kill their own process on every path above,
+      # so a live pid here means a step died between fork and kill.
+      - name: Kill any leftover ada_ecu
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          for PID_FILE in "$RUNNER_TEMP"/ada_pid_run_*; do
+            [ -f "$PID_FILE" ] || continue
+            PID=$(cat "$PID_FILE")
+            if kill -0 "$PID" 2>/dev/null; then
+              echo "::warning::ada_ecu (pid $PID from $PID_FILE) still alive at cleanup - killing"
+              kill -KILL "$PID" 2>/dev/null || true
+            fi
+          done
+      # Mirrors phase1-ci.yml's v2x-comms-check log upload: always, so a green run's evidence
+      # is retrievable too.
+      - name: Upload loopback-check logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ada-loopback-check-logs
+          path: |
+            ${{ runner.temp }}/ada_run_a.log
+            ${{ runner.temp }}/ada_run_b.log
+            ${{ runner.temp }}/ada_run_c.log
+            ${{ runner.temp }}/detector_run_d.stdout
+            ${{ runner.temp }}/detector_run_d.stderr
+          if-no-files-found: warn

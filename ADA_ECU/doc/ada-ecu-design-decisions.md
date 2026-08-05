@@ -91,14 +91,19 @@ Rejected alternative: SQLite. It adds a dependency and a file lifecycle to a Con
 
 Frozen R4 fixes `riskState ∈ {low, medium, high}`. For `nlos_obstruction`, with ego speed unknown in M1 — no GNSS and no Cortex-M ECU, report §1 — the inputs are the composed range `d_AC`, its change over time from the database, and C's relayed speed.
 
-| `riskState` | Meaning for the chained-collision plugin | Condition |
-|---|---|---|
-| `low` | C is not a present threat: unknown, outside the tracking gate, or tracked but neither near nor closing fast | no `tracked` C, **or** `d_AC > RISK_NEAR_M` and (`ttc` null or `ttc > RISK_TTC_WARN_S`) |
-| `medium` | C is tracked and relevant — inside the awareness band, closing at a normal rate | C `tracked`, `d_AC ≤ RISK_NEAR_M`, and not `high` |
-| `high` | C is tracked and imminent | C `tracked` and (`d_AC ≤ RISK_CRITICAL_M` **or** `ttc ≤ RISK_TTC_CRITICAL_S`) |
+**The band table is total and ordered.** The first row whose condition holds wins, so no state matches two rows and none matches none.
 
+| # | `riskState` | Meaning for the chained-collision plugin | Condition |
+|---|---|---|---|
+| 1 | `high` | C is tracked and imminent | C `tracked` and (`d_AC ≤ RISK_CRITICAL_M` **or** `ttc ≤ RISK_TTC_CRITICAL_S`) |
+| 2 | `medium` | C is tracked and relevant — inside the awareness band, or closing fast enough to matter at any range | C `tracked` and (`d_AC ≤ RISK_NEAR_M` **or** `ttc ≤ RISK_TTC_WARN_S`) |
+| 3 | `low` | C is not a present threat: unknown, outside the tracking gate, or tracked but neither near nor closing fast | every other state — no `tracked` C, `b_unknown`, or C `tracked` with `d_AC > RISK_NEAR_M` and (`ttc` null or `ttc > RISK_TTC_WARN_S`) |
+
+- `RISK_TTC_WARN_S` is the second clause of row 2, and that is its whole effect: a track closing fast enough is `medium` before its range reaches `RISK_NEAR_M`.
 - `closingRateMps = -(d_AC(t) − d_AC(t−Δ)) / Δ`; `ttcS = d_AC / closingRate` when the rate is positive, and null otherwise.
-- **Risk thresholds are separate constants from the R13 gate and never alias it.** Aliasing them collapses R14 into R13 and makes track identity and alarm level indistinguishable. `RISK_NEAR_M = 25` and `RISK_CRITICAL_M = 15` sit strictly inside `GATE_ENTER_M = 30`, so the bench's `default.yaml` approach produces a visible `low → medium → high` progression and `c-out-of-range.yaml` never leaves `low`.
+- **Risk thresholds are separate constants from the R13 gate and never alias it.** Aliasing them collapses R14 into R13 and makes track identity and alarm level indistinguishable.
+- **The bands and the gate measure different quantities, so no ordering holds between them.** `RISK_NEAR_M` and `RISK_CRITICAL_M` are thresholds on the composed range `d_AC = d_AB + d_BC`. `GATE_ENTER_M` is a threshold on the relayed range `d_BC` alone. C is admitted at `d_BC ≈ GATE_ENTER_M`, so `d_AC` at that instant is `d_AB` above the gate value, and 40 m or more for every `d_AB` the ego clip produces. A `RISK_NEAR_M` at or below `GATE_ENTER_M` therefore sits below every composed range the node can observe, and row 2's range clause never fires. The orderings the loader asserts are the ones lying within a single quantity ([HLD §6](ada-ecu-hld.md#6-internal-components)).
+- Rejected alternative: asserting `RISK_CRITICAL_M < RISK_NEAR_M < GATE_ENTER_M` at startup, with `RISK_NEAR_M` 25 and `RISK_CRITICAL_M` 15. Its right-hand comparison relates two different quantities. The values it admits leave row 2 reachable through its TTC clause alone, which is what D11 rejects.
 - **Every change of `riskState` for a `(warningType, trackId)` emits exactly one R4 warning event, in both directions.** Steady state emits nothing. Downgrades and the return to `low` are emitted too: R4 carries no separate clear message and the periodic state stream is optional, so the transition back is the only way the IVI learns to stop warning.
 - A transition commits only after it holds for `RISK_DWELL_MS` — one debounce across all three thresholds, independent of the R13 gate hysteresis that protects track identity.
 - **No B, no chain.** `d_AC = d_AB + d_BC` needs `d_AB`, so with no own-sensor B track the composed range does not exist. The plugin returns `low` with rationale `b_unknown` and logs `assess_skipped_b_unknown`. It follows that no `medium` or `high` was ever entered without a known B, so a clearing event can always fill the required `geometry.vehicleB` from `lastKnownB`. `geometry.vehicleC` is null exactly when C's track has been erased, which is why the frozen schema allows null there.
@@ -161,5 +166,22 @@ Which clock fills which R3 field, per source, is [§10.2](ada-ecu-hld.md#102-r3-
 - **Expiry compares a monotonic stamp, never `lastUpdated`.** `track_store` keeps a `monoMs` beside each entry and `admission` tests `now_mono − monoMs > TRACK_TIMEOUT_MS`. `lastUpdated` is `CLOCK_REALTIME` because it reaches the wire; the host's own NTP daemon stepping the shared wall clock mid-run would otherwise expire every track at once.
 - **The detector paces sampled frames to wall-clock rate.** With `DETECTOR_REALTIME_PACING` true, `detector/pacer.py` holds each sampled frame until its deadline `t0 + n × DETECTOR_FRAME_STRIDE / DETECTOR_CLIP_FPS` on `time.monotonic()`. **The deadline is computed, not accumulated** — a fixed sleep per frame folds the inference cost into scenario time and drifts unbounded over a run. `DETECTOR_CLIP_FPS` defaults to the clip's declared rate and is overridable; `DETECTOR_START_DELAY_S` is the grace from spawn to the first emitted frame.
 - **The run start is the operator restarting a node.** There is no orchestrator, no trigger message and no clock exchange: each stimulus source self-schedules from its own process start against its own configured delay.
-- **`tools/check_run_alignment.py` is a checker, not a trigger.** It reads logs after a run, is never on the ego data path, and is sanctioned test equipment rather than product code. Its five checks are [§12](ada-ecu-hld.md#12-test-strategy).
+- **`tools/check_run_alignment.py` is a checker, not a trigger.** It reads logs after a run, is never on the ego data path, and is sanctioned test equipment rather than product code. Its checks are [§12](ada-ecu-hld.md#12-test-strategy).
 - **Pacing serves R20, not the deferred dashcam view.** The deferred item forbids real-time pacing *as its own requirement* in service of that view; R20 makes it a requirement on its own footing, so building it pulls no deferred surface in (D6).
+
+## D11 — R22 run choreography: the run origin, the paced clip, and the risk band pair
+
+Realizes [m1-run-timing-and-event-triggering.md §6.6](../../requirements/m1-run-timing-and-event-triggering.md) for this node. R22 places the first R4 of a cycle in the open interval (`T0` + 8.0 s, `T0` + 10.0 s). Below is what this node owes that placement. Every lever is node configuration or bench scenario data, and no frozen contract carries any of it.
+
+- **`T0` is this node's own first emitted `own_sensor` R3 line**, visible in the `[EVT]` stream. The run origin is therefore read from one clock, which is what keeps K6 inside D10's single-domain rule.
+- **`DETECTOR_REALTIME_PACING = true` is load-bearing, not a preference.** With pacing off, clip time is not run time: the clip is consumed at whatever rate the CPU allows, and no instant in the choreography is expressible. A demo run with it off has no defined warning onset.
+- **Alignment is made on the bench, not here.** `DETECTOR_START_DELAY_S` stays 0, so the detector's warm-up `W` — ONNX session load plus `VideoCapture` open — is the only unknown, and the bench's `start_delay_s` cancels it ([SP D7](../../Scenario_Player/doc/scenario-player-design-decisions.md)).
+- **The bench cycle period and the clip length are one matched pair**, 10.0 s. A longer bench cycle leaves C tracked across a clip wrap at which B has been dropped and not yet re-admitted. The assessment then falls to `low` on the `b_unknown` path of D5, the warning disappears mid-run, and K1 fails for that interval. The constraint binds the two values together, and neither is free to be retuned alone.
+- **`RISK_NEAR_M` 60 with `RISK_CRITICAL_M` 30 moves the trigger off a derivative and onto a direct comparison.** `d_AC` at C's admission is ≈ 47 m, so the range clause of D5's row 2 commits the transition on its own, with a 13 m margin at the detector's nominal range estimate. It tolerates a range-estimate bias up to `k ≤ 1.70` before the transition leaves R22's window.
+
+| Rejected alternative | Why |
+|---|---|
+| 60 / 40 | Adds a `high` state ≈ 0.7 s after the `medium` onset, spending the warning window on a second transition rather than a margin |
+| 60 / 50 | Opens at `high`, and its bias tolerance falls to `k ≤ 1.16` |
+| 25 / 15 | `medium` at 8.3 s through row 2's TTC clause only, with no range-clause margin: `d_AC` never falls to 25 m inside a cycle, so the onset rides entirely on `ttc` |
+| Leave the bands and drive the transition from TTC alone | `ttc` derives from a numerical derivative of the *estimated* `d_AB`, the noisiest quantity in the node, and the transition would have to survive that jitter through the `RISK_DWELL_MS` debounce |

@@ -21,7 +21,7 @@ C++17 core (store, CRA, emission, logging) + Python 3.11 detector subprocess; YO
 
 ```
 docker login registry.hackathon-2.carsky.io -u <your_carsky_username>
-docker tag ada-ecu:latest registry.hackathon-2.carsky.io/m1-ada-ecu:latest
+docker tag m1-ada-ecu:latest registry.hackathon-2.carsky.io/m1-ada-ecu:latest
 docker push registry.hackathon-2.carsky.io/m1-ada-ecu:latest
 ```
 

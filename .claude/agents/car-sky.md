@@ -50,7 +50,7 @@ Concrete, verified context so this agent can authenticate and drive the platform
 ## Out of scope (hand off instead)
 
 - **No product-code implementation** — the artifact is already built by [[project-planner]]'s implementation subagents; this agent only deploys it. Bugs in the artifact go back to that track.
-- **No document authoring** — the platform/node references are [[project-architecture]]'s ([carsky-deployment-guide](../skills/carsky-deployment-guide/SKILL.md)) and the `*-walkthrough.md` procedures are [[project-researcher]]'s ([walkthrough-authoring](../skills/walkthrough-authoring/SKILL.md)). This agent consumes both and reports findings back for their owners to record.
+- **No document authoring** — the platform/node references are unowned but written by [[project-architecture]] under [carsky-deployment-guide](../skills/carsky-deployment-guide/SKILL.md), and the `*-walkthrough.md` procedures are [[project-researcher]]'s ([walkthrough-authoring](../skills/walkthrough-authoring/SKILL.md)). This agent consumes both and reports findings back to be recorded.
 - **No architecture, requirements, or task decomposition** — [[project-architecture]] / [[project-researcher]] / [[project-planner]] respectively.
 - **No credential storage** — this agent uses a credential the user supplies per run; it does not persist, commit, or manage keys.
 

@@ -93,7 +93,7 @@ An installed APK cannot be reconfigured without a rebuild, unlike a container no
 | `R4_SOCKET_BUFFER_BYTES` | `2048` | `R4ObserverConfig.bufferBytes` | — |
 | `R4_FLOW_BUFFER_EVENTS` | `8` | `SharedFlow` extra buffer | — |
 | `R4_RETRY_INITIAL_MS` / `R4_RETRY_MAX_MS` | `500` / `5000` | rebind back-off | — |
-| `WARNING_TIMEOUT_MS` | `10000` | `WarningViewModel` auto-dismiss | `--el warning_timeout_ms` |
+| `WARNING_TIMEOUT_MS` | `10000` | `WarningViewModel` auto-dismiss (D13) | `--el warning_timeout_ms` |
 | `SCENE_SCALE_M_PER_PX` | `0.5` | `CanvasWarningView` → `SceneCoordinateMapper` | `--ef scene_scale` |
 
 `SCENE_SCALE_M_PER_PX` is the projection's **base** scale, not a uniform metres-per-pixel: R17's inclined camera compresses depth toward the top, so the mapper derives a distance-varying scale from this one value.
@@ -111,3 +111,23 @@ An installed APK cannot be reconfigured without a rebuild, unlike a container no
 ## D12 — The provenance guard fails open, so every scene composer fills the snapshot
 
 `SceneGeometry.vehicleCSnapshot` is nullable and the guard treats `null` as trusted. It therefore protects the render only when the scene composer copies the R4 message's `object` snapshot into that field. A `SceneGeometry` built from `geometry` alone carries no snapshot, draws ghost C unchallenged, and voids the R19 provenance claim.
+
+## D13 — Active risk raises the warning; only silence lowers it
+
+The Display Area's warning lifecycle is driven by `riskState`, not by traffic alone. `WarningViewModel` and `MainViewModel` obey three rules, and nothing else changes the mode automatically.
+
+| Event | Effect on the warning lifecycle |
+|---|---|
+| An R4 warning with `riskState` `medium` or `high` | Idle → Active; the Display Area switches to Warning with `cause=warning`. Already Active, it refreshes the scene |
+| An R4 warning with `riskState` `low` | The scene and risk colour update. The countdown restarts. The mode does not change |
+| `WARNING_TIMEOUT_MS` with no R4 warning of any level | Active → Idle with `cause=timeout`; the Display Area returns to Home |
+
+- **A `low` cannot raise the warning.** A downgrade arriving while the Display Area shows Home leaves it on Home, which is what keeps the normal screen up for the whole pre-warning window R22 requires.
+- **A `low` cannot dismiss it either.** Every R4 warning restarts the countdown, the `low` included. Under R22's choreography the gap from a cycle's `low` to the next cycle's first active-risk message is ≈ 8.5 s, against a 10 s countdown. The warning therefore stays up once raised, and a run whose R4 stream stops clears the screen `WARNING_TIMEOUT_MS` later.
+- **The countdown is the only automatic dismissal path, so `WARNING_TIMEOUT_MS` is bound to the producer's cycle.** It must exceed the interval from a cycle's clearing `low` to the next cycle's first `medium`. A shorter value drops the warning for part of every cycle.
+- A tap is the only other cause of a mode change, and is logged `cause=user`.
+
+| Rejected alternative | Why |
+|---|---|
+| Dismiss on the `low`, treating a downgrade as an immediate clear | The producer emits one `low` per cycle at the point both tracks are dropped, so the warning would be visible for ≈ 1.2 s in every 10 s and the Display Area would flip on every cycle |
+| Latch the warning permanently once raised, ignoring both `low` and silence | The screen would stop reporting the ego system's state: a genuine cessation, and a producer that has gone away, would both keep the warning up |

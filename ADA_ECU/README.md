@@ -1,12 +1,31 @@
 # ADA_ECU — ADA ECU node (R3, R12–R15)
 
-Ego's perception and fusion node: detects B from the provided video clips, maintains the R3 track store with the R13 admission state machine, runs the R14 Collision Risk Assessment abstraction with the M1 NLOS plugin, and emits R4 warnings to the IVI. Focus goal is a structured, low-latency architecture — not detection performance.
+CarSky **Container Node**: ego's perception and fusion node — requirements R3 and R12–R15 of [m1-cooperative-awareness.md](../requirements/m1-cooperative-awareness.md) §2.
 
-- **Requirements:** R3, R12–R15 — [m1-cooperative-awareness.md](../requirements/m1-cooperative-awareness.md) §2.
-- **Node/deploy guide:** [node-ada-ecu.md](../requirements/car-sky-guide/node-ada-ecu.md) — image tag, blueprint config, env vars, pins, verification.
-- **Layout & build rules:** [node-code-layout.md](../.claude/rules/node-code-layout.md) — C++17 core + Python 3.11 detector subprocess, `docker build -t ada-ecu:latest ADA_ECU/`.
-- **Plan:** Phase 2 (skeleton, store, state machine) → Phases 3 ∥ 4 (detection · fusion) of [milestone1.md](../plans/milestone1.md).
+Two processes, one image: the C++17 `ada_ecu` core and the Python detector subprocess, joined by argv, exit codes and R3 JSONL over stdout — [design decision D2](doc/ada-ecu-design-decisions.md#d2--process-thread-and-mock-model).
 
-Two processes, one image: the C++17 core (store, CRA, emission, logging) and the Python detector join **only** through argv + exit codes + R3 JSONL over stdout — no FFI, no RPC (report §3(d)/(g)). The R13 gate constants (`GATE_ENTER_M`, `GATE_EXIT_M`) come from env, never literals ([CLAUDE.md](../CLAUDE.md) governing principle 5). The provided video clip(s) are `COPY`d into the image at build time — no live video pin in M1.
+## Design of record
 
-Empty until Phase 2 — structure is [project-architecture](../.claude/agents/project-architecture.md)'s to create via its HLD.
+- [doc/ada-ecu-hld.md](doc/ada-ecu-hld.md) — the HLD, this folder's sole design authority.
+- [node-ada-ecu.md](../requirements/car-sky-guide/node-ada-ecu.md) — node guide: image tag, blueprint config, env vars, pins, verification.
+- [phase2_tasks.md § Per-node build commands](../plans/phase2_tasks.md#per-node-build-commands-cited-in-acceptance-below) — the acceptance-cited build/test rows.
+
+## Build and test
+
+C++ core:
+
+```
+cmake -S ADA_ECU -B ADA_ECU/build && cmake --build ADA_ECU/build -j $(nproc) && ctest --test-dir ADA_ECU/build --output-on-failure
+```
+
+Python detector:
+
+```
+pip install -r ADA_ECU/detector/requirements-dev.txt && python -m pytest ADA_ECU/detector/tests
+```
+
+## Clip attribution
+
+The demo clip `media/ego-b-occluding-c.mp4` ships inside every pushed image; provenance in [media/ego-b-occluding-c.source.md](media/ego-b-occluding-c.source.md).
+
+> Dashcam footage: *"Dash Cam View of a Moving Vehicle in a Highway"* by **Mario Angel**, via Pexels — <https://www.pexels.com/video/dash-cam-view-of-a-moving-vehicle-in-a-highway-5915075/>
