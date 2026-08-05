@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CI Workflows, YAML and GitHub Actions</title>
+<meta name="description" content="What a CI workflow file is, the Docker actions it performs, and the tagging limitation this project lives with">
+<style>
+  :root {
+    --fpt-orange: #F37021;
+    --fpt-green: #50B848;
+    --fpt-blue: #034EA2;
+    --fpt-teal: #33B2C1;
+    --fpt-navy: #19226D;
+    --navy-deep: #0E1540;
+    --ink: #080808;
+    --ink-soft: #3d3d46;
+    --paper: #f4f4f6;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; background: #14183a; font-family: "Segoe UI", "Segoe UI Variable", "Helvetica Neue", Arial, sans-serif; }
+
+  .deck { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+
+  .slide {
+    width: 1280px; height: 720px;
+    position: absolute;
+    display: none;
+    flex-direction: column;
+    transform-origin: center center;
+    background: var(--paper);
+    color: var(--ink);
+    box-shadow: 0 18px 60px rgba(0,0,0,.45);
+    overflow: hidden;
+  }
+  .slide.active { display: flex; }
+
+  /* ---------- backgrounds ---------- */
+  .bg-light { background: linear-gradient(135deg, #f6f6f8 0%, #ececef 55%, #e0e1e6 100%); }
+  .bg-light::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720"><g fill="none" stroke-width="2"><g transform="skewX(-16)"><rect x="240" y="60" width="380" height="460" rx="70" stroke="rgba(255,255,255,0.85)"/><rect x="1010" y="210" width="400" height="470" rx="75" stroke="rgba(25,34,109,0.05)"/><rect x="520" y="400" width="330" height="380" rx="60" stroke="rgba(25,34,109,0.06)"/></g><line x1="880" y1="-40" x2="640" y2="780" stroke="rgba(255,255,255,0.9)"/><line x1="1180" y1="-40" x2="940" y2="780" stroke="rgba(25,34,109,0.05)"/></g></svg>');
+    background-size: cover;
+  }
+  .bg-navy { background: linear-gradient(135deg, #10173f 0%, #151d55 45%, var(--fpt-navy) 100%); color: #fff; }
+  .bg-navy::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720"><g fill="none" stroke-width="2"><g transform="skewX(-16)"><rect x="240" y="60" width="380" height="460" rx="70" stroke="rgba(120,180,255,0.20)"/><rect x="1010" y="210" width="400" height="470" rx="75" stroke="rgba(255,255,255,0.10)"/><rect x="520" y="400" width="330" height="380" rx="60" stroke="rgba(120,180,255,0.10)"/></g><line x1="880" y1="-40" x2="640" y2="780" stroke="rgba(120,180,255,0.30)"/><line x1="1180" y1="-40" x2="940" y2="780" stroke="rgba(120,180,255,0.16)"/></g></svg>');
+    background-size: cover;
+  }
+
+  /* cover / divider / thanks carry their photo as an inline background-image */
+  .cover-photo { background-size: cover; background-position: center; color: #fff; }
+  .divider { background-size: cover; background-position: center; color: #fff; justify-content: center; padding: 0 110px; }
+  .divider .sec-num { font-size: 120px; font-weight: 700; color: var(--fpt-orange); line-height: 1; opacity: .95; }
+  .divider h1 { font-size: 56px; font-weight: 700; color: #fff; margin-top: 10px; }
+  .divider .rule { width: 110px; height: 6px; background: var(--fpt-orange); border-radius: 3px; margin-top: 26px; }
+  .thanks { background-size: cover; background-position: center 20%; color: #fff; justify-content: center; align-items: center; text-align: center; }
+  .thanks h1 { font-size: 84px; font-weight: 700; }
+  .thanks .rule { width: 130px; height: 6px; background: var(--fpt-orange); border-radius: 3px; margin: 30px auto; }
+  .thanks p { font-size: 22px; color: #cdd6f7; }
+
+  /* ---------- title / closing text ---------- */
+  .cover { justify-content: center; padding: 0 110px; }
+  .cover .eyebrow { font-size: 20px; letter-spacing: .35em; text-transform: uppercase; color: var(--fpt-orange); font-weight: 600; margin-bottom: 26px; }
+  .cover h1 { font-size: 66px; line-height: 1.08; font-weight: 700; color: #fff; max-width: 900px; }
+  .cover .rule { width: 130px; height: 6px; background: var(--fpt-orange); border-radius: 3px; margin: 30px 0; }
+  .cover .tagline { font-size: 30px; font-weight: 300; color: #dfe6ff; margin-bottom: 14px; }
+  .cover .meta { font-size: 18px; color: #b9c2ea; }
+  .cover .meta a { color: #b9c2ea; }
+  .cover .accents, .divider .accents, .thanks .accents { position: absolute; bottom: 0; left: 0; right: 0; height: 8px; display: flex; }
+  .accents span { flex: 1; }
+
+  /* ---------- content slide chrome ---------- */
+  .content { padding: 44px 64px 58px; position: relative; }
+  .content > * { position: relative; }
+  .slide-head { display: flex; align-items: baseline; gap: 18px; border-bottom: 3px solid transparent; padding-bottom: 12px; margin-bottom: 18px;
+    border-image: linear-gradient(90deg, var(--fpt-orange) 0 90px, rgba(25,34,109,.15) 90px 100%) 1; }
+  .slide-head .num { font-size: 40px; font-weight: 700; color: var(--fpt-orange); line-height: 1; }
+  .slide-head h2 { font-size: 31px; font-weight: 700; color: var(--fpt-navy); line-height: 1.15; }
+  .lead { font-size: 19px; color: var(--ink-soft); margin-bottom: 16px; }
+  .lead:last-of-type { margin-bottom: 0; }
+  .lead strong, .lead b { color: var(--ink); }
+  .content a { color: var(--fpt-blue); }
+
+  .footer { position: absolute; left: 64px; right: 64px; bottom: 18px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #8a8d99; }
+  .footer .page { background: var(--fpt-navy); color: #fff; border-radius: 4px; padding: 2px 10px; font-weight: 600; }
+
+  ul.points { list-style: none; display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
+  ul.points:last-child { margin-bottom: 0; }
+  ul.points li { font-size: 18.5px; line-height: 1.42; color: var(--ink-soft); padding-left: 26px; position: relative; }
+  ul.points li::before { content: ""; position: absolute; left: 0; top: 9px; width: 12px; height: 12px; background: var(--fpt-orange); border-radius: 3px; transform: skewX(-12deg); }
+  ul.points li strong { color: var(--fpt-navy); }
+  ul.points li code, .content code { font-family: "Consolas", "Courier New", monospace; font-size: .92em; background: rgba(25,34,109,.07); border-radius: 4px; padding: 1px 6px; }
+
+  .imgbox { display: flex; flex-direction: column; align-items: center; gap: 8px; margin: 6px 0 14px; }
+  .imgbox img { border-radius: 10px; box-shadow: 0 6px 22px rgba(15,20,60,.16); background: #fff; max-width: 100%; }
+  .imgbox .cap { font-size: 13.5px; color: #8a8d99; font-style: italic; }
+  .imgbox img.flat { box-shadow: none; background: transparent; }
+
+  .cols { display: flex; gap: 34px; align-items: center; }
+
+  /* TOC */
+  .toc { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 26px; margin-top: 8px; }
+  .toc .item { display: flex; gap: 18px; align-items: baseline; background: #fff; border-radius: 10px; padding: 18px 22px; box-shadow: 0 5px 18px rgba(15,20,60,.10); border-left: 6px solid var(--fpt-orange); height: 100%; }
+  .toc .item:nth-child(2) { border-left-color: var(--fpt-green); }
+  .toc .item:nth-child(3) { border-left-color: var(--fpt-blue); }
+  .toc .item:nth-child(4) { border-left-color: var(--fpt-teal); }
+  .toc .item:nth-child(5) { border-left-color: var(--fpt-navy); }
+  .toc .item:nth-child(6) { border-left-color: var(--fpt-orange); }
+  .toc .n { font-size: 34px; font-weight: 700; color: var(--fpt-orange); min-width: 52px; }
+  .toc .item:nth-child(2) .n { color: var(--fpt-green); }
+  .toc .item:nth-child(3) .n { color: var(--fpt-blue); }
+  .toc .item:nth-child(4) .n { color: var(--fpt-teal); }
+  .toc .item:nth-child(5) .n { color: var(--fpt-navy); }
+  .toc h3 { font-size: 21px; color: var(--fpt-navy); margin-bottom: 4px; }
+  .toc p { font-size: 15px; color: var(--ink-soft); line-height: 1.35; }
+
+  /* cards */
+  .cards3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin: 6px 0 18px; }
+  .card { background: #fff; border-radius: 10px; padding: 16px 18px 14px; box-shadow: 0 5px 18px rgba(15,20,60,.10); border-top: 5px solid var(--fpt-orange); }
+  .card.g { border-top-color: var(--fpt-green); }
+  .card.b { border-top-color: var(--fpt-blue); }
+  .card h3 { font-size: 19px; color: var(--fpt-navy); margin-bottom: 6px; }
+  .card p { font-size: 15.5px; line-height: 1.4; color: var(--ink-soft); }
+
+  /* tables */
+  table.fpt { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 5px 18px rgba(15,20,60,.10); margin-bottom: 14px; }
+  table.fpt th { background: var(--fpt-navy); color: #fff; text-align: left; font-size: 16px; padding: 9px 16px; }
+  table.fpt td { font-size: 15.5px; line-height: 1.35; padding: 8.5px 16px; border-bottom: 1px solid #e7e8ee; color: var(--ink-soft); vertical-align: top; }
+  table.fpt tr:last-child td { border-bottom: none; }
+  table.fpt td strong { color: var(--fpt-navy); white-space: nowrap; }
+  .tag { display: inline-block; padding: 1px 9px; border-radius: 4px; color: #fff; font-size: 14px; font-weight: 600; }
+  .tag.o { background: var(--fpt-orange); } .tag.b { background: var(--fpt-blue); } .tag.t { background: var(--fpt-teal); } .tag.g { background: var(--fpt-green); } .tag.n { background: var(--fpt-navy); }
+
+  /* seam cards */
+  .seams { display: flex; flex-direction: column; gap: 13px; margin-bottom: 16px; }
+  .seam { background: #fff; border-radius: 8px; border-left: 6px solid var(--fpt-orange); box-shadow: 0 4px 14px rgba(15,20,60,.09); padding: 12px 18px; display: flex; gap: 16px; align-items: baseline; }
+  .seam.b { border-left-color: var(--fpt-blue); } .seam.t { border-left-color: var(--fpt-teal); }
+  .seam .who { font-weight: 700; color: var(--fpt-navy); font-size: 17.5px; white-space: nowrap; min-width: 200px; }
+  .seam p { font-size: 16px; line-height: 1.4; color: var(--ink-soft); }
+  .strip { background: linear-gradient(90deg, var(--fpt-navy), #2a35a0); color: #dfe6ff; border-radius: 8px; padding: 12px 20px; font-size: 15.5px; line-height: 1.45; margin-bottom: 14px; }
+  .strip strong { color: #fff; }
+  .strip:last-child { margin-bottom: 0; }
+
+  /* chain visual */
+  .chain { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 10px 0 22px; flex-wrap: nowrap; }
+  .chain .link { background: var(--fpt-navy); color: #fff; font-size: 16.5px; font-weight: 600; padding: 9px 20px; border-radius: 7px; transform: skewX(-10deg); box-shadow: 0 4px 12px rgba(15,20,60,.18); }
+  .chain .link > span { display: inline-block; transform: skewX(10deg); }
+  .chain .link.hot { background: var(--fpt-orange); }
+  .chain .arr { color: var(--fpt-orange); font-size: 22px; font-weight: 700; }
+  .chain .link small { display: block; font-size: 12px; font-weight: 400; opacity: .8; transform: skewX(10deg); }
+  /* flat modifier: upright rectangles instead of skewed links, for a dense data-path strip */
+  .chain.flat { gap: 7px; margin: 0 0 6px; }
+  .chain.flat .link { transform: none; font-size: 14.5px; padding: 5px 12px; text-align: center; line-height: 1.25; }
+  .chain.flat .link > span, .chain.flat .link small { transform: none; }
+  .chain.flat .link small { font-size: 11px; opacity: .85; }
+  .chain.flat .arr { font-size: 17px; }
+
+  .badges { display: flex; gap: 10px; justify-content: center; margin: 0 0 20px; flex-wrap: wrap; }
+  .badge { border: 2px solid var(--fpt-orange); color: #b34e0e; background: rgba(243,112,33,.07); font-size: 14.5px; font-weight: 600; padding: 5px 14px; border-radius: 999px; }
+  .badge.g { border-color: var(--fpt-green); color: #2c7a25; background: rgba(80,184,72,.09); }
+
+  /* terminal / log evidence */
+  pre.log { background: var(--navy-deep); color: #cfd6f5; font-family: "Consolas", "Courier New", monospace; font-size: 13.5px; line-height: 1.5; border-radius: 8px; padding: 14px 18px; overflow: hidden; margin-bottom: 14px; }
+  pre.log .ok { color: #7ee787; }
+  pre.log .dim { color: #7f88ad; }
+
+  /* ---------- controls ---------- */
+  .hint { position: fixed; left: 18px; bottom: 12px; color: rgba(255,255,255,.45); font-size: 12.5px; z-index: 50; }
+  .hud { position: fixed; right: 18px; bottom: 14px; z-index: 50; display: flex; gap: 8px; align-items: center; font-family: inherit; }
+  .hud button { background: rgba(255,255,255,.12); color: #fff; border: 1px solid rgba(255,255,255,.25); border-radius: 6px; padding: 5px 12px; font-size: 15px; cursor: pointer; }
+  .hud button:hover { background: var(--fpt-orange); border-color: var(--fpt-orange); }
+  .hud .ctr { color: rgba(255,255,255,.75); font-size: 14px; min-width: 60px; text-align: center; }
+  .progress { position: fixed; left: 0; bottom: 0; height: 4px; background: var(--fpt-orange); width: 0; z-index: 60; transition: width .25s ease; }
+
+  @media print {
+    html, body { background: #fff; height: auto; }
+    .deck { position: static; display: block; }
+    .slide { display: flex !important; position: relative; transform: none !important; box-shadow: none; page-break-after: always; margin: 0 auto; }
+    .hud, .progress, .hint { display: none !important; }
+    @page { size: 13.55in 7.65in; margin: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="deck">
+  <section class="slide cover-photo cover active" style="background-image: linear-gradient(90deg, rgba(8,12,38,.92) 0%, rgba(8,12,38,.72) 40%, rgba(8,12,38,.18) 100%), url('../assets/bg-title-city.jpg')">
+    <div class="eyebrow">Knowledge Base</div>
+    <h1>CI Workflows, YAML and GitHub Actions</h1>
+    <div class="rule"></div>
+    <div class="tagline">What the <code>.yml</code> files do, and what a tag really promises</div>
+    <div class="meta">Cooperative Vehicle Awareness · Milestone 1</div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">§</div><h2>Table of contents</h2></div>
+    <div class="toc">
+      <div class="item"><div class="n">01</div><div><h3>Continuous integration</h3><p>what GitHub Actions is for, and the words it uses</p></div></div>
+      <div class="item"><div class="n">02</div><div><h3>Docker</h3><p>images, containers, registries, and the two verbs that matter</p></div></div>
+      <div class="item"><div class="n">03</div><div><h3>The workflow file</h3><p>its shape, its syntax, and where the real documentation lives</p></div></div>
+      <div class="item"><div class="n">04</div><div><h3>Image identity</h3><p>name, tag and digest, and which of them a build chooses</p></div></div>
+      <div class="item"><div class="n">05</div><div><h3>Limitation in this project</h3><p>one push, two builds, one tag</p></div></div>
+    </div>
+    <div class="footer"><span>Knowledge Base · CI workflows, YAML and GitHub Actions</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">01</div>
+    <h1>Continuous integration</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">01</div><h2>The role of continuous integration</h2></div>
+    <p class="lead">Continuous integration is the practice of building and testing every change automatically, on a machine that is not the author's laptop.</p>
+    <ul class="points">
+      <li><strong>It answers one question:</strong> does this change still build, still pass its tests, and still produce a usable artifact?</li>
+      <li><strong>It runs on a clean machine every time</strong>, so "it works on my machine" stops being evidence.</li>
+      <li><strong>It runs unattended</strong>, on a trigger — nobody has to remember to start it.</li>
+    </ul>
+    <div class="strip"><strong>GitHub Actions</strong> is GitHub's built-in system for this. The instructions live in the repository itself, as files under <code>.github/workflows/</code>, so the build procedure is versioned with the code it builds.</div>
+    <div class="footer"><span>Knowledge Base · CI workflows, YAML and GitHub Actions</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">01</div><h2>The vocabulary</h2></div>
+    <p class="lead">The terms below are GitHub's, not this project's. They appear throughout the workflow files and in every error message.</p>
+    <table class="fpt">
+      <thead><tr><th>Term</th><th>What it is</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Workflow</strong></td><td>One <code>.yml</code> file under <code>.github/workflows/</code>. A complete automated procedure</td></tr>
+        <tr><td><strong>Event</strong></td><td>What starts a workflow — a <code>push</code>, a <code>pull_request</code>, a schedule</td></tr>
+        <tr><td><strong>Run</strong></td><td>One execution of a workflow, caused by one event</td></tr>
+        <tr><td><strong>Job</strong></td><td>A named group of steps inside a workflow. Jobs run in parallel by default</td></tr>
+        <tr><td><strong>Step</strong></td><td>A single instruction in a job — either a shell command or a reusable action</td></tr>
+        <tr><td><strong>Action</strong></td><td>A packaged, reusable step, referenced with <code>uses:</code></td></tr>
+        <tr><td><strong>Runner</strong></td><td>The virtual machine the job executes on</td></tr>
+      </tbody>
+    </table>
+    <div class="strip">This project also says <strong>lane</strong> for a job — a local nickname, not a GitHub term.</div>
+    <div class="footer"><span>Knowledge Base · CI workflows, YAML and GitHub Actions</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">01</div><h2>The authoritative documentation</h2></div>
+    <p class="lead">Nothing in this deck replaces GitHub's own reference. Use these when writing or debugging a workflow.</p>
+    <table class="fpt">
+      <thead><tr><th>Source</th><th>What to use it for</th></tr></thead>
+      <tbody>
+        <tr><td><a href="https://docs.github.com/en/actions">docs.github.com/en/actions</a></td><td>The starting point — concepts, guides, examples</td></tr>
+        <tr><td><a href="https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions">Workflow syntax reference</a></td><td>Every key that is legal in a workflow file, and what it means</td></tr>
+        <tr><td><a href="https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs">Events that trigger workflows</a></td><td>The full list of triggers and their filters</td></tr>
+        <tr><td><a href="https://docs.docker.com/">docs.docker.com</a></td><td>Docker itself — build, push, pull, run</td></tr>
+      </tbody>
+    </table>
+    <div class="footer"><span>Knowledge Base · CI workflows, YAML and GitHub Actions</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">02</div>
+    <h1>Docker</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">02</div><h2>Images and containers</h2></div>
+    <p class="lead">Docker packages an application together with everything it needs to run, so the same bundle behaves identically on any machine.</p>
+    <ul class="points">
+      <li><strong>Image</strong> — a frozen, read-only bundle: the filesystem, the libraries, the program, and the command to start it. Built once, never modified.</li>
+      <li><strong>Container</strong> — a running instance of an image. Starting the same image twice gives two containers.</li>
+      <li><strong>Registry</strong> — a server that stores images so other machines can fetch them. This project uses <strong>Zot</strong>, at <code>registry.hackathon-2.carsky.io</code>.</li>
+    </ul>
+    <p class="lead">An image is to a container what a program on disk is to a process in memory.</p>
+    <div class="footer"><span>Knowledge Base · CI workflows, YAML and GitHub Actions</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">02</div><h2>The four actions a build workflow performs</h2></div>
+    <p class="lead">Plain terms first, Docker's own terms in brackets. These four are what every image job in this repository does.</p>
+    <table class="fpt">
+      <thead><tr><th>#</th><th>Plain term</th><th>Docker term</th><th>What happens</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><strong>Build the image</strong></td><td><code>docker build</code></td><td>Turn source code into an image on the runner</td></tr>
+        <tr><td>2</td><td><strong>Upload the image</strong></td><td><strong>push</strong> — <code>docker push</code></td><td>Send the image from the runner to the registry</td></tr>
+        <tr><td>3</td><td><strong>Check the registry</strong></td><td>HTTP request</td><td>Ask the registry whether the image is really there</td></tr>
+        <tr><td>4</td><td><strong>Download the image</strong></td><td><strong>pull</strong> — <code>docker pull</code></td><td>Fetch it back from the registry and start it</td></tr>
+      </tbody>
+    </table>
+    <div class="strip">Steps 3 and 4 exist because a successful build only proves the code compiles. Only fetching the image back proves the registry holds something another machine can actually run.</div>
+    <div class="footer"><span>Knowledge Base · CI workflows, YAML and GitHub Actions</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">03</div>
+    <h1>The workflow file</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">03</div><h2>Anatomy of a workflow file</h2></div>
+    <p class="lead">YAML is an indentation-based format: nesting is expressed by spaces, never by braces or tabs. Four top-level keys carry a workflow.</p>
+    <pre class="log">name: phase1-ci                 # what the workflow is called
+
+on:                             # WHEN it runs
+  push:
+  pull_request:
+    branches: [main]
+
+jobs:                           # WHAT it runs
+  v2x-ecu-image:                # &lt;- a job, named by its author
+    runs-on: ubuntu-latest      # which runner
+    steps:                      # &lt;- the ordered instructions
+      - uses: actions/checkout@v4     # a reusable action
+      - name: Build the image         # a shell command
+        run: docker build -t my-image .</pre>
+    <ul class="points">
+      <li><strong><code>run:</code></strong> executes a shell command. <strong><code>uses:</code></strong> calls a packaged action someone else wrote.</li>
+      <li>Full key-by-key reference: <a href="https://docs.github.com/en/actions/writing-workflows/workflow-syntax-for-github-actions">Workflow syntax for GitHub Actions</a>.</li>
+    </ul>
+    <div class="footer"><span>Knowledge Base · CI workflows, YAML and GitHub Actions</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">03</div><h2>Upload (push) — the code</h2></div>
+    <p class="lead">Build the image and send it to the registry. <code>--push</code> makes buildx upload the result instead of leaving it on the runner.</p>
+    <pre class="log">- name: Build and upload the image
+  run: |
+    docker buildx build \
+      --platform linux/arm64 \
+      -t registry.hackathon-2.carsky.io/m1-v2x-ecu:latest \
+      --push \
+      --metadata-file &quot;$RUNNER_TEMP/push-metadata.json&quot; \
+      V2X_ECU/
+
+    # buildx reports the digest of exactly what it uploaded
+    DIGEST=$(jq -r &#x27;.&quot;containerimage.digest&quot;&#x27; &quot;$RUNNER_TEMP/push-metadata.json&quot;)
+    echo &quot;[PUSH] digest of this build: $DIGEST&quot;</pre>
+    <ul class="points">
+      <li><strong><code>-t</code></strong> names the image being uploaded — registry host, image name and tag in one string.</li>
+      <li><strong><code>--metadata-file</code></strong> is how the job learns the digest; the build chooses the digest, not the author.</li>
+    </ul>
+    <div class="footer"><span>Knowledge Base · CI workflows, YAML and GitHub Actions</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">03</div><h2>Download (pull) — the code</h2></div>
+    <p class="lead">Fetch the image back out of the registry and start a container from it, on a runner that has just been wiped of the local build.</p>
+    <pre class="log">- name: Download the image and start it
+  run: |
+    docker login registry.hackathon-2.carsky.io -u &quot;$USER&quot; --password-stdin &lt;&lt;&lt; &quot;$KEY&quot;
+
+    docker pull --platform linux/arm64 \
+      registry.hackathon-2.carsky.io/m1-v2x-ecu:latest
+
+    # start it and confirm the application comes up
+    docker run --rm --platform linux/arm64 \
+      registry.hackathon-2.carsky.io/m1-v2x-ecu:latest</pre>
+    <ul class="points">
+      <li><strong>A pull needs credentials</strong> exactly as a push does — the registry is private.</li>
+      <li>This is the same operation a CarSky node performs when it deploys.</li>
+    </ul>
+    <div class="footer"><span>Knowledge Base · CI workflows, YAML and GitHub Actions</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">03</div><h2>An image's three identifiers</h2></div>
+    <p class="lead">One image, three ways to refer to it. Two are chosen by the author; the third is not.</p>
+    <pre class="log">  registry.hackathon-2.carsky.io / m1-v2x-ecu : latest
+  └────────── registry host ─────┘ └── name ──┘ └tag─┘
+
+  registry.hackathon-2.carsky.io/m1-v2x-ecu@sha256:149c5433198d2e…
+                                            └──── digest (hash) ───┘</pre>
+    <table class="fpt">
+      <thead><tr><th>Identifier</th><th>Chosen by</th><th>Can it change?</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Name</strong></td><td>The author, in <code>-t</code></td><td>Fixed for the life of the image</td></tr>
+        <tr><td><strong>Tag</strong></td><td>The author, in <code>-t</code> after the <code>:</code></td><td><strong>Movable</strong> — can be repointed at a different image at any time</td></tr>
+        <tr><td><strong>Digest</strong></td><td>Computed by the build, from the image's own bytes</td><td>Never — a different image always has a different digest</td></tr>
+      </tbody>
+    </table>
+    <div class="strip">In <code>-t registry.…/m1-v2x-ecu:latest</code>, everything before the last <code>:</code> is the name, and <code>latest</code> is the tag. A tag is a label, not an identity.</div>
+    <div class="footer"><span>Knowledge Base · CI workflows, YAML and GitHub Actions</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">04</div>
+    <h1>Limitation in this project</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">04</div><h2>Two builds from one git push</h2></div>
+    <p class="lead">Every workflow file here subscribes to two events. One <code>git push</code> to a branch with an open pull request satisfies both.</p>
+    <pre class="log">on:
+  push:                      # fires on a push to any branch
+  pull_request:
+    branches: [main]         # ALSO fires, for a branch with an open PR</pre>
+    <ul class="points">
+      <li><strong>GitHub starts two runs</strong>, on the same commit, at the same time. Each executes the whole file, including the image jobs.</li>
+      <li><strong>Each run builds its own image.</strong> Container builds are not byte-identical — timestamps and layer ordering differ — so the two images have <strong>two different digests</strong>.</li>
+      <li><strong>Both upload under the same name and tag</strong>, <code>m1-v2x-ecu:latest</code>, because the tag is written into <code>-t</code> as a constant.</li>
+    </ul>
+    <div class="strip">A tag points at one image. The second upload to finish wins it; the first run's image stays in the registry with nothing pointing at it.</div>
+    <div class="footer"><span>Knowledge Base · CI workflows, YAML and GitHub Actions</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">04</div><h2>The tag a node loads</h2></div>
+    <p class="lead">A CarSky node does not know about builds, commits or pull requests. It is given one string.</p>
+    <ul class="points">
+      <li><strong>A node's <code>image</code> field takes a tag</strong> — <code>registry.hackathon-2.carsky.io/m1-v2x-ecu:latest</code>. Every blueprint and node guide in this repository uses that form.</li>
+      <li><strong>The node pulls whatever the tag points at</strong>, at the moment it deploys. It has no way to ask which build produced it.</li>
+      <li><strong><code>:latest</code> may hold either run's image</strong> — the push run's or the pull-request run's, decided by which finished second.</li>
+    </ul>
+    <div class="strip">The image running on a node can therefore come from any recent build, and nothing on the node records which. Two deploys minutes apart can load different code from the same tag.</div>
+    <div class="footer"><span>Knowledge Base · CI workflows, YAML and GitHub Actions</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">04</div><h2>What follows from a movable tag</h2></div>
+    <p class="lead">The consequence is not a single failure mode. It is the loss of a guarantee everything else assumed.</p>
+    <table class="fpt">
+      <thead><tr><th>Assumption</th><th>Why it no longer holds</th></tr></thead>
+      <tbody>
+        <tr><td>"The tag holds the image from my commit"</td><td>Another run may have written it afterwards</td></tr>
+        <tr><td>"Two deploys of one blueprint load the same code"</td><td>The tag may have moved between them</td></tr>
+        <tr><td>"A green build means the deployed image was verified"</td><td>The build verified an image; the tag may point at another</td></tr>
+        <tr><td>"The registry copy matches the runner's local copy"</td><td>Only until the next upload lands</td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>A digest is the only reference that cannot move</strong> — but no node in this project has ever been given one, so it is evidence rather than a deployment route.</li>
+      <li><strong>Reading the tag at deploy time is what settles it</strong>: query the registry for the digest behind <code>:latest</code> and record it beside the run.</li>
+    </ul>
+    <div class="footer"><span>Knowledge Base · CI workflows, YAML and GitHub Actions</span><span class="page"></span></div>
+  </section>
+  <section class="slide thanks" style="background-image: linear-gradient(rgba(8,12,38,.66), rgba(14,21,64,.86)), url('../assets/bg-fpt-tower.jpg')">
+    <h1>Thank you</h1>
+    <div class="rule"></div>
+    <p>Questions welcome · sources linked throughout · GitHub Actions and Docker documentation are the authorities</p>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+</div>
+
+<div class="hint">← → navigate · F fullscreen · print for PDF</div>
+<div class="hud">
+  <button id="prev" aria-label="Previous slide">‹</button>
+  <span class="ctr" id="ctr"></span>
+  <button id="next" aria-label="Next slide">›</button>
+</div>
+<div class="progress" id="prog"></div>
+
+<script>
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  slides.forEach((sl, i) => { const p = sl.querySelector('.page'); if (p) p.textContent = i + 1; });
+  let cur = 0;
+
+  function fit() {
+    const s = Math.min(innerWidth / 1280, innerHeight / 720);
+    slides.forEach(sl => sl.style.transform = `scale(${s})`);
+  }
+  function show(i) {
+    cur = Math.max(0, Math.min(slides.length - 1, i));
+    slides.forEach((sl, k) => sl.classList.toggle('active', k === cur));
+    document.getElementById('ctr').textContent = `${cur + 1} / ${slides.length}`;
+    document.getElementById('prog').style.width = `${(cur + 1) / slides.length * 100}%`;
+    location.hash = cur ? `#${cur + 1}` : '';
+  }
+  addEventListener('resize', fit);
+  addEventListener('keydown', e => {
+    if (['ArrowRight', 'PageDown', ' ', 'Enter'].includes(e.key)) { e.preventDefault(); show(cur + 1); }
+    else if (['ArrowLeft', 'PageUp', 'Backspace'].includes(e.key)) { e.preventDefault(); show(cur - 1); }
+    else if (e.key === 'Home') show(0);
+    else if (e.key === 'End') show(slides.length - 1);
+    else if (e.key.toLowerCase() === 'f') document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+  });
+  document.getElementById('prev').onclick = () => show(cur - 1);
+  document.getElementById('next').onclick = () => show(cur + 1);
+  let tx = null;
+  addEventListener('touchstart', e => tx = e.touches[0].clientX);
+  addEventListener('touchend', e => { if (tx !== null) { const dx = e.changedTouches[0].clientX - tx; if (Math.abs(dx) > 50) show(cur + (dx < 0 ? 1 : -1)); tx = null; } });
+
+  const h = parseInt((location.hash || '').slice(1), 10);
+  fit(); show(isNaN(h) ? 0 : h - 1);
+</script>
+
+</body>
+</html>
