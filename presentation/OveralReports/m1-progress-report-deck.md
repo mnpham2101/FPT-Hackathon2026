@@ -220,25 +220,18 @@ Every claim in this report is read off one of three surfaces, so a run either pr
 
 ---
 
-# HMI evidence — the idle screen
+# HMI evidence — the screen transition
 
-![h:330 The delivered IVI home screen — Display Area Mode HOME, idle and awaiting a warning](../assets/m1-report-ivi-home-screen.png)
+<div class="cols" style="align-items:flex-start; justify-content:center; gap:20px; margin:2px 0 12px;">
+<div style="text-align:center;"><img src="../assets/m1-report-ivi-home-screen.png" alt="The IVI home screen, idle" style="height:300px; width:auto; border-radius:10px; box-shadow:0 6px 22px rgba(15,20,60,.16);"><div style="font-size:13.5px; color:#8a8d99; font-style:italic; margin-top:8px;">Before — MODE: HOME, awaiting a warning</div></div>
+<div style="text-align:center; min-width:104px; padding-top:118px;"><div style="font-size:46px; font-weight:700; color:#F37021; line-height:1;">&#8594;</div><div style="font-size:13.5px; color:#19226D; font-weight:700; margin-top:6px;">first R4 warning<br>arrives</div></div>
+<div style="text-align:center;"><img src="../assets/m1-report-ivi-warning-screen.svg" alt="The IVI warning screen, the god view" style="height:300px; width:auto; border-radius:10px; box-shadow:0 6px 22px rgba(15,20,60,.16);"><div style="font-size:13.5px; color:#8a8d99; font-style:italic; margin-top:8px;">After — the god view, distance and risk colour</div></div>
+</div>
 
-- **`MODE: HOME`** in the status bar, with `Display Area Mode: HOME (Idle — Awaiting Warning)` in the diagnostics panel.
-- **`V2X LINK: BOUND :47300`** — the R4 listener is already up, so a later warning is not a start-up artefact.
-- **The capture must show the transition away from this screen** — the change, not the warning screen alone, is the evidence.
-
----
-
-# HMI evidence — the warning screen
-
-![h:300 The god view — ego, B and ghost C, with the distance readout and the risk colour](../assets/m1-report-ivi-warning-screen.svg)
-
+- **The transition is the evidence.** The idle screen shows `MODE: HOME` with the R4 listener already bound on `47300`, so the warning that follows is not a start-up artefact.
 - **Distance is on screen** — `d_AB` to the occluder and `d_AC` to the ghost, with the banner reading `[V2X] C · 35.0 m`.
 - **Risk is carried by colour** — the glow steps yellow, orange, red; the capture must catch it changing, not just show it red.
-- **Ghost C is drawn from R4 alone**, marked `source: v2x_relayed`, with the blind zone behind B.
-
-> **Accepted deviation.** The delivered screen is not the requirement's mock-up pixel for pixel. Everything the requirement asks it to convey is there — three vehicles, the distances, the risk state, the relayed provenance — and the deviation is accepted as a whole.
+- **Ghost C is drawn from R4 alone**, marked `source: v2x_relayed`, with the blind zone behind VehicleB.
 
 ---
 
@@ -258,13 +251,11 @@ Every claim in this report is read off one of three surfaces, so a run either pr
 |---|---|---|
 | Own-sensor detection reaches the store | `own_sensor_ingest` | `{"event":"own_sensor_ingest","payload":{"id":"own:1","source":"own_sensor"}}` |
 | Relayed object ingested from the V2X hop | `r2_ingest` | `{"event":"r2_ingest","payload":{"stationId":1201,"objectId":7}}` |
-| B confirmed from the ego's own sensors | `track_transition` | `{"event":"track_transition","id":"own:1","to":"tracked","source":"own_sensor"}` |
+| VehicleB confirmed from the ego's own sensors | `track_transition` | `{"event":"track_transition","id":"own:1","to":"tracked","source":"own_sensor"}` |
 | Ghost C confirmed from the relay only | `track_transition` | `{"event":"track_transition","id":"v2x:1201:7","to":"tracked","source":"v2x_relayed"}` |
 | The risk step behind the on-screen colour | `assessment` | `{"event":"assessment","risk":"high","prev":"medium","d_AC":35.0}` |
 | The warning emitted, carrying both vehicles | `r4_tx` | `{"event":"r4_tx","object":{"source":"v2x_relayed"},"geometry":{"vehicleB":[20.0,0.4]}}` |
 | The warning received and field-checked | `[RX]` · IVI | `[RX] seq=3 risk=high cSource=v2x_relayed bPos=(20.0,0.4)` |
-
-> **Shapes, not a transcript.** These are the lines each event produces and the fields a reviewer checks; the recorded run supplies the values.
 
 ---
 
@@ -334,23 +325,6 @@ Every claim in this report is read off one of three surfaces, so a run either pr
 - **Nothing on the board blocks the demonstration.** The delivered system runs today without any of it.
 - **Three of the five to-do items are reports** — the design, what the project taught us, and what the architecture can absorb next.
 - **The two optional items are explorations**, carried as ideas with a stated cost rather than as commitments.
-
----
-
-# Remaining items in detail
-
-| Item | What it covers | Where it lands |
-|---|---|---|
-| **Isolated node tests** | Each node exercised alone against bench stand-ins for its neighbours | The node folders and their walkthroughs |
-| **Scenario import** | Test scenarios read from JSON or XML, so a new case is a file rather than an edit | [Scenario_Player/](../../Scenario_Player/) |
-| **Design report** | The delivered design presented as a report, not as phase decks | [presentation/](../) |
-| **Knowledge-base report** | What the project taught us — the platform, the nodes, the CI, and what not to repeat | [presentation/KnowledgeBase/](../KnowledgeBase/) |
-| **Future-extension report** | What the architecture can absorb next, written against the seams that admit it | [requirements/future/](../../requirements/future/) |
-| **IVI layout improvement** | Possible rework of the warning-view layout, subject to review | [IVI_ECU/](../../IVI_ECU/) |
-| **Video to ADA and IVI** *(optional)* | One clip source feeding both nodes, so the IVI can show what the detector sees | [ADA_ECU/](../../ADA_ECU/) · [IVI_ECU/](../../IVI_ECU/) |
-| **Live-video machine learning** *(optional)* | Whether detection can run on a live stream rather than a recorded clip | [ADA_ECU/](../../ADA_ECU/) |
-
-> **Three days remain.** The isolated node tests close first; the three reports are the committed written record. Scenario import and the IVI layout follow as time allows, and the two optional items are explorations whose cost is stated before any of it is started.
 
 ---
 

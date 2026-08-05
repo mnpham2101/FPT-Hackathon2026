@@ -386,24 +386,18 @@
     <div class="footer"><span>Milestone 1 — Progress Report · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">05</div><h2>HMI evidence — the idle screen</h2></div>
-    <div class="imgbox"><img src="../assets/m1-report-ivi-home-screen.png" style="height:330px" alt="The delivered IVI home screen — Display Area Mode HOME, idle and awaiting a warning"><div class="cap">The delivered IVI home screen — Display Area Mode HOME, idle and awaiting a warning</div></div>
+    <div class="slide-head"><div class="num">05</div><h2>HMI evidence — the screen transition</h2></div>
+    <div class="cols" style="align-items:flex-start; justify-content:center; gap:20px; margin:2px 0 12px;">
+    <div style="text-align:center;"><img src="../assets/m1-report-ivi-home-screen.png" alt="The IVI home screen, idle" style="height:300px; width:auto; border-radius:10px; box-shadow:0 6px 22px rgba(15,20,60,.16);"><div style="font-size:13.5px; color:#8a8d99; font-style:italic; margin-top:8px;">Before — MODE: HOME, awaiting a warning</div></div>
+    <div style="text-align:center; min-width:104px; padding-top:118px;"><div style="font-size:46px; font-weight:700; color:#F37021; line-height:1;">&#8594;</div><div style="font-size:13.5px; color:#19226D; font-weight:700; margin-top:6px;">first R4 warning<br>arrives</div></div>
+    <div style="text-align:center;"><img src="../assets/m1-report-ivi-warning-screen.svg" alt="The IVI warning screen, the god view" style="height:300px; width:auto; border-radius:10px; box-shadow:0 6px 22px rgba(15,20,60,.16);"><div style="font-size:13.5px; color:#8a8d99; font-style:italic; margin-top:8px;">After — the god view, distance and risk colour</div></div>
+    </div>
     <ul class="points">
-      <li><strong><code>MODE: HOME</code></strong> in the status bar, with <code>Display Area Mode: HOME (Idle — Awaiting Warning)</code> in the diagnostics panel.</li>
-      <li><strong><code>V2X LINK: BOUND :47300</code></strong> — the R4 listener is already up, so a later warning is not a start-up artefact.</li>
-      <li><strong>The capture must show the transition away from this screen</strong> — the change, not the warning screen alone, is the evidence.</li>
-    </ul>
-    <div class="footer"><span>Milestone 1 — Progress Report · FPT Hackathon 2026</span><span class="page"></span></div>
-  </section>
-  <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">05</div><h2>HMI evidence — the warning screen</h2></div>
-    <div class="imgbox"><img src="../assets/m1-report-ivi-warning-screen.svg" style="height:300px" alt="The god view — ego, B and ghost C, with the distance readout and the risk colour"><div class="cap">The god view — ego, B and ghost C, with the distance readout and the risk colour</div></div>
-    <ul class="points">
+      <li><strong>The transition is the evidence.</strong> The idle screen shows <code>MODE: HOME</code> with the R4 listener already bound on <code>47300</code>, so the warning that follows is not a start-up artefact.</li>
       <li><strong>Distance is on screen</strong> — <code>d_AB</code> to the occluder and <code>d_AC</code> to the ghost, with the banner reading <code>[V2X] C · 35.0 m</code>.</li>
       <li><strong>Risk is carried by colour</strong> — the glow steps yellow, orange, red; the capture must catch it changing, not just show it red.</li>
-      <li><strong>Ghost C is drawn from R4 alone</strong>, marked <code>source: v2x_relayed</code>, with the blind zone behind B.</li>
+      <li><strong>Ghost C is drawn from R4 alone</strong>, marked <code>source: v2x_relayed</code>, with the blind zone behind VehicleB.</li>
     </ul>
-    <div class="strip"><strong>Accepted deviation.</strong> The delivered screen is not the requirement's mock-up pixel for pixel. Everything the requirement asks it to convey is there — three vehicles, the distances, the risk state, the relayed provenance — and the deviation is accepted as a whole.</div>
     <div class="footer"><span>Milestone 1 — Progress Report · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
@@ -423,14 +417,13 @@
       <tbody>
         <tr><td>Own-sensor detection reaches the store</td><td><code>own_sensor_ingest</code></td><td><code>{&quot;event&quot;:&quot;own_sensor_ingest&quot;,&quot;payload&quot;:{&quot;id&quot;:&quot;own:1&quot;,&quot;source&quot;:&quot;own_sensor&quot;}}</code></td></tr>
         <tr><td>Relayed object ingested from the V2X hop</td><td><code>r2_ingest</code></td><td><code>{&quot;event&quot;:&quot;r2_ingest&quot;,&quot;payload&quot;:{&quot;stationId&quot;:1201,&quot;objectId&quot;:7}}</code></td></tr>
-        <tr><td>B confirmed from the ego's own sensors</td><td><code>track_transition</code></td><td><code>{&quot;event&quot;:&quot;track_transition&quot;,&quot;id&quot;:&quot;own:1&quot;,&quot;to&quot;:&quot;tracked&quot;,&quot;source&quot;:&quot;own_sensor&quot;}</code></td></tr>
+        <tr><td>VehicleB confirmed from the ego's own sensors</td><td><code>track_transition</code></td><td><code>{&quot;event&quot;:&quot;track_transition&quot;,&quot;id&quot;:&quot;own:1&quot;,&quot;to&quot;:&quot;tracked&quot;,&quot;source&quot;:&quot;own_sensor&quot;}</code></td></tr>
         <tr><td>Ghost C confirmed from the relay only</td><td><code>track_transition</code></td><td><code>{&quot;event&quot;:&quot;track_transition&quot;,&quot;id&quot;:&quot;v2x:1201:7&quot;,&quot;to&quot;:&quot;tracked&quot;,&quot;source&quot;:&quot;v2x_relayed&quot;}</code></td></tr>
         <tr><td>The risk step behind the on-screen colour</td><td><code>assessment</code></td><td><code>{&quot;event&quot;:&quot;assessment&quot;,&quot;risk&quot;:&quot;high&quot;,&quot;prev&quot;:&quot;medium&quot;,&quot;d_AC&quot;:35.0}</code></td></tr>
         <tr><td>The warning emitted, carrying both vehicles</td><td><code>r4_tx</code></td><td><code>{&quot;event&quot;:&quot;r4_tx&quot;,&quot;object&quot;:{&quot;source&quot;:&quot;v2x_relayed&quot;},&quot;geometry&quot;:{&quot;vehicleB&quot;:[20.0,0.4]}}</code></td></tr>
         <tr><td>The warning received and field-checked</td><td><code>[RX]</code> · IVI</td><td><code>[RX] seq=3 risk=high cSource=v2x_relayed bPos=(20.0,0.4)</code></td></tr>
       </tbody>
     </table>
-    <div class="strip"><strong>Shapes, not a transcript.</strong> These are the lines each event produces and the fields a reviewer checks; the recorded run supplies the values.</div>
     <div class="footer"><span>Milestone 1 — Progress Report · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
@@ -497,24 +490,6 @@
       <li><strong>Three of the five to-do items are reports</strong> — the design, what the project taught us, and what the architecture can absorb next.</li>
       <li><strong>The two optional items are explorations</strong>, carried as ideas with a stated cost rather than as commitments.</li>
     </ul>
-    <div class="footer"><span>Milestone 1 — Progress Report · FPT Hackathon 2026</span><span class="page"></span></div>
-  </section>
-  <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">07</div><h2>Remaining items in detail</h2></div>
-    <table class="fpt">
-      <thead><tr><th>Item</th><th>What it covers</th><th>Where it lands</th></tr></thead>
-      <tbody>
-        <tr><td><strong>Isolated node tests</strong></td><td>Each node exercised alone against bench stand-ins for its neighbours</td><td>The node folders and their walkthroughs</td></tr>
-        <tr><td><strong>Scenario import</strong></td><td>Test scenarios read from JSON or XML, so a new case is a file rather than an edit</td><td><a href="../../Scenario_Player/">Scenario_Player/</a></td></tr>
-        <tr><td><strong>Design report</strong></td><td>The delivered design presented as a report, not as phase decks</td><td><a href="../">presentation/</a></td></tr>
-        <tr><td><strong>Knowledge-base report</strong></td><td>What the project taught us — the platform, the nodes, the CI, and what not to repeat</td><td><a href="../KnowledgeBase/">presentation/KnowledgeBase/</a></td></tr>
-        <tr><td><strong>Future-extension report</strong></td><td>What the architecture can absorb next, written against the seams that admit it</td><td><a href="../../requirements/future/">requirements/future/</a></td></tr>
-        <tr><td><strong>IVI layout improvement</strong></td><td>Possible rework of the warning-view layout, subject to review</td><td><a href="../../IVI_ECU/">IVI_ECU/</a></td></tr>
-        <tr><td><strong>Video to ADA and IVI</strong> <em>(optional)</em></td><td>One clip source feeding both nodes, so the IVI can show what the detector sees</td><td><a href="../../ADA_ECU/">ADA_ECU/</a> · <a href="../../IVI_ECU/">IVI_ECU/</a></td></tr>
-        <tr><td><strong>Live-video machine learning</strong> <em>(optional)</em></td><td>Whether detection can run on a live stream rather than a recorded clip</td><td><a href="../../ADA_ECU/">ADA_ECU/</a></td></tr>
-      </tbody>
-    </table>
-    <div class="strip"><strong>Three days remain.</strong> The isolated node tests close first; the three reports are the committed written record. Scenario import and the IVI layout follow as time allows, and the two optional items are explorations whose cost is stated before any of it is started.</div>
     <div class="footer"><span>Milestone 1 — Progress Report · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide thanks" style="background-image: linear-gradient(rgba(8,12,38,.66), rgba(14,21,64,.86)), url('../assets/bg-fpt-tower.jpg')">
