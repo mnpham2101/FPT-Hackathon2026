@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ADA ECU — Task Execution (Phases 2, 3 and 4)</title>
+<meta name="description" content="Planning deck — the decomposition of the ADA ECU&#x27;s three phases into 26 task groups and 89 subtasks, the performer of each unit, the dependency structure and what forced it, the code delivered, and the verification status of every acceptance criterion">
+<style>
+  :root {
+    --fpt-orange: #F37021;
+    --fpt-green: #50B848;
+    --fpt-blue: #034EA2;
+    --fpt-teal: #33B2C1;
+    --fpt-navy: #19226D;
+    --navy-deep: #0E1540;
+    --ink: #080808;
+    --ink-soft: #3d3d46;
+    --paper: #f4f4f6;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; background: #14183a; font-family: "Segoe UI", "Segoe UI Variable", "Helvetica Neue", Arial, sans-serif; }
+
+  .deck { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+
+  .slide {
+    width: 1280px; height: 720px;
+    position: absolute;
+    display: none;
+    flex-direction: column;
+    transform-origin: center center;
+    background: var(--paper);
+    color: var(--ink);
+    box-shadow: 0 18px 60px rgba(0,0,0,.45);
+    overflow: hidden;
+  }
+  .slide.active { display: flex; }
+
+  /* ---------- backgrounds ---------- */
+  .bg-light { background: linear-gradient(135deg, #f6f6f8 0%, #ececef 55%, #e0e1e6 100%); }
+  .bg-light::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720"><g fill="none" stroke-width="2"><g transform="skewX(-16)"><rect x="240" y="60" width="380" height="460" rx="70" stroke="rgba(255,255,255,0.85)"/><rect x="1010" y="210" width="400" height="470" rx="75" stroke="rgba(25,34,109,0.05)"/><rect x="520" y="400" width="330" height="380" rx="60" stroke="rgba(25,34,109,0.06)"/></g><line x1="880" y1="-40" x2="640" y2="780" stroke="rgba(255,255,255,0.9)"/><line x1="1180" y1="-40" x2="940" y2="780" stroke="rgba(25,34,109,0.05)"/></g></svg>');
+    background-size: cover;
+  }
+  .bg-navy { background: linear-gradient(135deg, #10173f 0%, #151d55 45%, var(--fpt-navy) 100%); color: #fff; }
+  .bg-navy::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720"><g fill="none" stroke-width="2"><g transform="skewX(-16)"><rect x="240" y="60" width="380" height="460" rx="70" stroke="rgba(120,180,255,0.20)"/><rect x="1010" y="210" width="400" height="470" rx="75" stroke="rgba(255,255,255,0.10)"/><rect x="520" y="400" width="330" height="380" rx="60" stroke="rgba(120,180,255,0.10)"/></g><line x1="880" y1="-40" x2="640" y2="780" stroke="rgba(120,180,255,0.30)"/><line x1="1180" y1="-40" x2="940" y2="780" stroke="rgba(120,180,255,0.16)"/></g></svg>');
+    background-size: cover;
+  }
+
+  /* cover / divider / thanks carry their photo as an inline background-image */
+  .cover-photo { background-size: cover; background-position: center; color: #fff; }
+  .divider { background-size: cover; background-position: center; color: #fff; justify-content: center; padding: 0 110px; }
+  .divider .sec-num { font-size: 120px; font-weight: 700; color: var(--fpt-orange); line-height: 1; opacity: .95; }
+  .divider h1 { font-size: 56px; font-weight: 700; color: #fff; margin-top: 10px; }
+  .divider .rule { width: 110px; height: 6px; background: var(--fpt-orange); border-radius: 3px; margin-top: 26px; }
+  .thanks { background-size: cover; background-position: center 20%; color: #fff; justify-content: center; align-items: center; text-align: center; }
+  .thanks h1 { font-size: 84px; font-weight: 700; }
+  .thanks .rule { width: 130px; height: 6px; background: var(--fpt-orange); border-radius: 3px; margin: 30px auto; }
+  .thanks p { font-size: 22px; color: #cdd6f7; }
+
+  /* ---------- title / closing text ---------- */
+  .cover { justify-content: center; padding: 0 110px; }
+  .cover .eyebrow { font-size: 20px; letter-spacing: .35em; text-transform: uppercase; color: var(--fpt-orange); font-weight: 600; margin-bottom: 26px; }
+  .cover h1 { font-size: 66px; line-height: 1.08; font-weight: 700; color: #fff; max-width: 900px; }
+  .cover .rule { width: 130px; height: 6px; background: var(--fpt-orange); border-radius: 3px; margin: 30px 0; }
+  .cover .tagline { font-size: 30px; font-weight: 300; color: #dfe6ff; margin-bottom: 14px; }
+  .cover .meta { font-size: 18px; color: #b9c2ea; }
+  .cover .meta a { color: #b9c2ea; }
+  .cover .accents, .divider .accents, .thanks .accents { position: absolute; bottom: 0; left: 0; right: 0; height: 8px; display: flex; }
+  .accents span { flex: 1; }
+
+  /* ---------- content slide chrome ---------- */
+  .content { padding: 44px 64px 58px; position: relative; }
+  .content > * { position: relative; }
+  .slide-head { display: flex; align-items: baseline; gap: 18px; border-bottom: 3px solid transparent; padding-bottom: 12px; margin-bottom: 18px;
+    border-image: linear-gradient(90deg, var(--fpt-orange) 0 90px, rgba(25,34,109,.15) 90px 100%) 1; }
+  .slide-head .num { font-size: 40px; font-weight: 700; color: var(--fpt-orange); line-height: 1; }
+  .slide-head h2 { font-size: 31px; font-weight: 700; color: var(--fpt-navy); line-height: 1.15; }
+  .lead { font-size: 19px; color: var(--ink-soft); margin-bottom: 16px; }
+  .lead:last-of-type { margin-bottom: 0; }
+  .lead strong, .lead b { color: var(--ink); }
+  .content a { color: var(--fpt-blue); }
+
+  .footer { position: absolute; left: 64px; right: 64px; bottom: 18px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #8a8d99; }
+  .footer .page { background: var(--fpt-navy); color: #fff; border-radius: 4px; padding: 2px 10px; font-weight: 600; }
+
+  ul.points { list-style: none; display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
+  ul.points:last-child { margin-bottom: 0; }
+  ul.points li { font-size: 18.5px; line-height: 1.42; color: var(--ink-soft); padding-left: 26px; position: relative; }
+  ul.points li::before { content: ""; position: absolute; left: 0; top: 9px; width: 12px; height: 12px; background: var(--fpt-orange); border-radius: 3px; transform: skewX(-12deg); }
+  ul.points li strong { color: var(--fpt-navy); }
+  ul.points li code, .content code { font-family: "Consolas", "Courier New", monospace; font-size: .92em; background: rgba(25,34,109,.07); border-radius: 4px; padding: 1px 6px; }
+
+  .imgbox { display: flex; flex-direction: column; align-items: center; gap: 8px; margin: 6px 0 14px; }
+  .imgbox img { border-radius: 10px; box-shadow: 0 6px 22px rgba(15,20,60,.16); background: #fff; max-width: 100%; }
+  .imgbox .cap { font-size: 13.5px; color: #8a8d99; font-style: italic; }
+  .imgbox img.flat { box-shadow: none; background: transparent; }
+
+  .cols { display: flex; gap: 34px; align-items: center; }
+
+  /* TOC */
+  .toc { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 26px; margin-top: 8px; }
+  .toc .item { display: flex; gap: 18px; align-items: baseline; background: #fff; border-radius: 10px; padding: 18px 22px; box-shadow: 0 5px 18px rgba(15,20,60,.10); border-left: 6px solid var(--fpt-orange); height: 100%; }
+  .toc .item:nth-child(2) { border-left-color: var(--fpt-green); }
+  .toc .item:nth-child(3) { border-left-color: var(--fpt-blue); }
+  .toc .item:nth-child(4) { border-left-color: var(--fpt-teal); }
+  .toc .item:nth-child(5) { border-left-color: var(--fpt-navy); }
+  .toc .item:nth-child(6) { border-left-color: var(--fpt-orange); }
+  .toc .n { font-size: 34px; font-weight: 700; color: var(--fpt-orange); min-width: 52px; }
+  .toc .item:nth-child(2) .n { color: var(--fpt-green); }
+  .toc .item:nth-child(3) .n { color: var(--fpt-blue); }
+  .toc .item:nth-child(4) .n { color: var(--fpt-teal); }
+  .toc .item:nth-child(5) .n { color: var(--fpt-navy); }
+  .toc h3 { font-size: 21px; color: var(--fpt-navy); margin-bottom: 4px; }
+  .toc p { font-size: 15px; color: var(--ink-soft); line-height: 1.35; }
+
+  /* cards */
+  .cards3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin: 6px 0 18px; }
+  .card { background: #fff; border-radius: 10px; padding: 16px 18px 14px; box-shadow: 0 5px 18px rgba(15,20,60,.10); border-top: 5px solid var(--fpt-orange); }
+  .card.g { border-top-color: var(--fpt-green); }
+  .card.b { border-top-color: var(--fpt-blue); }
+  .card h3 { font-size: 19px; color: var(--fpt-navy); margin-bottom: 6px; }
+  .card p { font-size: 15.5px; line-height: 1.4; color: var(--ink-soft); }
+
+  /* tables */
+  table.fpt { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 5px 18px rgba(15,20,60,.10); margin-bottom: 14px; }
+  table.fpt th { background: var(--fpt-navy); color: #fff; text-align: left; font-size: 16px; padding: 9px 16px; }
+  table.fpt td { font-size: 15.5px; line-height: 1.35; padding: 8.5px 16px; border-bottom: 1px solid #e7e8ee; color: var(--ink-soft); vertical-align: top; }
+  table.fpt tr:last-child td { border-bottom: none; }
+  table.fpt td strong { color: var(--fpt-navy); white-space: nowrap; }
+  .tag { display: inline-block; padding: 1px 9px; border-radius: 4px; color: #fff; font-size: 14px; font-weight: 600; }
+  .tag.o { background: var(--fpt-orange); } .tag.b { background: var(--fpt-blue); } .tag.t { background: var(--fpt-teal); } .tag.g { background: var(--fpt-green); } .tag.n { background: var(--fpt-navy); }
+
+  /* seam cards */
+  .seams { display: flex; flex-direction: column; gap: 13px; margin-bottom: 16px; }
+  .seam { background: #fff; border-radius: 8px; border-left: 6px solid var(--fpt-orange); box-shadow: 0 4px 14px rgba(15,20,60,.09); padding: 12px 18px; display: flex; gap: 16px; align-items: baseline; }
+  .seam.b { border-left-color: var(--fpt-blue); } .seam.t { border-left-color: var(--fpt-teal); }
+  .seam .who { font-weight: 700; color: var(--fpt-navy); font-size: 17.5px; white-space: nowrap; min-width: 200px; }
+  .seam p { font-size: 16px; line-height: 1.4; color: var(--ink-soft); }
+  .strip { background: linear-gradient(90deg, var(--fpt-navy), #2a35a0); color: #dfe6ff; border-radius: 8px; padding: 12px 20px; font-size: 15.5px; line-height: 1.45; margin-bottom: 14px; }
+  .strip strong { color: #fff; }
+  .strip:last-child { margin-bottom: 0; }
+
+  /* chain visual */
+  .chain { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 10px 0 22px; flex-wrap: nowrap; }
+  .chain .link { background: var(--fpt-navy); color: #fff; font-size: 16.5px; font-weight: 600; padding: 9px 20px; border-radius: 7px; transform: skewX(-10deg); box-shadow: 0 4px 12px rgba(15,20,60,.18); }
+  .chain .link > span { display: inline-block; transform: skewX(10deg); }
+  .chain .link.hot { background: var(--fpt-orange); }
+  .chain .arr { color: var(--fpt-orange); font-size: 22px; font-weight: 700; }
+  .chain .link small { display: block; font-size: 12px; font-weight: 400; opacity: .8; transform: skewX(10deg); }
+
+  .badges { display: flex; gap: 10px; justify-content: center; margin: 0 0 20px; flex-wrap: wrap; }
+  .badge { border: 2px solid var(--fpt-orange); color: #b34e0e; background: rgba(243,112,33,.07); font-size: 14.5px; font-weight: 600; padding: 5px 14px; border-radius: 999px; }
+  .badge.g { border-color: var(--fpt-green); color: #2c7a25; background: rgba(80,184,72,.09); }
+
+  /* terminal / log evidence */
+  pre.log { background: var(--navy-deep); color: #cfd6f5; font-family: "Consolas", "Courier New", monospace; font-size: 13.5px; line-height: 1.5; border-radius: 8px; padding: 14px 18px; overflow: hidden; margin-bottom: 14px; }
+  pre.log .ok { color: #7ee787; }
+  pre.log .dim { color: #7f88ad; }
+
+  /* ---------- controls ---------- */
+  .hint { position: fixed; left: 18px; bottom: 12px; color: rgba(255,255,255,.45); font-size: 12.5px; z-index: 50; }
+  .hud { position: fixed; right: 18px; bottom: 14px; z-index: 50; display: flex; gap: 8px; align-items: center; font-family: inherit; }
+  .hud button { background: rgba(255,255,255,.12); color: #fff; border: 1px solid rgba(255,255,255,.25); border-radius: 6px; padding: 5px 12px; font-size: 15px; cursor: pointer; }
+  .hud button:hover { background: var(--fpt-orange); border-color: var(--fpt-orange); }
+  .hud .ctr { color: rgba(255,255,255,.75); font-size: 14px; min-width: 60px; text-align: center; }
+  .progress { position: fixed; left: 0; bottom: 0; height: 4px; background: var(--fpt-orange); width: 0; z-index: 60; transition: width .25s ease; }
+
+  @media print {
+    html, body { background: #fff; height: auto; }
+    .deck { position: static; display: block; }
+    .slide { display: flex !important; position: relative; transform: none !important; box-shadow: none; page-break-after: always; margin: 0 auto; }
+    .hud, .progress, .hint { display: none !important; }
+    @page { size: 13.55in 7.65in; margin: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="deck">
+  <section class="slide cover-photo cover active" style="background-image: linear-gradient(90deg, rgba(8,12,38,.92) 0%, rgba(8,12,38,.72) 40%, rgba(8,12,38,.18) 100%), url('../assets/bg-title-city.jpg')">
+    <div class="eyebrow">Milestone 1 · Cooperative Vehicle Awareness — FPT Hackathon 2026</div>
+    <h1>ADA ECU — Task Execution</h1>
+    <div class="rule"></div>
+    <div class="tagline">Phases 2, 3 and 4: decomposition, execution and verification status</div>
+    <div class="meta">26 task groups · 89 subtasks · 64 closed · 24 outstanding · 1 skipped<br>Design of the same three phases: <a href="phase2-4-ada-ecu-design-deck.html">phase2-4-ada-ecu-design-deck.html</a><br>Preceding decks: <a href="../phase1/phase1-task-execution-deck.html">phase1-task-execution-deck.html</a> · <a href="../phase0/phase0-task-execution-deck.html">phase0-task-execution-deck.html</a><br>Sources: <a href="../../plans/phase2_tasks.md">phase2_tasks.md</a> · <a href="../../plans/phase3_tasks.md">phase3_tasks.md</a> · <a href="../../plans/phase4_tasks.md">phase4_tasks.md</a> · <a href="../../plans/milestone1.md">milestone1.md</a> · the run records in <a href="../../plans/doc/">plans/doc/</a></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">§</div><h2>Table of contents</h2></div>
+    <div class="toc">
+      <div class="item"><div class="n">01</div><div><h3>Work organization</h3><p>the vehicles, the terms, the verification lanes</p></div></div>
+      <div class="item"><div class="n">02</div><div><h3>Work decomposition</h3><p>identifiers, size, and who performed each unit</p></div></div>
+      <div class="item"><div class="n">03</div><div><h3>Phase 2</h3><p>the scaffold: store, admission rules, risk seam</p></div></div>
+      <div class="item"><div class="n">04</div><div><h3>Phase 3</h3><p>seeing vehicle B in the video</p></div></div>
+      <div class="item"><div class="n">05</div><div><h3>Phase 4</h3><p>the composed scene, the risk, the warning</p></div></div>
+      <div class="item"><div class="n">06</div><div><h3>Parallel and sequential work</h3><p>three barriers and what forced each</p></div></div>
+      <div class="item"><div class="n">07</div><div><h3>Verification status</h3><p>and the venue every piece of evidence came from</p></div></div>
+      <div class="item"><div class="n">08</div><div><h3>Handoff and open items</h3><p></p></div></div>
+    </div>
+    <div class="footer"><span>ADA ECU — Task Execution · Phases 2–4 · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">01</div>
+    <h1>Work organization</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">01</div><h2>The words this deck uses</h2></div>
+    <p class="lead"><strong>The ADA ECU is the computer these three phases build.</strong> It takes a report about vehicle C over the radio link, sees vehicle B for itself in the video, adds the two ranges together to place C, decides whether that is dangerous, and warns the display computer. How it is built inside is the design deck's subject, linked from the cover; this deck is only about how the work was organized and how it ran.</p>
+    <table class="fpt">
+      <thead><tr><th>Term</th><th>What it means</th></tr></thead>
+      <tbody>
+        <tr><td><strong>ego</strong></td><td>the vehicle being built. Only its computers exist in this project; the other two are content</td></tr>
+        <tr><td><strong>vehicle B</strong></td><td>the vehicle directly ahead. Ego's own camera can see it</td></tr>
+        <tr><td><strong>vehicle C</strong></td><td>the vehicle beyond B. Ego's camera can <strong>never</strong> see it, because B blocks the view</td></tr>
+        <tr><td><strong>ghost C</strong></td><td>vehicle C placed on ego's picture of the world from <em>another vehicle's report</em>, never from ego's own sensors</td></tr>
+        <tr><td><strong>frozen</strong></td><td>fixed before anything that depends on it is built, and not changed afterwards without re-agreeing it with every consumer</td></tr>
+        <tr><td><strong>seam</strong></td><td>an interface put in deliberately so that one side can be replaced without touching the other</td></tr>
+        <tr><td><strong>the bench</strong></td><td>test equipment that plays a traffic scenario and transmits it as real radio messages. A node on the real network, not a mock inside a program</td></tr>
+        <tr><td><strong>blueprint · Room</strong></td><td>the platform's description of a set of nodes and the links between them; and one <em>running</em> deployment of it. <strong>Two Rooms exist for the whole account</strong></td></tr>
+      </tbody>
+    </table>
+    <div class="footer"><span>ADA ECU — Task Execution · Phases 2–4 · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">01</div><h2>Planning terminology</h2></div>
+    <p class="lead">Three different things in this project are called a <em>track</em> or a <em>lane</em>. They are not interchangeable.</p>
+    <table class="fpt">
+      <thead><tr><th>Term</th><th>Definition</th><th>Specified in</th><th>Example here</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Track</strong></td><td>a workstream spanning whole phases, run by different people at once</td><td><a href="../../plans/milestone1.md">milestone1.md</a></td><td>this node is one track: phase 2, then 3 and 4</td></tr>
+        <tr><td><strong>Phase</strong></td><td>one stage, with an input list and acceptance criteria</td><td><a href="../../.claude/rules/task-planning-conventions.md">task-planning-conventions.md</a></td><td>Phase 3</td></tr>
+        <tr><td><strong>Task group</strong></td><td>subtasks that jointly deliver one feature or one solution</td><td>as above</td><td>group 3.2 — the detector's modules</td></tr>
+        <tr><td><strong>Subtask</strong></td><td>one objective, one commit, build and tests passing</td><td>as above</td><td><code>12.3.2.3</code> — range from box width</td></tr>
+        <tr><td><strong>Execution lane</strong></td><td>a dependency chain, named after the folder it writes into</td><td>each phase plan, <em>Execution order &amp; parallelism</em></td><td><code>ADA_ECU/detector/</code></td></tr>
+        <tr><td><strong>CI lane</strong></td><td>one job in a build workflow; it passes or fails</td><td><a href="../../.github/workflows/">.github/workflows/</a></td><td><code>ada-core-build</code></td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>Lane letters are local to a phase and do collide</strong> — earlier phases used letters; these three name their lanes after folders instead.</li>
+      <li><strong>Lane letters and group numbers express no order.</strong> Only a stated dependency sequences one unit against another, and a dependency always names an artifact.</li>
+      <li><strong>Only a CI lane executes.</strong> A track and an execution lane are planning structures, not programs.</li>
+    </ul>
+    <div class="footer"><span>ADA ECU — Task Execution · Phases 2–4 · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">01</div><h2>The node's ten verification lanes, and where each is maintained</h2></div>
+    <p class="lead">Every workflow file carries the same triggers, so <strong>every lane runs on every push wherever it lives.</strong> Placement decides where a lane is maintained, never whether it runs — the rule is <a href="../../.claude/rules/ci-lane-placement.md">ci-lane-placement.md</a>: a lane lives with the node it exercises.</p>
+    <table class="fpt">
+      <thead><tr><th>File</th><th>Lanes</th><th>What they prove</th></tr></thead>
+      <tbody>
+        <tr><td><code>phase2-ci.yml</code></td><td><code>ada-core-build</code> · <code>ada-loopback-check</code></td><td>the core compiles and its unit tests pass; the assembled program admits and drops a vehicle as designed, and produces nothing when its input is switched off</td></tr>
+        <tr><td><code>phase3-ci.yml</code></td><td><code>ada-detector-wheels</code> · <code>ada-detector-tests</code> · <code>ada-detector-run</code> · <code>ada-zero-c</code></td><td>the three libraries have a ready-made build for the node's processor; the detector's own tests; the one place the real detector runs; nothing is ever labelled vehicle C</td></tr>
+        <tr><td><code>phase4-ci.yml</code></td><td><code>ada-ecu-image</code> · <code>ada-bench-image</code> · <code>ada-bench-selfcheck</code> · <code>ada-e2e-loopback</code></td><td>both container images build and publish; the two stand-in roles talk to each other; the whole chain from a relayed report to a warning on a socket</td></tr>
+      </tbody>
+    </table>
+    <div class="strip"><strong>Two discrepancies, flagged rather than settled.</strong> All three plans place <code>ada-core-build</code> in <code>phase0-ci.yml</code> and quote the earlier convention — <em>a lane belongs to the phase that created it</em>. The standing rule is the opposite, and the workflow file already holds that lane in <code>phase2-ci.yml</code>; the plans' text is stale. Separately, all three plans name a lane <code>python-tests</code> in acceptance criteria, and no workflow file defines it: its work was split into <code>sp-unit-tests</code> and <code>ada-detector-tests</code>, which under the same rule retires the old name.</div>
+    <div class="footer"><span>ADA ECU — Task Execution · Phases 2–4 · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">02</div>
+    <h1>Work decomposition</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">02</div><h2>Task identification scheme</h2></div>
+    <p class="lead">Every task and subtask carries the identifier <code>X.Y.Z.W</code>, assigned once and never renumbered.</p>
+    <table class="fpt">
+      <thead><tr><th>Segment</th><th>Meaning</th><th>Value in <code>14.4.1.2</code></th></tr></thead>
+      <tbody>
+        <tr><td><code>X</code></td><td>the requirement served</td><td>the risk-assessment seam, with rules registered through it</td></tr>
+        <tr><td><code>Y</code></td><td>the phase</td><td>4 — the composed scene, the risk, the warning</td></tr>
+        <tr><td><code>Z</code></td><td>the task group</td><td>group 4.1 — scene composition and the first risk rule</td></tr>
+        <tr><td><code>W</code></td><td>the subtask</td><td>the second: the rule itself, plus one line registering it</td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>The group number is not the requirement number.</strong> Group 2.2 contains <code>13.2.2.1</code>, <code>6.2.2.2</code>, <code>18.2.2.3</code> and <code>3.2.2.4</code> — four different requirements in one group, because together they deliver one thing: a program that can read its settings, hold a socket, write an event and queue what arrives.</li>
+      <li><strong>A retired identifier is never reused.</strong> Phase 3 reserves two that are not in use; Phase 4 lists nine retired ones.</li>
+      <li><strong>A suggested branch per phase, never created by the planner:</strong> <code>feat/phase2-ada-scaffold</code>, <code>feat/phase3-ada-detector</code>, <code>feat/phase4-ada-fusion-warning</code>. Phase 3's record shows the work ran on <code>feat/phase3-object-detection</code> instead — a divergence from its own suggestion, noted here rather than corrected.</li>
+    </ul>
+    <div class="footer"><span>ADA ECU — Task Execution · Phases 2–4 · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">02</div><h2>Decomposition summary</h2></div>
+    <ul class="points">
+      <li><strong>26 task groups, 89 subtasks, one node folder.</strong> Phase 2 nine groups and 26 subtasks · Phase 3 seven and 24 · Phase 4 ten and 39.</li>
+      <li><strong>One subtask has one objective, one commit, a passing build and passing unit tests.</strong> Anything not required by that objective belongs to a different subtask.</li>
+      <li><strong>Every brief is self-contained</strong> — file paths, message fields, the acceptance criterion — so the implementing agent need not read the wider codebase to start.</li>
+      <li><strong>No tunable value is hardcoded.</strong> The proximity gate, the risk thresholds, the frame stride, the clip path, the peer addresses and the recording filter are all settings the platform injects; a literal outside the two settings readers is a defect.</li>
+      <li><strong>67 of the 89 subtasks need neither the platform nor a person.</strong> That was deliberate: the deployment slot is the scarce resource, so everything provable off the platform was scheduled first.</li>
+      <li><strong>The development machine cannot run any of it.</strong> It is Windows on an ARM processor with no container engine, so for every C++ and every image subtask "the tests pass" is defined as "the lane is green", and the definition of done cites a run identifier.</li>
+    </ul>
+    <div class="footer"><span>ADA ECU — Task Execution · Phases 2–4 · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">02</div><h2>Execution responsibility</h2></div>
+    <table class="fpt">
+      <thead><tr><th>Performer</th><th>Phase 2</th><th>Phase 3</th><th>Phase 4</th><th>Total</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Implementation agent</strong> — code, tests, workflow files</td><td>25</td><td>21</td><td>21</td><td><strong>67</strong></td></tr>
+        <tr><td><strong>Platform agent</strong> — deploy, read node logs, gather evidence</td><td>0</td><td>3</td><td>9</td><td><strong>12</strong></td></tr>
+        <tr><td><strong>A person</strong> — console screens, credentials, correspondence</td><td>1</td><td>0</td><td>9</td><td><strong>10</strong></td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>Phase 3 additionally lists three person-steps with no identifier</strong>, because they sit outside the task tree: creating and pushing the branch, confirming each build run and downloading what it produced, and fetching the model weights when the machine has no route to them.</li>
+      <li><strong>The person-steps are not a staffing choice.</strong> The platform's programming interface has no way to create a network link between nodes, no way to change a node's settings once the node exists, and no delete operation; and choosing the machine to deploy onto spends one of two slots the whole account has, which is the owner's call.</li>
+      <li><strong>An agent session holds no browser and no code-hosting credential</strong>, which is why confirming a build run is a person's step even though the build itself is not.</li>
+      <li><strong>CarSky is the cloud platform, and it is a hard dependency.</strong> Every claim this node can only make while running — the detector opening its clip, the warning leaving the node, the traffic recorded on the wire — exists only inside a CarSky Room, and the whole account has two of them while four groups of work want them.</li>
+    </ul>
+    <div class="footer"><span>ADA ECU — Task Execution · Phases 2–4 · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">02</div><h2>The three phases as one arc</h2></div>
+    <div class="imgbox"><img src="../assets/phase2-4-exec-arc-overview.svg" style="height:445px" alt="The three phases: Phase 2 first, then Phase 3 and Phase 4 side by side, converging on the two deployed Rooms and the readings taken off their logs"><div class="cap">The three phases: Phase 2 first, then Phase 3 and Phase 4 side by side, converging on the two deployed Rooms and the readings taken off their logs</div></div>
+    <ul class="points">
+      <li><strong>The two phases the milestone plan calls parallel are parallel until their deployed ends</strong>, where each needs the other. The detail of each block follows, one phase per section.</li>
+    </ul>
+    <div class="footer"><span>ADA ECU — Task Execution · Phases 2–4 · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">03</div>
+    <h1>Phase 2 — the scaffold</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">03</div><h2>Phase 2 — objective, input, output</h2></div>
+    <ul class="points">
+      <li><strong>Objective.</strong> Stand the node up on stand-in input: settings, socket, event stream, queue, the store of tracked vehicles, the admission rules, and the seam risk rules will later plug into. Nothing sees a camera and nothing assesses risk yet.</li>
+      <li><strong>Input.</strong> The four message formats frozen in Phase 0, this node's design document, and the <em>shape</em> of the relayed report the radio node sends — consumed from a test sender, with no live radio node required.</li>
+      <li><strong>Nothing in this phase waits on a person before it can start.</strong> One subtask is a person's, and it has no dependants.</li>
+      <li><strong>Stand-in input is external stimulus, never a branch in the program.</strong> The camera side is the real subprocess reader pointed at a recorded file; the radio side is a real datagram on the real socket. "Switching the input off" is a setting plus an idle sender, not a code path.</li>
+      <li><strong>Output.</strong> Six acceptance boxes, all six marked closed.</li>
+    </ul>
+    <div class="strip"><strong>Suggested branch:</strong> <code>feat/phase2-ada-scaffold</code>, one branch for the phase, branched from the main line. Documentation and evidence records commit straight to the main line.</div>
+    <div class="footer"><span>ADA ECU — Task Execution · Phases 2–4 · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">03</div><h2>Phase 2 — the nine task groups</h2></div>
+    <table class="fpt">
+      <thead><tr><th>Task group</th><th>Deliverable</th></tr></thead>
+      <tbody>
+        <tr><td><strong>2.1</strong> — orientation</td><td>The folder's README, pointing at the design rather than restating it.</td></tr>
+        <tr><td><strong>2.2</strong> — foundation</td><td>The only settings reader, the only socket owner, the event stream, and the queue with two writers and one reader.</td></tr>
+        <tr><td><strong>2.3</strong> — parsers</td><td>Both wire shapes mapped onto one record type, plus a corpus of broken input that must be rejected without a crash.</td></tr>
+        <tr><td><strong>2.4</strong> — store and admission</td><td>The store of tracked vehicles, the admission rules as pure logic, and the two joined together with expiry on silence.</td></tr>
+        <tr><td><strong>2.5</strong> — risk seam</td><td>The interface a risk rule implements, its record format, the store of those records, and the registry a rule joins. Empty of rules by design.</td></tr>
+        <tr><td><strong>2.6</strong> — input edges and assembly</td><td>The two input threads, the two stimulus sources, the event-stream checker, and the assembled program itself.</td></tr>
+        <tr><td><strong>2.7</strong> — image</td><td>The deployable container image and its start-up script.</td></tr>
+        <tr><td><strong>2.8</strong> — verification lanes</td><td>The loopback check lane, and the image lane — both landed <em>before</em> the code they verify.</td></tr>
+        <tr><td><strong>2.9</strong> — video input</td><td>The clip format preflight, the specification sent to the mentor, and the settings table in the node guide.</td></tr>
+      </tbody>
+    </table>
+    <div class="footer"><span>ADA ECU — Task Execution · Phases 2–4 · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">03</div><h2>Phase 2 — execution order (1 of 2)</h2></div>
+    <div class="imgbox"><img src="../assets/phase2-4-exec-phase2-core.svg" style="height:445px" alt="Phase 2 model layer: four independent foundation subtasks, the two parsers, the store with its admission rules, and the four-step risk seam beneath"><div class="cap">Phase 2 model layer: four independent foundation subtasks, the two parsers, the store with its admission rules, and the four-step risk seam beneath</div></div>
+    <ul class="points">
+      <li><strong>Thirteen of this phase's subtasks have no predecessor at all</strong> — these four foundation modules, both parsers, the store, the record format, and the independent row on the next slide.</li>
+    </ul>
+    <div class="footer"><span>ADA ECU — Task Execution · Phases 2–4 · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">03</div><h2>Phase 2 — execution order (2 of 2)</h2></div>
+    <div class="imgbox"><img src="../assets/phase2-4-exec-phase2-assembly.svg" style="height:450px" alt="Phase 2 assembly: the two input edges into the assembled program, the check lane and the image, and four subtasks with no predecessor"><div class="cap">Phase 2 assembly: the two input edges into the assembled program, the check lane and the image, and four subtasks with no predecessor</div></div>
+    <ul class="points">
+      <li><strong>The image lane was written before the image existed</strong>, guarded to skip until it did, so the subtask that wrote the image had a verification criterion on the day it landed.</li>
+    </ul>
+    <div class="footer"><span>ADA ECU — Task Execution · Phases 2–4 · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">03</div><h2>Phase 2 — code delivered</h2></div>
+    <table class="fpt">
+      <thead><tr><th>File group</th><th>Delivered by</th><th>Function</th></tr></thead>
+      <tbody>
+        <tr><td><code>src/config/</code> · <code>src/net/</code> · <code>src/log/</code> · <code>src/observer/input_queue.hpp</code></td><td><code>13.2.2.1</code> <code>6.2.2.2</code> <code>18.2.2.3</code> <code>3.2.2.4</code></td><td>The only settings reader; the only holder of a socket; one JSON line per event with two clock stamps; a bounded queue that drops the oldest rather than blocking a socket thread</td></tr>
+        <tr><td><code>src/parser/</code> · <code>tests/fixtures/malformed/</code></td><td><code>2.2.3.1</code> <code>3.2.3.2</code> <code>3.2.3.3</code></td><td>Both wire shapes to one record type, through the frozen bindings only; thirteen one-defect inputs, each with its expected disposition asserted</td></tr>
+        <tr><td><code>src/store/</code></td><td><code>3.2.4.1</code> <code>13.2.4.2</code> <code>13.2.4.3</code></td><td>The store; the admission rules as a pure function of state, count, distance and elapsed time; the two joined, with expiry measured on a clock that a time correction cannot move</td></tr>
+        <tr><td><code>src/cra/</code> · <code>schema/cra-assessment-record.schema.json</code></td><td><code>14.2.5.1</code> – <code>14.2.5.4</code></td><td>The frozen interface, its fourteen-field record format, the store of those records, and explicit registration — no static initialisation</td></tr>
+        <tr><td><code>src/observer/</code> · <code>src/main.cpp</code></td><td><code>2.2.6.1</code> <code>12.2.6.2</code> <code>13.2.6.4</code></td><td>The two input threads, and the assembled program: one writer, one loop, one clean shutdown</td></tr>
+        <tr><td><code>tools/</code> · <code>tests/fixtures/own_sensor_mock.jsonl</code></td><td><code>3.2.6.3</code> <code>18.2.6.5</code> <code>12.2.9.1</code></td><td>The two stimulus sources, the event-stream checker that turns a saved log into a pass or fail, and the clip format preflight</td></tr>
+        <tr><td><code>Dockerfile</code> · <code>entrypoint.sh</code> · <code>.dockerignore</code> · two workflow files</td><td><code>5.2.7.1</code> <code>5.2.8.1</code> <code>13.2.8.2</code></td><td>The deployable image, and the two lanes that build and exercise it</td></tr>
+      </tbody>
+    </table>
+    <div class="footer"><span>ADA ECU — Task Execution · Phases 2–4 · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">03</div><h2>Phase 2 — acceptance status</h2></div>
+    <p class="lead">All six boxes are marked closed. What closed each:</p>
+    <table class="fpt">
+      <thead><tr><th>Acceptance box</th><th>Closed by</th></tr></thead>
+      <tbody>
+        <tr><td>The store holds both kinds of record, and both enter through the identical call</td><td>The nine-field round trip, and the case that puts a camera-shaped and a relayed-shaped record through the same call</td></tr>
+        <tr><td>State changes visible in the log; none at all when the input is switched off</td><td>Both arms of the loopback lane</td></tr>
+        <tr><td>Admitted only within 30 m, dropped only beyond 35 m, no flicker</td><td>Boundary cases at 29.9 / 30.0 / 30.1 m and 34.9 / 35.0 / 35.1 m, an oscillating sequence yielding exactly one admission, and expiry on silence</td></tr>
+        <tr><td>The gate values come from configuration, never a literal</td><td>One settings reader for the whole program</td></tr>
+        <tr><td>The risk record format committed; the video specification sent</td><td>The committed schema with a validating sample; the mentor's confirmation of 2026-08-04</td></tr>
+        <tr><td><strong>Demonstration:</strong> build and frozen-format round trips green</td><td><code>ada-core-build</code></td></tr>
+      </tbody>
+    </table>
+    <div class="strip"><strong>Where that green run is recorded.</strong> Every C++ subtask in this phase defers its build and tests to <code>ada-core-build</code>, and no status line in the Phase 2 plan cites a run identifier. The green run those criteria rest on is recorded in the <strong>Phase 4</strong> plan — run <code>30919076468</code>, on that phase's branch head, which carries the Phase 2 code.</div>
+    <div class="footer"><span>ADA ECU — Task Execution · Phases 2–4 · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">04</div>
+    <h1>Phase 3 — seeing vehicle B</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">04</div><h2>Phase 3 — objective, input, output</h2></div>
+    <ul class="points">
+      <li><strong>Objective.</strong> Replace the recorded stand-in input with real perception: a pretrained detector finds <strong>vehicle B</strong> in the provided clip, estimates its range, and streams one record line per detection into the same store through the same call.</li>
+      <li><strong>Input.</strong> Phase 2's subprocess boundary — the command it launches and the lines it reads back — and its image; the frozen record binding; and the clip itself — ten seconds, 1280×720, 20 frames per second, openly licensed, with a written record of its source, its licence, its exact encode command and a verdict on its content.</li>
+      <li><strong>The clip is ten seconds and the runs are longer</strong>, so the detector loops it. Every duration-sensitive check in this phase and the next is worded against a looped run, not a single pass.</li>
+      <li><strong>Vehicle C is not in the footage at all.</strong> It exists only as a position asserted over the radio link, so "ego never sees C" holds by construction; what the footage had to avoid was a decoy vehicle held in ego's lane beyond B.</li>
+      <li><strong>Output.</strong> Four acceptance boxes: three marked closed, one open.</li>
+    </ul>
+    <div class="strip"><strong>Suggested branch:</strong> <code>feat/phase3-ada-detector</code>. The plan's own record shows the work on <code>feat/phase3-object-detection</code>.</div>
+    <div class="footer"><span>ADA ECU — Task Execution · Phases 2–4 · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">04</div><h2>Phase 3 — the seven task groups</h2></div>
+    <table class="fpt">
+      <thead><tr><th>Task group</th><th>Deliverable</th></tr></thead>
+      <tbody>
+        <tr><td><strong>3.1</strong> — library feasibility</td><td>The lane that proves three libraries have a ready-made build for the node's processor. <strong>Taken before any detector code exists.</strong></td></tr>
+        <tr><td><strong>3.2</strong> — detector modules</td><td>Eight modules: settings, frames, range, identity across frames, the model session, the emitted line, real-time release, and the process the node starts.</td></tr>
+        <tr><td><strong>3.3</strong> — model, fixture, lanes</td><td>The committed model and the one-off export that made it; a throwaway video fixture; the test lane and the lane that actually runs the detector.</td></tr>
+        <tr><td><strong>3.4</strong> — range calibration</td><td>Two camera constants retuned against the real clip, so the estimated range crosses the admission gate exactly once per pass.</td></tr>
+        <tr><td><strong>3.5</strong> — evidence and store integration</td><td>The falsifiable no-vehicle-C check and its lane; the real detector driving the real store; the detection log and its measurements.</td></tr>
+        <tr><td><strong>3.6</strong> — image and deployed measurement</td><td>The detector and the model inside the image, then two readings that only a deployed node can give.</td></tr>
+        <tr><td><strong>3.7</strong> — the clip in the repository and in the image</td><td>The clip and its written source record, one line of the image recipe, and what that layer costs to upload.</td></tr>
+      </tbody>
+    </table>
+    <div class="footer"><span>ADA ECU — Task Execution · Phases 2–4 · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">04</div><h2>Phase 3 — execution order (1 of 2)</h2></div>
+    <div class="imgbox"><img src="../assets/phase2-4-exec-phase3-modules.svg" style="height:445px" alt="Phase 3 detector modules: the library lane first, then the settings reader, four independent modules, the model session, the emitted line, and the entrypoint"><div class="cap">Phase 3 detector modules: the library lane first, then the settings reader, four independent modules, the model session, the emitted line, and the entrypoint</div></div>
+    <ul class="points">
+      <li><strong>The one unproven assumption was taken first.</strong> Had those libraries had no ready-made build, the answer was an older version, a different base image, or a long compile under emulation — a design decision, escalated rather than chosen on the spot.</li>
+    </ul>
+    <div class="footer"><span>ADA ECU — Task Execution · Phases 2–4 · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">04</div><h2>Phase 3 — execution order (2 of 2)</h2></div>
+    <div class="imgbox"><img src="../assets/phase2-4-exec-phase3-evidence.svg" style="height:450px" alt="Phase 3 evidence: the model and clip chain, the lane chain, the no-vehicle-C chain, and the three readings that wait on a deployed Room"><div class="cap">Phase 3 evidence: the model and clip chain, the lane chain, the no-vehicle-C chain, and the three readings that wait on a deployed Room</div></div>
+    <ul class="points">
+      <li><strong>Three subtasks have no code left to write.</strong> They read a saved node log that only the next phase's first deployment produces.</li>
+    </ul>
+    <div class="footer"><span>ADA ECU — Task Execution · Phases 2–4 · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">04</div><h2>Phase 3 — code delivered</h2></div>
+    <table class="fpt">
+      <thead><tr><th>File group</th><th>Delivered by</th><th>Function</th></tr></thead>
+      <tbody>
+        <tr><td><code>detector/config.py</code> · <code>detector/requirements.txt</code></td><td><code>12.3.2.1</code></td><td>The detector's only settings reader, and the three libraries pinned to the versions the feasibility lane proved</td></tr>
+        <tr><td><code>detector/frame_source.py</code> · <code>distance.py</code> · <code>tracker.py</code> · <code>pacer.py</code></td><td><code>12.3.2.2</code> – <code>12.3.2.4</code> · <code>12.3.2.8</code></td><td>Frames behind an interface, so a future camera is one new implementation; range from box width; identity across frames; each frame released at its real-world instant</td></tr>
+        <tr><td><code>detector/inference.py</code> · <code>emit.py</code> · <code>main.py</code></td><td><code>12.3.2.5</code> – <code>12.3.2.7</code></td><td>The model session on the processor alone, one record line per detection through the frozen binding, and nothing else on its output</td></tr>
+        <tr><td><code>models/yolo11n.onnx</code> · <code>tools/export_yolo11n.py</code></td><td><code>12.3.3.1</code></td><td>The committed model and its one-off export, kept out of the image so the build stays reproducible offline</td></tr>
+        <tr><td><code>media/ego-b-occluding-c.mp4</code> and its source record · three added lines of <code>Dockerfile</code></td><td><code>12.3.7.1</code> <code>12.3.7.2</code> <code>5.3.6.1</code></td><td>The clip with its licence, its exact encode command and both checksums; then clip, model and detector in the image, in that layer order</td></tr>
+        <tr><td><code>tools/check_zero_c.py</code> · <code>tools/make_sample_video.py</code> · <code>detector/tests/</code></td><td><code>12.3.5.1</code> <code>12.3.3.2</code> · group 3.2</td><td>Three rules that fail the run if ego ever claimed to have seen C; a fixture its own docstring forbids as evidence; every module tested alone</td></tr>
+        <tr><td><code>phase3-ci.yml</code> — four lanes</td><td><code>12.3.1.1</code> <code>12.3.3.3</code> <code>12.3.3.4</code> <code>12.3.5.4</code></td><td>The libraries, the detector's own tests, the one place the real detector runs, and the no-vehicle-C check made repeatable</td></tr>
+      </tbody>
+    </table>
+    <div class="footer"><span>ADA ECU — Task Execution · Phases 2–4 · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">04</div><h2>Phase 3 — acceptance status</h2></div>
+    <table class="fpt">
+      <thead><tr><th>Acceptance box</th><th>Status</th><th>Evidence, and its venue</th></tr></thead>
+      <tbody>
+        <tr><td>A detection log with per-frame objects and range estimates</td><td><strong>closed</strong></td><td>Recorded from a run on the <strong>development machine</strong> — not the lane the plan names as this subtask's venue</td></tr>
+        <tr><td>Entries reach the store the same way relayed ones do; the stand-in is retired</td><td><strong>closed</strong></td><td>A second arm of the loopback lane, driving the real detector over the committed clip</td></tr>
+        <tr><td><strong>No detection is ever labelled vehicle C</strong></td><td><strong>closed</strong></td><td>Three falsifiable rules, its own lane, and the structural fact that the detector cannot mint a relayed identifier</td></tr>
+        <tr><td>Runs on the processor alone at an acceptable pace</td><td><strong>open</strong></td><td>2.65 detections per second measured, against a floor of 5 — on a machine emulating a different processor. The deciding measurement is on the deployed node</td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>The retune is the phase's most concrete finding.</strong> With the default camera constants, vehicle B's estimated range started <em>inside</em> the 30 m gate and never crossed it; at 2.6 m assumed width and a 34.4° field of view the series runs 60 m to 11 m and crosses once per pass. The admission gate was never touched — it is a requirement value, and the camera constants are estimates.</li>
+      <li><strong>Two flaws recorded rather than absorbed:</strong> at the retuned scale B sits 2.29 m right of frame centre, so the selection rule's own ±2 m bound no longer holds; and the detector intermittently returns a near-full-width false box for up to three frames, which the next phase's nearest-vehicle choice must survive.</li>
+    </ul>
+    <div class="strip"><strong>A gap in the record itself.</strong> Twenty-one of this phase's 24 subtasks are ticked done, and only <strong>one</strong> carries a status line. The plan's own rule is that no status line means not started, so this phase's done-marking rests on its checkboxes and its run record rather than on per-subtask evidence.</div>
+    <div class="footer"><span>ADA ECU — Task Execution · Phases 2–4 · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">05</div>
+    <h1>Phase 4 — the warning</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">05</div><h2>Phase 4 — objective, input, output</h2></div>
+    <ul class="points">
+      <li><strong>Objective.</strong> Turn a live relayed report into a tracked ghost C, add ego's own range to B to place it, decide the risk level through the seam Phase 2 froze, and send a warning to the display computer on every real change of level — with the evidence to prove all of it, in the log and on the wire.</li>
+      <li><strong>Input.</strong> Phase 2 complete. Phase 3 is needed for the deployed part only, because without a real detector in the image there is no camera-seen vehicle B on a running node. Phase 1 is needed for one group only.</li>
+      <li><strong>Three configurations, run in that order, each replacing one stand-in with a real node.</strong> The <strong>isolated Room</strong> has both neighbours mocked, so every failure is this node's. The <strong>real-relay Room</strong> replaces the upstream mock, so a regression there belongs to the radio node. The <strong>system test</strong> replaces the downstream mock, and it is the display phase's to run, not this one's.</li>
+      <li><strong>This phase does not run the system test and cannot.</strong> What that adds is <em>rendering</em> — drawing ghost C on a screen — which is the display phase's acceptance, not this node's.</li>
+      <li><strong>Output.</strong> Six acceptance criteria, none of them ticked yet.</li>
+    </ul>
+    <div class="strip"><strong>Suggested branch:</strong> <code>feat/phase4-ada-fusion-warning</code>, with <code>feat/phase4-ada-isolated-room</code> offered as a clean alternative because the Room groups share no file with the fusion code.</div>
+    <div class="footer"><span>ADA ECU — Task Execution · Phases 2–4 · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">05</div><h2>Phase 4 — task groups 4.1 to 4.5</h2></div>
+    <table class="fpt">
+      <thead><tr><th>Task group</th><th>Deliverable</th></tr></thead>
+      <tbody>
+        <tr><td><strong>4.1</strong> — scene and the first risk rule</td><td>Ego, B and ghost C in one frame of reference; the first risk rule, registering through the frozen seam; and one committed transition per real change of level, in both directions.</td></tr>
+        <tr><td><strong>4.2</strong> — output</td><td>The warning message built through the frozen binding only, sent as one datagram, from the single loop. Plus one optional steady stream, deliberately not built.</td></tr>
+        <tr><td><strong>4.3</strong> — evidence tools</td><td>A stand-in receiver, the readable collision-risk event list, and the assertions the phase's own output criterion rests on. One further tool is blocked.</td></tr>
+        <tr><td><strong>4.4</strong> — traffic recording</td><td>Recording inside the container, and turning a saved log back into a file a protocol analyser can open. Both ported unchanged from the radio node's proven pair.</td></tr>
+        <tr><td><strong>4.5</strong> — the end-to-end lane</td><td>One lane running the whole chain on a loopback socket, with a second arm where the relayed vehicle stays far away and the expected result is <strong>no warning at all</strong>.</td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>The first risk rule is this phase's proof of a claim the previous phase made:</strong> adding a hazard type is one new file plus one added line, with the interface, the store, the sender and every other rule untouched. That shape is visible in the commit, which is why the plan makes the diff part of the acceptance.</li>
+    </ul>
+    <div class="footer"><span>ADA ECU — Task Execution · Phases 2–4 · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">05</div><h2>Phase 4 — task groups 4.6 to 4.12</h2></div>
+    <table class="fpt">
+      <thead><tr><th>Task group</th><th>Deliverable</th></tr></thead>
+      <tbody>
+        <tr><td><strong>4.6</strong> — the recorded traffic</td><td>One subtask: extract the recording from a saved node log and read the warning out of the packet bytes.</td></tr>
+        <tr><td><strong>4.9</strong> — Room prerequisites</td><td>The stand-in emitter and the stand-in sink, one image serving both roles, its build lane, its loopback self-check, and the settings specification the Room is typed from. <strong>Everything unproven, proved before a Room slot is spent on it.</strong></td></tr>
+        <tr><td><strong>4.10</strong> — create and deploy</td><td>Eight strictly ordered steps: confirm both images published, copy the working blueprint, reduce it, draw the one missing network link, type each node's settings, read them back and diff, deploy, wait for every node to run.</td></tr>
+        <tr><td><strong>4.11</strong> — the three checks</td><td>The relayed report arrived and raised its event; both vehicles are in the store at the same instant; the warning left the node carrying both. Then the far-away negative case, a contingency retune, and teardown.</td></tr>
+        <tr><td><strong>4.12</strong> — the real relay</td><td>The same checks again with the real bench and the real radio node upstream, then a scenario swap. <strong>No new checks and no new identifiers.</strong></td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>The three checks do not substitute for one another.</strong> The first two prove what happened <em>inside</em> the node; the third proves it <em>left</em> the node. Two green and the third silent is a routing failure, not a partial pass.</li>
+    </ul>
+    <div class="footer"><span>ADA ECU — Task Execution · Phases 2–4 · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">05</div><h2>Phase 4 — execution order: the code</h2></div>
+    <div class="imgbox"><img src="../assets/phase2-4-exec-phase4-code.svg" style="height:450px" alt="Phase 4 code: the rules chain, the output chain, the evidence tools, the recording pair, and the end-to-end lane that consumes them"><div class="cap">Phase 4 code: the rules chain, the output chain, the evidence tools, the recording pair, and the end-to-end lane that consumes them</div></div>
+    <ul class="points">
+      <li><strong>Fourteen subtasks, no platform and no person.</strong> Twelve are closed and green; one is blocked on other phases reaching the main line, and one is the optional stream that was skipped.</li>
+    </ul>
+    <div class="footer"><span>ADA ECU — Task Execution · Phases 2–4 · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">05</div><h2>Phase 4 — execution order: the Rooms</h2></div>
+    <div class="imgbox"><img src="../assets/phase2-4-exec-phase4-room.svg" style="height:475px" alt="Phase 4 Rooms: the eight ordered deploy steps, the three checks and their negative case, teardown, and the real-relay repeat — coloured by performer"><div class="cap">Phase 4 Rooms: the eight ordered deploy steps, the three checks and their negative case, teardown, and the real-relay repeat — coloured by performer</div></div>
+    <div class="footer"><span>ADA ECU — Task Execution · Phases 2–4 · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">05</div><h2>Phase 4 — code delivered</h2></div>
+    <table class="fpt">
+      <thead><tr><th>File group</th><th>Delivered by</th><th>Function</th></tr></thead>
+      <tbody>
+        <tr><td><code>src/fusion/scene_composer.*</code></td><td><code>15.4.1.1</code></td><td>Ego at the origin, B from the nearest camera-seen vehicle, ghost C at the sum of the two ranges — and "not composable" when B is unknown</td></tr>
+        <tr><td><code>src/cra/plugins/chained_collision.*</code> and one line of <code>builtin_plugins.cpp</code></td><td><code>14.4.1.2</code> <code>14.4.1.3</code></td><td>Three ordered risk bands, first match winning; a level must hold for 300 ms before it commits; exactly one event and one message per committed change, downgrades included</td></tr>
+        <tr><td><code>src/output/warning_builder.*</code> · <code>ivi_sender.*</code></td><td><code>15.4.2.1</code> <code>15.4.2.2</code></td><td>The only producer of the warning message in the node, and one datagram per warning with the whole body also written to the event stream</td></tr>
+        <tr><td><code>src/main.cpp</code> — the assessment tick</td><td><code>15.4.2.3</code></td><td>Expire, assess, compose, build, send — still one thread, still one writer</td></tr>
+        <tr><td><code>tools/mock_ivi_receiver.py</code> · <code>event_report.py</code> · <code>check_evt_log.py</code></td><td><code>18.4.3.1</code> <code>18.4.3.2</code> <code>18.4.3.3</code></td><td>A stand-in receiver that validates; the event list a person reads; and the assertion that both vehicles were tracked at the same instant with a warning carrying both</td></tr>
+        <tr><td><code>capture.sh</code> · <code>tools/extract_pcap.sh</code></td><td><code>6.4.4.1</code> <code>6.4.4.2</code></td><td>Live traffic text plus a rotating recording carried out through the log, and the host-side script that reverses it</td></tr>
+        <tr><td><code>tools/ada-bench/</code> · <code>blueprint-ada-isolated.json</code></td><td><code>2.4.9.2</code> <code>4.4.9.3</code> <code>5.4.9.4</code> <code>5.4.9.1</code></td><td>One image and two roles standing in for the neighbours, and the settings specification the Room is typed from and diffed against</td></tr>
+        <tr><td><code>phase4-ci.yml</code> — three lanes</td><td><code>15.4.5.1</code> <code>5.4.9.5</code> <code>2.4.9.7</code></td><td>The end-to-end lane, the bench image lane, and the bench loopback self-check</td></tr>
+      </tbody>
+    </table>
+    <div class="footer"><span>ADA ECU — Task Execution · Phases 2–4 · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">05</div><h2>Phase 4 — acceptance status</h2></div>
+    <p class="lead">Not one of the six criteria is ticked. What is already closed, and what each still needs:</p>
+    <table class="fpt">
+      <thead><tr><th>Acceptance criterion</th><th>Closed off the platform</th><th>Still needs</th></tr></thead>
+      <tbody>
+        <tr><td>C tracked only ever from the relayed source, through its whole lifecycle</td><td>Unit tests and the end-to-end lane</td><td>A deployed node, then the real relay</td></tr>
+        <tr><td>The risk rule registers through the seam; seam and record format are the artifacts</td><td><strong>Complete</strong> — one new file, one added line, green</td><td>Nothing</td></tr>
+        <tr><td>At least one warning per run carrying the composed geometry</td><td>The end-to-end lane, both arms</td><td>The same, on the wire, from a node</td></tr>
+        <tr><td>The event list reconstructs a whole run afterwards</td><td>The tool, run over a synthetic full run</td><td>The same, over a real node's log</td></tr>
+        <tr><td><strong>Demonstration:</strong> the collision-risk event list</td><td>The tool</td><td>The same, over a real node's log</td></tr>
+        <tr><td>Both vehicles reach the display path, by log <strong>and</strong> by recorded traffic</td><td>The log half, asserted in the lane</td><td>The recorded traffic</td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>The evidence that exists is two build runs.</strong> Run <code>30919076468</code> carried the core build; run <code>30919076595</code> carried the end-to-end lane, both image lanes and the bench self-check, all green on the first live attempt, with the observed risk sequence recorded rather than asserted.</li>
+    </ul>
+    <div class="strip"><strong>A box that lags its own evidence.</strong> The second criterion's closing work is done, green, and the phase plan itself states that it closes entirely off the platform — yet the criterion is still unticked in the milestone plan. That is a discrepancy for the owner to settle; this deck reports it rather than deciding it.</div>
+    <div class="footer"><span>ADA ECU — Task Execution · Phases 2–4 · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">06</div>
+    <h1>Parallel and sequential work</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">06</div><h2>Three barriers, and what sits between them</h2></div>
+    <div class="imgbox"><img src="../assets/phase2-4-exec-parallel-summary.svg" style="height:465px" alt="Three barriers across the three phases: Phase 2 first, then the two later phases side by side, then the two Rooms one after the other"><div class="cap">Three barriers across the three phases: Phase 2 first, then the two later phases side by side, then the two Rooms one after the other</div></div>
+    <div class="footer"><span>ADA ECU — Task Execution · Phases 2–4 · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">06</div><h2>Dependency structure</h2></div>
+    <p class="lead">Every subtask ran one at a time, because the agents share one working folder on one machine. The parallel rows state the dependency structure — the work that could proceed at once given more workers.</p>
+    <table class="fpt">
+      <thead><tr><th>Relationship</th><th>Scope</th><th>The constraint behind it</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Parallel — the two later phases</strong></td><td>all of Phase 3 against all of Phase 4</td><td>They never call each other. They meet only at the store: one writes camera-seen records into it, the other reads it. Two shared files sequence two edits, not the phases</td></tr>
+        <tr><td><strong>Parallel — within the foundation</strong></td><td>settings reader, socket, event stream, queue</td><td>Four files, no shared type; only the queue's consumers need more than one of them</td></tr>
+        <tr><td><strong>Parallel — the rules against the bench</strong></td><td>Phase 4's fusion code against its stand-in bench</td><td>Different folders entirely — the bench must be able to change without rebuilding the thing it tests</td></tr>
+        <tr><td><strong>Sequential — the risk seam</strong></td><td>record format, interface, record store, registry</td><td>Each is the compile-time input of the next</td></tr>
+        <tr><td><strong>Sequential — verification before code</strong></td><td>four lanes landed before the subtasks they verify</td><td>A subtask whose criterion is a green lane needs that lane to exist on the day it lands</td></tr>
+        <tr><td><strong>Sequential — the whole deploy chain</strong></td><td>images, then nodes, then links, then validation, then settings read-back, then the Room</td><td>The written procedure's ordering is binding: a node cannot reference an image that is not published, nor a log be read from a node that is not running</td></tr>
+        <tr><td><strong>Sequential — the two Rooms</strong></td><td>the isolated Room, then the real-relay Room</td><td>Two deployment slots for the whole account, wanted by four groups. The second Room takes the slot teardown releases</td></tr>
+      </tbody>
+    </table>
+    <div class="footer"><span>ADA ECU — Task Execution · Phases 2–4 · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">07</div>
+    <h1>Verification status</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">07</div><h2>The three venues of the evidence</h2></div>
+    <p class="lead">A closed subtask does not mean the same thing in all three phases. There are three venues, and they carry different weight.</p>
+    <table class="fpt">
+      <thead><tr><th>Venue</th><th>What it proves</th><th>What it cannot</th></tr></thead>
+      <tbody>
+        <tr><td><strong>A build lane, on every push</strong></td><td>The code compiles, the unit tests pass, the whole chain runs on a loopback socket, the images build and publish</td><td>Nothing about the real node: not the processor's speed, not the network between nodes, not that a clip opens where it was baked in</td></tr>
+        <tr><td><strong>The development machine</strong></td><td>Detection content, the shape of the range series, the no-vehicle-C verdict — all venue-independent facts</td><td>Any timing figure. It emulates a different processor, so its numbers understate a real runner and cannot close a rate criterion</td></tr>
+        <tr><td><strong>A deployed node in a Room</strong></td><td>The detector opening its clip, the rate on two processor cores, the warning leaving the node, the traffic on the wire</td><td>Nothing yet — <strong>no subtask in these three phases has been closed at this venue</strong></td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>64 subtasks are closed. Every one of them closed at the first two venues.</strong> The third venue is where 21 of the 24 outstanding subtasks live.</li>
+      <li><strong>A green image lane is not proof that an image reached the registry.</strong> The publish step is gated on a credential; without it the image still builds and the lane still ends green with a notice. Two subtasks exist purely to confirm the registry's own answer before a Room is created.</li>
+      <li><strong>The end-to-end lane can fail, and that was tested.</strong> Its second arm holds the relayed vehicle out of range and requires <strong>zero</strong> warnings, so the lane cannot pass on the mere presence of traffic.</li>
+    </ul>
+    <div class="footer"><span>ADA ECU — Task Execution · Phases 2–4 · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">07</div><h2>Open items carried forward</h2></div>
+    <p class="lead">Only items someone must still know or act on. Settled history stays in the plan files.</p>
+    <table class="fpt">
+      <thead><tr><th>Open item</th><th>Whose decision</th></tr></thead>
+      <tbody>
+        <tr><td><strong>What "its messages stopped" means.</strong> The milestone plan says five consecutive missed updates; the design implements one second of silence, because nothing arrives to increment a counter and the two input sources run at independently configured rates. Same intent, different form</td><td>the owner</td></tr>
+        <tr><td><strong>The risk thresholds — 60 m and 30 m — are proposals.</strong> They were chosen so that the <em>range</em> comparison alone commits the first warning, rather than a time-to-collision figure derived from the noisiest quantity in the node. No lane asserts a fixed sequence until they are ratified</td><td>the owner</td></tr>
+        <tr><td><strong>The warning message carries C's whole record but only B's position.</strong> Both whole records are in the event stream, so the evidence is complete twice over; widening the message would re-open a frozen format across two languages and six copies, days from the deadline</td><td>the owner</td></tr>
+        <tr><td><strong>Whether real-time pacing is a ratified requirement.</strong> The pacer is built to the design's designation of it, and the demo's timing cannot be placed without it</td><td>the owner</td></tr>
+        <tr><td><strong>Two documents disagree on when C's composed position may be empty.</strong> The plan follows the frozen format and reports the other reading</td><td>architecture</td></tr>
+        <tr><td><strong>One measurement closes no acceptance box in any phase</strong> — what the clip costs to upload. Either record it as a fifth check or move it to the phase that owns the publish</td><td>the planner</td></tr>
+        <tr><td><strong>Two Rooms for the whole account, wanted by four groups of work</strong></td><td>the planner</td></tr>
+      </tbody>
+    </table>
+    <div class="footer"><span>ADA ECU — Task Execution · Phases 2–4 · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">08</div>
+    <h1>Handoff</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">08</div><h2>Inputs available to Phase 5 and Phase 6</h2></div>
+    <ul class="points">
+      <li><strong>A node that already does the whole job on a loopback socket.</strong> A relayed report becomes a tracked ghost C, the scene is composed, a risk level is decided and a warning is sent — re-proven by one lane on every push, with a negative arm that fails if a warning appears when it should not.</li>
+      <li><strong>The warning message on the wire, in its frozen shape.</strong> The display phase can build against it without waiting for a Room, and a stand-in receiver that validates each message is already committed.</li>
+      <li><strong>The readable collision-risk event list</strong>, working on a saved log with no live process — which is what makes the "reconstructs a whole run afterwards" criterion demonstrable, and what the final recorded run will use.</li>
+      <li><strong>The image the final blueprint deploys</strong>, carrying the program, the detector, the model and the clip, built and published only by a build lane — nothing in this node is ever built by hand.</li>
+      <li><strong>A written procedure for the Room</strong> with a stated performer for every step, so the same route can be re-run for the final recording rather than reconstructed.</li>
+    </ul>
+    <p class="lead"><strong>What does not carry forward.</strong> Nothing here draws anything — the on-screen view of ghost C is the display phase's. No claim about this node has yet been made on a running node. The optional steady stream is off by default, asserted off in test, and stays that way.</p>
+    <div class="footer"><span>ADA ECU — Task Execution · Phases 2–4 · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">08</div><h2>Outstanding work</h2></div>
+    <p class="lead">24 of the 89 subtasks are open. Two need another phase's code; one is documentation; the remaining 21 need a Room.</p>
+    <table class="fpt">
+      <thead><tr><th>Where</th><th>What remains</th></tr></thead>
+      <tbody>
+        <tr><td>Phase 2</td><td><code>5.2.9.4</code> — the settings table in the node guide. Blocks nothing; the Room's values come from the blueprint specification instead</td></tr>
+        <tr><td>Phase 3</td><td><code>5.3.6.2</code> · <code>22.3.6.3</code> — the detection rate and the start-up delay, both read off the first Room's saved log. <code>5.3.7.3</code> — the upload cost, from two image builds and a real publish</td></tr>
+        <tr><td>Phase 4</td><td><code>21.4.3.4</code> — the six timing checks, waiting on the bench's timestamp field and the detector's line shape reaching the main line. <code>5.4.9.6</code> — confirming the image lane, waiting on the detector being in the image</td></tr>
+        <tr><td>Phase 4</td><td>Groups 4.10 to 4.12 and the recorded traffic — 18 subtasks, 9 of them a person's, inside two Rooms run one after the other</td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>One deployment session moves the largest block.</strong> The same three saved logs close all three checks, the recorded traffic, and two of Phase 3's readings — which is why saving them is its own subtask, ahead of the checks rather than inside each one.</li>
+      <li><strong>The start-up delay is the one measurement another track is waiting on.</strong> The bench's own timing value is derived from it, so it is the narrowest path out of this node into the final recorded run.</li>
+    </ul>
+    <div class="footer"><span>ADA ECU — Task Execution · Phases 2–4 · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide thanks" style="background-image: linear-gradient(rgba(8,12,38,.66), rgba(14,21,64,.86)), url('../assets/bg-fpt-tower.jpg')">
+    <h1>Thank you</h1>
+    <div class="rule"></div>
+    <p><strong>ADA ECU — Task Execution</strong> · Phases 2, 3 and 4 · Milestone 1 · FPT Hackathon 2026</p>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+</div>
+
+<div class="hint">← → navigate · F fullscreen · print for PDF</div>
+<div class="hud">
+  <button id="prev" aria-label="Previous slide">‹</button>
+  <span class="ctr" id="ctr"></span>
+  <button id="next" aria-label="Next slide">›</button>
+</div>
+<div class="progress" id="prog"></div>
+
+<script>
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  slides.forEach((sl, i) => { const p = sl.querySelector('.page'); if (p) p.textContent = i + 1; });
+  let cur = 0;
+
+  function fit() {
+    const s = Math.min(innerWidth / 1280, innerHeight / 720);
+    slides.forEach(sl => sl.style.transform = `scale(${s})`);
+  }
+  function show(i) {
+    cur = Math.max(0, Math.min(slides.length - 1, i));
+    slides.forEach((sl, k) => sl.classList.toggle('active', k === cur));
+    document.getElementById('ctr').textContent = `${cur + 1} / ${slides.length}`;
+    document.getElementById('prog').style.width = `${(cur + 1) / slides.length * 100}%`;
+    location.hash = cur ? `#${cur + 1}` : '';
+  }
+  addEventListener('resize', fit);
+  addEventListener('keydown', e => {
+    if (['ArrowRight', 'PageDown', ' ', 'Enter'].includes(e.key)) { e.preventDefault(); show(cur + 1); }
+    else if (['ArrowLeft', 'PageUp', 'Backspace'].includes(e.key)) { e.preventDefault(); show(cur - 1); }
+    else if (e.key === 'Home') show(0);
+    else if (e.key === 'End') show(slides.length - 1);
+    else if (e.key.toLowerCase() === 'f') document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+  });
+  document.getElementById('prev').onclick = () => show(cur - 1);
+  document.getElementById('next').onclick = () => show(cur + 1);
+  let tx = null;
+  addEventListener('touchstart', e => tx = e.touches[0].clientX);
+  addEventListener('touchend', e => { if (tx !== null) { const dx = e.changedTouches[0].clientX - tx; if (Math.abs(dx) > 50) show(cur + (dx < 0 ? 1 : -1)); tx = null; } });
+
+  const h = parseInt((location.hash || '').slice(1), 10);
+  fit(); show(isNaN(h) ? 0 : h - 1);
+</script>
+
+</body>
+</html>
