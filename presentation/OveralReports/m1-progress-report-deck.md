@@ -32,7 +32,7 @@ Sources: [m1-cooperative-awareness.md](../../requirements/m1-cooperative-awarene
 4. **Testing** — the three test layers and what each one proves
 5. **Acceptance evidence** — the three surfaces a claim is read from
 6. **Contribution** — scope of work by contributor
-7. **Remaining work** — what is open, and what it blocks
+7. **Remaining work** — what is open, what is optional, and what it blocks
 
 ---
 
@@ -329,10 +329,11 @@ Every claim in this report is read off one of three surfaces, so a run either pr
 
 # The work board
 
-![h:400 Remaining work — one test layer in progress, five items to do](../assets/m1-report-remaining-board.svg)
+![h:330 Remaining work — one test layer in progress, five items to do and two optional explorations](../assets/m1-report-remaining-board.svg)
 
 - **Nothing on the board blocks the demonstration.** The delivered system runs today without any of it.
-- **The open items are consolidation** — documenting what was built, and improving code that already behaves correctly.
+- **Three of the five to-do items are reports** — the design, what the project taught us, and what the architecture can absorb next.
+- **The two optional items are explorations**, carried as ideas with a stated cost rather than as commitments.
 
 ---
 
@@ -341,13 +342,15 @@ Every claim in this report is read off one of three surfaces, so a run either pr
 | Item | What it covers | Where it lands |
 |---|---|---|
 | **Isolated node tests** | Each node exercised alone against bench stand-ins for its neighbours | The node folders and their walkthroughs |
+| **Scenario import** | Test scenarios read from JSON or XML, so a new case is a file rather than an edit | [Scenario_Player/](../../Scenario_Player/) |
 | **Design report** | The delivered design presented as a report, not as phase decks | [presentation/](../) |
-| **Knowledge base** | Platform, node and CI know-how written up for reuse | [presentation/KnowledgeBase/](../KnowledgeBase/) |
-| **ADA code improvements** | Clean-up behind behaviour that already works | [ADA_ECU/](../../ADA_ECU/) |
-| **IVI code improvements** | Clean-up behind the delivered screen | [IVI_ECU/](../../IVI_ECU/) |
+| **Knowledge-base report** | What the project taught us — the platform, the nodes, the CI, and what not to repeat | [presentation/KnowledgeBase/](../KnowledgeBase/) |
+| **Future-extension report** | What the architecture can absorb next, written against the seams that admit it | [requirements/future/](../../requirements/future/) |
 | **IVI layout improvement** | Possible rework of the warning-view layout, subject to review | [IVI_ECU/](../../IVI_ECU/) |
+| **Video to ADA and IVI** *(optional)* | One clip source feeding both nodes, so the IVI can show what the detector sees | [ADA_ECU/](../../ADA_ECU/) · [IVI_ECU/](../../IVI_ECU/) |
+| **Live-video machine learning** *(optional)* | Whether detection can run on a live stream rather than a recorded clip | [ADA_ECU/](../../ADA_ECU/) |
 
-> **Three days remain.** The sequence that fits them: close the isolated node tests, then the written record — design report and knowledge base — with code improvements taken only as far as the remaining time safely allows.
+> **Three days remain.** The isolated node tests close first; the three reports are the committed written record. Scenario import and the IVI layout follow as time allows, and the two optional items are explorations whose cost is stated before any of it is started.
 
 ---
 

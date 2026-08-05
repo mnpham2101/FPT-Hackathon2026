@@ -203,7 +203,7 @@
       <div class="item"><div class="n">04</div><div><h3>Testing</h3><p>the three test layers and what each one proves</p></div></div>
       <div class="item"><div class="n">05</div><div><h3>Acceptance evidence</h3><p>the three surfaces a claim is read from</p></div></div>
       <div class="item"><div class="n">06</div><div><h3>Contribution</h3><p>scope of work by contributor</p></div></div>
-      <div class="item"><div class="n">07</div><div><h3>Remaining work</h3><p>what is open, and what it blocks</p></div></div>
+      <div class="item"><div class="n">07</div><div><h3>Remaining work</h3><p>what is open, what is optional, and what it blocks</p></div></div>
     </div>
     <div class="footer"><span>Milestone 1 — Progress Report · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
@@ -491,10 +491,11 @@
   </section>
   <section class="slide bg-light content">
     <div class="slide-head"><div class="num">07</div><h2>The work board</h2></div>
-    <div class="imgbox"><img src="../assets/m1-report-remaining-board.svg" style="height:400px" alt="Remaining work — one test layer in progress, five items to do"><div class="cap">Remaining work — one test layer in progress, five items to do</div></div>
+    <div class="imgbox"><img src="../assets/m1-report-remaining-board.svg" style="height:330px" alt="Remaining work — one test layer in progress, five items to do and two optional explorations"><div class="cap">Remaining work — one test layer in progress, five items to do and two optional explorations</div></div>
     <ul class="points">
       <li><strong>Nothing on the board blocks the demonstration.</strong> The delivered system runs today without any of it.</li>
-      <li><strong>The open items are consolidation</strong> — documenting what was built, and improving code that already behaves correctly.</li>
+      <li><strong>Three of the five to-do items are reports</strong> — the design, what the project taught us, and what the architecture can absorb next.</li>
+      <li><strong>The two optional items are explorations</strong>, carried as ideas with a stated cost rather than as commitments.</li>
     </ul>
     <div class="footer"><span>Milestone 1 — Progress Report · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
@@ -504,14 +505,16 @@
       <thead><tr><th>Item</th><th>What it covers</th><th>Where it lands</th></tr></thead>
       <tbody>
         <tr><td><strong>Isolated node tests</strong></td><td>Each node exercised alone against bench stand-ins for its neighbours</td><td>The node folders and their walkthroughs</td></tr>
+        <tr><td><strong>Scenario import</strong></td><td>Test scenarios read from JSON or XML, so a new case is a file rather than an edit</td><td><a href="../../Scenario_Player/">Scenario_Player/</a></td></tr>
         <tr><td><strong>Design report</strong></td><td>The delivered design presented as a report, not as phase decks</td><td><a href="../">presentation/</a></td></tr>
-        <tr><td><strong>Knowledge base</strong></td><td>Platform, node and CI know-how written up for reuse</td><td><a href="../KnowledgeBase/">presentation/KnowledgeBase/</a></td></tr>
-        <tr><td><strong>ADA code improvements</strong></td><td>Clean-up behind behaviour that already works</td><td><a href="../../ADA_ECU/">ADA_ECU/</a></td></tr>
-        <tr><td><strong>IVI code improvements</strong></td><td>Clean-up behind the delivered screen</td><td><a href="../../IVI_ECU/">IVI_ECU/</a></td></tr>
+        <tr><td><strong>Knowledge-base report</strong></td><td>What the project taught us — the platform, the nodes, the CI, and what not to repeat</td><td><a href="../KnowledgeBase/">presentation/KnowledgeBase/</a></td></tr>
+        <tr><td><strong>Future-extension report</strong></td><td>What the architecture can absorb next, written against the seams that admit it</td><td><a href="../../requirements/future/">requirements/future/</a></td></tr>
         <tr><td><strong>IVI layout improvement</strong></td><td>Possible rework of the warning-view layout, subject to review</td><td><a href="../../IVI_ECU/">IVI_ECU/</a></td></tr>
+        <tr><td><strong>Video to ADA and IVI</strong> <em>(optional)</em></td><td>One clip source feeding both nodes, so the IVI can show what the detector sees</td><td><a href="../../ADA_ECU/">ADA_ECU/</a> · <a href="../../IVI_ECU/">IVI_ECU/</a></td></tr>
+        <tr><td><strong>Live-video machine learning</strong> <em>(optional)</em></td><td>Whether detection can run on a live stream rather than a recorded clip</td><td><a href="../../ADA_ECU/">ADA_ECU/</a></td></tr>
       </tbody>
     </table>
-    <div class="strip"><strong>Three days remain.</strong> The sequence that fits them: close the isolated node tests, then the written record — design report and knowledge base — with code improvements taken only as far as the remaining time safely allows.</div>
+    <div class="strip"><strong>Three days remain.</strong> The isolated node tests close first; the three reports are the committed written record. Scenario import and the IVI layout follow as time allows, and the two optional items are explorations whose cost is stated before any of it is started.</div>
     <div class="footer"><span>Milestone 1 — Progress Report · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide thanks" style="background-image: linear-gradient(rgba(8,12,38,.66), rgba(14,21,64,.86)), url('../assets/bg-fpt-tower.jpg')">
