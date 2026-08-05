@@ -1,0 +1,13 @@
+{
+  "name": "state-stream",
+  "defaultRateHz": 1.0,
+  "loop": false,
+  "steps": [
+    { "sample": "r4-state", "overrides": { "seq": 101 } },
+    { "sample": "r4-state", "overrides": { "seq": 102 } },
+    { "sample": "r4-state", "overrides": { "seq": 103 } },
+    { "sample": "r4-state", "overrides": { "seq": 104 } },
+    { "sample": "r4-state", "overrides": { "seq": 105 } },
+    { "sample": "r4-state", "overrides": { "seq": 106 } }
+  ]
+}
