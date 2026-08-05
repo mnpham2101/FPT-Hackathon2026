@@ -28,7 +28,7 @@ Sources: [m1-cooperative-awareness.md](../../requirements/m1-cooperative-awarene
 
 1. **Status at a glance** — the headline numbers and how they are measured
 2. **Implementation** — progress by workstream, and what each phase delivered
-3. **Requirement coverage** — the 22 requirements and the six that deviate
+3. **Requirement coverage** — the 22 requirements by phase, and the six that deviate
 4. **Testing** — the three test layers and what each one proves
 5. **Acceptance evidence** — the three surfaces evidence is read from
 6. **Contribution** — scope of work by contributor
@@ -131,13 +131,12 @@ Percentages here come from **observable system behaviour**, not from a task boar
 
 ---
 
-# Coverage across the 22 requirements
+# Requirement coverage by phase
 
-![h:370 Requirement status — 16 as specified, 5 with a deviation, 1 not implemented](../assets/m1-report-requirements.svg)
+![h:400 Requirement status by delivering phase — 16 as specified, 5 with a deviation, 1 not implemented](../assets/m1-report-requirements.svg)
 
-- **Sixteen are delivered as specified**, including every contract and the end-to-end run that defines done.
-- **Five carry a deviation** — delivered and functional, but narrower in scope than the requirement text.
-- **One is not implemented** — R10 ego transmission, deferred to a future milestone by decision.
+- **R4 is the ADA-to-IVI contract; R15 is its implementation.** R9 is the V2X ECU receive pipeline, upstream of both.
+- **R10 is the only requirement carrying no implementation** — ego transmission, deferred to a future milestone by decision.
 
 ---
 

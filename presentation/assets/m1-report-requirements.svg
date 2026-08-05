@@ -1,87 +1,106 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 380" width="1120" height="380" font-family="Segoe UI, Segoe UI Variable, Helvetica Neue, Arial, sans-serif">
-<rect width="1120" height="380" fill="#ffffff"/>
-<rect x="40" y="44" width="754.4" height="40" rx="4" fill="#2E7D27"/>
-<text x="54" y="71" font-size="20" fill="#ffffff" font-weight="700">16</text>
-<text x="80" y="71" font-size="14.5" fill="#ffffff" font-weight="600">delivered as specified</text>
-<rect x="796.3636363636364" y="44" width="234.4" height="40" rx="4" fill="#C2740A"/>
-<text x="810.3636363636364" y="71" font-size="20" fill="#19226D" font-weight="700">5</text>
-<text x="836.3636363636364" y="71" font-size="14.5" fill="#19226D" font-weight="600">delivered with a deviation</text>
-<rect x="1032.7272727272727" y="44" width="45.3" height="40" rx="4" fill="#6E7488"/>
-<text x="1055.3636363636365" y="71" font-size="17" fill="#ffffff" font-weight="700" text-anchor="middle">1</text>
-<text x="40" y="28" font-size="12" fill="#8a8d99" font-weight="700" letter-spacing="1.4">ALL 22 ENUMERATED REQUIREMENTS</text>
-<text x="1080" y="28" font-size="13" fill="#8a8d99" font-weight="400" text-anchor="end">R10 is the only one carrying no implementation</text>
-<rect x="58.0" y="140" width="84.0" height="54" rx="6" fill="#2E7D27"/>
-<text x="100.0" y="165" font-size="17" fill="#ffffff" font-weight="700" text-anchor="middle">R1</text>
-<text x="100.0" y="183" font-size="11" fill="#ffffff" font-weight="600" text-anchor="middle">CPM</text>
-<rect x="150.0" y="140" width="84.0" height="54" rx="6" fill="#2E7D27"/>
-<text x="192.0" y="165" font-size="17" fill="#ffffff" font-weight="700" text-anchor="middle">R2</text>
-<text x="192.0" y="183" font-size="11" fill="#ffffff" font-weight="600" text-anchor="middle">V2X→ADA</text>
-<rect x="242.0" y="140" width="84.0" height="54" rx="6" fill="#2E7D27"/>
-<text x="284.0" y="165" font-size="17" fill="#ffffff" font-weight="700" text-anchor="middle">R3</text>
-<text x="284.0" y="183" font-size="11" fill="#ffffff" font-weight="600" text-anchor="middle">Track</text>
-<rect x="334.0" y="140" width="84.0" height="54" rx="6" fill="#2E7D27"/>
-<text x="376.0" y="165" font-size="17" fill="#ffffff" font-weight="700" text-anchor="middle">R4</text>
-<text x="376.0" y="183" font-size="11" fill="#ffffff" font-weight="600" text-anchor="middle">Warning</text>
-<rect x="426.0" y="140" width="84.0" height="54" rx="6" fill="#2E7D27"/>
-<text x="468.0" y="165" font-size="17" fill="#ffffff" font-weight="700" text-anchor="middle">R5</text>
-<text x="468.0" y="183" font-size="11" fill="#ffffff" font-weight="600" text-anchor="middle">Deploy</text>
-<rect x="518.0" y="140" width="84.0" height="54" rx="6" fill="#2E7D27"/>
-<text x="560.0" y="165" font-size="17" fill="#ffffff" font-weight="700" text-anchor="middle">R6</text>
-<text x="560.0" y="183" font-size="11" fill="#ffffff" font-weight="600" text-anchor="middle">Network</text>
-<rect x="610.0" y="140" width="84.0" height="54" rx="6" fill="#C2740A"/>
-<text x="652.0" y="165" font-size="17" fill="#19226D" font-weight="700" text-anchor="middle">R7</text>
-<text x="652.0" y="183" font-size="11" fill="#19226D" font-weight="600" text-anchor="middle">Adapter</text>
-<rect x="702.0" y="140" width="84.0" height="54" rx="6" fill="#2E7D27"/>
-<text x="744.0" y="165" font-size="17" fill="#ffffff" font-weight="700" text-anchor="middle">R8</text>
-<text x="744.0" y="183" font-size="11" fill="#ffffff" font-weight="600" text-anchor="middle">Modem</text>
-<rect x="794.0" y="140" width="84.0" height="54" rx="6" fill="#2E7D27"/>
-<text x="836.0" y="165" font-size="17" fill="#ffffff" font-weight="700" text-anchor="middle">R9</text>
-<text x="836.0" y="183" font-size="11" fill="#ffffff" font-weight="600" text-anchor="middle">Rx</text>
-<rect x="886.0" y="140" width="84.0" height="54" rx="6" fill="#6E7488"/>
-<text x="928.0" y="165" font-size="17" fill="#ffffff" font-weight="700" text-anchor="middle">R10</text>
-<text x="928.0" y="183" font-size="11" fill="#ffffff" font-weight="600" text-anchor="middle">Ego Tx</text>
-<rect x="978.0" y="140" width="84.0" height="54" rx="6" fill="#2E7D27"/>
-<text x="1020.0" y="165" font-size="17" fill="#ffffff" font-weight="700" text-anchor="middle">R11</text>
-<text x="1020.0" y="183" font-size="11" fill="#ffffff" font-weight="600" text-anchor="middle">Bench</text>
-<rect x="58.0" y="206" width="84.0" height="54" rx="6" fill="#C2740A"/>
-<text x="100.0" y="231" font-size="17" fill="#19226D" font-weight="700" text-anchor="middle">R12</text>
-<text x="100.0" y="249" font-size="11" fill="#19226D" font-weight="600" text-anchor="middle">Detect</text>
-<rect x="150.0" y="206" width="84.0" height="54" rx="6" fill="#2E7D27"/>
-<text x="192.0" y="231" font-size="17" fill="#ffffff" font-weight="700" text-anchor="middle">R13</text>
-<text x="192.0" y="249" font-size="11" fill="#ffffff" font-weight="600" text-anchor="middle">Store</text>
-<rect x="242.0" y="206" width="84.0" height="54" rx="6" fill="#2E7D27"/>
-<text x="284.0" y="231" font-size="17" fill="#ffffff" font-weight="700" text-anchor="middle">R14</text>
-<text x="284.0" y="249" font-size="11" fill="#ffffff" font-weight="600" text-anchor="middle">CRA</text>
-<rect x="334.0" y="206" width="84.0" height="54" rx="6" fill="#C2740A"/>
-<text x="376.0" y="231" font-size="17" fill="#19226D" font-weight="700" text-anchor="middle">R15</text>
-<text x="376.0" y="249" font-size="11" fill="#19226D" font-weight="600" text-anchor="middle">Warn out</text>
-<rect x="426.0" y="206" width="84.0" height="54" rx="6" fill="#C2740A"/>
-<text x="468.0" y="231" font-size="17" fill="#19226D" font-weight="700" text-anchor="middle">R16</text>
-<text x="468.0" y="249" font-size="11" fill="#19226D" font-weight="600" text-anchor="middle">HMI</text>
-<rect x="518.0" y="206" width="84.0" height="54" rx="6" fill="#C2740A"/>
-<text x="560.0" y="231" font-size="17" fill="#19226D" font-weight="700" text-anchor="middle">R17</text>
-<text x="560.0" y="249" font-size="11" fill="#19226D" font-weight="600" text-anchor="middle">View</text>
-<rect x="610.0" y="206" width="84.0" height="54" rx="6" fill="#2E7D27"/>
-<text x="652.0" y="231" font-size="17" fill="#ffffff" font-weight="700" text-anchor="middle">R18</text>
-<text x="652.0" y="249" font-size="11" fill="#ffffff" font-weight="600" text-anchor="middle">Logs</text>
-<rect x="702.0" y="206" width="84.0" height="54" rx="6" fill="#2E7D27"/>
-<text x="744.0" y="231" font-size="17" fill="#ffffff" font-weight="700" text-anchor="middle">R19</text>
-<text x="744.0" y="249" font-size="11" fill="#ffffff" font-weight="600" text-anchor="middle">E2E run</text>
-<rect x="794.0" y="206" width="84.0" height="54" rx="6" fill="#2E7D27"/>
-<text x="836.0" y="231" font-size="17" fill="#ffffff" font-weight="700" text-anchor="middle">R20</text>
-<text x="836.0" y="249" font-size="11" fill="#ffffff" font-weight="600" text-anchor="middle">Pacing</text>
-<rect x="886.0" y="206" width="84.0" height="54" rx="6" fill="#2E7D27"/>
-<text x="928.0" y="231" font-size="17" fill="#ffffff" font-weight="700" text-anchor="middle">R21</text>
-<text x="928.0" y="249" font-size="11" fill="#ffffff" font-weight="600" text-anchor="middle">Align</text>
-<rect x="978.0" y="206" width="84.0" height="54" rx="6" fill="#2E7D27"/>
-<text x="1020.0" y="231" font-size="17" fill="#ffffff" font-weight="700" text-anchor="middle">R22</text>
-<text x="1020.0" y="249" font-size="11" fill="#ffffff" font-weight="600" text-anchor="middle">Timing</text>
-<rect x="58.0" y="300" width="16.0" height="16" rx="3" fill="#2E7D27"/>
-<text x="84.0" y="313" font-size="14.5" fill="#3d3d46" font-weight="600">Delivered as specified — 16</text>
-<rect x="388.0" y="300" width="16.0" height="16" rx="3" fill="#C2740A"/>
-<text x="414.0" y="313" font-size="14.5" fill="#3d3d46" font-weight="600">Delivered with a deviation — 5</text>
-<rect x="718.0" y="300" width="16.0" height="16" rx="3" fill="#6E7488"/>
-<text x="744.0" y="313" font-size="14.5" fill="#3d3d46" font-weight="600">Deferred, not implemented — 1</text>
-<line x1="0" y1="336" x2="1120" y2="336" stroke="#DCDEE8"/>
-<text x="0" y="358" font-size="13" fill="#8a8d99" font-weight="400">Every deviation is a recorded scope decision, not an unfinished implementation — the register is on the next slide.</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 520" width="1120" height="520" font-family="Segoe UI, Segoe UI Variable, Helvetica Neue, Arial, sans-serif">
+<rect width="1120" height="520" fill="#ffffff"/>
+<rect x="40" y="34" width="754.4" height="32" rx="4" fill="#2E7D27"/>
+<text x="53" y="56" font-size="18" fill="#ffffff" font-weight="700">16</text>
+<text x="77" y="56" font-size="14" fill="#ffffff" font-weight="600">delivered as specified</text>
+<rect x="796.3636363636364" y="34" width="234.4" height="32" rx="4" fill="#C2740A"/>
+<text x="809.3636363636364" y="56" font-size="18" fill="#19226D" font-weight="700">5</text>
+<text x="833.3636363636364" y="56" font-size="14" fill="#19226D" font-weight="600">delivered with a deviation</text>
+<rect x="1032.7272727272727" y="34" width="45.3" height="32" rx="4" fill="#6E7488"/>
+<text x="1055.3636363636365" y="56" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">1</text>
+<text x="40" y="22" font-size="12" fill="#8a8d99" font-weight="700" letter-spacing="1.4">ALL 22 ENUMERATED REQUIREMENTS, GROUPED BY THE PHASE THAT DELIVERS THEM</text>
+<line x1="40" y1="88" x2="1080" y2="88" stroke="#DCDEE8"/>
+<text x="40" y="114" font-size="15.5" fill="#19226D" font-weight="700">Phase 0</text>
+<text x="40" y="130" font-size="11.5" fill="#8a8d99" font-weight="400">Contract freeze</text>
+<rect x="312" y="98" width="84.0" height="44" rx="6" fill="#2E7D27"/>
+<text x="354.0" y="118" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">R1</text>
+<text x="354.0" y="133" font-size="10" fill="#ffffff" font-weight="600" text-anchor="middle">CPM</text>
+<rect x="404" y="98" width="84.0" height="44" rx="6" fill="#2E7D27"/>
+<text x="446.0" y="118" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">R2</text>
+<text x="446.0" y="133" font-size="10" fill="#ffffff" font-weight="600" text-anchor="middle">V2X&#8594;ADA</text>
+<rect x="496" y="98" width="84.0" height="44" rx="6" fill="#2E7D27"/>
+<text x="538.0" y="118" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">R3</text>
+<text x="538.0" y="133" font-size="10" fill="#ffffff" font-weight="600" text-anchor="middle">TrackedObj</text>
+<rect x="588" y="98" width="84.0" height="44" rx="6" fill="#2E7D27"/>
+<text x="630.0" y="118" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">R4</text>
+<text x="630.0" y="133" font-size="10" fill="#ffffff" font-weight="600" text-anchor="middle">ADA&#8594;IVI</text>
+<rect x="680" y="98" width="84.0" height="44" rx="6" fill="#2E7D27"/>
+<text x="722.0" y="118" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">R5</text>
+<text x="722.0" y="133" font-size="10" fill="#ffffff" font-weight="600" text-anchor="middle">Deploy</text>
+<rect x="772" y="98" width="84.0" height="44" rx="6" fill="#2E7D27"/>
+<text x="814.0" y="118" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">R6</text>
+<text x="814.0" y="133" font-size="10" fill="#ffffff" font-weight="600" text-anchor="middle">Network</text>
+<line x1="40" y1="142" x2="1080" y2="142" stroke="#DCDEE8"/>
+<text x="40" y="168" font-size="15.5" fill="#19226D" font-weight="700">Phase 1</text>
+<text x="40" y="184" font-size="11.5" fill="#8a8d99" font-weight="400">V2X &amp; bench implementation</text>
+<rect x="312" y="152" width="84.0" height="44" rx="6" fill="#C2740A"/>
+<text x="354.0" y="172" font-size="16" fill="#19226D" font-weight="700" text-anchor="middle">R7</text>
+<text x="354.0" y="187" font-size="10" fill="#19226D" font-weight="600" text-anchor="middle">Radio seam</text>
+<rect x="404" y="152" width="84.0" height="44" rx="6" fill="#2E7D27"/>
+<text x="446.0" y="172" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">R8</text>
+<text x="446.0" y="187" font-size="10" fill="#ffffff" font-weight="600" text-anchor="middle">Modem stub</text>
+<rect x="496" y="152" width="84.0" height="44" rx="6" fill="#2E7D27"/>
+<text x="538.0" y="172" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">R9</text>
+<text x="538.0" y="187" font-size="10" fill="#ffffff" font-weight="600" text-anchor="middle">V2X Rx</text>
+<rect x="588" y="152" width="84.0" height="44" rx="6" fill="#6E7488"/>
+<text x="630.0" y="172" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">R10</text>
+<text x="630.0" y="187" font-size="10" fill="#ffffff" font-weight="600" text-anchor="middle">Ego Tx</text>
+<rect x="680" y="152" width="84.0" height="44" rx="6" fill="#2E7D27"/>
+<text x="722.0" y="172" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">R11</text>
+<text x="722.0" y="187" font-size="10" fill="#ffffff" font-weight="600" text-anchor="middle">Bench CPM</text>
+<line x1="40" y1="196" x2="1080" y2="196" stroke="#DCDEE8"/>
+<text x="40" y="222" font-size="15.5" fill="#19226D" font-weight="700">Phase 2</text>
+<text x="40" y="238" font-size="11.5" fill="#8a8d99" font-weight="400">ADA scaffold</text>
+<rect x="312" y="206" width="84.0" height="44" rx="6" fill="#2E7D27"/>
+<text x="354.0" y="226" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">R13</text>
+<text x="354.0" y="241" font-size="10" fill="#ffffff" font-weight="600" text-anchor="middle">Track store</text>
+<line x1="40" y1="250" x2="1080" y2="250" stroke="#DCDEE8"/>
+<text x="40" y="276" font-size="15.5" fill="#19226D" font-weight="700">Phase 3</text>
+<text x="40" y="292" font-size="11.5" fill="#8a8d99" font-weight="400">Object detection</text>
+<rect x="312" y="260" width="84.0" height="44" rx="6" fill="#C2740A"/>
+<text x="354.0" y="280" font-size="16" fill="#19226D" font-weight="700" text-anchor="middle">R12</text>
+<text x="354.0" y="295" font-size="10" fill="#19226D" font-weight="600" text-anchor="middle">Detection</text>
+<line x1="40" y1="304" x2="1080" y2="304" stroke="#DCDEE8"/>
+<text x="40" y="330" font-size="15.5" fill="#19226D" font-weight="700">Phase 4</text>
+<text x="40" y="346" font-size="11.5" fill="#8a8d99" font-weight="400">Fusion &amp; warning output</text>
+<rect x="312" y="314" width="84.0" height="44" rx="6" fill="#2E7D27"/>
+<text x="354.0" y="334" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">R14</text>
+<text x="354.0" y="349" font-size="10" fill="#ffffff" font-weight="600" text-anchor="middle">CRA</text>
+<rect x="404" y="314" width="84.0" height="44" rx="6" fill="#C2740A"/>
+<text x="446.0" y="334" font-size="16" fill="#19226D" font-weight="700" text-anchor="middle">R15</text>
+<text x="446.0" y="349" font-size="10" fill="#19226D" font-weight="600" text-anchor="middle">ADA&#8594;IVI tx</text>
+<line x1="40" y1="358" x2="1080" y2="358" stroke="#DCDEE8"/>
+<text x="40" y="384" font-size="15.5" fill="#19226D" font-weight="700">Phase 5</text>
+<text x="40" y="400" font-size="11.5" fill="#8a8d99" font-weight="400">IVI HMI &amp; warning view</text>
+<rect x="312" y="368" width="84.0" height="44" rx="6" fill="#C2740A"/>
+<text x="354.0" y="388" font-size="16" fill="#19226D" font-weight="700" text-anchor="middle">R16</text>
+<text x="354.0" y="403" font-size="10" fill="#19226D" font-weight="600" text-anchor="middle">HMI layout</text>
+<rect x="404" y="368" width="84.0" height="44" rx="6" fill="#C2740A"/>
+<text x="446.0" y="388" font-size="16" fill="#19226D" font-weight="700" text-anchor="middle">R17</text>
+<text x="446.0" y="403" font-size="10" fill="#19226D" font-weight="600" text-anchor="middle">God view</text>
+<line x1="40" y1="412" x2="1080" y2="412" stroke="#DCDEE8"/>
+<text x="40" y="438" font-size="15.5" fill="#19226D" font-weight="700">Phase 6</text>
+<text x="40" y="454" font-size="11.5" fill="#8a8d99" font-weight="400">Convergence &amp; evidence</text>
+<rect x="312" y="422" width="84.0" height="44" rx="6" fill="#2E7D27"/>
+<text x="354.0" y="442" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">R18</text>
+<text x="354.0" y="457" font-size="10" fill="#ffffff" font-weight="600" text-anchor="middle">Evidence log</text>
+<rect x="404" y="422" width="84.0" height="44" rx="6" fill="#2E7D27"/>
+<text x="446.0" y="442" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">R19</text>
+<text x="446.0" y="457" font-size="10" fill="#ffffff" font-weight="600" text-anchor="middle">E2E run</text>
+<rect x="496" y="422" width="84.0" height="44" rx="6" fill="#2E7D27"/>
+<text x="538.0" y="442" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">R20</text>
+<text x="538.0" y="457" font-size="10" fill="#ffffff" font-weight="600" text-anchor="middle">Pacing</text>
+<rect x="588" y="422" width="84.0" height="44" rx="6" fill="#2E7D27"/>
+<text x="630.0" y="442" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">R21</text>
+<text x="630.0" y="457" font-size="10" fill="#ffffff" font-weight="600" text-anchor="middle">Alignment</text>
+<rect x="680" y="422" width="84.0" height="44" rx="6" fill="#2E7D27"/>
+<text x="722.0" y="442" font-size="16" fill="#ffffff" font-weight="700" text-anchor="middle">R22</text>
+<text x="722.0" y="457" font-size="10" fill="#ffffff" font-weight="600" text-anchor="middle">Onset</text>
+<line x1="40" y1="466" x2="1080" y2="466" stroke="#DCDEE8"/>
+<rect x="40" y="488" width="16.0" height="16" rx="3" fill="#2E7D27"/>
+<text x="66" y="501" font-size="14" fill="#3d3d46" font-weight="600">Delivered as specified — 16</text>
+<rect x="370" y="488" width="16.0" height="16" rx="3" fill="#C2740A"/>
+<text x="396" y="501" font-size="14" fill="#3d3d46" font-weight="600">Delivered with a deviation — 5</text>
+<rect x="700" y="488" width="16.0" height="16" rx="3" fill="#6E7488"/>
+<text x="726" y="501" font-size="14" fill="#3d3d46" font-weight="600">Deferred, not implemented — 1</text>
 </svg>
