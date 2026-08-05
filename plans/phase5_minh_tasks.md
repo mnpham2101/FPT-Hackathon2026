@@ -1030,7 +1030,7 @@ Watching the node badges is not part of this subtask — `5.5.9.5` records the p
 
 **Dependencies:** after `5.5.9.5` and `16.5.9.19`. **Commit:** `[16.5.9.6] docs: record the ADB tunnel start against the Skycraft guest`
 
-### [ ] `16.5.9.19` — Obtain the tunnel CLI, its gateway URL and its token *(Human)*
+### [x] `16.5.9.19` — Obtain the tunnel CLI, its gateway URL and its token *(Human)*
 
 **Objective:** put the three organizer-supplied inputs the ADB tunnel needs into the team's hands.
 
@@ -1043,6 +1043,8 @@ Watching the node badges is not part of this subtask — `5.5.9.5` records the p
 **Acceptance:** the provenance of each of the three inputs recorded in `plans/doc/phase5-ivi-run.md`, answering §6.1 items 2, 3 and 4. **The token value is never written into the repository.** Evidence commit by the orchestrating session after the person confirms.
 
 **Dependencies:** none — needs no Phase 5 code, no image and no Room. **Commit:** `[16.5.9.19] docs: record the provenance of the ADB tunnel inputs`
+
+**Status:** done — all three inputs in hand, provenance recorded in [doc/phase5-ivi-run.md](doc/phase5-ivi-run.md): the binary under `tools/apk uploader/` (git-ignored), the gateway is the workbench base URL itself, and the token is a per-device derived value from the Rework Local ADB dialog — not the CarSky API key — held under `secrets/`. §6.1 items 2–4 answered; the token value is not in the repository.
 
 ### [ ] `16.5.9.7` — Prove the ADB route and read the guest's properties *(car-sky)*
 
