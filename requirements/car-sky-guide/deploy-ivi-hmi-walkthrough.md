@@ -496,7 +496,7 @@ Every link has its own observable, and they come from **two different log surfac
 | **CarSky node log** (the ADA container) | Deployment Viewer → the ADA node → **View Log**; or `GET /api/v1/deployments/{roomId}/logs/{nodeKey}?container=user` — **`container` is mandatory**, omitting it returns 500 | The producer's `[TX]` lines, and `[CAP]` tcpdump lines when the node has `NET_RAW` |
 | **Guest logcat** (the IVI app) | The **Log** widget, or `adb logcat -s IVI_V2X` | Everything the app does: `[LINK]`, `[RX]`, `[DROP]`, `[UI]` |
 
-**Known build/design discrepancy on the currently-installed team debug build:** it logs its listener bind as `R4ListenerService: UDP socket open on port 47300`, and the designed `[LINK] state=bound port=47300` line on tag `IVI_V2X` does not appear — so `adb logcat -s IVI_V2X` streams empty on that build. The bind itself is proven by the `R4ListenerService` line and `/proc/net/udp` showing `*:47300`. The ladder below describes the **designed** logging; reconcile the build against it before citing any V-rung text evidence (§6.1).
+**Known deviation on the current team debug build — rung V1's line only:** the designed `[LINK] state=bound port=47300` line on `IVI_V2X` does not appear; the bind is logged as `R4ListenerService: UDP socket open on port <port>` instead, so V1's text evidence is read with `adb logcat -s R4ListenerService` and corroborated by `/proc/net/udp` showing `*:47300`. Rungs V2 upward are unaffected — the receive loop logs `[RX]` and `[DROP]` on `IVI_V2X` as designed ([R4ListenerService.kt](../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/service/R4ListenerService.kt)), so an empty `-s IVI_V2X` stream before any datagram has arrived is normal, not a defect. Reconcile the bind line against the design before citing V1 text evidence (§6.1).
 
 Work up the ladder — each rung needs less to exist than the one below it, so start at the highest rung your build supports.
 
@@ -654,7 +654,7 @@ Each point below can make a step fail without this guide being wrong. Confirm it
 |---|---|---|
 | 1 | The IVI node's Part Prefix, display size and GPU backend | §4.2, §4.7 — a widget may ask which part to use |
 | 2 | Whether the guest display sleeps, and that `KEYCODE_WAKEUP` wakes it | §4.7 |
-| 3 | That the installed build logs the designed `[LINK]`, `[RX]`, `[DROP]` and `[UI]` lines on tag `IVI_V2X` — the current team debug build logs `R4ListenerService: …` instead, so `adb logcat -s IVI_V2X` streams empty on it (§4.8) | §4.8, §4.9, §6 — every text observable filters on that tag |
+| 3 | That the installed build logs rung V1's `[LINK] state=bound` line on tag `IVI_V2X` — the current team debug build logs the bind as `R4ListenerService: UDP socket open on port <port>` instead, while rungs V2 upward (`[RX]`, `[DROP]`) log on `IVI_V2X` as designed | §4.8 V1, §4.7 — V1's text evidence needs the `R4ListenerService` tag until the build is reconciled |
 | 4 | A JDK and an Android SDK being present on the build host | §1.1, §2 — §3 is the route that needs neither |
 | 5 | Whether `GET /api/v1/vms/{roomId}/{nodeKey}/screenshot` answers on this deployment | §4.9 — a convenience path, not the primary one |
 | 6 | The `ubuntu-latest` runner image's Android SDK and licence state staying sufficient for `compileSdk 34` | §3.1 |
