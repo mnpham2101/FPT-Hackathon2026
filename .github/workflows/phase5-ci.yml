@@ -1,12 +1,13 @@
-# The two lanes of the IVI ECU, the node Phase 5 develops:
+# The three lanes of the IVI ECU, the node Phase 5 develops:
 #   * ivi-unit-tests - the module tests on a plain JVM, no device;
 #   * ivi-assemble   - the APK build (16.5.7.1), its unit-test gate, and the `app-debug-apk`
 #     artifact that the CI route of requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md
-#     depends on.
-# A human downloads that artifact and installs it onto the Skycraft AAOS guest by hand; there is no
-# path from this workflow to the platform, because the IVI node pulls no image (its VM image is the
-# starter-pack AAOS artifact). r4-sim-image (5.5.7.3) lands here too - the ADA simulator's image is
-# the IVI node's test equipment.
+#     depends on;
+#   * r4-sim-image   - the ADA simulator's arm64 image m1-r4-sim:latest (5.5.7.3), the IVI
+#     node's test equipment for the mini-blueprint's ADA node.
+# A human downloads the APK artifact and installs it onto the Skycraft AAOS guest by hand; there is
+# no path from this workflow to the platform for the APK, because the IVI node pulls no image (its
+# VM image is the starter-pack AAOS artifact).
 #
 # WHERE A NEW JOB GOES: .claude/rules/ci-lane-placement.md designates the file for every lane, and
 # a lane lives with the NODE IT EXERCISES rather than the phase that wrote it. `ivi-unit-tests` is
@@ -132,3 +133,114 @@ jobs:
           name: app-debug-apk
           path: IVI_ECU/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+
+  # The ADA simulator image (5.5.7.3): the mini-blueprint's ADA node runs m1-r4-sim:latest in
+  # place of the real ADA ECU (walkthrough section 4.11), so the IVI node can be exercised alone.
+  # Structure copied from phase4-ci.yml's ada-bench-image lane, with one difference: the build
+  # context is IVI_ECU/ and the Dockerfile sits at r4-simulator/Dockerfile inside it, because the
+  # image is built from the :contract + :r4-simulator Gradle modules (self-containment holds - the
+  # build reads nothing outside IVI_ECU/).
+  r4-sim-image:
+    runs-on: ubuntu-latest
+    env:
+      # Live host per the O1 probe (2026-07-31): registry.carsky.io 502s, hackathon-2 answers.
+      REGISTRY_HOST: registry.hackathon-2.carsky.io
+      IMAGE: m1-r4-sim:latest
+      # arm64 only: a CarSky Container node rejects a multi-platform manifest index and hangs in
+      # Provisioning, so exactly one platform goes in the buildx invocation.
+      PLATFORMS: linux/arm64
+      CONTEXT: IVI_ECU/
+      DOCKERFILE: IVI_ECU/r4-simulator/Dockerfile
+      # One cache scope PER IMAGE, never a shared one - see the eviction note on v2x-ecu-image's
+      # scope in phase1-ci.yml.
+      CACHE_SCOPE: r4-sim-image
+    # The Gradle stage runs on the build platform (no QEMU emulation of the compiler), so a warm
+    # run is minutes; 30 covers a cold runner resolving the Kotlin toolchain inside the build.
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      # ACTIONS_CACHE_URL / ACTIONS_RESULTS_URL / ACTIONS_RUNTIME_TOKEN are handed to *actions*,
+      # not to `run:` steps - re-exporting through GITHUB_ENV is what lets a plain
+      # `docker buildx build --cache-to type=gha` reach the Actions cache. Fuller note on
+      # v2x-ecu-image's copy of this step in phase1-ci.yml.
+      - name: Expose the Actions cache runtime to the buildx gha cache
+        uses: actions/github-script@v7
+        with:
+          script: |
+            for (const name of ['ACTIONS_CACHE_URL', 'ACTIONS_RESULTS_URL', 'ACTIONS_RUNTIME_TOKEN']) {
+              const value = process.env[name];
+              if (value) {
+                core.exportVariable(name, value);
+              }
+            }
+      - name: Build the R4 simulator image (arm64)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # NO --load and NO --push here, on purpose: with --platform set and neither exporter
+          # given, buildx builds and exports nothing - a linux/arm64 image cannot be --loaded
+          # into an amd64 runner's store, and the push step below is where an exporter belongs.
+          # ignore-error on --cache-to: a cache-service hiccup must not turn a good build red.
+          echo "::group::docker buildx build $IMAGE ($PLATFORMS) from $CONTEXT"
+          docker buildx build \
+            --platform "$PLATFORMS" \
+            --provenance=false --sbom=false \
+            --cache-from "type=gha,scope=$CACHE_SCOPE" \
+            --cache-to "type=gha,mode=max,scope=$CACHE_SCOPE,ignore-error=true" \
+            -f "$DOCKERFILE" \
+            -t "$IMAGE" \
+            "$CONTEXT"
+          echo "::endgroup::"
+          echo "::notice::built $IMAGE ($PLATFORMS) - not pushed by this step"
+      - name: Push to CarSky Zot registry (skips until the secret exists)
+        id: push
+        shell: bash
+        env:
+          ZOT_KEY: ${{ secrets.CARSKY_ZOT_API_KEY }}
+          # Registry account (not a secret) - verified live 2026-07-31. Override with the
+          # CARSKY_REGISTRY_USER repo variable if the account changes.
+          REGISTRY_USER: ${{ vars.CARSKY_REGISTRY_USER || 'kis@hackathon.fpt.com' }}
+        # `pushed`/`digest` written exactly once, at the end - see v2x-ecu-image's push step.
+        # `pushed` is true only past the push itself, so the skip path leaves verification unrun.
+        run: |
+          set -euo pipefail
+          PUSHED=false
+          DIGEST=""
+          if [ -z "$ZOT_KEY" ]; then
+            echo "::notice::CARSKY_ZOT_API_KEY secret not set - image built but NOT pushed"
+          else
+            echo "$ZOT_KEY" | docker login "$REGISTRY_HOST" -u "$REGISTRY_USER" --password-stdin
+            # THE SAME CACHE SCOPE as the build step above, deliberately: this invocation is a
+            # cache hit that only re-resolves the graph and uploads. --metadata-file: the
+            # verification step checks the tag; this digest only feeds its moved-tag warning.
+            docker buildx build \
+              --platform "$PLATFORMS" \
+              --provenance=false --sbom=false \
+              --cache-from "type=gha,scope=$CACHE_SCOPE" \
+              --cache-to "type=gha,mode=max,scope=$CACHE_SCOPE,ignore-error=true" \
+              -f "$DOCKERFILE" \
+              -t "$REGISTRY_HOST/$IMAGE" \
+              --push \
+              --metadata-file "$RUNNER_TEMP/push-metadata.json" \
+              "$CONTEXT"
+            DIGEST=$(jq -r '."containerimage.digest" // empty' "$RUNNER_TEMP/push-metadata.json")
+            echo "::notice::pushed $REGISTRY_HOST/$IMAGE ($PLATFORMS) - this is the reference the mini-blueprint ADA node's image field takes"
+            echo "[PUSH] digest of this build: ${DIGEST:-unreported} (evidence of what was pushed; deploy by the tag above)"
+            PUSHED=true
+          fi
+          {
+            echo "pushed=$PUSHED"
+            echo "digest=$DIGEST"
+          } >> "$GITHUB_OUTPUT"
+      - name: Verify the pushed image is pullable and single-platform arm64
+        id: verify
+        if: steps.push.outputs.pushed == 'true'
+        uses: ./.github/actions/verify-arm64-image
+        with:
+          registry-host: ${{ env.REGISTRY_HOST }}
+          image: ${{ env.IMAGE }}
+          username: ${{ vars.CARSKY_REGISTRY_USER || 'kis@hackathon.fpt.com' }}
+          password: ${{ secrets.CARSKY_ZOT_API_KEY }}
+          digest: ${{ steps.push.outputs.digest }}
