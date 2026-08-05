@@ -71,3 +71,46 @@ Evidence gathered 2026-08-05T20:14–20:20Z against the m1-system-test Room (roo
 **Reading:** `send_ok=true` with nothing captured is consistent with an unanswered ARP — UDP `sendto` is fire-and-forget, the kernel holds the datagram while ARP for `10.99.0.13` goes unanswered, and ARP is invisible to a `udp` capture filter. Nothing on the Room bridge answers for `10.99.0.13`: the Skycraft node's ethernet pin does not put an ARP-answering `10.99.0.13` on the wire, and even if it did, the guest sits behind cuttlefish NAT with no visible forward of UDP 47300 into the VM.
 
 **Open question for the organizers (BTC):** how is a Skycraft node's ethernet pin supposed to deliver UDP into the AAOS guest — does the sidecar forward it, and does that require the pin's `port` field (currently `null`) or other config? Until answered, the ADA → IVI hop is the one link of the R19 chain with no proven route, and the loopback injection above is the only way to exercise the app's warning path in-Room.
+
+## Session 2 — valid-warning loopback injection: the app's ingest, behavior and UI modules all perform correctly
+
+2026-08-05T20:37–20:38Z, same Room, same installed build, over the still-open ADB tunnel. Purpose: feed the app the **exact payload the real ADA node emits** and observe every module downstream of the socket. Result: every module behaved as designed — this session **rules the app's receive, behavior and UI logic out** as causes of the missing warning; the remaining fault is the ADA → IVI network path outside the app (session 1).
+
+### Procedure (reproducible)
+
+1. **Payload:** the verbatim wire body of the ADA node's `r4_tx` event #62 (session 1) — a 515-byte R4 warning, `type=warning`, `schemaVersion=1`, `warningType=nlos_obstruction`, `riskState=medium`, object `id=v2x:1201:7` with `source=v2x_relayed`, geometry ego `(0,0)` / B `(4.24, −0.007)` / C `(31.27, 1.19)`. Saved as one line to a local file; 515 bytes confirmed after push — byte-identical to what the ADA reports sending.
+2. Push it into the guest: `adb -s localhost:5555 push r4-warning.json /data/local/tmp/r4-warning.json`
+3. Foreground the app (`am start -n com.hackathon.v2x.ivi/.MainActivity` — already the top activity), clear the log: `adb -s localhost:5555 logcat -c`
+4. Inject over loopback, inside the guest: `adb -s localhost:5555 shell "timeout 3 sh -c 'nc -u 127.0.0.1 47300 < /data/local/tmp/r4-warning.json'"`
+5. Read the evidence: `adb -s localhost:5555 logcat -d -v time` filtered on `IVI_V2X`, and `screencap -p` pulled from the guest ~2 s after injection (inside the 10 s warning window).
+
+### Log evidence
+
+Injection 1 — guest clock `20:37:12.152` send, `[RX]` logged `20:37:12.174` (**≈22 ms** socket → parsed event):
+
+```
+08-05 20:37:12.174 I/IVI_V2X ( 5017): [RX] R4 message received: R4WarningEvent(schemaVersion=1,
+warningType=nlos_obstruction, riskState=medium, objectSnapshot=R3Snapshot(id=v2x:1201:7, objectClass=vehicle,
+source=v2x_relayed, position=VehiclePosition(x=27.0, y=1.2), distance=27.026653, speed=5.0, confidence=0.95,
+state=tracked, timestamps=R3Timestamps(measured=1785960914840, received=1785960914840, lastUpdated=1785960914841)),
+geometry=SceneGeometry(ego=VehiclePosition(x=0.0, y=0.0), vehicleB=VehiclePosition(x=4.242286, y=-0.0071660713),
+vehicleC=VehiclePosition(x=31.26894, y=1.1928339), vehicleCSnapshot=null))
+```
+
+Injection 2 (`20:38:25.649`) produced the identical `[RX]` line; the screenshot below was taken 2 s after it.
+
+### Screen evidence
+
+- [phase5-ivi-warningview-loopback.png](phase5-ivi-warningview-loopback.png) — the **Warning View up, drawn from the injected message**: `⚠ NLOS OBSTRUCTION — Vehicle C ahead (relayed via V2X)` banner; ghost C rendered red with the blind zone, labelled `source: v2x_relayed · never seen by A's sensors`; B as occluder; ego A; `d_AB = 4.2 m` and `d_AC ≈ 31.3 m` matching the injected geometry; `RISK: MEDIUM`; status bar `MODE: WARNING · V2X LINK: BOUND :47300`; the canvas footnote `Drawn from R4 warning messages only — no ego detection of C exists at any point`.
+- [phase5-ivi-home-after-timeout.png](phase5-ivi-home-after-timeout.png) — ~30 s after injection 1: Display Area restored to `HOME (Idle — Awaiting Warning)` with `V2X LINK: ACTIVE` — the designed `WARNING_TIMEOUT_MS` (10 s, `app/build.gradle.kts`) auto-clear, working.
+
+### What this rules out
+
+| Module | Verdict | Proof |
+|---|---|---|
+| UDP ingest (`R4ListenerService`) | **Correct** | Datagram received on 47300, ~22 ms to parsed event |
+| Contract parsing (`R4Deserializer` / `contract` module) | **Correct** | The real ADA wire body parses into a fully-typed `R4WarningEvent`; provenance `v2x_relayed` preserved |
+| Behavior logic (`WarningViewModel` / `MainViewModel`) | **Correct** | Wake-on-warning forced `MODE: WARNING`; auto-clear restored Home after the designed 10 s |
+| UI logic (warning view / God View) | **Correct** | R16 layout with the R19 render: ghost C from `v2x_relayed` only, geometry and risk state faithful to the wire values |
+
+**Conclusion:** with a valid warning delivered to the guest's socket, the entire in-app chain — receive → parse → event → mode switch → God View render → timed restore — performs to design. The missing live warning is therefore **not** these modules' responsibility; the sole remaining cause is the ADA → IVI delivery path on the platform network (§ ADA → IVI hop investigation), which is outside the app.
