@@ -23,3 +23,4 @@ dependencyResolutionManagement {
 rootProject.name = "v2x-ivi"
 include(":app")
 include(":contract")
+include(":r4-simulator")
