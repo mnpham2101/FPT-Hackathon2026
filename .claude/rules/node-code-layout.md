@@ -8,8 +8,8 @@ The repo has exactly four **node** code folders — one per node in the R5 bluep
 
 | Folder | CarSky node | Requirements | Language / runtime (report §3(d)) | Artifact | Node guide |
 |---|---|---|---|---|---|
-| [Scenario_Player/](../../Scenario_Player/) | Container Node (bench) | R11 | Python | OCI image `scenario-player:latest` | [node-scenario-player.md](../../requirements/car-sky-guide/node-scenario-player.md) |
-| [V2X_ECU/](../../V2X_ECU/) | Container Node | R1, R7–R9 (R10 deferred) | C++17 (Vanetza codec in-process) | OCI image `v2x-ecu:latest` | [node-v2x-ecu.md](../../requirements/car-sky-guide/node-v2x-ecu.md) |
+| [Scenario_Player/](../../Scenario_Player/) | Container Node (bench) | R11 | Python | OCI image `m1-scenario-player:latest` | [node-scenario-player.md](../../requirements/car-sky-guide/node-scenario-player.md) |
+| [V2X_ECU/](../../V2X_ECU/) | Container Node | R1, R7–R9 (R10 deferred) | C++17 (Vanetza codec in-process) | OCI image `m1-v2x-ecu:latest` | [node-v2x-ecu.md](../../requirements/car-sky-guide/node-v2x-ecu.md) |
 | [ADA_ECU/](../../ADA_ECU/) | Container Node | R3, R12–R15 | C++17 core + Python detector subprocess | OCI image `m1-ada-ecu:latest` | [node-ada-ecu.md](../../requirements/car-sky-guide/node-ada-ecu.md) |
 | [IVI_ECU/](../../IVI_ECU/) | Skycraft Node (AAOS) | R4, R16–R17 | Kotlin / Jetpack Compose | APK via Gradle | [node-ivi-ecu.md](../../requirements/car-sky-guide/node-ivi-ecu.md) |
 
@@ -57,7 +57,7 @@ Each work folder — the four node folders above plus [plans/](../../plans/) —
 
 These apply unchanged to any image-building folder that is not a container node — a `tools/<name>/`, or the sanctioned in-folder mock of § `tools/`; read "node folder" as "build folder" there.
 
-- Each node folder is **self-contained and independently buildable**: its own `Dockerfile` at the folder root, its own dependency manifest, its own tests. Build from the repo root, e.g. `docker build -t scenario-player:latest Scenario_Player/`.
+- Each node folder is **self-contained and independently buildable**: its own `Dockerfile` at the folder root, its own dependency manifest, its own tests. Build from the repo root, e.g. `docker build -t m1-scenario-player:latest Scenario_Player/`.
 - **Self-containment, not the `Dockerfile`'s path, is what that rule protects.** A folder whose primary artifact is not an image may carry a secondary image's `Dockerfile` in a subfolder, provided the **build context stays inside the folder** — the build still reads nothing outside it. Today: `IVI_ECU/r4-simulator/Dockerfile` built with context `IVI_ECU/`, because that folder's primary artifact is the APK and the image is secondary test equipment ([ivi-ecu-hld.md §11](../../IVI_ECU/doc/ivi-ecu-hld.md#11-tech-stack-build-and-ci)). A folder whose primary artifact *is* an image keeps its `Dockerfile` at the root.
 - Local image tag → registry tag → blueprint `image` field: the tag/push commands and the node's blueprint config are in that node's guide, not restated here.
 - **CI builds every image, but pushes only when `CARSKY_ZOT_API_KEY` is set.** Each image lane's push step is gated on that secret: without it the image is built, the step emits a `::notice::` saying it was not pushed, the pull-back verification is skipped, and the job still ends green. **A green lane is therefore not evidence that an image reached the registry** — read the run's push notice, or query the registry, before treating a tag as deployable.
