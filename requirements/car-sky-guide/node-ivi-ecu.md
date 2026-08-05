@@ -76,14 +76,17 @@ Skycraft Node available pin kinds: `vhal`, `kuksa`, `ethernet`, `video`, `usb` (
 
 **Nothing on this node pulls the APK.** The VM image is the starter-pack AAOS artifact above; the team APK is installed by hand into the running guest, after the node reaches Running — there is no registry hop and no artifact-store hop for it ([deploy-ivi-hmi-walkthrough.md §4.1](deploy-ivi-hmi-walkthrough.md#41-how-the-apk-reaches-the-ivi-ecu-node)).
 
+**The route is proven on this deployment.** The [§4.4](deploy-ivi-hmi-walkthrough.md#44-get-an-adb-endpoint) `reach-backend` tunnel carried ADB to this node's guest; the form that connected:
+
 ```
-adb connect <skycraft-adb-endpoint>
-adb install -r app-debug.apk
+reach-backend adb --gateway https://hackathon-2.carsky.io --key <per-device a8k_ token> --port 5555
+adb connect localhost:5555        # answers: localhost:5555   device
 ```
 
-Use Rework's device panel or the CarSky Gateway ADB tunnel to get `<skycraft-adb-endpoint>` (ADB is exposed on a fixed port per Skycraft pod).
+- **Gateway** is the workbench base URL itself; the **token** is a per-device derived value shown in the Rework Local ADB dialog (Devices → the device → the ADB widget's tab → **Local ADB**) — it is not the CarSky API key, and a redeploy may mint a new one.
+- **Guest properties:** API level **34** (Android 14), clearing `minSdk 29`; `android.hardware.type.automotive` present, so the guest accepts the automotive-required APK.
 
-**The route is unproven on this deployment.** The candidate endpoint sources ([§4.4](deploy-ivi-hmi-walkthrough.md#44-get-an-adb-endpoint)), the guest properties that gate the install — `minSdk 29`, the `automotive` feature — ([§4.5](deploy-ivi-hmi-walkthrough.md#45-connect-and-check-the-guest)), the install itself ([§4.6](deploy-ivi-hmi-walkthrough.md#46-install-the-apk)), the launch command with its port override ([§4.7](deploy-ivi-hmi-walkthrough.md#47-open-the-screen-and-launch-the-app)), and the emulator fallback (§4.10, unavailable on an ARM64 Windows host — §2.2) are enumerated in [deploy-ivi-hmi-walkthrough.md](deploy-ivi-hmi-walkthrough.md).
+The install command is [§4.6](deploy-ivi-hmi-walkthrough.md#46-install-the-apk), the launch command and its `--ei r4_port` override are [§4.7](deploy-ivi-hmi-walkthrough.md#47-open-the-screen-and-launch-the-app), and the `adb logcat -s IVI_V2X` evidence filter is [§4.8](deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging).
 
 ## Verification (feeds R16, R17 acceptance)
 

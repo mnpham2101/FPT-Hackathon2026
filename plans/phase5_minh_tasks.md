@@ -1084,7 +1084,7 @@ One call, not a retry loop. §4.9's Recorder Part and the Devices panel stay the
 
 **Dependencies:** after `5.5.9.5`, which resolves the `nodeKey`. Parallel with `16.5.9.7`. **Commit:** `[16.5.9.21] docs: record whether the VM screenshot route answers`
 
-### [ ] `16.5.9.8` — Record the proven route in the IVI node guide *(agent — docs)*
+### [x] `16.5.9.8` — Record the proven route in the IVI node guide *(agent — docs)*
 
 **Objective:** get the ADB facts `16.5.9.6` and `16.5.9.7` established into the per-node deploy guide, which is where node facts live.
 
@@ -1095,6 +1095,8 @@ The edit carries, verbatim from `16.5.9.6`'s and `16.5.9.7`'s recorded outputs, 
 **Acceptance:** [node-ivi-ecu.md](../requirements/car-sky-guide/node-ivi-ecu.md) § Post-deploy carries the tunnel form that connected — or the failure — and the guest's API-level and automotive answers, and links §4.6–§4.8 for the commands instead of duplicating them; every line traces to a recorded output, with no invented values. Doc-only.
 
 **Dependencies:** after `16.5.9.7` and `16.5.5.8` (the launch-override command must exist before it is documented as working). **Commit:** `[16.5.9.8] docs: record the proven ADB route in the IVI node guide`
+
+**Status:** done — [node-ivi-ecu.md § Post-deploy](../requirements/car-sky-guide/node-ivi-ecu.md#post-deploy-install-the-team-apk) now carries the tunnel form that connected, the gateway/token provenance, and the guest's API-level and automotive answers, linking §4.6–§4.8 for the commands; every line traces to [doc/phase5-ivi-run.md](doc/phase5-ivi-run.md).
 
 ### [ ] `4.5.9.9` — Switch the ADA node to the R4 simulator's evidence config *(Human)*
 
