@@ -3,7 +3,7 @@ marp: true
 theme: default
 paginate: true
 title: Phase 1 — Design Concepts
-description: Design deck — the terminology, the Phase 1 slice of the blueprint, the two messages this phase carries, the protocol stack and its libraries, the call flow between the bench and the V2X ECU, and what Phase 2 inherits
+description: Design deck — the terminology, the Phase 1 slice of the blueprint, the two messages this phase carries, the protocol stack and its libraries, the images each node runs with their architecture and call flows, how each node is tested, and what Phase 2 inherits
 deck: Phase 1 — Design Concepts · FPT Hackathon 2026
 ---
 
@@ -31,9 +31,10 @@ Sources: [V2X ECU HLD](../../V2X_ECU/doc/v2x-ecu-hld.md) · [Scenario Player HLD
 1. **Terminology** — every term this deck uses, defined before use
 2. **The blueprint** — the whole topology, then the slice Phase 1 implements
 3. **The messages** — the air message and the object message, and where each is defined
-4. **Protocol stack and call flow** — the layers, the libraries, and the exchange itself
-5. **The nodes** — what each became this phase, with a deck for each
-6. **Handoff** — what Phase 2 inherits
+4. **Protocol stack and libraries** — the layers, and the third parties that serve them
+5. **The blueprint nodes** — the image each runs, its architecture, and its call flow
+6. **Testing** — the configurations that exercise each node, and the equipment they need
+7. **Handoff** — what Phase 2 inherits
 
 ---
 
@@ -182,19 +183,13 @@ One authority at the repository root, and a working copy inside each node that c
 
 ![bg](../assets/bg-navy-motif.png)
 
-# 04 · Protocol stack and call flow
+# 04 · Protocol stack and libraries
 
 ---
 
 # The protocol stack
 
 ![h:500 Protocol stack for the two Phase 1 flows: message, encoding and library per flow, over a shared UDP, IPv4 and Ethernet-Bridge base](../assets/phase1-des-protocol-stack.svg)
-
----
-
-# The exchange between the bench and the V2X ECU
-
-![h:500 Call flow: start-up inside each node produces no network traffic; the live loop transmits ten messages per second in one direction](../assets/phase1-des-callflow-bench-v2x.svg)
 
 ---
 
@@ -218,20 +213,95 @@ Three third-party dependencies. All are open source and Linux-compatible.
 
 ![bg](../assets/bg-navy-motif.png)
 
-# 05 · The nodes
+# 05 · The blueprint nodes
 
 ---
 
-# What each node became this phase
+# Delivered images
 
-| Node | State after Phase 1 |
-| ---- | ------------------- |
-| **Scenario Player** | A complete bench application: configuration loading, a kinematic model, an encoder helper process, and a transmission loop at ten messages per second. Detailed in [its own deck](phase1-design-scenario-player-deck.html). |
-| **V2X ECU** | A complete receiving application: the radio interface and its simulated modem, the four-stage receive pipeline, the object-message forwarder, the event log, and in-container traffic capture. Detailed in [its own deck](phase1-design-v2x-ecu-deck.html). |
-| **ADA node** | Runs the Phase 0 connectivity tool as a listener, so that arriving object messages can be read. **A placeholder**, retired when Phase 2 implements the node. |
-| **IVI node** | Unchanged. It keeps the supplied artifact and receives no traffic in this phase. |
+Three container images run in the phase's Room. Two of them are Phase 1 deliverables; the third is Phase 0 equipment kept in place.
 
+| Node | Image | Role | Messages | State after Phase 1 |
+| ---- | ----- | ---- | -------- | ------------------- |
+| **Scenario Player** | `m1-scenario-player:latest` | Source — one object update every 100 ms | Produces the air message | A complete bench application: configuration loading, a kinematic model, an encoder helper process, and the transmission loop. [Its own deck](phase1-design-scenario-player-deck.html) |
+| **V2X ECU** | `m1-v2x-ecu:latest` | Relay — decode, validate, deduplicate, forward | Consumes the air message, produces the object message | A complete receiving application: the radio interface and its simulated modem, the four-stage receive pipeline, the forwarder, the event log, and in-container traffic capture. [Its own deck](phase1-design-v2x-ecu-deck.html) |
+| **ADA node** | `m1-netcheck:latest` — Phase 0's connectivity tool | Sink — prints each arriving body | Receives the object message, interprets none of it | **A placeholder**, retired when Phase 2 implements the node |
+| **IVI node** | None — the supplied artifact, on a Skycraft node | Not exercised | None | Unchanged, and receives no traffic in this phase |
+
+- **The two new images are built for the platform's processor** and pushed to `registry.hackathon-2.carsky.io`; the placeholder is kept only so that the object message has somewhere to arrive and be read.
 - **The radio is simulated, and is labelled as such.** The interface mirrors a production modem's four calls; behind it, a state machine acknowledges each call and injects faults on request. Replacing it with a real modem changes nothing above the interface.
+
+---
+
+# Scenario Player architecture
+
+![h:515 Scenario Player component architecture: the data, business-logic and controller subsystems, the C++ encoder helper behind its codec interface, and the node either end of the wire](../assets/phase1-des-arch-bench.svg)
+
+---
+
+# Reading the component diagrams
+
+![h:470 The legend of both component diagrams: the six fill colours naming a component's role, and the notation for dependency, realization, node frames and test equipment](../assets/phase1-des-arch-legend.svg)
+
+---
+
+# Scenario Player internal call flow
+
+![h:495 Inside the bench: configuration and helper spawn at boot, then a rate loop that samples the model, encodes through the subprocess, sends one datagram and logs it](../assets/phase1-des-bench-flow.svg)
+
+---
+
+# V2X ECU architecture
+
+![h:520 V2X ECU component architecture: the controller, business-logic, data, evidence and tools subsystems, the radio interface and its simulated modem, and the bench and ADA nodes either side](../assets/phase1-des-arch-v2x.svg)
+
+---
+
+# V2X ECU internal call flow — start-up
+
+![h:500 Start-up: three interface calls, each acknowledged by the simulated modem, the receive thread started, and three transition events recorded](../assets/phase1-des-v2x-flow-1.svg)
+
+---
+
+# V2X ECU internal call flow — reception and decoding
+
+![h:500 Reception: a datagram reaches the receive thread, the pipeline records the arrival, the decoder returns content or an error, and validation rejects anything outside the profile](../assets/phase1-des-v2x-flow-2.svg)
+
+---
+
+# V2X ECU internal call flow — forwarding
+
+![h:500 Forwarding: duplicates are discarded, distance and units are derived, and the object message is transmitted to the ADA node](../assets/phase1-des-v2x-flow-3.svg)
+
+---
+
+# Overall callflows between nodes
+
+![h:495 Call flow: start-up inside each node produces no network traffic; the live loop transmits ten messages per second in one direction](../assets/phase1-des-callflow-bench-v2x.svg)
+
+---
+
+<!-- _class: lead -->
+
+![bg](../assets/bg-navy-motif.png)
+
+# 06 · Testing
+
+---
+
+# How each node is tested
+
+Four configurations, differing only in what stands at the seams and on the wire.
+
+| Configuration | Scenario Player | V2X ECU |
+| ------------- | --------------- | ------- |
+| **Unit — fakes at every seam** | A fake encoder helper, and injected send, clock and sleep callables | A fake codec, a map-backed environment, injected clocks, a loopback socket |
+| **Integration — the real codec** | The built `cpm_encode` over the six reference messages, byte for byte | The real decoder over the frozen corpus, and over a malformed corpus it must reject rather than crash on |
+| **Loopback — the comms check** | — | The built application against a stand-in sink, driven by the reference messages, with the log chain asserted |
+| **Deployed — the Room** | The bench against the real V2X ECU, evidenced from both node logs | The live bench upstream and the listener at the ADA address |
+
+- **The expected output is identical in the last two**, because only the sender and the sink change. A difference between them is a bench or platform finding, never a node one.
+- **A fake codec cannot prove the real one rejects garbage**, which is why the malformed corpus runs against the actual decoder.
 
 ---
 
@@ -251,7 +321,7 @@ Scaffolding, not production code, but part of the design because the phase's evi
 
 ![bg](../assets/bg-navy-motif.png)
 
-# 06 · Handoff
+# 07 · Handoff
 
 ---
 

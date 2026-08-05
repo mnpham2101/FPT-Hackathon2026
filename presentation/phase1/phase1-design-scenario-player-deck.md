@@ -44,7 +44,13 @@ Source: [scenario-player-hld.md](../../Scenario_Player/doc/scenario-player-hld.m
 
 # The modules and their dependencies
 
-![h:500 Scenario Player module architecture: the entrypoint and rate loop, the configuration and scenario data, the kinematic model, and the two output edges](../assets/phase1-des-arch-bench.svg)
+![h:515 Scenario Player component architecture: the data, business-logic and controller subsystems, the C++ encoder helper behind its codec interface, and the node either end of the wire](../assets/phase1-des-arch-bench.svg)
+
+---
+
+# Reading the diagram
+
+![h:470 The legend of the component diagram: the six fill colours naming a component's role, and the notation for dependency, realization, node frames and test equipment](../assets/phase1-des-arch-legend.svg)
 
 ---
 

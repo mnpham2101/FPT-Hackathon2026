@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Phase 0 — Design Concepts</title>
-<meta name="description" content="Design deck — the terminology, the five-node blueprint, the four frozen contracts and their locations, the protocol stack and its libraries, the state in which Phase 0 left the bench and V2X nodes, and the smoke test that closed the phase">
+<meta name="description" content="Design deck — the terminology, the five-node blueprint, the four frozen contracts and their locations, the protocol stack and its libraries, the image the blueprint nodes ran and the state Phase 0 left them in, the contract gate and the smoke test that closed the phase, and what Phase 1 inherits">
 <style>
   :root {
     --fpt-orange: #F37021;
@@ -195,8 +195,9 @@
       <div class="item"><div class="n">02</div><div><h3>The blueprint</h3><p>five nodes, one bridge, three flows</p></div></div>
       <div class="item"><div class="n">03</div><div><h3>The contracts</h3><p>R1, R2, R3 and R4 in turn, and the location of each</p></div></div>
       <div class="item"><div class="n">04</div><div><h3>Protocol stack and libraries</h3><p>one transport, two encodings, four third parties</p></div></div>
-      <div class="item"><div class="n">05</div><div><h3>The bench and the V2X node</h3><p>the state Phase 0 left them in</p></div></div>
-      <div class="item"><div class="n">06</div><div><h3>The smoke test</h3><p>its conclusions, and where the full report is held</p></div></div>
+      <div class="item"><div class="n">05</div><div><h3>The blueprint nodes</h3><p>the image each ran, and the state Phase 0 left them in</p></div></div>
+      <div class="item"><div class="n">06</div><div><h3>Testing</h3><p>what the contract gate proved, and what the smoke test proved</p></div></div>
+      <div class="item"><div class="n">07</div><div><h3>Handoff</h3><p>what Phase 1 inherits, and what it adds to both nodes</p></div></div>
     </div>
     <p class="lead"><em>Tracks, lanes and task groups — the planning terminology — are the subject of Deck B.</em></p>
     <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
@@ -464,12 +465,12 @@
   </section>
   <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
     <div class="sec-num">05</div>
-    <h1>The bench and the V2X node</h1>
+    <h1>The blueprint nodes</h1>
     <div class="rule"></div>
     <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">05</div><h2>Phase 0 built one image for both</h2></div>
+    <div class="slide-head"><div class="num">05</div><h2>Delivered images</h2></div>
     <p class="lead">Neither node had its production implementation yet. Phase 0 needed only to prove the connection between them, so both executed the same temporary container.</p>
     <table class="fpt">
       <thead><tr><th></th><th>Scenario Player (bench)</th><th>V2X ECU</th></tr></thead>
@@ -487,12 +488,84 @@
     <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">05</div><h2>The exchange as Phase 0 executed it</h2></div>
-    <div class="imgbox"><img src="../assets/phase0-netcheck-callflow.svg" style="height:495px" alt="Phase 0 netcheck call flow: the bench sends a stamped ASCII payload over UDP; the V2X node appends its role and forwards"><div class="cap">Phase 0 netcheck call flow: the bench sends a stamped ASCII payload over UDP; the V2X node appends its role and forwards</div></div>
+    <div class="slide-head"><div class="num">05</div><h2>Node architecture</h2></div>
+    <p class="lead">The image delivers one script that sends, stamps and forwards UDP datagrams. No node architecture exists yet, and none of the four nodes has an internal call flow of its own.</p>
+    <table class="fpt">
+      <thead><tr><th></th><th>Phase 0</th><th>Where the architecture arrives</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Scenario Player</strong></td><td>One script, one role</td><td>Phase 1 — the module design, the kinematic model and the encoder path</td></tr>
+        <tr><td><strong>V2X ECU</strong></td><td>The same script, relaying</td><td>Phase 1 — the radio seam, the simulated modem and the receive pipeline</td></tr>
+        <tr><td><strong>ADA ECU</strong></td><td>The same script, receiving</td><td>Phases 2–4 — the track store, the detector and fusion</td></tr>
+        <tr><td><strong>IVI ECU</strong></td><td>The supplied artifact, untouched</td><td>Phase 5 — the display application</td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>No design decision is embedded in <code>netcheck.py</code>.</strong> It proves the network carries datagrams between the addresses; every later node is designed against the contracts, not against it.</li>
+    </ul>
     <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">05</div><h2>What Phase 1 adds to both nodes</h2></div>
+    <div class="slide-head"><div class="num">05</div><h2>Overall callflows between nodes</h2></div>
+    <div class="imgbox"><img src="../assets/phase0-netcheck-callflow.svg" style="height:495px" alt="Phase 0 netcheck call flow: the bench sends a stamped ASCII payload over UDP; the V2X node appends its role and forwards"><div class="cap">Phase 0 netcheck call flow: the bench sends a stamped ASCII payload over UDP; the V2X node appends its role and forwards</div></div>
+    <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">06</div>
+    <h1>Testing</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">06</div><h2>What the contract gate proves</h2></div>
+    <p class="lead">Phase 0 shipped no running feature, so its verification is of the contracts themselves. One CI lane carries all of it.</p>
+    <table class="fpt">
+      <thead><tr><th>Check</th><th>What it proves</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Schema validation</strong></td><td>Every sample validates against the schema it claims, so a committed sample cannot drift from its contract</td></tr>
+        <tr><td><strong>Round-trip tests in C++, Python and Kotlin</strong></td><td>Each node's language binding writes and reads its contracts identically — three implementations, one definition</td></tr>
+        <tr><td><strong>Reference-vector generation</strong></td><td>The six R1 message pairs are generated by a build-only tool, and the same run proves regeneration is byte-stable</td></tr>
+        <tr><td><strong>Copy synchronisation</strong></td><td><code>check_sync.py</code> maps the originals onto all 36 node-local copies and exits non-zero on any byte difference</td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>The gate is what makes "frozen" enforceable.</strong> A contract edited in one node alone fails the lane rather than reaching the next phase unnoticed.</li>
+      <li><strong><code>contracts-gate</code> was green over all 36 copies</strong> — the evidence for the schema half of Phase 0's acceptance. The lane inventory and the run links are in <a href="phase0-task-execution-deck.html">Deck B</a>.</li>
+    </ul>
+    <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">06</div><h2>Proving the network before the ECUs existed</h2></div>
+    <p class="lead">Phase 0's fourth acceptance criterion was closed by a connectivity smoke test on blueprint <code>trial2_minh</code>. Its method, tooling, division of labour and evidence form a deck of their own; this slide states only its conclusions.</p>
+    <ul class="points">
+      <li><strong>All five pass criteria met, 2026-07-31.</strong> Every node running · zero errors · live per-node logs · traffic captured on the network · the chain proven by the payload's accumulated stamps.</li>
+      <li><strong>It closed the final Phase 0 acceptance criterion</strong> — blueprint topology documented and validated — which is what unblocked Phase 1.</li>
+      <li><strong>It established two facts every later image inherits:</strong> the registry host that responds, and the requirement that node images be single-platform <code>linux/arm64</code>.</li>
+      <li><strong>It left two items open</strong> — network maximum-packet-size headroom, and whether the AAOS guest can host a listener. Neither is blocking.</li>
+      <li><strong>Full report:</strong> <a href="phase0-smoke-test-deck.html">phase0-smoke-test-deck.html</a> — method, tested object, testing agent, manual steps and results. None of its content is repeated here.</li>
+    </ul>
+    <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">07</div>
+    <h1>Handoff</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">07</div><h2>What Phase 1 inherits</h2></div>
+    <p class="lead">Phase 1 implements the bench and the V2X ECU. The following are Phase 0 deliverables it builds on rather than re-establishes.</p>
+    <ul class="points">
+      <li><strong>Four frozen contracts on disk</strong>, with the six R1 reference messages and the samples — the definitions both nodes are written against, not a format still under discussion.</li>
+      <li><strong>A gate that keeps them frozen.</strong> <code>sync-manifest.json</code> and <code>check_sync.py</code> over 36 copies; Phase 1 extends the manifest rather than re-deriving it.</li>
+      <li><strong>A validated topology.</strong> Five nodes on <code>10.99.0.0/24</code> with static addresses and one bridge, deployed and observed running — so a Phase 1 node knows the address it transmits to before it is written.</li>
+      <li><strong>Two platform facts every later image obeys:</strong> the registry host that responds, and the requirement that node images be single-platform <code>linux/arm64</code>.</li>
+      <li><strong>Six CI lanes</strong> already running on every push, which Phase 1 extends with four more in the same shape.</li>
+      <li><strong>The netcheck image</strong>, reusable as a listener wherever a node has no implementation yet.</li>
+    </ul>
+    <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">07</div><h2>What Phase 1 adds to both nodes</h2></div>
     <p class="lead">Phase 0 established whether the nodes can communicate. Phase 1 establishes what they say, and is where the production designs arrive.</p>
     <table class="fpt">
       <thead><tr><th></th><th>Arriving in Phase 1</th></tr></thead>
@@ -504,25 +577,7 @@
     </table>
     <ul class="points">
       <li><strong>The netcheck image is retired as soon as either production image lands.</strong> Nothing carries forward from it except the confirmation that the network functions.</li>
-      <li><strong>The per-node call flows are already drafted</strong> in each node's <code>doc/</code> folder. They are Phase 1 material and belong to the Phase 1 deck.</li>
-    </ul>
-    <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
-  </section>
-  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
-    <div class="sec-num">06</div>
-    <h1>The smoke test</h1>
-    <div class="rule"></div>
-    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
-  </section>
-  <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">06</div><h2>Proving the network before the ECUs existed</h2></div>
-    <p class="lead">Phase 0's fourth acceptance criterion was closed by a connectivity smoke test on blueprint <code>trial2_minh</code>. Its method, tooling, division of labour and evidence form a deck of their own; this slide states only its conclusions.</p>
-    <ul class="points">
-      <li><strong>All five pass criteria met, 2026-07-31.</strong> Every node running · zero errors · live per-node logs · traffic captured on the network · the chain proven by the payload's accumulated stamps.</li>
-      <li><strong>It closed the final Phase 0 acceptance criterion</strong> — blueprint topology documented and validated — which is what unblocked Phase 1.</li>
-      <li><strong>It established two facts every later image inherits:</strong> the registry host that responds, and the requirement that node images be single-platform <code>linux/arm64</code>.</li>
-      <li><strong>It left two items open</strong> — network maximum-packet-size headroom, and whether the AAOS guest can host a listener. Neither is blocking.</li>
-      <li><strong>Full report:</strong> <a href="phase0-smoke-test-deck.html">phase0-smoke-test-deck.html</a> — method, tested object, testing agent, manual steps and results. None of its content is repeated here.</li>
+      <li><strong>The per-node call flows belong to Phase 1</strong>, and are drawn in its deck: <a href="../phase1/phase1-design-deck.html">phase1-design-deck.html</a>.</li>
     </ul>
     <div class="footer"><span>Phase 0 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>

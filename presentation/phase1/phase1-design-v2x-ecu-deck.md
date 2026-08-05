@@ -45,7 +45,13 @@ Source: [v2x-ecu-hld.md](../../V2X_ECU/doc/v2x-ecu-hld.md)
 
 # The modules and their dependencies
 
-![h:500 V2X ECU module architecture: the controller, the two operating-system holders, the radio interface and simulated modem, the pipeline, and the output edges](../assets/phase1-des-arch-v2x.svg)
+![h:520 V2X ECU component architecture: the controller, business-logic, data, evidence and tools subsystems, the radio interface and its simulated modem, and the bench and ADA nodes either side](../assets/phase1-des-arch-v2x.svg)
+
+---
+
+# Reading the diagram
+
+![h:470 The legend of the component diagram: the six fill colours naming a component's role, and the notation for dependency, realization, node frames and test equipment](../assets/phase1-des-arch-legend.svg)
 
 ---
 

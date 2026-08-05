@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Phase 1 — Design Concepts</title>
-<meta name="description" content="Design deck — the terminology, the Phase 1 slice of the blueprint, the two messages this phase carries, the protocol stack and its libraries, the call flow between the bench and the V2X ECU, and what Phase 2 inherits">
+<meta name="description" content="Design deck — the terminology, the Phase 1 slice of the blueprint, the two messages this phase carries, the protocol stack and its libraries, the images each node runs with their architecture and call flows, how each node is tested, and what Phase 2 inherits">
 <style>
   :root {
     --fpt-orange: #F37021;
@@ -194,9 +194,10 @@
       <div class="item"><div class="n">01</div><div><h3>Terminology</h3><p>every term this deck uses, defined before use</p></div></div>
       <div class="item"><div class="n">02</div><div><h3>The blueprint</h3><p>the whole topology, then the slice Phase 1 implements</p></div></div>
       <div class="item"><div class="n">03</div><div><h3>The messages</h3><p>the air message and the object message, and where each is defined</p></div></div>
-      <div class="item"><div class="n">04</div><div><h3>Protocol stack and call flow</h3><p>the layers, the libraries, and the exchange itself</p></div></div>
-      <div class="item"><div class="n">05</div><div><h3>The nodes</h3><p>what each became this phase, with a deck for each</p></div></div>
-      <div class="item"><div class="n">06</div><div><h3>Handoff</h3><p>what Phase 2 inherits</p></div></div>
+      <div class="item"><div class="n">04</div><div><h3>Protocol stack and libraries</h3><p>the layers, and the third parties that serve them</p></div></div>
+      <div class="item"><div class="n">05</div><div><h3>The blueprint nodes</h3><p>the image each runs, its architecture, and its call flow</p></div></div>
+      <div class="item"><div class="n">06</div><div><h3>Testing</h3><p>the configurations that exercise each node, and the equipment they need</p></div></div>
+      <div class="item"><div class="n">07</div><div><h3>Handoff</h3><p>what Phase 2 inherits</p></div></div>
     </div>
     <div class="footer"><span>Phase 1 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
@@ -344,18 +345,13 @@
   </section>
   <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
     <div class="sec-num">04</div>
-    <h1>Protocol stack and call flow</h1>
+    <h1>Protocol stack and libraries</h1>
     <div class="rule"></div>
     <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
   </section>
   <section class="slide bg-light content">
     <div class="slide-head"><div class="num">04</div><h2>The protocol stack</h2></div>
     <div class="imgbox"><img src="../assets/phase1-des-protocol-stack.svg" style="height:500px" alt="Protocol stack for the two Phase 1 flows: message, encoding and library per flow, over a shared UDP, IPv4 and Ethernet-Bridge base"><div class="cap">Protocol stack for the two Phase 1 flows: message, encoding and library per flow, over a shared UDP, IPv4 and Ethernet-Bridge base</div></div>
-    <div class="footer"><span>Phase 1 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
-  </section>
-  <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">04</div><h2>The exchange between the bench and the V2X ECU</h2></div>
-    <div class="imgbox"><img src="../assets/phase1-des-callflow-bench-v2x.svg" style="height:500px" alt="Call flow: start-up inside each node produces no network traffic; the live loop transmits ten messages per second in one direction"><div class="cap">Call flow: start-up inside each node produces no network traffic; the live loop transmits ten messages per second in one direction</div></div>
     <div class="footer"><span>Phase 1 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
@@ -378,28 +374,94 @@
   </section>
   <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
     <div class="sec-num">05</div>
-    <h1>The nodes</h1>
+    <h1>The blueprint nodes</h1>
     <div class="rule"></div>
     <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">05</div><h2>What each node became this phase</h2></div>
+    <div class="slide-head"><div class="num">05</div><h2>Delivered images</h2></div>
+    <p class="lead">Three container images run in the phase's Room. Two of them are Phase 1 deliverables; the third is Phase 0 equipment kept in place.</p>
     <table class="fpt">
-      <thead><tr><th>Node</th><th>State after Phase 1</th></tr></thead>
+      <thead><tr><th>Node</th><th>Image</th><th>Role</th><th>Messages</th><th>State after Phase 1</th></tr></thead>
       <tbody>
-        <tr><td><strong>Scenario Player</strong></td><td>A complete bench application: configuration loading, a kinematic model, an encoder helper process, and a transmission loop at ten messages per second. Detailed in <a href="phase1-design-scenario-player-deck.html">its own deck</a>.</td></tr>
-        <tr><td><strong>V2X ECU</strong></td><td>A complete receiving application: the radio interface and its simulated modem, the four-stage receive pipeline, the object-message forwarder, the event log, and in-container traffic capture. Detailed in <a href="phase1-design-v2x-ecu-deck.html">its own deck</a>.</td></tr>
-        <tr><td><strong>ADA node</strong></td><td>Runs the Phase 0 connectivity tool as a listener, so that arriving object messages can be read. <strong>A placeholder</strong>, retired when Phase 2 implements the node.</td></tr>
-        <tr><td><strong>IVI node</strong></td><td>Unchanged. It keeps the supplied artifact and receives no traffic in this phase.</td></tr>
+        <tr><td><strong>Scenario Player</strong></td><td><code>m1-scenario-player:latest</code></td><td>Source — one object update every 100 ms</td><td>Produces the air message</td><td>A complete bench application: configuration loading, a kinematic model, an encoder helper process, and the transmission loop. <a href="phase1-design-scenario-player-deck.html">Its own deck</a></td></tr>
+        <tr><td><strong>V2X ECU</strong></td><td><code>m1-v2x-ecu:latest</code></td><td>Relay — decode, validate, deduplicate, forward</td><td>Consumes the air message, produces the object message</td><td>A complete receiving application: the radio interface and its simulated modem, the four-stage receive pipeline, the forwarder, the event log, and in-container traffic capture. <a href="phase1-design-v2x-ecu-deck.html">Its own deck</a></td></tr>
+        <tr><td><strong>ADA node</strong></td><td><code>m1-netcheck:latest</code> — Phase 0's connectivity tool</td><td>Sink — prints each arriving body</td><td>Receives the object message, interprets none of it</td><td><strong>A placeholder</strong>, retired when Phase 2 implements the node</td></tr>
+        <tr><td><strong>IVI node</strong></td><td>None — the supplied artifact, on a Skycraft node</td><td>Not exercised</td><td>None</td><td>Unchanged, and receives no traffic in this phase</td></tr>
       </tbody>
     </table>
     <ul class="points">
+      <li><strong>The two new images are built for the platform's processor</strong> and pushed to <code>registry.hackathon-2.carsky.io</code>; the placeholder is kept only so that the object message has somewhere to arrive and be read.</li>
       <li><strong>The radio is simulated, and is labelled as such.</strong> The interface mirrors a production modem's four calls; behind it, a state machine acknowledges each call and injects faults on request. Replacing it with a real modem changes nothing above the interface.</li>
     </ul>
     <div class="footer"><span>Phase 1 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">05</div><h2>The test equipment the design depends on</h2></div>
+    <div class="slide-head"><div class="num">05</div><h2>Scenario Player architecture</h2></div>
+    <div class="imgbox"><img src="../assets/phase1-des-arch-bench.svg" style="height:515px" alt="Scenario Player component architecture: the data, business-logic and controller subsystems, the C++ encoder helper behind its codec interface, and the node either end of the wire"><div class="cap">Scenario Player component architecture: the data, business-logic and controller subsystems, the C++ encoder helper behind its codec interface, and the node either end of the wire</div></div>
+    <div class="footer"><span>Phase 1 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">05</div><h2>Reading the component diagrams</h2></div>
+    <div class="imgbox"><img src="../assets/phase1-des-arch-legend.svg" style="height:470px" alt="The legend of both component diagrams: the six fill colours naming a component&#x27;s role, and the notation for dependency, realization, node frames and test equipment"><div class="cap">The legend of both component diagrams: the six fill colours naming a component&#x27;s role, and the notation for dependency, realization, node frames and test equipment</div></div>
+    <div class="footer"><span>Phase 1 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">05</div><h2>Scenario Player internal call flow</h2></div>
+    <div class="imgbox"><img src="../assets/phase1-des-bench-flow.svg" style="height:495px" alt="Inside the bench: configuration and helper spawn at boot, then a rate loop that samples the model, encodes through the subprocess, sends one datagram and logs it"><div class="cap">Inside the bench: configuration and helper spawn at boot, then a rate loop that samples the model, encodes through the subprocess, sends one datagram and logs it</div></div>
+    <div class="footer"><span>Phase 1 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">05</div><h2>V2X ECU architecture</h2></div>
+    <div class="imgbox"><img src="../assets/phase1-des-arch-v2x.svg" style="height:520px" alt="V2X ECU component architecture: the controller, business-logic, data, evidence and tools subsystems, the radio interface and its simulated modem, and the bench and ADA nodes either side"><div class="cap">V2X ECU component architecture: the controller, business-logic, data, evidence and tools subsystems, the radio interface and its simulated modem, and the bench and ADA nodes either side</div></div>
+    <div class="footer"><span>Phase 1 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">05</div><h2>V2X ECU internal call flow — start-up</h2></div>
+    <div class="imgbox"><img src="../assets/phase1-des-v2x-flow-1.svg" style="height:500px" alt="Start-up: three interface calls, each acknowledged by the simulated modem, the receive thread started, and three transition events recorded"><div class="cap">Start-up: three interface calls, each acknowledged by the simulated modem, the receive thread started, and three transition events recorded</div></div>
+    <div class="footer"><span>Phase 1 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">05</div><h2>V2X ECU internal call flow — reception and decoding</h2></div>
+    <div class="imgbox"><img src="../assets/phase1-des-v2x-flow-2.svg" style="height:500px" alt="Reception: a datagram reaches the receive thread, the pipeline records the arrival, the decoder returns content or an error, and validation rejects anything outside the profile"><div class="cap">Reception: a datagram reaches the receive thread, the pipeline records the arrival, the decoder returns content or an error, and validation rejects anything outside the profile</div></div>
+    <div class="footer"><span>Phase 1 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">05</div><h2>V2X ECU internal call flow — forwarding</h2></div>
+    <div class="imgbox"><img src="../assets/phase1-des-v2x-flow-3.svg" style="height:500px" alt="Forwarding: duplicates are discarded, distance and units are derived, and the object message is transmitted to the ADA node"><div class="cap">Forwarding: duplicates are discarded, distance and units are derived, and the object message is transmitted to the ADA node</div></div>
+    <div class="footer"><span>Phase 1 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">05</div><h2>Overall callflows between nodes</h2></div>
+    <div class="imgbox"><img src="../assets/phase1-des-callflow-bench-v2x.svg" style="height:495px" alt="Call flow: start-up inside each node produces no network traffic; the live loop transmits ten messages per second in one direction"><div class="cap">Call flow: start-up inside each node produces no network traffic; the live loop transmits ten messages per second in one direction</div></div>
+    <div class="footer"><span>Phase 1 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">06</div>
+    <h1>Testing</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">06</div><h2>How each node is tested</h2></div>
+    <p class="lead">Four configurations, differing only in what stands at the seams and on the wire.</p>
+    <table class="fpt">
+      <thead><tr><th>Configuration</th><th>Scenario Player</th><th>V2X ECU</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Unit — fakes at every seam</strong></td><td>A fake encoder helper, and injected send, clock and sleep callables</td><td>A fake codec, a map-backed environment, injected clocks, a loopback socket</td></tr>
+        <tr><td><strong>Integration — the real codec</strong></td><td>The built <code>cpm_encode</code> over the six reference messages, byte for byte</td><td>The real decoder over the frozen corpus, and over a malformed corpus it must reject rather than crash on</td></tr>
+        <tr><td><strong>Loopback — the comms check</strong></td><td>—</td><td>The built application against a stand-in sink, driven by the reference messages, with the log chain asserted</td></tr>
+        <tr><td><strong>Deployed — the Room</strong></td><td>The bench against the real V2X ECU, evidenced from both node logs</td><td>The live bench upstream and the listener at the ADA address</td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>The expected output is identical in the last two</strong>, because only the sender and the sink change. A difference between them is a bench or platform finding, never a node one.</li>
+      <li><strong>A fake codec cannot prove the real one rejects garbage</strong>, which is why the malformed corpus runs against the actual decoder.</li>
+    </ul>
+    <div class="footer"><span>Phase 1 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">06</div><h2>The test equipment the design depends on</h2></div>
     <p class="lead">Scaffolding, not production code, but part of the design because the phase's evidence depends on it.</p>
     <ul class="points">
       <li><strong>A message transmitter and a log-chain assertion</strong>, held in <code>tools/comms_check/</code>. The transmitter sends the six reference messages; the assertion confirms that every received message produced an arrival event, a decode event carrying the decoded content, and a forwarding event carrying the object message. It fails if any link is missing.</li>
@@ -410,13 +472,13 @@
     <div class="footer"><span>Phase 1 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
-    <div class="sec-num">06</div>
+    <div class="sec-num">07</div>
     <h1>Handoff</h1>
     <div class="rule"></div>
     <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">06</div><h2>What Phase 2 inherits</h2></div>
+    <div class="slide-head"><div class="num">07</div><h2>What Phase 2 inherits</h2></div>
     <p class="lead">Phase 2 implements the ADA node's track store and admission logic. The following are Phase 1 deliverables it need not re-establish.</p>
     <ul class="points">
       <li><strong>An observed message format.</strong> Object messages arrive at the ADA node with real decoded values; Phase 2 builds against a format that has been seen on a running system, not only agreed on paper.</li>
@@ -428,7 +490,7 @@
     <div class="footer"><span>Phase 1 — Design Concepts · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">06</div><h2>What does not carry forward, and what is still open</h2></div>
+    <div class="slide-head"><div class="num">07</div><h2>What does not carry forward, and what is still open</h2></div>
     <ul class="points">
       <li><strong>The listener on the ADA node is a placeholder.</strong> It is Phase 0 connectivity equipment, and Phase 2 replaces it entirely. No part of it becomes production code.</li>
       <li><strong>The vehicle does not transmit.</strong> Transmission was moved out of the milestone; the radio interface declares the call, and nothing invokes it.</li>
