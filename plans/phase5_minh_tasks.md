@@ -1014,7 +1014,7 @@ Watching the node badges is not part of this subtask — `5.5.9.5` records the p
 
 **Dependencies:** after `5.5.9.4`. **Commit:** `[5.5.9.5] docs: record the mini-blueprint Room reaching Running`
 
-### [ ] `16.5.9.6` — Start the ADB tunnel to the guest *(car-sky)*
+### [x] `16.5.9.6` — Start the ADB tunnel to the guest *(car-sky)*
 
 **Objective:** leave the organizers' ADB tunnel serving a local port, so every step below can reach the Skycraft guest.
 
@@ -1029,6 +1029,8 @@ Watching the node badges is not part of this subtask — `5.5.9.5` records the p
 **Acceptance:** the CLI serving on the local port, recorded in `plans/doc/phase5-ivi-run.md` with the port used — or the exact failure. `16.5.9.7` is what confirms the tunnel actually carries ADB, via §4.5's `localhost:<port>   device` line.
 
 **Dependencies:** after `5.5.9.5` and `16.5.9.19`. **Commit:** `[16.5.9.6] docs: record the ADB tunnel start against the Skycraft guest`
+
+**Status:** done — `reach-backend` served `127.0.0.1:5555` on first use and was left running; output recorded in [doc/phase5-ivi-run.md](doc/phase5-ivi-run.md). Deviation: run against the already-Running m1-system-test Room rather than the mini-blueprint, so the `5.5.9.5` dependency was met by that Room instead.
 
 ### [x] `16.5.9.19` — Obtain the tunnel CLI, its gateway URL and its token *(Human)*
 

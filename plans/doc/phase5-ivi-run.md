@@ -16,3 +16,15 @@ Answers [§6.1](../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#6
 
 The click path to the dialog, step by step, is in [tools/apk uploader/README.md](../../tools/apk%20uploader/README.md) step 1.
 
+## `16.5.9.6` — ADB tunnel start
+
+Per [§4.4](../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#44-get-an-adb-endpoint), started 2026-08-05T19:36:51Z and left serving in its own terminal:
+
+```
+[reach-backend] kind=adb  node_key=o6xi8rl0wkzc2ymnshpyv-n4  local_port=5555
+[reach-backend] WebSocket endpoint: wss://hackathon-2.carsky.io/reach/adb/o6xi8rl0wkzc2ymnshpyv-n4
+[reach-backend] Listening on 127.0.0.1:5555
+```
+
+The mentor-supplied route (§6.1 item 1) carried ADB on first use — no failure to record.
+
