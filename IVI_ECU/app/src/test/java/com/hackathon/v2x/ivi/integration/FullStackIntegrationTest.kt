@@ -97,7 +97,7 @@ class FullStackIntegrationTest {
         assertEquals(DisplayMode.HomeView, mainViewModel.currentMode.value)
         assertTrue(warningViewModel.uiWarningState.value is WarningUiState.Idle)
 
-        // Attach before sending — SharedFlow has replay=0.
+        // Attach-first ordering — the live path when the UI is already up before traffic arrives.
         warningViewModel.attachService(service.r4EventFlow)
 
         // Allow the IO receive loop to bind BuildConfig.R4_UDP_PORT.
@@ -119,6 +119,41 @@ class FullStackIntegrationTest {
         assertEquals("high", active.event.riskState)
         assertEquals("nlos_obstruction", active.event.warningType)
         assertNotNull(warningViewModel.latestScene.value)
+        assertEquals(DisplayMode.WarningView, mainViewModel.currentMode.value)
+    }
+
+    @Test
+    fun udpR4Warning_sentBeforeUiAttaches_stillRaisesWarningView() = runBlocking {
+        awaitUdpListenerReady()
+
+        val payload = loadSampleWarningJson()
+        sendUdpWarning(payload)
+
+        // The service's replay cache holding the message is what bridges the attach gap —
+        // an empty cache here would reproduce the field defect (warning lost, HMI stays Home).
+        withTimeout(UDP_PROPAGATION_TIMEOUT_MS) {
+            while (service.r4EventFlow.replayCache.isEmpty()) {
+                delay(POLL_INTERVAL_MS)
+            }
+        }
+
+        // Only now does the UI exist — the real-device ordering when the APK is launched after
+        // the producer already fired its edge-triggered warning.
+        val warningViewModel = WarningViewModel(repository)
+        val mainViewModel = MainViewModel(warningViewModel.uiWarningState)
+        warningViewModel.attachService(service.r4EventFlow)
+
+        withTimeout(UDP_PROPAGATION_TIMEOUT_MS) {
+            while (
+                warningViewModel.uiWarningState.value !is WarningUiState.Active ||
+                mainViewModel.currentMode.value != DisplayMode.WarningView
+            ) {
+                delay(POLL_INTERVAL_MS)
+            }
+        }
+
+        val active = warningViewModel.uiWarningState.value as WarningUiState.Active
+        assertEquals("nlos_obstruction", active.event.warningType)
         assertEquals(DisplayMode.WarningView, mainViewModel.currentMode.value)
     }
 

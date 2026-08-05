@@ -27,7 +27,10 @@ import javax.inject.Singleton
 @Singleton
 class R4Repository @Inject constructor() {
 
-    private val _warningEvents = MutableSharedFlow<R4WarningEvent>(extraBufferCapacity = 32)
+    // replay = 1: a collector that subscribes after the warning arrived — a screen still loading,
+    // or a ViewModel recreated with the activity — still sees the current warning (the observer
+    // design's late-collector rule; edge-triggered R4 warnings are never re-sent by the producer).
+    private val _warningEvents = MutableSharedFlow<R4WarningEvent>(replay = 1, extraBufferCapacity = 32)
     val warningEvents: SharedFlow<R4WarningEvent> = _warningEvents.asSharedFlow()
 
     private val _currentState = MutableStateFlow<R4StateMessage?>(null)

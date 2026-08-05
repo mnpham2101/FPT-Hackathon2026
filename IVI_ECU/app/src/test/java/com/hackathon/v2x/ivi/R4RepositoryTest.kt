@@ -75,6 +75,21 @@ class R4RepositoryTest {
     }
 
     @Test
+    fun warningRoutedBeforeAnyCollector_replaysToLateCollector() = runTest(UnconfinedTestDispatcher()) {
+        repository.attachToService(serviceFlow, backgroundScope)
+
+        // No collector on warningEvents yet — the screen has not loaded. The producer's warning
+        // is edge-triggered and never re-sent, so the repository must hold it for late collectors.
+        serviceFlow.emit(warning("early-c"))
+
+        repository.warningEvents.test {
+            val event = awaitItem()
+            assertEquals("early-c", event.objectSnapshot.id)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
     fun stateMessages_lastValueWinsOnCurrentState() = runTest(UnconfinedTestDispatcher()) {
         repository.attachToService(serviceFlow, backgroundScope)
         assertNull(repository.currentState.value)

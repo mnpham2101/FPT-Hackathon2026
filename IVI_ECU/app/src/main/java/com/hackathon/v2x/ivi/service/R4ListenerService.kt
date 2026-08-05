@@ -54,7 +54,11 @@ class R4ListenerService : Service() {
     @Volatile
     private var datagramSocket: DatagramSocket? = null
 
-    private val _r4EventFlow = MutableSharedFlow<R4Message>(extraBufferCapacity = 64)
+    // replay = 1: the socket opens in onCreate, before the activity's service binding attaches
+    // R4Repository. ADA warnings are edge-triggered — one datagram per committed risk transition,
+    // never repeated — so a message received in that gap must survive until the first collector
+    // arrives or the HMI never leaves HomeView.
+    private val _r4EventFlow = MutableSharedFlow<R4Message>(replay = 1, extraBufferCapacity = 64)
     /** Public API — collect in [R4Repository]. */
     val r4EventFlow: SharedFlow<R4Message> = _r4EventFlow
 
