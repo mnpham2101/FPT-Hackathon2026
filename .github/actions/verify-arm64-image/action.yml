@@ -5,7 +5,7 @@
 # leaves the node in Provisioning with `waiting to start: trying and failing to pull image`, and
 # nothing in a build log says so (plans/doc/phase0-smoke-test-run.md, "images must be
 # single-platform arm64"). Until now the only thing that closed that gap was deploying and looking.
-# This action closes it in CI, on the artifact that was actually pushed, by asking the four
+# This action closes it in CI, on the artifact a node would actually pull, by asking the four
 # questions a node asks:
 #
 #   1. Does the tag resolve at all, with the registry credential the platform uses?
@@ -19,11 +19,23 @@
 # Questions 1-3 are answered against the registry API, not against the local build - the local
 # image can be perfect while the pushed one is not.
 #
-# WHAT THE CALLER STILL OWES. This action proves the image is pullable and starts on aarch64. It
-# does NOT prove the application inside it works - that check is image-specific and stays in the
-# calling lane, which is why `reference` is an output: the caller runs its own smoke against the
-# exact digest verified here, never against the mutable tag (which a parallel branch push can move
-# between this step and the next - the standing hazard recorded in plans/phase1_tasks.md).
+# WHAT IS VERIFIED: THE TAG, because the tag is what deploys. A CarSky Container node's blueprint
+# `image` field is a tag - every blueprint and node guide in this repo uses one, and no node on the
+# platform has ever carried a digest reference. So the tag is the only reference a deploy can fail
+# on, and the only one worth failing a build over.
+#
+# WHAT THIS DOES NOT CLAIM, and the caller must not read into a green result:
+#   * NOT that this run pushed the image verified. Every tag here is mutable and a concurrent run
+#     can move it between the push and this step. When the caller supplies `digest`, a mismatch is
+#     reported as a WARNING - the image a node would pull is still good, which is what was asked.
+#   * NOT that the application inside works. That check is image-specific and stays in the calling
+#     lane, which is why `reference` is an output.
+#
+# WHY NOT VERIFY THE DIGEST THIS RUN PUSHED. That was the previous policy and it failed builds for
+# a condition no deploy cares about: two concurrent runs push one mutable tag, the loser's image
+# goes untagged, its digest stops resolving, and the check 404s on an image nobody would ever pull
+# while the tag itself is healthy. Failing on the tag catches every condition a deploy can hit;
+# failing on a superseded digest catches a race in CI's own tagging.
 
 name: Verify a pushed CarSky node image
 description: >-
@@ -47,12 +59,9 @@ inputs:
   digest:
     description: >-
       The digest THIS run pushed, from `docker buildx build --metadata-file` (.["containerimage.digest"]).
-      Strongly preferred. Every image tag in this project is mutable and every branch push re-pushes
-      it, so a concurrent run can move :latest between this run's push and this step - and then
-      resolving the tag here would verify SOMEONE ELSE'S image while reporting success for ours.
-      Given a digest, the checks below run against exactly that manifest and the tag is only
-      reported on. Omit it to fall back to resolving the tag, which is correct only when nothing
-      else can be pushing.
+      Optional, and never what gets verified - the tag is (see the header). Supplying it only adds a
+      warning when the tag has since been moved by a concurrent run, so a reader of the log can tell
+      whether the image verified here is this run's own. A mismatch never fails the job.
     required: false
     default: ""
 
@@ -62,8 +71,10 @@ outputs:
     value: ${{ steps.manifest.outputs.digest }}
   reference:
     description: >-
-      host/repo@sha256:... - an immutable reference to exactly what was verified. Use this for any
-      follow-up smoke; the :latest tag is mutable and may already point elsewhere.
+      host/repo@sha256:... - an immutable reference to exactly what was verified, pinned from the
+      tag at verification time. Use this for any follow-up smoke, so a further tag move between
+      steps cannot swap the image under the caller. It stays resolvable because the tag points at
+      it: an image only becomes collectable once nothing tags it.
     value: ${{ steps.manifest.outputs.reference }}
 
 runs:
@@ -92,16 +103,11 @@ runs:
         # exists to catch.
         ACCEPT='application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json'
 
-        # WHAT IS VERIFIED: the digest this run pushed, when the caller supplied one. Anything else
-        # would be a different image under a contended tag. The tag is still fetched afterwards,
-        # but only to report on.
-        if [ -n "$EXPECTED_DIGEST" ]; then
-          SUBJECT="$EXPECTED_DIGEST"
-          echo "[VERIFY] verifying the digest this run pushed: ${EXPECTED_DIGEST}"
-        else
-          SUBJECT="$TAG"
-          echo "::warning::no digest supplied - falling back to resolving ${IMAGE}. Under concurrent pushes this can verify another run's image."
-        fi
+        # WHAT IS VERIFIED: the tag, always - it is what a CarSky node's `image` field carries, so
+        # it is the only reference a deploy can fail on. See the header for why the digest this run
+        # pushed is deliberately NOT the subject.
+        SUBJECT="$TAG"
+        echo "[VERIFY] verifying the tag a node would pull: ${IMAGE}"
 
         echo "[VERIFY] GET ${BASE}/manifests/${SUBJECT}"
         # Status captured rather than -f'd, so a 401/404 can be reported as the specific thing it
@@ -115,7 +121,7 @@ runs:
             echo "::error::registry rejected the credential (HTTP ${HTTP}) for ${REGISTRY_HOST}/${REPO} - a node using this account could not pull either"
             exit 1 ;;
           404)
-            echo "::error::${REGISTRY_HOST}/${REPO}:${SUBJECT} does not exist in the registry (HTTP 404) - the push reported success but the manifest is not resolvable"
+            echo "::error::${REGISTRY_HOST}/${IMAGE} does not resolve in the registry (HTTP 404) - a CarSky node given this image field would fail to pull. The push reported success, so either it did not land or the tag was deleted."
             exit 1 ;;
           *)
             echo "::error::registry returned HTTP ${HTTP} for ${REGISTRY_HOST}/${REPO}:${SUBJECT}"
@@ -134,11 +140,15 @@ runs:
           DIGEST="sha256:$(sha256sum "${WORK}/manifest.json" | cut -d' ' -f1)"
           echo "[VERIFY] registry sent no Docker-Content-Digest header - computed ${DIGEST} from the body"
         fi
-        # A content-addressed fetch that comes back as different content is the registry
-        # contradicting itself; never continue past it.
+        # Whose image is behind the tag - reported, never enforced. A concurrent run winning a
+        # mutable tag is a standing condition of this project, not a defect in what was just
+        # verified: the image checked below is the one a node would pull either way. A warning
+        # rather than a notice because it changes what the rest of this log means - the aarch64 and
+        # startup evidence below is then about the other run's build, not this one's.
         if [ -n "$EXPECTED_DIGEST" ] && [ "$DIGEST" != "$EXPECTED_DIGEST" ]; then
-          echo "::error::asked the registry for ${EXPECTED_DIGEST} and it returned ${DIGEST}"
-          exit 1
+          echo "::warning::${IMAGE} resolves to ${DIGEST}, not the ${EXPECTED_DIGEST} this run pushed - a concurrent run won the mutable tag. What is verified below is the image a node would pull, so the deploy is sound; this run's own build is left unverified."
+        elif [ -n "$EXPECTED_DIGEST" ]; then
+          echo "[VERIFY] :${TAG} points at the image this run pushed"
         fi
         echo "[VERIFY] content-type: ${CONTENT_TYPE}"
         echo "[VERIFY] digest:       ${DIGEST}"
@@ -185,23 +195,8 @@ runs:
           exit 1
         fi
 
-        # Where the TAG points, reported separately from what was verified. A node deploys by tag,
-        # so this is the number to compare against at deploy time. It is a notice and not a failure
-        # on purpose: another run winning a mutable tag is the documented standing hazard of this
-        # project, not a defect in the image just verified.
-        if [ -n "$EXPECTED_DIGEST" ]; then
-          TAG_DIGEST="$(curl -sS -u "${REGISTRY_USER}:${REGISTRY_PASS}" -H "Accept: ${ACCEPT}" \
-                             -o /dev/null -D - "${BASE}/manifests/${TAG}" \
-                        | tr -d '\r' | awk 'tolower($1)=="docker-content-digest:"{print $2}' | tail -1)"
-          if [ -z "$TAG_DIGEST" ]; then
-            echo "[VERIFY] could not read the current digest of :${TAG}"
-          elif [ "$TAG_DIGEST" = "$DIGEST" ]; then
-            echo "[VERIFY] :${TAG} points at the image verified here"
-          else
-            echo "::notice::${IMAGE} now points at ${TAG_DIGEST}, not the ${DIGEST} this run pushed - a concurrent push won the mutable tag. The image verified below is still this run's; identify the deployed image from the registry at deploy time."
-          fi
-        fi
-
+        # No second lookup of the tag here: ${DIGEST} above WAS resolved from it, so the comparison
+        # is already made.
         {
           echo "digest=${DIGEST}"
           echo "reference=${REGISTRY_HOST}/${REPO}@${DIGEST}"

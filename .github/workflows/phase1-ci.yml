@@ -486,9 +486,10 @@ jobs:
             # re-resolves the graph and uploads - minutes instead of a second full emulated Vanetza
             # compile. A different (or missing) scope here is the difference between ~6 minutes and
             # ~6 hours.
-            # --metadata-file: buildx reports the digest it actually pushed. That digest, not the
-            # mutable tag, is what the verification step checks - the tag can be overwritten by a
-            # concurrent run between this step and that one.
+            # --metadata-file: buildx reports the digest it actually pushed. The verification step
+            # checks the TAG, since that is what a node's image field carries; this digest is handed
+            # to it only so a tag moved by a concurrent run is warned about rather than passing
+            # silently.
             docker buildx build \
               --platform "$PLATFORMS" \
               --provenance=false --sbom=false \
@@ -499,7 +500,8 @@ jobs:
               --metadata-file "$RUNNER_TEMP/push-metadata.json" \
               "$CONTEXT"
             DIGEST=$(jq -r '."containerimage.digest" // empty' "$RUNNER_TEMP/push-metadata.json")
-            echo "::notice::pushed $REGISTRY_HOST/$IMAGE ($PLATFORMS) digest=${DIGEST:-unreported}"
+            echo "::notice::pushed $REGISTRY_HOST/$IMAGE ($PLATFORMS) - this is the reference a CarSky node's image field takes"
+            echo "[PUSH] digest of this build: ${DIGEST:-unreported} (evidence of what was pushed; deploy by the tag above)"
             PUSHED=true
           fi
           {
@@ -646,7 +648,8 @@ jobs:
             echo "$ZOT_KEY" | docker login "$REGISTRY_HOST" -u "$REGISTRY_USER" --password-stdin
             # Same cache scope as this job's build step, for the same reason as v2x-ecu-image: the
             # push build must be a cache hit, not a second emulated compile. --metadata-file for the
-            # same reason too: the verification checks the pushed digest, not the mutable tag.
+            # same reason too: the verification checks the tag, and this digest only feeds its
+            # moved-tag warning.
             docker buildx build \
               --platform "$PLATFORMS" \
               --provenance=false --sbom=false \
@@ -657,7 +660,8 @@ jobs:
               --metadata-file "$RUNNER_TEMP/push-metadata.json" \
               "$CONTEXT"
             DIGEST=$(jq -r '."containerimage.digest" // empty' "$RUNNER_TEMP/push-metadata.json")
-            echo "::notice::pushed $REGISTRY_HOST/$IMAGE ($PLATFORMS) digest=${DIGEST:-unreported}"
+            echo "::notice::pushed $REGISTRY_HOST/$IMAGE ($PLATFORMS) - this is the reference a CarSky node's image field takes"
+            echo "[PUSH] digest of this build: ${DIGEST:-unreported} (evidence of what was pushed; deploy by the tag above)"
             PUSHED=true
           fi
           {

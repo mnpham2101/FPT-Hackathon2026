@@ -89,12 +89,13 @@ jobs:
             echo "::notice::CARSKY_ZOT_API_KEY secret not set - image built but NOT pushed (M4 pending)"
           else
             echo "$ZOT_KEY" | docker login "$REGISTRY_HOST" -u "$REGISTRY_USER" --password-stdin
-            # --metadata-file: buildx writes the digest it actually pushed, which is what the
-            # verification below must check. Resolving the tag there instead would verify whatever
-            # :latest points to at that moment - a different run's image, if one raced us.
+            # --metadata-file: buildx writes the digest it actually pushed. The verification below
+            # resolves the TAG, because that is what a node's image field carries; this digest is
+            # passed to it only so a moved tag shows up as a warning in the log.
             docker buildx build --platform "$PLATFORMS" --provenance=false --sbom=false -t "$REGISTRY_HOST/$IMAGE" --push --metadata-file "$RUNNER_TEMP/netcheck-push.json" tools/netcheck/
             DIGEST=$(jq -r '."containerimage.digest" // empty' "$RUNNER_TEMP/netcheck-push.json")
-            echo "::notice::pushed $REGISTRY_HOST/$IMAGE ($PLATFORMS) digest=${DIGEST:-unreported}"
+            echo "::notice::pushed $REGISTRY_HOST/$IMAGE ($PLATFORMS) - this is the reference a CarSky node's image field takes"
+            echo "[PUSH] digest of this build: ${DIGEST:-unreported} (evidence of what was pushed; deploy by the tag above)"
             PUSHED=true
           fi
           {

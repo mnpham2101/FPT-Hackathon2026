@@ -214,8 +214,8 @@ jobs:
             # THE SAME CACHE SCOPE as the build step above, deliberately: every layer this build
             # needs was just written there, so this invocation is a cache hit that only re-resolves
             # the graph and uploads - minutes instead of a second full emulated compile.
-            # --metadata-file: buildx reports the digest it actually pushed; that digest, not the
-            # mutable tag, is what the verification step checks.
+            # --metadata-file: buildx reports the digest it actually pushed. The verification step
+            # checks the tag; this digest only feeds its moved-tag warning.
             docker buildx build \
               --platform "$PLATFORMS" \
               --provenance=false --sbom=false \
@@ -226,7 +226,8 @@ jobs:
               --metadata-file "$RUNNER_TEMP/push-metadata.json" \
               "$CONTEXT"
             DIGEST=$(jq -r '."containerimage.digest" // empty' "$RUNNER_TEMP/push-metadata.json")
-            echo "::notice::pushed $REGISTRY_HOST/$IMAGE ($PLATFORMS) digest=${DIGEST:-unreported}"
+            echo "::notice::pushed $REGISTRY_HOST/$IMAGE ($PLATFORMS) - this is the reference a CarSky node's image field takes"
+            echo "[PUSH] digest of this build: ${DIGEST:-unreported} (evidence of what was pushed; deploy by the tag above)"
             PUSHED=true
           fi
           {
@@ -335,7 +336,7 @@ jobs:
             echo "$ZOT_KEY" | docker login "$REGISTRY_HOST" -u "$REGISTRY_USER" --password-stdin
             # THE SAME CACHE SCOPE as the build step above, deliberately: this invocation is a
             # cache hit that only re-resolves the graph and uploads. --metadata-file: the
-            # verification step checks the digest actually pushed, not the mutable tag.
+            # verification step checks the tag; this digest only feeds its moved-tag warning.
             docker buildx build \
               --platform "$PLATFORMS" \
               --provenance=false --sbom=false \
@@ -346,7 +347,8 @@ jobs:
               --metadata-file "$RUNNER_TEMP/push-metadata.json" \
               "$CONTEXT"
             DIGEST=$(jq -r '."containerimage.digest" // empty' "$RUNNER_TEMP/push-metadata.json")
-            echo "::notice::pushed $REGISTRY_HOST/$IMAGE ($PLATFORMS) digest=${DIGEST:-unreported}"
+            echo "::notice::pushed $REGISTRY_HOST/$IMAGE ($PLATFORMS) - this is the reference a CarSky node's image field takes"
+            echo "[PUSH] digest of this build: ${DIGEST:-unreported} (evidence of what was pushed; deploy by the tag above)"
             PUSHED=true
           fi
           {
