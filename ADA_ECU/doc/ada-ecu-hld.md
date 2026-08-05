@@ -299,6 +299,25 @@ Scaffolding for exercising this node alone. None of it ships in the node image.
 
 No layer is collapsed: the admission machine cannot reach a socket, a plugin cannot send a datagram, and the detector cannot reach the store — its only route in is one JSONL line through a parser.
 
+### Protocol stack
+
+![The protocol stack carrying the two network channels this node terminates](../../presentation/assets/phase2-4-ada-protocol-stack.svg)
+
+Source: [phase2-4-ada-protocol-stack.svg](../../presentation/assets/phase2-4-ada-protocol-stack.svg).
+
+Two channels cross the network — R2 inbound and R4 outbound — and they share every layer below the encoding row. Which component owns each layer:
+
+| Layer | Owned here by |
+|---|---|
+| Message | `contracts/r2_message`'s `R2Message` inbound (§10.1); `contracts/r4_message`'s `R4WarningEvent` outbound (§10.3), with the `contracts/tracked_object` record nested inside it (§10.2) |
+| Encoding | the nlohmann/json bindings inside those three contract types — UTF-8 JSON, one object per datagram, unknown fields ignored on the inbound side |
+| Transport, network, link | `net/udp_socket` alone — the layer rule above is what keeps it there |
+
+- **The stack carries no ASN.1 and no ITS envelope.** This node never sees a CPM; the air message is decoded one hop upstream, so nothing here links a codec ([§11](#11-tech-stack-build-and-ci)).
+- **IPv4 is static and routerless.** Every peer sits on `10.99.0.0/24` with this node at `10.99.0.12`, and the link layer is the CarSky Ethernet Bridge — one simulated L2 segment, since the pod has no physical interface (R6).
+- **The detector channel is outside the stack.** `observer/detector_reader` spawns `detector/main.py` as a child process in the same container and reads R3 records from its standard output: an OS pipe supplies no addressing, no ports and no framing, so newlines delimit the messages and nothing sits beneath the JSON (D2).
+- **That asymmetry is a behavioural difference, not a notational one.** The pipe is ordered and lossless and blocks when its buffer fills, where UDP discards the datagram — which is why back-pressure appears on the detector path and loss appears on the network paths.
+
 ## 9. Call flow
 
 [phase2-4-ada-ecu-callflow.puml](phase2-4-ada-ecu-callflow.puml) — PlantUML sequence: bring-up and detector spawn, then B detected in the clip → R3 JSONL → store, relayed C → store, and the fusion tick driving expiry → R13 admission → R14 assessment → R15 emission → IVI, with the parse-reject, `b_unknown` and detector-EOF branches.
