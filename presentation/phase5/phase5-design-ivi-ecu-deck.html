@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Phase 5 — IVI ECU Design</title>
+<meta name="description" content="Companion design deck — IVI module architecture, folder layout, toolchain, R4 call flow, configuration and observation; fills the gap vs V2X/ADA design decks">
+<style>
+  :root {
+    --fpt-orange: #F37021;
+    --fpt-green: #50B848;
+    --fpt-blue: #034EA2;
+    --fpt-teal: #33B2C1;
+    --fpt-navy: #19226D;
+    --navy-deep: #0E1540;
+    --ink: #080808;
+    --ink-soft: #3d3d46;
+    --paper: #f4f4f6;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; background: #14183a; font-family: "Segoe UI", "Segoe UI Variable", "Helvetica Neue", Arial, sans-serif; }
+
+  .deck { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+
+  .slide {
+    width: 1280px; height: 720px;
+    position: absolute;
+    display: none;
+    flex-direction: column;
+    transform-origin: center center;
+    background: var(--paper);
+    color: var(--ink);
+    box-shadow: 0 18px 60px rgba(0,0,0,.45);
+    overflow: hidden;
+  }
+  .slide.active { display: flex; }
+
+  /* ---------- backgrounds ---------- */
+  .bg-light { background: linear-gradient(135deg, #f6f6f8 0%, #ececef 55%, #e0e1e6 100%); }
+  .bg-light::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720"><g fill="none" stroke-width="2"><g transform="skewX(-16)"><rect x="240" y="60" width="380" height="460" rx="70" stroke="rgba(255,255,255,0.85)"/><rect x="1010" y="210" width="400" height="470" rx="75" stroke="rgba(25,34,109,0.05)"/><rect x="520" y="400" width="330" height="380" rx="60" stroke="rgba(25,34,109,0.06)"/></g><line x1="880" y1="-40" x2="640" y2="780" stroke="rgba(255,255,255,0.9)"/><line x1="1180" y1="-40" x2="940" y2="780" stroke="rgba(25,34,109,0.05)"/></g></svg>');
+    background-size: cover;
+  }
+  .bg-navy { background: linear-gradient(135deg, #10173f 0%, #151d55 45%, var(--fpt-navy) 100%); color: #fff; }
+  .bg-navy::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720"><g fill="none" stroke-width="2"><g transform="skewX(-16)"><rect x="240" y="60" width="380" height="460" rx="70" stroke="rgba(120,180,255,0.20)"/><rect x="1010" y="210" width="400" height="470" rx="75" stroke="rgba(255,255,255,0.10)"/><rect x="520" y="400" width="330" height="380" rx="60" stroke="rgba(120,180,255,0.10)"/></g><line x1="880" y1="-40" x2="640" y2="780" stroke="rgba(120,180,255,0.30)"/><line x1="1180" y1="-40" x2="940" y2="780" stroke="rgba(120,180,255,0.16)"/></g></svg>');
+    background-size: cover;
+  }
+
+  /* cover / divider / thanks carry their photo as an inline background-image */
+  .cover-photo { background-size: cover; background-position: center; color: #fff; }
+  .divider { background-size: cover; background-position: center; color: #fff; justify-content: center; padding: 0 110px; }
+  .divider .sec-num { font-size: 120px; font-weight: 700; color: var(--fpt-orange); line-height: 1; opacity: .95; }
+  .divider h1 { font-size: 56px; font-weight: 700; color: #fff; margin-top: 10px; }
+  .divider .rule { width: 110px; height: 6px; background: var(--fpt-orange); border-radius: 3px; margin-top: 26px; }
+  .thanks { background-size: cover; background-position: center 20%; color: #fff; justify-content: center; align-items: center; text-align: center; }
+  .thanks h1 { font-size: 84px; font-weight: 700; }
+  .thanks .rule { width: 130px; height: 6px; background: var(--fpt-orange); border-radius: 3px; margin: 30px auto; }
+  .thanks p { font-size: 22px; color: #cdd6f7; }
+
+  /* ---------- title / closing text ---------- */
+  .cover { justify-content: center; padding: 0 110px; }
+  .cover .eyebrow { font-size: 20px; letter-spacing: .35em; text-transform: uppercase; color: var(--fpt-orange); font-weight: 600; margin-bottom: 26px; }
+  .cover h1 { font-size: 66px; line-height: 1.08; font-weight: 700; color: #fff; max-width: 900px; }
+  .cover .rule { width: 130px; height: 6px; background: var(--fpt-orange); border-radius: 3px; margin: 30px 0; }
+  .cover .tagline { font-size: 30px; font-weight: 300; color: #dfe6ff; margin-bottom: 14px; }
+  .cover .meta { font-size: 18px; color: #b9c2ea; }
+  .cover .meta a { color: #b9c2ea; }
+  .cover .accents, .divider .accents, .thanks .accents { position: absolute; bottom: 0; left: 0; right: 0; height: 8px; display: flex; }
+  .accents span { flex: 1; }
+
+  /* ---------- content slide chrome ---------- */
+  .content { padding: 44px 64px 58px; position: relative; }
+  .content > * { position: relative; }
+  .slide-head { display: flex; align-items: baseline; gap: 18px; border-bottom: 3px solid transparent; padding-bottom: 12px; margin-bottom: 18px;
+    border-image: linear-gradient(90deg, var(--fpt-orange) 0 90px, rgba(25,34,109,.15) 90px 100%) 1; }
+  .slide-head .num { font-size: 40px; font-weight: 700; color: var(--fpt-orange); line-height: 1; }
+  .slide-head h2 { font-size: 31px; font-weight: 700; color: var(--fpt-navy); line-height: 1.15; }
+  .lead { font-size: 19px; color: var(--ink-soft); margin-bottom: 16px; }
+  .lead:last-of-type { margin-bottom: 0; }
+  .lead strong, .lead b { color: var(--ink); }
+  .content a { color: var(--fpt-blue); }
+
+  .footer { position: absolute; left: 64px; right: 64px; bottom: 18px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #8a8d99; }
+  .footer .page { background: var(--fpt-navy); color: #fff; border-radius: 4px; padding: 2px 10px; font-weight: 600; }
+
+  ul.points { list-style: none; display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
+  ul.points:last-child { margin-bottom: 0; }
+  ul.points li { font-size: 18.5px; line-height: 1.42; color: var(--ink-soft); padding-left: 26px; position: relative; }
+  ul.points li::before { content: ""; position: absolute; left: 0; top: 9px; width: 12px; height: 12px; background: var(--fpt-orange); border-radius: 3px; transform: skewX(-12deg); }
+  ul.points li strong { color: var(--fpt-navy); }
+  ul.points li code, .content code { font-family: "Consolas", "Courier New", monospace; font-size: .92em; background: rgba(25,34,109,.07); border-radius: 4px; padding: 1px 6px; }
+
+  .imgbox { display: flex; flex-direction: column; align-items: center; gap: 8px; margin: 6px 0 14px; }
+  .imgbox img { border-radius: 10px; box-shadow: 0 6px 22px rgba(15,20,60,.16); background: #fff; max-width: 100%; }
+  .imgbox .cap { font-size: 13.5px; color: #8a8d99; font-style: italic; }
+  .imgbox img.flat { box-shadow: none; background: transparent; }
+
+  .cols { display: flex; gap: 34px; align-items: center; }
+
+  /* TOC */
+  .toc { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 26px; margin-top: 8px; }
+  .toc .item { display: flex; gap: 18px; align-items: baseline; background: #fff; border-radius: 10px; padding: 18px 22px; box-shadow: 0 5px 18px rgba(15,20,60,.10); border-left: 6px solid var(--fpt-orange); height: 100%; }
+  .toc .item:nth-child(2) { border-left-color: var(--fpt-green); }
+  .toc .item:nth-child(3) { border-left-color: var(--fpt-blue); }
+  .toc .item:nth-child(4) { border-left-color: var(--fpt-teal); }
+  .toc .item:nth-child(5) { border-left-color: var(--fpt-navy); }
+  .toc .item:nth-child(6) { border-left-color: var(--fpt-orange); }
+  .toc .n { font-size: 34px; font-weight: 700; color: var(--fpt-orange); min-width: 52px; }
+  .toc .item:nth-child(2) .n { color: var(--fpt-green); }
+  .toc .item:nth-child(3) .n { color: var(--fpt-blue); }
+  .toc .item:nth-child(4) .n { color: var(--fpt-teal); }
+  .toc .item:nth-child(5) .n { color: var(--fpt-navy); }
+  .toc h3 { font-size: 21px; color: var(--fpt-navy); margin-bottom: 4px; }
+  .toc p { font-size: 15px; color: var(--ink-soft); line-height: 1.35; }
+
+  /* cards */
+  .cards3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin: 6px 0 18px; }
+  .card { background: #fff; border-radius: 10px; padding: 16px 18px 14px; box-shadow: 0 5px 18px rgba(15,20,60,.10); border-top: 5px solid var(--fpt-orange); }
+  .card.g { border-top-color: var(--fpt-green); }
+  .card.b { border-top-color: var(--fpt-blue); }
+  .card h3 { font-size: 19px; color: var(--fpt-navy); margin-bottom: 6px; }
+  .card p { font-size: 15.5px; line-height: 1.4; color: var(--ink-soft); }
+
+  /* tables */
+  table.fpt { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 5px 18px rgba(15,20,60,.10); margin-bottom: 14px; }
+  table.fpt th { background: var(--fpt-navy); color: #fff; text-align: left; font-size: 16px; padding: 9px 16px; }
+  table.fpt td { font-size: 15.5px; line-height: 1.35; padding: 8.5px 16px; border-bottom: 1px solid #e7e8ee; color: var(--ink-soft); vertical-align: top; }
+  table.fpt tr:last-child td { border-bottom: none; }
+  table.fpt td strong { color: var(--fpt-navy); white-space: nowrap; }
+  .tag { display: inline-block; padding: 1px 9px; border-radius: 4px; color: #fff; font-size: 14px; font-weight: 600; }
+  .tag.o { background: var(--fpt-orange); } .tag.b { background: var(--fpt-blue); } .tag.t { background: var(--fpt-teal); } .tag.g { background: var(--fpt-green); } .tag.n { background: var(--fpt-navy); }
+
+  /* seam cards */
+  .seams { display: flex; flex-direction: column; gap: 13px; margin-bottom: 16px; }
+  .seam { background: #fff; border-radius: 8px; border-left: 6px solid var(--fpt-orange); box-shadow: 0 4px 14px rgba(15,20,60,.09); padding: 12px 18px; display: flex; gap: 16px; align-items: baseline; }
+  .seam.b { border-left-color: var(--fpt-blue); } .seam.t { border-left-color: var(--fpt-teal); }
+  .seam .who { font-weight: 700; color: var(--fpt-navy); font-size: 17.5px; white-space: nowrap; min-width: 200px; }
+  .seam p { font-size: 16px; line-height: 1.4; color: var(--ink-soft); }
+  .strip { background: linear-gradient(90deg, var(--fpt-navy), #2a35a0); color: #dfe6ff; border-radius: 8px; padding: 12px 20px; font-size: 15.5px; line-height: 1.45; margin-bottom: 14px; }
+  .strip strong { color: #fff; }
+  .strip:last-child { margin-bottom: 0; }
+
+  /* chain visual */
+  .chain { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 10px 0 22px; flex-wrap: nowrap; }
+  .chain .link { background: var(--fpt-navy); color: #fff; font-size: 16.5px; font-weight: 600; padding: 9px 20px; border-radius: 7px; transform: skewX(-10deg); box-shadow: 0 4px 12px rgba(15,20,60,.18); }
+  .chain .link > span { display: inline-block; transform: skewX(10deg); }
+  .chain .link.hot { background: var(--fpt-orange); }
+  .chain .arr { color: var(--fpt-orange); font-size: 22px; font-weight: 700; }
+  .chain .link small { display: block; font-size: 12px; font-weight: 400; opacity: .8; transform: skewX(10deg); }
+
+  .badges { display: flex; gap: 10px; justify-content: center; margin: 0 0 20px; flex-wrap: wrap; }
+  .badge { border: 2px solid var(--fpt-orange); color: #b34e0e; background: rgba(243,112,33,.07); font-size: 14.5px; font-weight: 600; padding: 5px 14px; border-radius: 999px; }
+  .badge.g { border-color: var(--fpt-green); color: #2c7a25; background: rgba(80,184,72,.09); }
+
+  /* terminal / log evidence */
+  pre.log { background: var(--navy-deep); color: #cfd6f5; font-family: "Consolas", "Courier New", monospace; font-size: 13.5px; line-height: 1.5; border-radius: 8px; padding: 14px 18px; overflow: hidden; margin-bottom: 14px; }
+  pre.log .ok { color: #7ee787; }
+  pre.log .dim { color: #7f88ad; }
+
+  /* ---------- controls ---------- */
+  .hint { position: fixed; left: 18px; bottom: 12px; color: rgba(255,255,255,.45); font-size: 12.5px; z-index: 50; }
+  .hud { position: fixed; right: 18px; bottom: 14px; z-index: 50; display: flex; gap: 8px; align-items: center; font-family: inherit; }
+  .hud button { background: rgba(255,255,255,.12); color: #fff; border: 1px solid rgba(255,255,255,.25); border-radius: 6px; padding: 5px 12px; font-size: 15px; cursor: pointer; }
+  .hud button:hover { background: var(--fpt-orange); border-color: var(--fpt-orange); }
+  .hud .ctr { color: rgba(255,255,255,.75); font-size: 14px; min-width: 60px; text-align: center; }
+  .progress { position: fixed; left: 0; bottom: 0; height: 4px; background: var(--fpt-orange); width: 0; z-index: 60; transition: width .25s ease; }
+
+  @media print {
+    html, body { background: #fff; height: auto; }
+    .deck { position: static; display: block; }
+    .slide { display: flex !important; position: relative; transform: none !important; box-shadow: none; page-break-after: always; margin: 0 auto; }
+    .hud, .progress, .hint { display: none !important; }
+    @page { size: 13.55in 7.65in; margin: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="deck">
+  <section class="slide cover-photo cover active" style="background-image: linear-gradient(90deg, rgba(8,12,38,.92) 0%, rgba(8,12,38,.72) 40%, rgba(8,12,38,.18) 100%), url('../assets/bg-title-city.jpg')">
+    <div class="eyebrow">Milestone 1 · Cooperative Vehicle Awareness — FPT Hackathon 2026</div>
+    <h1>Phase 5 — IVI ECU Design</h1>
+    <div class="rule"></div>
+    <div class="tagline">The consumer node, module by module</div>
+    <div class="meta">Companion to the demo deck <a href="phase5-ivi-deck.html">phase5-ivi-deck.html</a> (problem, God View, evidence). This deck is the <strong>design</strong> report — same altitude as <a href="../phase1/phase1-design-v2x-ecu-deck.html">phase1-design-v2x-ecu-deck.html</a>.<br>Source: <a href="../../IVI_ECU/doc/ivi-ecu-hld.md">ivi-ecu-hld.md</a> · <a href="../../IVI_ECU/doc/ivi-ecu-design-decisions.md">ivi-ecu-design-decisions.md</a><br>Learning notes for Lead’s <code>documents/</code> folder: <a href="../../documents/README.md">documents/README.md</a></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">§</div><h2>Table of contents</h2></div>
+    <div class="toc">
+      <div class="item"><div class="n">01</div><div><h3>Module architecture</h3><p>MVC layers and containment rules</p></div></div>
+      <div class="item"><div class="n">02</div><div><h3>Folder layout</h3><p>where each component lives</p></div></div>
+      <div class="item"><div class="n">03</div><div><h3>Build toolchain</h3><p>Gradle, AAOS, tests, APK</p></div></div>
+      <div class="item"><div class="n">04</div><div><h3>Call flow</h3><p>bind, receive, wake-on-warning, render</p></div></div>
+      <div class="item"><div class="n">05</div><div><h3>Configuration</h3><p>BuildConfig and blueprint pin</p></div></div>
+      <div class="item"><div class="n">06</div><div><h3>Observation</h3><p>log surfaces and demo evidence</p></div></div>
+    </div>
+    <div class="footer"><span>Phase 5 — IVI ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">01</div>
+    <h1>Module architecture</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">01</div><h2>What the IVI node is for</h2></div>
+    <ul class="points">
+      <li><strong>Input:</strong> R4 JSON datagrams from the ADA ECU (or <code>m1-r4-sim</code>) on UDP <strong>47300</strong>.</li>
+      <li><strong>Output:</strong> R16 HMI on AAOS — Display Area switches to the R17 <strong>2D God View</strong>; ghost C only from <code>v2x_relayed</code>.</li>
+      <li><strong>Not in scope:</strong> producing R4; ADA perception; V2X modem; uploading the APK as a CarSky Artifact.</li>
+    </ul>
+    <div class="footer"><span>Phase 5 — IVI ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">01</div><h2>MVC separation (HLD)</h2></div>
+    <table class="fpt">
+      <thead><tr><th>Layer</th><th>Examples</th><th>Rule</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Data</strong></td><td>R4 / R3 models, <code>R4Repository</code></td><td>Store and route; no UI meaning</td></tr>
+        <tr><td><strong>Business logic</strong></td><td>Deserializer, socket observer, classifier, coordinate mapper</td><td>No Compose / Activity types where the HLD places pure JVM</td></tr>
+        <tr><td><strong>UI logic</strong></td><td><code>WarningViewModel</code>, <code>MainViewModel</code>, <code>DisplayMode</code></td><td>State machines; no Canvas drawing</td></tr>
+        <tr><td><strong>UI</strong></td><td><code>MainScreen</code>, <code>CanvasWarningView</code> behind <code>IviWarningViewSeam</code></td><td>Draw and layout only</td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>Parse never draws.</strong> Compose never opens a socket.</li>
+      <li><strong>Seam <code>IviWarningViewSeam</code></strong> is the swap point for an optional 3D renderer without changing consumers.</li>
+    </ul>
+    <div class="footer"><span>Phase 5 — IVI ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">01</div><h2>Containment rules that define the design</h2></div>
+    <ul class="points">
+      <li><strong>One datagram = one R4 JSON object</strong> — no app-level Ethernet header; de-framing is buffer slicing (D3).</li>
+      <li><strong>Unknown <code>warningType</code> preserved on the wire</strong> — classification at the UI edge (D4).</li>
+      <li><strong>Foreground service hosts the receive loop</strong> — not the Activity lifecycle (D5).</li>
+      <li><strong>Provenance guard</strong> — ghost C renders only when snapshot <code>source</code> is <code>v2x_relayed</code> (R19).</li>
+      <li><strong>No tunable literals in Kotlin</strong> — port, timeout, scale from <code>BuildConfig</code> / runtime config (D10).</li>
+    </ul>
+    <p class="lead">Decisions D1–D13: <a href="../../IVI_ECU/doc/ivi-ecu-design-decisions.md">ivi-ecu-design-decisions.md</a>.</p>
+    <div class="footer"><span>Phase 5 — IVI ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">02</div>
+    <h1>Folder layout</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">02</div><h2>Abridged tree (design target + shipped app)</h2></div>
+    <pre class="log">IVI_ECU/
+├── settings.gradle.kts          shipped M1: include(&quot;:app&quot;)
+├── contracts/                   byte-synced R4 / R3 schema copies
+├── app/                         AAOS APK — Activity, Service, Compose, tests
+│   ├── src/main/AndroidManifest.xml
+│   └── src/main/java/…/ivi/
+│       ├── MainActivity.kt · IviApplication.kt
+│       ├── service/R4ListenerService.kt
+│       ├── data/R4Deserializer.kt · R4Repository.kt
+│       ├── model/               R4 / R3 / SceneGeometry
+│       └── ui/                  ViewModels · MainScreen · view seam
+├── mock-sender/                 interim Python R4 harness
+└── doc/                         HLD · decisions · PlantUML · wiki</pre>
+    <ul class="points">
+      <li><strong>HLD designates five Gradle modules</strong> (<code>:contract</code>, <code>:serializer</code>, <code>:observer</code>, <code>:app</code>, <code>:r4-simulator</code>) for a one-way JVM graph (D1–D2).</li>
+      <li><strong>Shipped tree today</strong> concentrates those packages under <code>:app</code> (Hilt). The design report names <strong>components</strong>; module split is an additive refactor, not a change to R4 behaviour.</li>
+    </ul>
+    <div class="footer"><span>Phase 5 — IVI ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">02</div><h2>What each package does</h2></div>
+    <table class="fpt">
+      <thead><tr><th>Package / artifact</th><th>Responsibility</th></tr></thead>
+      <tbody>
+        <tr><td><code>model/</code></td><td>Sealed <code>R4Message</code>, <code>SceneGeometry</code>, R3 snapshot</td></tr>
+        <tr><td><code>data/R4Deserializer</code></td><td>Bytes → typed message or failure</td></tr>
+        <tr><td><code>data/R4Repository</code></td><td>Fan-out warnings / last state</td></tr>
+        <tr><td><code>service/R4ListenerService</code></td><td>UDP bind, IO loop, <code>r4EventFlow</code></td></tr>
+        <tr><td><code>ui/WarningViewModel</code></td><td>Idle ↔ Active + <code>latestScene</code> + timeout</td></tr>
+        <tr><td><code>ui/MainViewModel</code></td><td>Display Area mode + wake-on-warning</td></tr>
+        <tr><td><code>ui/screen/MainScreen</code></td><td>R16 chrome</td></tr>
+        <tr><td><code>ui/view/*</code></td><td>Seam + Canvas God View + mapper + guard</td></tr>
+        <tr><td><code>mock-sender/</code></td><td>Scripted UDP to <code>.13:47300</code> for bench tests</td></tr>
+      </tbody>
+    </table>
+    <div class="footer"><span>Phase 5 — IVI ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">03</div>
+    <h1>Build toolchain</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">03</div><h2>How the node is built, tested and installed</h2></div>
+    <table class="fpt">
+      <thead><tr><th>Concern</th><th>Tool</th><th>Detail</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Language</strong></td><td>Kotlin</td><td>Compose UI; kotlinx.serialization for R4</td></tr>
+        <tr><td><strong>Build</strong></td><td>Gradle + AGP</td><td>Module <code>:app</code>; JDK 17/21</td></tr>
+        <tr><td><strong>DI (shipped)</strong></td><td>Hilt 2.58</td><td>Activity / Service / ViewModel injection</td></tr>
+        <tr><td><strong>Unit tests</strong></td><td>JUnit · MockK · Turbine · Robolectric</td><td>ViewModels, deserializer, Canvas guards, full-stack UDP</td></tr>
+        <tr><td><strong>Artifact</strong></td><td>Debug APK</td><td><code>assembleDebug</code> → <code>app-debug.apk</code> (&amp;lt; 50 MB)</td></tr>
+        <tr><td><strong>Install</strong></td><td>ADB into Skycraft guest</td><td>Never an Artifacts “AAOS APK” upload — Image + Host Package only</td></tr>
+        <tr><td><strong>CI</strong></td><td>phase5-ci (team lane)</td><td>Build / test; APK as workflow artifact when green</td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>AAOS guest</strong> comes from the platform AAOS artifact; the <strong>team APK</strong> is a separate ADB step (<a href="../../requirements/car-sky-guide/node-ivi-ecu.md">node-ivi-ecu.md</a>).</li>
+    </ul>
+    <div class="footer"><span>Phase 5 — IVI ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">04</div>
+    <h1>Call flow</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">04</div><h2>Part 1 — start-up</h2></div>
+    <ul class="points">
+      <li> 1. Launcher Intent → <code>MainActivity</code>. 2. <code>startForegroundService(R4ListenerService)</code> — socket opens on <code>R4_UDP_PORT</code>. 3. Compose <code>setContent</code> — <code>WarningViewModel</code> + bind service → <code>attachService(r4EventFlow)</code>. 4. Default Display Area = <strong>HomeView</strong>; status aims at <strong>BOUND :47300</strong>.</li>
+    </ul>
+    <p class="lead">Learning walkthrough: <a href="../../documents/ivi-android-screen-lifecycle.md">documents/ivi-android-screen-lifecycle.md</a>.</p>
+    <div class="footer"><span>Phase 5 — IVI ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">04</div><h2>Part 2 — reception and decode</h2></div>
+    <ul class="points">
+      <li> 1. ADA <code>sendto</code> → guest <code>:47300</code>. 2. <code>DatagramSocket.receive</code> on IO dispatcher. 3. <code>R4Deserializer</code> — warning or state, or skip malformed. 4. Emit on <code>r4EventFlow</code> → repository routes warnings.</li>
+    </ul>
+    <p class="lead">Learning walkthrough: <a href="../../documents/ivi-r4-observation-pipeline.md">documents/ivi-r4-observation-pipeline.md</a>.</p>
+    <div class="footer"><span>Phase 5 — IVI ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">04</div><h2>Part 3 — wake-on-warning and God View</h2></div>
+    <ul class="points">
+      <li> 1. <code>WarningViewModel</code> → <code>Active</code> + <code>latestScene</code> (<code>geometry</code> + <code>objectSnapshot</code>). 2. <code>MainViewModel</code> forces <strong>WarningView</strong>. 3. <code>CanvasWarningView.Render</code> — ego / B solid; ghost C dashed if <code>v2x_relayed</code>. 4. Silence &amp;gt; <code>WARNING_TIMEOUT_MS</code> → Idle → restore previous mode (unless user override).</li>
+    </ul>
+    <div class="footer"><span>Phase 5 — IVI ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">05</div>
+    <h1>Configuration</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">05</div><h2>Values the design externalises</h2></div>
+    <table class="fpt">
+      <thead><tr><th>Key</th><th>Default</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td><code>R4_UDP_PORT</code></td><td><code>47300</code></td><td>Listener port (blueprint ADA→IVI)</td></tr>
+        <tr><td><code>WARNING_TIMEOUT_MS</code></td><td><code>10000</code></td><td>Auto-dismiss Active → Idle</td></tr>
+        <tr><td><code>R4_SOCKET_BUFFER_BYTES</code></td><td><code>2048</code></td><td>Datagram buffer (HLD)</td></tr>
+        <tr><td>Scene scale</td><td><code>BuildConfig</code> / D10</td><td>Metres→canvas base scale</td></tr>
+        <tr><td>IVI pin address</td><td><code>10.99.0.13</code></td><td>CarSky ethernet pin — <strong>not</strong> a Kotlin literal</td></tr>
+        <tr><td>ADA env</td><td><code>IVI_ECU_HOST</code> / <code>IVI_ECU_PORT</code></td><td>Producer targets this node</td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li>Override path (HLD D10): launch extras such as <code>--ei r4_port</code> merged in runtime config when wired.</li>
+      <li>Skycraft <strong>image</strong> block = AAOS VM artifact IDs; Part Prefix (e.g. <code>ivi</code>) names <code>ivi-screen</code> / <code>ivi-logcat</code> widgets.</li>
+    </ul>
+    <div class="footer"><span>Phase 5 — IVI ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">05</div><h2>Observation — how the design is evidenced</h2></div>
+    <table class="fpt">
+      <thead><tr><th>Surface</th><th>What it proves</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Screen widget</strong></td><td>God View / Home chrome (R16 / R17)</td></tr>
+        <tr><td><strong>Guest logcat</strong></td><td>Bind, RX/DROP, UI mode transitions</td></tr>
+        <tr><td><strong>ADA View Log</strong></td><td><code>[TX] … → 10.99.0.13:47300</code></td></tr>
+        <tr><td><strong>tcpdump / <code>[CAP]</code> on ADA</strong></td><td>Wire presence of the ADA→IVI hop (producer-side)</td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li>Demo deck carries screenshots and learnings: <a href="phase5-ivi-deck.html">phase5-ivi-deck.html</a>.</li>
+      <li>Procedure: <a href="../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md">deploy-ivi-hmi-walkthrough.md</a> §4.8–4.9.</li>
+    </ul>
+    <div class="footer"><span>Phase 5 — IVI ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">05</div><h2>Open / additive items (design)</h2></div>
+    <ul class="points">
+      <li><strong>Gradle module split</strong> (<code>:contract</code> / <code>:serializer</code> / <code>:observer</code> / <code>:r4-simulator</code>) — HLD D1–D2; behaviour unchanged when landed.</li>
+      <li><strong>Live <code>R4LinkState</code> on the status bar</strong> — BOUND / REBINDING / ERROR as first-class UI.</li>
+      <li><strong>Kotlin <code>:r4-simulator</code> image</strong> replacing long-term Python mock.</li>
+      <li><strong>3D seam implementation</strong> — optional; Canvas remains M1.</li>
+    </ul>
+    <p class="lead">None of the above gates the R19 claim when the continuous eth path + <code>v2x_relayed</code> God View are demonstrated.</p>
+    <div class="footer"><span>Phase 5 — IVI ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide thanks" style="background-image: linear-gradient(rgba(8,12,38,.66), rgba(14,21,64,.86)), url('../assets/bg-fpt-tower.jpg')">
+    <h1>Thank you</h1>
+    <div class="rule"></div>
+    <p><strong>Phase 5 — IVI ECU Design</strong> · Milestone 1 · FPT Hackathon 2026 Sources: <a href="../../IVI_ECU/doc/ivi-ecu-hld.md">ivi-ecu-hld.md</a> · <a href="../../documents/README.md">documents/</a></p>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+</div>
+
+<div class="hint">← → navigate · F fullscreen · print for PDF</div>
+<div class="hud">
+  <button id="prev" aria-label="Previous slide">‹</button>
+  <span class="ctr" id="ctr"></span>
+  <button id="next" aria-label="Next slide">›</button>
+</div>
+<div class="progress" id="prog"></div>
+
+<script>
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  slides.forEach((sl, i) => { const p = sl.querySelector('.page'); if (p) p.textContent = i + 1; });
+  let cur = 0;
+
+  function fit() {
+    const s = Math.min(innerWidth / 1280, innerHeight / 720);
+    slides.forEach(sl => sl.style.transform = `scale(${s})`);
+  }
+  function show(i) {
+    cur = Math.max(0, Math.min(slides.length - 1, i));
+    slides.forEach((sl, k) => sl.classList.toggle('active', k === cur));
+    document.getElementById('ctr').textContent = `${cur + 1} / ${slides.length}`;
+    document.getElementById('prog').style.width = `${(cur + 1) / slides.length * 100}%`;
+    location.hash = cur ? `#${cur + 1}` : '';
+  }
+  addEventListener('resize', fit);
+  addEventListener('keydown', e => {
+    if (['ArrowRight', 'PageDown', ' ', 'Enter'].includes(e.key)) { e.preventDefault(); show(cur + 1); }
+    else if (['ArrowLeft', 'PageUp', 'Backspace'].includes(e.key)) { e.preventDefault(); show(cur - 1); }
+    else if (e.key === 'Home') show(0);
+    else if (e.key === 'End') show(slides.length - 1);
+    else if (e.key.toLowerCase() === 'f') document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+  });
+  document.getElementById('prev').onclick = () => show(cur - 1);
+  document.getElementById('next').onclick = () => show(cur + 1);
+  let tx = null;
+  addEventListener('touchstart', e => tx = e.touches[0].clientX);
+  addEventListener('touchend', e => { if (tx !== null) { const dx = e.changedTouches[0].clientX - tx; if (Math.abs(dx) > 50) show(cur + (dx < 0 ? 1 : -1)); tx = null; } });
+
+  const h = parseInt((location.hash || '').slice(1), 10);
+  fit(); show(isNaN(h) ? 0 : h - 1);
+</script>
+
+</body>
+</html>
