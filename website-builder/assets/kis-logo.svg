@@ -1,22 +1,60 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 150" role="img" aria-labelledby="kis-logo-title">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 420" role="img" aria-labelledby="kis-logo-title">
   <title id="kis-logo-title">KIS — Keep It Simple</title>
-  <!-- technical corner ticks -->
-  <g stroke="#9aa0ab" stroke-width="1.4" fill="none">
-    <path d="M14 26V14h12"/>
-    <path d="M254 14h12v12"/>
-    <path d="M266 124v12h-12"/>
-    <path d="M26 136H14v-12"/>
+  <defs>
+    <linearGradient id="ringGrad" x1="15%" y1="100%" x2="85%" y2="0%">
+      <stop offset="0%" stop-color="#152a4d"/>
+      <stop offset="100%" stop-color="#22c98f"/>
+    </linearGradient>
+    <linearGradient id="wordGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#152a4d"/>
+      <stop offset="55%" stop-color="#1c6e6d"/>
+      <stop offset="100%" stop-color="#22c98f"/>
+    </linearGradient>
+  </defs>
+
+  <circle cx="200" cy="170" r="145" fill="none" stroke="url(#ringGrad)" stroke-width="7"
+          stroke-linecap="round" stroke-dasharray="35.43 384.67 70.86 384.67 35.43" stroke-dashoffset="227.77"/>
+
+  <g fill="none" stroke="#22c98f" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M200,108 L200,58"/>
+    <path d="M196,92 L176,92 L176,66"/>
+    <path d="M204,92 L224,92 L224,66"/>
+    <path d="M192,98 L152,98 L152,78"/>
+    <path d="M208,98 L248,98 L248,78"/>
+    <path d="M186,106 L130,106 L130,96"/>
+    <path d="M214,106 L270,106 L270,96"/>
   </g>
-  <text x="140" y="82" dx="8" text-anchor="middle"
-        font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif"
-        font-size="58" font-weight="700" letter-spacing="16"
-        fill="#3b4bd8">KIS</text>
-  <g stroke="#2f3138" stroke-width="1.2">
-    <line x1="52" y1="106" x2="90" y2="106"/>
-    <line x1="190" y1="106" x2="228" y2="106"/>
+  <g fill="#fdfdfb" stroke="#22c98f" stroke-width="2.6">
+    <circle cx="200" cy="52" r="6"/>
+    <circle cx="176" cy="60" r="5.5"/>
+    <circle cx="224" cy="60" r="5.5"/>
+    <circle cx="152" cy="72" r="5"/>
+    <circle cx="248" cy="72" r="5"/>
+    <circle cx="130" cy="90" r="4.5"/>
+    <circle cx="270" cy="90" r="4.5"/>
   </g>
-  <text x="140" y="111" dx="2.5" text-anchor="middle"
-        font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif"
-        font-size="12.5" letter-spacing="5"
-        fill="#2f3138">KEEP IT SIMPLE</text>
+
+  <path d="M92,150 Q120,138 150,140 Q172,112 200,112 Q228,112 250,140 Q278,138 306,150 Q290,157 258,158 L142,158 Q110,157 92,150 Z"
+        fill="none" stroke="#152a4d" stroke-width="3.6" stroke-linejoin="round" stroke-linecap="round"/>
+  <g stroke="#22c98f" stroke-width="3" stroke-linecap="round">
+    <path d="M56,150 L114,150"/>
+    <path d="M66,158 L108,158"/>
+  </g>
+
+  <text x="200" y="272" font-family="'Segoe UI', Arial, sans-serif" font-weight="800"
+        font-size="104" letter-spacing="4" text-anchor="middle" fill="url(#wordGrad)">KIS</text>
+  <g fill="#22c98f">
+    <circle cx="298" cy="260" r="5"/>
+    <circle cx="312" cy="260" r="5"/>
+    <circle cx="326" cy="260" r="5"/>
+  </g>
+
+  <text x="200" y="352" font-family="'Segoe UI', Arial, sans-serif" font-weight="700"
+        font-size="27" letter-spacing="7" text-anchor="middle" fill="url(#wordGrad)">KEEP IT SIMPLE</text>
+
+  <g stroke="url(#ringGrad)" stroke-width="2.4" stroke-linecap="round">
+    <line x1="118" y1="382" x2="178" y2="382"/>
+    <line x1="222" y1="382" x2="282" y2="382"/>
+  </g>
+  <circle cx="200" cy="382" r="5.5" fill="none" stroke="url(#ringGrad)" stroke-width="2.4"/>
 </svg>
