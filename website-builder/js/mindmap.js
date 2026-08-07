@@ -1,9 +1,10 @@
 /* KIS site — the homepage mind map.
-   Renders the KIS LogoFrame and the four root pairs, and reproduces the
-   concept page's behaviour: activating a pair with children draws the
-   connecting arrows and reveals the child pairs (animated per the active
-   theme); activating a leaf — or the ↗ affordance on any pair — opens
-   that pair's page in a new tab. */
+   Renders the KIS LogoFrame and the four root pairs (no connector arrows
+   to the logo — the WarningRing already marks that relationship), and
+   reproduces the concept page's behaviour from there down: activating a
+   pair with children draws the connecting arrows and reveals the child
+   pairs (animated per the active theme); activating a leaf — or the ↗
+   affordance on any pair — opens that pair's page in a new tab. */
 
 (function () {
   var SVGNS = 'http://www.w3.org/2000/svg';
@@ -146,7 +147,6 @@
   function redrawAll() {
     Object.values(lines).forEach(function (l) { l.remove(); });
     lines = {};
-    drawLinks('kis', false);
     expanded.forEach(function (id) { drawLinks(id, false); });
   }
 
@@ -159,7 +159,6 @@
   els.kis = logo;
 
   SITE.childrenOf('kis').forEach(function (node, i) { addPair(node, i, true); });
-  requestAnimationFrame(function () { drawLinks('kis', true); });
 
   window.KIS.mountTopBar();
 
