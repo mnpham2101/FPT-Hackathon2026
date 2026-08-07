@@ -49,15 +49,15 @@
   --bg: #070b16;
   --ink: #e8f4ff;
   --muted: #8fa8c8;
-  --accent: #22e7ff;
+  --accent: #0a9fd4;
   --frame: #ff2fb2;
   --node-bg: rgba(10, 16, 30, 0.82);
-  --node-border: #2bd8ff;
+  --node-border: #0a9fd4;
   --connector: #ff2fb2;
   --card-shadow:
-    0 0 14px rgba(34, 231, 255, 0.3),
+    0 0 14px rgba(10, 159, 212, 0.4),
     0 4px 18px rgba(0, 0, 0, 0.55);
-  --neon-cyan: #22e7ff;
+  --neon-cyan: #0a9fd4;
   --neon-magenta: #ff2fb2;
 
   /* IVI vehicle-C risk-glow palette (CanvasWarningView.kt) — fixed brand
@@ -87,8 +87,8 @@
    graph paper. */
 [data-theme="blueprint"] .NodeCanvas {
   background-image:
-    linear-gradient(rgba(34, 231, 255, 0.07) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(34, 231, 255, 0.07) 1px, transparent 1px),
+    linear-gradient(rgba(10, 159, 212, 0.09) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(10, 159, 212, 0.09) 1px, transparent 1px),
     linear-gradient(rgba(255, 47, 178, 0.06) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 47, 178, 0.06) 1px, transparent 1px);
   background-size: 32px 32px, 32px 32px, 128px 128px, 128px 128px;
@@ -106,7 +106,7 @@
    plain box on the photo. */
 [data-theme="blueprint"] .Page {
   background: rgba(9, 14, 26, 0.86);
-  border: 1px solid rgba(43, 216, 255, 0.35);
+  border: 1px solid rgba(10, 159, 212, 0.45);
   border-radius: 18px;
   box-shadow: var(--card-shadow);
 }
@@ -117,8 +117,8 @@
 [data-theme="blueprint"] .PageLink--node,
 [data-theme="blueprint"] .PageLink--card {
   box-shadow:
-    0 0 12px rgba(34, 231, 255, 0.3),
-    inset 0 0 12px rgba(34, 231, 255, 0.12);
+    0 0 12px rgba(10, 159, 212, 0.4),
+    inset 0 0 12px rgba(10, 159, 212, 0.18);
 }
 
 [data-theme="blueprint"] .LogoFrame {
@@ -130,7 +130,7 @@
 /* Neon lettering: the glow is the sign, so the label carries it too. */
 [data-theme="blueprint"] .PageLink__label,
 [data-theme="blueprint"] .PageHeader__title h1 {
-  text-shadow: 0 0 10px rgba(34, 231, 255, 0.45);
+  text-shadow: 0 0 10px rgba(10, 159, 212, 0.55);
 }
 
 /* sketch — a pencil-sketch drawing of the FPT towers (assets/bg-sketch-board.jpg,
