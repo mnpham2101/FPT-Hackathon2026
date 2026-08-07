@@ -18,12 +18,40 @@
   var lines = {};    // "parent->child" -> <line>
   var expanded = new Set();
   var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var RING_GAP = 20; // px between WarningRing's edge and a root pair's edge
 
   /* ---- mounting ---- */
 
   function place(el, pos) {
     el.style.left = pos[0] + '%';
     el.style.top = pos[1] + '%';
+  }
+
+  /* Positions a direct child of 'kis' a fixed RING_GAP outside the
+     WarningRing's own measured box, rather than a hand-tuned percentage —
+     stays correct if the ring is ever resized. */
+  function placeOnRing(el, node) {
+    var ring = rectOf(els.kis);
+    var w = el.offsetWidth, h = el.offsetHeight;
+    var cx, cy;
+    if (node.ringSide === 'top') {
+      cx = ring.x + ring.w / 2;
+      cy = ring.y - RING_GAP - h / 2;
+    } else if (node.ringSide === 'left') {
+      cx = ring.x - RING_GAP - w / 2;
+      cy = ring.y + ring.h / 2;
+    } else {
+      cx = ring.x + ring.w + RING_GAP + w / 2;
+      cy = ring.y + ring.h * (node.ringAlign != null ? node.ringAlign : 0.5);
+    }
+    el.style.left = cx + 'px';
+    el.style.top = cy + 'px';
+  }
+
+  function positionRootPairs() {
+    SITE.childrenOf('kis').forEach(function (node) {
+      if (node.ringSide && els[node.id]) placeOnRing(els[node.id], node);
+    });
   }
 
   function addPair(node, index, animate) {
@@ -38,8 +66,8 @@
       onActivate: function () { onActivate(node); },
     });
     if (SITE.childrenOf(node.id).length) el.classList.add('PageLink--branch');
-    place(el, node.pos);
     canvas.append(el);
+    if (node.ringSide) placeOnRing(el, node); else place(el, node.pos);
     els[node.id] = el;
   }
 
@@ -145,6 +173,7 @@
   }
 
   function redrawAll() {
+    positionRootPairs();
     Object.values(lines).forEach(function (l) { l.remove(); });
     lines = {};
     expanded.forEach(function (id) { drawLinks(id, false); });
