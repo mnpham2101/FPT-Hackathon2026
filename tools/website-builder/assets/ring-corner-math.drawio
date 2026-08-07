@@ -1,0 +1,149 @@
+<mxfile host="app.diagrams.net" agent="claude" version="24.0.0">
+  <diagram name="Ring Corner Math" id="ring-corner-math">
+    <mxGraphModel dx="1300" dy="700" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1300" pageHeight="700" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- ===== Title ===== -->
+        <mxCell id="title" value="WarningRing corner placement: before vs after (js/mindmap.js placeOnRing)" style="text;html=1;align=center;verticalAlign=middle;fontSize=18;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="15" width="1220" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- ===== PANEL A: BEFORE ===== -->
+        <mxCell id="aTitle" value="BEFORE &#8212; measured from the sharp corner (wrong)" style="text;html=1;align=center;verticalAlign=middle;fontSize=14;fontStyle=1;fontColor=#B00020;" vertex="1" parent="1">
+          <mxGeometry x="130" y="60" width="440" height="26" as="geometry" />
+        </mxCell>
+
+        <mxCell id="aRing" value="" style="rounded=1;absoluteArcSize=1;arcSize=60;fillColor=#FFF8E1;strokeColor=#FFB300;strokeWidth=4;" vertex="1" parent="1">
+          <mxGeometry x="280" y="200" width="240" height="240" as="geometry" />
+        </mxCell>
+
+        <mxCell id="aP" value="" style="ellipse;fillColor=#D32F2F;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry x="275" y="195" width="10" height="10" as="geometry" />
+        </mxCell>
+        <mxCell id="aPLabel" value="P &#8212; sharp corner&#10;(where the OLD formula aimed)" style="text;html=1;align=center;verticalAlign=middle;fontSize=11;fontColor=#B00020;" vertex="1" parent="1">
+          <mxGeometry x="70" y="150" width="210" height="34" as="geometry" />
+        </mxCell>
+
+        <mxCell id="aC" value="" style="ellipse;fillColor=#1565C0;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry x="335" y="255" width="10" height="10" as="geometry" />
+        </mxCell>
+        <mxCell id="aCLabel" value="C &#8212; arc center&#10;= P + (r, r)" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontColor=#1565C0;" vertex="1" parent="1">
+          <mxGeometry x="348" y="252" width="130" height="34" as="geometry" />
+        </mxCell>
+
+        <mxCell id="aRLine" style="endArrow=none;html=1;dashed=1;strokeColor=#888888;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="280" y="200" as="sourcePoint" />
+            <mxPoint x="340" y="260" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="aRLabel" value="r" style="text;html=1;align=center;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="296" y="212" width="20" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="aCard" value="PageLink" style="rounded=1;arcSize=20;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2F3138;strokeWidth=1.5;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="135" y="115" width="110" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="aCardCorner" value="" style="ellipse;fillColor=#2F3138;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry x="240" y="160" width="10" height="10" as="geometry" />
+        </mxCell>
+
+        <!-- the two axis-wise GAP segments the old formula actually placed -->
+        <mxCell id="aGapX" style="endArrow=none;html=1;dashed=1;strokeColor=#888888;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="245" y="200" as="sourcePoint" />
+            <mxPoint x="280" y="200" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="aGapY" style="endArrow=none;html=1;dashed=1;strokeColor=#888888;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="245" y="165" as="sourcePoint" />
+            <mxPoint x="245" y="200" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="aGapLabel" value="GAP (35) on each axis&#10;&#8212; what the old formula intended" style="text;html=1;align=left;verticalAlign=middle;fontSize=10;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="65" y="205" width="175" height="34" as="geometry" />
+        </mxCell>
+
+        <!-- the real gap: card corner to the actual curve -->
+        <mxCell id="aActualGap" value="" style="endArrow=classic;html=1;dashed=1;strokeColor=#D32F2F;strokeWidth=2;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="245" y="165" as="sourcePoint" />
+            <mxPoint x="297.6" y="217.6" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="aActualGapLabel" value="actual gap &#8776; 74&#10;(not 35 &#8212; RING_GAP barely moves this!)" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontStyle=1;fontColor=#D32F2F;" vertex="1" parent="1">
+          <mxGeometry x="330" y="130" width="230" height="34" as="geometry" />
+        </mxCell>
+
+        <mxCell id="aFormula" value="Old formula:&#10;l = ring.w/2 + GAP + cardHalfW&#10;h = ring.h/2 + GAP + cardHalfH&#10;&#10;Measures GAP from the SHARP corner P &#8212;&#10;a point nothing is actually drawn at.&#10;Real distance to the curve:&#10;(r + GAP)&#183;&#8730;2 &#8722; r  &#8592; always bigger than GAP" style="text;html=1;align=left;verticalAlign=top;fontSize=12;strokeColor=#B00020;fillColor=#FFF5F5;rounded=1;spacing=10;" vertex="1" parent="1">
+          <mxGeometry x="130" y="470" width="440" height="150" as="geometry" />
+        </mxCell>
+
+        <!-- ===== PANEL B: AFTER ===== -->
+        <mxCell id="bTitle" value="AFTER &#8212; measured from the arc's curve (correct)" style="text;html=1;align=center;verticalAlign=middle;fontSize=14;fontStyle=1;fontColor=#2E7D32;" vertex="1" parent="1">
+          <mxGeometry x="730" y="60" width="440" height="26" as="geometry" />
+        </mxCell>
+
+        <mxCell id="bRing" value="" style="rounded=1;absoluteArcSize=1;arcSize=60;fillColor=#FFF8E1;strokeColor=#FFB300;strokeWidth=4;" vertex="1" parent="1">
+          <mxGeometry x="880" y="200" width="240" height="240" as="geometry" />
+        </mxCell>
+
+        <mxCell id="bP" value="" style="ellipse;fillColor=#D32F2F;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry x="875" y="195" width="10" height="10" as="geometry" />
+        </mxCell>
+        <mxCell id="bPLabel" value="P &#8212; sharp corner&#10;(no longer used as the target)" style="text;html=1;align=center;verticalAlign=middle;fontSize=11;fontColor=#888888;" vertex="1" parent="1">
+          <mxGeometry x="670" y="150" width="210" height="34" as="geometry" />
+        </mxCell>
+
+        <mxCell id="bC" value="" style="ellipse;fillColor=#1565C0;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry x="935" y="255" width="10" height="10" as="geometry" />
+        </mxCell>
+        <mxCell id="bCLabel" value="C &#8212; arc center&#10;= P + (r, r)" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontColor=#1565C0;" vertex="1" parent="1">
+          <mxGeometry x="948" y="252" width="130" height="34" as="geometry" />
+        </mxCell>
+
+        <mxCell id="bCard" value="PageLink" style="rounded=1;arcSize=20;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2F3138;strokeWidth=1.5;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="763" y="143" width="110" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="bCardCorner" value="" style="ellipse;fillColor=#2F3138;strokeColor=none;" vertex="1" parent="1">
+          <mxGeometry x="868" y="188" width="10" height="10" as="geometry" />
+        </mxCell>
+
+        <!-- C to the curve: radius r -->
+        <mxCell id="bRLine" style="endArrow=none;html=1;dashed=1;strokeColor=#888888;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="940" y="260" as="sourcePoint" />
+            <mxPoint x="897.6" y="217.6" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="bRLabel" value="r" style="text;html=1;align=center;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="905" y="230" width="20" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- curve to card corner: the new, exact gap -->
+        <mxCell id="bGapLine" value="" style="endArrow=classic;html=1;dashed=1;strokeColor=#2E7D32;strokeWidth=2;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="897.6" y="217.6" as="sourcePoint" />
+            <mxPoint x="872.8" y="192.8" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="bGapLabel" value="gap = GAP, exactly (35)&#10;&#8212; for any r" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontStyle=1;fontColor=#2E7D32;" vertex="1" parent="1">
+          <mxGeometry x="790" y="120" width="180" height="34" as="geometry" />
+        </mxCell>
+
+        <mxCell id="bFormula" value="New formula:&#10;l = ring.w/2 &#8722; r + (r+GAP)/&#8730;2 + cardHalfW&#10;h = ring.h/2 &#8722; r + (r+GAP)/&#8730;2 + cardHalfH&#10;&#10;Measures GAP from the ARC CENTER C,&#10;along the same 45&#176; diagonal the card&#10;already sits on. Distance from the card&#10;to the curve = GAP, exactly." style="text;html=1;align=left;verticalAlign=top;fontSize=12;strokeColor=#2E7D32;fillColor=#F3FFF3;rounded=1;spacing=10;" vertex="1" parent="1">
+          <mxGeometry x="730" y="470" width="440" height="150" as="geometry" />
+        </mxCell>
+
+        <!-- ===== Footer ===== -->
+        <mxCell id="footer" value="js/mindmap.js &#8212; placeOnRing() / ringRadius(). r = --ring-radius (40px live), GAP = RING_GAP. Diagram uses r=60, GAP=35 for legibility." style="text;html=1;align=center;verticalAlign=middle;fontSize=10;fontColor=#999999;" vertex="1" parent="1">
+          <mxGeometry x="130" y="640" width="1040" height="20" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
