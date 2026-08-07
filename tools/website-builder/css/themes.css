@@ -4,18 +4,23 @@
    animation mappings for the same theme names live in js/theme.js —
    add a theme in both places. */
 
-/* sketch — a hand-drawn sketchboard: paper, pencil lines and pen blue
-   (the concept PNG's look). --node-border/--connector are graphite
+/* sketch — a hand-drawn sketchboard: paper, pencil lines and a burnt
+   sienna colored pencil. --node-border/--connector are graphite
    pencil gray rather than ink-black, since those are the "drawn line"
    tokens (component boxes, connector arrows); --ink (body text) stays
    dark for legibility. --font-ui swaps to a handwriting face — see the
-   @font-face in base.css. */
+   @font-face in base.css.
+
+   --accent/--frame are sienna rather than the other themes' blue: the
+   accent paints the icon masks (components.css .PageLink__icon), and a
+   cool blue on cream paper reads as a foreign element beside the warm
+   pencil background and the amber/orange warning palette below. */
 [data-theme="sketch"] {
   --bg: #f6f4ee;
   --ink: #2f3138;
   --muted: #7a7f88;
-  --accent: #3b4bd8;
-  --frame: #3b4bd8;
+  --accent: #b0521f;
+  --frame: #b0521f;
   --node-bg: #fffdf8;
   --node-border: #4a4a46;
   --connector: #4a4a46;
