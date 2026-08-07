@@ -44,7 +44,14 @@
    WarningRing's own pixel geometry) rather than a rotated conic-gradient:
    combining transform:rotate() with the border-only mask trick clipped
    incorrectly in testing, leaking a diagonal wedge through the middle of
-   the ring. offset-path has no such clipping step to go wrong. */
+   the ring. offset-path has no such clipping step to go wrong.
+
+   That outline is SVG path data, and CSS custom properties can't be
+   substituted inside a quoted string (var() only works in a property's
+   own value, not string literal content) — so --ring-w/--ring-h/
+   --ring-radius can't drive it directly. js/mindmap.js's fitGlobPath()
+   builds it instead, from the ring's actual measured box, and sets
+   .WarningRing__glob's offset-path at boot and on every resize. */
 
 .WarningRing {
   --ring-w: 450px;
@@ -82,10 +89,8 @@
   border-radius: 50%;
   background: var(--warn-amber);
   box-shadow: 0 0 10px 3px var(--warn-amber);
-  /* Traces WarningRing's own outline clockwise from just right of the
-     top-left corner. path() can't read --ring-w/--ring-h/--ring-radius —
-     these coordinates (650/350/40) must be changed by hand to match. */
-  offset-path: path("M 40,0 H 610 A 40,40 0 0 1 650,40 V 310 A 40,40 0 0 1 610,350 H 40 A 40,40 0 0 1 0,310 V 40 A 40,40 0 0 1 40,0 Z");
+  /* offset-path is set by js/mindmap.js's fitGlobPath() — see the
+     comment above .WarningRing for why it can't live here as CSS. */
   offset-distance: 0%;
   offset-rotate: auto;
   animation: kis-glob-move 7s linear infinite, kis-glob-color 7s linear infinite;

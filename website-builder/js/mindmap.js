@@ -51,6 +51,35 @@
     });
   }
 
+  /* Rounded-rect outline path, clockwise from just right of the top-left
+     corner — the same construction as CSS's own WarningRing::before mask,
+     expressed as SVG path data instead of a border. Six straight runs
+     (each edge shortened by r at both ends) joined by four quarter-circle
+     arcs. Building this from measured w/h/r, instead of a literal string
+     hand-edited in CSS, is what keeps .WarningRing__glob's offset-path in
+     sync if the ring is ever resized. */
+  function ringOutlinePath(w, h, r) {
+    return 'path("' +
+      'M ' + r + ',0 ' +
+      'H ' + (w - r) + ' ' +
+      'A ' + r + ',' + r + ' 0 0 1 ' + w + ',' + r + ' ' +
+      'V ' + (h - r) + ' ' +
+      'A ' + r + ',' + r + ' 0 0 1 ' + (w - r) + ',' + h + ' ' +
+      'H ' + r + ' ' +
+      'A ' + r + ',' + r + ' 0 0 1 0,' + (h - r) + ' ' +
+      'V ' + r + ' ' +
+      'A ' + r + ',' + r + ' 0 0 1 ' + r + ',0 Z' +
+      '")';
+  }
+
+  function fitGlobPath() {
+    var glob = els.kis.querySelector('.WarningRing__glob');
+    if (!glob) return;
+    var ring = rectOf(els.kis);
+    var radius = parseFloat(getComputedStyle(els.kis).getPropertyValue('--ring-radius')) || 0;
+    glob.style.offsetPath = ringOutlinePath(ring.w, ring.h, radius);
+  }
+
   function addPair(node, index, animate) {
     var anim = window.KIS.theme.get().animation;
     var el = window.KIS.createPageLink({
@@ -170,6 +199,7 @@
   }
 
   function redrawAll() {
+    fitGlobPath();
     positionRootPairs();
     Object.values(lines).forEach(function (l) { l.remove(); });
     lines = {};
@@ -183,6 +213,7 @@
   place(logo, kis.pos);
   canvas.append(logo);
   els.kis = logo;
+  fitGlobPath();
 
   SITE.childrenOf('kis').forEach(function (node, i) { addPair(node, i, true); });
 
