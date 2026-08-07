@@ -45,13 +45,6 @@ window.KIS.SITE = {
     { id: 'module-design', parent: 'design', label: 'Module Design', icon: 'module-design',
       href: 'pages/module-design.html', pos: [14, 82],
       summary: 'The per-module designs: each component’s responsibility, its seams, and the layer it belongs to.' },
-    { id: 'presentation-style', parent: 'module-design', label: 'Presentation Style', icon: 'presentation-style',
-      href: 'pages/presentation-style.html', pos: [9, 86],
-      summary: 'How module designs are presented as slides: the deck conventions and the templates.' },
-    { id: 'article-style', parent: 'module-design', label: 'Article Style', icon: 'article-style',
-      href: 'pages/article-style.html', pos: [25, 80],
-      summary: 'How module designs are written as documents: the report structure and the writing rules.' },
-
     { id: 'delivery', parent: 'kis', label: 'Delivery', icon: 'delivery',
       href: 'pages/delivery.html', corner: 'br',
       summary: 'What shipping looks like: how the work is verified, deployed, and proven done.' },
