@@ -91,6 +91,32 @@ window.KIS.iconMaskUrl = function (name) {
   return 'url("../' + window.KIS.theme.get().assets.iconDir + '/' + name + '.svg")';
 };
 
+/* Filter defs referenced by components.css as filter:url(#id) — CSS
+   filter() can't be declared inline, and components.css is a static
+   file with no per-page templating, so the <filter> elements are
+   injected here instead, once, before anything that might reference
+   them gets created. Applied only under [data-theme="sketch"]
+   (components.css decides that); the elements themselves are harmless
+   and unused under other themes. */
+(function () {
+  var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('width', '0');
+  svg.setAttribute('height', '0');
+  svg.style.position = 'absolute';
+  svg.innerHTML =
+    '<defs>' +
+      '<filter id="kis-sketchy-icon" x="-60%" y="-60%" width="220%" height="220%">' +
+        '<feTurbulence type="fractalNoise" baseFrequency="0.07" numOctaves="1" seed="4" result="n"/>' +
+        '<feDisplacementMap in="SourceGraphic" in2="n" scale="2.5"/>' +
+      '</filter>' +
+      '<filter id="kis-sketchy-border" x="-60%" y="-60%" width="220%" height="220%">' +
+        '<feTurbulence type="fractalNoise" baseFrequency="0.012" numOctaves="1" seed="9" result="n"/>' +
+        '<feDisplacementMap in="SourceGraphic" in2="n" scale="2.5"/>' +
+      '</filter>' +
+    '</defs>';
+  document.body.appendChild(svg);
+})();
+
 (function () {
   var saved = null;
   try { saved = localStorage.getItem('kis-theme'); } catch (e) { /* ignore */ }

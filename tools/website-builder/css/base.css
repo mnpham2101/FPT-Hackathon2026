@@ -2,6 +2,18 @@
    Token values here are the defaults (sketch theme); themes.css overrides
    them per [data-theme]. Components never hardcode a color — tokens only. */
 
+/* Patrick Hand (SIL OFL) — self-hosted from assets/fonts/, the sketch
+   theme's --font-ui (themes.css). Downloaded once from Google Fonts;
+   the shipped site makes no font-CDN request at runtime. Latin subset
+   only (covers this site's copy). */
+@font-face {
+  font-family: 'Patrick Hand';
+  src: url('../assets/fonts/patrick-hand.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   --bg: #f6f4ee;
   --ink: #2f3138;

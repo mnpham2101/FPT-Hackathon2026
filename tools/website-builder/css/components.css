@@ -189,6 +189,7 @@
 }
 
 .PageLink--card {
+  position: relative;
   padding: 16px;
   border-radius: 14px;
   background: var(--node-bg);
@@ -201,6 +202,30 @@
   border-color: var(--accent);
 }
 
+/* Sketch theme: the pill's own border becomes invisible (width/style
+   kept, so kis-node-hover-glow's animated border-color above still
+   shows something on hover) — the visible resting border is a ::before
+   layer instead, run through the turbulence filter injected by
+   theme.js, so it reads as a wobbly pencil line rather than a ruled
+   one. Irregular border-radius values (not a uniform corner) add to
+   the hand-drawn read even where the filter's displacement is subtle. */
+[data-theme="sketch"] .PageLink--node,
+[data-theme="sketch"] .PageLink--card {
+  border-color: transparent;
+  border-radius: 16px 12px 18px 11px / 11px 18px 12px 16px;
+}
+
+[data-theme="sketch"] .PageLink--node::before,
+[data-theme="sketch"] .PageLink--card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1.5px solid var(--node-border);
+  border-radius: inherit;
+  filter: url(#kis-sketchy-border);
+  pointer-events: none;
+}
+
 .PageLink__icon {
   width: 26px;
   height: 26px;
@@ -208,6 +233,13 @@
   background: var(--accent);
   -webkit-mask: var(--icon-url) center / contain no-repeat;
   mask: var(--icon-url) center / contain no-repeat;
+}
+
+/* Sketch theme: wobble the icon's silhouette so its clean vector lines
+   read as hand-drawn — same turbulence-filter technique as the node
+   border above, a subtler displacement since icons are much smaller. */
+[data-theme="sketch"] .PageLink__icon {
+  filter: url(#kis-sketchy-icon);
 }
 
 .PageLink__label {
