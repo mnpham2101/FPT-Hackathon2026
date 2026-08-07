@@ -198,30 +198,12 @@
   white-space: normal;
 }
 
+/* Hidden rather than deleted from the DOM: components.js still relies on
+   this element existing to forward --card clicks (el.addEventListener
+   ('click', () => open.click())) and to stopPropagation for --node
+   branch clicks. display:none keeps both working with nothing visible. */
 .PageLink__open {
-  margin-left: 2px;
-  text-decoration: none;
-  font-size: 0.85rem;
-  color: var(--muted);
-  border: 1px solid transparent;
-  border-radius: 6px;
-  padding: 0 4px;
-}
-
-.PageLink__open:hover {
-  color: var(--accent);
-  border-color: var(--accent);
-}
-
-/* Branch nodes advertise that they expand; expanded ones that they collapse */
-.PageLink--branch .PageLink__label::after {
-  content: " +";
-  color: var(--muted);
-}
-
-.PageLink--node.is-expanded .PageLink__label::after {
-  content: " \2212";
-  color: var(--muted);
+  display: none;
 }
 
 /* ---- CardGrid — layout for PageLink--card lists on node pages ---- */
