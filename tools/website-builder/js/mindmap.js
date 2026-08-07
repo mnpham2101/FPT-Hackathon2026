@@ -1,14 +1,14 @@
 /* KIS site — the homepage mind map.
-   Renders the KIS LogoFrame and the four root pairs (no connector arrows
+   Renders the KIS LogoFrame and the four root nodes (no connector arrows
    to the logo — the WarningRing already marks that relationship), and
    reproduces the concept page's behaviour from there down: activating a
-   pair with children draws the connecting arrows and reveals the child
-   pairs (animated per the active theme); activating a leaf — or the ↗
-   affordance on any pair — opens that pair's page in a new tab. */
+   node with children draws the connecting arrows and reveals the child
+   nodes (animated per the active theme), activating again collapses
+   them; activating a leaf node opens its page in a new tab. */
 
 (function () {
   var SVGNS = 'http://www.w3.org/2000/svg';
-  var GAP = 6; // px between a connector end and the pair's border
+  var GAP = 6; // px between a connector end and the node's border
 
   var canvas = document.getElementById('canvas');
   var svg = document.getElementById('connectors');
@@ -18,7 +18,7 @@
   var lines = {};    // "parent->child" -> <line>
   var expanded = new Set();
   var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var RING_GAP = 0; // px between WarningRing's edge and a root pair's edge
+  var RING_GAP = 0; // px between WarningRing's edge and a root node's edge
 
   /* ---- mounting ---- */
 
@@ -57,7 +57,7 @@
     el.style.top = (cy0 + signY * h) + 'px';
   }
 
-  function positionRootPairs() {
+  function positionRootNodes() {
     SITE.childrenOf('kis').forEach(function (node) {
       if (node.corner && els[node.id]) placeOnRing(els[node.id], node);
     });
@@ -91,7 +91,7 @@
     glob.style.offsetPath = ringOutlinePath(ring.w, ring.h, ringRadius());
   }
 
-  function addPair(node, index, animate) {
+  function addNode(node, index, animate) {
     var anim = window.KIS.theme.get().animation;
     var el = window.KIS.createPageLink({
       id: node.id,
@@ -122,7 +122,7 @@
   function expand(id) {
     expanded.add(id);
     els[id].classList.add('is-expanded');
-    SITE.childrenOf(id).forEach(function (child, i) { addPair(child, i, true); });
+    SITE.childrenOf(id).forEach(function (child, i) { addNode(child, i, true); });
     requestAnimationFrame(function () { drawLinks(id, true); });
   }
 
@@ -139,7 +139,7 @@
 
   /* ---- connector geometry ----
      Layout geometry (offset*) ignores CSS transforms, so rects are stable
-     even while a pair's enter animation is still scaling it. */
+     even while a node's enter animation is still scaling it. */
 
   function rectOf(el) {
     return {
@@ -211,7 +211,7 @@
 
   function redrawAll() {
     fitGlobPath();
-    positionRootPairs();
+    positionRootNodes();
     Object.values(lines).forEach(function (l) { l.remove(); });
     lines = {};
     expanded.forEach(function (id) { drawLinks(id, false); });
@@ -226,7 +226,7 @@
   els.kis = logo;
   fitGlobPath();
 
-  SITE.childrenOf('kis').forEach(function (node, i) { addPair(node, i, true); });
+  SITE.childrenOf('kis').forEach(function (node, i) { addNode(node, i, true); });
 
   window.KIS.mountTopBar();
 

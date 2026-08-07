@@ -2,7 +2,7 @@
    A theme is one name mapping to three things:
      - a CSS variable set  (css/themes.css, matched by [data-theme=name])
      - an asset set        (which logo file, where the icons live)
-     - an animation set    (how connectors draw, how pairs enter)
+     - an animation set    (how connectors draw, how nodes enter)
    Components and the mind map read the active theme through KIS.theme.get();
    swapping or adding a theme means editing KIS.THEMES + themes.css only. */
 

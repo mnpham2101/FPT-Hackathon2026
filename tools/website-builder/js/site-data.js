@@ -1,6 +1,6 @@
 /* KIS site — the site graph, transcribed from the concept page (Designer.png).
-   One entry per pair (icon + text). `parent` wires the mind-map edges;
-   `pos` is the pair's center on the homepage canvas in [x%, y%].
+   One entry per node (icon + text). `parent` wires the mind-map edges;
+   `pos` is the node's center on the homepage canvas in [x%, y%].
 
    The four direct children of 'kis' sit at the WarningRing's corners
    instead: `corner` ('tl'/'tr'/'bl'/'br') places them an L-shaped offset

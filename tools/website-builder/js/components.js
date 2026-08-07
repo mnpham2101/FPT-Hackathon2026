@@ -19,7 +19,7 @@ window.KIS.applyEnter = function (el, animation) {
   }
 };
 
-/* PageLink — an icon + text pair representing a navigable page.
+/* PageLink — an icon + text node representing a navigable page.
 
    Input props (all optional except label/image):
      id          — written to the element's data-id, for callers that

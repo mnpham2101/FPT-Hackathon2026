@@ -13,7 +13,7 @@
   overflow: hidden;
 }
 
-/* ---- ConnectorLayer — SVG lines/arrows between pairs ---- */
+/* ---- ConnectorLayer — SVG lines/arrows between nodes ---- */
 
 .ConnectorLayer {
   position: absolute;
@@ -139,7 +139,7 @@
   height: auto;
 }
 
-/* ---- PageLink — an icon + text pair linking to a page ----
+/* ---- PageLink — an icon + text node linking to a page ----
    Variants: --node (positioned on the NodeCanvas), --card (page lists). */
 
 .PageLink {
