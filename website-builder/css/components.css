@@ -47,8 +47,8 @@
    the ring. offset-path has no such clipping step to go wrong. */
 
 .WarningRing {
-  --ring-w: 450px;
-  --ring-h: 300px;
+  --ring-w: 650px;
+  --ring-h: 350px;
   --ring-radius: 40px;
   position: absolute;
   transform: translate(-50%, -50%);
