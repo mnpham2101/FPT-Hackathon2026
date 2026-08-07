@@ -91,7 +91,12 @@
     glob.style.offsetPath = ringOutlinePath(ring.w, ring.h, ringRadius());
   }
 
-  function addNode(node, index, animate) {
+  /* `animate` runs the theme's enter animation on mount — how the four
+     root nodes arrive at boot. A child revealed by an expanding arrow
+     passes `pending` instead: it mounts hidden, so it can be measured
+     for the connector geometry, and revealNode() below plays its enter
+     animation once that arrow has finished growing. */
+  function addNode(node, index, animate, pending) {
     var anim = window.KIS.theme.get().animation;
     var el = window.KIS.createPageLink({
       id: node.id,
@@ -103,9 +108,18 @@
       onActivate: function () { onActivate(node); },
     });
     if (SITE.childrenOf(node.id).length) el.classList.add('PageLink--branch');
+    if (pending) el.classList.add('is-pending');
     canvas.append(el);
     if (node.corner) placeOnRing(el, node); else place(el, node.pos);
     els[node.id] = el;
+  }
+
+  function revealNode(el, animate) {
+    if (!el || !el.classList.contains('is-pending')) return;
+    el.classList.remove('is-pending');
+    if (animate && !reduced) {
+      window.KIS.applyEnter(el, { enter: window.KIS.theme.get().animation.nodeEnter });
+    }
   }
 
   /* ---- interaction ---- */
@@ -122,7 +136,7 @@
   function expand(id) {
     expanded.add(id);
     els[id].classList.add('is-expanded');
-    SITE.childrenOf(id).forEach(function (child, i) { addNode(child, i, true); });
+    SITE.childrenOf(id).forEach(function (child, i) { addNode(child, i, false, true); });
     requestAnimationFrame(function () { drawLinks(id, true); });
   }
 
@@ -164,11 +178,63 @@
     return { x: c.x + dx * t, y: c.y + dy * t };
   }
 
+  /* ---- arrow growth ----
+     The expansion is the line's endpoint moving out from the parent's
+     edge to the child. Only the shaft grows: the arrowhead and the child
+     pill are what the arrival produces, so the motion reads as the
+     parent reaching out and putting the child there.
+
+     A stroke-dashoffset reveal cannot express this. It moves no
+     endpoint, so a marker-end sits at the destination from the first
+     frame — markers are placed at a shape's geometric vertices and
+     ignore the dash pattern entirely. That is why the arrowhead used to
+     appear before its line arrived.
+
+     A <line>'s x1/y1/x2/y2 are plain attributes, not CSS geometry
+     properties like a circle's cx/r, so no transition or Web Animation
+     can drive them. The rAF tween below steps the attribute itself, and
+     carries its own easing for the same reason — anim.lineEasing names a
+     CSS timing function nothing here can hand to the browser. */
+
+  var EASINGS = {
+    linear: function (t) { return t; },
+    'ease-out': function (t) { return 1 - Math.pow(1 - t, 3); },
+  };
+
+  function growLine(line, from, to, opts) {
+    var ease = EASINGS[opts.easing] || EASINGS['ease-out'];
+    var dx = to.x - from.x, dy = to.y - from.y;
+    var start = null;
+
+    function step(now) {
+      // collapsed, or redrawn by a resize or theme swap, mid-flight
+      if (!line.isConnected) return;
+      if (start === null) start = now;
+      var elapsed = now - start;
+      if (elapsed < opts.delay) { requestAnimationFrame(step); return; }
+
+      line.style.opacity = '';
+      var t = Math.min(1, (elapsed - opts.delay) / opts.duration);
+      line.setAttribute('x2', from.x + dx * ease(t));
+      line.setAttribute('y2', from.y + dy * ease(t));
+      if (t < 1) requestAnimationFrame(step);
+      else opts.onArrive();
+    }
+
+    // Zero-length until its turn comes, and hidden until then: a stub at
+    // the parent's edge would otherwise sit there as a visible dot for
+    // the length of the stagger delay.
+    line.style.opacity = '0';
+    line.setAttribute('x2', from.x);
+    line.setAttribute('y2', from.y);
+    requestAnimationFrame(step);
+  }
+
   function drawLinks(parentId, animate) {
     var anim = window.KIS.theme.get().animation;
     var pRect = rectOf(els[parentId]);
 
-    SITE.childrenOf(parentId).forEach(function (child) {
+    SITE.childrenOf(parentId).forEach(function (child, i) {
       if (!els[child.id]) return;
       var key = parentId + '->' + child.id;
       if (lines[key]) { lines[key].remove(); delete lines[key]; }
@@ -181,27 +247,26 @@
       line.setAttribute('class', 'Connector');
       line.setAttribute('x1', from.x); line.setAttribute('y1', from.y);
       line.setAttribute('x2', to.x); line.setAttribute('y2', to.y);
-      line.setAttribute('marker-end', 'url(#kis-arrow)');
       if (anim.connectorDash) line.setAttribute('stroke-dasharray', anim.connectorDash);
 
+      /* Every theme expands the arrow the same way; only its timing and
+         dash pattern still differ. The redraws that are not expansions —
+         a resize, a theme swap — land the line complete, since their
+         children are already on screen. */
+      function arrive() {
+        line.setAttribute('marker-end', 'url(#kis-arrow)');
+        revealNode(els[child.id], animate);
+      }
+
       if (animate && !reduced) {
-        if (anim.connectorDash) {
-          // dashed themes fade the line in
-          line.style.opacity = '0';
-          line.style.transition = 'opacity ' + anim.lineDraw + 'ms ' + anim.lineEasing;
-          requestAnimationFrame(function () {
-            requestAnimationFrame(function () { line.style.opacity = '1'; });
-          });
-        } else {
-          // solid themes draw the line like a pen stroke
-          var len = Math.hypot(to.x - from.x, to.y - from.y);
-          line.setAttribute('stroke-dasharray', len);
-          line.setAttribute('stroke-dashoffset', len);
-          line.style.transition = 'stroke-dashoffset ' + anim.lineDraw + 'ms ' + anim.lineEasing;
-          requestAnimationFrame(function () {
-            requestAnimationFrame(function () { line.setAttribute('stroke-dashoffset', 0); });
-          });
-        }
+        growLine(line, from, to, {
+          duration: anim.lineDraw,
+          easing: anim.lineEasing,
+          delay: i * anim.nodeStagger,
+          onArrive: arrive,
+        });
+      } else {
+        arrive();
       }
 
       svg.append(line);

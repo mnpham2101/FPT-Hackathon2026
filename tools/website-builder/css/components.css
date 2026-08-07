@@ -189,6 +189,14 @@
   }
 }
 
+/* A child mounted but not yet revealed — its arrow is still growing
+   towards it (js/mindmap.js). visibility rather than display, so the pill
+   keeps its box and the connector can be measured against it before
+   anyone can see it. */
+.PageLink.is-pending {
+  visibility: hidden;
+}
+
 .PageLink--card {
   position: relative;
   padding: 16px;
