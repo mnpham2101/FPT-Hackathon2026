@@ -202,28 +202,87 @@
   border-color: var(--accent);
 }
 
-/* Sketch theme: the pill's own border becomes invisible (width/style
-   kept, so kis-node-hover-glow's animated border-color above still
-   shows something on hover) — the visible resting border is a ::before
-   layer instead, run through the turbulence filter injected by
-   theme.js, so it reads as a wobbly pencil line rather than a ruled
-   one. Irregular border-radius values (not a uniform corner) add to
-   the hand-drawn read even where the filter's displacement is subtle. */
-[data-theme="sketch"] .PageLink--node,
-[data-theme="sketch"] .PageLink--card {
-  border-color: transparent;
-  border-radius: 16px 12px 18px 11px / 11px 18px 12px 16px;
+/* ---- SketchOutline — the hand-drawn border, drawn by
+   js/components.js's attachSketchOutline() into every PageLink.
+
+   Hidden by default: only the sketch theme wants a wobbly line, and
+   every other theme keeps the element's own ruled CSS border. Under
+   sketch that border goes transparent (width/style kept, so the box
+   still reserves the same space) and these two paths carry the visible
+   edge — one stroke plus a fainter offset echo, the double-line a pen
+   leaves when a shape is drawn over twice.
+
+   --sketch-amp is how far the path wanders off the true outline, in px;
+   attachSketchOutline() reads it and insets the path by the same amount
+   so the wobble rides the pill's background edge instead of spilling
+   past it. */
+
+.SketchOutline {
+  display: none;
+  position: absolute;
+  left: 0;
+  top: 0;
+  overflow: visible;
+  pointer-events: none;
 }
 
-[data-theme="sketch"] .PageLink--node::before,
-[data-theme="sketch"] .PageLink--card::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border: 1.5px solid var(--node-border);
-  border-radius: inherit;
-  filter: url(#kis-sketchy-border);
-  pointer-events: none;
+.SketchOutline path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.SketchOutline__echo {
+  opacity: 0.42;
+}
+
+/* No drop shadow under sketch: the shadow is cast by the element's own
+   ruled rounded rect, so it traces a clean edge the wobbly stroke does
+   not follow — and pencil on paper casts none anyway. */
+[data-theme="sketch"] .PageLink--node,
+[data-theme="sketch"] .PageLink--card {
+  --sketch-amp: 1.6;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+[data-theme="sketch"] .PageLink .SketchOutline {
+  display: block;
+  color: var(--node-border);
+}
+
+/* The resting border is an SVG stroke under sketch, so the hover pulse
+   drives the outline's color rather than kis-node-hover-glow's
+   border-color (which has nothing visible to tint here). */
+[data-theme="sketch"] .PageLink--node:hover .SketchOutline {
+  animation: kis-sketch-hover-glow 1.4s ease-in-out infinite alternate;
+}
+
+@keyframes kis-sketch-hover-glow {
+  from {
+    color: var(--warn-amber);
+  }
+  to {
+    color: var(--warn-red);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-theme="sketch"] .PageLink--node:hover .SketchOutline {
+    animation: none;
+    color: var(--warn-orange);
+  }
+}
+
+/* Patrick Hand ships one weight; asking for 600 makes the browser
+   synthesise bold, which thickens the strokes until the face reads as a
+   heavy sans rather than handwriting. Sketch takes the real 400 and
+   recovers the lost presence with size instead. */
+[data-theme="sketch"] .PageLink__label {
+  font-weight: 400;
+  font-size: 1.05rem;
 }
 
 .PageLink__icon {
@@ -233,13 +292,6 @@
   background: var(--accent);
   -webkit-mask: var(--icon-url) center / contain no-repeat;
   mask: var(--icon-url) center / contain no-repeat;
-}
-
-/* Sketch theme: wobble the icon's silhouette so its clean vector lines
-   read as hand-drawn — same turbulence-filter technique as the node
-   border above, a subtler displacement since icons are much smaller. */
-[data-theme="sketch"] .PageLink__icon {
-  filter: url(#kis-sketchy-icon);
 }
 
 .PageLink__label {

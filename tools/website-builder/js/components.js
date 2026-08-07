@@ -10,6 +10,146 @@
 
 window.KIS = window.KIS || {};
 
+var SVGNS = 'http://www.w3.org/2000/svg';
+
+/* ---- hand-drawn outlines ----
+   A component box's sketch border is a rounded-rect path whose points are
+   pushed off the true outline by smooth noise, then stroked twice. The
+   wobble is in the geometry, so every stroke stays continuous — displacing
+   a rasterized 1.5px CSS border through an SVG turbulence filter (the
+   previous approach) thinned it wherever the noise gradient was steep and
+   tore it into visibly broken segments. */
+
+/* xorshift32, seeded from a string so one pill's wobble never changes */
+function hashSeed(str) {
+  var h = 2166136261;
+  for (var i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+/* Wrap-around smooth noise over t in [0,1): `count` random knots, cosine
+   interpolated. Low knot count is what keeps the wobble a gentle wave
+   rather than the per-pixel jitter that reads as a ragged line. */
+function noiseLoop(seed, count) {
+  var s = seed >>> 0 || 1;
+  var knots = [];
+  for (var i = 0; i < count; i++) {
+    s ^= s << 13; s >>>= 0;
+    s ^= s >>> 17;
+    s ^= s << 5; s >>>= 0;
+    knots.push(s / 4294967296 * 2 - 1);
+  }
+  return function (t) {
+    var x = t * count;
+    var i0 = Math.floor(x) % count;
+    var f = x - Math.floor(x);
+    var m = (1 - Math.cos(f * Math.PI)) / 2;
+    return knots[i0] * (1 - m) + knots[(i0 + 1) % count] * m;
+  };
+}
+
+/* Point and outward normal at arc-length d along a w×h rounded rect of
+   corner radius r, walking clockwise from the top edge. */
+function outlineAt(d, w, h, r) {
+  var sx = Math.max(w - 2 * r, 0);
+  var sy = Math.max(h - 2 * r, 0);
+  var arc = Math.PI * r / 2;
+  var u;
+
+  if ((u = d) < sx) return [r + u, 0, 0, -1];
+  if ((u = d - sx) < arc) {
+    var a1 = -Math.PI / 2 + u / r;
+    return [w - r + r * Math.cos(a1), r + r * Math.sin(a1), Math.cos(a1), Math.sin(a1)];
+  }
+  if ((u = d - sx - arc) < sy) return [w, r + u, 1, 0];
+  if ((u = d - sx - arc - sy) < arc) {
+    var a2 = u / r;
+    return [w - r + r * Math.cos(a2), h - r + r * Math.sin(a2), Math.cos(a2), Math.sin(a2)];
+  }
+  if ((u = d - sx - 2 * arc - sy) < sx) return [w - r - u, h, 0, 1];
+  if ((u = d - 2 * sx - 2 * arc - sy) < arc) {
+    var a3 = Math.PI / 2 + u / r;
+    return [r + r * Math.cos(a3), h - r + r * Math.sin(a3), Math.cos(a3), Math.sin(a3)];
+  }
+  if ((u = d - 2 * sx - 3 * arc - sy) < sy) return [0, h - r - u, -1, 0];
+  var a4 = Math.PI + (d - 2 * sx - 3 * arc - 2 * sy) / r;
+  return [r + r * Math.cos(a4), r + r * Math.sin(a4), Math.cos(a4), Math.sin(a4)];
+}
+
+/* Path data for one wobbled outline.
+
+   The displacement is outward-only — [0, amp] rather than [-amp, +amp].
+   A path allowed inward exposes a crescent of the box's own clean
+   rounded-rect background outside the stroke, and that ruled arc beside
+   a hand-drawn line is more conspicuous than the wobble is. Staying on
+   or outside the true outline keeps the stroke covering that edge the
+   whole way round. */
+function sketchPath(w, h, radius, seed, amp) {
+  var r = Math.max(Math.min(radius, Math.min(w, h) / 2), 1);
+  var len = 2 * Math.max(w - 2 * r, 0) + 2 * Math.max(h - 2 * r, 0) + 2 * Math.PI * r;
+  var n = Math.max(40, Math.round(len / 7));
+  var noise = noiseLoop(seed, 11);
+  var pts = [];
+
+  for (var i = 0; i < n; i++) {
+    var t = i / n;
+    var p = outlineAt(t * len, w, h, r);
+    var o = (noise(t) + 1) / 2 * amp;
+    pts.push([p[0] + p[2] * o, p[1] + p[3] * o]);
+  }
+
+  /* Quadratic through every sampled point, each segment ending at the
+     midpoint of the next pair — the standard closed-loop smoothing, so
+     the corners stay curves rather than a visible facet chain. */
+  function mid(a, b) {
+    return ((a[0] + b[0]) / 2).toFixed(2) + ',' + ((a[1] + b[1]) / 2).toFixed(2);
+  }
+  var d = 'M' + mid(pts[n - 1], pts[0]);
+  for (var j = 0; j < n; j++) {
+    var cur = pts[j];
+    d += 'Q' + cur[0].toFixed(2) + ',' + cur[1].toFixed(2) + ' ' + mid(cur, pts[(j + 1) % n]);
+  }
+  return d + 'Z';
+}
+
+/* Attach a two-stroke sketch outline to a component box. The paths track
+   the element's measured size, so a relabelled or reflowed pill redraws
+   itself; the CSS decides whether the outline is visible (sketch theme
+   only) and what it is stroked with. */
+window.KIS.attachSketchOutline = function (el, seed) {
+  var svg = document.createElementNS(SVGNS, 'svg');
+  svg.setAttribute('class', 'SketchOutline');
+  svg.setAttribute('aria-hidden', 'true');
+
+  var stroke = document.createElementNS(SVGNS, 'path');
+  var echo = document.createElementNS(SVGNS, 'path');
+  echo.setAttribute('class', 'SketchOutline__echo');
+  svg.append(stroke, echo);
+  el.prepend(svg);
+
+  function draw() {
+    var w = el.offsetWidth, h = el.offsetHeight;
+    if (!w || !h) return;
+    var cs = getComputedStyle(el);
+    var radius = parseFloat(cs.borderTopLeftRadius) || 14;
+    var amp = parseFloat(cs.getPropertyValue('--sketch-amp')) || 1.6;
+    svg.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
+    svg.setAttribute('width', w);
+    svg.setAttribute('height', h);
+    /* Both strokes share a seed, so the echo tracks the main line and
+       drifts off it by the difference in amplitude — a shape drawn over
+       twice. Independent seeds made the two wander apart into a smudge. */
+    stroke.setAttribute('d', sketchPath(w, h, radius, seed, amp));
+    echo.setAttribute('d', sketchPath(w, h, radius, seed, amp * 0.4));
+  }
+
+  draw();
+  if (window.ResizeObserver) new ResizeObserver(draw).observe(el);
+};
+
 /* Apply the shared animation prop to any component element */
 window.KIS.applyEnter = function (el, animation) {
   var anim = animation || {};
@@ -52,6 +192,7 @@ window.KIS.createPageLink = function (props) {
   label.textContent = props.label;
 
   el.append(icon, label);
+  window.KIS.attachSketchOutline(el, hashSeed(props.id || props.label || 'kis'));
 
   /* 'card' pills navigate to href on their own; any other style leaves
      that decision to onActivate, below, if the caller passed one. */
