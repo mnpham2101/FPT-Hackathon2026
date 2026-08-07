@@ -27,18 +27,30 @@
     el.style.top = pos[1] + '%';
   }
 
+  function ringRadius() {
+    return parseFloat(getComputedStyle(els.kis).getPropertyValue('--ring-radius')) || 0;
+  }
+
   /* Positions a direct child of 'kis' at one of WarningRing's four
-     corners: out by l = ring half-width + RING_GAP + card half-width,
-     down/up by h = ring half-height + RING_GAP + card half-height — an
-     L-shaped offset (not a diagonal ray), so opposite pairs never crowd
-     each other the way angles did near the ring's short edges. Computed
-     from the ring's actual measured box, not a hand-tuned percentage, so
-     it stays correct if the ring is ever resized. */
+     corners, RING_GAP outside the ring's actual *curved* edge — not its
+     sharp bounding-box corner. Each corner's stroke is a quarter-circle
+     of radius r, centered r-in from the box corner on each axis; placing
+     the card RING_GAP beyond that circle (along the same diagonal the
+     card already sits on) makes the gap-to-curve exactly RING_GAP
+     regardless of r. The previous version measured from the sharp
+     corner, so a card could look ~r*(sqrt(2)-1) px farther from the
+     ring than RING_GAP actually said, since that's how far the curve
+     recedes from the corner point the math was aiming at.
+     Still computed from the ring's actual measured box (and its
+     --ring-radius), not a hand-tuned percentage, so it stays correct if
+     the ring is ever resized. */
   function placeOnRing(el, node) {
     var ring = rectOf(els.kis);
     var cx0 = ring.x + ring.w / 2, cy0 = ring.y + ring.h / 2;
-    var l = ring.w / 2 + RING_GAP + el.offsetWidth / 2;
-    var h = ring.h / 2 + RING_GAP + el.offsetHeight / 2;
+    var r = ringRadius();
+    var diag = (r + RING_GAP) / Math.SQRT2;
+    var l = ring.w / 2 - r + diag + el.offsetWidth / 2;
+    var h = ring.h / 2 - r + diag + el.offsetHeight / 2;
     var signX = (node.corner === 'tr' || node.corner === 'br') ? 1 : -1;
     var signY = (node.corner === 'bl' || node.corner === 'br') ? 1 : -1;
     el.style.left = (cx0 + signX * l) + 'px';
@@ -76,8 +88,7 @@
     var glob = els.kis.querySelector('.WarningRing__glob');
     if (!glob) return;
     var ring = rectOf(els.kis);
-    var radius = parseFloat(getComputedStyle(els.kis).getPropertyValue('--ring-radius')) || 0;
-    glob.style.offsetPath = ringOutlinePath(ring.w, ring.h, radius);
+    glob.style.offsetPath = ringOutlinePath(ring.w, ring.h, ringRadius());
   }
 
   function addPair(node, index, animate) {
