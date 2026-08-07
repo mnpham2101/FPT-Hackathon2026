@@ -18,7 +18,7 @@
   var lines = {};    // "parent->child" -> <line>
   var expanded = new Set();
   var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var RING_GAP = 20; // px between WarningRing's edge and a root pair's edge
+  var RING_GAP = 0; // px between WarningRing's edge and a root pair's edge
 
   /* ---- mounting ---- */
 
