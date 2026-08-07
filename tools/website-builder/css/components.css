@@ -198,14 +198,6 @@
   white-space: normal;
 }
 
-/* Hidden rather than deleted from the DOM: components.js still relies on
-   this element existing to forward --card clicks (el.addEventListener
-   ('click', () => open.click())) and to stopPropagation for --node
-   branch clicks. display:none keeps both working with nothing visible. */
-.PageLink__open {
-  display: none;
-}
-
 /* ---- CardGrid — layout for PageLink--card lists on node pages ---- */
 
 .CardGrid {

@@ -39,20 +39,14 @@ window.KIS.createPageLink = function (props) {
 
   el.append(icon, label);
 
-  if (props.href) {
-    var open = document.createElement('a');
-    open.className = 'PageLink__open';
-    open.href = window.KIS.assetPath(props.href);
-    open.target = '_blank';
-    open.rel = 'noopener';
-    open.title = 'Open ' + props.label + ' in a new tab';
-    open.textContent = '↗';
-    open.addEventListener('click', function (e) { e.stopPropagation(); });
-    el.append(open);
-
-    if ((props.style || 'node') === 'card') {
-      el.addEventListener('click', function () { open.click(); });
-    }
+  /* --card pills (CardGrid, page.js) have no onActivate — the whole
+     card's only job is to navigate, so it does that directly on click.
+     --node pills (the mind map) pass onActivate instead, which decides
+     navigate-vs-expand itself (mindmap.js's onActivate/kids.length). */
+  if ((props.style || 'node') === 'card' && props.href) {
+    el.addEventListener('click', function () {
+      window.open(window.KIS.assetPath(props.href), '_blank', 'noopener');
+    });
   }
 
   if (props.onActivate) {
