@@ -54,3 +54,24 @@
     linear-gradient(90deg, rgba(95, 208, 255, 0.06) 1px, transparent 1px);
   background-size: 32px 32px;
 }
+
+/* sketch — a pencil-sketch drawing of the FPT towers (assets/bg-sketch-board.jpg,
+   converted from a Gemini-generated reference) as the page backdrop. The
+   cream tint over it (same color as --bg) keeps it a backdrop rather
+   than competing with pill/card content, which stay on their own
+   opaque --node-bg regardless. background-attachment:fixed so it
+   doesn't scroll with a tall node page. */
+[data-theme="sketch"] body {
+  background:
+    linear-gradient(rgba(246, 244, 238, 0.62), rgba(246, 244, 238, 0.62)),
+    url('../assets/bg-sketch-board.jpg') center / cover fixed no-repeat;
+}
+
+/* Node pages read as a sheet of paper set on that backdrop: body text
+   sits on a solid, near-opaque panel rather than directly on the photo,
+   so long-form reading stays fully legible. */
+[data-theme="sketch"] .Page {
+  background: rgba(255, 253, 248, 0.9);
+  border-radius: 18px;
+  box-shadow: var(--card-shadow);
+}
