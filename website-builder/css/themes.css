@@ -17,6 +17,12 @@
   --node-border: #2f3138;
   --connector: #2f3138;
   --card-shadow: 0 2px 10px rgba(20, 22, 40, 0.08);
+
+  /* IVI vehicle-C risk-glow palette (CanvasWarningView.kt) — fixed brand
+     reference, not swapped for visual variety like the tokens above. */
+  --warn-amber: #ffb300;
+  --warn-orange: #ff6600;
+  --warn-red: #ff1a1a;
 }
 
 /* blueprint — dark navy technical-drawing look */
@@ -30,6 +36,12 @@
   --node-border: #3f5c7a;
   --connector: #7fb4d9;
   --card-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+
+  /* IVI vehicle-C risk-glow palette (CanvasWarningView.kt) — fixed brand
+     reference, not swapped for visual variety like the tokens above. */
+  --warn-amber: #ffb300;
+  --warn-orange: #ff6600;
+  --warn-red: #ff1a1a;
 }
 
 [data-theme="blueprint"] .NodeCanvas {
