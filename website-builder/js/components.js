@@ -31,10 +31,7 @@ window.KIS.createPageLink = function (props) {
 
   var icon = document.createElement('span');
   icon.className = 'PageLink__icon';
-  icon.style.setProperty(
-    '--icon-url',
-    'url("' + window.KIS.assetPath(window.KIS.theme.get().assets.iconDir + '/' + props.image + '.svg') + '")'
-  );
+  icon.style.setProperty('--icon-url', window.KIS.iconMaskUrl(props.image));
 
   var label = document.createElement('span');
   label.className = 'PageLink__label';

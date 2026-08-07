@@ -42,10 +42,7 @@
   title.className = 'PageHeader__title';
   var icon = document.createElement('span');
   icon.className = 'PageLink__icon';
-  icon.style.setProperty(
-    '--icon-url',
-    'url("' + window.KIS.assetPath(window.KIS.theme.get().assets.iconDir + '/' + node.icon + '.svg') + '")'
-  );
+  icon.style.setProperty('--icon-url', window.KIS.iconMaskUrl(node.icon));
   var h1 = document.createElement('h1');
   h1.textContent = node.label;
   title.append(icon, h1);

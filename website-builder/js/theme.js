@@ -79,6 +79,18 @@ window.KIS.assetPath = function (rel) {
   return root + '/' + rel;
 };
 
+/* Icon mask URLs are a special case: they're assigned to --icon-url and
+   read by a `mask: var(--icon-url) ...` declaration living in
+   css/components.css. A url() reached through var() resolves relative to
+   the STYLESHEET that declares the consuming property, not the page or
+   wherever the custom property's value was set — so a page-relative path
+   here 404s (it resolves against css/, one level too deep). components.css
+   is always at <site-root>/css/components.css, so the correct base is the
+   fixed "../" back to site root, regardless of which page included it. */
+window.KIS.iconMaskUrl = function (name) {
+  return 'url("../' + window.KIS.theme.get().assets.iconDir + '/' + name + '.svg")';
+};
+
 (function () {
   var saved = null;
   try { saved = localStorage.getItem('kis-theme'); } catch (e) { /* ignore */ }
