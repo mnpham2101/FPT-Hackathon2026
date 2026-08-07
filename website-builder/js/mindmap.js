@@ -27,30 +27,27 @@
     el.style.top = pos[1] + '%';
   }
 
-  /* Positions a direct child of 'kis' a fixed RING_GAP outside the
-     WarningRing's own measured box, rather than a hand-tuned percentage —
-     stays correct if the ring is ever resized. */
+  /* Positions a direct child of 'kis' at one of WarningRing's four
+     corners: out by l = ring half-width + RING_GAP + card half-width,
+     down/up by h = ring half-height + RING_GAP + card half-height — an
+     L-shaped offset (not a diagonal ray), so opposite pairs never crowd
+     each other the way angles did near the ring's short edges. Computed
+     from the ring's actual measured box, not a hand-tuned percentage, so
+     it stays correct if the ring is ever resized. */
   function placeOnRing(el, node) {
     var ring = rectOf(els.kis);
-    var w = el.offsetWidth, h = el.offsetHeight;
-    var cx, cy;
-    if (node.ringSide === 'top') {
-      cx = ring.x + ring.w / 2;
-      cy = ring.y - RING_GAP - h / 2;
-    } else if (node.ringSide === 'left') {
-      cx = ring.x - RING_GAP - w / 2;
-      cy = ring.y + ring.h / 2;
-    } else {
-      cx = ring.x + ring.w + RING_GAP + w / 2;
-      cy = ring.y + ring.h * (node.ringAlign != null ? node.ringAlign : 0.5);
-    }
-    el.style.left = cx + 'px';
-    el.style.top = cy + 'px';
+    var cx0 = ring.x + ring.w / 2, cy0 = ring.y + ring.h / 2;
+    var l = ring.w / 2 + RING_GAP + el.offsetWidth / 2;
+    var h = ring.h / 2 + RING_GAP + el.offsetHeight / 2;
+    var signX = (node.corner === 'tr' || node.corner === 'br') ? 1 : -1;
+    var signY = (node.corner === 'bl' || node.corner === 'br') ? 1 : -1;
+    el.style.left = (cx0 + signX * l) + 'px';
+    el.style.top = (cy0 + signY * h) + 'px';
   }
 
   function positionRootPairs() {
     SITE.childrenOf('kis').forEach(function (node) {
-      if (node.ringSide && els[node.id]) placeOnRing(els[node.id], node);
+      if (node.corner && els[node.id]) placeOnRing(els[node.id], node);
     });
   }
 
@@ -67,7 +64,7 @@
     });
     if (SITE.childrenOf(node.id).length) el.classList.add('PageLink--branch');
     canvas.append(el);
-    if (node.ringSide) placeOnRing(el, node); else place(el, node.pos);
+    if (node.corner) placeOnRing(el, node); else place(el, node.pos);
     els[node.id] = el;
   }
 
