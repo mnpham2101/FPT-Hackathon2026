@@ -158,12 +158,34 @@
   background: var(--node-bg);
   border: 1.5px solid var(--node-border);
   box-shadow: var(--card-shadow);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition: transform 0.2s ease;
 }
 
+/* Hover: expands slightly and pulses the same warning glow as
+   WarningRing's glob (--warn-amber/--warn-red, themes.css) - amber and
+   red trade off smoothly for as long as the node stays hovered. */
 .PageLink--node:hover {
-  border-color: var(--accent);
-  box-shadow: 0 4px 14px rgba(20, 22, 40, 0.16);
+  transform: translate(-50%, -50%) scale(1.06);
+  animation: kis-node-hover-glow 1.4s ease-in-out infinite alternate;
+}
+
+@keyframes kis-node-hover-glow {
+  from {
+    border-color: var(--warn-amber);
+    box-shadow: 0 0 6px 1px var(--warn-amber);
+  }
+  to {
+    border-color: var(--warn-red);
+    box-shadow: 0 0 16px 5px var(--warn-red);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .PageLink--node:hover {
+    animation: none;
+    border-color: var(--warn-orange);
+    box-shadow: 0 0 10px 3px var(--warn-orange);
+  }
 }
 
 .PageLink--card {
