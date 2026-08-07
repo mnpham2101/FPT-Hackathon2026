@@ -25,6 +25,9 @@ window.KIS.SITE = {
     { id: 'requirements', parent: 'concepts', label: 'Requirements', icon: 'requirements',
       href: 'pages/requirements.html', pos: [40, 5],
       summary: 'The enumerated, testable requirements — each with its acceptance check and feasibility verdict.' },
+    { id: 'plans', parent: 'concepts', label: 'Plans', icon: 'plans',
+      href: 'pages/plans.html', pos: [58, 10],
+      summary: 'The phased implementation plans: phases, tasks and subtasks, each traceable back to a requirement.' },
 
     { id: 'proposal', parent: 'kis', label: 'Proposal', icon: 'proposal',
       href: 'pages/proposal.html', corner: 'tr',
