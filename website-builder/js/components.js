@@ -82,7 +82,12 @@ window.KIS.createLogoFrame = function (props) {
   img.src = window.KIS.assetPath((props && props.image) || window.KIS.theme.get().assets.logo);
   img.alt = 'KIS — Keep It Simple';
   el.append(img);
-  ring.append(el);
+
+  var glob = document.createElement('div');
+  glob.className = 'WarningRing__glob';
+  glob.setAttribute('aria-hidden', 'true');
+
+  ring.append(el, glob);
 
   window.KIS.applyEnter(ring, props && props.animation);
   return ring;

@@ -33,58 +33,86 @@
   fill: var(--connector);
 }
 
-/* ---- WarningRing — a larger rounded-rect ring encapsulating LogoFrame,
-   with a comet highlight sweeping clockwise in the IVI risk-glow palette
-   (--warn-amber/--warn-orange/--warn-red, themes.css). Homage to the
-   product's own vehicle-C warning glow (CanvasWarningView.kt), not a
-   themable token set — the colors stay fixed across themes. ---- */
+/* ---- WarningRing — a fixed 3:2 rounded rectangle encapsulating LogoFrame,
+   amber all the way around, with a glowing glob traversing its border and
+   escalating amber -> orange -> red (the IVI risk-glow palette,
+   --warn-amber/--warn-orange/--warn-red in themes.css — a homage to the
+   product's own vehicle-C warning glow in CanvasWarningView.kt, not a
+   themable token set, so the colors stay fixed across themes).
+
+   The glob rides a CSS motion path (an explicit rounded-rect outline in
+   WarningRing's own pixel geometry) rather than a rotated conic-gradient:
+   combining transform:rotate() with the border-only mask trick clipped
+   incorrectly in testing, leaking a diagonal wedge through the middle of
+   the ring. offset-path has no such clipping step to go wrong. */
 
 .WarningRing {
+  --ring-w: 450px;
+  --ring-h: 300px;
+  --ring-radius: 40px;
   position: absolute;
   transform: translate(-50%, -50%);
-  border-radius: 40px;
-  padding: 8px;
+  width: var(--ring-w);
+  height: var(--ring-h);
+  border-radius: var(--ring-radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.WarningRing::before,
-.WarningRing::after {
+.WarningRing::before {
   content: "";
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  padding: 3px;
+  padding: 5px;
+  background: var(--warn-amber);
+  opacity: 0.65;
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
 }
 
-.WarningRing::before {
+.WarningRing__glob {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
   background: var(--warn-amber);
-  opacity: 0.5;
+  box-shadow: 0 0 10px 3px var(--warn-amber);
+  /* Traces WarningRing's own outline clockwise from just right of the
+     top-left corner. path() can't read --ring-w/--ring-h/--ring-radius —
+     these coordinates (450/300/40) must be changed by hand to match. */
+  offset-path: path("M 40,0 H 410 A 40,40 0 0 1 450,40 V 260 A 40,40 0 0 1 410,300 H 40 A 40,40 0 0 1 0,260 V 40 A 40,40 0 0 1 40,0 Z");
+  offset-distance: 0%;
+  animation: kis-glob-move 3.6s linear infinite, kis-glob-color 3.6s linear infinite;
 }
 
-.WarningRing::after {
-  background: conic-gradient(
-    from 0deg,
-    transparent 0deg,
-    transparent 270deg,
-    var(--warn-amber) 300deg,
-    var(--warn-orange) 330deg,
-    var(--warn-red) 355deg,
-    transparent 360deg
-  );
-  filter: drop-shadow(0 0 5px var(--warn-orange));
-  animation: kis-ring-sweep 3.2s linear infinite;
-}
-
-@keyframes kis-ring-sweep {
+@keyframes kis-glob-move {
   to {
-    transform: rotate(360deg);
+    offset-distance: 100%;
+  }
+}
+
+@keyframes kis-glob-color {
+  0% {
+    background: var(--warn-amber);
+    box-shadow: 0 0 10px 3px var(--warn-amber);
+  }
+  50% {
+    background: var(--warn-orange);
+    box-shadow: 0 0 12px 4px var(--warn-orange);
+  }
+  100% {
+    background: var(--warn-red);
+    box-shadow: 0 0 14px 5px var(--warn-red);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .WarningRing::after {
+  .WarningRing__glob {
     animation: none;
   }
 }
