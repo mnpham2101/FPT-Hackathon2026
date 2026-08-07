@@ -39,17 +39,26 @@
   --road-asphalt: #4c4e52;
 }
 
-/* blueprint — dark navy technical-drawing look */
+/* blueprint — a neon night city: the FPT tower after dark
+   (assets/bg-fpt-tower.jpg) behind cyan and magenta signage. The two
+   neon hues are the theme's whole palette — cyan carries anything the
+   reader acts on (icons, links, node edges), magenta anything that
+   frames or connects. --node-bg is translucent so the city reads
+   through the pills instead of being boxed out by them. */
 [data-theme="blueprint"] {
-  --bg: #0e1b2c;
-  --ink: #dbe7f4;
-  --muted: #8aa3bd;
-  --accent: #5fd0ff;
-  --frame: #5fd0ff;
-  --node-bg: #122438;
-  --node-border: #3f5c7a;
-  --connector: #7fb4d9;
-  --card-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+  --bg: #070b16;
+  --ink: #e8f4ff;
+  --muted: #8fa8c8;
+  --accent: #22e7ff;
+  --frame: #ff2fb2;
+  --node-bg: rgba(10, 16, 30, 0.82);
+  --node-border: #2bd8ff;
+  --connector: #ff2fb2;
+  --card-shadow:
+    0 0 14px rgba(34, 231, 255, 0.3),
+    0 4px 18px rgba(0, 0, 0, 0.55);
+  --neon-cyan: #22e7ff;
+  --neon-magenta: #ff2fb2;
 
   /* IVI vehicle-C risk-glow palette (CanvasWarningView.kt) — fixed brand
      reference, not swapped for visual variety like the tokens above. */
@@ -58,15 +67,70 @@
   --warn-red: #ff1a1a;
 
   /* Lighter than sketch's asphalt: a #4c4e52 band would sink into this
-     theme's navy background instead of reading as a road. */
+     theme's night background instead of reading as a road. */
   --road-asphalt: #6e747c;
 }
 
+/* The photo is a lit building against a mid-blue sky — too bright to sit
+   under text at full strength, so a near-opaque wash of --bg drops it to
+   a backdrop and leaves only the neon edges and the road light trails
+   showing. fixed, so a tall node page scrolls over a still city. */
+[data-theme="blueprint"] body {
+  background:
+    linear-gradient(rgba(7, 11, 22, 0.7), rgba(7, 11, 22, 0.82)),
+    url('../assets/bg-fpt-tower.jpg') center / cover fixed no-repeat;
+}
+
+/* Two grids at different pitches: a fine cyan one for the technical
+   surface the theme keeps from its blueprint origin, and a coarser
+   magenta one at 4x the pitch, which reads as a horizon rather than
+   graph paper. */
 [data-theme="blueprint"] .NodeCanvas {
   background-image:
-    linear-gradient(rgba(95, 208, 255, 0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(95, 208, 255, 0.06) 1px, transparent 1px);
-  background-size: 32px 32px;
+    linear-gradient(rgba(34, 231, 255, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(34, 231, 255, 0.07) 1px, transparent 1px),
+    linear-gradient(rgba(255, 47, 178, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 47, 178, 0.06) 1px, transparent 1px);
+  background-size: 32px 32px, 32px 32px, 128px 128px, 128px 128px;
+}
+
+/* The connectors are magenta tubing rather than drawn lines, so they get
+   the same spill the pill edges do. drop-shadow follows the stroke's
+   alpha shape, which box-shadow (a box) cannot do on an SVG path. */
+[data-theme="blueprint"] .Connector {
+  filter: drop-shadow(0 0 4px rgba(255, 47, 178, 0.65));
+}
+
+/* Node pages get a smoked-glass panel: dark enough for body text, with a
+   cyan edge and glow so the panel reads as lit signage rather than a
+   plain box on the photo. */
+[data-theme="blueprint"] .Page {
+  background: rgba(9, 14, 26, 0.86);
+  border: 1px solid rgba(43, 216, 255, 0.35);
+  border-radius: 18px;
+  box-shadow: var(--card-shadow);
+}
+
+/* A neon tube is a bright line with colored light spilling both ways —
+   an outer glow alone reads as a drop shadow, so every lit edge below
+   pairs it with an inset of the same hue. */
+[data-theme="blueprint"] .PageLink--node,
+[data-theme="blueprint"] .PageLink--card {
+  box-shadow:
+    0 0 12px rgba(34, 231, 255, 0.3),
+    inset 0 0 12px rgba(34, 231, 255, 0.12);
+}
+
+[data-theme="blueprint"] .LogoFrame {
+  box-shadow:
+    0 0 22px rgba(255, 47, 178, 0.45),
+    inset 0 0 18px rgba(255, 47, 178, 0.18);
+}
+
+/* Neon lettering: the glow is the sign, so the label carries it too. */
+[data-theme="blueprint"] .PageLink__label,
+[data-theme="blueprint"] .PageHeader__title h1 {
+  text-shadow: 0 0 10px rgba(34, 231, 255, 0.45);
 }
 
 /* sketch — a pencil-sketch drawing of the FPT towers (assets/bg-sketch-board.jpg,
