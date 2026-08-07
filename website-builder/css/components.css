@@ -77,17 +77,18 @@
   position: absolute;
   top: 0;
   left: 0;
-  width: 16px;
-  height: 16px;
+  width: 28px;
+  height: 15px;
   border-radius: 50%;
   background: var(--warn-amber);
   box-shadow: 0 0 10px 3px var(--warn-amber);
   /* Traces WarningRing's own outline clockwise from just right of the
      top-left corner. path() can't read --ring-w/--ring-h/--ring-radius —
-     these coordinates (450/300/40) must be changed by hand to match. */
-  offset-path: path("M 40,0 H 410 A 40,40 0 0 1 450,40 V 260 A 40,40 0 0 1 410,300 H 40 A 40,40 0 0 1 0,260 V 40 A 40,40 0 0 1 40,0 Z");
+     these coordinates (650/350/40) must be changed by hand to match. */
+  offset-path: path("M 40,0 H 610 A 40,40 0 0 1 650,40 V 310 A 40,40 0 0 1 610,350 H 40 A 40,40 0 0 1 0,310 V 40 A 40,40 0 0 1 40,0 Z");
   offset-distance: 0%;
-  animation: kis-glob-move 3.6s linear infinite, kis-glob-color 3.6s linear infinite;
+  offset-rotate: auto;
+  animation: kis-glob-move 7s linear infinite, kis-glob-color 7s linear infinite;
 }
 
 @keyframes kis-glob-move {
