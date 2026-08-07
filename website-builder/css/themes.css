@@ -1,0 +1,40 @@
+/* KIS site — theme variable sets.
+   A theme is applied by js/theme.js setting <html data-theme="…">; the
+   matching block below re-maps the tokens from base.css. Asset and
+   animation mappings for the same theme names live in js/theme.js —
+   add a theme in both places. */
+
+/* sketch — paper, ink and pen blue (the concept PNG's look). Values equal
+   the :root defaults in base.css; the block exists so data-theme="sketch"
+   is explicit rather than "whatever the defaults are". */
+[data-theme="sketch"] {
+  --bg: #f6f4ee;
+  --ink: #2f3138;
+  --muted: #7a7f88;
+  --accent: #3b4bd8;
+  --frame: #3b4bd8;
+  --node-bg: #fffdf8;
+  --node-border: #2f3138;
+  --connector: #2f3138;
+  --card-shadow: 0 2px 10px rgba(20, 22, 40, 0.08);
+}
+
+/* blueprint — dark navy technical-drawing look */
+[data-theme="blueprint"] {
+  --bg: #0e1b2c;
+  --ink: #dbe7f4;
+  --muted: #8aa3bd;
+  --accent: #5fd0ff;
+  --frame: #5fd0ff;
+  --node-bg: #122438;
+  --node-border: #3f5c7a;
+  --connector: #7fb4d9;
+  --card-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="blueprint"] .NodeCanvas {
+  background-image:
+    linear-gradient(rgba(95, 208, 255, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(95, 208, 255, 0.06) 1px, transparent 1px);
+  background-size: 32px 32px;
+}

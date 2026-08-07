@@ -1,0 +1,265 @@
+/* KIS site — reusable component classes.
+   Naming: one PascalCase block per component (PageLink, LogoFrame, …),
+   BEM-style __element and --modifier suffixes. */
+
+/* ---- NodeCanvas — the homepage mind-map surface ---- */
+
+.NodeCanvas {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  min-height: 640px;
+  min-width: 900px;
+  overflow: hidden;
+}
+
+/* ---- ConnectorLayer — SVG lines/arrows between pairs ---- */
+
+.ConnectorLayer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.Connector {
+  stroke: var(--connector);
+  stroke-width: 1.6;
+  fill: none;
+}
+
+.ConnectorLayer marker path {
+  fill: var(--connector);
+}
+
+/* ---- LogoFrame — the large round-edged rectangle wrapping the logo ---- */
+
+.LogoFrame {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  border: 2.5px solid var(--frame);
+  border-radius: 30px;
+  padding: 10px 28px;
+  background: var(--node-bg);
+  box-shadow: var(--card-shadow);
+}
+
+.LogoFrame__img {
+  display: block;
+  width: 230px;
+  height: auto;
+}
+
+/* ---- PageLink — an icon + text pair linking to a page ----
+   Variants: --node (positioned on the NodeCanvas), --card (page lists). */
+
+.PageLink {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.PageLink--node {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  padding: 8px 12px;
+  border-radius: 14px;
+  background: var(--node-bg);
+  border: 1.5px solid var(--node-border);
+  box-shadow: var(--card-shadow);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.PageLink--node:hover {
+  border-color: var(--accent);
+  box-shadow: 0 4px 14px rgba(20, 22, 40, 0.16);
+}
+
+.PageLink--card {
+  padding: 16px;
+  border-radius: 14px;
+  background: var(--node-bg);
+  border: 1.5px solid var(--node-border);
+  box-shadow: var(--card-shadow);
+  transition: border-color 0.15s ease;
+}
+
+.PageLink--card:hover {
+  border-color: var(--accent);
+}
+
+.PageLink__icon {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  background: var(--accent);
+  -webkit-mask: var(--icon-url) center / contain no-repeat;
+  mask: var(--icon-url) center / contain no-repeat;
+}
+
+.PageLink__label {
+  font-weight: 600;
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+
+.PageLink--card .PageLink__label {
+  white-space: normal;
+}
+
+.PageLink__open {
+  margin-left: 2px;
+  text-decoration: none;
+  font-size: 0.85rem;
+  color: var(--muted);
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 0 4px;
+}
+
+.PageLink__open:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* Branch nodes advertise that they expand; expanded ones that they collapse */
+.PageLink--branch .PageLink__label::after {
+  content: " +";
+  color: var(--muted);
+}
+
+.PageLink--node.is-expanded .PageLink__label::after {
+  content: " \2212";
+  color: var(--muted);
+}
+
+/* ---- CardGrid — layout for PageLink--card lists on node pages ---- */
+
+.CardGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 14px;
+  margin-top: 16px;
+}
+
+/* ---- PageHeader — shared header on node pages ---- */
+
+.PageHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 28px;
+}
+
+.PageHeader__logo {
+  width: 120px;
+}
+
+.PageHeader__title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.PageHeader__title .PageLink__icon {
+  width: 34px;
+  height: 34px;
+}
+
+.Breadcrumb {
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.Breadcrumb a {
+  color: var(--muted);
+}
+
+.Breadcrumb a:hover {
+  color: var(--accent);
+}
+
+/* ---- ThemeSwitch ---- */
+
+.ThemeSwitch {
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--node-bg);
+  border: 1.5px solid var(--node-border);
+  border-radius: 999px;
+  padding: 6px 14px;
+  cursor: pointer;
+  box-shadow: var(--card-shadow);
+}
+
+.ThemeSwitch:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ---- Enter animations — applied by components via the animation prop ---- */
+
+@keyframes kis-pop {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes kis-rise {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -40%);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+}
+
+@keyframes kis-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.is-enter-pop {
+  animation: kis-pop 0.45s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+  animation-delay: var(--enter-delay, 0ms);
+}
+
+.is-enter-rise {
+  animation: kis-rise 0.5s ease-out both;
+  animation-delay: var(--enter-delay, 0ms);
+}
+
+.is-enter-fade {
+  animation: kis-fade 0.4s ease-out both;
+  animation-delay: var(--enter-delay, 0ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .is-enter-pop,
+  .is-enter-rise,
+  .is-enter-fade {
+    animation: none;
+  }
+
+  .Connector {
+    transition: none !important;
+    stroke-dashoffset: 0 !important;
+    opacity: 1 !important;
+  }
+}
