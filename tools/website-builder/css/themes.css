@@ -32,6 +32,11 @@
   --warn-amber: #ffb300;
   --warn-orange: #ff6600;
   --warn-red: #ff1a1a;
+
+  /* WarningRing's band — the road the risk glob drives around. Dark
+     asphalt on cream paper; the blueprint block lifts it off its own
+     dark background. */
+  --road-asphalt: #4c4e52;
 }
 
 /* blueprint — dark navy technical-drawing look */
@@ -51,6 +56,10 @@
   --warn-amber: #ffb300;
   --warn-orange: #ff6600;
   --warn-red: #ff1a1a;
+
+  /* Lighter than sketch's asphalt: a #4c4e52 band would sink into this
+     theme's navy background instead of reading as a road. */
+  --road-asphalt: #6e747c;
 }
 
 [data-theme="blueprint"] .NodeCanvas {

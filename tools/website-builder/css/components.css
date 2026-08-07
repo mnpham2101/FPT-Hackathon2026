@@ -34,11 +34,12 @@
 }
 
 /* ---- WarningRing — a fixed 3:2 rounded rectangle encapsulating LogoFrame,
-   amber all the way around, with a glowing glob traversing its border and
-   escalating amber -> orange -> red (the IVI risk-glow palette,
+   asphalt gray all the way around (--road-asphalt), read as the road the
+   traffic runs on, with a glowing glob traversing it and escalating
+   amber -> orange -> red (the IVI risk-glow palette,
    --warn-amber/--warn-orange/--warn-red in themes.css — a homage to the
    product's own vehicle-C warning glow in CanvasWarningView.kt, not a
-   themable token set, so the colors stay fixed across themes).
+   themable token set, so the glob's colors stay fixed across themes).
 
    The glob rides a CSS motion path (an explicit rounded-rect outline in
    WarningRing's own pixel geometry) rather than a rotated conic-gradient:
@@ -73,8 +74,8 @@
   inset: 0;
   border-radius: inherit;
   padding: 5px;
-  background: var(--warn-amber);
-  opacity: 0.65;
+  background: var(--road-asphalt);
+  opacity: 0.85;
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
