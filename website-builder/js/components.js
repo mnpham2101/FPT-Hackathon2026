@@ -66,8 +66,13 @@ window.KIS.createPageLink = function (props) {
   return el;
 };
 
-/* LogoFrame — the KIS logo inside the large round-edged rectangle */
+/* LogoFrame — the KIS logo inside the large round-edged rectangle, wrapped
+   in a WarningRing (the sweeping IVI-warning-colored outer ring). The
+   WarningRing is the positioned/animated element mindmap.js places. */
 window.KIS.createLogoFrame = function (props) {
+  var ring = document.createElement('div');
+  ring.className = 'WarningRing';
+
   var el = document.createElement('div');
   el.className = 'LogoFrame';
 
@@ -77,9 +82,10 @@ window.KIS.createLogoFrame = function (props) {
   img.src = window.KIS.assetPath((props && props.image) || window.KIS.theme.get().assets.logo);
   img.alt = 'KIS — Keep It Simple';
   el.append(img);
+  ring.append(el);
 
-  window.KIS.applyEnter(el, props && props.animation);
-  return el;
+  window.KIS.applyEnter(ring, props && props.animation);
+  return ring;
 };
 
 /* ThemeSwitch — cycles through KIS.THEMES */

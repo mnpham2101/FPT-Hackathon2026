@@ -33,11 +33,65 @@
   fill: var(--connector);
 }
 
+/* ---- WarningRing — a larger rounded-rect ring encapsulating LogoFrame,
+   with a comet highlight sweeping clockwise in the IVI risk-glow palette
+   (--warn-amber/--warn-orange/--warn-red, themes.css). Homage to the
+   product's own vehicle-C warning glow (CanvasWarningView.kt), not a
+   themable token set — the colors stay fixed across themes. ---- */
+
+.WarningRing {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  border-radius: 40px;
+  padding: 8px;
+}
+
+.WarningRing::before,
+.WarningRing::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 3px;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+
+.WarningRing::before {
+  background: var(--warn-amber);
+  opacity: 0.5;
+}
+
+.WarningRing::after {
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    transparent 270deg,
+    var(--warn-amber) 300deg,
+    var(--warn-orange) 330deg,
+    var(--warn-red) 355deg,
+    transparent 360deg
+  );
+  filter: drop-shadow(0 0 5px var(--warn-orange));
+  animation: kis-ring-sweep 3.2s linear infinite;
+}
+
+@keyframes kis-ring-sweep {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .WarningRing::after {
+    animation: none;
+  }
+}
+
 /* ---- LogoFrame — the large round-edged rectangle wrapping the logo ---- */
 
 .LogoFrame {
-  position: absolute;
-  transform: translate(-50%, -50%);
   border: 2.5px solid var(--frame);
   border-radius: 30px;
   padding: 10px 28px;
