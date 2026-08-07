@@ -20,10 +20,24 @@ window.KIS.applyEnter = function (el, animation) {
 };
 
 /* PageLink — an icon + text pair representing a navigable page.
-   style 'node': positioned pair on the homepage canvas (mind map).
-   style 'card': block in a CardGrid on a node page; clicking it opens
-   the page. props.onActivate, when given, receives primary clicks
-   (the mind map uses it for expand/collapse). */
+
+   Input props (all optional except label/image):
+     id          — written to the element's data-id, for callers that
+                   need to look this pill up later
+     label       — visible text
+     image       — icon id, passed to iconMaskUrl()
+     href        — the page this pill represents
+     style       — 'node' (default) or 'card'; selects the CSS modifier
+                   class and this factory's own click behavior below
+     onActivate  — function(props), called on every click if given
+     animation   — passed through to applyEnter()
+
+   Behavior:
+     - style 'card' with an href: this factory opens that href in a new
+       tab on click, on its own.
+     - style 'node', or no href: this factory does not navigate by
+       itself. If onActivate was given, it still runs on click; deciding
+       what that click means is entirely the caller's business. */
 window.KIS.createPageLink = function (props) {
   var el = document.createElement('div');
   el.className = 'PageLink PageLink--' + (props.style || 'node');
@@ -39,10 +53,8 @@ window.KIS.createPageLink = function (props) {
 
   el.append(icon, label);
 
-  /* --card pills (CardGrid, page.js) have no onActivate — the whole
-     card's only job is to navigate, so it does that directly on click.
-     --node pills (the mind map) pass onActivate instead, which decides
-     navigate-vs-expand itself (mindmap.js's onActivate/kids.length). */
+  /* 'card' pills navigate to href on their own; any other style leaves
+     that decision to onActivate, below, if the caller passed one. */
   if ((props.style || 'node') === 'card' && props.href) {
     el.addEventListener('click', function () {
       window.open(window.KIS.assetPath(props.href), '_blank', 'noopener');
