@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en" data-theme="sketch">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>KIS — Keep It Simple</title>
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/themes.css">
+</head>
+<body data-page="home" data-root=".">
+  <main class="NodeCanvas" id="canvas" aria-label="KIS home page mind map">
+    <svg class="ConnectorLayer" id="connectors" aria-hidden="true">
+      <defs>
+        <marker id="kis-arrow" viewBox="0 0 10 10" refX="9" refY="5"
+                markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z"/>
+        </marker>
+      </defs>
+    </svg>
+  </main>
+  <script src="js/site-data.js"></script>
+  <script src="js/theme.js"></script>
+  <script src="js/components.js"></script>
+  <script src="js/mindmap.js"></script>
+</body>
+</html>

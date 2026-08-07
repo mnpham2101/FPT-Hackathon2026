@@ -1,0 +1,434 @@
+/* KIS site — reusable component classes.
+   Naming: one PascalCase block per component (PageLink, LogoFrame, …),
+   BEM-style __element and --modifier suffixes. */
+
+/* ---- NodeCanvas — the homepage mind-map surface ---- */
+
+.NodeCanvas {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  min-height: 640px;
+  min-width: 900px;
+  overflow: hidden;
+}
+
+/* ---- ConnectorLayer — SVG lines/arrows between nodes ---- */
+
+.ConnectorLayer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.Connector {
+  stroke: var(--connector);
+  stroke-width: 1.6;
+  fill: none;
+}
+
+.ConnectorLayer marker path {
+  fill: var(--connector);
+}
+
+/* ---- WarningRing — a fixed 3:2 rounded rectangle encapsulating LogoFrame,
+   asphalt gray all the way around (--road-asphalt), read as the road the
+   traffic runs on, with a glowing glob traversing it and escalating
+   amber -> orange -> red (the IVI risk-glow palette,
+   --warn-amber/--warn-orange/--warn-red in themes.css — a homage to the
+   product's own vehicle-C warning glow in CanvasWarningView.kt, not a
+   themable token set, so the glob's colors stay fixed across themes).
+
+   The glob rides a CSS motion path (an explicit rounded-rect outline in
+   WarningRing's own pixel geometry) rather than a rotated conic-gradient:
+   combining transform:rotate() with the border-only mask trick clipped
+   incorrectly in testing, leaking a diagonal wedge through the middle of
+   the ring. offset-path has no such clipping step to go wrong.
+
+   That outline is SVG path data, and CSS custom properties can't be
+   substituted inside a quoted string (var() only works in a property's
+   own value, not string literal content) — so --ring-w/--ring-h/
+   --ring-radius can't drive it directly. js/mindmap.js's fitGlobPath()
+   builds it instead, from the ring's actual measured box, and sets
+   .WarningRing__glob's offset-path at boot and on every resize. */
+
+.WarningRing {
+  --ring-w: 450px;
+  --ring-h: 300px;
+  --ring-radius: 40px;
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: var(--ring-w);
+  height: var(--ring-h);
+  border-radius: var(--ring-radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.WarningRing::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 5px;
+  background: var(--road-asphalt);
+  opacity: 0.85;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+
+.WarningRing__glob {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 28px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--warn-amber);
+  box-shadow: 0 0 10px 3px var(--warn-amber);
+  /* offset-path is set by js/mindmap.js's fitGlobPath() — see the
+     comment above .WarningRing for why it can't live here as CSS. */
+  offset-distance: 0%;
+  offset-rotate: auto;
+  animation: kis-glob-move 7s linear infinite, kis-glob-color 7s linear infinite;
+}
+
+@keyframes kis-glob-move {
+  to {
+    offset-distance: 100%;
+  }
+}
+
+@keyframes kis-glob-color {
+  0% {
+    background: var(--warn-amber);
+    box-shadow: 0 0 10px 3px var(--warn-amber);
+  }
+  50% {
+    background: var(--warn-orange);
+    box-shadow: 0 0 12px 4px var(--warn-orange);
+  }
+  100% {
+    background: var(--warn-red);
+    box-shadow: 0 0 14px 5px var(--warn-red);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .WarningRing__glob {
+    animation: none;
+  }
+}
+
+/* ---- LogoFrame — the large round-edged rectangle wrapping the logo ---- */
+
+.LogoFrame {
+  border: 2.5px solid var(--frame);
+  border-radius: 30px;
+  padding: 10px 28px;
+  background: var(--node-bg);
+  box-shadow: var(--card-shadow);
+}
+
+.LogoFrame__img {
+  display: block;
+  width: 230px;
+  height: auto;
+}
+
+/* ---- PageLink — an icon + text node linking to a page ----
+   Variants: --node (positioned on the NodeCanvas), --card (page lists). */
+
+.PageLink {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.PageLink--node {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  padding: 8px 12px;
+  border-radius: 14px;
+  background: var(--node-bg);
+  border: 1.5px solid var(--node-border);
+  box-shadow: var(--card-shadow);
+  transition: transform 0.2s ease;
+}
+
+/* Hover: expands slightly and pulses the same warning glow as
+   WarningRing's glob (--warn-amber/--warn-red, themes.css) - amber and
+   red trade off smoothly for as long as the node stays hovered. */
+.PageLink--node:hover {
+  transform: translate(-50%, -50%) scale(1.06);
+  animation: kis-node-hover-glow 1.4s ease-in-out infinite alternate;
+}
+
+@keyframes kis-node-hover-glow {
+  from {
+    border-color: var(--warn-amber);
+    box-shadow: 0 0 6px 1px var(--warn-amber);
+  }
+  to {
+    border-color: var(--warn-red);
+    box-shadow: 0 0 16px 5px var(--warn-red);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .PageLink--node:hover {
+    animation: none;
+    border-color: var(--warn-orange);
+    box-shadow: 0 0 10px 3px var(--warn-orange);
+  }
+}
+
+.PageLink--card {
+  position: relative;
+  padding: 16px;
+  border-radius: 14px;
+  background: var(--node-bg);
+  border: 1.5px solid var(--node-border);
+  box-shadow: var(--card-shadow);
+  transition: border-color 0.15s ease;
+}
+
+.PageLink--card:hover {
+  border-color: var(--accent);
+}
+
+/* ---- SketchOutline — the hand-drawn border, drawn by
+   js/components.js's attachSketchOutline() into every PageLink.
+
+   Hidden by default: only the sketch theme wants a wobbly line, and
+   every other theme keeps the element's own ruled CSS border. Under
+   sketch that border goes transparent (width/style kept, so the box
+   still reserves the same space) and these two paths carry the visible
+   edge — one stroke plus a fainter offset echo, the double-line a pen
+   leaves when a shape is drawn over twice.
+
+   --sketch-amp is how far the path wanders off the true outline, in px;
+   attachSketchOutline() reads it and insets the path by the same amount
+   so the wobble rides the pill's background edge instead of spilling
+   past it. */
+
+.SketchOutline {
+  display: none;
+  position: absolute;
+  left: 0;
+  top: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.SketchOutline path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.SketchOutline__echo {
+  opacity: 0.42;
+}
+
+/* No drop shadow under sketch: the shadow is cast by the element's own
+   ruled rounded rect, so it traces a clean edge the wobbly stroke does
+   not follow — and pencil on paper casts none anyway. */
+[data-theme="sketch"] .PageLink--node,
+[data-theme="sketch"] .PageLink--card {
+  --sketch-amp: 1.6;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+[data-theme="sketch"] .PageLink .SketchOutline {
+  display: block;
+  color: var(--node-border);
+}
+
+/* The resting border is an SVG stroke under sketch, so the hover pulse
+   drives the outline's color rather than kis-node-hover-glow's
+   border-color (which has nothing visible to tint here). */
+[data-theme="sketch"] .PageLink--node:hover .SketchOutline {
+  animation: kis-sketch-hover-glow 1.4s ease-in-out infinite alternate;
+}
+
+@keyframes kis-sketch-hover-glow {
+  from {
+    color: var(--warn-amber);
+  }
+  to {
+    color: var(--warn-red);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-theme="sketch"] .PageLink--node:hover .SketchOutline {
+    animation: none;
+    color: var(--warn-orange);
+  }
+}
+
+/* Patrick Hand ships one weight; asking for 600 makes the browser
+   synthesise bold, which thickens the strokes until the face reads as a
+   heavy sans rather than handwriting. Sketch takes the real 400 and
+   recovers the lost presence with size instead. */
+[data-theme="sketch"] .PageLink__label {
+  font-weight: 400;
+  font-size: 1.05rem;
+}
+
+.PageLink__icon {
+  width: 26px;
+  height: 26px;
+  flex: none;
+  background: var(--accent);
+  -webkit-mask: var(--icon-url) center / contain no-repeat;
+  mask: var(--icon-url) center / contain no-repeat;
+}
+
+.PageLink__label {
+  font-weight: 600;
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+
+.PageLink--card .PageLink__label {
+  white-space: normal;
+}
+
+/* ---- CardGrid — layout for PageLink--card lists on node pages ---- */
+
+.CardGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 14px;
+  margin-top: 16px;
+}
+
+/* ---- PageHeader — shared header on node pages ---- */
+
+.PageHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 28px;
+}
+
+.PageHeader__logo {
+  width: 120px;
+}
+
+.PageHeader__title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.PageHeader__title .PageLink__icon {
+  width: 34px;
+  height: 34px;
+}
+
+.Breadcrumb {
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.Breadcrumb a {
+  color: var(--muted);
+}
+
+.Breadcrumb a:hover {
+  color: var(--accent);
+}
+
+/* ---- ThemeSwitch ---- */
+
+.ThemeSwitch {
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--node-bg);
+  border: 1.5px solid var(--node-border);
+  border-radius: 999px;
+  padding: 6px 14px;
+  cursor: pointer;
+  box-shadow: var(--card-shadow);
+}
+
+.ThemeSwitch:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ---- Enter animations — applied by components via the animation prop ---- */
+
+@keyframes kis-pop {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes kis-rise {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -40%);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+}
+
+@keyframes kis-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.is-enter-pop {
+  animation: kis-pop 0.45s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+  animation-delay: var(--enter-delay, 0ms);
+}
+
+.is-enter-rise {
+  animation: kis-rise 0.5s ease-out both;
+  animation-delay: var(--enter-delay, 0ms);
+}
+
+.is-enter-fade {
+  animation: kis-fade 0.4s ease-out both;
+  animation-delay: var(--enter-delay, 0ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .is-enter-pop,
+  .is-enter-rise,
+  .is-enter-fade {
+    animation: none;
+  }
+
+  .Connector {
+    transition: none !important;
+    stroke-dashoffset: 0 !important;
+    opacity: 1 !important;
+  }
+}
