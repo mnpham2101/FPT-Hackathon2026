@@ -11,18 +11,21 @@ Governs every high-level design [[project-architecture]] produces — the artifa
 
 ## One HLD per node, not per phase
 
-Every node of the R5 blueprint carries exactly one HLD, in its own folder's `doc/`, named for the node rather than for the phase that produced it:
+Every node of the R5 blueprint carries exactly one HLD, in that node's design folder under [documents/Design/](../../documents/Design/), named for the node rather than for the phase that produced it:
 
-| Node folder | HLD |
-|---|---|
-| [Scenario_Player/](../../Scenario_Player/) — the bench | `doc/scenario-player-hld.md` |
-| [V2X_ECU/](../../V2X_ECU/) | `doc/v2x-ecu-hld.md` |
-| [ADA_ECU/](../../ADA_ECU/) | `doc/ada-ecu-hld.md` |
-| [IVI_ECU/](../../IVI_ECU/) | `doc/ivi-ecu-hld.md` |
+| Node folder | Design folder | HLD |
+|---|---|---|
+| [Scenario_Player/](../../Scenario_Player/) — the bench | [documents/Design/SCENARIO-PLAYER/](../../documents/Design/SCENARIO-PLAYER/) | `scenario-player-hld.md` |
+| [V2X_ECU/](../../V2X_ECU/) | [documents/Design/V2X-ECU/](../../documents/Design/V2X-ECU/) | `v2x-ecu-hld.md` |
+| [ADA_ECU/](../../ADA_ECU/) | [documents/Design/ADA-ECU/](../../documents/Design/ADA-ECU/) | `ada-ecu-hld.md` |
+| [IVI_ECU/](../../IVI_ECU/) | [documents/Design/IVI-ECU/](../../documents/Design/IVI-ECU/) | `ivi-ecu-hld.md` |
 
+- **The design lives apart from the code it governs.** An HLD is read by a planner writing briefs and by a reviewer judging a branch, neither of whom is inside the node folder; collecting all four in one section is what lets a reader compare them. The node folder keeps its code and its `doc/deprecated/` ([node-code-layout.md § Where a node's documents live](node-code-layout.md#where-a-nodes-documents-live)).
+- **The decision record and the diagram sources sit beside the HLD**, in the same design folder: `<node-slug>-design-decisions.md`, the `.puml` sequence and component sources, and the `.drawio`/`.svg` component map.
 - **The bench is a node and gets the full document.** Being test equipment changes what its sections say, not whether it has them.
 - **A later phase extends the node's HLD; it does not add a second one.** Two design documents for one node means two answers to "where does this file go", and the implementer picks the wrong one.
 - **The HLD is that node's sole design authority.** Where it exists, no other document defines the node's components, paths, seams, configuration keys or evidence lines.
+- **A note that is not about one of our nodes is not design.** Technique, platform findings and protocol study go to [documents/KnowledgeBase/](../../documents/KnowledgeBase/), which [[project-researcher]] owns.
 
 ## Section order is mandatory
 
@@ -42,7 +45,7 @@ Nothing may be used before it is defined, and a planner must be able to reach an
 | 10 | **The contract** | always | The node's message schema — direction, transport, encoding, normative schema file, node copy, freeze status, and a field table per message kind |
 | 11 | **Tech stack, build and CI** | always | Languages, libraries and versions traced to the report; the build commands; the CI lanes |
 | 12 | **Test strategy** | always | The configurations that exercise the node, and the expected observables with the component that produces each |
-| 13 | **Design decisions** | always | A link to the node's decision record, `doc/<node-slug>-design-decisions.md`, and one line naming what D1…Dn cover |
+| 13 | **Design decisions** | always | A link to the node's decision record, `<node-slug>-design-decisions.md`, beside it, and one line naming what D1…Dn cover |
 
 A header blockquote precedes §1: what the document is, the frozen contract, the procedure documents beside it, and the diagram sources.
 
@@ -54,7 +57,7 @@ A header blockquote precedes §1: what the document is, the frozen contract, the
 - **§6 gives each component one responsibility.** Role, input, output, in a table. Work that fits no row belongs to a component the design has not defined yet — a design change, not an implementer's judgement call.
 - **§10 names which message set the contract is, and its direction.** Say it explicitly — "the message set from ADA-ECU" — and point at the normative schema file plus the node's byte-synced copy. A contract section that describes a format without naming producer and consumer leaves the reader guessing who sends it. A node that both consumes and produces gets one subsection per direction.
 - **§12's observables are the acceptance evidence.** Log lines and rendered output, each traced to the component that produces it. Where more than one configuration exists (mock producer versus real), state that the expected output is identical in both, so a difference is a finding about the other node.
-- **§13 is a pointer; the decisions live in a companion file.** `<Node_Folder>/doc/<node-slug>-design-decisions.md` holds `D1…Dn`, each a titled decision with its rationale and its rejected alternative — worked example: [ivi-ecu-design-decisions.md](../../documents/Design/IVI-ECU/ivi-ecu-design-decisions.md). The HLD cites decisions by number wherever they bind a component, and keeps §13 to the link plus one line of coverage. Decisions are binding: one is revisited by changing its entry, never by an implementation that departs from it.
+- **§13 is a pointer; the decisions live in a companion file.** `documents/Design/<NODE>/<node-slug>-design-decisions.md` holds `D1…Dn`, each a titled decision with its rationale and its rejected alternative — worked example: [ivi-ecu-design-decisions.md](../../documents/Design/IVI-ECU/ivi-ecu-design-decisions.md). The HLD cites decisions by number wherever they bind a component, and keeps §13 to the link plus one line of coverage. Decisions are binding: one is revisited by changing its entry, never by an implementation that departs from it.
 
 ## Diagrams
 
@@ -87,5 +90,5 @@ using `type = design` and the **requirement-only `X`** form of the taskID — HL
 
 ## How to apply
 
-- [[project-architecture]] applies the section list at the outline step of [high-level-design-procedure](../skills/high-level-design-procedure/SKILL.md), and again before committing. Do not commit an HLD without its `[X] design: ...` tagged message. A deliverable placed outside the sanctioned work-folder locations of [node-code-layout.md §Per-folder doc/](node-code-layout.md#per-folder-doc) is called out with its rationale and goes through that procedure's approval pause.
+- [[project-architecture]] applies the section list at the outline step of [high-level-design-procedure](../skills/high-level-design-procedure/SKILL.md), and again before committing. Do not commit an HLD without its `[X] design: ...` tagged message. A deliverable placed outside the sanctioned work-folder locations of [node-code-layout.md § Where a node's documents live](node-code-layout.md#where-a-nodes-documents-live) is called out with its rationale and goes through that procedure's approval pause.
 - [[project-planner]] reads the node's HLD as the structural input to task planning and cites its sections in every brief; a missing section is flagged back to architecture rather than filled in by the plan.

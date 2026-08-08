@@ -43,15 +43,25 @@ The boundary — this carves out test equipment, it does not weaken the product-
 - **Same build rules.** A test-equipment folder that builds an image — a `tools/<name>/`, or the in-folder mock above — is self-contained under § Build rules exactly as a node folder is: own `Dockerfile` (that section fixes where it may sit), own dependency manifest, own tests, no cross-folder source imports, no hardcoded tunables (role, peer addresses, ports and cadences come from env). A host-side tool that builds no image still obeys everything but the `Dockerfile` line.
 - **Take contract fields from the node's `contracts/` file, never a private copy.** A tool whose field list has drifted accepts messages the real node would reject — the test passes and the system is still broken.
 
-## Per-folder `doc/`
+## Where a node's documents live
 
-Each work folder — the four node folders above plus [plans/](../../plans/) — carries a `doc/` subfolder holding **report-style documents about that folder's design and rationale**: HLDs, design notes, decision rationale, the versioned pull-request reviews of that node ([pull-request-review-format.md](pull-request-review-format.md)), and `doc/research_notes/` for investigation findings and their diagrams (`.puml`/`.svg`/`.drawio`). Existing examples: [documents/Design/SCENARIO-PLAYER/](../../documents/Design/SCENARIO-PLAYER/), [plans/doc/research_notes/](../../plans/doc/research_notes/).
+A node's documents are filed by **what they are**, not by which folder the code sits in. Three destinations, three owners:
 
-- **Read before writing.** Any agent working in a folder reads that folder's `doc/` first — it is the local context (why the design is what it is, what was already investigated and rejected) that the requirements report and plan do not carry.
-- **Write design & rationale there, not in code comments or the plan.** Design/rationale output for a node lands in that node's `doc/`; the HLD content and commit rules still apply ([hld-content-and-commit-format.md](hld-content-and-commit-format.md)).
-- `doc/` is documentation only — no implementation code, and it is never part of the built image.
-- The folder is created when its first document lands (git does not track empty directories), so a missing `doc/` means "nothing written yet", not "convention does not apply".
+| Kind | Location | Owner |
+|---|---|---|
+| Design authority — HLD, decision record, node-specific design notes, diagram sources | [documents/Design/`<NODE>`/](../../documents/Design/) | [[project-architecture]] |
+| General knowledge — technique, platform findings, protocol study; anything not unique to one node | [documents/KnowledgeBase/](../../documents/KnowledgeBase/) | [[project-researcher]] |
+| Superseded and point-in-time documents — old design notes, and reviews of work that has moved on | `<Node_Folder>/doc/deprecated/` | whoever supersedes the document |
+
+- **The test is what the document is about, not what it is called.** A study of what the platform serves as camera input is knowledge even though only one node consumes it; a port plan that a node's HLD names as its own deliverable is design even though it reads like research.
+- **Read before writing.** Any agent working on a node reads that node's design folder first — it is the local context (why the design is what it is, what was already investigated and rejected) that the requirements report and plan do not carry.
+- **Write design & rationale there, not in code comments or the plan.** The HLD content and commit rules still apply ([hld-content-and-commit-format.md](hld-content-and-commit-format.md)).
+- **A node folder holds no design.** After the move, `<Node_Folder>/doc/` holds `deprecated/` and nothing else; a new document goes to one of the three homes above rather than back beside the code.
+- Documents are documentation only — never implementation code, and never part of a built image.
+- A folder is created when its first document lands (git does not track empty directories), so a missing one means "nothing written yet", not "convention does not apply".
 - Documents follow [markdown-writing-style](../skills/markdown-writing-style/SKILL.md); reference the report's requirement numbers instead of restating requirements.
+
+[plans/](../../plans/) keeps its own `doc/` for run records and planning research — it is not a node, and its documents are about the plan rather than about a node's design.
 
 ## Build rules (all container nodes)
 

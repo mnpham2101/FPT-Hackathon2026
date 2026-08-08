@@ -6,24 +6,31 @@ A review is a **verdict on work already done**. It is not a plan, not a design, 
 
 ## Location & naming
 
-Reviews live in the **reviewed node's own `doc/`**, beside the HLD that judged them, at:
+A review is written to the **reviewed node's own `doc/`**, at:
 
 ```
 <Node_Folder>/doc/<node-slug>-pr<N>-review-v<K>.md
 ```
 
-Worked example: [ivi-ecu-pr2-review-v1.md](../../IVI_ECU/doc/deprecated/ivi-ecu-pr2-review-v1.md).
-
 | Element | Value |
 |---|---|
-| `<Node_Folder>/doc/` | the `doc/` of the node the PR principally develops, per [node-code-layout.md § Per-folder doc/](node-code-layout.md#per-folder-doc) |
+| `<Node_Folder>/doc/` | the `doc/` of the node the PR principally develops, per [node-code-layout.md § Where a node's documents live](node-code-layout.md#where-a-nodes-documents-live) |
 | `<node-slug>` | the same slug the node's HLD uses — `ivi-ecu`, `ada-ecu`, `v2x-ecu`, `scenario-player` |
 | `<N>` | the pull-request number |
 | `<K>` | the review version, from `1` |
 
-- **The review sits with the design it was judged against.** An agent reading a node folder's `doc/` for context gets the HLD, the decisions, and what the last review of that node found — in one place, without knowing a review happened.
+- **The review sits with the node, not with the design.** The design authority lives in [documents/Design/`<NODE>`/](../../documents/Design/) and states what the node *should* be; a review states what one branch *was* on one day. Keeping the two apart is what stops a verdict being read as a specification.
 - **A PR spanning several node folders gets one document**, in the `doc/` of the node carrying most of the change; cross-node findings stay in it rather than being split. A PR with no principal node goes to [plans/doc/](../../plans/doc/).
 - **Reviews are committed and pushed to `main`**, not to the branch under review. The branch is rewritten, rebased, squashed or deleted as the work lands; the review is the record of what was found and must outlive it.
+
+### Archiving a review
+
+**A review moves to `<Node_Folder>/doc/deprecated/` once the work it judged has landed or been superseded** — not when it is written. Until then it is live: it names gaps someone may still be closing.
+
+Worked examples, both archived: [ivi-ecu-pr2-review-v1.md](../../IVI_ECU/doc/deprecated/ivi-ecu-pr2-review-v1.md) and [ivi-ecu-pr2-review-v2.md](../../IVI_ECU/doc/deprecated/ivi-ecu-pr2-review-v2.md).
+
+- **Archiving moves the file; it never edits the verdict.** Relative links may be repointed for the new depth, and nothing else.
+- **A later version does not archive an earlier one.** v1 and v2 judge different commits and travel together — § Versions are enumerated, never overwritten.
 
 ## Versions are enumerated, never overwritten
 

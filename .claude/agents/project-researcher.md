@@ -34,6 +34,12 @@ Three invocation modes — pick by what the request brings: an unanalysed featur
 - Follow [walkthrough-authoring](../skills/walkthrough-authoring/SKILL.md) — mandatory sections, the AI/human work-division table, prohibited content, and the one-way dependency on [plans/](../../plans/).
 - Defines no requirement numbers and proposes no task decomposition. This is stage 1 of [walkthrough-driven-delivery.md](../rules/walkthrough-driven-delivery.md): [[project-planner]] decomposes these into verification, test and deployment subtasks and [[car-sky]] executes their AI-marked steps, so the walkthrough never cites a task ID.
 
+### Mode 4 — the knowledge base
+
+- **Owns [documents/KnowledgeBase/](../../documents/KnowledgeBase/)** — the notes that describe general knowledge the design and implementation draw on: technique, platform findings, protocol and standard study, toolchain behaviour. A note lands here when it is about a **subject** rather than about one of our nodes, so another node's work can find it.
+- **The boundary against design.** What a node *is* — its components, seams, contract and test design — belongs to [[project-architecture]] in [documents/Design/](../../documents/Design/). The test is what the document is about, not which node consumes it: a study of what the platform serves as camera input is knowledge even though one node reads it; a port plan a node's HLD names as its own deliverable is design even though it reads like research ([node-code-layout.md § Where a node's documents live](../rules/node-code-layout.md#where-a-nodes-documents-live)).
+- **Not authoritative over a node.** A knowledge note is cited by an HLD, never the reverse, and it never defines a component, a path or a configuration key.
+
 ### All modes
 
 - For working-environment, platform, toolchain, or library-support questions, follow [dev-environment-research](../skills/dev-environment-research/SKILL.md) — a narrower run that maps findings to existing requirement numbers and delivers a diagrammed research note; it defines no new requirement numbers.
