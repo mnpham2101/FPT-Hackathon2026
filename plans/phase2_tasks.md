@@ -18,7 +18,7 @@
 **Input (must exist before start).** All present on `main`:
 
 - The Phase 0 contract layer listed under § Authority above.
-- [ada-ecu-hld.md](../documents/Design/ADA-ECU/ada-ecu-hld.md) and [video-source-for-r12.md](../documents/KnowledgeBase/video-source-for-r12.md) committed.
+- [ada-ecu-hld.md](../documents/Design/ADA-ECU/ada-ecu-hld.md) and video-source-for-r12.md *(deprecated)* committed.
 - Phase 1's frozen R2 producer shape — `V2X_ECU/src/forward/ada_forwarder` sends one compact-JSON `R2Message` datagram per perceived-object update to `ADA_ECU_HOST:47200`. Phase 2 consumes that shape from `tools/mock_v2x_sender.py`; **no live Phase 1 node is required.**
 
 Nothing in this phase waits on a person before it can start.
@@ -529,11 +529,11 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 ### [x] `12.2.9.1` — Clip preflight `tools/check_clip_spec.py` *(AI)*
 
-**Objective:** the [research note KPI 1](../documents/KnowledgeBase/video-source-for-r12.md#measurable-checks-kpis) made executable — reject a non-conforming clip naming the failing attribute, and pass on the committed one.
+**Objective:** the research note KPI 1 *(deprecated)* made executable — reject a non-conforming clip naming the failing attribute, and pass on the committed one.
 
 **Scope:**
 
-- Python 3 at `ADA_ECU/tools/check_clip_spec.py`; reads a video path and checks the machine-checkable rows of the [§3 spec table](../documents/KnowledgeBase/video-source-for-r12.md#3-video-input-spec-to-build-phase-3-against): container MP4, codec H.264, resolution 1280×720, constant frame rate 20 fps, file ≤ 60 MB, no audio track — plus a decode pass proving OpenCV reads ≥ 99% of the declared frame count with zero errors (KPI 2).
+- Python 3 at `ADA_ECU/tools/check_clip_spec.py`; reads a video path and checks the machine-checkable rows of the §3 spec table *(deprecated)*: container MP4, codec H.264, resolution 1280×720, constant frame rate 20 fps, file ≤ 60 MB, no audio track — plus a decode pass proving OpenCV reads ≥ 99% of the declared frame count with zero errors (KPI 2).
 - **Duration default is 10–120 s, an interim value.** The committed clip is 10.0 s / 200 frames. B is the lead vehicle only between t≈6 s and t≈16 s of the source. A run longer than the clip comes from looping (`DETECTOR_LOOP=true`) rather than from different footage — reasoning in [the sidecar § The remaining deviation](../ADA_ECU/media/ego-b-occluding-c.source.md). The research note's §3 duration row reads 60–120 s, and § Open items item 6 carries that reconciliation to [[project-researcher]].
 - Every expected value comes from CLI flags/env with those defaults — **no literals**.
 - Probe via `ffprobe` when present, falling back to OpenCV properties with a clear notice; exit 1 listing every failing attribute with actual-vs-expected; exit 0 with a one-line summary otherwise.
@@ -552,7 +552,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Scope — four steps, all performed by the person:**
 
-1. Send [video-source-for-r12.md §3](../documents/KnowledgeBase/video-source-for-r12.md#3-video-input-spec-to-build-phase-3-against) to FPT-Mentor — the format / frame rate / data rate table with its `assume` markers, and the KPI list beneath it.
+1. Send video-source-for-r12.md §3 *(deprecated)* to FPT-Mentor — the format / frame rate / data rate table with its `assume` markers, and the KPI list beneath it.
 2. Ask for confirmation or correction of the proposed values.
 3. State in the message that the committed clip is 10.0 s and that a longer run comes from looping, so any correction is against what exists.
 4. Record the send in `plans/doc/phase2-ada-scaffold-run.md` — created by this subtask — with the date and any reply.
@@ -574,7 +574,7 @@ Nothing new is authored; the note is the artifact.
 **Scope — [node-ada-ecu.md](../requirements/car-sky-guide/node-ada-ecu.md) § Blueprint node config only, additive:**
 
 - Env rows added to the existing five: `V2X_LISTEN_HOST`, `CONFIRM_HITS`, `TRACK_TIMEOUT_MS`, `FUSION_TICK_MS`, `DETECTOR_ENABLED`, `DETECTOR_CMD`, `DETECTOR_LOOP`, `DETECTOR_RESTART_MAX`, `VIDEO_CLIP_PATH` (`/app/media/ego-b-occluding-c.mp4`), `DETECTOR_FRAME_STRIDE` (`4`), `DETECTOR_REALTIME_PACING` (`true`), `DETECTOR_CLIP_FPS` (`20.0`), `DETECTOR_START_DELAY_S` (`0.0`), `MODEL_PATH`, `CONF_THRESHOLD`, `IOU_THRESHOLD`, `TRACK_IOU_MIN`, `VEHICLE_WIDTH_M`, `CAMERA_HFOV_DEG`, `CRA_ENABLED`, `RISK_NEAR_M`, `RISK_CRITICAL_M`, `RISK_TTC_WARN_S`, `RISK_TTC_CRITICAL_S`, `RISK_DWELL_MS`, `STATE_RATE_HZ`, `EVENT_LOG_PATH`, `ASSESS_LOG_EVERY_MS`, `CAPTURE_FILTER`, `PCAP_DIR`, `CAPTURE_ROTATE_S`. Values = the [HLD §6](../documents/Design/ADA-ECU/ada-ecu-hld.md#6-internal-components) defaults; the table there is the authority and is referenced, not duplicated in prose.
-- **Change nothing else.** The guide carries `command: ["./entrypoint.sh"]`, `capabilities: ["NET_RAW"]` and the `registry.hackathon-2.carsky.io` host. Leave them unchanged. Pins unchanged: exactly one `ethernet` `OUTPUT` pin at `10.99.0.12`, **no `video` pin** (the clip is baked into the image; [research note §1](../documents/KnowledgeBase/video-source-for-r12.md#1-platform-finding--carsky-serves-no-camera-content)). No frozen contract moves.
+- **Change nothing else.** The guide carries `command: ["./entrypoint.sh"]`, `capabilities: ["NET_RAW"]` and the `registry.hackathon-2.carsky.io` host. Leave them unchanged. Pins unchanged: exactly one `ethernet` `OUTPUT` pin at `10.99.0.12`, **no `video` pin** (the clip is baked into the image; research note §1 *(deprecated)*). No frozen contract moves.
 
 **This subtask blocks nothing.** The env values a human types into the isolated Room come from `5.4.9.1`'s `blueprint-ada-isolated.json` and are diffed by `5.4.10.6`, not from this guide.
 
@@ -639,4 +639,4 @@ guide       5.2.9.4 (after 13.2.2.1 + phase-3 12.3.2.1)
 
 ---
 
-*Phase 2 = 9 task groups, 26 subtasks — 25 *AI* (2 docs-only), 1 *Human*. Nothing started. Decomposed from [ada-ecu-hld.md](../documents/Design/ADA-ECU/ada-ecu-hld.md), [video-source-for-r12.md](../documents/KnowledgeBase/video-source-for-r12.md) and [milestone1_high_level_plan.md § Phase 2](../documents/Plan-Proposal/milestone1_high_level_plan.md#phase-2--ada-scaffolding-store--state-machine-no-detector-r3-r13).*
+*Phase 2 = 9 task groups, 26 subtasks — 25 *AI* (2 docs-only), 1 *Human*. Nothing started. Decomposed from [ada-ecu-hld.md](../documents/Design/ADA-ECU/ada-ecu-hld.md), video-source-for-r12.md *(deprecated)* and [milestone1_high_level_plan.md § Phase 2](../documents/Plan-Proposal/milestone1_high_level_plan.md#phase-2--ada-scaffolding-store--state-machine-no-detector-r3-r13).*

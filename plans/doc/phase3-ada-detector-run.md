@@ -2,7 +2,7 @@
 
 > Run evidence for the R12 detection log, the distance-constant retune, and the KPI
 > measurements of [phase3_tasks.md](../phase3_tasks.md) groups 3.4–3.5. The KPIs are
-> [video-source-for-r12.md § Measurable checks](../../documents/KnowledgeBase/video-source-for-r12.md#measurable-checks-kpis);
+> video-source-for-r12.md § Measurable checks *(deprecated)*;
 > the retune rule is [ADA HLD D6](../../documents/Design/ADA-ECU/ada-ecu-design-decisions.md#d6--r12-detector-frame-source-seam-inference-distance-zero-c-evidence).
 
 ## Venue

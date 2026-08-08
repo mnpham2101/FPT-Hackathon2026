@@ -3,7 +3,7 @@
 > **Authority & context:**
 > - **Phase content:** [milestone1_high_level_plan.md § Phase 3](../documents/Plan-Proposal/milestone1_high_level_plan.md#phase-3--object-detection-from-video-r12--runs--with-phase-4) — its four acceptance checkboxes are the phase output.
 > - **Design:** [ada-ecu-hld.md](../documents/Design/ADA-ECU/ada-ecu-hld.md) — §4 folder structure for every path, §6 env tables for every constant; **[D6](../documents/Design/ADA-ECU/ada-ecu-design-decisions.md#d6--r12-detector-frame-source-seam-inference-distance-zero-c-evidence)** is this phase's design (frame-source seam, inference, distance, association, emission, zero-C evidence, model provenance) and **[D10](../documents/Design/ADA-ECU/ada-ecu-design-decisions.md#d10--clock-domains-and-stimulus-paced-against-clock_monotonic)** adds the detector's real-time pacing.
-> - **Video source:** [video-source-for-r12.md](../documents/KnowledgeBase/video-source-for-r12.md) §3 the clip spec and its KPIs; and **the clip's own record**, [ADA_ECU/media/ego-b-occluding-c.source.md](../ADA_ECU/media/ego-b-occluding-c.source.md) — provenance, licence, encode command, content verdict, and the accepted duration deviation.
+> - **Video source:** video-source-for-r12.md *(deprecated)* §3 the clip spec and its KPIs; and **the clip's own record**, [ADA_ECU/media/ego-b-occluding-c.source.md](../ADA_ECU/media/ego-b-occluding-c.source.md) — provenance, licence, encode command, content verdict, and the accepted duration deviation.
 > - **Requirements:** [m1-cooperative-awareness.md §2](../requirements/m1-cooperative-awareness.md) R3, R5, R12, R18 and §3(g) — referenced by number, never restated.
 > - **Run timing:** [m1-run-timing-and-event-triggering.md](../requirements/m1-run-timing-and-event-triggering.md) — §6.2's detector timestamp ruling (`12.3.2.6`), §6.1's three pacing keys and R20's detector half (`12.3.2.1`, `12.3.2.8`), and §6.6(g)'s warm-up budget (`12.3.5.2`, `22.3.6.3`).
 > - **Phase 2 baseline (do not re-plan):** [phase2_tasks.md § Phase 2 overview](phase2_tasks.md#phase-2-overview) — the C++ core, the store, the R13 machine, the CRA seam, `src/observer/detector_reader` with its `DETECTOR_CMD` process contract, the image and the `ada-ecu-image` lane, `tools/check_clip_spec.py`.
@@ -28,9 +28,9 @@
 - [x] Detection log over the provided clip with per-frame objects and distance estimates (R12) — closed by `12.3.5.2`.
 - [x] Entries enter the store via the same R3 interface as relayed entries, `source = own_sensor` — mock no longer required — closed by `3.3.5.3`.
 - [x] **Zero detections labeled C** — closed by `12.3.5.1` (`tools/check_zero_c.py`) + `12.3.5.4` (the CI lane that makes it repeatable) + the structural argument in [HLD D6](../documents/Design/ADA-ECU/ada-ecu-design-decisions.md#d6--r12-detector-frame-source-seam-inference-distance-zero-c-evidence) + the clip's own content verdict.
-- [ ] Runs CPU-only on the provided clip; offline pace acceptable — closed by `12.3.5.2` (measured effective inference rate ≥ 5 Hz, i.e. ≤ 200 ms per sampled frame) on the CI Linux runner, and `5.3.6.2` (the same measurement on the deployed node — [research note KPI 3](../documents/KnowledgeBase/video-source-for-r12.md#measurable-checks-kpis)).
+- [ ] Runs CPU-only on the provided clip; offline pace acceptable — closed by `12.3.5.2` (measured effective inference rate ≥ 5 Hz, i.e. ≤ 200 ms per sampled frame) on the CI Linux runner, and `5.3.6.2` (the same measurement on the deployed node — research note KPI 3 *(deprecated)*).
 
-**The clip is 10 s, a deviation from the [research note §3](../documents/KnowledgeBase/video-source-for-r12.md#3-video-input-spec-to-build-phase-3-against) 60–120 s duration row, accepted with looping as its remedy** ([provenance record § The remaining deviation](../ADA_ECU/media/ego-b-occluding-c.source.md)). B is the lead vehicle only across a 10 s window of the source. A longer run is obtained by **looping** (`DETECTOR_LOOP=true`, default), each loop reading as a fresh approach cycle with B re-appearing at ~60 m and closing again. Every duration-sensitive check in this phase and in Phase 4 is worded against a **looped** run, not a single pass.
+**The clip is 10 s, a deviation from the research note §3 *(deprecated)* 60–120 s duration row, accepted with looping as its remedy** ([provenance record § The remaining deviation](../ADA_ECU/media/ego-b-occluding-c.source.md)). B is the lead vehicle only across a 10 s window of the source. A longer run is obtained by **looping** (`DETECTOR_LOOP=true`, default), each loop reading as a fresh approach cycle with B re-appearing at ~60 m and closing again. Every duration-sensitive check in this phase and in Phase 4 is worded against a **looped** run, not a single pass.
 
 **Suggested branch (suggestion only — creation is the user's call):** `feat/phase3-ada-detector`. One branch for the whole phase; subtasks commit onto it. It branches from Phase 2's branch (or from `main` once Phase 2 merges) — it needs `detector_reader` and the image, nothing from Phase 4.
 
@@ -144,7 +144,7 @@ The three pacing keys are [HLD §6](../documents/Design/ADA-ECU/ada-ecu-hld.md#6
 
 ### [x] `12.3.2.2` — Frame-source seam `detector/frame_source.py` *(AI)*
 
-**Objective:** the mandatory D6 seam — frame acquisition behind an interface, so a future CarSky `video` pin is one new implementation and touches nothing downstream ([research note §2 (a′)](../documents/KnowledgeBase/video-source-for-r12.md#why-a-is-rejected-for-m1)).
+**Objective:** the mandatory D6 seam — frame acquisition behind an interface, so a future CarSky `video` pin is one new implementation and touches nothing downstream (research note §2 (a′) *(deprecated)*).
 
 **Scope — steps in order:**
 
@@ -333,7 +333,7 @@ The clip-time value `frame_index / fps * 1000` stays a detector-local `Frame` fi
 
 ### [x] `12.3.3.2` — CI video fixture `tools/make_sample_video.py` *(AI — parallel)*
 
-**Objective:** the decoder smoke fixture, and **only** that ([research note §2 (c)](../documents/KnowledgeBase/video-source-for-r12.md#why-c-is-a-fallback-not-the-source)).
+**Objective:** the decoder smoke fixture, and **only** that (research note §2 (c) *(deprecated)*).
 
 **Scope — steps in order:**
 
@@ -445,11 +445,11 @@ The clip-time value `frame_index / fps * 1000` stays a detector-local `Frame` fi
 
 1. Trigger `ada-detector-run` with `DETECTOR_LOOP=true` and a duration of at least 60 s of wall time — six loops of the 10 s clip — so the rate measurement has a window and the loop path is exercised in the same run.
 2. Download the stdout artifact, and commit a representative excerpt plus the summary into `plans/doc/phase3-ada-detector-run.md`; the full log is not committed.
-3. Record [research note KPI 2](../documents/KnowledgeBase/video-source-for-r12.md#measurable-checks-kpis) — ≥ 99 % of declared frames read with zero decode errors, across loops.
+3. Record research note KPI 2 *(deprecated)* — ≥ 99 % of declared frames read with zero decode errors, across loops.
 4. Record KPI 3 — effective inference rate ≥ 5 Hz, i.e. wall-clock ≤ 200 ms per sampled frame — from the lane's unpaced arm, because pacing fixes the emit interval and the paced arm cannot measure CPU throughput (`12.3.3.4`).
 5. Record KPI 4 — ≥ 1 `class = vehicle`, `source = own_sensor` entry with a distance estimate for ≥ 90 % of sampled frames.
 6. Record KPI 5 — `check_zero_c.py` exit 0 over the whole log.
-7. Raise `DETECTOR_FRAME_STRIDE` and re-run if KPI 3 fails, never changing the model ([research note §5](../documents/KnowledgeBase/video-source-for-r12.md#5-requirement-mapping-and-flags)); record the stride used.
+7. Raise `DETECTOR_FRAME_STRIDE` and re-run if KPI 3 fails, never changing the model (research note §5 *(deprecated)*); record the stride used.
 8. Record the detector warm-up `W` — ONNX model load plus `VideoCapture` open, from process start to the first emitted R3 line. It is the value the bench's `start_delay_s` is set to, and R22's alignment budget is **−0.5 / +1.1 s** around it ([m1-run-timing-and-event-triggering.md §6.6(g)](../requirements/m1-run-timing-and-event-triggering.md); [SP D7](../documents/Design/SCENARIO-PLAYER/scenario-player-design-decisions.md#d7--the-demo-cycle-is-one-clip-length-and-its-geometry-is-solved-backwards-from-the-first-warning)). This run produces the **host** figure; the deployed one, which is what the bench is configured from, is `22.3.6.3`. The remedy for a large `W` is the bench's `start_delay_s`, never a change here.
 9. Record the interval between the last emitted line of one clip pass and the first of the next, and whether B's track id is re-minted or carried. A long re-open stall is what would expire ego's own B track between cycles, which is `13.4.11.3`'s own-sensor half in Phase 4.
 10. Record the paced-rate check: with `DETECTOR_REALTIME_PACING` true, the sampled-frame rate equals `DETECTOR_CLIP_FPS / DETECTOR_FRAME_STRIDE` within ±2 %, which is [HLD §12](../documents/Design/ADA-ECU/ada-ecu-hld.md#12-test-strategy) K4's bound read off this run's own stamps.
@@ -570,7 +570,7 @@ Layer order decides which blobs are re-pushed: `media/` and `models/` sit above 
 
 ### [x] `12.3.7.2` — Bake the committed clip into the ADA image *(AI)*
 
-**Objective:** the clip reaches the container the only way it can — inside the image. A Container Node has no volume, no bind mount and no host path ([research note §1](../documents/KnowledgeBase/video-source-for-r12.md#1-platform-finding--carsky-serves-no-camera-content)). The single objective is that one Dockerfile line; the size and digest measurement below is that line's acceptance evidence, not a second deliverable.
+**Objective:** the clip reaches the container the only way it can — inside the image. A Container Node has no volume, no bind mount and no host path (research note §1 *(deprecated)*). The single objective is that one Dockerfile line; the size and digest measurement below is that line's acceptance evidence, not a second deliverable.
 
 **Venue:** every build, `docker history` read and in-image run step happens in the `ada-ecu-image` lane. The dev host carries no Docker daemon and no binfmt emulation, so this subtask reads the lane's log rather than building locally.
 
