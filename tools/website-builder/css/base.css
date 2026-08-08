@@ -25,6 +25,18 @@
   --connector: #2f3138;
   --card-shadow: 0 2px 10px rgba(20, 22, 40, 0.08);
   --font-ui: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+
+  /* Generated document pages (css/doc.css) take these instead of --font-ui,
+     and no [data-theme] block may override them: a document must set in one
+     typeface whichever theme is on. --font-ui is a theming token — sketch
+     swaps it to handwriting — and a long technical page reflows into a
+     different shape when the face changes under it, so its headings land in
+     different places and every measurement a reader took of the page is
+     wrong. The theme still recolors these pages; only the text metrics are
+     held still. System stacks, so a document page costs no font download
+     beyond the sketch face already declared above. */
+  --font-doc: "Segoe UI", "Helvetica Neue", "Noto Sans", Arial, sans-serif;
+  --font-doc-mono: "Cascadia Mono", Consolas, "SFMono-Regular", Menlo, "DejaVu Sans Mono", monospace;
 }
 
 * {

@@ -1,0 +1,248 @@
+/* KIS site — the generated document pages (build-pages.py).
+
+   Two blocks: DocLayout, the two-column shell holding the TableOfContents
+   beside the content, and Markdown, the typography of a rendered document
+   body. Both read the same tokens every other component does, so a document
+   page recolors with the theme.
+
+   The one thing a theme may not change here is the typeface: .DocBody takes
+   --font-doc, which base.css defines once and no [data-theme] block
+   overrides. Colors are theming; text metrics are not. */
+
+.DocBody {
+  font-family: var(--font-doc);
+}
+
+/* ---- DocLayout — index column + content column ---- */
+
+.DocLayout {
+  max-width: 1220px;
+  margin: 0 auto;
+  padding: 24px 20px 72px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 26px;
+  align-items: start;
+}
+
+@media (min-width: 1080px) {
+  .DocLayout {
+    grid-template-columns: 268px minmax(0, 1fr);
+  }
+
+  /* Sticky rather than fixed: it scrolls with the page until it reaches the
+     top, then holds — a fixed index overlaps the end of a short page. */
+  .DocLayout__aside {
+    position: sticky;
+    top: 24px;
+    max-height: calc(100vh - 48px);
+    overflow-y: auto;
+  }
+}
+
+/* Empty on a page with too few headings to index. Collapsing the column
+   rather than leaving a 268px gutter is what lets one template serve both. */
+.DocLayout__aside:empty {
+  display: none;
+}
+
+@media (min-width: 1080px) {
+  .DocLayout:has(> .DocLayout__aside:empty) {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 940px;
+  }
+}
+
+/* .Page carries each theme's panel treatment (themes.css); .DocPage keeps it
+   and gives up .Page's own centering, which DocLayout now does. */
+.DocPage {
+  max-width: none;
+  margin: 0;
+  padding: 30px 34px 52px;
+  min-width: 0;
+}
+
+.DocPage .PageHeader {
+  margin-bottom: 22px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid color-mix(in srgb, var(--muted) 35%, transparent);
+}
+
+/* The source path under the title: which file the page was rendered from, so
+   a reader who wants to change it knows what to open. */
+.DocPage__source {
+  font-family: var(--font-doc-mono);
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+/* ---- Markdown — a rendered document body ---- */
+
+.Markdown {
+  font-size: 0.97rem;
+  line-height: 1.68;
+  overflow-wrap: break-word;
+}
+
+.Markdown > * + * {
+  margin-top: 15px;
+}
+
+.Markdown h1,
+.Markdown h2,
+.Markdown h3,
+.Markdown h4,
+.Markdown h5,
+.Markdown h6 {
+  line-height: 1.28;
+  font-weight: 600;
+  scroll-margin-top: 24px;
+}
+
+.Markdown > h2 {
+  margin-top: 38px;
+  padding-bottom: 6px;
+  font-size: 1.4rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--muted) 30%, transparent);
+}
+
+.Markdown > h3 { margin-top: 30px; font-size: 1.13rem; }
+.Markdown > h4 { margin-top: 24px; font-size: 1rem; }
+.Markdown > h5,
+.Markdown > h6 { margin-top: 20px; font-size: 0.95rem; color: var(--muted); }
+
+/* The document's own h1 is the page title the header already shows, so it is
+   dropped here rather than printed twice. */
+.Markdown > h1:first-child {
+  display: none;
+}
+
+/* ---- section anchors ----
+   Every heading carries a permalink the generator emitted, so any section
+   can be linked to directly. Shown on hover: a column of ¶ glyphs down the
+   left margin is noise on a page nobody is trying to link into. */
+
+.Markdown .headerlink {
+  margin-left: 8px;
+  color: var(--muted);
+  text-decoration: none;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.Markdown h2:hover .headerlink,
+.Markdown h3:hover .headerlink,
+.Markdown h4:hover .headerlink,
+.Markdown h5:hover .headerlink,
+.Markdown h6:hover .headerlink,
+.Markdown .headerlink:focus {
+  opacity: 1;
+}
+
+.Markdown a {
+  color: var(--accent);
+  text-decoration-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  text-underline-offset: 2px;
+}
+
+/* A link whose target the build could not resolve: build-pages.py strips the
+   href and leaves the address in data-missing, so it reads as text a reader
+   cannot click rather than a link that 404s when they do. */
+.Markdown a[data-missing] {
+  color: var(--muted);
+  text-decoration: line-through;
+  cursor: not-allowed;
+}
+
+.Markdown ul,
+.Markdown ol {
+  padding-left: 24px;
+}
+
+.Markdown li + li { margin-top: 4px; }
+.Markdown li > ul,
+.Markdown li > ol { margin-top: 4px; }
+
+.Markdown blockquote {
+  padding: 2px 0 2px 16px;
+  border-left: 3px solid var(--accent);
+  color: var(--muted);
+}
+
+.Markdown blockquote > * + * {
+  margin-top: 10px;
+}
+
+.Markdown code {
+  font-family: var(--font-doc-mono);
+  font-size: 0.86em;
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--muted) 20%, transparent);
+}
+
+.Markdown pre {
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--muted) 32%, transparent);
+  background: color-mix(in srgb, var(--muted) 12%, transparent);
+  overflow-x: auto;
+}
+
+.Markdown pre code {
+  padding: 0;
+  background: none;
+  font-size: 0.84rem;
+  line-height: 1.55;
+}
+
+/* These documents carry wide requirement and component tables. The wrapper
+   scrolls instead of the page, so a nine-column table never pushes the whole
+   layout sideways. */
+.Markdown__scroll {
+  overflow-x: auto;
+}
+
+.Markdown table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.88rem;
+}
+
+.Markdown th,
+.Markdown td {
+  padding: 7px 12px;
+  border: 1px solid color-mix(in srgb, var(--muted) 38%, transparent);
+  text-align: left;
+  vertical-align: top;
+}
+
+.Markdown th {
+  background: color-mix(in srgb, var(--muted) 16%, transparent);
+  font-weight: 600;
+}
+
+.Markdown img,
+.Markdown svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Diagrams are drawn on white and would vanish into the blueprint theme's
+   dark panel, so they get their own sheet to sit on under every theme. */
+.Markdown img {
+  display: block;
+  padding: 10px;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.Markdown hr {
+  border: 0;
+  border-top: 1px solid color-mix(in srgb, var(--muted) 35%, transparent);
+}
+
+.Markdown .footnote {
+  font-size: 0.86rem;
+  color: var(--muted);
+}
