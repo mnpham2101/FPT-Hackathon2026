@@ -1,7 +1,5 @@
 # Milestone 1 — Cooperative Vehicle Awareness (A ← B ← C)
 
-**Abridged version.** A reader who does not need the full plan can take the proposal deck instead: [Cooperative Vehicle Awareness](../../presentation/m1-proposal-deck.md) ([HTML](../../presentation/m1-proposal-deck.html)). It presents this plan; where the two differ, this document governs.
-
 > Requirements, scope, and tech stacks live in the authoritative report [m1-cooperative-awareness.md](../../requirements/m1-cooperative-awareness.md) (R1–R19), extended by [m1-run-timing-and-event-triggering.md](../../requirements/m1-run-timing-and-event-triggering.md) (R20–R22, run timing and demo choreography); this plan references R-numbers instead of restating them, and on any conflict the report wins. Phase structure follows the [proposal-deck timeline](../../presentation/assets/m1-phase-timeline.svg) (second authority).
 
 ## 1. Introduction
