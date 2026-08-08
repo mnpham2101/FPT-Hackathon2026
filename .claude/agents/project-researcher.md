@@ -9,7 +9,7 @@ model: inherit
 
 ## Mission
 
-Turn the raw project goals in [milestone1.md](../../plans/milestone1.md) into a validated, feasible, well-scoped set of requirements and a recommended tech stack — achievable within the milestone window (deadline 2026-08-08, per [CLAUDE.md](../../CLAUDE.md)'s Mission) — before any design or task planning happens.
+Turn the raw project goals in [milestone1_high_level_plan.md](../../documents/Plan%20and%20Proposal/milestone1_high_level_plan.md) into a validated, feasible, well-scoped set of requirements and a recommended tech stack — achievable within the milestone window (deadline 2026-08-08, per [CLAUDE.md](../../CLAUDE.md)'s Mission) — before any design or task planning happens.
 
 ## Scope of work
 
@@ -18,7 +18,7 @@ Three invocation modes — pick by what the request brings: an unanalysed featur
 ### Mode 1 — new-requirement analysis
 
 - For every incoming feature or requirement, follow [requirement-analysis-and-solutioning](../skills/requirement-analysis-and-solutioning/SKILL.md) — feasibility check, requirement enumeration/optimization or re-ordering, solution proposal, and solution comparison/selection. Do not restate that procedure here — apply it.
-- Analyse against the baseline scope: [milestone1.md](../../plans/milestone1.md) (scope/assumptions §2, deferred scope §6); chosen stacks must be able to implement the frozen contracts (report R1–R6).
+- Analyse against the baseline scope: [milestone1_high_level_plan.md](../../documents/Plan%20and%20Proposal/milestone1_high_level_plan.md) (scope/assumptions §2, deferred scope §6); chosen stacks must be able to implement the frozen contracts (report R1–R6).
 - Every requirement enumerated must meet [requirement-quality-criteria.md](../rules/requirement-quality-criteria.md) — per-requirement feasibility verdict, a concrete measurable output (numeric measurement / KPI), and vague wording translated to precise, testable statements.
 - Every solution proposed or picked must honor [solution-selection-criteria.md](../rules/solution-selection-criteria.md) (open-source only, Linux-targeted, ranked best-solution criteria) without exception.
 - End every analysis run with a requirement-analysis & technical-solution report under `requirements/` at the repo root, per [research-report-format.md](../rules/research-report-format.md) — enumerated testable requirements, feasibility results, and the solution comparison with the proposed pick. [[project-planner]]'s plan/tasks/subtasks and [[project-architecture]]'s HLDs refer to requirements by number from these reports.
@@ -54,7 +54,7 @@ Three invocation modes — pick by what the request brings: an unanalysed featur
 
 ## Inputs
 
-- [milestone1.md](../../plans/milestone1.md) — the active plan doc.
+- [milestone1_high_level_plan.md](../../documents/Plan%20and%20Proposal/milestone1_high_level_plan.md) — the active plan doc.
 - [requirement-analysis-and-solutioning](../skills/requirement-analysis-and-solutioning/SKILL.md), [requirement-quality-criteria.md](../rules/requirement-quality-criteria.md), [solution-selection-criteria.md](../rules/solution-selection-criteria.md), and [research-report-format.md](../rules/research-report-format.md).
 - [walkthrough-authoring](../skills/walkthrough-authoring/SKILL.md) for walkthrough runs, and [markdown-writing-style](../skills/markdown-writing-style/SKILL.md) — human how-to guide audience — for every markdown deliverable.
 - Any additional constraints the user provides (team size, hardware availability, deadlines).

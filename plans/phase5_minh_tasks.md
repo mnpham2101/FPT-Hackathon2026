@@ -2,7 +2,7 @@
 
 > **Authority & context:**
 >
-> - **Phase content:** [milestone1.md § Phase 5](milestone1.md#phase-5--ivi-hmi-mock-driven-r16-r17--display-track-parallel-from-the-start) — its five acceptance criteria are the phase output.
+> - **Phase content:** [milestone1_high_level_plan.md § Phase 5](../documents/Plan%20and%20Proposal/milestone1_high_level_plan.md#phase-5--ivi-hmi-mock-driven-r16-r17--display-track-parallel-from-the-start) — its five acceptance criteria are the phase output.
 > - **Design:** [ivi-ecu-hld.md](../documents/Design/IVI-ECU/ivi-ecu-hld.md) — the node's sole design authority — with [phase5-ivi-components.puml](../documents/Design/IVI-ECU/phase5-ivi-components.puml) and [phase5-ivi-callflow.puml](../documents/Design/IVI-ECU/phase5-ivi-callflow.puml). Every target path below is cited from its **[§4](../documents/Design/IVI-ECU/ivi-ecu-hld.md#4-folder-structure)** folder map; component responsibilities **[§6](../documents/Design/IVI-ECU/ivi-ecu-hld.md#6-internal-components)**, seams **[§8](../documents/Design/IVI-ECU/ivi-ecu-hld.md#8-interfaces-ports-and-the-layer-rule)**, the R4 input contract **§10**, CI **[§11](../documents/Design/IVI-ECU/ivi-ecu-hld.md#11-tech-stack-build-and-ci)**, test configurations and log shapes **[§12](../documents/Design/IVI-ECU/ivi-ecu-hld.md#12-test-strategy)**, decisions **D1–D13** ([§13](../documents/Design/IVI-ECU/ivi-ecu-hld.md#13-design-decisions)). Deployment steps come from the bring-up procedure below, not from the design.
 > - **Research notes:** [phase5-r4-simulator.md](../documents/Design/IVI-ECU/phase5-r4-simulator.md) · [UDP-msg-parsing.md](../documents/KnowledgeBase/UDP-msg-parsing.md) — non-authoritative; the HLD wins on conflict.
 > - **Requirements:** [m1-cooperative-awareness.md §2](../requirements/m1-cooperative-awareness.md) R4, R16, R17 (plus R5, R6, R18, R19 where this phase touches them) and [m1-run-timing-and-event-triggering.md §7](../requirements/m1-run-timing-and-event-triggering.md) R22, whose K7 this phase's system test reads — referenced by number, never restated.
@@ -28,7 +28,7 @@
 
 **The component set and every target path are [HLD §4](../documents/Design/IVI-ECU/ivi-ecu-hld.md#4-folder-structure) and [§6](../documents/Design/IVI-ECU/ivi-ecu-hld.md#6-internal-components).** **Briefs below cite them; they do not restate them.** A brief names the file it changes and what it must end up doing, and the reader gets the component's responsibility, its inputs and its outputs from the design's tables rather than from a sentence in each subtask.
 
-**Output (phase acceptance — the five criteria of [milestone1.md § Phase 5](milestone1.md#phase-5--ivi-hmi-mock-driven-r16-r17--display-track-parallel-from-the-start)):**
+**Output (phase acceptance — the five criteria of [milestone1_high_level_plan.md § Phase 5](../documents/Plan%20and%20Proposal/milestone1_high_level_plan.md#phase-5--ivi-hmi-mock-driven-r16-r17--display-track-parallel-from-the-start)):**
 
 - [ ] The HMI runs on the AAOS node with the R16 layout; button/app areas switch what the Display area shows.
 - [ ] **(Dev)** A mock R4 warning brings the warning view up showing ego, B, and ghost C at the composed positions.
@@ -1322,7 +1322,7 @@ This subtask runs only where the simulator config has already replaced the probe
 >
 > **This group builds no image.** Each node's image is published by the phase that owns that node.
 >
-> **This group closes no Phase 5 acceptance criterion.** It produces the whole-topology evidence Phase 6's R19 convergence run starts from ([milestone1.md § Phase 6](milestone1.md#phase-6--convergence-real-data-end-to-end-r18-r19--r10-moved-to-the-future-plan)).
+> **This group closes no Phase 5 acceptance criterion.** It produces the whole-topology evidence Phase 6's R19 convergence run starts from ([milestone1_high_level_plan.md § Phase 6](../documents/Plan%20and%20Proposal/milestone1_high_level_plan.md#phase-6--convergence-real-data-end-to-end-r18-r19--r10-moved-to-the-future-plan)).
 
 ### [ ] `5.5.10.1` — Clone the baseline into the full blueprint and set every node's real image *(Human)*
 
@@ -1554,7 +1554,7 @@ with **`5.5.9.1` → `16.5.9.7` running alongside it**, unblocked from the start
 
 ## Acceptance traceability
 
-Every Phase 5 acceptance criterion in [milestone1.md](milestone1.md#phase-5--ivi-hmi-mock-driven-r16-r17--display-track-parallel-from-the-start) maps to at least one subtask.
+Every Phase 5 acceptance criterion in [milestone1_high_level_plan.md](../documents/Plan%20and%20Proposal/milestone1_high_level_plan.md#phase-5--ivi-hmi-mock-driven-r16-r17--display-track-parallel-from-the-start) maps to at least one subtask.
 
 | Phase 5 acceptance criterion | Closed by |
 |---|---|
@@ -1590,7 +1590,7 @@ Carried, not decided. No Phase 5 subtask may close one of these by assuming an a
 Each is a decision with its reason.
 
 - **3D and multi-process wake-on-warning** — optional, not committed M1 deliverables (D11). No subtask attempts either, and no 3D stub is created. The optional path stays open through the `IviWarningViewSeam` render seam rather than through a reserved file path, and `4.5.5.2`'s foreground service keeps multi-process reachable.
-- **The ego video clip in the Display Area** — deferred by the report's §4 decision record and itemized in [milestone1.md §6](milestone1.md#6-deferred-to-later-milestones); no subtask implements any part of it, including a `DisplayMode`, a media dependency or a `video` pin.
+- **The ego video clip in the Display Area** — deferred by the report's §4 decision record and itemized in [milestone1_high_level_plan.md §6](../documents/Plan%20and%20Proposal/milestone1_high_level_plan.md#6-deferred-to-later-milestones); no subtask implements any part of it, including a `DisplayMode`, a media dependency or a `video` pin.
 - **`WarningBannerOverlay` mounted in the Display Area** — forbidden by a standing user decision (D11). The God-View canvas must render unobstructed.
 - **Robolectric, a coverage threshold, and LeakCanary** — none has a basis in R4/R16/R17 acceptance; the acceptance criteria are behavioural, and D2's plain-JVM split is what removes the need for Robolectric (HLD §11, §12).
 - **Runtime JSON-Schema validation on the device** — the typed decode already enforces required fields and types; the schema is enforced in the round-trip tests on both sides (HLD §6).

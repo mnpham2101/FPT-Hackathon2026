@@ -6,7 +6,7 @@ This project implements **V2X (Vehicle-to-Everything)** features that let vehicl
 
 **Milestone 1** demonstrates cooperative, non-line-of-sight (NLOS) awareness: three vehicles drive in a collinear convoy — **A** follows **B** follows **C**. Vehicle A's camera can never see C because B blocks the line of sight. Vehicle B *can* see C, and broadcasts that perception to A over V2X — so both A and B end up displaying C and its relative position, even though A never detects C directly.
 
-Full mission, scope, contracts, and phase plan live in [CLAUDE.md](CLAUDE.md) and [plans/milestone1.md](plans/milestone1.md). Original goals and the deferred future-feature list are in [.claude/prompts/project_goals.md](.claude/prompts/project_goals.md).
+Full mission, scope, contracts, and phase plan live in [CLAUDE.md](CLAUDE.md) and [milestone1_high_level_plan.md](documents/Plan%20and%20Proposal/milestone1_high_level_plan.md). Original goals and the deferred future-feature list are in [.claude/prompts/project_goals.md](.claude/prompts/project_goals.md).
 
 ## Repository layout
 

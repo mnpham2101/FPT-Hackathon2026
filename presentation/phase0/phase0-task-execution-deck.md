@@ -52,7 +52,7 @@ Phase 0 and Phase 1 both use the term *lane*, for two different concepts. Neithe
 
 | Term               | Definition                                                                          | Specified in                                      | Example               |
 | ------------------ | ------------------------------------------------------------------------------------ | ------------------------------------------------- | --------------------- |
-| **Track**          | a workstream spanning whole phases, executed by different people concurrently        | [milestone1.md §3](../../plans/milestone1.md)     | comms track = Phase 1 |
+| **Track**          | a workstream spanning whole phases, executed by different people concurrently        | [milestone1_high_level_plan.md §3](../../documents/Plan%20and%20Proposal/milestone1_high_level_plan.md)     | comms track = Phase 1 |
 | **Execution lane** | subtasks ordered by dependency, grouped by the folder they write into                | each phase plan, *Execution order & parallelism*  | Lane B = `V2X_ECU/`   |
 | **CI lane**        | one job in the GitHub Actions workflow                                               | `.github/workflows/phase0-ci.yml`                 | `v2x-core-build`      |
 

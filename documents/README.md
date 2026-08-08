@@ -6,6 +6,7 @@ These are **contributor write-ups, not authorities**. A node's design is fixed b
 
 | Folder | What goes in it |
 |---|---|
+| [Plan and Proposal/](Plan%20and%20Proposal/) | The milestone plan: its phases, their inputs and their acceptance criteria — the authority phase planning decomposes from |
 | [Design/](Design/) | How a node is built and why, one subfolder per ECU |
 | [Delivery/](Delivery/) | Reports on what was delivered, and the evidence behind it |
 | [KnowledgeBase/](KnowledgeBase/) | Topic notes that outlive the milestone — platform, protocol, tooling |

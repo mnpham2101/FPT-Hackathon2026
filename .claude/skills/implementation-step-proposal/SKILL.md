@@ -16,11 +16,11 @@ Consult **all** documents listed in [CLAUDE.md § Document authority](../../../C
 3. [Car-Sky-Platform.html](../../../requirements/development-platform-doc/Car-Sky-Platform.html) — platform mechanics (blueprint/node/pin, deploy flow).
 4. [BTC_phan_hoi_V2X_team.pdf](../../../requirements/development-platform-doc/BTC_phan_hoi_V2X_team.pdf) — organizers' advisory.
 
-Plus the active plan [milestone1.md](../../../plans/milestone1.md) for the requirement's phase, phase objective, and phase acceptance criteria.
+Plus the active plan [milestone1_high_level_plan.md](../../../documents/Plan%20and%20Proposal/milestone1_high_level_plan.md) for the requirement's phase, phase objective, and phase acceptance criteria.
 
 ## Procedure
 
-1. **Locate the requirement.** Find Rx in the report §2 and the phase that delivers it in [milestone1.md](../../../plans/milestone1.md) §5 — the phase number is the `[Phase]` segment of the output file name.
+1. **Locate the requirement.** Find Rx in the report §2 and the phase that delivers it in [milestone1_high_level_plan.md](../../../documents/Plan%20and%20Proposal/milestone1_high_level_plan.md) §5 — the phase number is the `[Phase]` segment of the output file name.
 2. **Extract the implementation constraints.** From the reference documentation: what the requirement must satisfy (definition + acceptance), the selected tech stack, dependent contracts (R1–R6), and platform facts that shape the implementation (node type, pins, deploy flow).
 3. **Enumerate the implementation steps.** A numbered list in dependency order. Each step: concise, one action, self-contained enough for an implementing agent to act without re-reading the wider codebase — name the component/interface touched, what to build or change, and the check that proves the step done.
 4. **Save one file per requirement** in [plans/](../../../plans/) (same folder as milestone1.md), named `Rx_[Phase].md` — e.g. `plans/R7_1.md` for R7 delivered in Phase 1.

@@ -35,7 +35,7 @@ Drift is caught twice: by byte identity in `check_sync.py`, and by wire truth in
 - **Every scenario tunable lives in the YAML**, validated by `player/config.py`; nothing about the content is an env var or a literal.
 - The two committed variants are chosen to drive the R13 lifecycle from the consumer's side: `default.yaml` closes C from 70 m to 20.5 m across its cycle, crossing the 30 m admission gate 8.0 s in (D7), and `c-out-of-range.yaml` holds C static at 60 m, beyond the 35 m exit gate, so no track is ever admitted.
 
-The scenario values pair with the R13 gate constants that [milestone1.md §4](../../../plans/milestone1.md#track-admission-gate-r13) fixes. The pairing is a property of the data, so a gate change is answered by editing the YAML, never by editing the model.
+The scenario values pair with the R13 gate constants that [milestone1_high_level_plan.md §4](../../Plan%20and%20Proposal/milestone1_high_level_plan.md#track-admission-gate-r13) fixes. The pairing is a property of the data, so a gate change is answered by editing the YAML, never by editing the model.
 
 ## D4 — Runtime composition, and one base image for both build stages
 

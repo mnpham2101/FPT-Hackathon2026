@@ -6,4 +6,4 @@ Reports on what was delivered and the evidence behind it: run records, acceptanc
 |---|---|---|
 | _none yet_ | | |
 
-The evidence itself — CI runs, Room logs, recorded demos — is cited from here by its source, not copied into this folder. The acceptance criteria a run is judged against live in [m1-cooperative-awareness.md §2](../../requirements/m1-cooperative-awareness.md) and in the active plan, [plans/milestone1.md](../../plans/milestone1.md).
+The evidence itself — CI runs, Room logs, recorded demos — is cited from here by its source, not copied into this folder. The acceptance criteria a run is judged against live in [m1-cooperative-awareness.md §2](../../requirements/m1-cooperative-awareness.md) and in the active plan, [milestone1_high_level_plan.md](../Plan%20and%20Proposal/milestone1_high_level_plan.md).
