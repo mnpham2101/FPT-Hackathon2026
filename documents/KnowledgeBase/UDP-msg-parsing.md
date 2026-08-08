@@ -24,8 +24,6 @@ The link, network and transport headers are removed by the network interface and
 - **UDP preserves datagram boundaries.** Unlike a stream transport, no accumulate-and-split logic is required, and none should be implemented.
 - Strip a UTF-8 byte-order mark and surrounding whitespace before deserialising. A JSON parser tolerates whitespace but not a leading BOM.
 
-The listen port is application configuration — `47300` against the ADA-ECU, `5004` against a local simulator — and is unrelated to the link-layer configuration of the bridge.
-
 ### Message surface
 
 The `type` field discriminates two variants:
@@ -74,6 +72,7 @@ Receive-path design points:
 - **Keep `isLenient = false`.** Leniency admits unquoted keys and comparable syntax deviations, which conceal producer defects. Forward compatibility is provided by `ignoreUnknownKeys`, which is a separate setting.
 - **Do not add runtime schema validation.** Typed deserialisation already enforces required fields and their types; a schema validator executing on the device duplicates that work at runtime cost. Schema conformance is verified by the round-trip tests on both sides.
 - **Deserialise off the main thread**, on the IO dispatcher the receive loop already occupies. At 1–10 messages per second the cost is negligible, but the main thread must never block on a socket.
+- **Forward compatibility.** A message may carry data the consumer was not built for. Two cases arise: a field holding a value reserved for a feature not implemented yet (§4.1), and a field that arrives `null` where the consumer expects a value (§4.2).
 
 The resulting pipeline:
 
@@ -83,20 +82,45 @@ The resulting pipeline:
 4. Apply the semantic checks of §4.2.
 5. Publish to the repository flow; view models map the result to UI state.
 
-### 4.1 Unrecognised `warningType` — preserve the value, classify at the presentation edge
+### 4.1 Reserved and unrecognised values — preserve, then classify above the parser
 
-Substituting a placeholder such as `"unknown"` at deserialisation time discards information. The value must be preserved verbatim, and a separate classification step maps recognised values to their presentation and every other value to a generic warning presentation.
+A format in service reserves fields for unimplemented behaviour and gains enumeration values after its consumers ship. A deployed consumer will therefore receive values it does not recognise.
 
-The committed additive-version test asserts this behaviour: `r4-unknown-warning.json` carries `warningType: "slippery_road"`, and [R4AdditiveVersionTest](../../IVI_ECU/app/src/test/java/com/hackathon/v2x/ivi/model/R4AdditiveVersionTest.kt) asserts the parsed value **is** `"slippery_road"` — merely not equal to the known constant.
+| Strategy | Consequence |
+|---|---|
+| Raise | One unrecognised field discards the fields the consumer does understand |
+| Substitute a placeholder | Parses, but the received value is lost to the log and to round-trip equality |
+| **Preserve, classify above the parser** | The parser transcribes; presentation maps anything unrecognised to a default |
 
-Rewriting the field during deserialisation would remove the diagnostic record of which unrecognised value arrived, break round-trip equality, and place a presentation concern in the data layer. The externally observable behaviour — an unrecognised value degrades instead of raising — is achieved either way.
+Preserving constrains the model too: declare the field as its wire type, not a closed enumeration — an enumeration forces the recognise-or-fail decision at parse time, which is the decision being deferred.
+
+`warningType` is the worked example. It carries one recognised value today; a later producer may emit `"slippery_road"`, `"black_ice"` or anything else, and a consumer already in the field must show *something* useful without being updated. The flow below is how it handles a value it has never seen:
+
+![Handling an unrecognised warningType](warning-type-handling.svg)
+
+*Sources: [warning-type-handling.drawio](warning-type-handling.drawio), [warning-type-handling.csv](warning-type-handling.csv).*
+
+Substituting `"unknown"` during deserialisation would pass a "does not crash" check while destroying the record of what arrived, and the log would report an unrecognised value without saying which.
 
 ### 4.2 Validation the decoder does not cover
 
-Type-correct JSON can still be semantically invalid. Two checks belong above the deserialiser:
+A deserialiser enforces syntax and type; it cannot enforce meaning. Whether a well-formed value may be trusted for a given use, and whether an absent value is a fault or a state, are properties of the application rather than of the schema.
 
-- **Provenance guard.** The `object.source` member must equal `v2x_relayed` before the object is rendered as a relayed vehicle. This is implemented in the renderer: [CanvasWarningView](../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/ui/view/CanvasWarningView.kt) draws a `[?]` marker and logs at ERROR for any other value.
-- **`geometry.vehicleC` may legitimately be `null`**, indicating that C is not yet tracked. The Kotlin model declares it nullable and every consumer accepts it. This is a normal operating state and must not be logged as an error.
+| Question the schema cannot answer | In this message | The check |
+|---|---|---|
+| May this value be trusted for this use? | `object.source` — valid string, possibly the wrong provenance | Render as relayed only when the source says relayed; anything else draws `[?]` and logs at ERROR |
+| Is absence a fault or a state? | `geometry.vehicleC` — `null`, not absent, while C is untracked | Accept `null` as normal; the model declares it nullable and nothing logs it |
+
+Both checks sit in a `ConditionChecker` the acting layer calls, downstream of a `MsgDeserializer` that transcribes and judges nothing:
+
+![Where the semantic checks sit](semantic-check-placement.svg)
+
+*Sources: [semantic-check-placement.drawio](semantic-check-placement.drawio), [semantic-check-placement.csv](semantic-check-placement.csv).*
+
+**Advice.** For any field the schema leaves open — free-form string, nullable member, optional object — ask both before writing the consumer:
+
+- **Trust.** Would acting on a wrong value be unsafe or misleading? Then `MsgDeserializer` must not decide it. The acting layer calls `ConditionChecker` on the line before it acts, so the guard and the guarded action are read and changed together. The test of correct placement: deleting the behaviour deletes its guard with it. A guard hoisted into the deserialiser is invisible to the code it protects, and it imposes one trust rule on every other consumer — a recorder, a metrics counter — that may not need it.
+- **Absence.** Decide which kind of `null` has arrived. A **fault** is a value the producer should have sent and did not; log it. A **state** is a value the producer legitimately has nothing to report for, such as `geometry.vehicleC` while C is untracked; never log it. An expected `null` reported as an error, at message rate, teaches the reader to ignore the log.
 
 ### 4.3 Where the parsing code should live
 

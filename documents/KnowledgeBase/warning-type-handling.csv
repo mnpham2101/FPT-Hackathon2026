@@ -1,0 +1,22 @@
+# draw.io CSV import source — Arrange > Insert > Advanced > CSV
+# Text source for warning-type-handling.svg. Edit here, re-import, re-export the SVG.
+#
+# label: %step%
+# style: %shape%
+# namespace: wt-
+# connect: {"from":"next","to":"id","invert":true,"style":"edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#52606D;strokeWidth=1.6;endArrow=block;"}
+# connect: {"from":"nextno","to":"id","invert":true,"label":"no","style":"edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#52606D;strokeWidth=1.6;endArrow=block;fontColor=#B0521F;"}
+# width: auto
+# height: auto
+# padding: 18
+# nodespacing: 40
+# levelspacing: 46
+# layout: verticalflow
+#
+id,step,shape,next,nextno
+start,"Message deserialised — warningType : String","rounded=1;whiteSpace=wrap;html=1;fillColor=#ECEFF3;strokeColor=#52606D;strokeWidth=1.6;",recognised,
+recognised,"warningType recognised?","rhombus;whiteSpace=wrap;html=1;fillColor=#E4EEF7;strokeColor=#2F6F9F;strokeWidth=1.8;",mapped,verbatim
+mapped,"Map to its own presentation","rounded=0;whiteSpace=wrap;html=1;fillColor=#F6F8FA;strokeColor=#52606D;strokeWidth=1.6;",render,
+verbatim,"Keep the value verbatim; use the default presentation","rounded=0;whiteSpace=wrap;html=1;fillColor=#FDF6EE;strokeColor=#B0521F;strokeWidth=1.6;",logonce,
+logonce,"Log the value once","rounded=0;whiteSpace=wrap;html=1;fillColor=#FDF6EE;strokeColor=#B0521F;strokeWidth=1.6;",render,
+render,"Render — the received value is never rewritten","rounded=1;whiteSpace=wrap;html=1;fillColor=#ECEFF3;strokeColor=#52606D;strokeWidth=1.6;",,

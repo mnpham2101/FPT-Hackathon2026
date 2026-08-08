@@ -1,0 +1,63 @@
+<mxfile host="app.diagrams.net" type="device">
+  <diagram name="Semantic check placement" id="semantic-check-placement">
+    <mxGraphModel dx="900" dy="700" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="820" pageHeight="600" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <mxCell id="band" value="ConditionChecker — called by the layer that acts, not by the deserialiser" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F7FAFC;strokeColor=#2F6F9F;strokeWidth=1.4;dashed=1;align=left;verticalAlign=top;spacingLeft=14;spacingTop=8;fontSize=12;fontStyle=1;fontColor=#2F6F9F;" vertex="1" parent="1">
+          <mxGeometry x="130" y="228" width="660" height="232" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="bytes" value="Datagram bytes" style="rounded=1;arcSize=40;whiteSpace=wrap;html=1;fillColor=#ECEFF3;strokeColor=#52606D;strokeWidth=1.6;fontSize=12;fontColor=#1F2933;" vertex="1" parent="1">
+          <mxGeometry x="200" y="24" width="220" height="44" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="deser" value="MsgDeserializer&#10;syntax and type only — judges no meaning" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E4EEF7;strokeColor=#2F6F9F;strokeWidth=1.8;fontSize=12;fontColor=#1F4D6D;" vertex="1" parent="1">
+          <mxGeometry x="170" y="96" width="280" height="62" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="typed" value="Typed message" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F6F8FA;strokeColor=#52606D;strokeWidth=1.6;fontSize=12;fontColor=#1F2933;" vertex="1" parent="1">
+          <mxGeometry x="200" y="188" width="220" height="44" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="trust" value="value trusted&#10;for this use?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#E4EEF7;strokeColor=#2F6F9F;strokeWidth=1.8;fontSize=12;fontColor=#1F4D6D;" vertex="1" parent="1">
+          <mxGeometry x="178" y="270" width="264" height="84" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="untrusted" value="Draw the unknown-source&#10;marker; log ERROR" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FDF6EE;strokeColor=#B0521F;strokeWidth=1.6;fontSize=12;fontColor=#1F2933;" vertex="1" parent="1">
+          <mxGeometry x="544" y="286" width="230" height="52" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="absence" value="a missing value:&#10;fault or state?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#E4EEF7;strokeColor=#2F6F9F;strokeWidth=1.8;fontSize=12;fontColor=#1F4D6D;" vertex="1" parent="1">
+          <mxGeometry x="178" y="386" width="264" height="76" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="fault" value="Log the fault" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FDF6EE;strokeColor=#B0521F;strokeWidth=1.6;fontSize=12;fontColor=#1F2933;" vertex="1" parent="1">
+          <mxGeometry x="544" y="400" width="230" height="48" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="accept" value="Accept — no log entry" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F6F8FA;strokeColor=#52606D;strokeWidth=1.6;fontSize=12;fontColor=#1F2933;" vertex="1" parent="1">
+          <mxGeometry x="190" y="498" width="240" height="44" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="act" value="Act — render" style="rounded=1;arcSize=40;whiteSpace=wrap;html=1;fillColor=#ECEFF3;strokeColor=#52606D;strokeWidth=1.6;fontSize=12;fontColor=#1F2933;" vertex="1" parent="1">
+          <mxGeometry x="200" y="566" width="220" height="30" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="rule" value="A fault is a value the producer should have sent and did not.&#10;A state is one it legitimately has nothing to report for." style="text;html=1;align=left;fontSize=11;fontStyle=1;fontColor=#52606D;" vertex="1" parent="1">
+          <mxGeometry x="544" y="474" width="250" height="66" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="f0" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#52606D;strokeWidth=1.6;endArrow=block;" edge="1" parent="1" source="bytes" target="deser"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="f1" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#52606D;strokeWidth=1.6;endArrow=block;" edge="1" parent="1" source="deser" target="typed"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="f2" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#52606D;strokeWidth=1.6;endArrow=block;" edge="1" parent="1" source="typed" target="trust"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="f3" value="no" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#52606D;strokeWidth=1.6;endArrow=block;fontColor=#B0521F;fontStyle=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="trust" target="untrusted"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="f4" value="yes" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#52606D;strokeWidth=1.6;endArrow=block;fontColor=#3E7D3E;fontStyle=1;" edge="1" parent="1" source="trust" target="absence"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="f5" value="fault" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#52606D;strokeWidth=1.6;endArrow=block;fontColor=#B0521F;fontStyle=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="absence" target="fault"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="f6" value="state" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#52606D;strokeWidth=1.6;endArrow=block;fontColor=#3E7D3E;fontStyle=1;" edge="1" parent="1" source="absence" target="accept"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="f7" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#52606D;strokeWidth=1.6;endArrow=block;" edge="1" parent="1" source="accept" target="act"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -1,0 +1,65 @@
+<mxfile host="app.diagrams.net" type="device">
+  <diagram name="Unrecognised warningType" id="warning-type-handling">
+    <mxGraphModel dx="900" dy="620" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="760" pageHeight="470" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <mxCell id="note" value="Why this arises&#10;&#10;A producer may add a value&#10;&quot;slippery_road&quot; after the consumer&#10;shipped. It has no mapping for it." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FDF6EE;strokeColor=#B0521F;strokeWidth=1.4;align=left;spacingLeft=10;fontSize=11;fontColor=#6B4A33;verticalAlign=top;spacingTop=6;" vertex="1" parent="1">
+          <mxGeometry x="24" y="28" width="212" height="112" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="start" value="Message deserialised&#10;warningType : String" style="rounded=1;arcSize=40;whiteSpace=wrap;html=1;fillColor=#ECEFF3;strokeColor=#52606D;strokeWidth=1.6;fontSize=12;fontColor=#1F2933;" vertex="1" parent="1">
+          <mxGeometry x="280" y="24" width="200" height="54" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="decide" value="warningType&#10;recognised?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#E4EEF7;strokeColor=#2F6F9F;strokeWidth=1.8;fontSize=12;fontColor=#1F4D6D;" vertex="1" parent="1">
+          <mxGeometry x="248" y="104" width="264" height="96" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="mapped" value="Map to its own&#10;presentation" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#F6F8FA;strokeColor=#52606D;strokeWidth=1.6;fontSize=12;fontColor=#1F2933;" vertex="1" parent="1">
+          <mxGeometry x="50" y="200" width="200" height="60" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="verbatim" value="Keep the value verbatim;&#10;use the default presentation" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FDF6EE;strokeColor=#B0521F;strokeWidth=1.6;fontSize=12;fontColor=#1F2933;" vertex="1" parent="1">
+          <mxGeometry x="500" y="200" width="230" height="60" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="logonce" value="Log the value once" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FDF6EE;strokeColor=#B0521F;strokeWidth=1.6;fontSize=12;fontColor=#1F2933;" vertex="1" parent="1">
+          <mxGeometry x="500" y="290" width="230" height="48" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="render" value="Render&#10;the received value is never rewritten" style="rounded=1;arcSize=40;whiteSpace=wrap;html=1;fillColor=#ECEFF3;strokeColor=#52606D;strokeWidth=1.6;fontSize=12;fontColor=#1F2933;" vertex="1" parent="1">
+          <mxGeometry x="270" y="396" width="220" height="52" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="rule" value="The decision is made after parsing,&#10;never inside the parser." style="text;html=1;align=left;fontSize=11;fontStyle=1;fontColor=#52606D;" vertex="1" parent="1">
+          <mxGeometry x="24" y="292" width="210" height="46" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e0" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#52606D;strokeWidth=1.6;endArrow=block;" edge="1" parent="1" source="start" target="decide">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e1" value="yes" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#52606D;strokeWidth=1.6;endArrow=block;fontColor=#3E7D3E;fontStyle=1;exitX=0;exitY=0.5;entryX=0.5;entryY=0;" edge="1" parent="1" source="decide" target="mapped">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e2" value="no" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#52606D;strokeWidth=1.6;endArrow=block;fontColor=#B0521F;fontStyle=1;exitX=1;exitY=0.5;entryX=0.5;entryY=0;" edge="1" parent="1" source="decide" target="verbatim">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#52606D;strokeWidth=1.6;endArrow=block;" edge="1" parent="1" source="verbatim" target="logonce">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#52606D;strokeWidth=1.6;endArrow=block;exitX=0.5;exitY=1;entryX=0;entryY=0.5;" edge="1" parent="1" source="mapped" target="render">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="150" y="372"/></Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#52606D;strokeWidth=1.6;endArrow=block;exitX=0.5;exitY=1;entryX=1;entryY=0.5;" edge="1" parent="1" source="logonce" target="render">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points"><mxPoint x="615" y="372"/></Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

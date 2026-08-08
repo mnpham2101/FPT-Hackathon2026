@@ -1,0 +1,25 @@
+# draw.io CSV import source — Arrange > Insert > Advanced > CSV
+# Text source for semantic-check-placement.svg. Edit here, re-import, re-export the SVG.
+#
+# label: %step%
+# style: %shape%
+# namespace: sc-
+# connect: {"from":"next","to":"id","invert":true,"style":"edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#52606D;strokeWidth=1.6;endArrow=block;"}
+# connect: {"from":"branch","to":"id","invert":true,"label":"exception","style":"edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#52606D;strokeWidth=1.6;endArrow=block;fontColor=#B0521F;"}
+# width: auto
+# height: auto
+# padding: 18
+# nodespacing: 40
+# levelspacing: 46
+# layout: verticalflow
+#
+id,step,shape,next,branch
+bytes,"Datagram bytes","rounded=1;whiteSpace=wrap;html=1;fillColor=#ECEFF3;strokeColor=#52606D;strokeWidth=1.6;",deser,
+deser,"MsgDeserializer — syntax and type only, judges no meaning","rounded=0;whiteSpace=wrap;html=1;fillColor=#E4EEF7;strokeColor=#2F6F9F;strokeWidth=1.8;",typed,
+typed,"Typed message","rounded=0;whiteSpace=wrap;html=1;fillColor=#F6F8FA;strokeColor=#52606D;strokeWidth=1.6;",trust,
+trust,"ConditionChecker: value trusted for this use?","rhombus;whiteSpace=wrap;html=1;fillColor=#E4EEF7;strokeColor=#2F6F9F;strokeWidth=1.8;",absence,untrusted
+untrusted,"Draw the unknown-source marker; log ERROR","rounded=0;whiteSpace=wrap;html=1;fillColor=#FDF6EE;strokeColor=#B0521F;strokeWidth=1.6;",,
+absence,"ConditionChecker: a missing value — fault or state?","rhombus;whiteSpace=wrap;html=1;fillColor=#E4EEF7;strokeColor=#2F6F9F;strokeWidth=1.8;",accept,fault
+fault,"Log the fault","rounded=0;whiteSpace=wrap;html=1;fillColor=#FDF6EE;strokeColor=#B0521F;strokeWidth=1.6;",,
+accept,"Accept — no log entry","rounded=0;whiteSpace=wrap;html=1;fillColor=#F6F8FA;strokeColor=#52606D;strokeWidth=1.6;",act,
+act,"Act — render","rounded=1;whiteSpace=wrap;html=1;fillColor=#ECEFF3;strokeColor=#52606D;strokeWidth=1.6;",,

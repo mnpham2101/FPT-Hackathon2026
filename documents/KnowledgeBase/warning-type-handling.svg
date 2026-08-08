@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="470" viewBox="0 0 760 470" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <rect x="0" y="0" width="760" height="470" fill="#ffffff"/>
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#52606d"/>
+    </marker>
+  </defs>
+
+  <!-- context note -->
+  <rect x="24" y="28" width="212" height="112" rx="4" fill="#fdf6ee" stroke="#b0521f" stroke-width="1.4"/>
+  <text x="38" y="50" font-size="12" font-weight="600" fill="#8a3f16">Why this arises</text>
+  <text x="38" y="72" font-size="11.5" fill="#6b4a33">A producer may add a value</text>
+  <text x="38" y="90" font-size="11.5" fill="#6b4a33" font-family="Consolas, monospace">"slippery_road"</text>
+  <text x="38" y="108" font-size="11.5" fill="#6b4a33">after the consumer shipped.</text>
+  <text x="38" y="126" font-size="11.5" fill="#6b4a33">It has no mapping for it.</text>
+
+  <!-- start -->
+  <rect x="280" y="24" width="200" height="54" rx="16" fill="#eceff3" stroke="#52606d" stroke-width="1.6"/>
+  <text x="380" y="45" font-size="12.5" fill="#1f2933" text-anchor="middle">Message deserialised</text>
+  <text x="380" y="64" font-size="11" fill="#7b8794" text-anchor="middle" font-family="Consolas, monospace">warningType : String</text>
+  <path d="M380,78 L380,100" stroke="#52606d" stroke-width="1.6" marker-end="url(#ah)"/>
+
+  <!-- decision -->
+  <polygon points="380,104 512,152 380,200 248,152" fill="#e4eef7" stroke="#2f6f9f" stroke-width="1.8"/>
+  <text x="380" y="148" font-size="12" fill="#1f4d6d" text-anchor="middle">warningType</text>
+  <text x="380" y="164" font-size="12" fill="#1f4d6d" text-anchor="middle">recognised?</text>
+
+  <!-- yes branch -->
+  <path d="M248,152 L150,152 L150,196" stroke="#52606d" stroke-width="1.6" fill="none" marker-end="url(#ah)"/>
+  <text x="196" y="144" font-size="11.5" font-weight="600" fill="#3e7d3e" text-anchor="middle">yes</text>
+  <rect x="50" y="200" width="200" height="60" rx="4" fill="#f6f8fa" stroke="#52606d" stroke-width="1.6"/>
+  <text x="150" y="226" font-size="12" fill="#1f2933" text-anchor="middle">Map to its own</text>
+  <text x="150" y="244" font-size="12" fill="#1f2933" text-anchor="middle">presentation</text>
+
+  <!-- no branch -->
+  <path d="M512,152 L610,152 L610,196" stroke="#52606d" stroke-width="1.6" fill="none" marker-end="url(#ah)"/>
+  <text x="564" y="144" font-size="11.5" font-weight="600" fill="#b0521f" text-anchor="middle">no</text>
+  <rect x="500" y="200" width="230" height="60" rx="4" fill="#fdf6ee" stroke="#b0521f" stroke-width="1.6"/>
+  <text x="615" y="226" font-size="12" fill="#1f2933" text-anchor="middle">Keep the value verbatim;</text>
+  <text x="615" y="244" font-size="12" fill="#1f2933" text-anchor="middle">use the default presentation</text>
+
+  <path d="M615,260 L615,286" stroke="#52606d" stroke-width="1.6" marker-end="url(#ah)"/>
+  <rect x="500" y="290" width="230" height="48" rx="4" fill="#fdf6ee" stroke="#b0521f" stroke-width="1.6"/>
+  <text x="615" y="319" font-size="12" fill="#1f2933" text-anchor="middle">Log the value once</text>
+
+  <!-- merge -->
+  <path d="M150,260 L150,372 L380,372" stroke="#52606d" stroke-width="1.6" fill="none"/>
+  <path d="M615,338 L615,372 L380,372" stroke="#52606d" stroke-width="1.6" fill="none"/>
+  <path d="M380,372 L380,392" stroke="#52606d" stroke-width="1.6" marker-end="url(#ah)"/>
+
+  <!-- end -->
+  <rect x="270" y="396" width="220" height="52" rx="16" fill="#eceff3" stroke="#52606d" stroke-width="1.6"/>
+  <text x="380" y="417" font-size="12.5" fill="#1f2933" text-anchor="middle">Render</text>
+  <text x="380" y="435" font-size="11" fill="#7b8794" text-anchor="middle">the received value is never rewritten</text>
+
+  <!-- rule -->
+  <text x="24" y="300" font-size="11.5" font-weight="600" fill="#52606d">The decision is made</text>
+  <text x="24" y="318" font-size="11.5" font-weight="600" fill="#52606d">after parsing, never</text>
+  <text x="24" y="336" font-size="11.5" font-weight="600" fill="#52606d">inside the parser.</text>
+</svg>
