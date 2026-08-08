@@ -1,8 +1,12 @@
-# IVI ECU — high-level design (R4, R16, R17)
+# IVI ECU — high-level design
 
-> **The IVI node's HLD, and the sole design authority for `IVI_ECU/`.** Every component this node runs, its role, input and output, where it lives, and how the components connect. Decision record: [ivi-ecu-design-decisions.md](ivi-ecu-design-decisions.md) (D1–D13). Frozen contract: [r4-ada-ivi.schema.json](../../contracts/r4-ada-ivi.schema.json). Build, install and verify: [deploy-ivi-hmi-walkthrough.md](../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md). Node facts: [node-ivi-ecu.md](../../requirements/car-sky-guide/node-ivi-ecu.md).
+> **The IVI node's HLD, and the sole design authority for `IVI_ECU/`.** Every component this node runs, its role, input and output, where it lives, and how the components connect. Decision record: [ivi-ecu-design-decisions.md](ivi-ecu-design-decisions.md) (D1–D13). Frozen contract: [r4-ada-ivi.schema.json](../../../contracts/r4-ada-ivi.schema.json). Build, install and verify: [deploy-ivi-hmi-walkthrough.md](../../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md). Node facts: [node-ivi-ecu.md](../../../requirements/car-sky-guide/node-ivi-ecu.md).
 >
-> Diagrams: [ivi-ecu-module-architecture.svg](research_notes/ivi-ecu-module-architecture.svg) (components) · [phase5-ivi-callflow.puml](phase5-ivi-callflow.puml) (sequence) · [phase5-ivi-components.puml](phase5-ivi-components.puml) (modules).
+> Diagrams: [ivi-ecu-module-architecture.svg](ivi-ecu-module-architecture.svg) (components) · [phase5-ivi-callflow.puml](phase5-ivi-callflow.puml) (sequence) · [phase5-ivi-components.puml](phase5-ivi-components.puml) (modules).
+
+**Author:** Vũ Xuân Bách 
+
+Presentation gives an abridged, summary of IVI-ECU: [IVI-ECU Design Summary](../../../presentation/phase5/phase5-ivi-deck.md)
 
 ## 1. Scope and authority
 
@@ -13,7 +17,7 @@
 
 **This is the only design document governing this node.** It fixes the component set and each component's responsibility, the module graph, every deliverable's path, the seams, the configuration keys, and the evidence log lines.
 
-- **Task planning decomposes from this document plus the requirements report, and nothing else.** Requirement numbers and acceptance come from [m1-cooperative-awareness.md](../../requirements/m1-cooperative-awareness.md); everything structural comes from here — which component a subtask creates, its path, the interface it satisfies, the log line or scene that closes it. Deploy and verify subtasks come from the walkthrough, per [walkthrough-driven-delivery.md](../../.claude/rules/walkthrough-driven-delivery.md).
+- **Task planning decomposes from this document plus the requirements report, and nothing else.** Requirement numbers and acceptance come from [m1-cooperative-awareness.md](../../../requirements/m1-cooperative-awareness.md); everything structural comes from here — which component a subtask creates, its path, the interface it satisfies, the log line or scene that closes it. Deploy and verify subtasks come from the walkthrough, per [walkthrough-driven-delivery.md](../../../.claude/rules/walkthrough-driven-delivery.md).
 - **Plans cite; they do not restate.** A brief links the section governing its step, so a change lands in one place.
 - **Implementation does not extend this silently.** A component, path or configuration key not designated here is not created ad hoc — the design changes first.
 - **What overrides it:** the requirements report, the frozen R4/R3 contracts, and the walkthrough for procedure. On conflict, the CLAUDE.md authority order decides.
@@ -26,12 +30,12 @@
 
 | Document | What it fixes for this node |
 |---|---|
-| [m1-cooperative-awareness.md](../../requirements/m1-cooperative-awareness.md) — **the authority** | R4, R16, R17 whole — definition, dependency, acceptance, tech stack. R5/R6: node type, bridge, port. R18/R19: what the run must evidence. §3(e)/(f): the stack. §4: the standing decisions, restated in D11 |
-| Its figures — [ivi-ecu.svg](../../requirements/ivi-ecu.svg) · [ivi-god-view-scene.svg](../../requirements/ivi-god-view-scene.svg) · [ivi-god-view-warning-screen.svg](../../requirements/ivi-god-view-warning-screen.svg) | The R16 layout; R17's visual language; and the annotated variant, which is explanatory and never rendered |
-| [r4-ada-ivi.schema.json](../../contracts/r4-ada-ivi.schema.json) · [r3-tracked-object.schema.json](../../contracts/r3-tracked-object.schema.json) | The frozen input contract, field for field (§10) |
-| [m1-run-timing-and-event-triggering.md](../../requirements/m1-run-timing-and-event-triggering.md) | R20/R21 oblige this node with nothing: R4 carries no timestamp, so the warning timeout is a local countdown, and pacing belongs to the bench and the detector. R22 obliges it with two things: the app is listening on its R4 port before the first warning can arrive at `T0` + 8.0 s, and the Display Area holds Home until an active-risk warning raises it (D13). K7 is this node's observable (§12) |
-| [m1-video-source-and-ivi-dashcam.md](../../requirements/m1-video-source-and-ivi-dashcam.md) | A dashcam view is deferred (D11). If accepted, the clip arrives over HTTP from the ADA node or as a local copy — never through a `video` pin |
-| [node-ivi-ecu.md](../../requirements/car-sky-guide/node-ivi-ecu.md) | VM artifact, pin, address |
+| [m1-cooperative-awareness.md](../../../requirements/m1-cooperative-awareness.md) — **the authority** | R4, R16, R17 whole — definition, dependency, acceptance, tech stack. R5/R6: node type, bridge, port. R18/R19: what the run must evidence. §3(e)/(f): the stack. §4: the standing decisions, restated in D11 |
+| Its figures — [ivi-ecu.svg](../../../requirements/ivi-ecu.svg) · [ivi-god-view-scene.svg](../../../requirements/ivi-god-view-scene.svg) · [ivi-god-view-warning-screen.svg](../../../requirements/ivi-god-view-warning-screen.svg) | The R16 layout; R17's visual language; and the annotated variant, which is explanatory and never rendered |
+| [r4-ada-ivi.schema.json](../../../contracts/r4-ada-ivi.schema.json) · [r3-tracked-object.schema.json](../../../contracts/r3-tracked-object.schema.json) | The frozen input contract, field for field (§10) |
+| [m1-run-timing-and-event-triggering.md](../../../requirements/m1-run-timing-and-event-triggering.md) | R20/R21 oblige this node with nothing: R4 carries no timestamp, so the warning timeout is a local countdown, and pacing belongs to the bench and the detector. R22 obliges it with two things: the app is listening on its R4 port before the first warning can arrive at `T0` + 8.0 s, and the Display Area holds Home until an active-risk warning raises it (D13). K7 is this node's observable (§12) |
+| [m1-video-source-and-ivi-dashcam.md](../../../requirements/m1-video-source-and-ivi-dashcam.md) | A dashcam view is deferred (D11). If accepted, the clip arrives over HTTP from the ADA node or as a local copy — never through a `video` pin |
+| [node-ivi-ecu.md](../../../requirements/car-sky-guide/node-ivi-ecu.md) | VM artifact, pin, address |
 
 ### Research notes
 
@@ -39,15 +43,15 @@ Non-authoritative scratch, except the walkthrough, which is authoritative for it
 
 | Note | Adopted here |
 |---|---|
-| [phase5-r4-parsing.md](research_notes/phase5-r4-parsing.md) | Wire truth — no application header, de-framing is slicing (D3); the decode-failure table as `R4DecodeResult`; unknown-`warningType` preservation (D4); pure-JVM module placement (D1, D2) |
-| [phase5-r4-simulator.md](research_notes/phase5-r4-simulator.md) | The simulator's two run modes and scenario cases; payloads come from the frozen samples, never a literal (D9) |
-| [deploy-ivi-hmi-walkthrough.md](../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md) | The mini-blueprint target (§4.11) and the ADA-node env contract — `IVI_ECU_HOST` / `IVI_ECU_PORT` / `R4_SCENARIO` / `R4_RATE_HZ` / `START_DELAY_S` (§4.8) — that the simulator reads verbatim |
+| [phase5-r4-parsing.md](../../KnowledgeBase/phase5-r4-parsing.md) | Wire truth — no application header, de-framing is slicing (D3); the decode-failure table as `R4DecodeResult`; unknown-`warningType` preservation (D4); pure-JVM module placement (D1, D2) |
+| [phase5-r4-simulator.md](phase5-r4-simulator.md) | The simulator's two run modes and scenario cases; payloads come from the frozen samples, never a literal (D9) |
+| [deploy-ivi-hmi-walkthrough.md](../../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md) | The mini-blueprint target (§4.11) and the ADA-node env contract — `IVI_ECU_HOST` / `IVI_ECU_PORT` / `R4_SCENARIO` / `R4_RATE_HZ` / `START_DELAY_S` (§4.8) — that the simulator reads verbatim |
 
 ## 3. The component architecture
 
-![IVI ECU component architecture](research_notes/ivi-ecu-module-architecture.svg)
+![IVI ECU component architecture](ivi-ecu-module-architecture.svg)
 
-Source: [research_notes/ivi-ecu-module-architecture.svg](research_notes/ivi-ecu-module-architecture.svg).
+Source: [research_notes/ivi-ecu-module-architecture.svg](ivi-ecu-module-architecture.svg).
 
 A UML component diagram. Fill colour is the component's role; `«use»` dependencies are dashed with an open arrowhead; realization is dashed with a hollow triangle; a seam is a provided interface meeting a required one at an assembly connector. The two `«node»` rectangles are **IVI-ECU**, everything this node runs, and **ADA-ECU**, the producer it depends on; the CarSky observation surfaces sit outside both. Component names below are the short `package/File` form — §4 resolves each to its path.
 
@@ -167,7 +171,7 @@ Graceful degradation is split across the last two on purpose: the parser preserv
 
 | Component | Role | Input | Output |
 |---|---|---|---|
-| `ui/screen/MainScreen` | the R16 layout as [ivi-ecu.svg](../../requirements/ivi-ecu.svg) fixes it: central Display Area, Home / Apps / Settings areas, mode labels, bottom status bar; hosts the Warning View slot | `DisplayMode`, `WarningUiState`, `R4LinkState` | the composed screen |
+| `ui/screen/MainScreen` | the R16 layout as [ivi-ecu.svg](../../../requirements/ivi-ecu.svg) fixes it: central Display Area, Home / Apps / Settings areas, mode labels, bottom status bar; hosts the Warning View slot | `DisplayMode`, `WarningUiState`, `R4LinkState` | the composed screen |
 | `ui/view/IviWarningViewSeam` | the R17 render seam, `Render(scene, riskState)` — what lets an optional 3D renderer swap in with no consumer change | — | the interface both renderers realize |
 | `ui/view/CanvasWarningView` | the God View as R17 fixes it: dark canvas, a lane-marked road converging toward the top, three car silhouettes in one lane with ego nearest. Ego and B solid; ghost C dashed and translucent on a pulsing ground glow coloured by risk; a `null` `vehicleC` drawn without C. **The scene alone is the warning** — no legend, no distance labels, no text overlay, no banner. The `[V2X]` badge and distance callouts belong to R17's annotated figure, not here | `SceneGeometry`, `riskState` | Compose Canvas draw calls |
 | `ui/view/SceneCoordinateMapper` | scene metres → canvas coordinates. R17's camera is inclined, not overhead, so this is an oblique projection: depth compresses toward the top and each vehicle shows a shallow rear face. Pure math, no Android types | `SceneGeometry`, the base scale | screen-space geometry |
@@ -201,7 +205,7 @@ Outside the node boundary: the `ADA-ECU` interface and the two observation surfa
 
 Scaffolding for exercising the IVI alone. No production component depends on it, and neither piece reaches a release build — the injector is excluded by source set, the simulator is a node away.
 
-- **The simulator is a container image.** `r4-simulator/` builds `m1-r4-sim:latest`; CI pushes it to the CarSky Zot registry and the mini-blueprint's ADA node pulls that tag, the route every other node image takes ([walkthrough §4.11](../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#411-the-mini-blueprint-route), [zot-registry-api-key.md](../../requirements/car-sky-guide/zot-registry-api-key.md)). It is the only place Zot enters IVI work; the APK never touches the registry.
+- **The simulator is a container image.** `r4-simulator/` builds `m1-r4-sim:latest`; CI pushes it to the CarSky Zot registry and the mini-blueprint's ADA node pulls that tag, the route every other node image takes ([walkthrough §4.11](../../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#411-the-mini-blueprint-route), [zot-registry-api-key.md](../../../requirements/car-sky-guide/zot-registry-api-key.md)). It is the only place Zot enters IVI work; the APK never touches the registry.
 - **The injector is not.** `DevInjectorReceiver` is a `BroadcastReceiver` in the debug source set — no image, no registry, no node. Hence the diagram places it inside the IVI-ECU boundary and the simulator inside ADA-ECU.
 
 | Component | Role | Input | Output |
@@ -232,7 +236,7 @@ No layer is collapsed: the receive loop cannot reach a Composable, a Composable 
 | Direction | ADA-ECU → IVI-ECU, one way |
 | Transport | UDP to `10.99.0.13:47300`, one message per datagram, no framing header (D3) |
 | Encoding | UTF-8 JSON |
-| Normative schema | [r4-ada-ivi.schema.json](../../contracts/r4-ada-ivi.schema.json), embedding [r3-tracked-object.schema.json](../../contracts/r3-tracked-object.schema.json) |
+| Normative schema | [r4-ada-ivi.schema.json](../../../contracts/r4-ada-ivi.schema.json), embedding [r3-tracked-object.schema.json](../../../contracts/r3-tracked-object.schema.json) |
 | Node copy | `IVI_ECU/contracts/*.schema.json`, byte-synced; `:contract`'s models bind against it |
 | Status | Frozen — a field change is a re-freeze across every consumer |
 
@@ -255,9 +259,13 @@ Two message kinds share the port, discriminated by `type`.
 
 Evolution is additive, and the schema fixes the consumer's three obligations: ignore unknown fields, tolerate a newer `schemaVersion`, treat an unknown `warningType` as generic. None is an error path.
 
+## IVI R4 Message Observation
+
+For details how IVI-ECU observes R4 Messages (ADA-ECU -> IVI-ECU), visit [How the IVI app observes ADA→IVI (R4) messages](./ivi-r4-observation-pipeline.md)
+
 ## 11. Tech stack, build and CI
 
-No dependency outside this table enters the node without a design change. Traces are to [m1-cooperative-awareness.md](../../requirements/m1-cooperative-awareness.md) and to the [decision record](ivi-ecu-design-decisions.md).
+No dependency outside this table enters the node without a design change. Traces are to [m1-cooperative-awareness.md](../../../requirements/m1-cooperative-awareness.md) and to the [decision record](ivi-ecu-design-decisions.md).
 
 | Area | Stack | Trace |
 |---|---|---|
@@ -274,9 +282,9 @@ Build commands, from `IVI_ECU/`: `./gradlew assembleDebug` · `./gradlew :contra
 
 | CI lane | File | What it does |
 |---|---|---|
-| `ivi-unit-tests` | [phase5-ci.yml](../../.github/workflows/phase5-ci.yml) | the module tests on a plain JVM, no device |
-| `ivi-assemble` | [phase5-ci.yml](../../.github/workflows/phase5-ci.yml) | `assembleDebug` + `lint`, uploading `app-debug.apk` under the artifact name the walkthrough references |
-| the simulator image | [phase5-ci.yml](../../.github/workflows/phase5-ci.yml) | `linux/arm64` build of `m1-r4-sim:latest` from context `IVI_ECU/`, pushed to Zot and verified by pull-back |
+| `ivi-unit-tests` | [phase5-ci.yml](../../../.github/workflows/phase5-ci.yml) | the module tests on a plain JVM, no device |
+| `ivi-assemble` | [phase5-ci.yml](../../../.github/workflows/phase5-ci.yml) | `assembleDebug` + `lint`, uploading `app-debug.apk` under the artifact name the walkthrough references |
+| the simulator image | [phase5-ci.yml](../../../.github/workflows/phase5-ci.yml) | `linux/arm64` build of `m1-r4-sim:latest` from context `IVI_ECU/`, pushed to Zot and verified by pull-back |
 
 The simulator's `Dockerfile` sits at `r4-simulator/Dockerfile` with context `IVI_ECU/` — a deviation from "own `Dockerfile` at the folder root", because this folder's primary artifact is the APK. Self-containment holds: the build reads nothing outside `IVI_ECU/`.
 
@@ -289,7 +297,7 @@ Two configurations exercise the same node, differing in one component — which 
 
 **Expected output and observed behaviour are identical in both** — the log lines below, and the God View as §6 describes it. No component here distinguishes the two producers, so a difference between the runs is a producer finding, not an IVI one.
 
-Expected observables, per [walkthrough §6](../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#6-expected-outputs-and-acceptance):
+Expected observables, per [walkthrough §6](../../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#6-expected-outputs-and-acceptance):
 
 | Observable | Produced by |
 |---|---|
@@ -317,12 +325,12 @@ The following deployment scheme supports IVI-ECU isolated tests and system tests
 
 | Path | Topology | Port | Guide |
 |---|---|---|---|
-| Local / emulator | mock-sender → `127.0.0.1` | 5004 | [mock-sender/README.md](../mock-sender/README.md) |
-| Mock 2-node Room | `m1-mock-r4-sender` + Skycraft IVI + bridge | 5004 (align both) | [task51-2node-blueprint-answer.md](../../plans/doc/task51-2node-blueprint-answer.md), [blueprint-2node-task51-test-guide.md](../../requirements/blueprint-2node-task51-test-guide.md) |
-| Mini ADA+IVI (optional) | ADA + IVI + bridge | **47300** | [phase5-mini-blueprint-ada-ivi.md](research_notes/phase5-mini-blueprint-ada-ivi.md) — see §10 gap |
-| Full M1 | 4 nodes + bridge | 47300 | [node-ivi-ecu.md](../../requirements/car-sky-guide/node-ivi-ecu.md) |
+| Local / emulator | mock-sender → `127.0.0.1` | 5004 | [mock-sender/README.md](../../../IVI_ECU/mock-sender/README.md) |
+| Mock 2-node Room | `m1-mock-r4-sender` + Skycraft IVI + bridge | 5004 (align both) | [task51-2node-blueprint-answer.md](../../../plans/doc/task51-2node-blueprint-answer.md), [blueprint-2node-task51-test-guide.md](../../../requirements/blueprint-2node-task51-test-guide.md) |
+| Mini ADA+IVI (optional) | ADA + IVI + bridge | **47300** | [phase5-mini-blueprint-ada-ivi.md](phase5-mini-blueprint-ada-ivi.md) — see §10 gap |
+| Full M1 | 4 nodes + bridge | 47300 | [node-ivi-ecu.md](../../../requirements/car-sky-guide/node-ivi-ecu.md) |
 
-Post-deploy always: build APK → ADB tunnel to Skycraft → `adb install` ([phase5-ivi-deploy.md](../deployment/phase5-ivi-deploy.md)). Ethernet pins often missing after JSON import — add/wire in Nydus UI.
+Post-deploy always: build APK → ADB tunnel to Skycraft → `adb install` ([phase5-ivi-deploy.md](../../../IVI_ECU/deployment/phase5-ivi-deploy.md)). Ethernet pins often missing after JSON import — add/wire in Nydus UI.
 
 ## 13. Design decisions
 

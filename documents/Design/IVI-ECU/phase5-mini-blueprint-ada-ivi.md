@@ -48,7 +48,7 @@ Use mock 2-node for Phase 5 display-track parallel work; use this mini-blueprint
 
 ## ADA without V2X/Bench (gap)
 
-- Stock ADA expects R2 ingress on `V2X_LISTEN_PORT` (47200). A mini-blueprint with no V2X needs either: (a) a tiny R2 injector container on the same bridge, or (b) an ADA test mode / fixture path that synthesizes tracks and calls the R15 emitter, or (c) keep using [mock-sender](../../mock-sender/) instead of real ADA until Phase 4 emission is fixture-triggerable.
+- Stock ADA expects R2 ingress on `V2X_LISTEN_PORT` (47200). A mini-blueprint with no V2X needs either: (a) a tiny R2 injector container on the same bridge, or (b) an ADA test mode / fixture path that synthesizes tracks and calls the R15 emitter, or (c) keep using [mock-sender](../../../IVI_ECU/mock-sender/) instead of real ADA until Phase 4 emission is fixture-triggerable.
 - Flag for planner: do not claim “ADA+IVI only” end-to-end unless one of (a)–(c) is in the task plan.
 
 ## Acceptance checks for this Room

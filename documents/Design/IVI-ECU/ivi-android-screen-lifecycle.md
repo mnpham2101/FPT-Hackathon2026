@@ -3,7 +3,7 @@
 **Audience:** learning note for the delivery report (code freeze).  
 **Author:** Vũ Xuân Bách · Phase 5 IVI  
 **Scope:** the shipped APK under `IVI_ECU/app/` on AAOS (Skycraft).  
-**Authorities:** [AndroidManifest.xml](../../../IVI_ECU/app/src/main/AndroidManifest.xml) · [MainActivity.kt](../../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/MainActivity.kt) · [MainScreen.kt](../../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/ui/screen/MainScreen.kt) · [DisplayMode.kt](../../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/ui/DisplayMode.kt) · [ivi-ecu-hld.md](../../../IVI_ECU/doc/ivi-ecu-hld.md)
+**Authorities:** [AndroidManifest.xml](../../../IVI_ECU/app/src/main/AndroidManifest.xml) · [MainActivity.kt](../../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/MainActivity.kt) · [MainScreen.kt](../../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/ui/screen/MainScreen.kt) · [DisplayMode.kt](../../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/ui/DisplayMode.kt) · [ivi-ecu-hld.md](ivi-ecu-hld.md)
 
 This note answers: *what happens from process start until the driver sees Home or the God View?* It is not a second HLD.
 
@@ -77,7 +77,7 @@ First frame: DisplayMode.HomeView (default)
 
 ### 3.1 `MainActivity` responsibilities
 
-- Start the UDP listener as a **foreground** service so reception is not tied to the Activity being resumed ([design D5](../../../IVI_ECU/doc/ivi-ecu-design-decisions.md)).
+- Start the UDP listener as a **foreground** service so reception is not tied to the Activity being resumed ([design D5](ivi-ecu-design-decisions.md)).
 - Inject `IviWarningViewSeam` (Canvas God View implementation).
 - `setContent` — replace the classic `setContentView(R.layout…)` with Jetpack Compose.
 - Bind the service for the composition lifetime (`DisposableEffect` → `bindService` / `unbindService`) and call `WarningViewModel.attachService(listener.r4EventFlow)`.
@@ -153,4 +153,4 @@ IVI_ECU/app/src/main/
         └── view/                ← IviWarningViewSeam, CanvasWarningView, …
 ```
 
-Further reading: [ivi-technical-wiki.md](../../../IVI_ECU/doc/ivi-technical-wiki.md) · [deploy-ivi-hmi-walkthrough.md](../../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md) §4.7–4.8.
+Further reading: [ivi-technical-wiki.md](ivi-technical-wiki.md) · [deploy-ivi-hmi-walkthrough.md](../../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md) §4.7–4.8.
