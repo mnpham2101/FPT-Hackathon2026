@@ -30,7 +30,6 @@ A node is just a `PageLink` — an icon + label `<div>` built by `createPageLink
 | `index.html` | The home page: `NodeCanvas` + `ConnectorLayer` SVG; behaviour in `js/mindmap.js` |
 | `pages/*.html` | One boilerplate page per node; all content renders from `js/site-data.js` via `js/page.js` |
 | `assets/` | The logo SVGs (`kis-logo.svg`, `kis-logo-blueprint.svg`), `icons/*.svg`, and the `bg-*.jpg` backgrounds |
-| `asset-tools/` | Generators for the derived assets in `assets/` — run by hand, never at page load |
 | `css/base.css` | Reset + design tokens (CSS variables) |
 | `css/components.css` | The reusable component classes |
 | `css/themes.css` | One `[data-theme=…]` variable block per theme |
