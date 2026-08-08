@@ -150,6 +150,12 @@
   .chain .link.hot { background: var(--fpt-orange); }
   .chain .arr { color: var(--fpt-orange); font-size: 22px; font-weight: 700; }
   .chain .link small { display: block; font-size: 12px; font-weight: 400; opacity: .8; transform: skewX(10deg); }
+  /* flat modifier: upright rectangles instead of skewed links, for a dense data-path strip */
+  .chain.flat { gap: 7px; margin: 0 0 6px; }
+  .chain.flat .link { transform: none; font-size: 14.5px; padding: 5px 12px; text-align: center; line-height: 1.25; }
+  .chain.flat .link > span, .chain.flat .link small { transform: none; }
+  .chain.flat .link small { font-size: 11px; opacity: .85; }
+  .chain.flat .arr { font-size: 17px; }
 
   .badges { display: flex; gap: 10px; justify-content: center; margin: 0 0 20px; flex-wrap: wrap; }
   .badge { border: 2px solid var(--fpt-orange); color: #b34e0e; background: rgba(243,112,33,.07); font-size: 14.5px; font-weight: 600; padding: 5px 14px; border-radius: 999px; }
@@ -213,7 +219,7 @@
     <table class="fpt">
       <thead><tr><th>Term</th><th>Definition</th><th>Specified in</th><th>Example</th></tr></thead>
       <tbody>
-        <tr><td><strong>Track</strong></td><td>a workstream spanning whole phases, executed by different people concurrently</td><td><a href="../../plans/milestone1.md">milestone1.md §3</a></td><td>comms track = Phase 1</td></tr>
+        <tr><td><strong>Track</strong></td><td>a workstream spanning whole phases, executed by different people concurrently</td><td><a href="../../documents/Plan/milestone1_high_level_plan.md">milestone1_high_level_plan.md §3</a></td><td>comms track = Phase 1</td></tr>
         <tr><td><strong>Execution lane</strong></td><td>subtasks ordered by dependency, grouped by the folder they write into</td><td>each phase plan, <em>Execution order &amp; parallelism</em></td><td>Lane B = <code>V2X_ECU/</code></td></tr>
         <tr><td><strong>CI lane</strong></td><td>one job in the GitHub Actions workflow</td><td><code>.github/workflows/phase0-ci.yml</code></td><td><code>v2x-core-build</code></td></tr>
       </tbody>

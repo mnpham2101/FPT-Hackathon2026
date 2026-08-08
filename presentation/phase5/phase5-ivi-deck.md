@@ -20,7 +20,7 @@ deck: "Phase 5 — IVI HMI & 2D God View · FPT Hackathon 2026"
 
 IVI ECU · R4 ADA→IVI · Skycraft AAOS · 2026-08
 
-Sources: [phase5_minh_tasks.md](../../plans/phase5_minh_tasks.md) · [phase5-ivi-hld.md](../../IVI_ECU/doc/phase5-ivi-hld.md) · [r4-ada-ivi.schema.json](../../contracts/r4-ada-ivi.schema.json) · [deploy-ivi-hmi-walkthrough.md](../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md)
+Sources: [phase5_minh_tasks.md](../../plans/phase5_minh_tasks.md) · [ivi-ecu-hld.md](../../documents/Design/IVI-ECU/ivi-ecu-hld.md) · [r4-ada-ivi.schema.json](../../contracts/r4-ada-ivi.schema.json) · [deploy-ivi-hmi-walkthrough.md](../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md)
 
 ---
 

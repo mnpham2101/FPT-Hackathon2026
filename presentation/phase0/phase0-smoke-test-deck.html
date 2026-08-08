@@ -150,6 +150,12 @@
   .chain .link.hot { background: var(--fpt-orange); }
   .chain .arr { color: var(--fpt-orange); font-size: 22px; font-weight: 700; }
   .chain .link small { display: block; font-size: 12px; font-weight: 400; opacity: .8; transform: skewX(10deg); }
+  /* flat modifier: upright rectangles instead of skewed links, for a dense data-path strip */
+  .chain.flat { gap: 7px; margin: 0 0 6px; }
+  .chain.flat .link { transform: none; font-size: 14.5px; padding: 5px 12px; text-align: center; line-height: 1.25; }
+  .chain.flat .link > span, .chain.flat .link small { transform: none; }
+  .chain.flat .link small { font-size: 11px; opacity: .85; }
+  .chain.flat .arr { font-size: 17px; }
 
   .badges { display: flex; gap: 10px; justify-content: center; margin: 0 0 20px; flex-wrap: wrap; }
   .badge { border: 2px solid var(--fpt-orange); color: #b34e0e; background: rgba(243,112,33,.07); font-size: 14.5px; font-weight: 600; padding: 5px 14px; border-radius: 999px; }

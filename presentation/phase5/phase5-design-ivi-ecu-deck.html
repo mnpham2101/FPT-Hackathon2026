@@ -150,6 +150,12 @@
   .chain .link.hot { background: var(--fpt-orange); }
   .chain .arr { color: var(--fpt-orange); font-size: 22px; font-weight: 700; }
   .chain .link small { display: block; font-size: 12px; font-weight: 400; opacity: .8; transform: skewX(10deg); }
+  /* flat modifier: upright rectangles instead of skewed links, for a dense data-path strip */
+  .chain.flat { gap: 7px; margin: 0 0 6px; }
+  .chain.flat .link { transform: none; font-size: 14.5px; padding: 5px 12px; text-align: center; line-height: 1.25; }
+  .chain.flat .link > span, .chain.flat .link small { transform: none; }
+  .chain.flat .link small { font-size: 11px; opacity: .85; }
+  .chain.flat .arr { font-size: 17px; }
 
   .badges { display: flex; gap: 10px; justify-content: center; margin: 0 0 20px; flex-wrap: wrap; }
   .badge { border: 2px solid var(--fpt-orange); color: #b34e0e; background: rgba(243,112,33,.07); font-size: 14.5px; font-weight: 600; padding: 5px 14px; border-radius: 999px; }
@@ -185,7 +191,7 @@
     <h1>Phase 5 — IVI ECU Design</h1>
     <div class="rule"></div>
     <div class="tagline">The consumer node, module by module</div>
-    <div class="meta">Companion to the demo deck <a href="phase5-ivi-deck.html">phase5-ivi-deck.html</a> (problem, God View, evidence). This deck is the <strong>design</strong> report — same altitude as <a href="../phase1/phase1-design-v2x-ecu-deck.html">phase1-design-v2x-ecu-deck.html</a>.<br>Source: <a href="../../IVI_ECU/doc/ivi-ecu-hld.md">ivi-ecu-hld.md</a> · <a href="../../IVI_ECU/doc/ivi-ecu-design-decisions.md">ivi-ecu-design-decisions.md</a><br>Learning notes for Lead’s <code>documents/</code> folder: <a href="../../documents/README.md">documents/README.md</a></div>
+    <div class="meta">Companion to the demo deck <a href="phase5-ivi-deck.html">phase5-ivi-deck.html</a> (problem, God View, evidence). This deck is the <strong>design</strong> report — same altitude as <a href="../phase1/phase1-design-v2x-ecu-deck.html">phase1-design-v2x-ecu-deck.html</a>.<br>Source: <a href="../../documents/Design/IVI-ECU/ivi-ecu-hld.md">ivi-ecu-hld.md</a> · <a href="../../documents/Design/IVI-ECU/ivi-ecu-design-decisions.md">ivi-ecu-design-decisions.md</a><br>Learning notes for Lead’s <code>documents/</code> folder: <a href="../../documents/">documents/</a></div>
     <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
   </section>
   <section class="slide bg-light content">
@@ -241,7 +247,7 @@
       <li><strong>Provenance guard</strong> — ghost C renders only when snapshot <code>source</code> is <code>v2x_relayed</code> (R19).</li>
       <li><strong>No tunable literals in Kotlin</strong> — port, timeout, scale from <code>BuildConfig</code> / runtime config (D10).</li>
     </ul>
-    <p class="lead">Decisions D1–D13: <a href="../../IVI_ECU/doc/ivi-ecu-design-decisions.md">ivi-ecu-design-decisions.md</a>.</p>
+    <p class="lead">Decisions D1–D13: <a href="../../documents/Design/IVI-ECU/ivi-ecu-design-decisions.md">ivi-ecu-design-decisions.md</a>.</p>
     <div class="footer"><span>Phase 5 — IVI ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
@@ -325,7 +331,7 @@
     <ul class="points">
       <li> 1. Launcher Intent → <code>MainActivity</code>. 2. <code>startForegroundService(R4ListenerService)</code> — socket opens on <code>R4_UDP_PORT</code>. 3. Compose <code>setContent</code> — <code>WarningViewModel</code> + bind service → <code>attachService(r4EventFlow)</code>. 4. Default Display Area = <strong>HomeView</strong>; status aims at <strong>BOUND :47300</strong>.</li>
     </ul>
-    <p class="lead">Learning walkthrough: <a href="../../documents/ivi-android-screen-lifecycle.md">documents/ivi-android-screen-lifecycle.md</a>.</p>
+    <p class="lead">Learning walkthrough: <a href="../../documents/KnowledgeBase/android-screen-lifecycle.md">documents/KnowledgeBase/android-screen-lifecycle.md</a>.</p>
     <div class="footer"><span>Phase 5 — IVI ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
@@ -333,7 +339,7 @@
     <ul class="points">
       <li> 1. ADA <code>sendto</code> → guest <code>:47300</code>. 2. <code>DatagramSocket.receive</code> on IO dispatcher. 3. <code>R4Deserializer</code> — warning or state, or skip malformed. 4. Emit on <code>r4EventFlow</code> → repository routes warnings.</li>
     </ul>
-    <p class="lead">Learning walkthrough: <a href="../../documents/ivi-r4-observation-pipeline.md">documents/ivi-r4-observation-pipeline.md</a>.</p>
+    <p class="lead">Learning walkthrough: <a href="../../documents/Design/IVI-ECU/ivi-r4-observation-pipeline.md">documents/ivi-r4-observation-pipeline.md</a>.</p>
     <div class="footer"><span>Phase 5 — IVI ECU Design · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
@@ -399,7 +405,7 @@
   <section class="slide thanks" style="background-image: linear-gradient(rgba(8,12,38,.66), rgba(14,21,64,.86)), url('../assets/bg-fpt-tower.jpg')">
     <h1>Thank you</h1>
     <div class="rule"></div>
-    <p><strong>Phase 5 — IVI ECU Design</strong> · Milestone 1 · FPT Hackathon 2026 Sources: <a href="../../IVI_ECU/doc/ivi-ecu-hld.md">ivi-ecu-hld.md</a> · <a href="../../documents/README.md">documents/</a></p>
+    <p><strong>Phase 5 — IVI ECU Design</strong> · Milestone 1 · FPT Hackathon 2026 Sources: <a href="../../documents/Design/IVI-ECU/ivi-ecu-hld.md">ivi-ecu-hld.md</a> · <a href="../../documents/">documents/</a></p>
     <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
   </section>
 </div>

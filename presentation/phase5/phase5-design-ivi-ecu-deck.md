@@ -22,7 +22,7 @@ Companion to the demo deck [phase5-ivi-deck.html](phase5-ivi-deck.html) (problem
 
 Source: [ivi-ecu-hld.md](../../documents/Design/IVI-ECU/ivi-ecu-hld.md) · [ivi-ecu-design-decisions.md](../../documents/Design/IVI-ECU/ivi-ecu-design-decisions.md)
 
-Learning notes for Lead’s `documents/` folder: [documents/README.md](../../documents/README.md)
+Learning notes for Lead’s `documents/` folder: [documents/](../../documents/)
 
 ---
 
@@ -247,4 +247,4 @@ None of the above gates the R19 claim when the continuous eth path + `v2x_relaye
 
 **Phase 5 — IVI ECU Design** · Milestone 1 · FPT Hackathon 2026
 
-Sources: [ivi-ecu-hld.md](../../documents/Design/IVI-ECU/ivi-ecu-hld.md) · [documents/](../../documents/README.md)
+Sources: [ivi-ecu-hld.md](../../documents/Design/IVI-ECU/ivi-ecu-hld.md) · [documents/](../../documents/)
