@@ -62,4 +62,3 @@ Use mock 2-node for Phase 5 display-track parallel work; use this mini-blueprint
 
 - Full 4-node: [carsky-4-node-blueprint.md](../../../requirements/car-sky-guide/carsky-4-node-blueprint.md)
 - Mock path: [blueprint-2node-task51-test.json](../../../requirements/blueprint-2node-task51-test.json)
-- Port 5004 vs 47300: [phase5-ivi-implementation-notes.md](phase5-ivi-implementation-notes.md)
