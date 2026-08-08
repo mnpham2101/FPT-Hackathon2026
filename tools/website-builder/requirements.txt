@@ -1,0 +1,7 @@
+# build-pages.py — the markdown -> HTML generator.
+# The site itself stays dependency-free; this is a build-time requirement only.
+markdown>=3.5
+
+# asset-tools/make-sketch-bg.py — the derived background generator, run by hand.
+numpy>=1.24
+pillow>=10.0
