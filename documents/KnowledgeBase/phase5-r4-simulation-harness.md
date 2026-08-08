@@ -58,5 +58,5 @@ IVI must listen on the same port (`BuildConfig.R4_UDP_PORT`, default 5004). See 
 ## Related
 
 - Mini real-ADA Room: [phase5-mini-blueprint-ada-ivi.md](../Design/IVI-ECU/phase5-mini-blueprint-ada-ivi.md)
-- UDP Diagram parsing at IVI: [How IVI parses UDP Diagram at from ADA ECU](phase5-r4-parse-approach.md)
+- UDP Diagram parsing at IVI: [How IVI parses UDP Diagram at from ADA ECU](UDP-msg-parsing.md)
 - Schema: [r4-ada-ivi.schema.json](../../contracts/r4-ada-ivi.schema.json)

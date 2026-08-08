@@ -4,7 +4,7 @@
 >
 > - **Phase content:** [milestone1.md § Phase 5](milestone1.md#phase-5--ivi-hmi-mock-driven-r16-r17--display-track-parallel-from-the-start) — its five acceptance criteria are the phase output.
 > - **Design:** [ivi-ecu-hld.md](../documents/Design/IVI-ECU/ivi-ecu-hld.md) — the node's sole design authority — with [phase5-ivi-components.puml](../documents/Design/IVI-ECU/phase5-ivi-components.puml) and [phase5-ivi-callflow.puml](../documents/Design/IVI-ECU/phase5-ivi-callflow.puml). Every target path below is cited from its **[§4](../documents/Design/IVI-ECU/ivi-ecu-hld.md#4-folder-structure)** folder map; component responsibilities **[§6](../documents/Design/IVI-ECU/ivi-ecu-hld.md#6-internal-components)**, seams **[§8](../documents/Design/IVI-ECU/ivi-ecu-hld.md#8-interfaces-ports-and-the-layer-rule)**, the R4 input contract **§10**, CI **[§11](../documents/Design/IVI-ECU/ivi-ecu-hld.md#11-tech-stack-build-and-ci)**, test configurations and log shapes **[§12](../documents/Design/IVI-ECU/ivi-ecu-hld.md#12-test-strategy)**, decisions **D1–D13** ([§13](../documents/Design/IVI-ECU/ivi-ecu-hld.md#13-design-decisions)). Deployment steps come from the bring-up procedure below, not from the design.
-> - **Research notes:** [phase5-r4-simulator.md](../documents/Design/IVI-ECU/phase5-r4-simulator.md) · [phase5-r4-parsing.md](../documents/KnowledgeBase/phase5-r4-parsing.md) — non-authoritative; the HLD wins on conflict.
+> - **Research notes:** [phase5-r4-simulator.md](../documents/Design/IVI-ECU/phase5-r4-simulator.md) · [UDP-msg-parsing.md](../documents/KnowledgeBase/UDP-msg-parsing.md) — non-authoritative; the HLD wins on conflict.
 > - **Requirements:** [m1-cooperative-awareness.md §2](../requirements/m1-cooperative-awareness.md) R4, R16, R17 (plus R5, R6, R18, R19 where this phase touches them) and [m1-run-timing-and-event-triggering.md §7](../requirements/m1-run-timing-and-event-triggering.md) R22, whose K7 this phase's system test reads — referenced by number, never restated.
 > - **Deploy facts:** [node-ivi-ecu.md](../requirements/car-sky-guide/node-ivi-ecu.md) · [carsky-4-node-blueprint.md](../requirements/car-sky-guide/carsky-4-node-blueprint.md) · [deploy-walkthrough-netcheck.md](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md).
 > - **Bring-up procedure:** [deploy-ivi-hmi-walkthrough.md](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md) — **authoritative** for the APK's build, retrieval from CI, blueprint deploy, `adb install`, launch and verification. Every subtask that installs, launches, observes or reads logs from the IVI app cites the section governing that step instead of restating it. Its [§5](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#5-work-division-between-ai-and-human) decides which of those steps an agent can perform and which need a person, and is what the *Human* label below follows.
@@ -338,7 +338,7 @@ One scenario file per purpose, all data: `approach.json` drives V4 and carries t
 
 ### [ ] `4.5.2.2` — `R4Deserializer` implementation + the decode-table test *(agent)*
 
-**Objective:** implement `R4Decoder` so every row of the [parsing note §2](../documents/KnowledgeBase/phase5-r4-parsing.md) table maps to the right `R4DecodeResult`, and nothing escapes as an exception.
+**Objective:** implement `R4Decoder` so every row of the [parsing note §2](../documents/KnowledgeBase/UDP-msg-parsing.md) table maps to the right `R4DecodeResult`, and nothing escapes as an exception.
 
 **Scope — two files:**
 

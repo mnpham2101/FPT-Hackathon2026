@@ -43,7 +43,7 @@ Non-authoritative scratch, except the walkthrough, which is authoritative for it
 
 | Note | Adopted here |
 |---|---|
-| [phase5-r4-parsing.md](../../KnowledgeBase/phase5-r4-parsing.md) | Wire truth — no application header, de-framing is slicing (D3); the decode-failure table as `R4DecodeResult`; unknown-`warningType` preservation (D4); pure-JVM module placement (D1, D2) |
+| [UDP-msg-parsing.md](../../KnowledgeBase/UDP-msg-parsing.md) | Wire truth — no application header, de-framing is slicing (D3); the decode-failure table as `R4DecodeResult`; unknown-`warningType` preservation (D4); pure-JVM module placement (D1, D2) |
 | [phase5-r4-simulator.md](phase5-r4-simulator.md) | The simulator's two run modes and scenario cases; payloads come from the frozen samples, never a literal (D9) |
 | [deploy-ivi-hmi-walkthrough.md](../../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md) | The mini-blueprint target (§4.11) and the ADA-node env contract — `IVI_ECU_HOST` / `IVI_ECU_PORT` / `R4_SCENARIO` / `R4_RATE_HZ` / `START_DELAY_S` (§4.8) — that the simulator reads verbatim |
 
