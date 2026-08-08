@@ -22,6 +22,6 @@ The authoritative design of the ADA ECU: the detector, the fusion of own percept
 
 ## Elsewhere
 
-- **General knowledge** applied to this node: [documents/KnowledgeBase/](../../KnowledgeBase/) — including [video-source-for-r12.md](../../KnowledgeBase/video-source-for-r12.md)
+- **General knowledge** applied to this node: [documents/KnowledgeBase/](../../KnowledgeBase/)
 - **Superseded documents:** [ADA_ECU/doc/deprecated/](../../../ADA_ECU/doc/deprecated/)
 - **How to deploy and collect evidence:** [deploy-ada-ecu-walkthrough.md](../../../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md)
