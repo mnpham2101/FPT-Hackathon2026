@@ -18,7 +18,7 @@
       <article class="Markdown" id="doc-body">
 <h1 id="phase-24-hld-ada-ecu-store-admission-risk-assessment-warning-output-r3-r12r15-r18-ada-side">Phase 2–4 HLD — ADA ECU: store, admission, risk assessment, warning output (R3, R12–R15, R18 ADA side)<a class="headerlink" href="#phase-24-hld-ada-ecu-store-admission-risk-assessment-warning-output-r3-r12r15-r18-ada-side" title="Link to this section">¶</a></h1>
 <blockquote>
-<p>High-level design for the ADA ECU's share of <a data-missing="../../../documents/Plan-Proposal/milestone1_high_level_plan.md">milestone1_high_level_plan.md</a> §5 Phases 2, 3 and 4, per <a href="claude-rules-hld-content-and-commit-format.html">hld-content-and-commit-format.md</a>. Requirement definitions, field tables and tech stacks live in <a href="requirements-m1-cooperative-awareness.html">m1-cooperative-awareness.md</a> §2 R3/R12–R15/R18 and §3(d)/(g) — referenced, never restated.</p>
+<p>High-level design for the ADA ECU's share of <a href="documents-plan-milestone1-high-level-plan.html">milestone1_high_level_plan.md</a> §5 Phases 2, 3 and 4, per <a href="claude-rules-hld-content-and-commit-format.html">hld-content-and-commit-format.md</a>. Requirement definitions, field tables and tech stacks live in <a href="requirements-m1-cooperative-awareness.html">m1-cooperative-awareness.md</a> §2 R3/R12–R15/R18 and §3(d)/(g) — referenced, never restated.</p>
 <p>Authoritative design inputs this document realizes rather than reinterprets: <a href="requirements-ada-ecu.svg">ada-ecu.svg</a> (module shape, R14) and <a href="requirements-vehiclec-track-admission-state-machine.png">vehicleC_track_admission_state_machine.png</a> (R13 lifecycle).</p>
 <p>Diagram sources: <a href="../../../documents/Design/ADA-ECU/phase2-4-ada-ecu-components.puml">components</a> · <a href="../../../documents/Design/ADA-ECU/phase2-4-ada-ecu-callflow.puml">call flow</a> · <a href="../../../documents/Design/ADA-ECU/phase2-4-ada-ecu-admission.puml">admission state machine</a>.</p>
 <p><strong>This HLD resolves the standing consolidation question</strong> raised in <a data-missing="../../../documents/KnowledgeBase/video-source-for-r12.md">video-source-for-r12.md</a> §5 ("two ADA folders exist") — decision D1.</p>
@@ -203,7 +203,7 @@
 <li>"Its messages stop" (R13's own wording) is a time condition. A count cannot express silence — nothing arrives to increment it, which is precisely why the branch implementation needed a clock inside its <code>expire()</code> anyway.</li>
 <li>The two sources run at independently configured cadences — relayed updates at the bench's <code>cpm_rate_hz</code> (10 Hz default), own-sensor at <code>DETECTOR_FRAME_STRIDE</code>-reduced 5 Hz. One count M would mean two different real timeouts, and re-tuning <em>another node's</em> config would silently change ADA behavior.</li>
 </ul>
-<p>Default <code>TRACK_TIMEOUT_MS = 1000</code> is the wall-clock form of <a data-missing="../../../documents/Plan-Proposal/milestone1_high_level_plan.md">milestone1_high_level_plan.md</a> §4's proposed M = 5, taken at the slower of the two sources (5 × 200 ms), so neither source expires early. The plan's wording is flagged for re-ratification (§11 item 1) rather than silently overridden.</p>
+<p>Default <code>TRACK_TIMEOUT_MS = 1000</code> is the wall-clock form of <a href="documents-plan-milestone1-high-level-plan.html">milestone1_high_level_plan.md</a> §4's proposed M = 5, taken at the slower of the two sources (5 × 200 ms), so neither source expires early. The plan's wording is flagged for re-ratification (§11 item 1) rather than silently overridden.</p>
 <p>Further rules:</p>
 <ul>
 <li><strong>The store is the sole writer of <code>state</code>.</strong> The <code>state</code> field on incoming detector lines and R2-derived objects is ignored; the detector emits <code>not_tracked</code> by convention because it holds no store.</li>
@@ -314,7 +314,7 @@ class ICollisionRiskAssessment {
 <li><strong>Every change of <code>riskState</code> for a <code>(warningType, trackId)</code> emits exactly one R4 warning event — both directions.</strong> Steady state emits nothing. Downgrades and the return to <code>low</code> are emitted too: R4 carries no separate "clear" message and the periodic state stream is optional, so the transition back is the only way the IVI learns to stop warning.</li>
 <li>A transition commits only after it holds for <code>RISK_DWELL_MS</code> (default 300 ms) — one debounce covering all three thresholds, independent of the R13 gate hysteresis that protects track identity.</li>
 <li><strong>No B, no chain.</strong> <code>d_AC = d_AB + d_BC</code> needs <code>d_AB</code>; with no own-sensor B track the composed range does not exist, so the plugin returns <code>low</code> with rationale <code>b_unknown</code> and logs <code>assess_skipped_b_unknown</code>. It follows that no <code>medium</code>/<code>high</code> was ever entered without a known B, so the clearing event can always fill the required <code>geometry.vehicleB</code> from <code>lastKnownB</code>. <code>geometry.vehicleC</code> is <code>null</code> exactly when C's track has been erased — which is why the frozen schema allows null there.</li>
-<li>Composition (<code>fusion/scene_composer</code>): <code>vehicleB = (d_AB, y_B)</code> from the nearest <code>own_sensor</code> track, <code>vehicleC = (d_AB + d_BC, y_B + y_BC)</code> — longitudinal sum, lateral component-wise, valid for the near-collinear convoy (<a data-missing="../../../documents/Plan-Proposal/milestone1_high_level_plan.md">milestone1_high_level_plan.md</a> §2).</li>
+<li>Composition (<code>fusion/scene_composer</code>): <code>vehicleB = (d_AB, y_B)</code> from the nearest <code>own_sensor</code> track, <code>vehicleC = (d_AB + d_BC, y_B + y_BC)</code> — longitudinal sum, lateral component-wise, valid for the near-collinear convoy (<a href="documents-plan-milestone1-high-level-plan.html">milestone1_high_level_plan.md</a> §2).</li>
 </ul>
 <h3 id="d6-r12-detector-frame-source-seam-inference-distance-zero-c-evidence">D6 — R12 detector: frame-source seam, inference, distance, zero-C evidence<a class="headerlink" href="#d6-r12-detector-frame-source-seam-inference-distance-zero-c-evidence" title="Link to this section">¶</a></h3>
 <ul>
@@ -624,7 +624,7 @@ class ICollisionRiskAssessment {
 <div class="Markdown__scroll"><table>
 <thead>
 <tr>
-<th>Acceptance (<a data-missing="../../../documents/Plan-Proposal/milestone1_high_level_plan.md">milestone1_high_level_plan.md</a> §5)</th>
+<th>Acceptance (<a href="documents-plan-milestone1-high-level-plan.html">milestone1_high_level_plan.md</a> §5)</th>
 <th>Closed by</th>
 </tr>
 </thead>
@@ -703,7 +703,7 @@ class ICollisionRiskAssessment {
 <tbody>
 <tr>
 <td>1</td>
-<td><strong><code>miss_limit</code> semantics changed in form, not intent</strong> — <a data-missing="../../../documents/Plan-Proposal/milestone1_high_level_plan.md">milestone1_high_level_plan.md</a> §4 words M as "consecutive missed updates (proposed 5)"; D3 realizes it as <code>TRACK_TIMEOUT_MS</code> wall-clock (default 1000 ms = 5 periods at the slower source). Flagged for re-ratification, not absorbed silently.</td>
+<td><strong><code>miss_limit</code> semantics changed in form, not intent</strong> — <a href="documents-plan-milestone1-high-level-plan.html">milestone1_high_level_plan.md</a> §4 words M as "consecutive missed updates (proposed 5)"; D3 realizes it as <code>TRACK_TIMEOUT_MS</code> wall-clock (default 1000 ms = 5 periods at the slower source). Flagged for re-ratification, not absorbed silently.</td>
 <td>user / project-planner (plan §4 wording)</td>
 </tr>
 <tr>

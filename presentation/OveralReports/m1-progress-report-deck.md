@@ -20,7 +20,7 @@ deck: Milestone 1 — Progress Report · FPT Hackathon 2026
 
 Reported 05 August 2026 · hard deadline 08 August 2026 · four contributors
 
-Sources: [m1-cooperative-awareness.md](../../requirements/m1-cooperative-awareness.md) · [milestone1_high_level_plan.md](../../documents/Plan-Proposal/milestone1_high_level_plan.md) · the recorded system-test run
+Sources: [m1-cooperative-awareness.md](../../requirements/m1-cooperative-awareness.md) · [milestone1_high_level_plan.md](../../documents/Plan/milestone1_high_level_plan.md) · the recorded system-test run
 
 ---
 

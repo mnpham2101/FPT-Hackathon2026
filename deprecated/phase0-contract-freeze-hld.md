@@ -1,6 +1,6 @@
 # Phase 0 HLD — Contract Freeze (R1–R6)
 
-> High-level design for [milestone1_high_level_plan.md § Phase 0](../documents/Plan-Proposal/milestone1_high_level_plan.md#phase-0--freeze-the-contracts-r1r6), per [hld-content-and-commit-format.md](../.claude/rules/hld-content-and-commit-format.md). Requirement definitions, field tables, and tech stacks live in [m1-cooperative-awareness.md](../requirements/m1-cooperative-awareness.md) §2 Contracts and §3 — referenced, never restated. Call-flow source: [phase0-contract-freeze-call-flow.puml](phase0-contract-freeze-call-flow.puml).
+> High-level design for [milestone1_high_level_plan.md § Phase 0](../documents/Plan/milestone1_high_level_plan.md#phase-0--freeze-the-contracts-r1r6), per [hld-content-and-commit-format.md](../.claude/rules/hld-content-and-commit-format.md). Requirement definitions, field tables, and tech stacks live in [m1-cooperative-awareness.md](../requirements/m1-cooperative-awareness.md) §2 Contracts and §3 — referenced, never restated. Call-flow source: [phase0-contract-freeze-call-flow.puml](phase0-contract-freeze-call-flow.puml).
 >
 > **Location note:** this HLD is cross-cutting (all four nodes), so it lives in `plans/doc/` per [node-code-layout.md § Per-folder doc/](../.claude/rules/node-code-layout.md#per-folder-doc); later node-scoped HLDs (R11 bench, Phase 2 ADA) land in their own node's `doc/`.
 >
@@ -214,7 +214,7 @@ Traceable to the report §3 (per-track stacks) and per-requirement tech-stack li
 
 ## 12. Phase 0 acceptance traceability
 
-| [Phase 0 acceptance](../documents/Plan-Proposal/milestone1_high_level_plan.md#phase-0--freeze-the-contracts-r1r6) | Closed by |
+| [Phase 0 acceptance](../documents/Plan/milestone1_high_level_plan.md#phase-0--freeze-the-contracts-r1r6) | Closed by |
 |---|---|
 | R1 profile committed; golden vectors encode/decode through the Vanetza seam | `r1-cpm-profile.md` + `gv_tool` + `test_cpm_golden_vectors.cpp` (D3) |
 | R2/R3/R4 schemas committed; round-trip tests pass in C++ / Python / Kotlin | schemas (D1) + the six round-trip test suites (D2, §5 paths) |

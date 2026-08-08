@@ -5,7 +5,7 @@ description: Task ID scheme, phase/task/subtask structure, subtask discipline (s
 
 # Task Planning Conventions
 
-Authoritative process rule for how [[project-planner]] must structure the implementation plan. This governs *how* planning is done, independent of which milestone is active — phase *content* itself lives in [plans/](../../plans/) (currently [milestone1_high_level_plan.md](../../documents/Plan-Proposal/milestone1_high_level_plan.md)).
+Authoritative process rule for how [[project-planner]] must structure the implementation plan. This governs *how* planning is done, independent of which milestone is active — phase *content* itself lives in [plans/](../../plans/) (currently [milestone1_high_level_plan.md](../../documents/Plan/milestone1_high_level_plan.md)).
 
 ## Task ID scheme
 

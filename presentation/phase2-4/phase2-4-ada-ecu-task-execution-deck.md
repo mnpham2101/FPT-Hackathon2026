@@ -24,7 +24,7 @@ Design of the same three phases: [phase2-4-ada-ecu-design-deck.html](phase2-4-ad
 
 Preceding decks: [phase1-task-execution-deck.html](../phase1/phase1-task-execution-deck.html) · [phase0-task-execution-deck.html](../phase0/phase0-task-execution-deck.html)
 
-Sources: [phase2_tasks.md](../../plans/phase2_tasks.md) · [phase3_tasks.md](../../plans/phase3_tasks.md) · [phase4_tasks.md](../../plans/phase4_tasks.md) · [milestone1_high_level_plan.md](../../documents/Plan-Proposal/milestone1_high_level_plan.md) · the run records in [plans/doc/](../../plans/doc/)
+Sources: [phase2_tasks.md](../../plans/phase2_tasks.md) · [phase3_tasks.md](../../plans/phase3_tasks.md) · [phase4_tasks.md](../../plans/phase4_tasks.md) · [milestone1_high_level_plan.md](../../documents/Plan/milestone1_high_level_plan.md) · the run records in [plans/doc/](../../plans/doc/)
 
 ---
 
@@ -72,7 +72,7 @@ Three different things in this project are called a *track* or a *lane*. They ar
 
 | Term | Definition | Specified in | Example here |
 | ---- | ---------- | ------------ | ------------ |
-| **Track** | a workstream spanning whole phases, run by different people at once | [milestone1_high_level_plan.md](../../documents/Plan-Proposal/milestone1_high_level_plan.md) | this node is one track: phase 2, then 3 and 4 |
+| **Track** | a workstream spanning whole phases, run by different people at once | [milestone1_high_level_plan.md](../../documents/Plan/milestone1_high_level_plan.md) | this node is one track: phase 2, then 3 and 4 |
 | **Phase** | one stage, with an input list and acceptance criteria | [task-planning-conventions.md](../../.claude/rules/task-planning-conventions.md) | Phase 3 |
 | **Task group** | subtasks that jointly deliver one feature or one solution | as above | group 3.2 — the detector's modules |
 | **Subtask** | one objective, one commit, build and tests passing | as above | `12.3.2.3` — range from box width |

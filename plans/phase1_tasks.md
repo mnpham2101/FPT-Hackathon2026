@@ -1,7 +1,7 @@
 # Phase 1 — Comms Bring-up (V2X ECU + Scenario Player): Full Task Breakdown
 
 > **Authority & context:**
-> - **Phase content:** [milestone1_high_level_plan.md § Phase 1](../documents/Plan-Proposal/milestone1_high_level_plan.md#phase-1--comms-bring-up-v2x-ecu--scenario-player-r5r9-r11--r10-moved-to-the-future-plan) — its eight acceptance checkboxes are the phase output.
+> - **Phase content:** [milestone1_high_level_plan.md § Phase 1](../documents/Plan/milestone1_high_level_plan.md#phase-1--comms-bring-up-v2x-ecu--scenario-player-r5r9-r11--r10-moved-to-the-future-plan) — its eight acceptance checkboxes are the phase output.
 > - **Design (V2X ECU):** [v2x-ecu-hld.md](../documents/Design/V2X-ECU/v2x-ecu-hld.md) — §4 folder structure, §6 components and env table, §11 build and CI, and the [decision record](../documents/Design/V2X-ECU/v2x-ecu-design-decisions.md) D1–D8 (D4 payload-carrying events; D7 the bench↔V2X comms check). Every V2X_ECU path below is cited from its §4; the D7 script pair lives at repo-root `tools/comms_check/`, sanctioned by [node-code-layout.md § tools/](../.claude/rules/node-code-layout.md#tools--test-equipment-and-ecu-mocks) and V2X D7.
 > - **Design (Scenario Player):** [scenario-player-hld.md](../documents/Design/SCENARIO-PLAYER/scenario-player-hld.md) — §4 folder structure, §6 components and configuration, §12 test strategy, and the [decision record](../documents/Design/SCENARIO-PLAYER/scenario-player-design-decisions.md) D1–D7. Every Scenario_Player path below is cited from its §4.
 > - **Run timing:** [m1-run-timing-and-event-triggering.md §7](../requirements/m1-run-timing-and-event-triggering.md) R20 and R22 — the bench's paced scenario clock (group 1.6) and the R22 demo cycle it emits (group 1.13).
@@ -875,7 +875,7 @@ Dissection caveat (D5): raw UPER without GN/BTP shows as UDP data, so the eviden
 
 **Dependencies:** none — anytime. **Commit:** `[5.1.11.1] docs: reconcile milestone1 Phase 0 acceptance with phase0_tasks`
 
-**Status:** done 2026-08-01 — landed on `main` as commit `68ef5f5`. [milestone1_high_level_plan.md](../documents/Plan-Proposal/milestone1_high_level_plan.md) § Phase 0 shows 4/4 closed in this tree; the note about the branch copy lagging `main` is stale following this plan update.
+**Status:** done 2026-08-01 — landed on `main` as commit `68ef5f5`. [milestone1_high_level_plan.md](../documents/Plan/milestone1_high_level_plan.md) § Phase 0 shows 4/4 closed in this tree; the note about the branch copy lagging `main` is stale following this plan update.
 
 ---
 
@@ -1050,4 +1050,4 @@ Four plan-tracked deliverables carry no milestone box of their own:
 
 ---
 
-*This plan decomposes [milestone1_high_level_plan.md § Phase 1](../documents/Plan-Proposal/milestone1_high_level_plan.md#phase-1--comms-bring-up-v2x-ecu--scenario-player-r5r9-r11--r10-moved-to-the-future-plan) against the two Phase 1 HLDs, with group 1.13 decomposed from [m1-run-timing-and-event-triggering.md §6.6](../requirements/m1-run-timing-and-event-triggering.md) and [SP D7](../documents/Design/SCENARIO-PLAYER/scenario-player-design-decisions.md#d7--the-demo-cycle-is-one-clip-length-and-its-geometry-is-solved-backwards-from-the-first-warning). 13 task groups, 54 subtasks: 45 are agent-implemented, and group 1.10's 9 carry the walkthrough's AI and Human labels. 40 are closed against three CI runs — `30697863324` on `16b8674`, `30698630956` on `7a02fb5`, and `30700052056` on `31d0347`. The 14 open are group 1.10's deploy and verification work, group 1.6's scenario-clock subtasks and group 1.13's two — § Remaining work. Retired IDs, never reused: `20.1.13.2`, `20.1.13.3`.*
+*This plan decomposes [milestone1_high_level_plan.md § Phase 1](../documents/Plan/milestone1_high_level_plan.md#phase-1--comms-bring-up-v2x-ecu--scenario-player-r5r9-r11--r10-moved-to-the-future-plan) against the two Phase 1 HLDs, with group 1.13 decomposed from [m1-run-timing-and-event-triggering.md §6.6](../requirements/m1-run-timing-and-event-triggering.md) and [SP D7](../documents/Design/SCENARIO-PLAYER/scenario-player-design-decisions.md#d7--the-demo-cycle-is-one-clip-length-and-its-geometry-is-solved-backwards-from-the-first-warning). 13 task groups, 54 subtasks: 45 are agent-implemented, and group 1.10's 9 carry the walkthrough's AI and Human labels. 40 are closed against three CI runs — `30697863324` on `16b8674`, `30698630956` on `7a02fb5`, and `30700052056` on `31d0347`. The 14 open are group 1.10's deploy and verification work, group 1.6's scenario-clock subtasks and group 1.13's two — § Remaining work. Retired IDs, never reused: `20.1.13.2`, `20.1.13.3`.*

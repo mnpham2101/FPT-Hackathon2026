@@ -67,7 +67,7 @@
 <td>The clip reaches the container as one image layer and by no other route. The IVI dashcam view is deferred, and no part of it is built here (D6)</td>
 </tr>
 <tr>
-<td><a data-missing="../../Plan-Proposal/milestone1_high_level_plan.md">milestone1_high_level_plan.md</a></td>
+<td><a href="documents-plan-milestone1-high-level-plan.html">milestone1_high_level_plan.md</a></td>
 <td>§4's R13 gate constants; §2's near-collinear composition assumption; Phases 2, 3 and 4 acceptance; §6's deferred scope</td>
 </tr>
 <tr>
@@ -606,7 +606,7 @@
 </tr>
 </tbody>
 </table></div>
-<p>The addresses, the ports and the two gate constants are fixed by a committed source — <a href="requirements-car-sky-guide-node-ada-ecu.html#blueprint-node-config">node-ada-ecu.md</a> and <a data-missing="../../Plan-Proposal/milestone1_high_level_plan.md#track-admission-gate-r13">milestone1_high_level_plan.md §4</a>. Every other default above is this design's proposal. A value the blueprint omits falls through to the app's own default, never to an <code>ENV</code> baked into the image.</p>
+<p>The addresses, the ports and the two gate constants are fixed by a committed source — <a href="requirements-car-sky-guide-node-ada-ecu.html#blueprint-node-config">node-ada-ecu.md</a> and <a href="documents-plan-milestone1-high-level-plan.html#track-admission-gate-r13">milestone1_high_level_plan.md §4</a>. Every other default above is this design's proposal. A value the blueprint omits falls through to the app's own default, never to an <code>ENV</code> baked into the image.</p>
 <p><strong>Startup validation.</strong> <code>config/config</code> asserts the rules below and nothing beyond them. A violation names the offending key and exits non-zero. Each rule orders values of one quantity, or bounds a single value. <strong>No rule relates a risk threshold to a gate threshold</strong>, because the two measure different ranges (D5).</p>
 <div class="Markdown__scroll"><table>
 <thead>

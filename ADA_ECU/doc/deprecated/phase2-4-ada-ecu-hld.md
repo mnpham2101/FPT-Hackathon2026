@@ -1,6 +1,6 @@
 # Phase 2–4 HLD — ADA ECU: store, admission, risk assessment, warning output (R3, R12–R15, R18 ADA side)
 
-> High-level design for the ADA ECU's share of [milestone1_high_level_plan.md](../../../documents/Plan-Proposal/milestone1_high_level_plan.md) §5 Phases 2, 3 and 4, per [hld-content-and-commit-format.md](../../../.claude/rules/hld-content-and-commit-format.md). Requirement definitions, field tables and tech stacks live in [m1-cooperative-awareness.md](../../../requirements/m1-cooperative-awareness.md) §2 R3/R12–R15/R18 and §3(d)/(g) — referenced, never restated.
+> High-level design for the ADA ECU's share of [milestone1_high_level_plan.md](../../../documents/Plan/milestone1_high_level_plan.md) §5 Phases 2, 3 and 4, per [hld-content-and-commit-format.md](../../../.claude/rules/hld-content-and-commit-format.md). Requirement definitions, field tables and tech stacks live in [m1-cooperative-awareness.md](../../../requirements/m1-cooperative-awareness.md) §2 R3/R12–R15/R18 and §3(d)/(g) — referenced, never restated.
 >
 > Authoritative design inputs this document realizes rather than reinterprets: [ada-ecu.svg](../../../requirements/ada-ecu.svg) (module shape, R14) and [vehicleC_track_admission_state_machine.png](../../../requirements/vehicleC_track_admission_state_machine.png) (R13 lifecycle).
 >
@@ -87,7 +87,7 @@ Realizes [vehicleC_track_admission_state_machine.png](../../../requirements/vehi
 - "Its messages stop" (R13's own wording) is a time condition. A count cannot express silence — nothing arrives to increment it, which is precisely why the branch implementation needed a clock inside its `expire()` anyway.
 - The two sources run at independently configured cadences — relayed updates at the bench's `cpm_rate_hz` (10 Hz default), own-sensor at `DETECTOR_FRAME_STRIDE`-reduced 5 Hz. One count M would mean two different real timeouts, and re-tuning *another node's* config would silently change ADA behavior.
 
-Default `TRACK_TIMEOUT_MS = 1000` is the wall-clock form of [milestone1_high_level_plan.md](../../../documents/Plan-Proposal/milestone1_high_level_plan.md) §4's proposed M = 5, taken at the slower of the two sources (5 × 200 ms), so neither source expires early. The plan's wording is flagged for re-ratification (§11 item 1) rather than silently overridden.
+Default `TRACK_TIMEOUT_MS = 1000` is the wall-clock form of [milestone1_high_level_plan.md](../../../documents/Plan/milestone1_high_level_plan.md) §4's proposed M = 5, taken at the slower of the two sources (5 × 200 ms), so neither source expires early. The plan's wording is flagged for re-ratification (§11 item 1) rather than silently overridden.
 
 Further rules:
 
@@ -153,7 +153,7 @@ Frozen R4 fixes `riskState ∈ {low, medium, high}`. For `nlos_obstruction`, wit
 - **Every change of `riskState` for a `(warningType, trackId)` emits exactly one R4 warning event — both directions.** Steady state emits nothing. Downgrades and the return to `low` are emitted too: R4 carries no separate "clear" message and the periodic state stream is optional, so the transition back is the only way the IVI learns to stop warning.
 - A transition commits only after it holds for `RISK_DWELL_MS` (default 300 ms) — one debounce covering all three thresholds, independent of the R13 gate hysteresis that protects track identity.
 - **No B, no chain.** `d_AC = d_AB + d_BC` needs `d_AB`; with no own-sensor B track the composed range does not exist, so the plugin returns `low` with rationale `b_unknown` and logs `assess_skipped_b_unknown`. It follows that no `medium`/`high` was ever entered without a known B, so the clearing event can always fill the required `geometry.vehicleB` from `lastKnownB`. `geometry.vehicleC` is `null` exactly when C's track has been erased — which is why the frozen schema allows null there.
-- Composition (`fusion/scene_composer`): `vehicleB = (d_AB, y_B)` from the nearest `own_sensor` track, `vehicleC = (d_AB + d_BC, y_B + y_BC)` — longitudinal sum, lateral component-wise, valid for the near-collinear convoy ([milestone1_high_level_plan.md](../../../documents/Plan-Proposal/milestone1_high_level_plan.md) §2).
+- Composition (`fusion/scene_composer`): `vehicleB = (d_AB, y_B)` from the nearest `own_sensor` track, `vehicleC = (d_AB + d_BC, y_B + y_BC)` — longitudinal sum, lateral component-wise, valid for the near-collinear convoy ([milestone1_high_level_plan.md](../../../documents/Plan/milestone1_high_level_plan.md) §2).
 
 ### D6 — R12 detector: frame-source seam, inference, distance, zero-C evidence
 
@@ -348,7 +348,7 @@ No module spans two layers.
 
 ## 10. Acceptance traceability
 
-| Acceptance ([milestone1_high_level_plan.md](../../../documents/Plan-Proposal/milestone1_high_level_plan.md) §5) | Closed by |
+| Acceptance ([milestone1_high_level_plan.md](../../../documents/Plan/milestone1_high_level_plan.md) §5) | Closed by |
 |---|---|
 | Phase 2 — store exposes all R3 fields; detector-shaped and relayed-shaped entries enter through the identical interface | frozen R3 binding + `store/track_store` with both parsers writing the same `upsert` (D2, D3); `tests/store/test_track_store.cpp` |
 | Phase 2 — mock-driven transitions observable and matching the R13 diagram; mock off ⇒ no tracks | D3 machine + `track_transition` events (D8); `DETECTOR_ENABLED=false` (D2) |
@@ -370,7 +370,7 @@ No module spans two layers.
 
 | # | Item | Owner / closes at |
 |---|---|---|
-| 1 | **`miss_limit` semantics changed in form, not intent** — [milestone1_high_level_plan.md](../../../documents/Plan-Proposal/milestone1_high_level_plan.md) §4 words M as "consecutive missed updates (proposed 5)"; D3 realizes it as `TRACK_TIMEOUT_MS` wall-clock (default 1000 ms = 5 periods at the slower source). Flagged for re-ratification, not absorbed silently. | user / project-planner (plan §4 wording) |
+| 1 | **`miss_limit` semantics changed in form, not intent** — [milestone1_high_level_plan.md](../../../documents/Plan/milestone1_high_level_plan.md) §4 words M as "consecutive missed updates (proposed 5)"; D3 realizes it as `TRACK_TIMEOUT_MS` wall-clock (default 1000 ms = 5 periods at the slower source). Flagged for re-ratification, not absorbed silently. | user / project-planner (plan §4 wording) |
 | 2 | **Deleting `ada-ecu/` removes ~1,900 lines of committed work** (D1). The rule, not this design, makes `ADA_ECU/` canonical, but the deletion should carry the user's explicit go-ahead in the subtask that performs it. | user, at planning |
 | 3 | **Distance accuracy is unvalidated** — the pinhole known-width estimate (D6) has no calibration target in a user-supplied clip. `VEHICLE_WIDTH_M` / `CAMERA_HFOV_DEG` are proposals; if the delivered clip's geometry makes B's estimated range disagree with the scenario, the two constants are retuned, never the gate. | Phase 3, on the real clip |
 | 4 | **IVI-side defect found, not designed here (Phase 5's work):** `IVI_ECU/app/.../model/R4WarningMessage.kt` on this branch declares `R4Geometry(ego, b, c)` with no `@SerialName`, so it cannot decode this node's `geometry.vehicleB`/`vehicleC`, and it requires a `trackedObjects` array this design does not emit. **`R4Message.kt` on main (sealed `R4WarningEvent`/`R4StateMessage` + `SceneGeometry.kt`) is the binding the IVI uses**; the branch's parallel model is superseded. | project-planner → Phase 5 |
