@@ -4,17 +4,17 @@
 
 The IVI application receives messages as UDP datagrams on a configured port. Each datagram has to be converted into a typed Kotlin object that the presentation layer can consume: the receive path yields raw bytes, and every stage above it — repository, view model, renderer — needs fields with names and types rather than a byte buffer.
 
-The payload is a UTF-8 JSON document. Deserialising it into Kotlin data classes gives compile-time field access, type checking at the boundary, and a single place where a malformed message is rejected. In this project the message exchanged from the ADA-ECU to the IVI-ECU is defined in [r4-ada-ivi.schema.json](../../contracts/r4-ada-ivi.schema.json), referred to below as the R4 message.
+The payload is a UTF-8 JSON document. Deserialising it into Kotlin data classes gives compile-time field access, type checking at the boundary, and a single place where a malformed message is rejected. In this project the message exchanged from the ADA-ECU to the IVI-ECU is defined in [r4-ada-ivi.schema.json](../../contracts/r4-ada-ivi.schema.json).
 
 This document covers the consumer side: the structure on the wire, the deserialisation library selected for it, and the handling that library does not provide.
 
-## 2. R4 message structure
+## 2. Message structure
 
-![R4 message structure](r4-message-structure.svg)
+![Message structure](message-structure.svg)
 
-*Source: [r4-message-structure.drawio](r4-message-structure.drawio).*
+*Source: [message-structure.drawio](message-structure.drawio).*
 
-**One R4 message is one UDP datagram containing one UTF-8 JSON object.** There is no application-layer framing: no length prefix, no envelope, no sequence header. The JSON object is the entire payload.
+**One message is one UDP datagram containing one UTF-8 JSON object.** There is no application-layer framing: no length prefix, no envelope, no sequence header. The JSON object is the entire payload.
 
 The link, network and transport headers are removed by the network interface and the kernel before the datagram reaches the application, so an application-level "de-framing" step is not header removal. It is correct slicing of the receive buffer, which is where the defects occur:
 
@@ -100,7 +100,7 @@ Type-correct JSON can still be semantically invalid. Two checks belong above the
 
 ### 4.3 Where the parsing code should live
 
-A **pure Kotlin/JVM Gradle module** holding the models, the configured `Json` instance, and the byte-slice-to-message entry point, depended upon by the application and by the simulator that produces the same messages ([phase5-r4-simulation-harness.md](phase5-r4-simulation-harness.md)), so that producer and consumer cannot diverge.
+A **pure Kotlin/JVM Gradle module** holding the models, the configured `Json` instance, and the byte-slice-to-message entry point, depended upon by the application and by the simulator that produces the same messages ([producer-simulation-harness.md](producer-simulation-harness.md)), so that producer and consumer cannot diverge.
 
 - The module carries **no Android dependencies**, which keeps it executable in a plain-JVM test job and reusable from a command-line tool.
 - The models currently reside in the application module. Relocating them is a move, not a rewrite: the committed round-trip and additive-version tests move with them and must continue to pass unchanged.

@@ -4,7 +4,7 @@
 **Target Platform:** Android Automotive OS (AAOS - API 29+ / Target 33)  
 **Author:** Vinh & Team IVI  
 **Date:** 03/08/2026  
-**Contracts:** `contracts/r4-ada-ivi.schema.json` (R4 Version 1.0)
+**Message schema:** `contracts/r4-ada-ivi.schema.json`
 
 ---
 
@@ -24,14 +24,14 @@ Standard Mobile Android is designed for personal smartphones (touchscreens, batt
 
 ---
 
-## 2. End-to-End R4 Ingest & Data Pipeline
+## 2. End-to-End Message Ingest & Data Pipeline
 
 The IVI ECU ingests cooperative awareness warnings from the ADA (Autonomous Driving Assistant) ECU over the local Ethernet Bridge using raw UDP datagrams.
 
 ```
 ┌─────────────────┐       UDP Port 47300      ┌───────────────────────┐
 │     ADA ECU     │ ────────────────────────> │  R4ListenerService    │
-│  (Data Source)  │  Raw JSON Bytes (R4)      │  (ForegroundService)  │
+│  (Data Source)  │  Raw JSON Bytes      │  (ForegroundService)  │
 └─────────────────┘                           └───────────┬───────────┘
                                                           │  r4EventFlow (SharedFlow)
                                                           ▼
@@ -44,7 +44,7 @@ The IVI ECU ingests cooperative awareness warnings from the ADA (Autonomous Driv
          ▼
 ┌────────────────────────────────────────────────────────────────────────┐
 │                          Jetpack Compose UI                            │
-│  MainScreen (R16 Switcher)  ──>  CanvasWarningView (R17 2D God View)   │
+│  MainScreen (mode switcher)  ──>  CanvasWarningView (2D god view)   │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -80,14 +80,14 @@ data class R4WarningEvent(
 
 | Protocol | Latency | Overhead | Schema Enforcement | Use Case in Automotive |
 |---|---|---|---|---|
-| **Raw UDP Socket (Selected)** | **< 2 ms** | **Minimal (8-byte header)** | Application-layer JSON validator | **Safety Warnings (R4 ADA→IVI)** |
+| **Raw UDP Socket (Selected)** | **< 2 ms** | **Minimal (8-byte header)** | Application-layer JSON validator | **Safety warnings (ADA→IVI)** |
 | **SOME/IP** | 5–10 ms | Moderate | AUTOSAR FIBEX / ARXML | ECU-to-ECU service-oriented RPC |
 | **gRPC / Protobuf** | 10–20 ms | Low payload, high CPU | `.proto` IDL contract | Cloud-to-Vehicle Telemetry |
 | **MQTT** | 30–100 ms | High (Broker dependency) | None (Topic string) | Non-critical Infotainment (Weather/Media) |
 | **Zenoh / DDS** | 3–5 ms | Low-to-Moderate | Shared Memory / PubSub | ADAS Sensor Fusion Internal Bus |
 
-**Why Raw UDP for R4?**
-R4 safety warnings require zero-handshake, ultra-low latency broadcast (< 5ms deadline). If an obstacle is detected at 60 km/h, every millisecond saved in transmission translates directly to vehicle stopping distance.
+**Why Raw UDP for safety warnings?**
+Safety warnings require zero-handshake, ultra-low latency broadcast (< 5ms deadline). If an obstacle is detected at 60 km/h, every millisecond saved in transmission translates directly to vehicle stopping distance.
 
 ---
 
@@ -96,7 +96,7 @@ R4 safety warnings require zero-handshake, ultra-low latency broadcast (< 5ms de
 ### 4.1 State Transition Lifecycle
 
 ```
-                 Incoming R4 Warning Event
+                 Incoming Warning Event
              ┌───────────────────────────────┐
              │                               ▼
     ┌────────────────┐   10s Timeout   ┌──────────────────┐
@@ -127,7 +127,7 @@ $$\text{Pixel}_Y = \text{Height} - \text{Margin}_{\text{bottom}} - (Y_{\text{met
 
 - **Clamping:** Off-screen vehicles are clamped 16 px inside canvas boundaries so objects never disappear silently.
 
-### 5.2 R19 Defensive Provenance Guard
+### 5.2 Defensive Provenance Guard
 
 ```kotlin
 val snapshot = scene.vehicleCSnapshot
