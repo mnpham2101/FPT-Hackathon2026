@@ -57,7 +57,7 @@ python website/build-pages.py --clean                      # drop stale pages fi
 python website/build-pages.py documents/Design/README.md   # render just one
 ```
 
-`build-pages.py` starts at the document behind each leaf node, then follows every relative link and builds a page for each Markdown it reaches — so a document linked from a page is a page too. It prints any link it could not resolve, which is how a document pointing at a moved or deleted file gets noticed. Editing the Markdown is enough; never hand-edit a generated page, as the next build overwrites it.
+**`build-pages.py` builds one page per Markdown file in [documents/](documents/), and nothing else.** A link that leaves `documents/` — to a requirement, a walkthrough, a schema, a deck — points at the file where it lives rather than becoming another page. That boundary is what keeps the site the project's written record instead of a rendering of the whole repository. It prints any link it could not resolve, which is how a document pointing at a moved or deleted file gets noticed. Editing the Markdown is enough; never hand-edit a generated page, as the next build overwrites it.
 
 ### 2 · View it
 

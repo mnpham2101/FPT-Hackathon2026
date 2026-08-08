@@ -52,6 +52,16 @@ ENTRIES = [
     ("module-design", "documents/Design/README.md"),
 ]
 
+# The site is the project's written record, and that record is documents/.
+# Markdown under here becomes a page; markdown anywhere else is linked where
+# it lives, exactly as a schema or a diagram source is.
+#
+# This is what bounds the crawl.  Following every link wherever it led built
+# 120 pages -- deprecated HLDs, phase plans, the agent rules -- and reported
+# their stale links as if the site were responsible for them.  A link that
+# leaves documents/ is a reference to the repository, not another page.
+CRAWL_ROOTS = ("documents/",)
+
 # Copied into pages/ so the page can render them.  Anything else a document
 # links to is linked where it already lives (§ classify).
 INLINE_SUFFIXES = {".svg", ".png", ".jpg", ".jpeg", ".gif", ".webp"}
@@ -278,8 +288,12 @@ class Build:
             return out_of_pages(rel), "file"
 
         if full.suffix.lower() == ".md":
-            self.enqueue_markdown(rel, node)
-            return page_name(rel), "page"
+            if str(rel).startswith(CRAWL_ROOTS):
+                self.enqueue_markdown(rel, node)
+                return page_name(rel), "page"
+            # Markdown outside documents/ is a reference, not a page: the
+            # link reaches the file in the repository and the crawl stops.
+            return out_of_pages(rel), "file"
 
         if full.suffix.lower() in INLINE_SUFFIXES:
             self.copy_asset(rel)
@@ -344,12 +358,37 @@ def traverse(entries):
             sys.exit("entry source missing: %s (node '%s')" % (source, node))
         build.enqueue_markdown(PurePosixPath(source), node)
 
-    while build.queue:
-        rel, node = build.queue.popleft()
-        build_page(rel, node, build)
-        build.built.append(str(rel))
+    def drain():
+        while build.queue:
+            rel, node = build.queue.popleft()
+            build_page(rel, node, build)
+            build.built.append(str(rel))
+
+    drain()
+
+    # Then every remaining document in the crawl roots, linked to or not.
+    # Reachability alone leaves a document invisible the moment the page
+    # that used to link it is deleted -- which is how Delivery/README.md
+    # disappeared from the site when documents/README.md was removed. The
+    # site presents the folder, so the folder decides what is in it.
+    for root in CRAWL_ROOTS:
+        for src in sorted((ROOT / root).rglob("*.md")):
+            rel = repo_rel(src)
+            if rel is not None:
+                build.enqueue_markdown(rel, node_for(rel, entries))
+    drain()
 
     return build
+
+
+def node_for(rel, entries):
+    """The site node a swept document belongs under, for its breadcrumb:
+    the entry sharing its top-level folder under documents/, if any."""
+    parts = PurePosixPath(str(rel)).parts
+    for node, source in entries:
+        if PurePosixPath(source).parts[:2] == parts[:2]:
+            return node
+    return ""
 
 
 # =========================================================================

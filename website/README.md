@@ -32,7 +32,7 @@ Zip it and send it; the reader double-clicks `index.html`. Roughly 20 MB, and ge
 
 One thing is rewritten, and only in the copy: a deck linking a `.md` file is repointed at the page built from it, so a reader clicking "IVI ECU — high-level design" inside a deck gets the rendered page instead of raw markdown. The deck in `presentation/` is untouched — the bundle's copy is a derived artifact, exactly as the export itself is.
 
-What does not survive the bundle: **links to a folder rather than a file** — six of them, into `.claude/`, `contracts/samples/` and `ADA_ECU/doc/`. The bundle copies files, and a directory link has nothing to resolve to once the repository is not there.
+What does not survive the bundle: **a link to a folder rather than a file** — one, `contracts/samples/`. The bundle copies files, and a directory link has nothing to resolve to once the repository is not there.
 
 The document pages in `pages/` are generated. Rebuild them after any change to the markdown they render:
 
@@ -83,7 +83,7 @@ A node is just a `PageLink` — an icon + label `<div>` built by `createPageLink
 | Function | What it does |
 |---|---|
 | `build_page(rel)` | One markdown file → one page in `pages/`, with an id and a permalink on every heading |
-| `traverse(entries)` | Follows the links out of the entry documents and builds a page for every markdown they reach |
+| `traverse(entries)` | Builds a page for every markdown file under `documents/` |
 
 A leaf node with a folder of its own opens that folder's document:
 
@@ -97,8 +97,6 @@ A leaf node with a folder of its own opens that folder's document:
 
 The same pairs are `ENTRIES` in `build-pages.py` and the `href`/`source` pair on the node in `js/site-data.js`; change one and you must change the other. The `href` filename is `page_name(source)` — derived, never chosen by hand.
 
-The remaining leaves — System Design, Acceptance Evidence, Test Guide — have no folder yet and keep their hand-written page. Adding one is two edits: the folder's document, and a row in both tables above.
-
 A node with no folder of its own — System Design, Acceptance Evidence, Test Guide — still gets a page: a mount point `js/page.js` fills from the site graph at load time. Those are generated from `js/site-data.js` too, which is what makes `pages/` derived in full and safe to gitignore. Adding a node to the graph is enough; no file is written by hand.
 
 `--clean` deletes every page carrying this tool's `<meta name="generator">` mark, which is now all of them, so a page whose source document was deleted goes with it.
@@ -107,13 +105,17 @@ A node with no folder of its own — System Design, Acceptance Evidence, Test Gu
 
 A flat folder makes every link between two generated pages a plain same-level `href`, with no relative depth to compute and nothing to break when a document moves inside the repo. Flat also needs unique names, so **a page is named for its whole repo path**, not its basename: `documents/Design/README.md` → `documents-design-readme.html`. There are five `README.md` files in this repo and they cannot all be `README.html`. The name is a pure function of the path, so a rebuild never renumbers anything.
 
-### The traversal
+### The traversal, and where it stops
+
+`CRAWL_ROOTS` bounds it to `documents/`. **Markdown under there becomes a page; markdown anywhere else is linked where it lives**, exactly as a schema or a diagram source is. Without that bound the crawl followed links wherever they led and built 120 pages — deprecated HLDs, phase plans, the agent process rules — and reported *their* stale links as if the site were responsible for them. A link that leaves `documents/` is a reference to the repository, not another page.
 
 1. Seed the queue with each entry document, tagged with the site node that opens it.
-2. Take a document off the queue and render it. Rendering rewrites its links, and every markdown link it rewrites is enqueued at that moment with the same tag — so a document inherits the breadcrumb of whichever entry reached it first.
-3. Repeat until the queue empties.
+2. Take a document off the queue and render it. Rendering rewrites its links, and every markdown link inside `documents/` is enqueued at that moment with the same tag — so a document inherits the breadcrumb of whichever entry reached it first.
+3. Drain, then sweep `documents/` for anything not yet built and drain again.
 
 `seen` is checked when a document is *enqueued*, not when it is rendered, so a document linked from twenty pages is queued once. That is also what terminates the walk on the cycles these documents are full of — an HLD links its decision record, which links back to the HLD.
+
+The sweep in step 3 is why the count matches the folder rather than what happens to be linked. Reachability alone leaves a document invisible the moment the page that linked it is deleted — which is exactly how `Delivery/README.md` fell out of the site when `documents/README.md` was removed.
 
 ### What happens to each link target
 
