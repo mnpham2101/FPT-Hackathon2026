@@ -79,6 +79,9 @@ MD_CONFIG = {
 GENERATOR = "kis-build-pages"
 
 ATTR_RE = re.compile(r'\b(href|src)\s*=\s*"([^"]*)"')
+# url(...) inside a <style> block -- how a deck names its background images,
+# which an href/src scan alone would miss and leave out of a bundle.
+CSS_URL_RE = re.compile(r"""url\(\s*['"]?([^'")]+)""")
 SKIP_SCHEMES = ("http://", "https://", "mailto:", "tel:", "data:", "//")
 
 
@@ -349,6 +352,126 @@ def traverse(entries):
     return build
 
 
+# =========================================================================
+#  3 · bundle — a copy of the site that opens with no server
+# =========================================================================
+
+# Copied out of website/ into a bundle.  The generator, its requirements and
+# the asset scripts are how the site is produced, not part of it.
+SITE_RUNTIME = ("index.html", "css", "js", "assets", "pages")
+
+
+def reachable_outside(site_root: Path):
+    """Every repo file the built pages reach outside website/, transitively.
+
+    Transitively matters: a page links a deck, and the deck needs its own
+    backgrounds and diagrams. Following only one hop produces a bundle whose
+    decks open with every image missing."""
+    found, frontier = set(), set()
+
+    def links_of(f: Path):
+        txt = f.read_text(encoding="utf-8", errors="replace")
+        out = set(ATTR_RE.findall(txt))
+        return {t for _, t in out} | set(CSS_URL_RE.findall(txt))
+
+    def collect(f: Path, targets):
+        for raw in targets:
+            if not raw or raw.startswith("#") or raw.startswith(SKIP_SCHEMES):
+                continue
+            p = (f.parent / unquote(split_target(raw)[0])).resolve()
+            if p.is_file() and site_root not in p.parents and repo_rel(p):
+                if p not in found:
+                    found.add(p)
+                    frontier.add(p)
+
+    for page in (site_root / "pages").glob("*.html"):
+        collect(page, links_of(page))
+    while frontier:
+        f = frontier.pop()
+        if f.suffix.lower() in (".html", ".htm"):
+            collect(f, links_of(f))
+    return found
+
+
+def retarget_markdown_links(text, deck: Path, dest: Path, dest_root: Path):
+    """In a bundled deck, point a link that names a .md at the page built
+    from it.
+
+    The deck in presentation/ is never touched -- this rewrites the bundle's
+    own copy, which is a derived artifact exactly as the export itself is.
+    Without it a reader who clicks 'IVI ECU high-level design' inside a deck
+    gets raw markdown rendered as plain text."""
+    def sub(m):
+        attr, target = m.group(1), m.group(2)
+        if not target or target.startswith("#") or target.startswith(SKIP_SCHEMES):
+            return m.group(0)
+        path, tail = split_target(target)
+        src = (deck.parent / unquote(path)).resolve()
+        if src.suffix.lower() != ".md" or not src.is_file():
+            return m.group(0)
+        rel = repo_rel(src)
+        if rel is None or not (PAGES / page_name(rel)).is_file():
+            return m.group(0)
+        # Anchored at the bundle root, never derived from the deck's own
+        # depth: presentation/ holds decks at two nesting levels, and a
+        # ../.. guessed from one of them is wrong for the other.
+        page = dest_root / "website" / "pages" / page_name(rel)
+        return '%s="%s%s"' % (attr, href_of(dest, page), tail)
+
+    return ATTR_RE.sub(sub, text)
+
+
+def href_of(from_file: Path, to_file: Path):
+    return quote(os.path.relpath(to_file, from_file.parent).replace(os.sep, "/"), safe="/")
+
+
+def bundle(dest_root: Path):
+    """Write a self-contained copy of the site that needs no web server.
+
+    The bundle mirrors the repository's own layout for every file the site
+    reaches, so nothing is rewritten and nothing has to be: a deck's
+    ../assets/ still resolves, and a page's ../../presentation/ still
+    resolves, because their relative positions are unchanged. The repo's
+    root index.html rides along as the bundle's entry point, which is what
+    makes <bundle>/index.html open the site on a double-click."""
+    # Best effort: a cloud-synced checkout can keep a directory handle open
+    # after its files are gone, so the tree may not vanish completely. Every
+    # write below overwrites by name and tolerates a directory that survived,
+    # which is why a partial delete is not a failure.
+    if dest_root.exists():
+        shutil.rmtree(dest_root, ignore_errors=True)
+
+    for name in SITE_RUNTIME:
+        src = SITE / name
+        out = dest_root / "website" / name
+        out.parent.mkdir(parents=True, exist_ok=True)
+        if src.is_dir():
+            shutil.copytree(src, out, dirs_exist_ok=True)
+        else:
+            shutil.copy2(src, out)
+
+    outside = reachable_outside(SITE)
+    for src in sorted(outside):
+        rel = repo_rel(src)
+        out = dest_root / str(rel)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, out)
+        if str(rel).startswith(PRESERVE_PREFIXES) and src.suffix.lower() == ".html":
+            out.write_text(
+                retarget_markdown_links(
+                    src.read_text(encoding="utf-8", errors="replace"), src, out, dest_root),
+                encoding="utf-8",
+            )
+
+    entry = ROOT / "index.html"
+    if entry.is_file():
+        shutil.copy2(entry, dest_root / "index.html")
+
+    total = sum(f.stat().st_size for f in dest_root.rglob("*") if f.is_file())
+    count = sum(1 for f in dest_root.rglob("*") if f.is_file())
+    return count, total, len(outside)
+
+
 # --- driver ---------------------------------------------------------------
 
 
@@ -367,6 +490,8 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("source", nargs="?", help="one markdown file to render; omit to traverse")
     ap.add_argument("--clean", action="store_true", help="remove previously generated pages first")
+    ap.add_argument("--bundle", metavar="DIR", nargs="?", const="dist",
+                    help="also write a self-contained copy to DIR (default: dist/)")
     args = ap.parse_args()
 
     PAGES.mkdir(parents=True, exist_ok=True)
@@ -385,6 +510,11 @@ def main():
     build = traverse(ENTRIES)
     print("pages   %d" % len(build.built))
     print("assets  %d" % len(build.assets))
+    if args.bundle:
+        dest = (ROOT / args.bundle).resolve()
+        count, total, pulled = bundle(dest)
+        print("bundle  %d files, %.1f MB, %d pulled in from the repo -> %s/index.html"
+              % (count, total / 1e6, pulled, dest.relative_to(ROOT).as_posix()))
     print("output  %s" % PAGES.relative_to(ROOT).as_posix())
     if build.dead:
         seen = sorted(set(build.dead))

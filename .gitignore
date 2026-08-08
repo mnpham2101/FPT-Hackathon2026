@@ -55,3 +55,6 @@ sample_video*.mp4
 # bg-sketch-board.jpg is committed, its AI-generated sources are not
 website/assets/Gemini_Generated_Image_v1.png
 website/assets/Gemini_Generated_Image_v2.png
+
+# website/build-pages.py --bundle output: a derived, self-contained copy of the site
+dist/

@@ -21,9 +21,11 @@
 <p>The folder is top-level, beside <a href="../../presentation/">presentation/</a> and for the same reason: both are human-facing publications of the project, each self-contained with its own content, design system and generator. It is not node product code, and not the test equipment <a href="../../tools/">tools/</a> is for.</p>
 <p>It renders <a href="../../documents/">documents/</a> but does not own it. That folder stays where every rule and design document expects it, and the decks read it too — the site is one view of that content, not its home.</p>
 <h2 id="run-it">Run it<a class="headerlink" href="#run-it" title="Link to this section">¶</a></h2>
-<p>Open <code>index.html</code> directly, or serve the folder:</p>
-<pre><code class="language-bash">python -m http.server 8080   # from website/
+<p>Open <code>website/index.html</code> directly, or serve <strong>the repository root</strong>:</p>
+<pre><code class="language-bash">python -m http.server 8080        # from the repo root, not from website/
+# then open http://localhost:8080/website/index.html
 </code></pre>
+<p><strong>The root is the repo, not this folder.</strong> A document page links out to the deck exports in <a href="../../presentation/">../presentation/</a> and to schemas and diagrams elsewhere in the repo, because only images are copied in (§ What happens to each link target). Serving <code>website/</code> alone puts those targets above the web root, and every one of them 404s — the "Abridged version" links on the HLD pages are the ones a reader hits first. Opening the files directly works for the same reason: <code>file://</code> has no root to climb above.</p>
 <p>The document pages in <code>pages/</code> are generated. Rebuild them after any change to the markdown they render:</p>
 <pre><code class="language-bash">pip install -r website/requirements.txt   # once
 python website/build-pages.py             # from the repo root
@@ -217,7 +219,7 @@ python website/build-pages.py documents/Design/README.md   # just one
 </tr>
 </tbody>
 </table></div>
-<p>Only images are copied, because only images have to be <em>inside</em> the site to render. Everything else is linked in place — copying it would make <code>pages/</code> a second, staler copy of the repository. <strong>The consequence: those out-links resolve when the site is opened from a checkout or served from the repo root, and 404 when <code>website-builder/</code> is itself the web root.</strong></p>
+<p>Only images are copied, because only images have to be <em>inside</em> the site to render. Everything else is linked in place — copying it would make <code>pages/</code> a second, staler copy of the repository. <strong>This is what fixes the web root at the repo rather than at this folder</strong> (§ Run it): a link to a deck reaches out of <code>website/</code>, so <code>website/</code> cannot be the root.</p>
 <p><code>presentation/</code> is never re-rendered. Its decks are Marp markdown with an HTML export already built beside them by <code>slide-build-tool/build-slides.py</code>; a link to a deck's <code>.md</code> is retargeted to that export, and neither file is touched.</p>
 <p>The build prints every unresolved link with its reason. What shows up there is stale links in the source markdown — a document pointing at a file that has since moved or been deleted — and those are fixed in the markdown, never in the builder.</p>
 <h2 id="reusable-components">Reusable components<a class="headerlink" href="#reusable-components" title="Link to this section">¶</a></h2>

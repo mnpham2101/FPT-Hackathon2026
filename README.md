@@ -46,7 +46,17 @@ python -m http.server 8080   # from the repo root, not from website/
 # then open http://localhost:8080/website/index.html
 ```
 
-Serve the repo root, not `website/`. A document page links out to the deck exports in [presentation/](presentation/) and to schemas and diagrams elsewhere — nothing but images is copied into the site — so serving `website/` alone puts those targets above the web root and they 404.
+Serve the repo root, not `website/`. A document page links out to the deck exports in [presentation/](presentation/) and to schemas and diagrams elsewhere — nothing but images is copied into the site — so serving `website/` alone puts those targets above the web root and they 404. The root [index.html](index.html) redirects to the site, so `http://localhost:8080/` lands on it.
+
+### Sending the site to someone
+
+`--bundle` writes a self-contained copy that needs no server and no Python:
+
+```bash
+python website/build-pages.py --bundle        # writes dist/
+```
+
+Zip `dist/` and send it; the reader opens `dist/index.html` by double-clicking. It carries every file the site reaches — the decks and their images, the diagrams, the schemas — so all of it works from any folder on any machine. About 20 MB. `dist/` is generated and gitignored; rebuild it rather than committing it.
 
 The pages under `website/pages/` are generated from the Markdown in [documents/](documents/). Rebuild after changing any document it renders:
 

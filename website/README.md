@@ -15,7 +15,24 @@ python -m http.server 8080        # from the repo root, not from website/
 # then open http://localhost:8080/website/index.html
 ```
 
-**The root is the repo, not this folder.** A document page links out to the deck exports in [../presentation/](../presentation/) and to schemas and diagrams elsewhere in the repo, because only images are copied in (§ What happens to each link target). Serving `website/` alone puts those targets above the web root, and every one of them 404s — the "Abridged version" links on the HLD pages are the ones a reader hits first. Opening the files directly works for the same reason: `file://` has no root to climb above.
+**The root is the repo, not this folder.** A document page links out to the deck exports in [../presentation/](../presentation/) and to schemas and diagrams elsewhere in the repo, because only images are copied in (§ What happens to each link target). Serving `website/` alone puts those targets above the web root, and every one of them 404s — the "Abridged version" links on the HLD pages are the ones a reader hits first. Opening the files directly works for the same reason: `file://` has no root to climb above. The repo's root [index.html](../index.html) redirects here, so `http://localhost:8080/` finds the site without anyone having to know that rule.
+
+## Sending it to someone
+
+`--bundle` writes a self-contained copy that needs neither a server nor Python:
+
+```bash
+python website/build-pages.py --bundle          # writes dist/
+python website/build-pages.py --bundle out/     # or anywhere else
+```
+
+Zip it and send it; the reader double-clicks `index.html`. Roughly 20 MB, and generated — `dist/` is gitignored, and is rebuilt rather than committed.
+
+**The bundle mirrors the repository's own layout** for every file the site reaches, rather than flattening it. That is what lets it copy everything and rewrite almost nothing: a deck's `../assets/…` and a page's `../../presentation/…` both still resolve, because their relative positions are unchanged. The repo's root `index.html` rides along as the entry point, which is why `<bundle>/index.html` opens the site.
+
+One thing is rewritten, and only in the copy: a deck linking a `.md` file is repointed at the page built from it, so a reader clicking "IVI ECU — high-level design" inside a deck gets the rendered page instead of raw markdown. The deck in `presentation/` is untouched — the bundle's copy is a derived artifact, exactly as the export itself is.
+
+What does not survive the bundle: **links to a folder rather than a file** — six of them, into `.claude/`, `contracts/samples/` and `ADA_ECU/doc/`. The bundle copies files, and a directory link has nothing to resolve to once the repository is not there.
 
 The document pages in `pages/` are generated. Rebuild them after any change to the markdown they render:
 
