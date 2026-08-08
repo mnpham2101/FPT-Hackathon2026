@@ -4,6 +4,8 @@
 >
 > Diagrams: [v2x-ecu-module-architecture.svg](v2x-ecu-module-architecture.svg) (components, paired with its `.drawio`) · [v2x-ecu-components.puml](v2x-ecu-components.puml) (module graph) · [phase1-v2x-ecu-callflow.puml](phase1-v2x-ecu-callflow.puml) (sequence) · [phase1-des-protocol-stack.svg](../../../presentation/assets/phase1-des-protocol-stack.svg) (the stack, §8).
 
+**Abridged version.** A reader who does not need the full document can take the design deck instead: [Phase 1 — V2X ECU Design](../../../presentation/phase1/phase1-design-v2x-ecu-deck.md) ([HTML](../../../presentation/phase1/phase1-design-v2x-ecu-deck.html)). It presents this HLD; where the two differ, this document governs.
+
 ## 1. Scope and authority
 
 `V2X_ECU/` only — the ego's radio-facing node, from the datagram arriving at the listen port to the R2 message leaving for the ADA ECU, plus the traffic capture taken at this node's interface.

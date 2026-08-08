@@ -4,6 +4,8 @@
 >
 > Diagrams: [scenario-player-module-architecture.svg](scenario-player-module-architecture.svg) (components, paired with its `.drawio`) · [scenario-player-components.puml](scenario-player-components.puml) (module graph) · [phase1-scenario-player-callflow.puml](phase1-scenario-player-callflow.puml) (sequence).
 
+**Abridged version.** A reader who does not need the full document can take the design deck instead: [Phase 1 — Scenario Player Design](../../../presentation/phase1/phase1-design-scenario-player-deck.md) ([HTML](../../../presentation/phase1/phase1-design-scenario-player-deck.html)). It presents this HLD; where the two differ, this document governs.
+
 ## 1. Scope and authority
 
 `Scenario_Player/` only — the bench that emulates the Quectel modem's connection point and generates the CPM stream describing vehicle C, up to the datagram leaving this node.

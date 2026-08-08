@@ -6,7 +6,7 @@
 
 **Author:** Vũ Xuân Bách 
 
-Presentation gives an abridged, summary of IVI-ECU: [IVI-ECU Design Summary](../../../presentation/phase5/phase5-ivi-deck.md)
+**Abridged version.** A reader who does not need the full document can take the design deck instead: [Phase 5 — IVI ECU Design](../../../presentation/phase5/phase5-design-ivi-ecu-deck.md) ([HTML](../../../presentation/phase5/phase5-design-ivi-ecu-deck.html)). It presents this HLD; where the two differ, this document governs. The demo deck [Phase 5 — IVI HMI & 2D God View](../../../presentation/phase5/phase5-ivi-deck.md) shows the running result rather than the design.
 
 ## 1. Scope and authority
 

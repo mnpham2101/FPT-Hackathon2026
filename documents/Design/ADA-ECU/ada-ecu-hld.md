@@ -4,6 +4,8 @@
 >
 > Diagrams: [ada-ecu-module-architecture.svg](ada-ecu-module-architecture.svg) (components, paired with its `.drawio`) · [phase2-4-ada-ecu-components.puml](phase2-4-ada-ecu-components.puml) (module graph) · [phase2-4-ada-ecu-callflow.puml](phase2-4-ada-ecu-callflow.puml) (sequence) · [phase2-4-ada-ecu-admission.puml](phase2-4-ada-ecu-admission.puml) (the R13 state machine).
 
+**Abridged version.** A reader who does not need the full document can take the design deck instead: [Phases 2-4 — ADA ECU Design](../../../presentation/phase2-4/phase2-4-ada-ecu-design-deck.md) ([HTML](../../../presentation/phase2-4/phase2-4-ada-ecu-design-deck.html)). It presents this HLD; where the two differ, this document governs.
+
 ## 1. Scope and authority
 
 `ADA_ECU/` only — ego's perception and fusion node, from the R2 datagram arriving on the wire and the clip frame leaving the decoder, to the R4 warning datagram leaving the node.
