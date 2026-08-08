@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en" data-theme="sketch">
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="kis-build-pages">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Phase 5 — Mini-blueprint: ADA ECU + IVI ECU + Ethernet Bridge — KIS</title>
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/doc.css">
+  <link rel="stylesheet" href="../css/themes.css">
+</head>
+<body class="DocBody" data-root=".." data-doc-node="module-design" data-doc-title="Phase 5 — Mini-blueprint: ADA ECU + IVI ECU + Ethernet Bridge" data-doc-source="documents/Design/IVI-ECU/phase5-mini-blueprint-ada-ivi.md">
+  <div class="DocLayout">
+    <aside class="DocLayout__aside" id="doc-toc"></aside>
+    <main class="Page DocPage">
+      <header class="PageHeader" id="doc-header"></header>
+      <article class="Markdown" id="doc-body">
+<h1 id="phase-5-mini-blueprint-ada-ecu-ivi-ecu-ethernet-bridge">Phase 5 — Mini-blueprint: ADA ECU + IVI ECU + Ethernet Bridge<a class="headerlink" href="#phase-5-mini-blueprint-ada-ecu-ivi-ecu-ethernet-bridge" title="Link to this section">¶</a></h1>
+<p>Approach to stand up a reduced CarSky Room that exercises ADA→IVI (R4) without Bench or V2X. Complements the existing mock-only 2-node path in <a href="requirements-blueprint-2node-task51-test-guide.html">blueprint-2node-task51-test-guide.md</a>.</p>
+<h2 id="feasibility">Feasibility<a class="headerlink" href="#feasibility" title="Link to this section">¶</a></h2>
+<ul>
+<li>Achievable for integration smoke once ADA can emit R4 (Phase 4 R15 path) and IVI listens on the same UDP port.</li>
+<li>At-risk without ADB tunnel / APK install on Skycraft (platform shell/screenshot routes may be unavailable).</li>
+<li>Does not replace R19 (needs full chain); it only shortens ADA↔IVI debugging.</li>
+</ul>
+<h2 id="topology">Topology<a class="headerlink" href="#topology" title="Link to this section">¶</a></h2>
+<pre><code>[ADA ECU] ──eth──► [Ethernet Bridge] ◄──eth── [IVI ECU]
+  Container                                 Skycraft AAOS
+  10.99.0.12                                10.99.0.13
+  send UDP → .13:47300                      listen UDP :47300
+</code></pre>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Node</th>
+<th>Type</th>
+<th>Address</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ADA ECU</td>
+<td>Container</td>
+<td><code>10.99.0.12</code></td>
+<td>Emit R4 JSON (warning ± optional state)</td>
+</tr>
+<tr>
+<td>Ethernet Bridge</td>
+<td>Bridge</td>
+<td><code>10.99.0.1</code> / <code>10.99.0.0/24</code></td>
+<td>R6 L2 fabric only (no app UDP port)</td>
+</tr>
+<tr>
+<td>IVI ECU</td>
+<td>Skycraft</td>
+<td><code>10.99.0.13</code></td>
+<td>Bind R4 listener; render R16/R17 HMI</td>
+</tr>
+</tbody>
+</table></div>
+<p>Authoritative production ports: <a href="requirements-m1-cooperative-awareness.html">m1-cooperative-awareness.md</a> baseline table; ADA env in <a href="requirements-car-sky-guide-node-ada-ecu.html">node-ada-ecu.md</a>; IVI artifact/pin in <a href="requirements-car-sky-guide-node-ivi-ecu.html">node-ivi-ecu.md</a>.</p>
+<h2 id="why-not-reuse-the-2-node-mock-blueprint-as-is">Why not reuse the 2-node mock blueprint as-is<a class="headerlink" href="#why-not-reuse-the-2-node-mock-blueprint-as-is" title="Link to this section">¶</a></h2>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th></th>
+<th>Mock 2-node (Task 5.1)</th>
+<th>Mini ADA+IVI (this note)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Producer</td>
+<td><code>m1-mock-r4-sender</code> container</td>
+<td>Real <code>ADA_ECU</code> image</td>
+</tr>
+<tr>
+<td>Subnet example</td>
+<td><code>10.88.0.0/24</code></td>
+<td>Prefer <code>10.99.0.0/24</code> (M1)</td>
+</tr>
+<tr>
+<td>UDP port</td>
+<td><strong>5004</strong> (dev)</td>
+<td><strong>47300</strong> (production R4)</td>
+</tr>
+<tr>
+<td>Purpose</td>
+<td>HMI/data-layer without ADA</td>
+<td>Contract + emission alignment with ADA</td>
+</tr>
+</tbody>
+</table></div>
+<p>Use mock 2-node for Phase 5 display-track parallel work; use this mini-blueprint when validating live ADA payloads before Phase 6 full chain.</p>
+<h2 id="build-steps-nydus">Build steps (Nydus)<a class="headerlink" href="#build-steps-nydus" title="Link to this section">¶</a></h2>
+<ol>
+<li>New Blueprint (or clone M1 and delete Bench + V2X nodes).</li>
+<li>Add <strong>Ethernet Bridge</strong> + <strong>Container (ADA)</strong> + <strong>Skycraft (IVI)</strong>.</li>
+<li>Attach IVI VM artifact (<code>AAOS</code> / ids in <a href="requirements-car-sky-guide-node-ivi-ecu.html">node-ivi-ecu.md</a>).</li>
+<li>Set ADA <code>config.image</code> to the pushed <code>ada-ecu</code> registry tag; set env at least: <code>IVI_ECU_HOST=10.99.0.13</code>, <code>IVI_ECU_PORT=47300</code> (plus ADA’s V2X listen vars only if that hop is present — omit or stub if V2X is absent).</li>
+<li><strong>Manually</strong> add one <code>ethernet</code> pin per role node (JSON import drops them); static addresses <code>.12</code> / <code>.13</code>; wire both to the bridge (<code>direction: OUTPUT</code> on both role pins per platform convention).</li>
+<li>Align IVI listen port with ADA send port: <code>BuildConfig.R4_UDP_PORT</code> / flavor must be <strong>47300</strong> for this Room (dev mock Rooms may keep 5004).</li>
+<li>Deploy Room → wait Running → ADB-install team APK → drive ADA to emit ≥1 R4 warning.</li>
+</ol>
+<h2 id="ada-without-v2xbench-gap">ADA without V2X/Bench (gap)<a class="headerlink" href="#ada-without-v2xbench-gap" title="Link to this section">¶</a></h2>
+<ul>
+<li>Stock ADA expects R2 ingress on <code>V2X_LISTEN_PORT</code> (47200). A mini-blueprint with no V2X needs either: (a) a tiny R2 injector container on the same bridge, or (b) an ADA test mode / fixture path that synthesizes tracks and calls the R15 emitter, or (c) keep using <a href="ivi-ecu-mock-sender-readme.html">mock-sender</a> instead of real ADA until Phase 4 emission is fixture-triggerable.</li>
+<li>Flag for planner: do not claim “ADA+IVI only” end-to-end unless one of (a)–(c) is in the task plan.</li>
+</ul>
+<h2 id="acceptance-checks-for-this-room">Acceptance checks for this Room<a class="headerlink" href="#acceptance-checks-for-this-room" title="Link to this section">¶</a></h2>
+<ul>
+<li>All three nodes reach Running (bridge may not count in “N/M ECUs”).</li>
+<li>Capture or ADA log shows UDP to <code>10.99.0.13:47300</code>.</li>
+<li>IVI logcat (<code>R4ListenerService</code> / <code>IVI_V2X</code>) shows deserialize success; Warning View shows ego, B, ghost C with <code>object.source == v2x_relayed</code>.</li>
+<li>Unknown <code>warningType</code> still degrades (R4 additive-version).</li>
+</ul>
+<h2 id="related">Related<a class="headerlink" href="#related" title="Link to this section">¶</a></h2>
+<ul>
+<li>Full 4-node: <a href="requirements-car-sky-guide-carsky-4-node-blueprint.html">carsky-4-node-blueprint.md</a></li>
+<li>Mock path: <a href="../../requirements/blueprint-2node-task51-test.json">blueprint-2node-task51-test.json</a></li>
+</ul>
+      </article>
+    </main>
+  </div>
+  <script src="../js/site-data.js"></script>
+  <script src="../js/theme.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/doc-page.js"></script>
+</body>
+</html>

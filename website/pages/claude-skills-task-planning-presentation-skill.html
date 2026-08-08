@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en" data-theme="sketch">
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="kis-build-pages">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Task-Planning Presentation (project-planner) — KIS</title>
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/doc.css">
+  <link rel="stylesheet" href="../css/themes.css">
+</head>
+<body class="DocBody" data-root=".." data-doc-node="plans" data-doc-title="Task-Planning Presentation (project-planner)" data-doc-source=".claude/skills/task-planning-presentation/SKILL.md">
+  <div class="DocLayout">
+    <aside class="DocLayout__aside" id="doc-toc"></aside>
+    <main class="Page DocPage">
+      <header class="PageHeader" id="doc-header"></header>
+      <article class="Markdown" id="doc-body">
+<hr />
+<p>name: task-planning-presentation
+description: Procedure project-planner follows to present a phase's task planning to humans — a markdown + HTML deck under presentation/phase<N>/ showing how work was organized, who or what performed it, in what order, and what came out, illustrated with hand-authored draw.io/SVG diagrams and written for a reader who has not seen the design. project-planner only.</p>
+<hr />
+<h1 id="task-planning-presentation-project-planner">Task-Planning Presentation (project-planner)<a class="headerlink" href="#task-planning-presentation-project-planner" title="Link to this section">¶</a></h1>
+<p>Trigger: [[project-planner]] is asked to present, explain or report a phase's task planning — "make a deck for phase N", "explain the phase N tasks".</p>
+<p>Governed elsewhere, do not restate: planning itself by <a href="claude-rules-task-planning-conventions.html">task-planning-conventions.md</a>, deck mechanics and slide titles by <a href="claude-rules-deck-authoring-conventions.html">deck-authoring-conventions.md</a>, styling by <a href="../../presentation/template/template.md">template.md</a>, diagram authoring by <a href="claude-skills-task-planning-presentation-references-drawio-svg-pairs.html">references/drawio-svg-pairs.md</a>.</p>
+<h2 id="ownership">Ownership<a class="headerlink" href="#ownership" title="Link to this section">¶</a></h2>
+<p>[[project-planner]] alone. <strong>[[project-architecture]] does not run this skill or author these decks.</strong></p>
+<p><code>plans/phase&lt;N&gt;_tasks.md</code> stays the source of truth; a deck is a reading of it, never a second source and never where new planning decisions get made.</p>
+<h2 id="purpose-and-boundary">Purpose and boundary<a class="headerlink" href="#purpose-and-boundary" title="Link to this section">¶</a></h2>
+<p>The deck answers one question — <strong>how the work was organized, and how it ran in the planned order</strong> — in four parts: what the units are · who or what performed each · in what order and what overlapped · what came out. A slide serving none of the four belongs elsewhere.</p>
+<p>Architecture is out of scope. State an architectural fact in one line and link the phase's design deck from the cover; never re-explain it, and never let two decks own the same diagram.</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>This deck</th>
+<th>The design deck</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Phases, task groups, subtasks, IDs</td>
+<td>Blueprint and node topology</td>
+</tr>
+<tr>
+<td>Tracks, execution lanes, CI lanes</td>
+<td>Node internals, call flows</td>
+</tr>
+<tr>
+<td>Who performed the work</td>
+<td>Message formats and contracts</td>
+</tr>
+<tr>
+<td>Execution order and parallelism</td>
+<td>Protocol stack and libraries</td>
+</tr>
+<tr>
+<td>What each group landed, and where</td>
+<td>Design rationale from the HLD</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="plain-language">Plain language<a class="headerlink" href="#plain-language" title="Link to this section">¶</a></h2>
+<p><strong>The audience has not read the design.</strong> Every term coined for it is noise — translate or drop it. A deck needing the requirements report open beside it has failed. Worked translations from Phase 0:</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Design vocabulary</th>
+<th>The deck says</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>R1 · R2 · R3 · R4</td>
+<td>the V2X message on the air · the V2X-to-ADA message · the tracked-object record · the warning message</td>
+</tr>
+<tr>
+<td>R1–R6</td>
+<td>the six contracts, covering every message the nodes exchange</td>
+</tr>
+<tr>
+<td>hop 3</td>
+<td>incoming traffic to the IVI ECU</td>
+</tr>
+<tr>
+<td>golden vectors, the corpus</td>
+<td>the six reference messages</td>
+</tr>
+<tr>
+<td>octets</td>
+<td>bytes</td>
+</tr>
+<tr>
+<td>a CI run ID</td>
+<td>the lane that produced it, linked to the run URL</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>A requirement number is never a name</strong> — say what the thing is.</li>
+<li><strong>Define a term before first use, or translate it.</strong> "Contract", "track", "lane" are load-bearing and get defined; design vocabulary gets translated instead.</li>
+<li><strong>Real paths keep their real names</strong> — <code>contracts/golden-vectors/</code>, <code>R4Message.kt</code>, task IDs. Renaming them makes the deck point at things that do not exist; explain them in surrounding prose.</li>
+<li><strong>No opaque identifiers as evidence</strong> — name the thing, put the number in the link.</li>
+</ul>
+<p>Ship test: could someone who has never opened the requirements report follow the workflow, see what it cost, and say what it produced?</p>
+<h2 id="required-content">Required content<a class="headerlink" href="#required-content" title="Link to this section">¶</a></h2>
+<p>Treat a requester's content suggestion as the outline, not the substance — honour its shape, then say plainly what it omits.</p>
+<ul>
+<li><strong>Decomposition</strong> — phases → task groups → subtasks, with <code>X.Y.Z.W</code> read out on one worked example. Flag that the group number is not the requirement number.</li>
+<li><strong>Objective per task group</strong>, and which phase acceptance criterion it closed.</li>
+<li><strong>Track and lane per group</strong>, and what that implies about what could proceed at once.</li>
+<li><strong>Resources</strong> — every phase plan marks each subtask <em>agent</em> (AI subagent), <em>car-sky</em> (cloud platform: build, push, deploy, verify) or <em>USER-MANUAL</em> (a person: console/UI work, credentials, physical checks). Give the counts, say where human effort was unavoidable and why, and name the cloud platform as the dependency it is.</li>
+<li><strong>Order and overlap</strong> — the diagrams, plus which relationships are genuinely parallel and which are forced sequential, and by what.</li>
+<li><strong>What was delivered</strong> — the files that landed, grouped, each group's purpose.</li>
+<li><strong>Handoff</strong> — what the next phase may assume, from that phase's own input list.</li>
+<li><strong>A cover link to the design deck.</strong></li>
+</ul>
+<h2 id="planning-glossary">Planning glossary<a class="headerlink" href="#planning-glossary" title="Link to this section">¶</a></h2>
+<p>Project-coined terms that collide with ordinary usage. Define each on its own slide, with a diagram, before use — reading the definition from the source at authoring time, since the plans evolve.</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Term</th>
+<th>What it groups</th>
+<th>Defined in</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Track</strong></td>
+<td>a workstream of whole phases, run by different people at once</td>
+<td><a href="documents-plan-milestone1-high-level-plan.html">milestone1_high_level_plan.md</a></td>
+</tr>
+<tr>
+<td><strong>Phase</strong></td>
+<td>the <code>Y</code> segment — a stage with input and acceptance criteria</td>
+<td><a href="claude-rules-task-planning-conventions.html">task-planning-conventions.md</a></td>
+</tr>
+<tr>
+<td><strong>Task group</strong></td>
+<td>the <code>Z</code> segment — subtasks delivering one feature or solution</td>
+<td>as above</td>
+</tr>
+<tr>
+<td><strong>Subtask</strong></td>
+<td>the <code>W</code> segment — one objective, one commit, tests green</td>
+<td>as above</td>
+</tr>
+<tr>
+<td><strong>Execution lane</strong></td>
+<td>a dependency chain, named after the folder it writes into</td>
+<td>each phase plan's <em>Execution order &amp; parallelism</em></td>
+</tr>
+<tr>
+<td><strong>CI lane</strong></td>
+<td>one GitHub Actions job — often the literal acceptance ("lane green")</td>
+<td><a href="../../.github/workflows/">.github/workflows/</a></td>
+</tr>
+</tbody>
+</table></div>
+<p>Four traps to defuse rather than inherit:</p>
+<ul>
+<li><strong>Track, execution lane and CI lane are three axes</strong>, not three words for one.</li>
+<li><strong>Lane letters are phase-local and collide</strong> — Phase 0's Lane D is a code folder, Phase 1's is the deploy chain. Name the phase when both are on screen.</li>
+<li><strong>Lane letters are not an order.</strong> Only a stated dependency sequences one lane against another, and it names an artifact, never a letter.</li>
+<li><strong>Only a CI lane actually runs.</strong> Tracks and execution lanes are planning structure, not programs.</li>
+</ul>
+<h2 id="diagrams">Diagrams<a class="headerlink" href="#diagrams" title="Link to this section">¶</a></h2>
+<p>Required, not optional — ordering and parallelism cannot be read from prose.</p>
+<ul>
+<li><strong>Several diagrams, one per slide</strong>: lanes overview and independent start points → per-lane or per-cluster detail → parallel-versus-sequential summary. One dense picture of a whole phase is unreadable at projector scale.</li>
+<li><strong>Every arrow traces to a real dependency</strong> — a subtask's <code>Dependencies:</code> line or the plan's execution-order block, never a plausible-looking ordering.</li>
+<li><strong>A <code>.drawio</code> + <code>.svg</code> pair per diagram</strong>, shared in <a href="../../presentation/assets/">presentation/assets/</a> prefixed <code>phase&lt;N&gt;-</code>. Authoring and verification: <a href="claude-skills-task-planning-presentation-references-drawio-svg-pairs.html">references/drawio-svg-pairs.md</a>.</li>
+</ul>
+<h2 id="before-shipping">Before shipping<a class="headerlink" href="#before-shipping" title="Link to this section">¶</a></h2>
+<p>Check, do not assume:</p>
+<ul>
+<li>Builder ran clean; expected slide count.</li>
+<li>Zero <code>base64</code> in the HTML; every asset path resolves.</li>
+<li>Every diagram passes the four checks in <a href="claude-skills-task-planning-presentation-references-drawio-svg-pairs.html">references/drawio-svg-pairs.md</a>.</li>
+<li><strong>Render the deck itself</strong> — content colliding with the footer or pushed off the bottom, especially after a table gains a column or a bullet.</li>
+<li>Every subtask ID, arrow, link and path cited exists.</li>
+<li>Grep for surviving requirement numbers and § Plain language vocabulary.</li>
+</ul>
+<h2 id="honesty">Honesty<a class="headerlink" href="#honesty" title="Link to this section">¶</a></h2>
+<ul>
+<li><strong>Mirror the <code>Status:</code> lines.</strong> A subtask closed by CI is not one proven on a deployed node — say which, and show partly-closed acceptance as partly closed.</li>
+<li><strong>Carry open items, not work history.</strong> An item earns a slide when someone must still know or act on it: an open risk, a deferred decision, evidence weaker than it looks. Settled history — a subtask recorded blocked before completing, a mis-tagged commit, an erratum already routed to its owner — is the plan file's job.</li>
+<li><strong>Flag contradictions, do not resolve them.</strong> Where sources disagree, present the discrepancy; resolving it is a planning decision taken with the user.</li>
+<li><strong>Mark reconstruction as reconstruction</strong>, and say from what.</li>
+</ul>
+<h2 id="exemplar-and-output">Exemplar and output<a class="headerlink" href="#exemplar-and-output" title="Link to this section">¶</a></h2>
+<p><a href="../../presentation/phase0/phase0-task-execution-deck.html">phase0-task-execution-deck.md</a> is the worked example — follow its shape rather than inventing one: work organization and glossary → decomposition → task groups → code delivered → execution order across several diagrams → parallel versus sequential → handoff and deferred work.</p>
+<p>Deliver a <code>&lt;deck-slug&gt;-deck.md</code> + generated <code>.html</code> in <code>presentation/phase&lt;N&gt;/</code>, the diagram pairs in <code>presentation/assets/</code>, and one commit carrying sources, HTML and assets together. Hand back the slide outline, assets created, check results, and every ambiguity flagged.</p>
+<p>When authoring decks through parallel subagents, each owns a disjoint file set and <strong>does not commit</strong> — the planner makes the single combined commit, since concurrent agents in one working tree cannot commit safely.</p>
+      </article>
+    </main>
+  </div>
+  <script src="../js/site-data.js"></script>
+  <script src="../js/theme.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/doc-page.js"></script>
+</body>
+</html>

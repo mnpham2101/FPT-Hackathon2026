@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en" data-theme="sketch">
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="kis-build-pages">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CarSky Deploy Preflight (car-sky agent) — KIS</title>
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/doc.css">
+  <link rel="stylesheet" href="../css/themes.css">
+</head>
+<body class="DocBody" data-root=".." data-doc-node="plans" data-doc-title="CarSky Deploy Preflight (car-sky agent)" data-doc-source=".claude/skills/carsky-deploy-preflight/SKILL.md">
+  <div class="DocLayout">
+    <aside class="DocLayout__aside" id="doc-toc"></aside>
+    <main class="Page DocPage">
+      <header class="PageHeader" id="doc-header"></header>
+      <article class="Markdown" id="doc-body">
+<hr />
+<p>name: carsky-deploy-preflight
+description: Procedure the car-sky agent runs before any CarSky deployment — confirm the three required inputs (which blueprint, which ECU/node in it, which login credential) and the platform-access context, prompting the user for anything missing. Gate: never build, push, or deploy until all three are pinned.</p>
+<hr />
+<h1 id="carsky-deploy-preflight-car-sky-agent">CarSky Deploy Preflight (car-sky agent)<a class="headerlink" href="#carsky-deploy-preflight-car-sky-agent" title="Link to this section">¶</a></h1>
+<p>Trigger: [[car-sky]] is handed a deployment task (deploy an artifact/image to CarSky) by [[project-architecture]] or [[project-planner]]. Run this <strong>first</strong>, before any build/push/deploy action — it resolves the inputs a deploy cannot proceed without. Distinct from <a href="claude-skills-carsky-deployment-guide-skill.html">carsky-deployment-guide</a> (which authors runbook docs); this skill gathers and confirms the live deploy inputs.</p>
+<h2 id="the-three-required-inputs">The three required inputs<a class="headerlink" href="#the-three-required-inputs" title="Link to this section">¶</a></h2>
+<p>Never start a deploy until all three are pinned. If the spawning agent's brief already supplies one, confirm it back; if any is missing or ambiguous, <strong>ask the user</strong> (do not guess — a wrong blueprint or credential deploys to the wrong place or fails auth).</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Input</th>
+<th>What to resolve</th>
+<th>Where it comes from</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>Which blueprint</strong></td>
+<td>Exact blueprint name + id to deploy into. Almost never a baseline: <code>baseline_m1</code> and <code>baseline_phase1</code> are clone sources and are not deployed or edited directly, so what a task names is normally a clone of <code>baseline_phase1</code> (<a href="requirements-car-sky-guide-carsky-4-node-blueprint.html#8-the-blueprints-on-carsky">carsky-4-node-blueprint.md § The blueprints on CarSky</a>). If the clone does not exist yet, confirm it should be created first</td>
+<td>Spawning brief, or <code>GET /api/v1/blueprints?name=&lt;filter&gt;</code>; prompt if unclear</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>Which ECU / node</strong></td>
+<td>Which node(s) in the blueprint this deploy targets — one ECU (<code>V2X ECU</code>, <code>ADA ECU</code>, <code>IVI ECU</code>) or the Bench, or the whole blueprint. Determines which image/artifact to build+push and which node config to update.</td>
+<td>Spawning brief (the ECU folder being deployed); confirm against the blueprint's node list</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>Which credential</strong></td>
+<td>The API key (or login) to authenticate with, and thus <strong>which account/environment</strong> the deploy lands in.</td>
+<td><strong>Prompt the user</strong> — never assume; see § Platform access</td>
+</tr>
+</tbody>
+</table></div>
+<p>Restate the three back to the user as a one-line confirmation before proceeding (e.g. "Deploying <strong>ADA ECU</strong> into blueprint <strong>ada-isolated</strong> on <strong>hackathon-2</strong> using the key you provided — proceed?").</p>
+<h2 id="platform-access-context-the-deploy-needs-to-log-in">Platform access (context the deploy needs to log in)<a class="headerlink" href="#platform-access-context-the-deploy-needs-to-log-in" title="Link to this section">¶</a></h2>
+<ul>
+<li><strong>Environment (M1):</strong> <code>https://hackathon-2.carsky.io</code> — the base URL. Environment-specific; confirm it hasn't changed (the organizers may rotate hosts between rounds).</li>
+<li><strong>Auth:</strong> REST calls use header <code>Authorization: Bearer &lt;API_KEY&gt;</code>. The key is minted in the UI: <strong>Settings (⚙) → Credentials → New credential</strong> (shown once). It is a machine-to-machine (m2m) API key — <strong>not</strong> a Keycloak login credential, and not derivable from one.</li>
+<li><strong>Never</strong> hardcode, echo, log, or commit the API key. Take it from the user at run time (or an env var they set, e.g. <code>CS_API_KEY</code>); keep it out of files and out of the transcript where avoidable.</li>
+<li><strong>Registry:</strong> container images push to the CarSky Zot registry (<code>docker login registry.hackathon-2.carsky.io -u &lt;user&gt;</code>, API key as password) before a Container node can reference them. <code>registry.hackathon-2.carsky.io</code> is the host that actually serves Zot; <code>registry.carsky.io</code> does not (<a href="requirements-car-sky-guide-zot-registry-api-key.html#registry-host-caveat-open-item-o1">zot-registry-api-key.md § Registry host caveat</a>). Login, image tag and the node's <code>image</code> field must all name the same host — a mismatch is the "push succeeded, node cannot pull" failure.</li>
+<li><strong>Full REST reference + verified request shapes:</strong> <a href="requirements-car-sky-guide-carsky-rest-api-blueprint.html">carsky-rest-api-blueprint.md</a> — endpoints, the atomic <code>/batch</code> node-create payload, <code>validate</code>, deploy/verify calls, and the OpenAPI spec at <code>GET /api/v1/openapi.json</code>. <a href="../../requirements/development-platform-doc/Car-Sky-Platform.html">Car-Sky-Platform.html</a>'s "API &amp; MCP Tools" module is the general platform reference behind it — consult it for anything the guide doesn't cover, but the guide's live-verified results win on conflict.</li>
+</ul>
+<h2 id="known-platform-limitation-to-flag-up-front">Known platform limitation to flag up front<a class="headerlink" href="#known-platform-limitation-to-flag-up-front" title="Link to this section">¶</a></h2>
+<p>The REST/OpenAPI API <strong>cannot create <code>ETHERNET</code> pins or wire the Ethernet Bridge</strong> (<code>pinType</code> enum excludes <code>ETHERNET</code>; verified — returns 400). So any deploy whose blueprint still needs its R6 ethernet wiring has a <strong>manual UI step</strong> (<a href="requirements-car-sky-guide-carsky-4-node-blueprint.html">carsky-4-node-blueprint.md §4 step 5</a>). Surface this in the preflight confirmation whenever the target blueprint's nodes lack their ethernet pins/edges — don't let the deploy reach <code>validate</code> and fail with "node has no pins" unexpectedly.</p>
+<h2 id="output">Output<a class="headerlink" href="#output" title="Link to this section">¶</a></h2>
+<ul>
+<li>A confirmed triple (blueprint, ECU/node, credential) + verified base URL, restated to the user.</li>
+<li>A go/no-go: proceed to deploy only when all three are pinned and the user has confirmed; otherwise hold and ask.</li>
+</ul>
+<h2 id="how-to-apply">How to apply<a class="headerlink" href="#how-to-apply" title="Link to this section">¶</a></h2>
+<p>Owned by [[car-sky]], run at the start of every deployment task. Produces no task IDs. On completion, hand control back to [[car-sky]]'s own deploy procedure (build → push → author/update blueprint → deploy → verify), using the confirmed inputs.</p>
+      </article>
+    </main>
+  </div>
+  <script src="../js/site-data.js"></script>
+  <script src="../js/theme.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/doc-page.js"></script>
+</body>
+</html>

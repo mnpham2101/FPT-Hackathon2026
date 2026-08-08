@@ -1,0 +1,600 @@
+<!doctype html>
+<html lang="en" data-theme="sketch">
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="kis-build-pages">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Phase 2 — ADA Scaffolding (store + R13 admission + R14 abstraction, no detector): Full Task Breakdown — KIS</title>
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/doc.css">
+  <link rel="stylesheet" href="../css/themes.css">
+</head>
+<body class="DocBody" data-root=".." data-doc-node="plans" data-doc-title="Phase 2 — ADA Scaffolding (store + R13 admission + R14 abstraction, no detector): Full Task Breakdown" data-doc-source="plans/phase2_tasks.md">
+  <div class="DocLayout">
+    <aside class="DocLayout__aside" id="doc-toc"></aside>
+    <main class="Page DocPage">
+      <header class="PageHeader" id="doc-header"></header>
+      <article class="Markdown" id="doc-body">
+<h1 id="phase-2-ada-scaffolding-store-r13-admission-r14-abstraction-no-detector-full-task-breakdown">Phase 2 — ADA Scaffolding (store + R13 admission + R14 abstraction, no detector): Full Task Breakdown<a class="headerlink" href="#phase-2-ada-scaffolding-store-r13-admission-r14-abstraction-no-detector-full-task-breakdown" title="Link to this section">¶</a></h1>
+<blockquote>
+<p><strong>Authority &amp; context:</strong>
+- <strong>Phase content:</strong> <a href="documents-plan-milestone1-high-level-plan.html#phase-2--ada-scaffolding-store--state-machine-no-detector-r3-r13">milestone1_high_level_plan.md § Phase 2</a> — its six acceptance checkboxes are the phase output.
+- <strong>Design:</strong> <a href="documents-design-ada-ecu-ada-ecu-hld.html">ada-ecu-hld.md</a> — §4 folder structure, §6 components, env tables and § Startup validation, §12 test strategy, and the <a href="documents-design-ada-ecu-ada-ecu-design-decisions.html">decision record</a> D1–D11. Every <code>ADA_ECU/</code> path below is cited from its §4; diagrams <a href="../../documents/Design/ADA-ECU/phase2-4-ada-ecu-components.puml">components</a> · <a href="../../documents/Design/ADA-ECU/phase2-4-ada-ecu-callflow.puml">call flow</a> · <a href="../../documents/Design/ADA-ECU/phase2-4-ada-ecu-admission.puml">admission</a>.
+- <strong>Requirements:</strong> <a href="requirements-m1-cooperative-awareness.html">m1-cooperative-awareness.md §2</a> R2, R3, R5, R6, R12–R14, R18 — referenced by number, never restated.
+- <strong>Run timing:</strong> <a href="requirements-m1-run-timing-and-event-triggering.html">m1-run-timing-and-event-triggering.md</a> — §6.2's clock-domain ruling, which <code>2.2.3.1</code> and <code>13.2.4.3</code> implement; §6.1's env values and §6.6's R22 choreography, which <code>13.2.2.1</code> loads (HLD <a href="documents-design-ada-ecu-ada-ecu-design-decisions.html#d10--clock-domains-and-stimulus-paced-against-clock_monotonic">D10</a>, <a href="documents-design-ada-ecu-ada-ecu-design-decisions.html#d11--r22-run-choreography-the-run-origin-the-paced-clip-and-the-risk-band-pair">D11</a>).
+- <strong>Phase 0 baseline (present on <code>main</code>, do not re-plan):</strong> <code>contracts/</code> frozen + <code>sync-manifest.json</code> + <code>check_sync.py</code>; <code>ADA_ECU/contracts/</code> synced schema copies; <code>ADA_ECU/src/contracts/{tracked_object,r2_message,r4_message}.{hpp,cpp}</code> bindings; <code>ADA_ECU/detector/contracts/tracked_object.py</code>; <code>ADA_ECU/tests/contracts/</code> round-trip tests; <code>ADA_ECU/CMakeLists.txt</code> with the <code>ada_add_test()</code> helper.
+- <strong>Deploy guide:</strong> <a href="requirements-car-sky-guide-node-ada-ecu.html">node-ada-ecu.md</a> — its § Blueprint node config carries <code>command: ["./entrypoint.sh"]</code>, <code>capabilities: ["NET_RAW"]</code> and the <code>registry.hackathon-2.carsky.io</code> host; <code>5.2.9.4</code> adds only the §6 env rows.
+- <strong>Rules:</strong> <a href="claude-rules-task-planning-conventions.html">task-planning-conventions.md</a> (<code>X.Y.Z.W</code>; subtask discipline restated once in § Subtask discipline below); <a href="claude-rules-node-code-layout.html">node-code-layout.md</a>.</p>
+<p><strong>Task ID legend:</strong> <code>X.2.Z.W</code> — X = requirement served · 2 = this phase · Z = task group · W = subtask position within the group. IDs are stable; never renumber, never reuse a retired one.</p>
+</blockquote>
+<h2 id="phase-2-overview">Phase 2 overview<a class="headerlink" href="#phase-2-overview" title="Link to this section">¶</a></h2>
+<p><strong>Objective.</strong> Stand up the ADA ECU skeleton inside <code>ADA_ECU/</code>: the C++17 core (config, socket, event log, observers, parsers), the R3 track store, the R13 admission state machine, and the R14 Collision Risk Assessment abstraction with its committed database schema. Every one of those runs on mock input — a JSONL fixture through the real detector-reader, and mock R2 traffic through the real socket — so the pipeline works before any ML. The phase also lands the deployable image, the ADA CI lanes, and the R12 clip preflight Phase 3 depends on.</p>
+<p><strong>Input (must exist before start).</strong> All present on <code>main</code>:</p>
+<ul>
+<li>The Phase 0 contract layer listed under § Authority above.</li>
+<li><a href="documents-design-ada-ecu-ada-ecu-hld.html">ada-ecu-hld.md</a> and video-source-for-r12.md <em>(deprecated)</em> committed.</li>
+<li>Phase 1's frozen R2 producer shape — <code>V2X_ECU/src/forward/ada_forwarder</code> sends one compact-JSON <code>R2Message</code> datagram per perceived-object update to <code>ADA_ECU_HOST:47200</code>. Phase 2 consumes that shape from <code>tools/mock_v2x_sender.py</code>; <strong>no live Phase 1 node is required.</strong></li>
+</ul>
+<p>Nothing in this phase waits on a person before it can start.</p>
+<p><strong>Output (phase acceptance = the six milestone boxes):</strong></p>
+<ul>
+<li>[x] The store exposes all R3 fields; detector-shaped and relayed-shaped entries enter through the identical interface (R3) — closed by <code>3.2.4.1</code> + <code>2.2.3.1</code> + <code>3.2.3.2</code> (both parsers call the same <code>upsert</code>).</li>
+<li>[x] Mock-driven state transitions are observable in logs and match the R13 diagram; toggling the mock off yields no tracks — closed by <code>13.2.4.2</code> + <code>13.2.4.3</code> + <code>13.2.8.2</code> (loopback lane, <code>DETECTOR_ENABLED=false</code> arm).</li>
+<li>[x] Mock C is admitted only within <code>gate_enter</code> and dropped only beyond <code>gate_exit</code> or after <code>miss_limit</code> — no add/remove flicker — closed by <code>13.2.4.3</code> boundary cases at 30 m / 35 m plus <code>TRACK_TIMEOUT_MS</code> expiry. <strong><code>miss_limit</code> is realized as wall-clock, flagged not absorbed</strong> — § Open items item 1.</li>
+<li>[x] Gate constants are read from configuration — no literals — closed by <code>13.2.2.1</code> (the node's only env reader).</li>
+<li>[x] CRA database schema committed; video-input proposal sent to FPT-Mentor — closed by <code>14.2.5.2</code> (schema) + <code>12.2.9.2</code> (the send).</li>
+<li>[x] <strong>Demo:</strong> build + CI round-trip tests green on the frozen contracts (golden vectors) — closed by <code>ada-core-build</code> staying green across every subtask plus <code>5.2.8.1</code> / <code>13.2.8.2</code>.</li>
+</ul>
+<p><strong>Suggested branch (suggestion only — creation is the user's call):</strong> <code>feat/phase2-ada-scaffold</code>, branched from <code>main</code>. One branch for the whole phase; implementation subtasks commit onto it. Docs-only subtasks and evidence records commit straight to <code>main</code>.</p>
+<p><strong>This plan is written against <code>main</code></strong>, where <code>ADA_ECU/</code> carries nothing beyond the Phase 0 contract layer listed above. That is the only baseline; no other branch is one.</p>
+<h3 id="execution-labels">Execution labels<a class="headerlink" href="#execution-labels" title="Link to this section">¶</a></h3>
+<p>Every subtask carries exactly one. The label is who performs the work, not who tracks it — the planner keeps the ID and the done-tracking in every case. The vocabulary is the <code>AI</code> / <code>Human</code> split of <a href="requirements-car-sky-guide-deploy-ada-ecu-walkthrough.html#7-work-division-between-ai-and-human">deploy-ada-ecu-walkthrough.md §7</a>.</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Label</th>
+<th>Who does it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><em>AI</em></td>
+<td>A spawned implementation subagent. The default for code, tests and CI. A step touching the live platform is [[car-sky]] instead, and is still <em>AI</em>.</td>
+</tr>
+<tr>
+<td><em>AI — orchestrator</em></td>
+<td>The orchestrating session. It pushes the phase branch, watches the lane, and records the run id in the subtask's <code>**Status:**</code> line. It also makes the evidence-record commit for a <em>Human</em> subtask once the person confirms.</td>
+</tr>
+<tr>
+<td><em>Human</em></td>
+<td>A person, outside any tool an agent holds. No agent performs these.</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Creating the phase branch is a Human step; pushing onto it afterwards is not.</strong> The user creates the branch named in § Phase 2 overview. The orchestrator then pushes each subtask's commit and reads the lane result. No subtask's acceptance waits on a person for a push.</p>
+<p><strong>Phase 2 is 25 <em>AI</em> subtasks and 1 <em>Human</em> subtask.</strong> The single human row is <code>12.2.9.2</code>. No subtask here is performed by [[car-sky]] — nothing in this phase touches the platform.</p>
+<p><strong>Implementation-subagent specification</strong> (inherited by every <em>AI</em> subtask): general-purpose agent; tools Read/Grep/Glob/Write/Edit/Bash; writes ONLY inside <code>ADA_ECU/</code> (plus its own <code>**Status:**</code> line in this file and, where the subtask explicitly says so, <code>.github/workflows/</code> or <code>requirements/car-sky-guide/</code>); reads <a href="../../ADA_ECU/doc/">ADA_ECU/doc/</a> first; inherits § Subtask discipline as its definition of done; makes the atomic commit itself with the exact commit message from the brief; never pushes — that is the orchestrator's row above.</p>
+<p>Language best practice is part of the definition of done:</p>
+<ul>
+<li>C++17 core guidelines, RAII ownership, no raw owning pointers.</li>
+<li>No socket header outside <code>src/net/</code>.</li>
+<li>Python type hints and dataclasses, no module-level mutable globals.</li>
+<li>Tests deterministic — no sleep used as synchronization.</li>
+</ul>
+<h3 id="subtask-discipline-applies-to-every-subtask-below">Subtask discipline (applies to every subtask below)<a class="headerlink" href="#subtask-discipline-applies-to-every-subtask-below" title="Link to this section">¶</a></h3>
+<p>Per <a href="claude-rules-task-planning-conventions.html#subtask-discipline-non-negotiable">task-planning-conventions.md § Subtask discipline</a>: single objective, no out-of-scope code, exactly one atomic commit with the stated message, build passes, unit tests pass, brief self-contained. Hard execution constraints:</p>
+<ul>
+<li><strong>Dev host is Windows-on-ARM with no Docker/WSL.</strong> C++ verification and image builds run on GitHub Actions — a C++ subtask's build/tests acceptance = <strong>CI green on the pushed branch</strong> (the Phase 0/1 model). Python verification follows § Per-node build commands: a <code>detector/</code> subtask verifies locally <strong>and</strong> on CI <code>python-tests</code>, a <code>tools/</code> subtask verifies locally, since no lane collects <code>ADA_ECU/tools/tests/</code>.</li>
+<li><strong>No hardcoded tunables</strong> (CLAUDE.md principle 5): every constant in <a href="documents-design-ada-ecu-ada-ecu-hld.html#6-internal-components">HLD §6</a> comes from <code>src/config/config.cpp</code> (core) or <code>detector/config.py</code> (detector, Phase 3). A literal outside those two files is a defect.</li>
+<li><strong>Sequential execution at run time:</strong> all implementation subagents share one working tree, so subtasks execute one at a time in dependency order. The parallel/sequential marks below are the logical dependency structure.</li>
+<li><strong>Status tracking:</strong> each subtask gains a <code>**Status:**</code> line (appended in that subtask's own atomic commit) recording done/blocked + verification evidence; no status line = not started. <strong>Nothing in this file is started.</strong></li>
+</ul>
+<h3 id="per-node-build-commands-cited-in-acceptance-below">Per-node build commands (cited in acceptance below)<a class="headerlink" href="#per-node-build-commands-cited-in-acceptance-below" title="Link to this section">¶</a></h3>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Node / area</th>
+<th>Build + test command</th>
+<th>Verified</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ADA_ECU/</code> (C++ core)</td>
+<td><code>cmake -S ADA_ECU -B ADA_ECU/build &amp;&amp; cmake --build ADA_ECU/build -j $(nproc) &amp;&amp; ctest --test-dir ADA_ECU/build --output-on-failure</code></td>
+<td>CI <code>ada-core-build</code> (phase0-ci.yml)</td>
+</tr>
+<tr>
+<td><code>ADA_ECU/detector/</code> (Python)</td>
+<td><code>pip install -r ADA_ECU/detector/requirements-dev.txt &amp;&amp; python -m pytest ADA_ECU/detector/tests</code></td>
+<td>local <strong>and</strong> CI <code>python-tests</code></td>
+</tr>
+<tr>
+<td><code>ADA_ECU/tools/</code> (Python)</td>
+<td><code>python -m py_compile ADA_ECU/tools/&lt;script&gt;.py</code></td>
+<td>local</td>
+</tr>
+<tr>
+<td><code>contracts/</code> gate</td>
+<td><code>python contracts/check_sync.py</code> → exit 0</td>
+<td>local + CI <code>contracts-gate</code></td>
+</tr>
+<tr>
+<td>ADA image</td>
+<td><code>docker buildx build --platform linux/arm64 --provenance=false --sbom=false -t m1-ada-ecu:latest ADA_ECU/</code></td>
+<td>CI <code>ada-ecu-image</code> (<code>5.2.8.1</code>)</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Image tags, stated separately.</strong> The local build tag is <code>m1-ada-ecu:latest</code> (<a href="documents-design-ada-ecu-ada-ecu-design-decisions.html#d9--deployment-shape">HLD D9</a>). The registry tag is <code>registry.hackathon-2.carsky.io/m1-ada-ecu:latest</code> (<a href="requirements-car-sky-guide-node-ada-ecu.html">node-ada-ecu.md § Blueprint node config</a>, which is also the blueprint <code>image</code> value).</p>
+<h3 id="ci-ruling-extend-or-add">CI ruling — extend or add?<a class="headerlink" href="#ci-ruling-extend-or-add" title="Link to this section">¶</a></h3>
+<p><strong><code>ada-core-build</code> in <a href="../../.github/workflows/phase0-ci.yml">phase0-ci.yml</a> needs no edit.</strong> It runs <code>cmake -S ADA_ECU -B ADA_ECU/build</code>, builds, and runs <code>ctest</code> over the whole project — every module library and test target this phase registers in <code>ADA_ECU/CMakeLists.txt</code> is covered the moment it is registered. The same holds for <code>python-tests</code>, which carries a guarded <code>ADA_ECU/detector</code> pytest step.</p>
+<p><strong><code>python-tests</code> collects two folders and no others:</strong> <code>Scenario_Player/tests</code> and <code>ADA_ECU/detector/tests</code>, each guarded on its own <code>requirements-dev.txt</code>. <code>ADA_ECU/tools/tests/</code> is outside both guards, so a <code>tools/</code> test's acceptance is local — the <code>ADA_ECU/tools/</code> row of § Per-node build commands.</p>
+<p><strong>Phase 2 creates two lanes in two files.</strong> <code>ada-loopback-check</code> (the mock-driven admission run) goes in a new <code>.github/workflows/phase2-ci.yml</code>, per the convention stated in <a href="../../.github/workflows/phase1-ci.yml">phase1-ci.yml</a>'s header — <em>a lane belongs to the phase that created it, not to the phase that last touched it</em>. <code>ada-ecu-image</code> (arm64 build + gated push) goes in <code>.github/workflows/phase4-ci.yml</code>: the image built from <code>ADA_ECU/</code> carries the Phase 2 scaffold, the Phase 3 detector and the Phase 4 fusion, so its lane is filed with the node artifact rather than any single phase (<a href="documents-design-ada-ecu-ada-ecu-hld.html#11-tech-stack-build-and-ci">HLD §11</a>; <a href="plans-phase4-tasks.html">phase4_tasks.md § CI ruling</a> — whichever subtask lands first creates that file with the standard header, and the others add only their job). Phase 3 and Phase 4 create their own files for their own lanes.</p>
+<hr />
+<h2 id="task-group-21-node-orientation-serves-r5">Task Group 2.1 — Node orientation (serves R5)<a class="headerlink" href="#task-group-21-node-orientation-serves-r5" title="Link to this section">¶</a></h2>
+<h3 id="x-5213-point-ada_ecureadmemd-at-the-hld-ai">[x] <code>5.2.1.3</code> — Point <code>ADA_ECU/README.md</code> at the HLD <em>(AI)</em><a class="headerlink" href="#x-5213-point-ada_ecureadmemd-at-the-hld-ai" title="Link to this section">¶</a></h3>
+<p><strong>Objective:</strong> the node README states what the folder is and links the design of record (<a href="documents-design-ada-ecu-ada-ecu-hld.html#4-folder-structure">HLD §4</a>, the <code>README.md</code> row).</p>
+<p><strong>Scope:</strong> <code>ADA_ECU/README.md</code> only — one-screen orientation: node identity (Container Node, R3/R12–R15), the two-process shape (D2), links to <a href="documents-design-ada-ecu-ada-ecu-hld.html">ada-ecu-hld.md</a>, <a href="requirements-car-sky-guide-node-ada-ecu.html">node-ada-ecu.md</a>, and the § Per-node build commands rows. It also carries the clip attribution string <a href="ada-ecu-media-ego-b-occluding-c-source.html">ADA_ECU/media/ego-b-occluding-c.source.md § Attribution</a> names, since the clip ships inside every pushed image. References, never restates (<a href="claude-skills-markdown-writing-style-skill.html">markdown-writing-style</a> rule 4).</p>
+<p><strong>Acceptance:</strong> links resolve; no requirement text restated; the attribution line matches the sidecar character for character. Doc-only — no build target.</p>
+<p><strong>Dependencies:</strong> none. <strong>Commit:</strong> <code>[5.2.1.3] docs: point the ADA README at the phase 2-4 HLD</code></p>
+<p><strong>Status:</strong> done — README rewritten as one-screen orientation; every link target verified present, both build commands byte-match § Per-node build commands, attribution line diffs identical against the sidecar.</p>
+<hr />
+<h2 id="task-group-22-core-foundation-config-socket-event-log-input-queue-serves-r13-r6-r18-r3">Task Group 2.2 — Core foundation: config, socket, event log, input queue (serves R13, R6, R18, R3)<a class="headerlink" href="#task-group-22-core-foundation-config-socket-event-log-input-queue-serves-r13-r6-r18-r3" title="Link to this section">¶</a></h2>
+<blockquote>
+<p>The four transport- and rule-blind modules every later group depends on. Paths from <a href="documents-design-ada-ecu-ada-ecu-hld.html#4-folder-structure">HLD §4</a>; build/test = the ADA C++ row of § Per-node build commands. Each new module registers a static library plus a test target in <code>ADA_ECU/CMakeLists.txt</code>, following the existing <code>ada_contracts</code> / <code>ada_add_test()</code> pattern.</p>
+</blockquote>
+<h3 id="x-13221-env-config-loader-srcconfigconfighppcpp-ai">[x] <code>13.2.2.1</code> — Env config loader <code>src/config/config.{hpp,cpp}</code> <em>(AI)</em><a class="headerlink" href="#x-13221-env-config-loader-srcconfigconfighppcpp-ai" title="Link to this section">¶</a></h3>
+<p><strong>Objective:</strong> the node's <strong>only</strong> env reader (<a href="documents-design-ada-ecu-ada-ecu-hld.html#6-internal-components">HLD §6</a>, Data table, the <code>config/config</code> row): load + validate the core-consumed env set into an immutable <code>Config</code> struct.</p>
+<p><strong>Scope:</strong></p>
+<ul>
+<li>Fields + defaults exactly per the <strong>Env — core</strong> table of <a href="documents-design-ada-ecu-ada-ecu-hld.html#6-internal-components">HLD §6</a>: <code>V2X_LISTEN_PORT</code> (47200) · <code>V2X_LISTEN_HOST</code> (<code>0.0.0.0</code>) · <code>IVI_ECU_HOST</code> (<code>10.99.0.13</code>) · <code>IVI_ECU_PORT</code> (47300) · <code>GATE_ENTER_M</code> (30) · <code>GATE_EXIT_M</code> (35) · <code>CONFIRM_HITS</code> (3) · <code>TRACK_TIMEOUT_MS</code> (1000) · <code>FUSION_TICK_MS</code> (100) · <code>DETECTOR_ENABLED</code> (true) · <code>DETECTOR_CMD</code> (<code>python3 /app/detector/main.py</code>) · <code>DETECTOR_RESTART_MAX</code> (5) · <code>CRA_ENABLED</code> (<code>nlos_obstruction</code>) · <code>RISK_NEAR_M</code> (60) · <code>RISK_CRITICAL_M</code> (30) · <code>RISK_TTC_WARN_S</code> (6) · <code>RISK_TTC_CRITICAL_S</code> (3) · <code>RISK_DWELL_MS</code> (300) · <code>STATE_RATE_HZ</code> (0) · <code>EVENT_LOG_PATH</code> (empty) · <code>ASSESS_LOG_EVERY_MS</code> (1000). The Phase 4 risk values are loaded now and unused until then — one loader, one table, no second env read later.</li>
+<li><strong>Not read here:</strong> <code>VIDEO_CLIP_PATH</code>, <code>DETECTOR_FRAME_STRIDE</code>, <code>DETECTOR_LOOP</code>, <code>DETECTOR_REALTIME_PACING</code>, <code>DETECTOR_CLIP_FPS</code>, <code>DETECTOR_START_DELAY_S</code>, <code>MODEL_PATH</code>, <code>CONF_THRESHOLD</code>, <code>IOU_THRESHOLD</code>, <code>TRACK_IOU_MIN</code>, <code>VEHICLE_WIDTH_M</code>, <code>CAMERA_HFOV_DEG</code> — the <strong>Env — detector</strong> table of HLD §6, read by <code>detector/config.py</code> in Phase 3. Each key is read in exactly one place, which that section states as a rule. Also not read here: <code>CAPTURE_FILTER</code>, <code>PCAP_DIR</code> and <code>CAPTURE_ROTATE_S</code>, consumed by <code>capture.sh</code> directly in Phase 4.</li>
+<li>Validation: exactly the rules of the <strong>Startup validation</strong> table of <a href="documents-design-ada-ecu-ada-ecu-hld.html#6-internal-components">HLD §6</a> and nothing beyond them — ports 1–65535; non-empty hosts; <code>CRA_ENABLED</code> naming registered plugins only; <code>0 &lt; GATE_ENTER_M &lt; GATE_EXIT_M</code>; <code>0 &lt; RISK_CRITICAL_M &lt; RISK_NEAR_M</code>; <code>0 &lt; RISK_TTC_CRITICAL_S &lt; RISK_TTC_WARN_S</code>; <code>CONFIRM_HITS ≥ 1</code>; positive <code>TRACK_TIMEOUT_MS</code>/<code>FUSION_TICK_MS</code>; <code>RISK_DWELL_MS ≥ 0</code>; non-negative <code>STATE_RATE_HZ</code>; <code>DETECTOR_RESTART_MAX ≥ 0</code>. Invalid value → descriptive exception naming the offending key, caller exits non-zero. Env read through an injectable getter so tests never mutate process env.</li>
+<li><strong>No assertion may relate a risk threshold to a gate threshold.</strong> <code>RISK_NEAR_M</code>/<code>RISK_CRITICAL_M</code> are thresholds on the composed range <code>d_AC</code>; <code>GATE_ENTER_M</code>/<code>GATE_EXIT_M</code> are thresholds on one source's own range (<code>d_BC</code> relayed, <code>d_AB</code> estimated). Comparing them orders two different quantities, and the pair R22 requires — 60 / 30 — is above <code>GATE_ENTER_M</code> by design (<a href="documents-design-ada-ecu-ada-ecu-design-decisions.html#d5--risk-vocabulary-and-edge-triggered-emission">D5</a>, <a href="documents-design-ada-ecu-ada-ecu-design-decisions.html#d11--r22-run-choreography-the-run-origin-the-paced-clip-and-the-risk-band-pair">D11</a>). A loader that rejects the pair exits the node at startup, and a node that has exited emits nothing.</li>
+<li>Test <code>tests/config/test_config.cpp</code>: defaults when unset; each override parsed; each rejection case, including the three same-quantity ordering rules — gate, risk range, risk TTC — and a positive case proving <code>RISK_NEAR_M = 60</code> with <code>GATE_ENTER_M = 30</code> loads without error.</li>
+</ul>
+<p><strong>Acceptance:</strong> ADA build + ctest green on CI (<code>ada-core-build</code>); no tunable literal anywhere outside this file's defaults table.</p>
+<p><strong>Dependencies:</strong> none — starts immediately. <strong>Commit:</strong> <code>[13.2.2.1] feat: add ADA ECU env config loader</code></p>
+<p><strong>Status:</strong> done — loader + injectable-getter tests cover defaults, every override, all rejection rules incl. the three same-quantity orderings, and the 60/30 cross-quantity positive case; build/tests deferred to CI ada-core-build.</p>
+<h3 id="x-6222-sole-socket-holder-srcnetudp_sockethppcpp-ai-parallel-with-13221">[x] <code>6.2.2.2</code> — Sole socket holder <code>src/net/udp_socket.{hpp,cpp}</code> <em>(AI — parallel with 13.2.2.1)</em><a class="headerlink" href="#x-6222-sole-socket-holder-srcnetudp_sockethppcpp-ai-parallel-with-13221" title="Link to this section">¶</a></h3>
+<p><strong>Objective:</strong> <code>net::UdpSocket</code> — the <strong>only</strong> <code>ADA_ECU/src</code> code allowed to include socket headers (<a href="documents-design-ada-ecu-ada-ecu-hld.html#6-internal-components">HLD §6</a>, controller table, the <code>net/udp_socket</code> row).</p>
+<p><strong>Scope:</strong> RAII fd ownership (move-only, no raw owning handles); <code>bind(host, port)</code>; blocking <code>recvFrom(buffer)</code> with a poll timeout so a stopping thread is not wedged; <code>sendTo(host, port, bytes)</code>; transient errors are <strong>counted rather than thrown</strong> and the count is returned to the caller, which logs it (HLD §6, the same row). POSIX headers confined to the <code>.cpp</code>; the header stays POSIX-free. Test <code>tests/net/test_udp_socket.cpp</code>: loopback send → receive round-trip on an ephemeral port; bind-conflict surfaces cleanly; receive timeout returns empty rather than blocking forever.</p>
+<p><strong>Acceptance:</strong> ADA build + ctest green on CI; <code>&lt;sys/socket.h&gt;</code>, <code>&lt;netinet/*&gt;</code>, <code>&lt;arpa/*&gt;</code> appear only under <code>src/net/</code>.</p>
+<p><strong>Dependencies:</strong> none. <strong>Commit:</strong> <code>[6.2.2.2] feat: add ADA UdpSocket sole transport holder</code></p>
+<p><strong>Status:</strong> done — RAII move-only socket with poll-timeout receive and counted transient errors; loopback round-trip, bind-conflict, timeout and move tests on ephemeral ports; POSIX headers confined to the .cpp; build/tests deferred to CI ada-core-build.</p>
+<h3 id="x-18223-r18-evt-jsonl-event-log-srclogevent_loghppcpp-ai-parallel">[x] <code>18.2.2.3</code> — R18 <code>[EVT]</code> JSONL event log <code>src/log/event_log.{hpp,cpp}</code> <em>(AI — parallel)</em><a class="headerlink" href="#x-18223-r18-evt-jsonl-event-log-srclogevent_loghppcpp-ai-parallel" title="Link to this section">¶</a></h3>
+<p><strong>Objective:</strong> the ADA half of the R18 evidence stream (HLD D8) — one JSONL line per event, <code>[EVT]</code>-prefixed, same line shape as the V2X ECU so one offline reader reconstructs both nodes.</p>
+<p><strong>Scope:</strong></p>
+<ul>
+<li>Event vocabulary exactly <a href="documents-design-ada-ecu-ada-ecu-design-decisions.html#d8--r18-the-ada-half-of-the-evidence-stream">HLD D8</a>: <code>detector_spawn</code>, <code>detector_eof</code>, <code>detector_restart</code>, <code>own_sensor_ingest</code>, <code>r2_ingest</code>, <code>parse_reject</code>, <code>track_transition</code>, <code>track_expire</code>, <code>assessment</code>, <code>assess_skipped_b_unknown</code>, <code>risk_transition</code>, <code>r4_tx</code>. Phase 2 emits the first eight; the last four are declared here and first written in Phase 4.</li>
+<li>Line fields match the V2X ECU's frozen shape: <code>event</code>, <code>mono_ms</code>, <code>epoch_ms</code>, <code>counters</code>, plus a per-event <code>payload</code>. Payload-carrying events: <code>r2_ingest</code> embeds the received R2 body, <code>own_sensor_ingest</code> the parsed R3 object, <code>track_transition</code> the id/source/from/to/distance/reason, <code>r4_tx</code> the emitted R4 body.</li>
+<li><code>mono_ms</code> is <code>CLOCK_MONOTONIC</code>, <code>epoch_ms</code> is <code>CLOCK_REALTIME</code> — <a href="requirements-m1-run-timing-and-event-triggering.html">m1-run-timing-and-event-triggering.md §6.2</a>. Both are written on every line, never one derived from the other.</li>
+<li>Serialization through nlohmann, never string concatenation — a payload carrying quotes or newlines must escape correctly. Sink: stdout always, flushed per line (CarSky View Log is the live window); additionally append to <code>EVENT_LOG_PATH</code> when non-empty.</li>
+<li>Test <code>tests/log/test_event_log.cpp</code>: line parses as JSON after the <code>[EVT]</code> prefix; counters accumulate; embedded payloads present and parseable; a payload string containing quotes/newlines round-trips; file sink writes when the path is set (temp dir).</li>
+</ul>
+<p><strong>Acceptance:</strong> ADA build + ctest green on CI. The field names freeze here — <code>18.2.6.5</code>'s log checker parses them, and so do Phase 4's <code>event_report.py</code> and <code>check_evt_log.py --fusion</code>.</p>
+<p><strong>Dependencies:</strong> none. <strong>Commit:</strong> <code>[18.2.2.3] feat: add ADA R18 JSONL event log writer</code></p>
+<p><strong>Status:</strong> done — nlohmann-only writer with both clock stamps, cumulative counters, injectable sink/clocks, stdout + optional EVENT_LOG_PATH file sink; all twelve D8 event names declared; tests cover parse-after-prefix, counter accumulation, quote/newline round-trip and the temp-dir file sink; build/tests deferred to CI ada-core-build.</p>
+<h3 id="x-3224-bounded-input-queue-srcobserverinput_queuehpp-ai-parallel">[x] <code>3.2.2.4</code> — Bounded input queue <code>src/observer/input_queue.hpp</code> <em>(AI — parallel)</em><a class="headerlink" href="#x-3224-bounded-input-queue-srcobserverinput_queuehpp-ai-parallel" title="Link to this section">¶</a></h3>
+<p><strong>Objective:</strong> the D2 single-consumer queue — two producer threads (V2X rx, detector reader), one consumer (the main thread), so the store has exactly one writer.</p>
+<p><strong>Scope:</strong> header-only bounded queue of a small tagged struct <code>InputItem { Source source; std::string line; int64_t rxEpochMs; }</code> where <code>Source ∈ {V2xR2, DetectorR3}</code>; blocking <code>pop(timeout)</code>; <code>push</code> drops the <strong>oldest</strong> item and increments a dropped counter when full (a stalled consumer must never block a socket thread); <code>close()</code> wakes the consumer for clean shutdown. No parsing, no I/O, no logging inside. Test <code>tests/observer/test_input_queue.cpp</code>: FIFO order per producer; two concurrent producers deliver every item or count the drop; bounded capacity honoured; <code>pop</code> returns after <code>close()</code>.</p>
+<p><strong>Acceptance:</strong> ADA build + ctest green on CI; deterministic under repeat runs (no sleeps as synchronization).</p>
+<p><strong>Dependencies:</strong> none. <strong>Commit:</strong> <code>[3.2.2.4] feat: add bounded input queue for the two observers</code></p>
+<p><strong>Status:</strong> done — header-only bounded queue (INTERFACE lib) with drop-oldest-and-count push, timeout pop, close()-wakes-consumer; tests cover per-producer FIFO, two concurrent producers (delivered + dropped accounting), capacity bound and pop-after-close, synchronized by join not sleeps; build/tests deferred to CI ada-core-build.</p>
+<hr />
+<h2 id="task-group-23-data-parsers-wire-frozen-r3-model-serves-r2-r3">Task Group 2.3 — Data parsers: wire → frozen R3 model (serves R2, R3)<a class="headerlink" href="#task-group-23-data-parsers-wire-frozen-r3-model-serves-r2-r3" title="Link to this section">¶</a></h2>
+<blockquote>
+<p>The Data Parser block of the <a href="../../documents/Design/ADA-ECU/phase2-4-ada-ecu-components.puml">component map</a>. Both parsers produce the <strong>same</strong> <code>contracts::TrackedObject</code> and both hand it to the <strong>same</strong> <code>upsert</code> — that identity is the R3 acceptance box. Field authority: the synced <code>ADA_ECU/contracts/r2-v2x-object.schema.json</code> and <code>r3-tracked-object.schema.json</code>; models: the Phase 0 bindings in <code>ADA_ECU/src/contracts/</code>.</p>
+</blockquote>
+<h3 id="x-2231-r2-parser-srcparserr2_parserhppcpp-ai">[x] <code>2.2.3.1</code> — R2 parser <code>src/parser/r2_parser.{hpp,cpp}</code> <em>(AI)</em><a class="headerlink" href="#x-2231-r2-parser-srcparserr2_parserhppcpp-ai" title="Link to this section">¶</a></h3>
+<p><strong>Objective:</strong> map one received R2 JSON datagram to a <code>TrackedObject</code> with <code>source = v2x_relayed</code> (<a href="documents-design-ada-ecu-ada-ecu-hld.html#6-internal-components">HLD §6</a>, controller table, the <code>parser/r2_parser</code> row; <a href="documents-design-ada-ecu-ada-ecu-hld.html#101-r2--the-message-set-from-the-v2x-ecu-consumed">HLD §10.1</a>).</p>
+<p><strong>Scope:</strong></p>
+<ul>
+<li>Parse <strong>through the frozen <code>contracts::R2Message</code> binding</strong>, never by raw JSON probing.</li>
+<li>Mapping: <code>id = "v2x:" + stationId + ":" + object.objectId</code> · <code>class = object.classification</code> · <code>source = v2x_relayed</code> · <code>position = object.position{x,y}</code> · <code>distance = object.distance</code> · <code>speed = object.speed</code>.</li>
+<li><code>confidence = object.confidence</code>, <strong>or <code>0.0</code> when that field is null</strong> — the obligation row in <a href="documents-design-ada-ecu-ada-ecu-hld.html#101-r2--the-message-set-from-the-v2x-ecu-consumed">HLD §10.1</a>. Frozen R2 types the field <code>["number","null"]</code> and frozen R3 requires <code>confidence</code> present in 0–1, so an unmapped null produces a schema-invalid track. The received value is carried out-of-band on the parse result, beside <code>position.confidence</code>.</li>
+<li><strong>Timestamps, per <a href="documents-design-ada-ecu-ada-ecu-hld.html#102-r3--the-object-model-of-the-store-owned">HLD §10.2</a> and <a href="requirements-m1-run-timing-and-event-triggering.html">m1-run-timing-and-event-triggering.md §6.2</a>:</strong></li>
+<li><code>timestamps.measured</code> = <code>rxTime + object.timeOfMeasurement</code>. Frozen <code>contracts/r2-v2x-object.schema.json</code> bounds <code>object.timeOfMeasurement</code> at −2048..2047 ms as an offset against the CPM reference time, so it is a delta and never an epoch. Both operands arrive in the same R2 message, so the sum stays inside one clock domain.</li>
+<li><code>timestamps.received</code> = the message's <code>rxTime</code> field, which is the V2X ECU's clock. A recorded value, never an operand of anything but the line above.</li>
+<li>The ADA-side receive stamp does not enter the R3 object. It rides on <code>InputItem.rxEpochMs</code> for the <code>r2_ingest</code> event only.</li>
+<li><code>timestamps.lastUpdated</code> = <strong>written by the store</strong>, always ADA's own <code>CLOCK_REALTIME</code> at store write — never a foreign node's value.</li>
+<li><strong>Arithmetic mixing two nodes' stamps is forbidden</strong> (D10). No expression may combine a value that originated on another node with one that originated here.</li>
+<li><code>state</code> is <strong>not</strong> set here — the store is the sole writer of <code>state</code> (D3). Emit <code>not_tracked</code> as the placeholder the store overwrites.</li>
+<li><code>position.confidence</code> (metres, R2 field F6) has no R3 home: carry it out-of-band on the parse result so <code>18.2.2.3</code>'s <code>r2_ingest</code> payload can record it (<a href="documents-design-ada-ecu-ada-ecu-hld.html#101-r2--the-message-set-from-the-v2x-ecu-consumed">HLD §10.1</a>, the <code>position.confidence</code> obligation row).</li>
+<li>Failures return a typed reject reason (enum) for counting — no logging inside the class, no throw into the pipeline.</li>
+<li>Test <code>tests/parser/test_r2_parser.cpp</code>: the node-local sample <code>tests/fixtures/samples/r2-object.json</code> maps field-by-field to the expected <code>TrackedObject</code>; id convention exact; <code>measured</code> equals <code>1789000000123 + (−50)</code> = <code>1789000000073</code>, the sample's <code>rxTime</code> plus its <code>timeOfMeasurement</code>; <code>received</code> equals the sample's <code>rxTime</code>; a null <code>object.confidence</code> maps to <code>0.0</code> and the received null is still visible on the out-of-band result; one case per reject reason.</li>
+</ul>
+<p><strong>Acceptance:</strong> ADA build + ctest green on CI.</p>
+<p><strong>Dependencies:</strong> none (Phase 0 binding suffices). <strong>Commit:</strong> <code>[2.2.3.1] feat: add R2 to TrackedObject parser</code></p>
+<p><strong>Status:</strong> done — parses through the frozen R2Message binding only; id <code>v2x:&lt;stationId&gt;:&lt;objectId&gt;</code>, null confidence → 0.0 with the wire null and position.confidence out-of-band on the result, measured = rxTime + timeOfMeasurement, lastUpdated = 0 placeholder; five typed reject reasons each counted and tested; build/tests deferred to CI ada-core-build.</p>
+<h3 id="x-3232-r3-jsonl-parser-srcparserr3_parserhppcpp-ai-parallel-with-2231">[x] <code>3.2.3.2</code> — R3 JSONL parser <code>src/parser/r3_parser.{hpp,cpp}</code> <em>(AI — parallel with 2.2.3.1)</em><a class="headerlink" href="#x-3232-r3-jsonl-parser-srcparserr3_parserhppcpp-ai-parallel-with-2231" title="Link to this section">¶</a></h3>
+<p><strong>Objective:</strong> map one detector JSONL line to a <code>TrackedObject</code> with <code>source = own_sensor</code>.</p>
+<p><strong>Scope:</strong> parse through the frozen <code>contracts::TrackedObject</code> binding; <strong>the incoming <code>state</code> field is ignored</strong> (D3 — the store owns <code>state</code>); a line whose <code>source</code> is not <code>own_sensor</code> is rejected with a typed reason (a detector cannot mint relayed entries — the structural half of the zero-C argument, D6); malformed JSON and schema-invalid lines are rejected and counted, never fatal. Test <code>tests/parser/test_r3_parser.cpp</code>: <code>tests/fixtures/samples/r3-tracked-object.json</code> maps intact; an incoming <code>state: "tracked"</code> is discarded; a <code>source: "v2x_relayed"</code> line is rejected; malformed line rejected.</p>
+<p><strong>Acceptance:</strong> ADA build + ctest green on CI.</p>
+<p><strong>Dependencies:</strong> none. <strong>Commit:</strong> <code>[3.2.3.2] feat: add detector JSONL to TrackedObject parser</code></p>
+<p><strong>Status:</strong> done — parses through the frozen TrackedObject binding only; incoming state discarded for the not_tracked placeholder (D3), non-own_sensor source rejected with a typed reason (D6), malformed/missing/wrong-type/out-of-range lines rejected and counted, never fatal; the frozen sample carries source v2x_relayed, so the maps-intact case flips it to own_sensor and the verbatim sample is the source-rejection case; build/tests deferred to CI ada-core-build.</p>
+<h3 id="x-3233-parse-reject-corpus-testsfixturesmalformed-counted-rejection-test-ai">[x] <code>3.2.3.3</code> — Parse-reject corpus <code>tests/fixtures/malformed/</code> + counted-rejection test <em>(AI)</em><a class="headerlink" href="#x-3233-parse-reject-corpus-testsfixturesmalformed-counted-rejection-test-ai" title="Link to this section">¶</a></h3>
+<p><strong>Objective:</strong> prove both parsers reject a structurally invalid corpus with zero crashes and correct counters (HLD §4 — a local fixture, <strong>not</strong> a synced contract).</p>
+<p><strong>Scope:</strong> commit the corpus with per-case provenance in the test comments — R2 side: empty line, truncated JSON, wrong <code>type</code>, missing <code>object</code>, <code>object.distance</code> absent, <code>distance</code> non-numeric, unknown extra field (<strong>must be tolerated</strong>, R2 additive evolution); R3 side: empty line, truncated JSON, missing required R3 field, out-of-range <code>confidence</code>, <code>source: v2x_relayed</code>, unknown extra field (<strong>tolerated</strong>). Test <code>tests/parser/test_parse_reject_corpus.cpp</code> (planner-designated path, § Open items item 2): one parameterized suite asserting each case's expected disposition (<code>Reject</code> or <code>ToleratedAdditive</code>) with no either-outcome branch, plus a whole-corpus run proving the parsers still accept the valid sample afterwards.</p>
+<p><strong>Acceptance:</strong> ADA build + ctest green on CI; every case's disposition asserted explicitly.</p>
+<p><strong>Dependencies:</strong> after <code>2.2.3.1</code> + <code>3.2.3.2</code>. <strong>Commit:</strong> <code>[3.2.3.3] test: reject the malformed parse corpus with zero crashes</code></p>
+<p><strong>Status:</strong> done — thirteen one-defect corpus files (<code>r2-&lt;case&gt;.json</code> / <code>r3-&lt;case&gt;.json</code>, empty-line cases as zero-byte files) with provenance in the test header; one parameterized suite asserts each case's exact disposition and reject reason with no either-outcome branch, both unknown-extra-field cases tolerated; the whole-corpus run proves one parser instance per side survives all cases with exact counters and still accepts the valid samples; build/tests deferred to CI ada-core-build.</p>
+<hr />
+<h2 id="task-group-24-r3-store-r13-admission-state-machine-serves-r3-r13">Task Group 2.4 — R3 store + R13 admission state machine (serves R3, R13)<a class="headerlink" href="#task-group-24-r3-store-r13-admission-state-machine-serves-r3-r13" title="Link to this section">¶</a></h2>
+<blockquote>
+<p>The "Current Input" block. The state machine realizes <a href="../../documents/Design/ADA-ECU/phase2-4-ada-ecu-admission.puml">phase2-4-ada-ecu-admission.puml</a> exactly — <strong>one machine, both sources</strong>, parameterized only by what counts as an update (D3). <code>not_tracked</code> means <strong>absent from the store</strong>: a drop erases the entry, it does not leave one flagged.</p>
+</blockquote>
+<h3 id="x-3241-track-store-srcstoretrack_storehppcpp-ai">[x] <code>3.2.4.1</code> — Track store <code>src/store/track_store.{hpp,cpp}</code> <em>(AI)</em><a class="headerlink" href="#x-3241-track-store-srcstoretrack_storehppcpp-ai" title="Link to this section">¶</a></h3>
+<p><strong>Objective:</strong> the R3 store — an <code>id → TrackedObject</code> map with <code>upsert / get / all / nearest / erase</code>, single-writer, exposing every R3 field.</p>
+<p><strong>Scope:</strong></p>
+<ul>
+<li>Surface: <code>upsert(TrackedObject)</code> (the <strong>identical</strong> entry point for both parsers — the R3 acceptance box), <code>get(id)</code>, <code>all()</code>, <code>allBySource(Source)</code>, <code>nearest(Source)</code> (smallest <code>distance</code>), <code>erase(id)</code>. <code>allBySource</code> is a planner addition, § Open items item 2; the rest are <a href="documents-design-ada-ecu-ada-ecu-hld.html#6-internal-components">HLD §6</a>'s <code>store/track_store</code> row. No admission logic here — that is <code>store/admission</code>, a separate component in the same section (D3) — and no I/O.</li>
+<li>The store owns <code>state</code>: <code>upsert</code> preserves the stored <code>state</code> and never takes it from the incoming object. It also stamps <code>timestamps.lastUpdated</code> from <code>CLOCK_REALTIME</code> at write, discarding whatever the parser left there.</li>
+<li>Test <code>tests/store/test_track_store.cpp</code>: an object round-trips with <strong>all nine R3 fields</strong> intact (<code>id</code>, <code>class</code>, <code>source</code>, <code>position</code>, <code>distance</code>, <code>speed</code>, <code>confidence</code>, <code>state</code>, <code>timestamps</code>); a detector-shaped and a relayed-shaped object both enter through the same <code>upsert</code> and are indistinguishable to the store except by <code>source</code>; <code>nearest</code> picks the smallest distance per source; <code>erase</code> removes.</li>
+</ul>
+<p><strong>Acceptance:</strong> ADA build + ctest green on CI — this test is the R3 acceptance box's unit-level closure.</p>
+<p><strong>Dependencies:</strong> none (uses the Phase 0 binding). <strong>Commit:</strong> <code>[3.2.4.1] feat: add the R3 track store</code></p>
+<p><strong>Status:</strong> done — upsert/get/all/allBySource/nearest/erase with injectable CLOCK_REALTIME stamp; store owns <code>state</code> (not_tracked on first insert, preserved on refresh) and restamps <code>lastUpdated</code>; 7-case test covers the nine-field round-trip, identical-upsert for both source shapes, per-source nearest with tie case, erase, and the restamp; build/tests deferred to CI ada-core-build.</p>
+<h3 id="x-13242-admission-state-machine-srcstoreadmissionhppcpp-ai">[x] <code>13.2.4.2</code> — Admission state machine <code>src/store/admission.{hpp,cpp}</code> <em>(AI)</em><a class="headerlink" href="#x-13242-admission-state-machine-srcstoreadmissionhppcpp-ai" title="Link to this section">¶</a></h3>
+<p><strong>Objective:</strong> the R13 machine as a <strong>pure</strong> function of (current state, hits, distance, elapsed) → (next state, action) — no I/O, no store access, no clock read inside.</p>
+<p><strong>Scope:</strong></p>
+<ul>
+<li>Exactly the diagram's edges: <code>not_tracked → tentative</code> on <code>distance ≤ GATE_ENTER_M</code> (create, hits = 1) · <code>tentative → tentative</code> on <code>distance ≤ GATE_ENTER_M</code> (hits += 1) · <code>tentative → tracked</code> at <code>hits ≥ CONFIRM_HITS</code> · <code>tracked → tracked</code> on <code>distance ≤ GATE_EXIT_M</code> (refresh) · <code>tentative → not_tracked</code> on <code>distance &gt; GATE_ENTER_M</code> <strong>or</strong> <code>now − lastUpdated &gt; TRACK_TIMEOUT_MS</code> (erase, hits = 0) · <code>tracked → not_tracked</code> on <code>distance &gt; GATE_EXIT_M</code> <strong>or</strong> timeout (erase, hits = 0).</li>
+<li>Hysteresis is one Schmitt band: <code>GATE_ENTER_M</code> admits and holds while <code>tentative</code>; only once <code>tracked</code> does the wider <code>GATE_EXIT_M</code> hold. The hits counter resets to 0 on every entry to <code>not_tracked</code>.</li>
+<li>Thresholds are constructor parameters (from <code>Config</code>), never literals; <code>now</code> is a parameter, never <code>steady_clock::now()</code> inside.</li>
+<li>Test <code>tests/store/test_admission_own_sensor.cpp</code>: the full own-sensor lifecycle in both directions; promotion exactly at <code>CONFIRM_HITS</code>, not before; counter reset proven by re-entering <code>tentative</code> after a drop and needing the full N again; timeout expiry from both <code>tentative</code> and <code>tracked</code>.</li>
+</ul>
+<p><strong>Acceptance:</strong> ADA build + ctest green on CI; every edge in the <code>.puml</code> has at least one covering case.</p>
+<p><strong>Dependencies:</strong> after <code>13.2.2.1</code> (threshold types). <strong>Commit:</strong> <code>[13.2.4.2] feat: implement the R13 admission state machine</code></p>
+<p><strong>Status:</strong> done — pure step() machine realizing all eight diagram edges, thresholds as ctor params from Config, timeout evaluated first, hits reset on every erase; edge names aligned to the 13.2.4.3 reason vocabulary (self-loops distinct as counted/refreshed); test covers lifecycle both directions, promotion boundary, counter reset, timeout precedence, Schmitt band, CONFIRM_HITS==1 degenerate; build/tests deferred to CI ada-core-build.</p>
+<h3 id="x-13243-store-admission-integration-expiry-transition-events-ai">[x] <code>13.2.4.3</code> — Store ↔ admission integration, expiry, transition events <em>(AI)</em><a class="headerlink" href="#x-13243-store-admission-integration-expiry-transition-events-ai" title="Link to this section">¶</a></h3>
+<p><strong>Objective:</strong> wire the machine into the store — every ingest and every tick runs admission, every edge writes one <code>track_transition</code>, every expiry writes <code>track_expire</code>.</p>
+<p><strong>Scope:</strong></p>
+<ul>
+<li><code>TrackStore::apply(update)</code> runs admission on ingest and <code>TrackStore::expire(now)</code> runs the timeout edge for <strong>every</strong> track on the fusion tick, so a track can expire on silence alone (D2). Erased tracks are removed from the map, not flagged.</li>
+<li><strong>Expiry is an interval, so it runs on <code>CLOCK_MONOTONIC</code></strong> (<code>steady_clock</code>) — <a href="requirements-m1-run-timing-and-event-triggering.html">m1-run-timing-and-event-triggering.md §6.2</a>. Keep a parallel monotonic stamp per track and compare <code>now − thatStamp &gt; TRACK_TIMEOUT_MS</code> against it. <code>timestamps.lastUpdated</code> stays <code>CLOCK_REALTIME</code> — it is a log/wire value, not an interval operand. Reason: a host NTP step on the shared wall clock would otherwise expire every track at once mid-demo. <code>13.2.4.2</code> is unaffected — <code>now</code> is a parameter there; what this subtask fixes is which clock the caller reads it from.</li>
+<li>Each edge emits one <code>track_transition</code> event (id, source, from, to, distance, reason ∈ <code>gate_enter|confirmed|gate_exit|out_of_gate|timeout</code>) through the injected <code>EventLog&amp;</code>; expiry additionally emits <code>track_expire</code>.</li>
+<li>Test <code>tests/store/test_admission_relayed.cpp</code>: relayed-C boundary cases at the exact gate values — 29.9 / 30.0 / 30.1 m admitting, 34.9 / 35.0 / 35.1 m holding-vs-dropping once <code>tracked</code>; <strong>no flicker</strong>: an oscillating 30–34 m sequence yields exactly one admit transition and zero drops; expiry after <code>TRACK_TIMEOUT_MS</code> of silence; the emitted <code>track_transition</code> sequence matches the diagram edge for edge.</li>
+<li>Test <code>tests/store/test_expiry_monotonic.cpp</code>, the fourth file <a href="documents-design-ada-ecu-ada-ecu-hld.html#4-folder-structure">HLD §4</a> designates under <code>tests/store/</code>: expiry fires on the monotonic stamp alone. One case steps <code>timestamps.lastUpdated</code> forward and backward with the monotonic stamp held, and asserts no track expires; a second advances the injected monotonic time past <code>TRACK_TIMEOUT_MS</code> with <code>lastUpdated</code> untouched, and asserts the track is erased. That pair is the failure D10 exists to prevent.</li>
+</ul>
+<p><strong>Acceptance:</strong> ADA build + ctest green on CI — closes the "admitted only within <code>gate_enter</code>, dropped only beyond <code>gate_exit</code> or after <code>miss_limit</code>, no flicker" box at unit level.</p>
+<p><strong>Dependencies:</strong> after <code>3.2.4.1</code> + <code>13.2.4.2</code> + <code>18.2.2.3</code>. <strong>Commit:</strong> <code>[13.2.4.3] feat: run admission and expiry inside the track store</code></p>
+<p><strong>Status:</strong> done — store wired to the pure machine via a thresholds-from-Config constructor and injected EventLog; per-entry monotonic stamp is the sole expiry operand (D10 pair proven in test_expiry_monotonic), lastUpdated stays realtime; five state-changing reasons emit one track_transition each, self-loops silent (planner ruling — the .puml every-edge note flagged stale to architecture), timeout adds track_expire ({id, source, distance} payload, pending ratification); boundary/flicker/expiry covered in test_admission_relayed; build/tests deferred to CI ada-core-build.</p>
+<hr />
+<h2 id="task-group-25-r14-cra-abstraction-database-schema-registry-serves-r14">Task Group 2.5 — R14 CRA abstraction, database schema, registry (serves R14)<a class="headerlink" href="#task-group-25-r14-cra-abstraction-database-schema-registry-serves-r14" title="Link to this section">¶</a></h2>
+<blockquote>
+<p>R14's acceptance is <strong>the code plus the database schema</strong> — the interface, the registry, and a committed schema the assessment reads and writes. Phase 2 lands all three empty of rules; Phase 4's <code>chained_collision</code> is the first plugin and the proof that adding one is <em>one new file plus one line</em> (D4).</p>
+</blockquote>
+<h3 id="x-14252-cra-assessment-record-schema-schemacra-assessment-recordschemajson-ai-first-in-the-group">[x] <code>14.2.5.2</code> — CRA assessment-record schema <code>schema/cra-assessment-record.schema.json</code> <em>(AI — first in the group)</em><a class="headerlink" href="#x-14252-cra-assessment-record-schema-schemacra-assessment-recordschemajson-ai-first-in-the-group" title="Link to this section">¶</a></h3>
+<p><strong>Objective:</strong> the committed R14 database schema — one of the two artifacts R14's acceptance names, and a Phase 2 acceptance box on its own.</p>
+<p><strong>Scope:</strong></p>
+<ul>
+<li>JSON Schema (draft 2020-12) at <code>ADA_ECU/schema/cra-assessment-record.schema.json</code> — <strong>node-local</strong>, deliberately <em>not</em> under <code>ADA_ECU/contracts/</code> (that folder holds only byte-synced copies of frozen cross-node contracts) and <strong>not</strong> added to <code>contracts/sync-manifest.json</code>.</li>
+<li>Record fields exactly the <a href="documents-design-ada-ecu-ada-ecu-design-decisions.html#d4--r14-the-collision-risk-assessment-interface-registry-and-database">HLD D4 table</a>: <code>trackId</code>, <code>warningType</code>, <code>riskState</code>, <code>riskStateEnteredMs</code>, <code>firstSeenMs</code>, <code>lastUpdatedMs</code>, <code>distanceM</code>, <code>previousDistanceM</code>, <code>closingRateMps</code>, <code>ttcS</code> (nullable), <code>lastSnapshot</code> (an R3 object, <code>$ref</code> to the synced <code>contracts/r3-tracked-object.schema.json</code>), <code>lastKnownB</code> (nullable position), <code>emittedCount</code>, <code>rationale</code>. Keyed by <code>trackId</code> + <code>warningType</code>, which is what D4's field table calls the key; D4's accessor line words it differently, and § Open items item 5 carries the reconciliation.</li>
+<li>One committed sample record at <code>tests/fixtures/cra-assessment-record.json</code> that validates against it. It sits <strong>outside</strong> <code>tests/fixtures/samples/</code>, which <a href="documents-design-ada-ecu-ada-ecu-hld.html#4-folder-structure">HLD §4</a> reserves for byte-synced contract samples; this record is node-local (D1). Path per § Open items item 2.</li>
+</ul>
+<p><strong>Acceptance:</strong> schema is valid JSON Schema and the sample validates (checked by <code>14.2.5.3</code>'s test); <code>contracts/check_sync.py</code> still exits 0.</p>
+<p><strong>Dependencies:</strong> none. <strong>Commit:</strong> <code>[14.2.5.2] feat: commit the CRA assessment-record schema</code></p>
+<p><strong>Status:</strong> done — draft 2020-12 schema with all fourteen D4 fields required, <code>ttcS</code>/<code>lastKnownB</code> nullable, <code>lastSnapshot</code> <code>$ref</code>ing the synced R3 schema by relative path; sample validates (jsonschema Draft202012Validator, zero errors); <code>contracts/check_sync.py</code> exit 0 (47 copies byte-identical).</p>
+<h3 id="x-14251-freeze-the-cra-interface-srccrai_collision_risk_assessmenthpp-ai">[x] <code>14.2.5.1</code> — Freeze the CRA interface <code>src/cra/i_collision_risk_assessment.hpp</code> <em>(AI)</em><a class="headerlink" href="#x-14251-freeze-the-cra-interface-srccrai_collision_risk_assessmenthpp-ai" title="Link to this section">¶</a></h3>
+<p><strong>Objective:</strong> the R14 seam, header-only and frozen — the text is in <a href="documents-design-ada-ecu-ada-ecu-design-decisions.html#d4--r14-the-collision-risk-assessment-interface-registry-and-database">HLD D4</a> and is transcribed, not redesigned.</p>
+<p><strong>Scope:</strong> <code>struct RiskContext { const TrackStore&amp; store; AssessmentDb&amp; db; std::int64_t now_ms; }</code> · <code>struct RiskFinding { std::string warningType; std::string riskState; std::optional&lt;contracts::TrackedObject&gt; trigger; std::string rationale; }</code> · <code>class ICollisionRiskAssessment</code> with <code>virtual std::string name() const = 0</code> and <code>virtual RiskFinding assess(RiskContext&amp;) = 0</code>. <strong>The plugin never emits</strong> — it returns a finding; the output stage decides transport.</p>
+<p><strong><code>AssessmentDb</code> is forward-declared here, not included</strong> — that is what lets this header land before <code>14.2.5.3</code> and removes the circular dependency; the definition arrives with the accessor. The forward declaration carries no accessor signature, so § Open items item 5's reconciliation lands in <code>14.2.5.3</code> alone and does not reopen this header. Test <code>tests/cra/test_cra_interface.cpp</code> (planner-designated path, § Open items item 2): a minimal fake plugin implements the interface, is called through a base pointer, and returns a finding — proves implementability and freezes the signatures.</p>
+<p><strong>Acceptance:</strong> ADA build + ctest green on CI; interface text stable — later subtasks may not alter it without re-freezing.</p>
+<p><strong>Dependencies:</strong> after <code>3.2.4.1</code> (references <code>TrackStore</code>). <strong>Commit:</strong> <code>[14.2.5.1] feat: freeze the collision risk assessment interface</code></p>
+<p><strong>Status:</strong> done — D4 interface transcribed verbatim into <code>src/cra/i_collision_risk_assessment.hpp</code> in <code>ada::cra</code> (AssessmentDb forward-declared, no accessor signature; <code>using store::TrackStore;</code> added so D4's text resolves — both convention facts flagged to architecture); test exercises a fake plugin through a base pointer and static_asserts the frozen signatures; build/tests deferred to CI ada-core-build.</p>
+<h3 id="x-14253-assessment-database-accessor-srccraassessment_dbhppcpp-ai">[x] <code>14.2.5.3</code> — Assessment database accessor <code>src/cra/assessment_db.{hpp,cpp}</code> <em>(AI)</em><a class="headerlink" href="#x-14253-assessment-database-accessor-srccraassessment_dbhppcpp-ai" title="Link to this section">¶</a></h3>
+<p><strong>Objective:</strong> the typed in-process accessor over the D4 schema — the seam a future milestone swaps for real persistence.</p>
+<p><strong>Scope:</strong> <code>struct AssessmentRecord</code> mirroring <code>14.2.5.2</code>'s fields; <code>get(trackId, warningType) -&gt; optional&lt;Record&gt;</code>, <code>upsert(Record)</code>, <code>erase(trackId)</code>, <code>all()</code>; every write also appended to the <code>[EVT]</code> stream as an <code>assessment</code> line so the table is reconstructible offline (D4). The composite <code>get</code> key follows D4's field table; § Open items item 5 carries the divergence from D4's accessor line, and a resolution there changes this signature and nothing else. <strong>No database engine</strong> — the rationale is recorded in HLD D4; this subtask does not revisit it. Test <code>tests/cra/test_assessment_db.cpp</code>: a record round-trips through <code>upsert</code>/<code>get</code>; the serialized record <strong>validates against <code>schema/cra-assessment-record.schema.json</code></strong> (loaded from disk, not restated in the test); <code>erase</code> removes; the sample at <code>tests/fixtures/cra-assessment-record.json</code> deserializes.</p>
+<p><strong>Acceptance:</strong> ADA build + ctest green on CI; the schema is loaded and enforced by the test, not duplicated.</p>
+<p><strong>Dependencies:</strong> after <code>14.2.5.2</code> + <code>14.2.5.1</code> + <code>18.2.2.3</code>. <strong>Commit:</strong> <code>[14.2.5.3] feat: add the CRA assessment database accessor</code></p>
+<p><strong>Status:</strong> done — AssessmentRecord mirrors the schema's fourteen fields by name (<code>ttcS</code>/<code>lastKnownB</code> as optionals); AssessmentDb defines the 14.2.5.1 forward declaration in <code>ada::cra</code>, keyed (trackId, warningType) per D4's field table (Open item 5 noted at the signature), every upsert mirrored as one <code>assessment</code> [EVT] line; test validates the serialized record against <code>schema/cra-assessment-record.schema.json</code> loaded from disk (minimal in-test validator over the features the schema uses) and round-trips the committed sample; build/tests deferred to CI ada-core-build. The implementing agent's report was lost to a session limit — files verified by planner inspection instead.</p>
+<h3 id="x-14254-plugin-registry-srccraregistryhppcpp-srccrabuiltin_pluginscpp-ai">[x] <code>14.2.5.4</code> — Plugin registry <code>src/cra/registry.{hpp,cpp}</code> + <code>src/cra/builtin_plugins.cpp</code> <em>(AI)</em><a class="headerlink" href="#x-14254-plugin-registry-srccraregistryhppcpp-srccrabuiltin_pluginscpp-ai" title="Link to this section">¶</a></h3>
+<p><strong>Objective:</strong> explicit registration and lookup by <code>warningType</code>, plus the one file an added plugin edits.</p>
+<p><strong>Scope:</strong></p>
+<ul>
+<li><code>registry.add(std::unique_ptr&lt;ICollisionRiskAssessment&gt;)</code>, <code>get(name)</code>, <code>enabled(const std::vector&lt;std::string&gt;&amp;)</code> selecting the subset named by <code>CRA_ENABLED</code>; an unknown name in <code>CRA_ENABLED</code> is a startup error naming it.</li>
+<li><code>builtin_plugins.cpp</code> holds <code>registerBuiltinPlugins(Registry&amp;, const Config&amp;)</code> — <strong>empty in Phase 2</strong>, one <code>registry.add(std::make_unique&lt;ChainedCollision&gt;(cfg))</code> line in Phase 4. <strong>Registration is explicit, not static-init</strong> (D4: a static library's linker discards unreferenced registrar objects).</li>
+<li>Test <code>tests/cra/test_registry.cpp</code>: two fake plugins register and are retrievable by name; duplicate name rejected; <code>CRA_ENABLED</code> selects a subset; an unknown name errors.</li>
+</ul>
+<p><strong>Acceptance:</strong> ADA build + ctest green on CI.</p>
+<p><strong>Dependencies:</strong> after <code>14.2.5.1</code> + <code>13.2.2.1</code>. <strong>Commit:</strong> <code>[14.2.5.4] feat: add the CRA plugin registry and builtin registration point</code></p>
+<p><strong>Status:</strong> done — registry.{hpp,cpp} + builtin_plugins.cpp + tests/cra/test_registry.cpp; get() returns nullptr on unknown (query), enabled() throws RegistryError naming the unknown CRA_ENABLED entry (startup validation, the check config.cpp defers to registry wiring); registerBuiltinPlugins declared in registry.hpp (HLD §4 designates no builtin_plugins.hpp) and empty in Phase 2; build/tests deferred to CI ada-core-build.</p>
+<hr />
+<h2 id="task-group-26-observers-composition-root-mock-drive-serves-r2-r12-r13-r18">Task Group 2.6 — Observers, composition root, mock drive (serves R2, R12, R13, R18)<a class="headerlink" href="#task-group-26-observers-composition-root-mock-drive-serves-r2-r12-r13-r18" title="Link to this section">¶</a></h2>
+<blockquote>
+<p>The input edges and the controller. <strong>No mock branch exists inside <code>src/</code></strong> (D2): Phase 2's mock own-sensor input is the <em>real</em> detector-reader pointed at a JSONL fixture via <code>DETECTOR_CMD</code>, and mock R2 traffic is a real datagram on the real socket. "Toggling the mock off" is <code>DETECTOR_ENABLED=false</code> plus no bench traffic.</p>
+</blockquote>
+<h3 id="x-2261-v2x-listener-srcobserverv2x_listenerhppcpp-ai">[x] <code>2.2.6.1</code> — V2X listener <code>src/observer/v2x_listener.{hpp,cpp}</code> <em>(AI)</em><a class="headerlink" href="#x-2261-v2x-listener-srcobserverv2x_listenerhppcpp-ai" title="Link to this section">¶</a></h3>
+<p><strong>Objective:</strong> the R2 ingress thread — bind <code>V2X_LISTEN_HOST:V2X_LISTEN_PORT</code>, receive datagrams, push onto the input queue.</p>
+<p><strong>Scope:</strong> owns one <code>net::UdpSocket</code>; one RAII-managed thread joined on destruction (no detached threads); each datagram becomes one <code>InputItem{V2xR2, body, rxEpochMs}</code> where <code>rxEpochMs</code> is <code>CLOCK_REALTIME</code> at receive; receive errors are counted and logged, never fatal; <code>stop()</code> is prompt and idempotent. No parsing here. Test <code>tests/observer/test_v2x_listener.cpp</code> (planner-designated path): a loopback datagram on an ephemeral port arrives on the queue byte-identical; clean shutdown with no hang; a queue-full drop is counted.</p>
+<p><strong>Acceptance:</strong> ADA build + ctest green on CI; no socket headers outside <code>src/net/</code>.</p>
+<p><strong>Dependencies:</strong> after <code>6.2.2.2</code> + <code>3.2.2.4</code>. <strong>Commit:</strong> <code>[2.2.6.1] feat: add the R2 UDP listener thread</code></p>
+<p><strong>Status:</strong> done — RAII listener thread over the sole UdpSocket, each datagram one InputItem{V2xR2, body, rxEpochMs}, receive errors counted via receiveErrorCount() (logging is the composition root's, per D2 no-logging-in-class); tests cover byte-identical delivery incl. NUL/0xFF, ordered arrival, idempotent stop, bounded join, deterministic capacity-1 drop count; build/tests deferred to CI ada-core-build.</p>
+<h3 id="x-12262-detector-reader-srcobserverdetector_readerhppcpp-ai-parallel-with-2261">[x] <code>12.2.6.2</code> — Detector reader <code>src/observer/detector_reader.{hpp,cpp}</code> <em>(AI — parallel with 2.2.6.1)</em><a class="headerlink" href="#x-12262-detector-reader-srcobserverdetector_readerhppcpp-ai-parallel-with-2261" title="Link to this section">¶</a></h3>
+<p><strong>Objective:</strong> spawn <code>DETECTOR_CMD</code> and read its stdout as R3 JSONL — the ego side of the D2 process contract (argv + exit codes + JSONL over stdout, no FFI, no RPC).</p>
+<p><strong>Scope:</strong></p>
+<ul>
+<li><code>fork</code>/<code>exec</code> the configured command with a stdout pipe; one reader thread doing <code>getline</code>; each line becomes one <code>InputItem{DetectorR3, line, rxEpochMs}</code>.</li>
+<li>Lifecycle, one rule per step (D2):
+  1. A clean EOF on the child's stdout emits <code>detector_eof</code> and respawns <code>DETECTOR_CMD</code>.
+  2. The clip-level loop is the detector's own, applied by <code>FileFrameSource</code> from <code>DETECTOR_LOOP</code> (D6); this class reads no detector env key and holds no loop flag.
+  3. A non-zero exit emits <code>detector_restart(reason, attempt)</code> and respawns.
+  4. Restarts after a non-zero exit are bounded by <code>DETECTOR_RESTART_MAX</code>; past the bound the class stops respawning and logs terminal failure.
+  5. Each spawn emits <code>detector_spawn</code>.
+  6. <code>DETECTOR_ENABLED=false</code> means no spawn at all, logged once.</li>
+<li>The committed clip is 10 s, and <code>DETECTOR_LOOP</code> defaults to true, so a run longer than the clip is served inside the detector rather than by a respawn.</li>
+<li><strong>Phase 2 drive:</strong> <code>DETECTOR_CMD="cat /app/tests/fixtures/own_sensor_mock.jsonl"</code> — the real reader, a fixture producer. There is no fixture-mode branch in this class.</li>
+<li>Test <code>tests/observer/test_detector_reader.cpp</code> (planner-designated path): a <code>printf</code>/<code>cat</code>-style child's lines all arrive; a clean EOF respawns the child (bounded assertion, injectable sleep); non-zero exit restarts up to the max then stops; <code>DETECTOR_ENABLED=false</code> spawns nothing; child is reaped on destruction (no zombies).</li>
+</ul>
+<p><strong>Acceptance:</strong> ADA build + ctest green on CI; no orphaned child process after the suite.</p>
+<p><strong>Dependencies:</strong> after <code>13.2.2.1</code> + <code>3.2.2.4</code> + <code>18.2.2.3</code>. <strong>Commit:</strong> <code>[12.2.6.2] feat: add the detector subprocess reader</code></p>
+<p><strong>Status:</strong> done — fork/exec with whitespace argv (no shell), one getline reader thread, all six D2 lifecycle rules; injectable respawn hook as the delay/bound point; RAII kill+reap+join with ECHILD zombie check in tests; class reads no env (config values injected); emits a once-per-construction <code>detector_disabled</code> line for the disabled arm — a 13th event name pending D8 ratification (see Open items); build/tests deferred to CI ada-core-build.</p>
+<h3 id="x-3263-mock-drive-equipment-testsfixturesown_sensor_mockjsonl-toolsmock_v2x_senderpy-ai">[x] <code>3.2.6.3</code> — Mock drive equipment: <code>tests/fixtures/own_sensor_mock.jsonl</code> + <code>tools/mock_v2x_sender.py</code> <em>(AI)</em><a class="headerlink" href="#x-3263-mock-drive-equipment-testsfixturesown_sensor_mockjsonl-toolsmock_v2x_senderpy-ai" title="Link to this section">¶</a></h3>
+<p><strong>Objective:</strong> the two Phase 2 stimulus sources — both outside <code>src/</code>.</p>
+<p><strong>Scope:</strong></p>
+<ul>
+<li><code>ADA_ECU/tests/fixtures/own_sensor_mock.jsonl</code>: a hand-written R3 JSONL stream for one own-sensor track <code>own:1</code> at ~5 Hz timestamps, distance walking 40 → 8 m and back out past 35 m, every line validating against the synced <code>contracts/r3-tracked-object.schema.json</code>, <code>source: own_sensor</code>, <code>state: not_tracked</code>. Content chosen to traverse the full R13 lifecycle in both directions.</li>
+<li><code>ADA_ECU/tools/mock_v2x_sender.py</code>: Python 3 stdlib only; sends R2 JSON datagrams to a target <code>host:port</code> from CLI args/env (<strong>no hardcoded peer</strong>); a <code>--profile approaching|out-of-range</code> selecting a distance ramp 70.0 → 20.5 m at 5.0 m/s or a static 60.0 m, mirroring the bench's two committed scenarios (<code>Scenario_Player/scenarios/default.yaml</code>, <code>c-out-of-range.yaml</code>) — the approach values are the R22 demo geometry those files carry (<a href="documents-design-scenario-player-scenario-player-design-decisions.html#d7--the-demo-cycle-is-one-clip-length-and-its-geometry-is-solved-backwards-from-the-first-warning">SP D7</a>), read from the YAML rather than re-derived; configurable rate and count; one stdout line per datagram for correlation. Bodies validate against the synced <code>contracts/r2-v2x-object.schema.json</code>.</li>
+<li>Test equipment only — never enters the image (<code>.dockerignore</code>, <code>5.2.7.1</code>).</li>
+</ul>
+<p><strong>Acceptance:</strong> <code>python -m py_compile ADA_ECU/tools/mock_v2x_sender.py</code> passes; the script's <code>--validate</code> self-check reports every fixture line valid against the synced R3 schema and every generated body valid against the synced R2 schema (both loaded from <code>ADA_ECU/contracts/</code>, never restated); a loopback self-check receives every datagram byte-identical — evidence in the Status line.</p>
+<p><strong>Dependencies:</strong> none. <strong>Commit:</strong> <code>[3.2.6.3] feat: add the Phase 2 mock own-sensor fixture and R2 sender</code></p>
+<p><strong>Status:</strong> done — <code>py_compile</code> clean; <code>--validate</code>: 61/61 fixture lines valid vs synced R3 schema, 100/100 approaching + 200/200 out-of-range bodies valid vs synced R2 schema (schemas loaded from <code>ADA_ECU/contracts/</code>); <code>--loopback</code>: 100+200 datagrams byte-identical on 127.0.0.1; profiles read geometry from the two committed scenario YAMLs (70.0→20.5 m @ 5.0 m/s; static 60.0 m); no hardcoded peer (env <code>ADA_ECU_HOST</code>/<code>ADA_ECU_PORT</code> or CLI).</p>
+<h3 id="x-13264-composition-root-srcmaincpp-ada_ecu-executable-ai">[x] <code>13.2.6.4</code> — Composition root <code>src/main.cpp</code> + <code>ada_ecu</code> executable <em>(AI)</em><a class="headerlink" href="#x-13264-composition-root-srcmaincpp-ada_ecu-executable-ai" title="Link to this section">¶</a></h3>
+<p><strong>Objective:</strong> assemble config → event log → registry → observers → queue → parsers → store, and run the fusion tick — controller only, no rules (HLD §8 MVC mapping).</p>
+<p><strong>Scope:</strong></p>
+<ul>
+<li>Load <code>Config</code> (exit non-zero with a message on invalid env); construct <code>EventLog</code>, <code>TrackStore</code>, <code>AssessmentDb</code>, <code>Registry</code> + <code>registerBuiltinPlugins</code> (empty in Phase 2), <code>V2xListener</code>, <code>DetectorReader</code>.</li>
+<li>Main loop: <code>pop</code> from the queue → route by source to <code>r2_parser</code> / <code>r3_parser</code> → <code>parse_reject</code> on failure (counted, never fatal) → <code>store.apply(update)</code> → <code>r2_ingest</code> / <code>own_sensor_ingest</code> event. Every <code>FUSION_TICK_MS</code>, call <code>store.expire(now)</code>; the CRA assessment call is added in Phase 4 (<code>15.4.2.3</code>).</li>
+<li><strong>The main thread is the single writer</strong> of the store (D2). SIGTERM/SIGINT → stop observers, join threads, flush the log, exit 0. Documented exit codes.</li>
+<li><code>add_executable(ada_ecu src/main.cpp …)</code> in <code>ADA_ECU/CMakeLists.txt</code>. No new unit-test file — acceptance is the full existing suite plus the link of the complete chain; run-level evidence is <code>13.2.8.2</code>.</li>
+</ul>
+<p><strong>Acceptance:</strong> ADA build + ctest green on CI; the <code>ada_ecu</code> target builds and links.</p>
+<p><strong>Dependencies:</strong> after <code>13.2.2.1</code> + <code>2.2.6.1</code> + <code>12.2.6.2</code> + <code>2.2.3.1</code> + <code>3.2.3.2</code> + <code>13.2.4.3</code> + <code>14.2.5.4</code>. <strong>Commit:</strong> <code>[13.2.6.4] feat: add the ada_ecu composition root</code></p>
+<p><strong>Status:</strong> done — composition root assembled per HLD §8/D2, single-writer loop + fusion tick + signal-clean shutdown (exit codes documented); CRA_ENABLED validated via enabled() only when the registry is non-empty (planner ruling — config.cpp:207 defers the check to wiring; Phase 4's first builtin activates it); queue capacity and listener poll timeout are file-local constexpr structural bounds flagged as planner-designated, not gate constants; build/link deferred to CI ada-core-build.</p>
+<h3 id="x-18265-evt-stream-checker-toolscheck_evt_logpy-ai">[x] <code>18.2.6.5</code> — <code>[EVT]</code>-stream checker <code>tools/check_evt_log.py</code> <em>(AI)</em><a class="headerlink" href="#x-18265-evt-stream-checker-toolscheck_evt_logpy-ai" title="Link to this section">¶</a></h3>
+<p><strong>Objective:</strong> the scripted assertion that turns a saved <code>[EVT]</code> stream into a pass/fail — the ADA counterpart of <code>tools/comms_check/check_v2x_log.py</code>, reused on-platform and in CI.</p>
+<p><strong>Scope:</strong></p>
+<ul>
+<li>Python 3 stdlib; input = file path or stdin; tolerates interleaved <code>[CAP]</code> and non-<code>[EVT]</code> lines (View Log exports carry both).</li>
+<li><strong>Phase 2 mode <code>--admission</code>:</strong> every <code>r2_ingest</code> / <code>own_sensor_ingest</code> is followed by store state consistent with the diagram; the observed <code>track_transition</code> sequence per track id is a legal path through <a href="../../documents/Design/ADA-ECU/phase2-4-ada-ecu-admission.puml">the state machine</a> (no <code>not_tracked → tracked</code> jump, no promotion before <code>CONFIRM_HITS</code> in-gate updates, no drop inside the hysteresis band); at least one full <code>not_tracked → tentative → tracked → not_tracked</code> cycle observed per named source; non-zero exit naming the first illegal edge.</li>
+<li><strong>Mode <code>--expect-no-tracks</code>:</strong> exit non-zero if any <code>track_transition</code> appears — the "mock off yields no tracks" arm.</li>
+<li><strong>An empty input is never a pass</strong> — zero <code>[EVT]</code> lines exits non-zero. Phase 4 extends this script with the risk/emission chain (<code>18.4.3.3</code>); the modes are additive.</li>
+</ul>
+<p><strong>Acceptance:</strong> <code>python -m py_compile</code> passes; demonstrated exit 0 on a synthetic conforming log and non-zero on each of: an illegal edge, an early promotion, a mid-band drop, and a log with zero <code>[EVT]</code> lines — evidence in the Status line.</p>
+<p><strong>Dependencies:</strong> after <code>18.2.2.3</code> (field names freeze there). <strong>Commit:</strong> <code>[18.2.6.5] feat: add the ADA EVT-stream admission checker</code></p>
+<p><strong>Status:</strong> done — py_compile exit 0; demonstrated exit 0 on a conforming synthetic log (full NT→TE→TR→NT cycle, band refresh) and non-zero naming the first illegal edge on each of: NT→TR jump, TR→NT drop at 33 m inside the (30, 35] band, and a zero-<code>[EVT]</code> input; <code>--expect-no-tracks</code> 0/1 arms and <code>--min-transitions</code> vacuous-pass block demonstrated; vocabulary admits <code>detector_disabled</code> as a 13th name pending D8 ratification; mode dispatch is an additive registry for Phase 4's <code>--fusion</code>. <strong>Fix after the first lane run:</strong> promotion hit-counts are not stream-observable (13.2.4.3 ruling — self-loops emit nothing), so the checker asserts chain continuity and in-gate distance on TE→TR instead of an early-promotion count; that property is owned by <code>test_admission_own_sensor.cpp</code>.</p>
+<hr />
+<h2 id="task-group-27-image-and-entrypoint-serves-r5-hld-d9">Task Group 2.7 — Image and entrypoint (serves R5; HLD D9)<a class="headerlink" href="#task-group-27-image-and-entrypoint-serves-r5-hld-d9" title="Link to this section">¶</a></h2>
+<h3 id="x-5271-ada_ecudockerfile-entrypointsh-dockerignore-ai">[x] <code>5.2.7.1</code> — <code>ADA_ECU/Dockerfile</code> + <code>entrypoint.sh</code> + <code>.dockerignore</code> <em>(AI)</em><a class="headerlink" href="#x-5271-ada_ecudockerfile-entrypointsh-dockerignore-ai" title="Link to this section">¶</a></h3>
+<p><strong>Objective:</strong> the deployable <code>m1-ada-ecu:latest</code> image — two stages, <strong>one base</strong>, single-platform <code>linux/arm64</code> (D9).</p>
+<p><strong>Scope:</strong></p>
+<ul>
+<li>Both stages on <code>python:3.11-slim</code>, per <a href="documents-design-ada-ecu-ada-ecu-design-decisions.html#d9--deployment-shape">HLD D9</a> — it is the report's Python 3.11 for the detector <em>and</em> the C++ build base, so the binary links against the glibc and libstdc++ it runs on by construction. No Vanetza on this node, so apt's cmake (3.22+) suffices.</li>
+<li>The two stages, step by step:
+  1. Build stage: apt-install cmake, g++ and git.
+  2. Build stage: configure and build the <code>ada_ecu</code> target only, with the test targets excluded from the image build.
+  3. Runtime stage: apt-install <code>tcpdump</code> and <code>coreutils</code> (for base64), which the Phase 4 capture needs.
+  4. Runtime stage: copy in <code>/app/ada_ecu</code> and <code>/app/entrypoint.sh</code>, and set workdir <code>/app</code>.
+  5. Write no <code>COPY</code> line for <code>media/</code>, <code>models/</code> or <code>detector/</code>.
+  6. Keep <code>tools/</code>, <code>tests/</code>, <code>doc/</code> and <code>schema/</code> out of the runtime stage.</li>
+</ul>
+<p>Step 5 is a layer-ordering constraint, not an omission: <code>media/</code> is Phase 3 <code>12.3.7.2</code>'s single line, and <code>models/</code> plus <code>detector/</code> are <code>5.3.6.1</code>'s, in that order, so the rarely-changing blobs sit above the code layer.
+- <code>entrypoint.sh</code>: <code>[ -x ./capture.sh ] &amp;&amp; ./capture.sh &amp;</code> then <code>exec ./ada_ecu</code> — the guard exists because <code>capture.sh</code> lands in Phase 4 (<code>6.4.4.1</code>); the blueprint <code>command</code> is <code>["./entrypoint.sh"]</code> from now on, so the node config does not change again when capture arrives.
+- <code>.dockerignore</code> keeps <code>doc/</code>, <code>tests/</code>, <code>tools/</code>, <code>schema/</code>, <code>build/</code>, <code>detector/requirements-dev.txt</code> and <code>media/source/</code> out of the build context — and <strong>must not exclude <code>media/</code> itself</strong>.
+- No <code>ENV</code> lines shadowing <a href="documents-design-ada-ecu-ada-ecu-hld.html#6-internal-components">HLD §6</a> defaults — the blueprint injects env.</p>
+<p><strong>Acceptance:</strong> <code>sh -n</code> and <code>bash -n</code> clean on <code>entrypoint.sh</code>, LF line endings, exec bit set; CI <code>ada-ecu-image</code> lane (<code>5.2.8.1</code>) green — <code>docker buildx build --platform linux/arm64 --provenance=false --sbom=false -t m1-ada-ecu:latest ADA_ECU/</code> succeeds. <code>--platform</code> and the disabled attestations are a standing requirement: a Container Node rejects a multi-platform manifest index and hangs in Provisioning (<a href="plans-doc-phase0-smoke-test-run.html">phase0-smoke-test-run.md</a>).</p>
+<p><strong>Dependencies:</strong> after <code>13.2.6.4</code> + <code>5.2.8.1</code> (the lane must exist to verify). <strong>Commit:</strong> <code>[5.2.7.1] feat: add the ADA ECU Dockerfile and entrypoint</code></p>
+<p><strong>Status:</strong> done — Dockerfile (one base <code>python:3.11-slim</code>, two stages, target-scoped <code>--target ada_ecu</code>, layer slot reserved for Phase 3 media/models/detector) + entrypoint.sh (<code>sh -n</code>/<code>bash -n</code> clean, LF, capture guard + <code>exec ./ada_ecu</code>) + .dockerignore; <strong>divergence, implemented working form:</strong> <code>tests/</code> stays in the build context (<code>ada_add_test</code> resolves sources at configure time, no toggle exists) and never reaches the runtime stage — the scope bullet's <code>.dockerignore keeps tests/ out</code> line is thereby overridden; exec bit recorded via <code>git update-index --chmod=+x</code>; image build pending CI <code>ada-ecu-image</code> on the pushed branch.</p>
+<hr />
+<h2 id="task-group-28-ci-lanes-serves-r5-r13-workflow-file-edits">Task Group 2.8 — CI lanes (serves R5, R13; workflow-file edits)<a class="headerlink" href="#task-group-28-ci-lanes-serves-r5-r13-workflow-file-edits" title="Link to this section">¶</a></h2>
+<blockquote>
+<p>Two files, per § CI ruling: <code>5.2.8.1</code> writes <code>.github/workflows/phase4-ci.yml</code> (the node-artifact lane), <code>13.2.8.2</code> creates <code>.github/workflows/phase2-ci.yml</code>. Both lanes land <strong>before</strong> their consumers, guarded on file existence like the Phase 0/1 jobs, so consuming subtasks have CI acceptance from day one. <code>.github/workflows/</code> is explicitly in these two subtasks' write scope and no other's in this phase.</p>
+</blockquote>
+<h3 id="x-5281-lane-ada-ecu-image-in-phase4-ciyml-ai">[x] <code>5.2.8.1</code> — Lane <code>ada-ecu-image</code> in <code>phase4-ci.yml</code> <em>(AI)</em><a class="headerlink" href="#x-5281-lane-ada-ecu-image-in-phase4-ciyml-ai" title="Link to this section">¶</a></h3>
+<p><strong>Objective:</strong> arm64 image build and gated push for the ADA node image; <code>v2x-ecu-image</code> in <a href="../../.github/workflows/phase1-ci.yml">phase1-ci.yml</a> is the template. This lane builds <code>m1-ada-ecu:latest</code>, the image Phase 4's isolated Room deploys. No other route builds it.</p>
+<p><strong>Scope — create <code>.github/workflows/phase4-ci.yml</code> (if absent) and one job in it:</strong></p>
+<ol>
+<li>Create the file with the same <code>on:</code> and <code>concurrency:</code> blocks as phase1-ci.yml.</li>
+<li>Add a header comment naming what the file carries and why, following the Phase 1 file's convention.</li>
+<li>Add one job <code>ada-ecu-image</code>, mirroring <code>v2x-ecu-image</code> in shape.</li>
+<li>Set up qemu and buildx in that job.</li>
+<li>Build with <code>docker buildx build --platform linux/arm64 --provenance=false --sbom=false -t registry.hackathon-2.carsky.io/m1-ada-ecu:latest ADA_ECU/</code> — the registry tag of § Per-node build commands, whose local form is <code>m1-ada-ecu:latest</code>.</li>
+<li>Push only when <code>CARSKY_ZOT_API_KEY</code> exists, using the same login step and notice-and-exit-0 guard.</li>
+<li>Give the job its own buildx <code>type=gha</code> cache scope.</li>
+<li>Verify the pushed artifact through the existing <code>.github/actions/verify-arm64-image</code> composite.</li>
+<li>Guard the job to skip with a notice while <code>ADA_ECU/Dockerfile</code> is absent.</li>
+<li>Set <code>timeout-minutes: 360</code>, matching the existing arm64 image lanes in phase1-ci.yml.</li>
+</ol>
+<p><strong>D9's in-image detector check is not this subtask's.</strong> <a href="documents-design-ada-ecu-ada-ecu-design-decisions.html#d9--deployment-shape">D9</a> ends the image lane by starting <code>detector/main.py --synthetic</code> inside the pulled <code>linux/arm64</code> image and observing R3 JSONL on stdout. The detector first enters the image in Phase 3 <code>5.3.6.1</code>, and that step lands with it.</p>
+<p><strong>Acceptance:</strong> workflow YAML valid; run-blocks <code>bash -n</code> clean; lane green on the current tree (guard branch) — goes live when <code>5.2.7.1</code> lands.</p>
+<p><strong>Dependencies:</strong> none — lands immediately. <strong>Commit:</strong> <code>[5.2.8.1] chore: add the ADA ECU image build-push CI lane</code></p>
+<p><strong>Status:</strong> done — <code>.github/workflows/phase4-ci.yml</code> created (job <code>ada-ecu-image</code>, guard branch active while <code>ADA_ECU/Dockerfile</code> is absent); YAML parses via <code>yaml.safe_load</code>, both bash <code>run:</code> blocks <code>bash -n</code> clean, LF endings (zero CR bytes).</p>
+<h3 id="x-13282-lane-ada-loopback-check-ai">[x] <code>13.2.8.2</code> — Lane <code>ada-loopback-check</code> <em>(AI)</em><a class="headerlink" href="#x-13282-lane-ada-loopback-check-ai" title="Link to this section">¶</a></h3>
+<p><strong>Objective:</strong> the repeatable form of the Phase 2 "mock-driven transitions observable in logs; mock off yields no tracks" box.</p>
+<p><strong>Scope — create <code>.github/workflows/phase2-ci.yml</code> (same <code>on:</code>/<code>concurrency:</code>/header convention as phase1-ci.yml) with one job <code>ada-loopback-check</code>, its steps in this order:</strong></p>
+<ol>
+<li>Build the <code>ada_ecu</code> target.</li>
+<li>Run A: start <code>ada_ecu</code> with <code>DETECTOR_ENABLED=true</code>, <code>DETECTOR_CMD="cat ADA_ECU/tests/fixtures/own_sensor_mock.jsonl"</code> and <code>IVI_ECU_HOST=127.0.0.1</code>, capturing stdout to a file.</li>
+<li>Run A: drive <code>python ADA_ECU/tools/mock_v2x_sender.py --profile approaching</code> at the node's listen port.</li>
+<li>Run A: send SIGTERM and wait for the process to exit.</li>
+<li>Run A: assert <code>python ADA_ECU/tools/check_evt_log.py --admission</code> exits 0 over the captured stdout, passing a minimum transition count so the check cannot pass vacuously.</li>
+<li>Run B: start the same binary with <code>DETECTOR_ENABLED=false</code> and start no sender, capturing stdout.</li>
+<li>Run B: assert <code>python ADA_ECU/tools/check_evt_log.py --expect-no-tracks</code> exits 0 over that capture.</li>
+<li>Fail the job on any non-zero exit from steps 1–7.</li>
+</ol>
+<p><strong>Acceptance:</strong> lane green on the pushed branch; run A observes at least one complete <code>tentative → tracked → not_tracked</code> cycle per source.</p>
+<p><strong>Dependencies:</strong> after <code>13.2.6.4</code> + <code>3.2.6.3</code> + <code>18.2.6.5</code>. <strong>Commit:</strong> <code>[13.2.8.2] chore: add the ADA loopback admission CI lane</code></p>
+<p><strong>Status:</strong> done — <code>.github/workflows/phase2-ci.yml</code> created (job <code>ada-loopback-check</code>, runs A+B with bounded polls — readiness on first <code>[EVT]</code> line, expiry on <code>track_expire</code> — and R18 checker verdicts <code>--admission --min-transitions 6</code> / <code>--expect-no-tracks</code>); run math documented from the committed scenario sources (gate crossed at datagram 80, t≈8.0 s); the fixture drive is a two-line paced wrapper (<code>cat &lt;fixture&gt;; sleep 1</code>) rather than bare <code>cat</code>, because the reader respawns on clean EOF without backoff; YAML parses, all run blocks <code>bash -n</code> clean, LF-only — lane verification pending the pushed-branch run.</p>
+<hr />
+<h2 id="task-group-29-video-input-preflight-spec-delivery-node-guide-serves-r12-r5">Task Group 2.9 — Video input: preflight, spec delivery, node guide (serves R12, R5)<a class="headerlink" href="#task-group-29-video-input-preflight-spec-delivery-node-guide-serves-r12-r5" title="Link to this section">¶</a></h2>
+<blockquote>
+<p>The clip is an input, not a deliverable of this group: <code>ADA_ECU/media/ego-b-occluding-c.mp4</code> with its provenance sidecar, committed by Phase 3 <code>12.3.7.1</code>. This group owns the machine-checkable preflight over it, the delivery of the spec proposal that closes a milestone box, and the node guide's env rows.</p>
+</blockquote>
+<h3 id="x-12291-clip-preflight-toolscheck_clip_specpy-ai">[x] <code>12.2.9.1</code> — Clip preflight <code>tools/check_clip_spec.py</code> <em>(AI)</em><a class="headerlink" href="#x-12291-clip-preflight-toolscheck_clip_specpy-ai" title="Link to this section">¶</a></h3>
+<p><strong>Objective:</strong> the research note KPI 1 <em>(deprecated)</em> made executable — reject a non-conforming clip naming the failing attribute, and pass on the committed one.</p>
+<p><strong>Scope:</strong></p>
+<ul>
+<li>Python 3 at <code>ADA_ECU/tools/check_clip_spec.py</code>; reads a video path and checks the machine-checkable rows of the §3 spec table <em>(deprecated)</em>: container MP4, codec H.264, resolution 1280×720, constant frame rate 20 fps, file ≤ 60 MB, no audio track — plus a decode pass proving OpenCV reads ≥ 99% of the declared frame count with zero errors (KPI 2).</li>
+<li><strong>Duration default is 10–120 s, an interim value.</strong> The committed clip is 10.0 s / 200 frames. B is the lead vehicle only between t≈6 s and t≈16 s of the source. A run longer than the clip comes from looping (<code>DETECTOR_LOOP=true</code>) rather than from different footage — reasoning in <a href="ada-ecu-media-ego-b-occluding-c-source.html">the sidecar § The remaining deviation</a>. The research note's §3 duration row reads 60–120 s, and § Open items item 6 carries that reconciliation to [[project-researcher]].</li>
+<li>Every expected value comes from CLI flags/env with those defaults — <strong>no literals</strong>.</li>
+<li>Probe via <code>ffprobe</code> when present, falling back to OpenCV properties with a clear notice; exit 1 listing every failing attribute with actual-vs-expected; exit 0 with a one-line summary otherwise.</li>
+<li><strong>Out of scope — the content rows.</strong> "B occludes the lane at 10–40 m in ≥ 90% of frames" and "no vehicle ahead of B in the ego lane" are human judgements recorded in the sidecar's § Content verdict; this script must not claim to verify them.</li>
+<li>Test <code>ADA_ECU/tools/tests/test_check_clip_spec.py</code> (planner-designated path, § Open items item 2): synthesize small conforming and non-conforming clips with OpenCV; assert exit codes and the named failing attribute.</li>
+</ul>
+<p><strong>Acceptance:</strong> <code>python -m py_compile</code> passes; the test passes <strong>locally</strong>, per the <code>ADA_ECU/tools/</code> row of § Per-node build commands; <strong>and the script exits 0 on <code>ADA_ECU/media/ego-b-occluding-c.mp4</code></strong> with its summary recorded in the Status line. No CI lane covers this test — <code>python-tests</code> collects <code>Scenario_Player/tests</code> and <code>ADA_ECU/detector/tests</code> only, and installs neither the OpenCV this test needs to synthesize clips.</p>
+<p><strong>Dependencies:</strong> none. <strong>Commit:</strong> <code>[12.2.9.1] feat: add the R12 clip preflight checker</code></p>
+<p><strong>Status:</strong> done — py_compile OK; <code>pytest ADA_ECU/tools/tests -q</code> = 12 passed, 1 skipped (ffprobe-gated); real clip exit 0: <code>OK ego-b-occluding-c.mp4: container=mp4 codec=h264 1280x720 20.00fps decoded=200/200 frames (100.0%) duration=10.00s size=5.02MiB probe=opencv skipped=frame_rate_constant,audio</code> — the two skips are honest OpenCV-fallback limits (no ffprobe on this host), never false passes. Verified with official x64 CPython 3.12.10 under WoA emulation — PyPI has no win_arm64 OpenCV wheel.</p>
+<h3 id="x-12292-send-the-video-input-proposal-to-fpt-mentor-human">[x] <code>12.2.9.2</code> — Send the video-input proposal to FPT-Mentor <em>(Human)</em><a class="headerlink" href="#x-12292-send-the-video-input-proposal-to-fpt-mentor-human" title="Link to this section">¶</a></h3>
+<p><strong>Objective:</strong> the milestone acceptance clause "video-input proposal sent to FPT-Mentor".</p>
+<p><strong>Scope — four steps, all performed by the person:</strong></p>
+<ol>
+<li>Send video-source-for-r12.md §3 <em>(deprecated)</em> to FPT-Mentor — the format / frame rate / data rate table with its <code>assume</code> markers, and the KPI list beneath it.</li>
+<li>Ask for confirmation or correction of the proposed values.</li>
+<li>State in the message that the committed clip is 10.0 s and that a longer run comes from looping, so any correction is against what exists.</li>
+<li>Record the send in <code>plans/doc/phase2-ada-scaffold-run.md</code> — created by this subtask — with the date and any reply.</li>
+</ol>
+<p>Nothing new is authored; the note is the artifact.</p>
+<p><strong>This requests confirmation of a spec, not footage, and blocks nothing.</strong> The clip is sourced, encoded, licence-cleared and committed (<a href="ada-ecu-media-ego-b-occluding-c-source.html">sidecar</a>), so every Phase 3 subtask proceeds without waiting for a reply.</p>
+<p><strong>Acceptance:</strong> step 4's record exists in <code>plans/doc/phase2-ada-scaffold-run.md</code>, carrying the date and any reply. The evidence commit is the orchestrator's, made once the person confirms the send.</p>
+<p><strong>Dependencies:</strong> none — send it early; it has the longest external latency and no dependant. <strong>Commit:</strong> <code>[12.2.9.2] docs: record the video-input proposal sent to FPT-Mentor</code></p>
+<p><strong>Status:</strong> done — user-confirmed 2026-08-04: proposal sent to FPT-Mentor and the committed clip <code>ADA_ECU/media/ego-b-occluding-c.mp4</code> confirmed as the file to use; record in <a href="plans-doc-phase2-ada-scaffold-run.html">doc/phase2-ada-scaffold-run.md</a>; evidence commit by the orchestrator.</p>
+<h3 id="5294-add-the-6-env-rows-to-node-ada-ecumd-ai-writes-in-requirementscar-sky-guide">[ ] <code>5.2.9.4</code> — Add the §6 env rows to <code>node-ada-ecu.md</code> <em>(AI — writes in <code>requirements/car-sky-guide/</code>)</em><a class="headerlink" href="#5294-add-the-6-env-rows-to-node-ada-ecumd-ai-writes-in-requirementscar-sky-guide" title="Link to this section">¶</a></h3>
+<p><strong>Objective:</strong> the guide's § Blueprint node config carries the full HLD §6 env set, so a human configures the node once from one table.</p>
+<p><strong>Scope — <a href="requirements-car-sky-guide-node-ada-ecu.html">node-ada-ecu.md</a> § Blueprint node config only, additive:</strong></p>
+<ul>
+<li>Env rows added to the existing five: <code>V2X_LISTEN_HOST</code>, <code>CONFIRM_HITS</code>, <code>TRACK_TIMEOUT_MS</code>, <code>FUSION_TICK_MS</code>, <code>DETECTOR_ENABLED</code>, <code>DETECTOR_CMD</code>, <code>DETECTOR_LOOP</code>, <code>DETECTOR_RESTART_MAX</code>, <code>VIDEO_CLIP_PATH</code> (<code>/app/media/ego-b-occluding-c.mp4</code>), <code>DETECTOR_FRAME_STRIDE</code> (<code>4</code>), <code>DETECTOR_REALTIME_PACING</code> (<code>true</code>), <code>DETECTOR_CLIP_FPS</code> (<code>20.0</code>), <code>DETECTOR_START_DELAY_S</code> (<code>0.0</code>), <code>MODEL_PATH</code>, <code>CONF_THRESHOLD</code>, <code>IOU_THRESHOLD</code>, <code>TRACK_IOU_MIN</code>, <code>VEHICLE_WIDTH_M</code>, <code>CAMERA_HFOV_DEG</code>, <code>CRA_ENABLED</code>, <code>RISK_NEAR_M</code>, <code>RISK_CRITICAL_M</code>, <code>RISK_TTC_WARN_S</code>, <code>RISK_TTC_CRITICAL_S</code>, <code>RISK_DWELL_MS</code>, <code>STATE_RATE_HZ</code>, <code>EVENT_LOG_PATH</code>, <code>ASSESS_LOG_EVERY_MS</code>, <code>CAPTURE_FILTER</code>, <code>PCAP_DIR</code>, <code>CAPTURE_ROTATE_S</code>. Values = the <a href="documents-design-ada-ecu-ada-ecu-hld.html#6-internal-components">HLD §6</a> defaults; the table there is the authority and is referenced, not duplicated in prose.</li>
+<li><strong>Change nothing else.</strong> The guide carries <code>command: ["./entrypoint.sh"]</code>, <code>capabilities: ["NET_RAW"]</code> and the <code>registry.hackathon-2.carsky.io</code> host. Leave them unchanged. Pins unchanged: exactly one <code>ethernet</code> <code>OUTPUT</code> pin at <code>10.99.0.12</code>, <strong>no <code>video</code> pin</strong> (the clip is baked into the image; research note §1 <em>(deprecated)</em>). No frozen contract moves.</li>
+</ul>
+<p><strong>This subtask blocks nothing.</strong> The env values a human types into the isolated Room come from <code>5.4.9.1</code>'s <code>blueprint-ada-isolated.json</code> and are diffed by <code>5.4.10.6</code>, not from this guide.</p>
+<p><strong>Acceptance:</strong> the JSON block is valid JSON; every env name matches <code>src/config/config.cpp</code> and <code>detector/config.py</code> character for character; links resolve. Doc-only — no build target.</p>
+<p><strong>Dependencies:</strong> after <code>13.2.2.1</code> (core env names freeze there) + Phase 3 <code>12.3.2.1</code> (detector env names). <strong>Commit:</strong> <code>[5.2.9.4] docs: add the phase 2-4 env rows to the ADA node guide</code></p>
+<hr />
+<h2 id="execution-order-parallelism">Execution order &amp; parallelism<a class="headerlink" href="#execution-order-parallelism" title="Link to this section">¶</a></h2>
+<p>Dependencies are real (files, frozen interfaces, CI lanes) — not default assumptions. At run time everything executes sequentially in one working tree (§ Subtask discipline); the lanes below are the logical structure.</p>
+<pre><code>Human       12.2.9.2 (longest external latency)                 (no dependant - schedule first)
+Docs        5.2.1.3                                             (anytime)
+CI-first    5.2.8.1                                             (guarded lane - lands before 5.2.7.1)
+
+foundation  13.2.2.1 ∥ 6.2.2.2 ∥ 18.2.2.3 ∥ 3.2.2.4
+parsers     2.2.3.1 ∥ 3.2.3.2 ──► 3.2.3.3
+store       3.2.4.1 ; 13.2.4.2 (after 13.2.2.1) ──► 13.2.4.3 (also needs 3.2.4.1 + 18.2.2.3)
+CRA         14.2.5.2 ──► 14.2.5.1 (after 3.2.4.1) ──► 14.2.5.3 ──► 14.2.5.4
+observers   2.2.6.1 (after 6.2.2.2 + 3.2.2.4) ∥ 12.2.6.2 (after 13.2.2.1 + 3.2.2.4 + 18.2.2.3)
+equipment   3.2.6.3 ∥ 18.2.6.5 (after 18.2.2.3) ∥ 12.2.9.1      (anytime)
+assembly    13.2.6.4 (after 13.2.2.1 + 2.2.6.1 + 12.2.6.2 + 2.2.3.1 + 3.2.3.2 + 13.2.4.3 + 14.2.5.4)
+verify      13.2.8.2 (after 13.2.6.4 + 3.2.6.3 + 18.2.6.5)
+image       5.2.7.1 (after 13.2.6.4 + 5.2.8.1)
+guide       5.2.9.4 (after 13.2.2.1 + phase-3 12.3.2.1)
+</code></pre>
+<p><strong>Recommended runtime order (single tree):</strong> 12.2.9.2 <em>(Human)</em> → 5.2.8.1 → 5.2.1.3 → 13.2.2.1 → 6.2.2.2 → 18.2.2.3 → 3.2.2.4 → 2.2.3.1 → 3.2.3.2 → 3.2.3.3 → 3.2.4.1 → 13.2.4.2 → 13.2.4.3 → 14.2.5.2 → 14.2.5.1 → 14.2.5.3 → 14.2.5.4 → 2.2.6.1 → 12.2.6.2 → 3.2.6.3 → 18.2.6.5 → 13.2.6.4 → 13.2.8.2 → 5.2.7.1 → 12.2.9.1 → 5.2.9.4.</p>
+<p><strong>Phase 3 and Phase 4 relative to this phase.</strong> Both run in parallel after Phase 2 (<a href="documents-plan-milestone1-high-level-plan.html#3-development-plan--order-of-implementation">milestone1_high_level_plan.md §3</a>), and neither needs the other. Phase 4 needs groups 2.2–2.6 (store, admission, CRA seam, main loop) plus <code>5.2.7.1</code>; Phase 3 needs only the frozen <code>detector/contracts/tracked_object.py</code> from Phase 0 and the <code>DETECTOR_CMD</code> contract from <code>12.2.6.2</code>.</p>
+<h2 id="acceptance-traceability">Acceptance traceability<a class="headerlink" href="#acceptance-traceability" title="Link to this section">¶</a></h2>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Milestone Phase 2 box</th>
+<th>Closed by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Store exposes all R3 fields; both entry shapes use the identical interface (R3)</td>
+<td><code>3.2.4.1</code> (nine-field round-trip + same-<code>upsert</code> case) · <code>2.2.3.1</code> · <code>3.2.3.2</code></td>
+</tr>
+<tr>
+<td>Mock-driven transitions observable and matching the diagram; mock off ⇒ no tracks</td>
+<td><code>13.2.4.2</code> · <code>13.2.4.3</code> · <code>18.2.2.3</code> (<code>track_transition</code>) · <code>18.2.6.5</code> · <code>13.2.8.2</code> (both arms)</td>
+</tr>
+<tr>
+<td>C admitted only within <code>gate_enter</code>, dropped only beyond <code>gate_exit</code> or after <code>miss_limit</code>, no flicker</td>
+<td><code>13.2.4.3</code> boundary + oscillation + timeout cases</td>
+</tr>
+<tr>
+<td>Gate constants from configuration, no literals</td>
+<td><code>13.2.2.1</code> (sole env reader) · <code>5.2.9.4</code> (blueprint injection)</td>
+</tr>
+<tr>
+<td>CRA database schema committed</td>
+<td><code>14.2.5.2</code> (schema) · <code>14.2.5.3</code> (accessor + schema-enforcing test)</td>
+</tr>
+<tr>
+<td>Video-input proposal sent to FPT-Mentor</td>
+<td><code>12.2.9.2</code> — the artifact is the committed research note §3</td>
+</tr>
+<tr>
+<td><strong>Demo:</strong> build + CI round-trip tests green on the frozen contracts</td>
+<td><code>ada-core-build</code> green per subtask · <code>5.2.8.1</code> · <code>13.2.8.2</code> · Phase 0 <code>tests/contracts/</code> unchanged</td>
+</tr>
+<tr>
+<td><em>(phase task, no box)</em> R14 abstraction stood up</td>
+<td><code>14.2.5.1</code> · <code>14.2.5.4</code> — the plugin itself is Phase 4 (<code>14.4.1.2</code>)</td>
+</tr>
+<tr>
+<td><em>(phase task, no box)</em> ADA half of the R18 stream starts</td>
+<td><code>18.2.2.3</code> · emission in <code>13.2.4.3</code> / <code>13.2.6.4</code></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Every Phase 2 box closes off-platform.</strong> No box here needs a Room, a registry or a person beyond <code>12.2.9.2</code>'s send.</p>
+<h2 id="open-items-flags-no-phase-2-subtask-may-silently-close-them">Open items &amp; flags (no Phase 2 subtask may silently close them)<a class="headerlink" href="#open-items-flags-no-phase-2-subtask-may-silently-close-them" title="Link to this section">¶</a></h2>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Item</th>
+<th>Owner / closes at</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong><code>miss_limit</code> semantics — the user's re-ratification.</strong> <a href="documents-plan-milestone1-high-level-plan.html#track-admission-gate-r13">milestone1_high_level_plan.md §4</a> words M as "consecutive missed updates (proposed 5)". <a href="documents-design-ada-ecu-ada-ecu-design-decisions.html#d3--r13-admission-one-state-machine-both-sources">HLD D3</a> realizes it as wall-clock <code>TRACK_TIMEOUT_MS = 1000 ms</code> and carries the argument for the change of form. Implementation proceeds on the wall-clock form. <strong>Trigger:</strong> the question goes to the user at the same point in the schedule as <code>12.2.9.2</code>, before the first subtask starts — the phase's two outbound actions leave together. An answer arriving after <code>13.2.4.3</code> is done is taken up as new work under a new ID</td>
+<td><strong>user</strong></td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>Planner-designated paths and surfaces beyond the HLD's explicit lists</strong>, named per the folder's own conventions: <code>tests/config/</code>, <code>tests/net/</code>, <code>tests/log/</code>, <code>tests/observer/test_input_queue.cpp</code>, <code>tests/observer/test_v2x_listener.cpp</code>, <code>tests/observer/test_detector_reader.cpp</code>, <code>tests/parser/test_parse_reject_corpus.cpp</code>, <code>tests/cra/test_cra_interface.cpp</code>, <code>tests/fixtures/cra-assessment-record.json</code>, <code>tools/check_evt_log.py</code>, <code>tools/check_clip_spec.py</code>, <code>tools/tests/test_check_clip_spec.py</code>, and the <code>TrackStore::allBySource(Source)</code> accessor. Required by subtask discipline and by the research note's KPI 1. Flagged as HLD-consistent additions, not new design</td>
+<td>[[project-architecture]] (ack)</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong><code>(proposal)</code> defaults proceed as proposed</strong> — <code>CONFIRM_HITS=3</code>, <code>TRACK_TIMEOUT_MS=1000</code>, <code>FUSION_TICK_MS=100</code>, <code>DETECTOR_RESTART_MAX=5</code>, <code>DETECTOR_LOOP=true</code> (<a href="documents-design-ada-ecu-ada-ecu-hld.html#6-internal-components">HLD §6</a>). Externalized either way, so a ratification change is a node-config edit, not a code change. <strong>Trigger:</strong> answered with item 1, in the same message</td>
+<td>user</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>The relayed <code>measured</code> timestamp — mapped, nothing outstanding.</strong> <code>2.2.3.1</code> maps <code>timestamps.measured = rxTime + object.timeOfMeasurement</code>, per <a href="documents-design-ada-ecu-ada-ecu-hld.html#102-r3--the-object-model-of-the-store-owned">HLD §10.2</a> and <a href="requirements-m1-run-timing-and-event-triggering.html">m1-run-timing-and-event-triggering.md §6.2</a>. Frozen <code>contracts/r2-v2x-object.schema.json</code> bounds <code>object.timeOfMeasurement</code> as a −2048..2047 ms delta and <code>V2X_ECU/src/pipeline/r2_builder.cpp</code> emits it in that form, so the sum is the only reading the contract admits. No contract change and no HLD amendment is outstanding. The rest of §6.2 — realtime for stamps, monotonic for intervals including expiry, no arithmetic across two nodes' clocks — is implemented at <code>2.2.3.1</code>, <code>18.2.2.3</code>, <code>3.2.4.1</code> and <code>13.2.4.3</code></td>
+<td>none — recorded for traceability</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>D4's accessor signature against its own field table.</strong> <a href="documents-design-ada-ecu-ada-ecu-design-decisions.html#d4--r14-the-collision-risk-assessment-interface-registry-and-database">D4</a> words the accessor <code>get(trackId)</code> and calls the table "keyed by track id"; its field table names <code>trackId, warningType</code> as the key. <code>14.2.5.2</code> and <code>14.2.5.3</code> build the composite form. <strong>Trigger:</strong> reconcile before Phase 4's first plugin compiles against the seam (<code>14.4.1.2</code>)</td>
+<td>[[project-architecture]]</td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>Research-note §3's duration row reads 60–120 s.</strong> The committed clip is 10.0 s and the run length comes from <code>DETECTOR_LOOP</code>, so <code>12.2.9.1</code> defaults to 10–120 s in the interim. <strong>Trigger:</strong> reconcile §3 before <code>12.2.9.2</code> sends it</td>
+<td>[[project-researcher]]</td>
+</tr>
+<tr>
+<td>7</td>
+<td><strong>Which component honours <code>DETECTOR_LOOP</code>.</strong> <a href="documents-design-ada-ecu-ada-ecu-design-decisions.html#d2--process-thread-and-mock-model">D2</a> gates the core's EOF respawn on <code>DETECTOR_LOOP=true</code>, while <a href="documents-design-ada-ecu-ada-ecu-hld.html#6-internal-components">HLD §6</a> places the key in the <strong>Env — detector</strong> table under the rule that each key is read in exactly one place, and D6 gives it to <code>FileFrameSource</code>. <code>12.2.6.2</code> follows §6: it respawns on any clean EOF and reads no detector key. <strong>Trigger:</strong> reconcile D2's wording with §6's placement before Phase 3 <code>12.3.2.1</code> writes <code>detector/config.py</code></td>
+<td>[[project-architecture]]</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<p><em>Phase 2 = 9 task groups, 26 subtasks — 25 </em>AI<em> (2 docs-only), 1 </em>Human<em>. Nothing started. Decomposed from <a href="documents-design-ada-ecu-ada-ecu-hld.html">ada-ecu-hld.md</a>, video-source-for-r12.md </em>(deprecated)<em> and <a href="documents-plan-milestone1-high-level-plan.html#phase-2--ada-scaffolding-store--state-machine-no-detector-r3-r13">milestone1_high_level_plan.md § Phase 2</a>.</em></p>
+      </article>
+    </main>
+  </div>
+  <script src="../js/site-data.js"></script>
+  <script src="../js/theme.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/doc-page.js"></script>
+</body>
+</html>

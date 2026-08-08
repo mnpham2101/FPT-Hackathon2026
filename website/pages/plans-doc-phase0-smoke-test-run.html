@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en" data-theme="sketch">
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="kis-build-pages">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Phase 0 — Baseline Connectivity Smoke Test: Run Record — KIS</title>
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/doc.css">
+  <link rel="stylesheet" href="../css/themes.css">
+</head>
+<body class="DocBody" data-root=".." data-doc-node="plans" data-doc-title="Phase 0 — Baseline Connectivity Smoke Test: Run Record" data-doc-source="plans/doc/phase0-smoke-test-run.md">
+  <div class="DocLayout">
+    <aside class="DocLayout__aside" id="doc-toc"></aside>
+    <main class="Page DocPage">
+      <header class="PageHeader" id="doc-header"></header>
+      <article class="Markdown" id="doc-body">
+<h1 id="phase-0-baseline-connectivity-smoke-test-run-record">Phase 0 — Baseline Connectivity Smoke Test: Run Record<a class="headerlink" href="#phase-0-baseline-connectivity-smoke-test-run-record" title="Link to this section">¶</a></h1>
+<p>Evidence log for task group 0.8 (<a href="plans-phase0-tasks.html">phase0_tasks.md</a>), executing <a href="plans-doc-research-notes-baseline-connectivity-smoke-test.html">baseline-connectivity-smoke-test.md</a>. Steps are recorded as they complete; pass criteria C1–C5 are the note's.</p>
+<h2 id="standing-requirement-container-images-must-be-single-platform-arm64">Standing requirement — container images must be single-platform arm64<a class="headerlink" href="#standing-requirement-container-images-must-be-single-platform-arm64" title="Link to this section">¶</a></h2>
+<p><strong>Every image a Container node pulls must be built for <code>linux/arm64</code> alone.</strong> A multi-platform manifest index is not accepted — the node stays in <code>Provisioning</code> with <code>waiting to start: trying and failing to pull image</code>.</p>
+<p>This governs every container node in the project (<code>Scenario_Player</code>, <code>V2X_ECU</code>, <code>ADA_ECU</code>), not just netcheck. In CI that means one platform in the buildx invocation:</p>
+<pre><code class="language-yaml">PLATFORMS: linux/arm64
+</code></pre>
+<pre><code>docker buildx build --platform linux/arm64 --provenance=false --sbom=false \
+  -t &lt;host&gt;/&lt;image&gt;:&lt;tag&gt; --push &lt;context&gt;/
+</code></pre>
+<p>Keep <code>--provenance=false --sbom=false</code>: buildx otherwise attaches attestation entries that turn the result back into a multi-entry index.</p>
+<p><strong>Verify before deploying</strong> — the tag must resolve to a single-platform image, not an index:</p>
+<pre><code>curl -u &lt;user&gt;:&lt;zak_key&gt; https://registry.hackathon-2.carsky.io/v2/&lt;repo&gt;/manifests/&lt;tag&gt;
+</code></pre>
+<p>The Zot UI shows the same thing: one architecture chip on the repository card, not <code>amd64  arm64</code>.</p>
+<h2 id="m1-netcheck-tool-authored">M1 — netcheck tool authored<a class="headerlink" href="#m1-netcheck-tool-authored" title="Link to this section">¶</a></h2>
+<p>Subtask <code>6.0.8.1</code>, commit <code>c17b488</code>: <code>tools/netcheck/</code> (Dockerfile, entrypoint.sh, capture.sh, netcheck.py) verbatim from the note §4.2–§4.5.</p>
+<h2 id="m2m4-registry-login-build-push-2026-07-31">M2–M4 — registry login, build, push ✅ 2026-07-31<a class="headerlink" href="#m2m4-registry-login-build-push-2026-07-31" title="Link to this section">¶</a></h2>
+<p>Executed by GitHub Actions (the dev host has no Docker), job <code>netcheck-image</code> in <a href="../../.github/workflows/phase0-ci.yml">.github/workflows/phase0-ci.yml</a>.</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Registry host (O1 answer)</strong></td>
+<td><code>registry.hackathon-2.carsky.io</code> — <strong>closes open item O1</strong></td>
+</tr>
+<tr>
+<td>Registry account</td>
+<td><code>kis@hackathon.fpt.com</code> (workflow default; <code>CARSKY_REGISTRY_USER</code> variable overrides)</td>
+</tr>
+<tr>
+<td>Credential</td>
+<td><code>CARSKY_ZOT_API_KEY</code> GitHub Actions secret (<code>zak_…</code>, never committed)</td>
+</tr>
+<tr>
+<td>Pushed tag</td>
+<td><code>registry.hackathon-2.carsky.io/m1-netcheck:latest</code></td>
+</tr>
+<tr>
+<td>Platform</td>
+<td><code>linux/arm64</code>, single-platform (commit <code>5e75920</code>)</td>
+</tr>
+</tbody>
+</table></div>
+<p><code>registry.carsky.io</code> returns 502; <code>registry.hackathon-2.carsky.io</code> serves the registry (<code>GET /v2/</code> → 401 challenge, → 200 with the key) and is the host for both push and blueprint node <code>image</code> fields.</p>
+<h2 id="m5m9-blueprint-config-deploy-2026-07-31">M5–M9 — blueprint config + deploy ✅ 2026-07-31<a class="headerlink" href="#m5m9-blueprint-config-deploy-2026-07-31" title="Link to this section">¶</a></h2>
+<p>Deployed as <code>trial2_minh_netcheck</code> on room <code>27gs83k3oeju2mbywu1j8</code>, namespace <code>room-12tviahc</code>, blueprint snapshot <code>mZPNS7C8VA-cD1Ethjebq</code>. All three container nodes carry <code>registry.hackathon-2.carsky.io/m1-netcheck:latest</code>, <code>command: ["./entrypoint.sh"]</code>, <code>capabilities: ["NET_RAW"]</code>.</p>
+<p><strong>Room <code>RUNNING</code>, 5/5 nodes <code>Running</code></strong>, stable across a 10-minute observation window with no restarts. Per-node config values and the M5–M8 readiness assessment: <a href="plans-doc-phase0-trial2-minh-preflight.html">phase0-trial2-minh-preflight.md</a>.</p>
+<p>Deploying alone started the programs — no manual exec was needed, satisfying the HLD §6 startup guarantee.</p>
+<h2 id="m10-pass-criteria-2026-07-31">M10 — pass criteria ✅ 2026-07-31<a class="headerlink" href="#m10-pass-criteria-2026-07-31" title="Link to this section">¶</a></h2>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Criterion</th>
+<th>Evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>C1 all <code>Running</code></td>
+<td>5/5 nodes; every pod reports <code>sidecar=running user=running</code></td>
+</tr>
+<tr>
+<td>C2 no <code>[ERR]</code></td>
+<td>0 error lines across bench / V2X / ADA</td>
+</tr>
+<tr>
+<td>C3 live log per node</td>
+<td>100 lines each, streaming</td>
+</tr>
+<tr>
+<td>C4 wire capture</td>
+<td>80 / 66 / 66 <code>[CAP]</code> lines, <code>e-eth In/Out</code> on <code>10.99.0.x</code></td>
+</tr>
+<tr>
+<td>C5 accumulated stamps</td>
+<td>ADA logs <code>body=seq=288\|bench\|v2x</code></td>
+</tr>
+</tbody>
+</table></div>
+<pre><code>bench  [TX] #285 to 10.99.0.11:47100          len=13
+v2x    [RX] #288 from 10.99.0.10  body=seq=287|bench
+       [TX] #288 relayed to 10.99.0.12:47200  len=17
+ada    [RX] #289 from 10.99.0.11  body=seq=288|bench|v2x
+       [TX] #289 relayed to 10.99.0.13:47300  len=21
+</code></pre>
+<p><strong>Hop 3 (IVI) used the note §7 option 2 (fallback), not option 1.</strong> ADA's <code>[TX] … relayed to 10.99.0.13:47300</code> plus its <code>[CAP]</code> line prove the datagram reached the wire; the Skycraft node has no listener, so receipt is unconfirmed. Option 1 (ADB <code>nc -u -l -p 47300</code>) remains available if a confirmed hop-3 receipt is wanted.</p>
+<h2 id="open-items">Open items<a class="headerlink" href="#open-items" title="Link to this section">¶</a></h2>
+<ul>
+<li><strong>Platform tenancy gap</strong> — <code>GET /api/v1/blueprints</code> returns all blueprints across every owner unfiltered, and <code>GET /api/v1/blueprints/{id}</code> returns another owner's <code>"visibility": "PRIVATE"</code> blueprint in full, including node <code>config</code>, <code>env</code>, and inline script source. Rival teams' designs and images are readable by any participant. Report to BTC; unrelated to M1 delivery.</li>
+<li><strong>Unreliable REST routes</strong> (2026-07-31): <code>POST /deployments/{roomId}/restart[/{node}]</code> returns 500 <code>INTERNAL_ERROR</code>; <code>container-exec</code> returns 503 <code>Conduit service not configured</code>. Prefer teardown + redeploy. Recorded in <a href="requirements-car-sky-guide-carsky-rest-api-blueprint.html">carsky-rest-api-blueprint.md</a>.</li>
+<li>Propagate the single-platform arm64 requirement into <a href="requirements-car-sky-guide-deploy-walkthrough-netcheck.html">deploy-walkthrough-netcheck.md</a> §M7 and its §5 quick reference, and into the three ECU node guides before their images are built.</li>
+</ul>
+      </article>
+    </main>
+  </div>
+  <script src="../js/site-data.js"></script>
+  <script src="../js/theme.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/doc-page.js"></script>
+</body>
+</html>

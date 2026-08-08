@@ -1,0 +1,760 @@
+<!doctype html>
+<html lang="en" data-theme="sketch">
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="kis-build-pages">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Phase 3 — Object Detection from Video (R12): Full Task Breakdown — KIS</title>
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/doc.css">
+  <link rel="stylesheet" href="../css/themes.css">
+</head>
+<body class="DocBody" data-root=".." data-doc-node="plans" data-doc-title="Phase 3 — Object Detection from Video (R12): Full Task Breakdown" data-doc-source="plans/phase3_tasks.md">
+  <div class="DocLayout">
+    <aside class="DocLayout__aside" id="doc-toc"></aside>
+    <main class="Page DocPage">
+      <header class="PageHeader" id="doc-header"></header>
+      <article class="Markdown" id="doc-body">
+<h1 id="phase-3-object-detection-from-video-r12-full-task-breakdown">Phase 3 — Object Detection from Video (R12): Full Task Breakdown<a class="headerlink" href="#phase-3-object-detection-from-video-r12-full-task-breakdown" title="Link to this section">¶</a></h1>
+<blockquote>
+<p><strong>Authority &amp; context:</strong>
+- <strong>Phase content:</strong> <a href="documents-plan-milestone1-high-level-plan.html#phase-3--object-detection-from-video-r12--runs--with-phase-4">milestone1_high_level_plan.md § Phase 3</a> — its four acceptance checkboxes are the phase output.
+- <strong>Design:</strong> <a href="documents-design-ada-ecu-ada-ecu-hld.html">ada-ecu-hld.md</a> — §4 folder structure for every path, §6 env tables for every constant; <strong><a href="documents-design-ada-ecu-ada-ecu-design-decisions.html#d6--r12-detector-frame-source-seam-inference-distance-zero-c-evidence">D6</a></strong> is this phase's design (frame-source seam, inference, distance, association, emission, zero-C evidence, model provenance) and <strong><a href="documents-design-ada-ecu-ada-ecu-design-decisions.html#d10--clock-domains-and-stimulus-paced-against-clock_monotonic">D10</a></strong> adds the detector's real-time pacing.
+- <strong>Video source:</strong> video-source-for-r12.md <em>(deprecated)</em> §3 the clip spec and its KPIs; and <strong>the clip's own record</strong>, <a href="ada-ecu-media-ego-b-occluding-c-source.html">ADA_ECU/media/ego-b-occluding-c.source.md</a> — provenance, licence, encode command, content verdict, and the accepted duration deviation.
+- <strong>Requirements:</strong> <a href="requirements-m1-cooperative-awareness.html">m1-cooperative-awareness.md §2</a> R3, R5, R12, R18 and §3(g) — referenced by number, never restated.
+- <strong>Run timing:</strong> <a href="requirements-m1-run-timing-and-event-triggering.html">m1-run-timing-and-event-triggering.md</a> — §6.2's detector timestamp ruling (<code>12.3.2.6</code>), §6.1's three pacing keys and R20's detector half (<code>12.3.2.1</code>, <code>12.3.2.8</code>), and §6.6(g)'s warm-up budget (<code>12.3.5.2</code>, <code>22.3.6.3</code>).
+- <strong>Phase 2 baseline (do not re-plan):</strong> <a href="plans-phase2-tasks.html#phase-2-overview">phase2_tasks.md § Phase 2 overview</a> — the C++ core, the store, the R13 machine, the CRA seam, <code>src/observer/detector_reader</code> with its <code>DETECTOR_CMD</code> process contract, the image and the <code>ada-ecu-image</code> lane, <code>tools/check_clip_spec.py</code>.
+- <strong>Rules:</strong> <a href="claude-rules-task-planning-conventions.html">task-planning-conventions.md</a>; <a href="claude-rules-node-code-layout.html">node-code-layout.md</a>.</p>
+<p><strong>Task ID legend:</strong> <code>X.3.Z.W</code> — X = requirement served · 3 = this phase · Z = task group · W = subtask position. IDs are stable; never renumber, never reuse a retired one. Reserved, not in use: <code>12.3.4.1</code>, <code>12.3.4.2</code>.</p>
+<p><strong>Runs in parallel with Phase 4.</strong> The two never call each other — they meet only at the R3 store: this phase writes <code>own_sensor</code> entries through the JSONL subprocess boundary, Phase 4 reads the store.</p>
+</blockquote>
+<h2 id="phase-3-overview">Phase 3 overview<a class="headerlink" href="#phase-3-overview" title="Link to this section">¶</a></h2>
+<p><strong>Objective.</strong> Replace Phase 2's JSONL fixture with real perception: a YOLO11n ONNX detector reads the committed clip, finds <strong>B — the visible occluder</strong>, estimates its range, and streams R3 JSONL on stdout into the same store through the same interface. Zero entries labelled C, checked by <code>ADA_ECU/tools/check_zero_c.py</code>.</p>
+<p><strong>Input (must exist before start).</strong> Every input below exists on <code>main</code> except the first bullet's Phase 2 deliverables, which Phase 2 produces:</p>
+<ul>
+<li>Phase 2 complete: <code>src/observer/detector_reader</code> (the <code>DETECTOR_CMD</code> + stdout-JSONL contract), <code>src/parser/r3_parser</code>, the store, <code>ada_ecu</code>, the ADA image and its CI lane, <code>ADA_ECU/tools/check_clip_spec.py</code>.</li>
+<li>Phase 0's frozen <code>ADA_ECU/detector/contracts/tracked_object.py</code> binding, <code>detector/requirements-dev.txt</code>, and <code>ADA_ECU/detector/tests/test_r3_roundtrip.py</code>.</li>
+<li><strong>The clip is in the repo.</strong> <code>ADA_ECU/media/ego-b-occluding-c.mp4</code> — 1280×720, 20 fps CFR, H.264 High / yuv420p, 200 frames / 10.0 s, 5 261 876 bytes, no audio — with its provenance record beside it. Licence: Pexels License, commercial use and modification permitted, attribution given anyway. <strong>Sourcing, cutting and re-encoding video is <code>12.3.7.1</code>'s alone; no other subtask in this phase touches a video file.</strong></li>
+</ul>
+<p><strong>Output (phase acceptance = the four milestone boxes):</strong></p>
+<ul>
+<li>[x] Detection log over the provided clip with per-frame objects and distance estimates (R12) — closed by <code>12.3.5.2</code>.</li>
+<li>[x] Entries enter the store via the same R3 interface as relayed entries, <code>source = own_sensor</code> — mock no longer required — closed by <code>3.3.5.3</code>.</li>
+<li>[x] <strong>Zero detections labeled C</strong> — closed by <code>12.3.5.1</code> (<code>tools/check_zero_c.py</code>) + <code>12.3.5.4</code> (the CI lane that makes it repeatable) + the structural argument in <a href="documents-design-ada-ecu-ada-ecu-design-decisions.html#d6--r12-detector-frame-source-seam-inference-distance-zero-c-evidence">HLD D6</a> + the clip's own content verdict.</li>
+<li>[ ] Runs CPU-only on the provided clip; offline pace acceptable — closed by <code>12.3.5.2</code> (measured effective inference rate ≥ 5 Hz, i.e. ≤ 200 ms per sampled frame) on the CI Linux runner, and <code>5.3.6.2</code> (the same measurement on the deployed node — research note KPI 3 <em>(deprecated)</em>).</li>
+</ul>
+<p><strong>The clip is 10 s, a deviation from the research note §3 <em>(deprecated)</em> 60–120 s duration row, accepted with looping as its remedy</strong> (<a href="ada-ecu-media-ego-b-occluding-c-source.html">provenance record § The remaining deviation</a>). B is the lead vehicle only across a 10 s window of the source. A longer run is obtained by <strong>looping</strong> (<code>DETECTOR_LOOP=true</code>, default), each loop reading as a fresh approach cycle with B re-appearing at ~60 m and closing again. Every duration-sensitive check in this phase and in Phase 4 is worded against a <strong>looped</strong> run, not a single pass.</p>
+<p><strong>Suggested branch (suggestion only — creation is the user's call):</strong> <code>feat/phase3-ada-detector</code>. One branch for the whole phase; subtasks commit onto it. It branches from Phase 2's branch (or from <code>main</code> once Phase 2 merges) — it needs <code>detector_reader</code> and the image, nothing from Phase 4.</p>
+<h3 id="execution-labels">Execution labels<a class="headerlink" href="#execution-labels" title="Link to this section">¶</a></h3>
+<p><code>AI</code> and <code>Human</code>, the vocabulary of <a href="requirements-car-sky-guide-deploy-ada-ecu-walkthrough.html#7-work-division-between-ai-and-human">deploy-ada-ecu-walkthrough.md §7</a>; the definitions are <a href="plans-phase2-tasks.html#execution-labels">phase2_tasks.md § Execution labels</a>.</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Label</th>
+<th>Who performs it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>AI</code></td>
+<td>A spawned agent. Code, tests and CI go to an implementation subagent; a row marked <code>AI — car-sky</code> goes to [[car-sky]] for the authenticated REST calls, registry checks and deployed-log reads.</td>
+</tr>
+<tr>
+<td><code>Human</code></td>
+<td>A person, outside any tool an agent holds. The planner keeps the ID and the done-tracking in every case.</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Phase 3 is 23 <code>AI</code> subtasks — 21 to an implementation subagent, 2 to [[car-sky]] — plus the three <code>Human</code> steps below.</strong> The human steps carry no subtask ID because the person performs them outside the task tree. A subtask's label is its executor; a step inside a subtask performed by someone else names that executor in the step.</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th><code>Human</code> step</th>
+<th>What depends on it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Create and push the phase branch <code>feat/phase3-ada-detector</code></td>
+<td>every acceptance worded "lane green on the pushed branch" — <code>12.3.1.1</code>, <code>12.3.3.3</code>, <code>12.3.3.4</code>, <code>12.3.5.4</code></td>
+</tr>
+<tr>
+<td>Confirm a workflow run in the Actions web UI and download its artifact — an agent session holds no GitHub token (<a href="requirements-car-sky-guide-deploy-ada-ecu-walkthrough.html#7-work-division-between-ai-and-human">walkthrough §7</a>)</td>
+<td>every lane acceptance, and the run artifact <code>12.3.4.3</code> and <code>12.3.5.2</code> read</td>
+</tr>
+<tr>
+<td>Fetch <code>yolo11n.pt</code> from the Ultralytics release assets when the export host has no egress to them</td>
+<td><code>12.3.3.1</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>Four constraints specific to this phase:</p>
+<ul>
+<li><strong>Detector dependencies may not install on the dev host.</strong> <code>onnxruntime</code> and <code>opencv-python-headless</code> have no guaranteed wheel for Windows-on-ARM. Every detector test therefore runs on CI (<code>ada-detector-tests</code>, <code>12.3.3.3</code>) and degrades to <code>pytest.importorskip</code> locally — the skip-locally / run-on-CI pattern of <a href="../../Scenario_Player/tests/test_encoder_golden.py"><code>Scenario_Player/tests/test_encoder_golden.py</code></a>. A subtask whose tests only <em>skip</em> locally is not done until its CI lane is green.</li>
+<li><strong>Every run of the real detector happens on the CI Linux runner</strong>, in lane <code>ada-detector-run</code> (<code>12.3.3.4</code>), which captures stdout and uploads it with the measured summary as a workflow artifact. <code>12.3.4.3</code> and <code>12.3.5.2</code> read that artifact rather than running the detector themselves.</li>
+<li><strong>Every image build, <code>docker history</code> read and image push happens in GitHub Actions.</strong> The dev host carries no Docker daemon and no binfmt emulation, and nothing in this repo is built by hand (<a href="documents-plan-milestone1-high-level-plan.html#phase-4--obscured-object-fusion-relayed-c--risk--warning-r13r15--runs--with-phase-3">milestone1_high_level_plan.md § Phase 4</a>).</li>
+<li><strong>Detector modules read env only through <code>detector/config.py</code></strong> (HLD §6). No <code>os.environ</code> outside that file.</li>
+</ul>
+<h3 id="subtask-discipline">Subtask discipline<a class="headerlink" href="#subtask-discipline" title="Link to this section">¶</a></h3>
+<p>Identical to <a href="plans-phase2-tasks.html#subtask-discipline-applies-to-every-subtask-below">phase2_tasks.md § Subtask discipline</a> — not restated. <strong>21 of 24 subtasks are done</strong>; <code>5.3.6.2</code>, <code>22.3.6.3</code> and <code>5.3.7.3</code> wait on Phase 4's isolated-Room log and car-sky.</p>
+<h3 id="per-node-build-commands-cited-in-acceptance-below">Per-node build commands (cited in acceptance below)<a class="headerlink" href="#per-node-build-commands-cited-in-acceptance-below" title="Link to this section">¶</a></h3>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Area</th>
+<th>Build + test command</th>
+<th>Verified</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ADA_ECU/detector/</code></td>
+<td><code>pip install -r ADA_ECU/detector/requirements.txt -r ADA_ECU/detector/requirements-dev.txt &amp;&amp; python -m pytest ADA_ECU/detector/tests</code></td>
+<td>CI <code>ada-detector-tests</code> (<code>12.3.3.3</code>); local with skips</td>
+</tr>
+<tr>
+<td><code>ADA_ECU/</code> (C++ core)</td>
+<td><code>cmake -S ADA_ECU -B ADA_ECU/build &amp;&amp; cmake --build ADA_ECU/build -j $(nproc) &amp;&amp; ctest --test-dir ADA_ECU/build --output-on-failure</code></td>
+<td>CI <code>ada-core-build</code></td>
+</tr>
+<tr>
+<td><code>ADA_ECU/tools/</code></td>
+<td><code>python -m py_compile ADA_ECU/tools/&lt;script&gt;.py</code></td>
+<td>local + CI</td>
+</tr>
+<tr>
+<td>ADA image</td>
+<td><code>docker buildx build --platform linux/arm64 --provenance=false --sbom=false -t m1-ada-ecu:latest ADA_ECU/</code></td>
+<td>CI <code>ada-ecu-image</code></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Local tag and registry tag are different strings.</strong> The local build tag is <code>m1-ada-ecu:latest</code> (<a href="documents-design-ada-ecu-ada-ecu-design-decisions.html#d9--deployment-shape">HLD D9</a> and <a href="documents-design-ada-ecu-ada-ecu-hld.html#11-tech-stack-build-and-ci">§11</a>); the tag CI builds, pushes and the blueprint pulls is <code>registry.hackathon-2.carsky.io/m1-ada-ecu:latest</code> (<a href="requirements-car-sky-guide-node-ada-ecu.html">node-ada-ecu.md</a>). Every acceptance below names which of the two it means.</p>
+<h3 id="ci-ruling-for-this-phase">CI ruling for this phase<a class="headerlink" href="#ci-ruling-for-this-phase" title="Link to this section">¶</a></h3>
+<p>New lanes go in a new <code>.github/workflows/phase3-ci.yml</code> — <em>a lane belongs to the phase that created it</em> (<a href="../../.github/workflows/phase1-ci.yml">phase1-ci.yml</a> header). Four jobs: <code>ada-detector-wheels</code> (<code>12.3.1.1</code>), <code>ada-detector-tests</code> (<code>12.3.3.3</code>), <code>ada-detector-run</code> (<code>12.3.3.4</code>), <code>ada-zero-c</code> (<code>12.3.5.4</code>). <code>ada-core-build</code> and <code>python-tests</code> in phase0-ci.yml stay untouched; <code>ada-ecu-image</code> in <code>phase4-ci.yml</code> is reused, not duplicated.</p>
+<hr />
+<h2 id="task-group-31-arm64-dependency-verification-serves-r12-hld-11-item-6">Task Group 3.1 — arm64 dependency verification (serves R12; HLD §11 item 6)<a class="headerlink" href="#task-group-31-arm64-dependency-verification-serves-r12-hld-11-item-6" title="Link to this section">¶</a></h2>
+<blockquote>
+<p>The one unproven platform assumption in this phase, taken first. If <code>onnxruntime</code> has no aarch64 wheel for <code>python:3.11-slim</code>, the image build falls back to a source build under emulation whose duration is unbounded and which can exhaust the job timeout.</p>
+</blockquote>
+<h3 id="x-12311-phase3-ciyml-lane-ada-detector-wheels-ai-runs-before-every-other-subtask-in-this-phase">[x] <code>12.3.1.1</code> — <code>phase3-ci.yml</code> + lane <code>ada-detector-wheels</code> <em>(AI — runs before every other subtask in this phase)</em><a class="headerlink" href="#x-12311-phase3-ciyml-lane-ada-detector-wheels-ai-runs-before-every-other-subtask-in-this-phase" title="Link to this section">¶</a></h3>
+<p><strong>Objective:</strong> prove, before any detector code exists, that <code>onnxruntime</code>, <code>opencv-python-headless</code> and <code>numpy</code> install as prebuilt wheels for <code>linux/arm64</code> on <code>python:3.11-slim</code>.</p>
+<p><strong>Scope — steps in order:</strong></p>
+<ol>
+<li>Create <code>.github/workflows/phase3-ci.yml</code> with the same <code>on:</code>/<code>concurrency:</code> block as <a href="../../.github/workflows/phase1-ci.yml">phase1-ci.yml</a>.</li>
+<li>Write a header comment naming what the file carries.</li>
+<li>Add job <code>ada-detector-wheels</code> with a qemu setup step.</li>
+<li>Run <code>docker run --platform linux/arm64 python:3.11-slim</code> executing <code>pip install --only-binary=:all: onnxruntime opencv-python-headless numpy</code>.</li>
+<li>Follow it with an import smoke: <code>import onnxruntime, cv2, numpy; print(versions)</code>.</li>
+<li>Keep <code>--only-binary=:all:</code> so the lane exits non-zero, naming the package with no wheel, rather than starting a source build.</li>
+<li>Print the escalation note on failure: pin an older <code>onnxruntime</code> carrying an aarch64 wheel, switch the base to a distro whose apt carries the package, or accept a source build with a raised timeout. The choice is [[project-architecture]]'s, not the implementing subagent's.</li>
+</ol>
+<p><code>.github/workflows/</code> is explicitly in this subtask's write scope.</p>
+<p><strong>Acceptance:</strong> lane green on the pushed branch with the three versions printed; or lane red with the failing package named and the item escalated (§ Open items item 1). A red lane completes this subtask; the escalation in § Open items item 1 follows, and <code>12.3.2.5</code> and <code>5.3.6.1</code> stay blocked until it is resolved.</p>
+<p><strong>Dependencies:</strong> none — first in the phase. <strong>Commit:</strong> <code>[12.3.1.1] chore: add the arm64 detector-wheel CI lane</code></p>
+<hr />
+<h2 id="task-group-32-detector-modules-serves-r12-hld-d6">Task Group 3.2 — Detector modules (serves R12; HLD D6)<a class="headerlink" href="#task-group-32-detector-modules-serves-r12-hld-d6" title="Link to this section">¶</a></h2>
+<blockquote>
+<p>The Python subprocess. Paths from <a href="documents-design-ada-ecu-ada-ecu-hld.html#4-folder-structure">HLD §4</a>; every module is importable and unit-testable on its own, and none of them opens a socket or reads env directly.</p>
+</blockquote>
+<h3 id="x-12321-detectorconfigpy-detectorrequirementstxt-ai">[x] <code>12.3.2.1</code> — <code>detector/config.py</code> + <code>detector/requirements.txt</code> <em>(AI)</em><a class="headerlink" href="#x-12321-detectorconfigpy-detectorrequirementstxt-ai" title="Link to this section">¶</a></h3>
+<p><strong>Objective:</strong> the detector's <strong>only</strong> env reader. Its runtime dependency manifest is inseparable from it: the loader's own test run needs the pinned runtime set, and <code>12.3.1.1</code> proved exactly those versions.</p>
+<p><strong>Scope — steps in order:</strong></p>
+<ol>
+<li>Write <code>detector/config.py</code> as a frozen dataclass loaded from env, carrying the <a href="documents-design-ada-ecu-ada-ecu-hld.html#6-internal-components">HLD §6</a> detector half with the defaults in the table below.</li>
+<li>Take the env mapping as an injectable argument so tests never mutate <code>os.environ</code>.</li>
+<li>Validate: positive stride, thresholds in [0, 1], positive width, HFOV in (0, 180), positive <code>DETECTOR_CLIP_FPS</code> when set, <code>DETECTOR_START_DELAY_S</code> ≥ 0.</li>
+<li>Raise <code>ValueError</code> naming the variable on any invalid value; <code>main.py</code> exits non-zero on it (<code>12.3.2.7</code>).</li>
+<li>Write <code>detector/requirements.txt</code> with <code>onnxruntime</code>, <code>opencv-python-headless</code> and <code>numpy</code>, each <strong>pinned</strong> to the version <code>12.3.1.1</code> proved.</li>
+<li>Add a leading <code>-r requirements.txt</code> to Phase 0's <code>requirements-dev.txt</code> so a dev install carries the runtime set.</li>
+<li>Write <code>detector/tests/test_config.py</code>: defaults when unset; each override; each rejection case.</li>
+</ol>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Env key</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>VIDEO_CLIP_PATH</code></td>
+<td><code>/app/media/ego-b-occluding-c.mp4</code></td>
+</tr>
+<tr>
+<td><code>DETECTOR_FRAME_STRIDE</code></td>
+<td><code>4</code></td>
+</tr>
+<tr>
+<td><code>DETECTOR_LOOP</code></td>
+<td><code>true</code></td>
+</tr>
+<tr>
+<td><code>DETECTOR_REALTIME_PACING</code></td>
+<td><code>true</code></td>
+</tr>
+<tr>
+<td><code>DETECTOR_CLIP_FPS</code></td>
+<td><code>20.0</code> — the committed clip's declared rate (<a href="documents-design-ada-ecu-ada-ecu-hld.html#6-internal-components">HLD §6</a>); overridable, and the frame source's <code>CAP_PROP_FPS</code> is the fallback when a different clip is mounted</td>
+</tr>
+<tr>
+<td><code>DETECTOR_START_DELAY_S</code></td>
+<td><code>0.0</code></td>
+</tr>
+<tr>
+<td><code>MODEL_PATH</code></td>
+<td><code>/app/models/yolo11n.onnx</code></td>
+</tr>
+<tr>
+<td><code>CONF_THRESHOLD</code> · <code>IOU_THRESHOLD</code></td>
+<td><code>0.35</code> · <code>0.45</code></td>
+</tr>
+<tr>
+<td><code>TRACK_IOU_MIN</code></td>
+<td><code>0.3</code></td>
+</tr>
+<tr>
+<td><code>VEHICLE_WIDTH_M</code> · <code>CAMERA_HFOV_DEG</code></td>
+<td><code>1.8</code> · <code>60</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>The three pacing keys are <a href="documents-design-ada-ecu-ada-ecu-hld.html#6-internal-components">HLD §6</a> rows and are consumed by <code>12.3.2.8</code>; their behaviour is <a href="documents-design-ada-ecu-ada-ecu-design-decisions.html#d10--clock-domains-and-stimulus-paced-against-clock_monotonic">D10</a>. <code>DETECTOR_FRAME_STRIDE</code> is a decimation stride, not a rate, and 5 Hz effective is an assumed CPU throughput rather than an enforced one (<a href="requirements-m1-run-timing-and-event-triggering.html">m1-run-timing-and-event-triggering.md §2(d)</a>).</p>
+<p><strong>Acceptance:</strong> pytest green on CI <code>ada-detector-tests</code>; no <code>os.environ</code> access anywhere else in <code>detector/</code>.</p>
+<p><strong>Dependencies:</strong> after <code>12.3.1.1</code> (pin versions to what installed). <strong>Commit:</strong> <code>[12.3.2.1] feat: add the detector config loader and runtime requirements</code></p>
+<h3 id="x-12322-frame-source-seam-detectorframe_sourcepy-ai">[x] <code>12.3.2.2</code> — Frame-source seam <code>detector/frame_source.py</code> <em>(AI)</em><a class="headerlink" href="#x-12322-frame-source-seam-detectorframe_sourcepy-ai" title="Link to this section">¶</a></h3>
+<p><strong>Objective:</strong> the mandatory D6 seam — frame acquisition behind an interface, so a future CarSky <code>video</code> pin is one new implementation and touches nothing downstream (research note §2 (a′) <em>(deprecated)</em>).</p>
+<p><strong>Scope — steps in order:</strong></p>
+<ol>
+<li>Define the <code>Frame(index, timestamp_ms, image, width, height)</code> dataclass.</li>
+<li>Define the <code>FrameSource</code> protocol with <code>iter_frames() -&gt; Iterator[Frame]</code>, and expose the source's declared rate so <code>12.3.2.8</code> can read it.</li>
+<li>Implement <code>FileFrameSource</code> over an OpenCV <code>VideoCapture</code> on <code>VIDEO_CLIP_PATH</code>, yielding every <code>DETECTOR_FRAME_STRIDE</code>-th frame.</li>
+<li>Set <code>timestamp_ms = frame_index / fps * 1000</code> — clip time, a detector-local field, never an R3 timestamp (<code>12.3.2.6</code>).</li>
+<li>At EOF, re-open from frame 0 when <code>DETECTOR_LOOP</code> is true; otherwise stop.</li>
+<li>Raise with the path named when the file cannot be opened.</li>
+<li>Keep <code>frame_index</code> accumulating across loops rather than resetting to 0: the pacer's deadline is computed from the sampled-frame ordinal (<a href="documents-design-ada-ecu-ada-ecu-design-decisions.html#d10--clock-domains-and-stimulus-paced-against-clock_monotonic">D10</a>), so a resetting index would move the deadline backwards at every loop. Expose the within-clip index separately if a caller wants it.</li>
+<li>Implement <code>SyntheticFrameSource</code>, generating N frames of a configurable size with no clip on disk — the CI import-and-plumbing path, never a detection-evidence path (<code>12.3.3.2</code>).</li>
+<li>Write <code>detector/tests/test_frame_source.py</code>: stride selects the expected indices; loop restarts the <em>file</em> while the yielded index keeps increasing; EOF without loop terminates; the synthetic source yields the declared count and shape; a missing file raises.</li>
+</ol>
+<p>Pacing is <code>12.3.2.8</code>'s, not this file's: <code>iter_frames()</code> stays a generator that assumes nothing about the consumer's rate.</p>
+<p><strong>Acceptance:</strong> pytest green on CI; no OpenCV call anywhere else in <code>detector/</code> except this file.</p>
+<p><strong>Dependencies:</strong> after <code>12.3.2.1</code>. <strong>Commit:</strong> <code>[12.3.2.2] feat: add the detector frame-source seam</code></p>
+<h3 id="x-12323-distance-estimation-detectordistancepy-ai-parallel-with-12322">[x] <code>12.3.2.3</code> — Distance estimation <code>detector/distance.py</code> <em>(AI — parallel with 12.3.2.2)</em><a class="headerlink" href="#x-12323-distance-estimation-detectordistancepy-ai-parallel-with-12322" title="Link to this section">¶</a></h3>
+<p><strong>Objective:</strong> the pinhole known-width range and lateral offset (D6) — pure maths, no model, no frames.</p>
+<p>The three formulas, from D6:</p>
+<pre><code>f_px = (frame_w / 2) / tan(CAMERA_HFOV_DEG / 2)
+d    = VEHICLE_WIDTH_M × f_px / bbox_w_px
+y    = (bbox_u_center − frame_w / 2) × d / f_px
+</code></pre>
+<p><strong>Scope — steps in order:</strong></p>
+<ol>
+<li>Implement the three formulas above in <code>detector/distance.py</code>.</li>
+<li>Take every input as a parameter; this module performs no env read.</li>
+<li>Return <code>None</code> for a zero or negative <code>bbox_w_px</code> rather than dividing.</li>
+<li>State the rationale in a one-line docstring linking D6; the rejected estimators stay in D6 and are not restated in code comments.</li>
+<li>Write <code>detector/tests/test_distance.py</code> with four cases: hand-computed values for at least three (bbox width, frame width, HFOV) triples; a wider bbox is always nearer; right of centre is <code>+y</code>; the degenerate-width guard returns <code>None</code>.</li>
+</ol>
+<p><strong>Acceptance:</strong> pytest green locally <strong>and</strong> on CI (this module has no heavy dependency, so it must pass locally too).</p>
+<p><strong>Dependencies:</strong> after <code>12.3.2.1</code>. <strong>Commit:</strong> <code>[12.3.2.3] feat: add pinhole known-width distance estimation</code></p>
+<h3 id="x-12324-frame-to-frame-association-detectortrackerpy-ai-parallel">[x] <code>12.3.2.4</code> — Frame-to-frame association <code>detector/tracker.py</code> <em>(AI — parallel)</em><a class="headerlink" href="#x-12324-frame-to-frame-association-detectortrackerpy-ai-parallel" title="Link to this section">¶</a></h3>
+<p><strong>Objective:</strong> stable <code>own:&lt;n&gt;</code> ids across sampled frames by greedy IoU matching (D6) — no tracking library.</p>
+<p><strong>Scope — steps in order:</strong></p>
+<ol>
+<li>Greedily IoU-match the current frame's boxes against the previous <strong>sampled</strong> frame's.</li>
+<li>Hold an id while IoU ≥ <code>TRACK_IOU_MIN</code>.</li>
+<li>Mint a new id from a monotonic counter otherwise.</li>
+<li>Format every id as <code>own:&lt;n&gt;</code>; the detector can never mint a <code>v2x:</code> id (the structural half of the zero-C argument, D6).</li>
+<li>Perform no time-based prediction; one dominant occluder is the design target.</li>
+<li>Carry several concurrent tracks rather than one — the clip holds adjacent-lane and oncoming traffic, which is expected and is not C (<a href="ada-ecu-media-ego-b-occluding-c-source.html#c-is-synthetic--what-the-criterion-actually-constrains">provenance record § C is synthetic</a>).</li>
+<li>Write <code>detector/tests/test_tracker.py</code> with four cases: an id survives a small box drift across frames; a box jump below <code>TRACK_IOU_MIN</code> yields a new id; two boxes get distinct ids and do not swap; ids are never reused.</li>
+</ol>
+<p><strong>Acceptance:</strong> pytest green locally and on CI.</p>
+<p><strong>Dependencies:</strong> after <code>12.3.2.1</code>. <strong>Commit:</strong> <code>[12.3.2.4] feat: add greedy IoU frame-to-frame association</code></p>
+<h3 id="x-12325-inference-detectorinferencepy-ai">[x] <code>12.3.2.5</code> — Inference <code>detector/inference.py</code> <em>(AI)</em><a class="headerlink" href="#x-12325-inference-detectorinferencepy-ai" title="Link to this section">¶</a></h3>
+<p><strong>Objective:</strong> the YOLO11n ONNX Runtime CPU session behind a swappable <code>Detector</code> protocol (D6, report §3(g)).</p>
+<p><strong>Scope — steps in order:</strong></p>
+<ol>
+<li>Define the <code>Detector</code> protocol: <code>detect(image) -&gt; list[Detection(bbox_xywh, score, coco_class)]</code>.</li>
+<li>Implement <code>OnnxDetector</code> on an ONNX Runtime <strong>CPU</strong> provider over <code>MODEL_PATH</code>.</li>
+<li>Letterbox each frame to 640×640, recording the scale and pad so boxes map back to source pixels.</li>
+<li>Apply the score floor <code>CONF_THRESHOLD</code> and NMS at <code>IOU_THRESHOLD</code>.</li>
+<li>Collapse the COCO classes <code>car</code>, <code>truck</code>, <code>bus</code> and <code>motorcycle</code> to the R3 <code>class: "vehicle"</code>, and drop everything else.</li>
+<li>Put the <code>FakeDetector</code> returning scripted boxes in the test file, not in <code>detector/</code>.</li>
+<li>Write <code>detector/tests/test_inference.py</code> (planner-designated path, § Open items item 2) with four cases: a box in letterboxed coordinates maps back to the expected source pixels; NMS suppresses an overlapping duplicate; the class map collapses the four vehicle classes and drops a person; the ONNX session test loads the model and reports the expected input/output shapes.</li>
+<li>Guard the session test with <code>pytest.importorskip</code> and skip it additionally when <code>models/yolo11n.onnx</code> is absent.</li>
+</ol>
+<p><strong>Acceptance:</strong> pytest green on CI <code>ada-detector-tests</code> with the session test <strong>executed</strong> (the lane installs the wheels and the model is committed by <code>12.3.3.1</code>).</p>
+<p><strong>Dependencies:</strong> after <code>12.3.2.1</code> + <code>12.3.1.1</code>; the session test unskips once <code>12.3.3.1</code> lands. <strong>Commit:</strong> <code>[12.3.2.5] feat: add the YOLO11n ONNX inference stage</code></p>
+<h3 id="x-12326-emission-detectoremitpy-ai">[x] <code>12.3.2.6</code> — Emission <code>detector/emit.py</code> <em>(AI)</em><a class="headerlink" href="#x-12326-emission-detectoremitpy-ai" title="Link to this section">¶</a></h3>
+<p><strong>Objective:</strong> one R3 JSONL line per detection per sampled frame, through the <strong>frozen</strong> Phase 0 binding (D6).</p>
+<p><strong>Scope — one step per emitted field, then the write:</strong></p>
+<ol>
+<li>Build the object through <code>detector/contracts/tracked_object.py</code>; declare no second model (D1).</li>
+<li><code>source</code> — the constant <code>own_sensor</code>.</li>
+<li><code>id</code> — the tracker's <code>own:&lt;n&gt;</code>.</li>
+<li><code>class</code> — the constant <code>vehicle</code>.</li>
+<li><code>position</code> — <code>{x: distance, y: lateral}</code> from <code>12.3.2.3</code>.</li>
+<li><code>distance</code> — the pinhole range from <code>12.3.2.3</code>.</li>
+<li><code>speed</code> — <code>|Δdistance| / Δt</code> between consecutive sampled frames for the same id, and 0 on a track's first sampled frame (<a href="documents-design-ada-ecu-ada-ecu-design-decisions.html#d6--r12-detector-frame-source-seam-inference-distance-zero-c-evidence">D6</a>: frozen R3 bounds <code>speed</code> at <code>minimum: 0</code>, so a signed closing rate is not representable there; the sign lives in the <code>distance</code> series). <code>Δt</code> is the difference of the two frames' clip-time <code>Frame.timestamp_ms</code>, which stays exact under a constant frame rate.</li>
+<li><code>confidence</code> — the detection score.</li>
+<li><code>state</code> — the constant <code>not_tracked</code>; the store is the sole <code>state</code> writer (D3).</li>
+<li><code>timestamps</code> — per the ruling below.</li>
+<li>Write one compact JSON object per line to stdout, flushed per line.</li>
+</ol>
+<p><strong>Timestamp ruling — <a href="documents-design-ada-ecu-ada-ecu-hld.html#102-r3--the-object-model-of-the-store-owned">HLD §10.2</a> and <a href="requirements-m1-run-timing-and-event-triggering.html">m1-run-timing-and-event-triggering.md §6.2</a>.</strong> All R3 timestamps are <code>CLOCK_REALTIME</code> epoch ms, which is what the frozen <code>contracts/r3-tracked-object.schema.json</code> defines <code>measured</code> and <code>received</code> to be.</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Value for <code>own_sensor</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>measured</code></td>
+<td><code>CLOCK_REALTIME</code> at frame capture</td>
+</tr>
+<tr>
+<td><code>received</code></td>
+<td><code>CLOCK_REALTIME</code> at the emit instant</td>
+</tr>
+<tr>
+<td><code>lastUpdated</code></td>
+<td>written by the store, not by the detector</td>
+</tr>
+</tbody>
+</table></div>
+<p>The clip-time value <code>frame_index / fps * 1000</code> stays a detector-local <code>Frame</code> field (<code>12.3.2.2</code>) and reaches no R3 timestamp.</p>
+<p><strong>Tests — <code>detector/tests/test_emit_contract.py</code>:</strong></p>
+<ol>
+<li>Emitted lines validate against the synced <code>ADA_ECU/contracts/r3-tracked-object.schema.json</code>, loaded from disk.</li>
+<li>The id and source conventions are exact, and no <code>v2x_relayed</code> line is producible.</li>
+<li>A track's first sampled frame emits <code>speed</code> 0.</li>
+<li>The second frame's <code>speed</code> matches the hand-computed <code>|Δd| / Δt</code>.</li>
+<li>A closing track — distance decreasing across three sampled frames — emits a positive <code>speed</code> on every frame after the first.</li>
+<li><code>measured</code> is an epoch stamp preceding <code>received</code>, and both advance across sampled frames.</li>
+</ol>
+<p><strong>Acceptance:</strong> pytest green locally and on CI; the schema is loaded, never restated.</p>
+<p><strong>Dependencies:</strong> after <code>12.3.2.3</code> + <code>12.3.2.4</code>. <strong>Commit:</strong> <code>[12.3.2.6] feat: emit R3 JSONL from the detector</code></p>
+<h3 id="x-12328-real-time-pacer-detectorpacerpy-ai-parallel">[x] <code>12.3.2.8</code> — Real-time pacer <code>detector/pacer.py</code> <em>(AI — parallel)</em><a class="headerlink" href="#x-12328-real-time-pacer-detectorpacerpy-ai-parallel" title="Link to this section">¶</a></h3>
+<p><strong>Objective:</strong> the <a href="documents-design-ada-ecu-ada-ecu-hld.html#6-internal-components">HLD §6</a> <code>detector/pacer</code> component — hold each sampled frame until its wall-clock instant, and apply <code>DETECTOR_START_DELAY_S</code> before the first.</p>
+<p><strong>Scope — steps in order:</strong></p>
+<ol>
+<li>Create <code>detector/pacer.py</code> at the path <a href="documents-design-ada-ecu-ada-ecu-hld.html#4-folder-structure">HLD §4</a> designates.</li>
+<li>Wrap an <code>Iterator[Frame]</code> and yield the same frames, released on schedule; the pacer adds, drops and reorders nothing.</li>
+<li>Compute each deadline as <code>t0 + n × DETECTOR_FRAME_STRIDE / DETECTOR_CLIP_FPS</code> on <code>time.monotonic()</code>, where <code>n</code> is the sampled-frame ordinal (<a href="documents-design-ada-ecu-ada-ecu-design-decisions.html#d10--clock-domains-and-stimulus-paced-against-clock_monotonic">D10</a>).</li>
+<li>Compute the deadline rather than accumulating fixed sleeps — an accumulated sleep folds the inference cost into scenario time and drifts unbounded over a run (D10).</li>
+<li>Sleep <code>DETECTOR_START_DELAY_S</code> from <code>t0</code> before releasing the first frame.</li>
+<li>Take <code>DETECTOR_CLIP_FPS</code> from the config when it is set, and from the frame source's declared rate otherwise (<code>12.3.2.1</code>, <code>12.3.2.2</code>).</li>
+<li>Pass frames through with no sleep when <code>DETECTOR_REALTIME_PACING</code> is false.</li>
+<li>Release a late frame immediately rather than sleeping a negative interval, so a slow inference step never runs the schedule backwards.</li>
+<li>Write <code>detector/tests/test_pacer.py</code> — the path <a href="documents-design-ada-ecu-ada-ecu-hld.html#4-folder-structure">HLD §4</a> designates — with an injected monotonic clock and sleep, and five cases: deadlines are <code>stride / fps</code> apart; the start delay precedes the first frame; a slow consumer does not shift later deadlines; pacing off yields no sleep; the frame sequence is unchanged in both modes.</li>
+</ol>
+<p><strong>Acceptance:</strong> pytest green locally and on CI; no <code>time.sleep</code> call anywhere else in <code>detector/</code>.</p>
+<p><strong>Dependencies:</strong> after <code>12.3.2.1</code>. <strong>Commit:</strong> <code>[12.3.2.8] feat: add the detector real-time pacer</code></p>
+<h3 id="x-12327-entrypoint-detectormainpy-ai">[x] <code>12.3.2.7</code> — Entrypoint <code>detector/main.py</code> <em>(AI)</em><a class="headerlink" href="#x-12327-entrypoint-detectormainpy-ai" title="Link to this section">¶</a></h3>
+<p><strong>Objective:</strong> the ego side of the D2 process contract — argv, wiring, exit codes. Controller only, no rules.</p>
+<p><strong>Scope — steps in order:</strong></p>
+<ol>
+<li>Load <code>config</code> (<code>12.3.2.1</code>).</li>
+<li>Build the frame source — the file source by default, <code>--synthetic N</code> for the CI import-and-plumbing smoke.</li>
+<li>Wrap it in the pacer (<code>12.3.2.8</code>).</li>
+<li>Construct the <code>OnnxDetector</code> (<code>12.3.2.5</code>).</li>
+<li>Drive the <a href="documents-design-ada-ecu-ada-ecu-hld.html#6-internal-components">HLD §6</a> pipeline in its stated order: source → pacer → inference → distance → tracker → emit.</li>
+<li>Write startup and fatal errors to <strong>stderr</strong>, so stdout carries only R3 JSONL — the reader parses every stdout line.</li>
+<li>Document the exit codes: 0 on clean EOF; non-zero for a missing clip, a missing model, or an invalid config.</li>
+<li>Exit cleanly and promptly on SIGTERM.</li>
+<li>Write <code>detector/tests/test_main.py</code> (planner-designated path) with three cases: a short synthetic run with a fake detector emits N valid JSONL lines on stdout and nothing else; a missing clip exits non-zero with the path named; SIGTERM terminates within a bounded time.</li>
+</ol>
+<p><strong>Acceptance:</strong> pytest green on CI; <strong>stdout contains only JSONL</strong> — asserted, because a stray print corrupts the process contract; the pacer is wired unconditionally and its behaviour is decided by config alone.</p>
+<p><strong>Dependencies:</strong> after <code>12.3.2.2</code> + <code>12.3.2.5</code> + <code>12.3.2.6</code> + <code>12.3.2.8</code>. <strong>Commit:</strong> <code>[12.3.2.7] feat: add the detector entrypoint</code></p>
+<hr />
+<h2 id="task-group-33-model-ci-fixture-detector-lane-serves-r12">Task Group 3.3 — Model, CI fixture, detector lane (serves R12)<a class="headerlink" href="#task-group-33-model-ci-fixture-detector-lane-serves-r12" title="Link to this section">¶</a></h2>
+<h3 id="x-12331-toolsexport_yolo11npy-committed-modelsyolo11nonnx-ai-with-one-human-step">[x] <code>12.3.3.1</code> — <code>tools/export_yolo11n.py</code> + committed <code>models/yolo11n.onnx</code> <em>(AI, with one Human step)</em><a class="headerlink" href="#x-12331-toolsexport_yolo11npy-committed-modelsyolo11nonnx-ai-with-one-human-step" title="Link to this section">¶</a></h3>
+<p><strong>Objective:</strong> the one-off Ultralytics → ONNX export and its committed artifact (D6 model provenance).</p>
+<p><strong>External input, named rather than assumed:</strong> the export downloads the <code>yolo11n.pt</code> weights from the Ultralytics release assets at run time, so the export host needs egress to them. Where the host has none, a <strong><code>Human</code></strong> fetches the file and places it beside the script, and the agent runs the export against the local file.</p>
+<p><strong>Scope — steps in order:</strong></p>
+<ol>
+<li>Write <code>ADA_ECU/tools/export_yolo11n.py</code>, which performs the Ultralytics → ONNX export (AGPL-3.0 accepted, report §4).</li>
+<li>Record the input size and the opset in the script header.</li>
+<li>Record the resolved weights URL, the SHA-256 of the downloaded <code>yolo11n.pt</code>, and the SHA-256 of the exported <code>yolo11n.onnx</code> in the script header, so a re-export is verifiable against the committed artifact.</li>
+<li>Commit the resulting <code>ADA_ECU/models/yolo11n.onnx</code> (~10 MB).</li>
+<li>Track it in plain git, as <code>media/ego-b-occluding-c.mp4</code> is tracked; do not use Git LFS.</li>
+<li>Leave <code>.gitattributes</code> alone — it carries <code>*.onnx binary</code>, so no change is needed.</li>
+<li>Keep the script out of CI and out of the image: committing the artifact is what keeps the image build offline-reproducible and Ultralytics out of the runtime dependency set.</li>
+<li>Do not add the script's Ultralytics import to <code>requirements.txt</code>.</li>
+</ol>
+<p><strong>Acceptance:</strong> the ONNX file loads in an ONNX Runtime CPU session and reports the expected input/output shapes (asserted by <code>12.3.2.5</code>'s session test, which unskips here); <code>python -m py_compile</code> on the exporter passes.</p>
+<p><strong>Dependencies:</strong> after <code>12.3.1.1</code>. <strong>Commit:</strong> <code>[12.3.3.1] feat: export and commit the YOLO11n ONNX model</code></p>
+<h3 id="x-12332-ci-video-fixture-toolsmake_sample_videopy-ai-parallel">[x] <code>12.3.3.2</code> — CI video fixture <code>tools/make_sample_video.py</code> <em>(AI — parallel)</em><a class="headerlink" href="#x-12332-ci-video-fixture-toolsmake_sample_videopy-ai-parallel" title="Link to this section">¶</a></h3>
+<p><strong>Objective:</strong> the decoder smoke fixture, and <strong>only</strong> that (research note §2 (c) <em>(deprecated)</em>).</p>
+<p><strong>Scope — steps in order:</strong></p>
+<ol>
+<li>Write <code>ADA_ECU/tools/make_sample_video.py</code>, which writes a short MP4 to a path given on the command line.</li>
+<li>Make the content deterministic and the size, fps and frame count configurable.</li>
+<li>Commit no generated output, and add the generated files to <code>.gitignore</code>.</li>
+<li>State in the module docstring, in one line, that it is a CI fixture and must never be the demo source: it writes flat grey rectangles, which a pretrained COCO detector will not classify as <code>car</code>, so a run against it produces zero detections and no R12 evidence.</li>
+</ol>
+<p><strong>Acceptance:</strong> <code>python -m py_compile</code> passes; the generated file opens through <code>FileFrameSource</code> and yields the declared frame count (asserted in <code>detector/tests/test_frame_source.py</code>, extended here).</p>
+<p><strong>Dependencies:</strong> after <code>12.3.2.2</code>. <strong>Commit:</strong> <code>[12.3.3.2] feat: add the CI sample-video fixture generator</code></p>
+<h3 id="x-12333-lane-ada-detector-tests-ai">[x] <code>12.3.3.3</code> — Lane <code>ada-detector-tests</code> <em>(AI)</em><a class="headerlink" href="#x-12333-lane-ada-detector-tests-ai" title="Link to this section">¶</a></h3>
+<p><strong>Objective:</strong> the Linux verification lane for group 3.2 — the only place the detector suite runs unskipped.</p>
+<p><strong>Scope — the job's steps, in <code>phase3-ci.yml</code>:</strong></p>
+<ol>
+<li>Check out the repository.</li>
+<li>Install with pip cache: <code>pip install -r ADA_ECU/detector/requirements.txt -r ADA_ECU/detector/requirements-dev.txt</code>.</li>
+<li>Run <code>python -m pytest ADA_ECU/detector/tests -q</code>.</li>
+<li>Assert the skip count: the job fails when any test skips for a missing dependency.</li>
+<li>Guard the job with a skip-with-notice while <code>ADA_ECU/detector/requirements.txt</code> is absent.</li>
+</ol>
+<p><strong>Acceptance:</strong> workflow YAML valid; run-blocks <code>bash -n</code> clean; lane green with 0 dependency-skips once group 3.2 lands.</p>
+<p><strong>Dependencies:</strong> after <code>12.3.1.1</code> (same file); lands before its consumers. <strong>Commit:</strong> <code>[12.3.3.3] chore: add the ADA detector test CI lane</code></p>
+<h3 id="x-12334-lane-ada-detector-run-ai">[x] <code>12.3.3.4</code> — Lane <code>ada-detector-run</code> <em>(AI)</em><a class="headerlink" href="#x-12334-lane-ada-detector-run-ai" title="Link to this section">¶</a></h3>
+<p><strong>Objective:</strong> the venue for every run of the real detector — a Linux runner that executes it over the committed clip and uploads the captured stdout as a workflow artifact.</p>
+<p><strong>Scope — the job's steps, in <code>phase3-ci.yml</code>:</strong></p>
+<ol>
+<li>Check out the repository, which carries <code>ADA_ECU/media/ego-b-occluding-c.mp4</code> and <code>ADA_ECU/models/yolo11n.onnx</code>.</li>
+<li>Install the detector's runtime requirements with pip cache.</li>
+<li>Run <code>detector/main.py</code> with <code>VIDEO_CLIP_PATH</code> set to the checked-out clip and <code>DETECTOR_LOOP=true</code>, for a wall-clock duration taken from a job input with a default of 60 s.</li>
+<li>Capture stdout to a file, and capture stderr separately.</li>
+<li>Compute and print a summary: sampled-frame count, elapsed wall time, effective sampled-frame rate, warm-up interval from process start to the first emitted line, and the interval between the last line of one clip pass and the first of the next.</li>
+<li>Add a second arm with <code>DETECTOR_REALTIME_PACING=false</code>, and print the per-sampled-frame inference cost it measures. Pacing fixes the emit interval at <code>DETECTOR_FRAME_STRIDE / DETECTOR_CLIP_FPS</code>, so the paced arm cannot measure CPU throughput and the unpaced arm is what KPI 3 reads.</li>
+<li>Upload the captured stdout, the stderr and both summaries as a workflow artifact.</li>
+<li>Take the env values the run uses — stride, thresholds, <code>VEHICLE_WIDTH_M</code>, <code>CAMERA_HFOV_DEG</code> — from job inputs with the <code>12.3.2.1</code> defaults, so <code>12.3.4.3</code> can re-run with candidate constants without editing the workflow.</li>
+<li>Guard the job with a skip-with-notice while <code>ADA_ECU/models/yolo11n.onnx</code> is absent.</li>
+</ol>
+<p><strong>Acceptance:</strong> workflow YAML valid; run-blocks <code>bash -n</code> clean; lane green on the pushed branch with a non-empty stdout artifact and the summary printed.</p>
+<p><strong>Dependencies:</strong> after <code>12.3.1.1</code> (same file) + <code>12.3.2.7</code> + <code>12.3.3.1</code>. <strong>Commit:</strong> <code>[12.3.3.4] chore: add the detector run CI lane</code></p>
+<hr />
+<h2 id="task-group-34-distance-calibration-against-the-real-clip-serves-r12">Task Group 3.4 — Distance calibration against the real clip (serves R12)<a class="headerlink" href="#task-group-34-distance-calibration-against-the-real-clip-serves-r12" title="Link to this section">¶</a></h2>
+<blockquote>
+<p>The clip's content is judged in <a href="ada-ecu-media-ego-b-occluding-c-source.html">the provenance record's § Content verdict</a> and is not re-judged here; its format gate and its image placement are <code>12.3.7.2</code>'s. This group owns the distance constants alone.</p>
+</blockquote>
+<h3 id="x-12343-retune-the-distance-constants-against-the-clip-ai">[x] <code>12.3.4.3</code> — Retune the distance constants against the clip <em>(AI)</em><a class="headerlink" href="#x-12343-retune-the-distance-constants-against-the-clip-ai" title="Link to this section">¶</a></h3>
+<p><strong>Objective:</strong> close <a href="documents-design-ada-ecu-ada-ecu-design-decisions.html#d6--r12-detector-frame-source-seam-inference-distance-zero-c-evidence">HLD decision D6</a> — <code>VEHICLE_WIDTH_M</code> and <code>CAMERA_HFOV_DEG</code> are proposals with no calibration target until the detector runs on the real clip.</p>
+<p><strong>Venue:</strong> the run happens in lane <code>ada-detector-run</code> (<code>12.3.3.4</code>) on the CI Linux runner, and the agent reads its uploaded stdout artifact. The detector is not run on the dev host. Confirming the run and downloading the artifact is the <strong><code>Human</code></strong> step of § Execution labels.</p>
+<p><strong>Scope — steps in order:</strong></p>
+<ol>
+<li>Trigger <code>ada-detector-run</code> with the <code>12.3.2.1</code> default constants and read the uploaded stdout artifact.</li>
+<li>Select B's track numerically: the track with the largest bounding-box area whose lateral offset stays within ±2 m of frame centre for ≥ 90 % of the sampled frames in which it appears. Adjacent-lane and oncoming vehicles are expected in the series, so no visual judgement decides which track is B.</li>
+<li>Extract that track's estimated range series.</li>
+<li>Compare it against the clip's recorded geometry — <a href="ada-ecu-media-ego-b-occluding-c-source.html">the provenance record</a> states B is a white coach closing from roughly 60 m to roughly 10 m across the 10 s, present in every sampled frame.</li>
+<li>Check the required property, which is a monotonic, consistently-biased range rather than absolute accuracy: the approach yields a decreasing series crossing <code>GATE_ENTER_M</code> (30 m) exactly once per loop.</li>
+<li>On disagreement, retune <strong>only</strong> <code>VEHICLE_WIDTH_M</code> and <code>CAMERA_HFOV_DEG</code>, re-running the lane with the candidate values. Never retune the R13 gate (D3/D6): the gate is a requirement value and the camera constants are estimates. The coach is wider than the 1.8 m car default, so a systematic under-read of range is the expected first finding.</li>
+<li>Record the final values as the defaults in <code>detector/config.py</code>, which is the node's only detector env reader.</li>
+<li>Record the before/after series summary in <code>plans/doc/phase3-ada-detector-run.md</code>, naming the workflow run the artifact came from.</li>
+<li>Hand the two final values to [[project-architecture]] for <a href="documents-design-ada-ecu-ada-ecu-hld.html#6-internal-components">HLD §6</a>'s <strong>Env — detector</strong> table and for <a href="requirements-car-sky-guide-node-ada-ecu.html">node-ada-ecu.md</a>. <strong>The implementing subagent does not edit either file</strong> — the HLD is this node's sole design authority and the node guide is a platform reference, both owned by [[project-architecture]] (<a href="claude.html">CLAUDE.md § Roles</a>, <a href="claude-rules-hld-content-and-commit-format.html">hld-content-and-commit-format.md § How to apply</a>). The hand-off carries the measured series, the chosen values and the run they came from.</li>
+</ol>
+<p><strong>Acceptance:</strong> the estimated-range series for B is monotonic through the approach and crosses the gate once per loop; the two constants' final values are committed in <code>detector/config.py</code> and recorded in the run doc, and the hand-off to [[project-architecture]] is recorded there too.</p>
+<p><strong>Dependencies:</strong> after <code>12.3.2.7</code> + <code>12.3.3.1</code> + <code>12.3.3.4</code>. <strong>Commit:</strong> <code>[12.3.4.3] fix: retune the pinhole distance constants against the demo clip</code></p>
+<hr />
+<h2 id="task-group-35-zero-c-evidence-and-store-integration-serves-r12-r3-r18">Task Group 3.5 — Zero-C evidence and store integration (serves R12, R3, R18)<a class="headerlink" href="#task-group-35-zero-c-evidence-and-store-integration-serves-r12-r3-r18" title="Link to this section">¶</a></h2>
+<h3 id="x-12351-zero-c-check-toolscheck_zero_cpy-ai">[x] <code>12.3.5.1</code> — Zero-C check <code>tools/check_zero_c.py</code> <em>(AI)</em><a class="headerlink" href="#x-12351-zero-c-check-toolscheck_zero_cpy-ai" title="Link to this section">¶</a></h3>
+<p><strong>Objective:</strong> make the R19 zero-C claim falsifiable (D6) — the check fails the run on any of the three rules below.</p>
+<p><strong>Scope — steps in order:</strong></p>
+<ol>
+<li>Write <code>ADA_ECU/tools/check_zero_c.py</code> against the Python 3 standard library alone.</li>
+<li>Take a detection log (R3 JSONL) as input, and the ADA <code>[EVT]</code> stream as an optional second input.</li>
+<li>Take the spatial radius as a CLI argument with a default of 5.0 m, as <a href="documents-design-ada-ecu-ada-ecu-design-decisions.html#d6--r12-detector-frame-source-seam-inference-distance-zero-c-evidence">D6</a> words it — no env key and no literal in the comparison.</li>
+<li>Fail the run when an own-sensor entry claims <code>source: v2x_relayed</code> (rule 1).</li>
+<li>Fail the run when an own-sensor entry carries a <code>v2x:</code> id namespace (rule 2).</li>
+<li>Fail the run when an own-sensor track sits within the radius argument of the relayed C position at the same timestamp (rule 3).</li>
+<li>Add no fourth rule asserting that the detector found nothing but B: adjacent-lane and oncoming vehicles are expected in this clip, and such a rule would fail on correct footage (<a href="ada-ecu-media-ego-b-occluding-c-source.html#what-this-obliges-downstream">provenance record § What this obliges downstream</a>).</li>
+<li>Exit non-zero naming the offending line and the rule that fired.</li>
+<li>Exit 0 printing the counts examined, so a vacuous pass is visible.</li>
+<li>Write <code>ADA_ECU/tools/tests/test_check_zero_c.py</code> (planner-designated path) with three cases: a clean log exits 0; one planted violation per rule exits 1 naming that rule; an empty log exits non-zero, because nothing examined is not a pass.</li>
+</ol>
+<p><strong>Acceptance:</strong> <code>python -m py_compile</code> passes; the test passes locally and on CI.</p>
+<p><strong>Dependencies:</strong> after <code>12.3.2.6</code> (line shape). <strong>Commit:</strong> <code>[12.3.5.1] feat: add the R12 zero-C evidence check</code></p>
+<h3 id="x-12352-detector-run-over-the-clip-the-r12-detection-log-ai">[x] <code>12.3.5.2</code> — Detector run over the clip: the R12 detection log <em>(AI)</em><a class="headerlink" href="#x-12352-detector-run-over-the-clip-the-r12-detection-log-ai" title="Link to this section">¶</a></h3>
+<p><strong>Objective:</strong> the R12 acceptance artifact — a detection log over the provided clip with per-frame objects and distance estimates, at an acceptable offline pace.</p>
+<p><strong>Venue:</strong> the run happens in lane <code>ada-detector-run</code> (<code>12.3.3.4</code>) on the CI Linux runner, with the retuned constants of <code>12.3.4.3</code>, and the agent reads its uploaded stdout artifact. Confirming the run and downloading the artifact is the <strong><code>Human</code></strong> step of § Execution labels.</p>
+<p><strong>Scope — steps in order:</strong></p>
+<ol>
+<li>Trigger <code>ada-detector-run</code> with <code>DETECTOR_LOOP=true</code> and a duration of at least 60 s of wall time — six loops of the 10 s clip — so the rate measurement has a window and the loop path is exercised in the same run.</li>
+<li>Download the stdout artifact, and commit a representative excerpt plus the summary into <code>plans/doc/phase3-ada-detector-run.md</code>; the full log is not committed.</li>
+<li>Record research note KPI 2 <em>(deprecated)</em> — ≥ 99 % of declared frames read with zero decode errors, across loops.</li>
+<li>Record KPI 3 — effective inference rate ≥ 5 Hz, i.e. wall-clock ≤ 200 ms per sampled frame — from the lane's unpaced arm, because pacing fixes the emit interval and the paced arm cannot measure CPU throughput (<code>12.3.3.4</code>).</li>
+<li>Record KPI 4 — ≥ 1 <code>class = vehicle</code>, <code>source = own_sensor</code> entry with a distance estimate for ≥ 90 % of sampled frames.</li>
+<li>Record KPI 5 — <code>check_zero_c.py</code> exit 0 over the whole log.</li>
+<li>Raise <code>DETECTOR_FRAME_STRIDE</code> and re-run if KPI 3 fails, never changing the model (research note §5 <em>(deprecated)</em>); record the stride used.</li>
+<li>Record the detector warm-up <code>W</code> — ONNX model load plus <code>VideoCapture</code> open, from process start to the first emitted R3 line. It is the value the bench's <code>start_delay_s</code> is set to, and R22's alignment budget is <strong>−0.5 / +1.1 s</strong> around it (<a href="requirements-m1-run-timing-and-event-triggering.html">m1-run-timing-and-event-triggering.md §6.6(g)</a>; <a href="documents-design-scenario-player-scenario-player-design-decisions.html#d7--the-demo-cycle-is-one-clip-length-and-its-geometry-is-solved-backwards-from-the-first-warning">SP D7</a>). This run produces the <strong>host</strong> figure; the deployed one, which is what the bench is configured from, is <code>22.3.6.3</code>. The remedy for a large <code>W</code> is the bench's <code>start_delay_s</code>, never a change here.</li>
+<li>Record the interval between the last emitted line of one clip pass and the first of the next, and whether B's track id is re-minted or carried. A long re-open stall is what would expire ego's own B track between cycles, which is <code>13.4.11.3</code>'s own-sensor half in Phase 4.</li>
+<li>Record the paced-rate check: with <code>DETECTOR_REALTIME_PACING</code> true, the sampled-frame rate equals <code>DETECTOR_CLIP_FPS / DETECTOR_FRAME_STRIDE</code> within ±2 %, which is <a href="documents-design-ada-ecu-ada-ecu-hld.html#12-test-strategy">HLD §12</a> K4's bound read off this run's own stamps.</li>
+</ol>
+<p><strong>Acceptance:</strong> the four KPIs, the measured host warm-up <code>W</code>, the clip-pass interval and the paced-rate check recorded with their values; this closes the R12 detection-log box and the CPU-only/offline-pace box at runner level (<code>5.3.6.2</code> repeats KPI 3 on the deployed node, <code>22.3.6.3</code> the warm-up).</p>
+<p><strong>Dependencies:</strong> after <code>12.3.2.7</code> + <code>12.3.3.1</code> + <code>12.3.3.4</code> + <code>12.3.4.3</code> + <code>12.3.5.1</code>. <strong>Commit:</strong> <code>[12.3.5.2] docs: record the R12 detection log and KPI measurements</code></p>
+<h3 id="x-3353-retire-the-mock-real-detector-into-the-real-store-ai">[x] <code>3.3.5.3</code> — Retire the mock: real detector into the real store <em>(AI)</em><a class="headerlink" href="#x-3353-retire-the-mock-real-detector-into-the-real-store-ai" title="Link to this section">¶</a></h3>
+<p><strong>Objective:</strong> the second Phase 3 box — own-sensor entries enter the store through the <strong>same</strong> R3 interface as relayed entries, with the fixture no longer required.</p>
+<p><strong>Scope — steps in order:</strong></p>
+<ol>
+<li>Write no new module.</li>
+<li>Add a sibling arm to <code>13.2.8.2</code>'s loopback lane that leaves the <a href="documents-design-ada-ecu-ada-ecu-hld.html#6-internal-components">HLD §6</a> default <code>DETECTOR_CMD</code> — <code>python3 /app/detector/main.py</code> — in place, where Phase 2's arm overrides it with the <code>cat …/own_sensor_mock.jsonl</code> fixture.</li>
+<li>Drive that arm over the committed clip, <code>VIDEO_CLIP_PATH=ADA_ECU/media/ego-b-occluding-c.mp4</code>, as <code>12.3.5.4</code> does. A synthetic frame source produces zero detections (<code>12.3.3.2</code>), so it can produce neither an <code>own_sensor_ingest</code> line nor a track.</li>
+<li>Assert <code>own_sensor_ingest</code> events and at least one <code>track_transition</code> to <code>tracked</code> for an <code>own:&lt;n&gt;</code> id — proving the JSONL crosses the process boundary, parses through <code>r3_parser</code>, and lands in the store via the same <code>upsert</code> as <code>r2_parser</code>.</li>
+<li>Keep the synthetic source in a second, separate arm as the import-and-plumbing smoke, whose only expected observable is R3 JSONL on stdout — never a track, and never an <code>own_sensor_ingest</code> assertion.</li>
+<li>Leave the Phase 2 fixture committed as a test artifact — it is what <code>--expect-no-tracks</code> and the deterministic admission cases run against.</li>
+</ol>
+<p><strong>Acceptance:</strong> the lane arm is green and observes <code>own:&lt;n&gt;</code> tracks reaching <code>tracked</code> with <code>source = own_sensor</code>; the ADA build + ctest stay green.</p>
+<p><strong>Dependencies:</strong> after <code>12.3.2.7</code> + <code>12.3.3.1</code> + Phase 2 <code>13.2.8.2</code>. <strong>Commit:</strong> <code>[3.3.5.3] test: drive the store from the real detector subprocess</code></p>
+<h3 id="x-12354-lane-ada-zero-c-ai">[x] <code>12.3.5.4</code> — Lane <code>ada-zero-c</code> <em>(AI)</em><a class="headerlink" href="#x-12354-lane-ada-zero-c-ai" title="Link to this section">¶</a></h3>
+<p><strong>Objective:</strong> make the zero-C check repeatable rather than a one-off run — it feeds R19, so it must not be a manual step.</p>
+<p><strong>Scope — the job's steps, in <code>phase3-ci.yml</code>:</strong></p>
+<ol>
+<li>Install the detector requirements.</li>
+<li>Run <code>detector/main.py</code> over the committed clip, which is present in every checkout, capturing stdout. The synthetic source is not a fallback here: it produces zero detections and would leave nothing to examine.</li>
+<li>Run <code>python ADA_ECU/tools/check_zero_c.py</code> over the captured stdout and fail the job on a non-zero exit.</li>
+<li>Assert a non-zero examined-line count, so the lane cannot pass on an empty log.</li>
+</ol>
+<p><strong>Acceptance:</strong> lane green on the pushed branch with a non-zero examined count.</p>
+<p><strong>Dependencies:</strong> after <code>12.3.5.1</code> + <code>12.3.2.7</code> + <code>12.3.3.1</code> + <code>12.3.3.3</code> (same file). <strong>Commit:</strong> <code>[12.3.5.4] chore: add the zero-C evidence CI lane</code></p>
+<hr />
+<h2 id="task-group-36-image-and-deployed-measurement-serves-r5">Task Group 3.6 — Image and deployed measurement (serves R5)<a class="headerlink" href="#task-group-36-image-and-deployed-measurement-serves-r5" title="Link to this section">¶</a></h2>
+<h3 id="x-5361-extend-the-ada-image-with-the-detector-and-model-ai">[x] <code>5.3.6.1</code> — Extend the ADA image with the detector and model <em>(AI)</em><a class="headerlink" href="#x-5361-extend-the-ada-image-with-the-detector-and-model-ai" title="Link to this section">¶</a></h3>
+<p><strong>Objective:</strong> the deployable image carries both processes (D9 image layout).</p>
+<p><strong>Scope — steps in order, all in <code>ADA_ECU/Dockerfile</code>:</strong></p>
+<ol>
+<li>Verify <code>COPY media/ /app/media/</code> is present and sits above the lines added below; <code>12.3.7.2</code> owns that line and lands first. Do not duplicate or reorder it.</li>
+<li>Add <code>COPY models/ /app/models/</code> after it.</li>
+<li>Add <code>COPY detector/ /app/detector/</code> last, because it changes every commit while <code>media/</code> and <code>models/</code> rarely change.</li>
+<li>Add <code>RUN pip install --no-cache-dir -r /app/detector/requirements.txt</code>.</li>
+<li>Add nothing else — exactly two COPY lines and one RUN line.</li>
+<li>Confirm <code>.dockerignore</code> keeps <code>detector/tests/</code> and <code>requirements-dev.txt</code> out of the image.</li>
+</ol>
+<p>Layer order decides which blobs are re-pushed: <code>media/</code> and <code>models/</code> sit above <code>detector/</code> so their blobs are pushed once and cached thereafter. The image layout ends as <code>/app/ada_ecu</code>, <code>/app/entrypoint.sh</code>, <code>/app/detector/</code>, <code>/app/models/yolo11n.onnx</code>, <code>/app/media/ego-b-occluding-c.mp4</code>.</p>
+<p><strong>Acceptance:</strong> <code>ada-ecu-image</code> lane green; the lane's in-image run step starts <code>detector/main.py --synthetic</code> inside the pulled arm64 image and observes R3 JSONL on stdout — the import-and-plumbing smoke, whose only expected observable is that stream. It proves the wheels resolved for aarch64 in the real image, which is what <a href="documents-design-ada-ecu-ada-ecu-design-decisions.html#d9--deployment-shape">HLD decision D9</a> asks for.</p>
+<p><strong>Dependencies:</strong> after <code>12.3.1.1</code> + <code>12.3.2.7</code> + <code>12.3.3.1</code> + <code>12.3.7.2</code> (which must have written <code>COPY media/</code> first). <strong>Commit:</strong> <code>[5.3.6.1] feat: add the detector and model to the ADA image</code></p>
+<h3 id="5362-measure-the-deployed-inference-rate-off-the-isolated-ada-room-ai-car-sky">[ ] <code>5.3.6.2</code> — Measure the deployed inference rate off the isolated ADA Room <em>(AI — car-sky)</em><a class="headerlink" href="#5362-measure-the-deployed-inference-rate-off-the-isolated-ada-room-ai-car-sky" title="Link to this section">¶</a></h3>
+<p><strong>Objective:</strong> KPI 3 on the real 2-vCPU node rather than on a CI runner — and the proof that the <strong>baked-in clip opens on the deployed node</strong>, which no off-platform run can establish about the <code>COPY media/</code> delivery path.</p>
+<p><strong>This subtask books no Room and performs no deploy.</strong> It reads <a href="plans-phase4-tasks.html">phase4_tasks.md</a> group 4.11's already-saved <code>ada.log</code> from the isolated ADA Room — bridge + V2X bench mock + ADA + IVI sink mock. The detector needs no neighbour for this measurement and the ADA node's config is identical in every Room. The account allows two concurrent deployments; this subtask books no second Room slot, and group 4.11's saved log carries the measurement. If group 4.11 has not run yet, this subtask waits for it rather than deploying.</p>
+<p><strong>Scope — reading steps, in order:</strong></p>
+<ol>
+<li>Open <code>18.4.11.1</code>'s saved ADA node log.</li>
+<li>Confirm <code>detector_spawn</code>, then a steady <code>own_sensor_ingest</code> stream.</li>
+<li>Measure the effective sampled-frame rate from the event timestamps — ≥ 5 Hz, i.e. ≤ 200 ms per sampled frame. The deployed node runs with <code>DETECTOR_REALTIME_PACING</code> true, which caps the rate at <code>DETECTOR_CLIP_FPS / DETECTOR_FRAME_STRIDE</code>; reaching that cap is what proves the 2-vCPU node sustains the inference cost, and falling below it is what proves it does not.</li>
+<li>Record the clip path the node reports opening. <code>detector_spawn</code> followed by <code>own_sensor_ingest</code> on the deployed node is the proof that the baked-in clip opened there (<a href="requirements-m1-video-source-and-ivi-dashcam.html">m1-video-source-and-ivi-dashcam.md §7 KPI 9</a>).</li>
+<li>Record the deployed warm-up interval, which will exceed <code>12.3.5.2</code>'s runner figure, and the interval between the last line of one clip pass and the first of the next.</li>
+<li>Report the rate whichever way it lands. If it falls short, the remedy is raising <code>DETECTOR_FRAME_STRIDE</code> in the ADA node config and re-reading on the next Room — config only, no rebuild. A rate below KPI 3 is also the Phase 4 failure mode where ego's own B track expires between updates and the composed geometry disappears (<a href="requirements-car-sky-guide-deploy-ada-ecu-walkthrough.html#81-confirm-before-relying-on-these">deploy-ada-ecu-walkthrough.md §8.1 item 11</a>).</li>
+</ol>
+<p><strong>Acceptance:</strong> the measured deployed rate, warm-up, clip-pass interval and reported clip path recorded in <code>plans/doc/phase3-ada-detector-run.md</code>, citing the Room and log the reading came from.</p>
+<p><strong>Dependencies:</strong> after <code>5.3.6.1</code> (so the deployed image carries the detector) + Phase 4 <code>18.4.11.1</code> (the log to read). <strong>Commit:</strong> <code>[5.3.6.2] docs: record the deployed ADA inference rate and clip-open evidence</code></p>
+<h3 id="22363-measure-the-detector-warm-up-w-on-the-deployed-node-and-derive-start_delay_s-car-sky">[ ] <code>22.3.6.3</code> — Measure the detector warm-up <code>W</code> on the deployed node and derive <code>start_delay_s</code> <em>(car-sky)</em><a class="headerlink" href="#22363-measure-the-detector-warm-up-w-on-the-deployed-node-and-derive-start_delay_s-car-sky" title="Link to this section">¶</a></h3>
+<p><strong>Objective:</strong> produce <strong>one number</strong> — the interval, on the deployed ADA node, from the detector process spawn to its first emitted R3 line. It is the value the bench's <code>start_delay_s</code> is set to, and R22 cannot be configured without it (<a href="requirements-m1-run-timing-and-event-triggering.html">m1-run-timing-and-event-triggering.md §6.6(g)</a>, <a href="requirements-m1-run-timing-and-event-triggering.html">§9 item 4</a>; <a href="documents-design-scenario-player-scenario-player-design-decisions.html">SP D7</a>).</p>
+<p><strong>This subtask books no Room and performs no deploy.</strong> Like <code>5.3.6.2</code> it reads <a href="plans-phase4-tasks.html">phase4_tasks.md</a> <code>18.4.11.1</code>'s already-saved <code>ada.log</code> from the isolated ADA Room. The account allows two concurrent deployments; a second slot for a log read is waste. If group 4.11 has not run, this subtask waits.</p>
+<p><strong>Scope — reading and arithmetic, entirely:</strong></p>
+<ul>
+<li>From the saved ADA node <code>[EVT]</code> stream, take <code>mono_ms</code> of the <strong><code>detector_spawn</code></strong> line and <code>mono_ms</code> of the <strong>first <code>own_sensor_ingest</code></strong> line. <code>W = Δ mono_ms / 1000</code>, seconds. Both stamps are this node's own <code>CLOCK_MONOTONIC</code>, so the measurement crosses no clock domain (<a href="documents-design-ada-ecu-ada-ecu-design-decisions.html#d10--clock-domains-and-stimulus-paced-against-clock_monotonic">ADA D10</a>).</li>
+<li>The first <code>own_sensor_ingest</code> is also <strong><code>T0</code></strong>, the R22 run origin (<a href="documents-design-ada-ecu-ada-ecu-design-decisions.html#d11--r22-run-choreography-the-run-origin-the-paced-clip-and-the-risk-band-pair">ADA D11</a>). Record its <code>mono_ms</code> and <code>epoch_ms</code> alongside <code>W</code>, so a later K6 read has the origin the run actually used.</li>
+<li>Confirm the run was paced: the node's <code>DETECTOR_REALTIME_PACING</code> as deployed, and the observed sampled-frame period against <code>DETECTOR_FRAME_STRIDE / DETECTOR_CLIP_FPS</code>. <strong>An unpaced run yields no usable <code>W</code></strong> — clip time is not run time, so report it as unmeasured and hand back rather than deriving a number from it.</li>
+<li>Take <code>W</code> over <strong>at least three detector spawns</strong> where the log has them (a restart, or a second Room), and record the spread. A single sample with no spread is still acceptable evidence; state which it is.</li>
+<li><strong>Derive the bench value:</strong> <code>start_delay_s = W</code>, since <code>DETECTOR_START_DELAY_S</code> stays <code>0.0</code> (D11). State it to one decimal, with the −0.5 / +1.1 s tolerance band around the measurement, so <code>22.1.13.4</code> writes a value with a stated margin rather than a guess.</li>
+</ul>
+<p><strong>Executor:</strong> <em>car-sky</em>, per <a href="requirements-car-sky-guide-deploy-ada-ecu-walkthrough.html#7-work-division-between-ai-and-human">deploy-ada-ecu-walkthrough.md §7</a>'s AI row for reading node logs. It performs no canvas step and no deploy click.</p>
+<p><strong>Acceptance:</strong> <code>W</code> in seconds, <code>T0</code>'s two stamps, the observed sampled-frame period, the deployed <code>DETECTOR_REALTIME_PACING</code> value, and the derived <code>start_delay_s</code> with its tolerance band — all recorded in <code>plans/doc/phase3-ada-detector-run.md</code>, citing the Room and the log the reading came from.</p>
+<p><strong>Dependencies:</strong> after <code>5.3.6.1</code> + <code>12.3.2.8</code> (the run must be paced) + Phase 4 <code>18.4.11.1</code> (the log). <strong>Unblocks</strong> Phase 1 <code>22.1.13.4</code>. <strong>Commit:</strong> <code>[22.3.6.3] docs: record the deployed detector warm-up and the derived bench start delay</code></p>
+<hr />
+<h2 id="task-group-37-the-demo-clip-in-the-repo-and-in-the-image-serves-r12-r5">Task Group 3.7 — The demo clip in the repo and in the image (serves R12, R5)<a class="headerlink" href="#task-group-37-the-demo-clip-in-the-repo-and-in-the-image-serves-r12-r5" title="Link to this section">¶</a></h2>
+<blockquote>
+<p>This group puts the committed clip into the image and measures what that costs. The clip itself is an input (§ Input), not a deliverable of any subtask here.</p>
+<p>C is scenario-injected and never in the footage; the decoy criterion and the bench's obligation are <a href="ada-ecu-media-ego-b-occluding-c-source.html#c-is-synthetic--what-the-criterion-actually-constrains">§ C is synthetic</a>.</p>
+</blockquote>
+<h3 id="x-12371-the-demo-clip-its-provenance-and-the-binary-tracking-rules-ai">[x] <code>12.3.7.1</code> — The demo clip, its provenance and the binary tracking rules <em>(AI)</em><a class="headerlink" href="#x-12371-the-demo-clip-its-provenance-and-the-binary-tracking-rules-ai" title="Link to this section">¶</a></h3>
+<p><strong>Objective:</strong> the clip, its provenance record, and the rules that keep exactly one video file in git — <code>*.mp4 binary</code> / <code>*.onnx binary</code> in <code>.gitattributes</code>, <code>ADA_ECU/media/source/</code> in <code>.gitignore</code>.</p>
+<p><strong><a href="ada-ecu-media-ego-b-occluding-c-source.html">The provenance record</a> is the authority, and no subtask may restate or contradict it:</strong> the source and its URL, the Pexels License and the attribution string, the exact ffmpeg encode command, both SHA-256s, the content verdict per criterion, the § C is synthetic reasoning and its downstream obligations, the rejected candidates, and the accepted 10 s duration with looping as its remedy.</p>
+<p><strong>Status:</strong> done, commit <code>3d55d7b</code>. Candidate selection detail is <a href="ada-ecu-media-ego-b-occluding-c-source.html#rejected-candidates">§ Rejected candidates</a>.</p>
+<h3 id="x-12372-bake-the-committed-clip-into-the-ada-image-ai">[x] <code>12.3.7.2</code> — Bake the committed clip into the ADA image <em>(AI)</em><a class="headerlink" href="#x-12372-bake-the-committed-clip-into-the-ada-image-ai" title="Link to this section">¶</a></h3>
+<p><strong>Objective:</strong> the clip reaches the container the only way it can — inside the image. A Container Node has no volume, no bind mount and no host path (research note §1 <em>(deprecated)</em>). The single objective is that one Dockerfile line; the size and digest measurement below is that line's acceptance evidence, not a second deliverable.</p>
+<p><strong>Venue:</strong> every build, <code>docker history</code> read and in-image run step happens in the <code>ada-ecu-image</code> lane. The dev host carries no Docker daemon and no binfmt emulation, so this subtask reads the lane's log rather than building locally.</p>
+<p><strong>Scope — the image only. No video file is created, moved, re-encoded or re-committed.</strong></p>
+<ul>
+<li>Run <code>python ADA_ECU/tools/check_clip_spec.py ADA_ECU/media/ego-b-occluding-c.mp4</code> (from <code>12.2.9.1</code>) and require <strong>exit 0</strong>. This is the format gate over the committed artifact; the content rows are the provenance record's and are not re-judged here.</li>
+<li><code>ADA_ECU/Dockerfile</code>: add <strong>one line only — <code>COPY media/ /app/media/</code></strong> — as its own early layer. <strong>This subtask is the sole owner of that line</strong>; <code>5.3.6.1</code> adds <code>COPY models/</code> and <code>COPY detector/</code> afterwards and only verifies this one. Write it where those two will follow it:</li>
+</ul>
+<p><code>dockerfile
+  # media and model: change rarely, pushed once, cached thereafter
+  COPY media/  /app/media/    # &lt;- this subtask
+  COPY models/ /app/models/   # &lt;- 5.3.6.1, later
+  # code: changes every commit
+  COPY detector/ /app/detector/   # &lt;- 5.3.6.1, later</code></p>
+<p>Ordering is why the split matters: <code>media/</code> must sit above <code>models/</code> and <code>detector/</code> so its blob is pushed once and cached thereafter — the property <code>5.3.7.3</code> measures as KPI 7 (identical media-layer digest across two builds).</p>
+<ul>
+<li>Confirm <code>ADA_ECU/.dockerignore</code> does <strong>not</strong> exclude <code>media/</code>, and <strong>does</strong> exclude <code>media/source/</code>. Check the pattern list rather than assuming; <code>5.2.7.1</code> wrote it.</li>
+<li>No code change: <code>VIDEO_CLIP_PATH</code> defaults to <code>/app/media/ego-b-occluding-c.mp4</code> (<code>12.3.2.1</code>), and the path and the stride are env, never literals (CLAUDE.md principle 5).</li>
+<li><strong>Add the measurement steps to the <code>ada-ecu-image</code> lane and record their output</strong> in <code>plans/doc/phase3-ada-detector-run.md</code>: <code>docker image inspect -f '{{.Size}}'</code> before and after, the media layer's own size from <code>docker history</code>, and the layer digest. That job lives in <code>phase2-ci.yml</code>, which is in this subtask's write scope for those steps alone — the lane is not duplicated and its build step is not edited. Expect the delta to be ≈ 5.0 MB — H.264 is already compressed, so the layer's gzip gains ~0 %.</li>
+</ul>
+<p><strong>Acceptance (all required):</strong></p>
+<ul>
+<li><code>check_clip_spec.py</code> exits 0 on the committed clip, output recorded.</li>
+<li>The image-size delta, media-layer size and layer digest recorded in the run doc, read from the lane's log.</li>
+<li>CI lane <code>ada-ecu-image</code> green: <code>docker buildx build --platform linux/arm64 --provenance=false --sbom=false</code> succeeds against the registry tag <code>registry.hackathon-2.carsky.io/m1-ada-ecu:latest</code>, and a run step inside the built arm64 image finds <code>/app/media/ego-b-occluding-c.mp4</code> at exactly 5 261 876 bytes.</li>
+<li>Unit tests unaffected and still green.</li>
+<li><strong>Exactly one video file remains in git history and no new one is added.</strong></li>
+</ul>
+<p><strong>Dependencies:</strong> after Phase 2 <code>5.2.7.1</code> (the Dockerfile must exist) + <code>12.2.9.1</code> (the preflight). Unblocks <code>5.3.6.1</code>, <code>5.3.7.3</code>. <strong>Commit:</strong> <code>[12.3.7.2] feat: bake the demo clip into the ADA image</code></p>
+<h3 id="5373-record-the-media-layer-size-cache-stability-and-push-kpis-ai-car-sky">[ ] <code>5.3.7.3</code> — Record the media-layer size, cache-stability and push KPIs <em>(AI — car-sky)</em><a class="headerlink" href="#5373-record-the-media-layer-size-cache-stability-and-push-kpis-ai-car-sky" title="Link to this section">¶</a></h3>
+<p><strong>Objective:</strong> close <a href="requirements-m1-video-source-and-ivi-dashcam.html">m1-video-source-and-ivi-dashcam.md §7 KPIs 7 and 8</a> — one number, read twice: what the clip costs to upload. The digest comparison and the push report are the two readings, not two deliverables.</p>
+<p><strong>Who performs which half, within this one brief:</strong> the two builds and the <code>docker history</code> comparison run in the <code>ada-ecu-image</code> lane, and the implementing agent reads the two runs' logs. The registry credential, the push and the registry's blob report are [[car-sky]]'s, per <a href="claude-skills-carsky-deploy-preflight-skill.html">carsky-deploy-preflight</a>.</p>
+<p><strong>Scope — steps in order:</strong></p>
+<ol>
+<li>Run <code>ada-ecu-image</code> twice with no change under <code>ADA_ECU/media/</code>.</li>
+<li>Read <code>docker history</code> from both runs and assert the media layer digest is identical across them, and its size is ≤ 60 MB (KPI 7). A changed digest means the layer ordering is wrong, and <code>12.3.7.2</code>'s Dockerfile edit is the fix.</li>
+<li>[[car-sky]]: record the first push of <code>registry.hackathon-2.carsky.io/m1-ada-ecu:latest</code> — the media blob's transfer time and the measured link rate.</li>
+<li>[[car-sky]]: push again and confirm the registry reports that blob already present, 0 bytes transferred (KPI 8) — Zot skips blobs it already holds.</li>
+<li>Record both readings in <code>plans/doc/phase3-ada-detector-run.md</code>. No code change; doc-only commit.</li>
+</ol>
+<p><strong>Acceptance:</strong> the two digests match and are recorded; the second push reports 0 bytes for the media blob; both numbers written to the run doc.</p>
+<p><strong>Dependencies:</strong> after <code>12.3.7.2</code> + <code>5.3.6.1</code>. <strong>Commit:</strong> <code>[5.3.7.3] docs: record the ADA media-layer size and push-cache KPIs</code></p>
+<hr />
+<h2 id="execution-order-parallelism">Execution order &amp; parallelism<a class="headerlink" href="#execution-order-parallelism" title="Link to this section">¶</a></h2>
+<pre><code>wheels     12.3.1.1                                   (runs before every other subtask - gates 12.3.2.5 and 5.3.6.1)
+lanes      12.3.3.3                                   (guarded lane - lands before group 3.2's consumers)
+modules    12.3.2.1 ──► 12.3.2.2 ∥ 12.3.2.3 ∥ 12.3.2.4 ∥ 12.3.2.8
+                        12.3.2.5 (after 12.3.2.1 + 12.3.1.1)
+                        12.3.2.6 (after 12.3.2.3 + 12.3.2.4)
+                        12.3.2.7 (after 12.3.2.2 + 12.3.2.5 + 12.3.2.6 + 12.3.2.8)
+artifacts  12.3.3.1 (after 12.3.1.1) ∥ 12.3.3.2 (after 12.3.2.2)
+run lane   12.3.3.4 (after 12.3.1.1 + 12.3.2.7 + 12.3.3.1)
+clip       12.3.7.2 (after phase-2 5.2.7.1 + 12.2.9.1)   - independent of the module lane
+evidence   12.3.5.1 (after 12.3.2.6) ──► 12.3.5.4 (also needs 12.3.2.7 + 12.3.3.1)
+           3.3.5.3 (after 12.3.2.7 + 12.3.3.1 + phase-2 13.2.8.2)
+           12.3.4.3 (after 12.3.2.7 + 12.3.3.1 + 12.3.3.4) ──► 12.3.5.2 (also needs 12.3.5.1)
+image      5.3.6.1 (after 12.3.1.1 + 12.3.2.7 + 12.3.3.1 + 12.3.7.2)
+push/KPI   5.3.7.3 (after 12.3.7.2 + 5.3.6.1)
+deployed   5.3.6.2 ∥ 22.3.6.3 (after 5.3.6.1 + 12.3.2.8 + phase-4 18.4.11.1 - log reads, not deploys)
+</code></pre>
+<p><strong><code>12.3.3.1</code> gates every subtask that runs the real detector</strong> — <code>12.3.3.4</code>, <code>12.3.4.3</code>, <code>12.3.5.2</code>, <code>12.3.5.4</code>, <code>3.3.5.3</code> and <code>5.3.6.1</code> all execute against <code>MODEL_PATH</code>, and that file reaches disk only when <code>12.3.3.1</code> commits it. The edges above are the dependency structure a parallel run must honour, not a suggestion the recommended order happens to satisfy.</p>
+<p><strong>Recommended runtime order (single tree):</strong> 12.3.1.1 → 12.3.3.3 → 12.3.2.1 → 12.3.2.2 → 12.3.2.3 → 12.3.2.4 → 12.3.2.8 → 12.3.3.2 → 12.3.3.1 → 12.3.2.5 → 12.3.2.6 → 12.3.2.7 → 12.3.3.4 → 12.3.7.2 → 12.3.5.1 → 12.3.5.4 → 3.3.5.3 → 12.3.4.3 → 12.3.5.2 → 5.3.6.1 → 5.3.7.3 → 5.3.6.2 → 22.3.6.3.</p>
+<p><strong>Three <code>Human</code> steps and one external input gate this phase</strong> (§ Execution labels): the branch creation and push, the workflow-run confirmations and artifact downloads, and the <code>yolo11n.pt</code> fetch <code>12.3.3.1</code> needs when the export host has no egress. The remaining external unknown is <code>12.3.1.1</code>'s wheel availability, which is taken first.</p>
+<p><strong>Relative to Phase 4.</strong> Fully parallel until <code>5.3.6.2</code>, which reads a log Phase 4's isolated Room produced. Phase 4 consumes the store, not the detector; the only shared files are <code>ADA_ECU/CMakeLists.txt</code> (C++ targets — this phase adds none) and <code>ADA_ECU/Dockerfile</code> (this phase adds three <code>COPY</code> lines, Phase 4 adds one for <code>capture.sh</code>). Sequence those edits, not the phases.</p>
+<h2 id="acceptance-traceability">Acceptance traceability<a class="headerlink" href="#acceptance-traceability" title="Link to this section">¶</a></h2>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Milestone Phase 3 box</th>
+<th>Closed by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Detection log with per-frame objects and distance estimates (R12)</td>
+<td><code>12.3.5.2</code>, over the committed clip; modules <code>12.3.2.2</code>/<code>3</code>/<code>5</code>/<code>6</code>/<code>7</code>/<code>8</code></td>
+</tr>
+<tr>
+<td>Entries enter via the same R3 interface, <code>source = own_sensor</code>, mock retired</td>
+<td><code>3.3.5.3</code> · <code>12.3.2.6</code> (frozen binding) · Phase 2 <code>3.2.3.2</code> + <code>3.2.4.1</code></td>
+</tr>
+<tr>
+<td><strong>Zero detections labeled C</strong></td>
+<td><code>12.3.5.1</code> (the falsifiable check) · <code>12.3.5.4</code> (repeatable in CI) · D6's structural argument · the clip's content verdict in <a href="ada-ecu-media-ego-b-occluding-c-source.html">the provenance record</a></td>
+</tr>
+<tr>
+<td>CPU-only, offline pace acceptable</td>
+<td><code>12.3.5.2</code> KPI 3 (CI runner) · <code>5.3.6.2</code> (deployed node) · <code>12.3.1.1</code> (CPU-only wheels)</td>
+</tr>
+<tr>
+<td><em>(no milestone box — § Open items item 12)</em> media layer ≤ 60 MB, digest stable; second push transfers 0 bytes</td>
+<td><code>5.3.7.3</code></td>
+</tr>
+<tr>
+<td><em>(no milestone box)</em> the baked-in clip opens <strong>on the deployed node</strong></td>
+<td><code>5.3.6.2</code></td>
+</tr>
+<tr>
+<td><em>(no milestone box)</em> R20's detector half — sampled frames released at 1.0× wall time, K4 within ±2 %</td>
+<td><code>12.3.2.8</code> (the pacer) · <code>12.3.5.2</code> (the host measurement) · verified by Phase 4 <code>21.4.3.4</code></td>
+</tr>
+<tr>
+<td><em>(no milestone box)</em> the detector warm-up <code>W</code> and the bench <code>start_delay_s</code> R22 rests on</td>
+<td><code>22.3.6.3</code>, consumed by Phase 1 <code>22.1.13.4</code></td>
+</tr>
+<tr>
+<td><em>(phase task, no box)</em> R18 own-sensor evidence</td>
+<td><code>own_sensor_ingest</code> payloads from Phase 2 <code>18.2.2.3</code>, fed by this phase's real lines</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Three of the four boxes close off-platform.</strong> Only the deployed half of the CPU-pace box needs a Room, and it reads Phase 4's.</p>
+<h2 id="open-items-flags-no-phase-3-subtask-may-silently-close-them">Open items &amp; flags (no Phase 3 subtask may silently close them)<a class="headerlink" href="#open-items-flags-no-phase-3-subtask-may-silently-close-them" title="Link to this section">¶</a></h2>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Item</th>
+<th>Owner / closes at</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>Resolved by <code>12.3.1.1</code>: <code>onnxruntime==1.28.0</code>, <code>opencv-python-headless==5.0.0.93</code>, <code>numpy==2.4.6</code> install as prebuilt cp311 aarch64 wheels on <code>python:3.11-slim</code></strong> — the pins in <code>detector/requirements.txt</code>. Original item: aarch64 wheel availability was unproven (<a href="documents-design-ada-ecu-ada-ecu-design-decisions.html#d9--deployment-shape">HLD decision D9</a>). Verified first by <code>12.3.1.1</code>. A red lane escalates — pin an older wheel, change the base image, or accept a QEMU source build with a raised timeout. Not an implementer's call</td>
+<td><code>12.3.1.1</code>, then [[project-architecture]]</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>Planner-designated test/tool paths beyond the HLD's list</strong>: <code>detector/tests/test_config.py</code>, <code>test_inference.py</code>, <code>test_main.py</code>; <code>ADA_ECU/tools/tests/test_check_zero_c.py</code>. Required by subtask discipline; HLD-consistent additions, not new design</td>
+<td>[[project-architecture]] (ack)</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>Resolved by <code>12.3.4.3</code>: retuned to <code>VEHICLE_WIDTH_M=2.6</code>, <code>CAMERA_HFOV_DEG=34.4</code></strong> (<a href="plans-doc-phase3-ada-detector-run.html">run record</a>) — the default constants started B inside the gate (22.3 m), the predicted coach bias. Original item: distance accuracy unvalidated (<a href="documents-design-ada-ecu-ada-ecu-design-decisions.html#d6--r12-detector-frame-source-seam-inference-distance-zero-c-evidence">HLD decision D6</a>). <code>12.3.4.3</code> is the retune, and it may only move <code>VEHICLE_WIDTH_M</code> / <code>CAMERA_HFOV_DEG</code>, never <code>GATE_ENTER_M</code> / <code>GATE_EXIT_M</code>. B is a coach, wider than the 1.8 m car default, so expect a systematic bias to correct</td>
+<td><code>12.3.4.3</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>Detector warm-up <code>W</code> (ONNX load + <code>VideoCapture</code> open) is unmeasured</strong> — estimated 2–5 s, and it is the one measurement R22 cannot ship without: it sets the bench's <code>start_delay_s</code>, held to <strong>−0.5 / +1.1 s</strong> (<a href="requirements-m1-run-timing-and-event-triggering.html">§6.6(g)</a>). <code>12.3.5.2</code> produces the CI-runner figure; <strong><code>22.3.6.3</code> produces the deployed one, which is the value that ships</strong>, and Phase 1 <code>22.1.13.4</code> writes it into <code>scenarios/default.yaml</code></td>
+<td><code>12.3.5.2</code>, then <code>22.3.6.3</code></td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>The clip is 10 s, and every long-run behaviour therefore depends on looping.</strong> Accepted, with reasoning in <a href="ada-ecu-media-ego-b-occluding-c-source.html">the provenance record</a>. Two consequences no subtask may absorb silently: <code>FileFrameSource</code> must keep <code>frame_index</code> monotonic across loops (<code>12.3.2.2</code>), and the gap between the last emitted line of one clip pass and the first of the next must not exceed <code>TRACK_TIMEOUT_MS</code>, or ego's own B track expires between cycles. <code>12.3.5.2</code> measures that gap; if it is too long, the finding goes to [[project-architecture]] — it is not fixed by widening the timeout</td>
+<td><code>12.3.5.2</code></td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>The detector's pacer is built because <a href="documents-design-ada-ecu-ada-ecu-hld.html#6-internal-components">HLD §4/§6/§12</a> and <a href="documents-design-ada-ecu-ada-ecu-design-decisions.html#d10--clock-domains-and-stimulus-paced-against-clock_monotonic">D10</a> designate it (<code>12.3.2.8</code>); the requirement number it serves is unratified.</strong> <a href="requirements-m1-run-timing-and-event-triggering.html">m1-run-timing-and-event-triggering.md §7</a> defines R20 and §8(1) schedules R20/R21 behind this phase's acceptance. D10 states that pacing serves R20 on its own footing rather than the deferred IVI dashcam view, so building it pulls no deferred surface in; the dashcam view stays deferred (<a href="documents-plan-milestone1-high-level-plan.html#6-deferred-to-later-milestones">milestone1_high_level_plan.md §6</a>) and no Phase 3 subtask may add clip-serving or an <code>exposedPorts</code> entry. <strong>Trigger:</strong> the user accepts or rejects R20, which fixes whether <code>12.3.2.8</code> and its K4 bound are traceable to a ratified requirement</td>
+<td><strong>user</strong> (accept/reject R20)</td>
+</tr>
+<tr>
+<td>7</td>
+<td><strong>The §3 clip-spec numbers are proposals</strong>, and the duration row does not match the committed artifact. <code>12.2.9.2</code> sends the spec to FPT-Mentor for confirmation and states the deviation. A correction arriving late is absorbed by <strong>raising the stride</strong>, never by changing the model or the gate</td>
+<td>user / <code>12.2.9.2</code></td>
+</tr>
+<tr>
+<td>8</td>
+<td><strong>The <code>container-file</code> API is not the deploy path, and no subtask may make it one.</strong> <a href="requirements-m1-video-source-and-ivi-dashcam.html">m1-video-source-and-ivi-dashcam.md §5</a> documents <code>POST /api/v1/deployments/:roomId/container-file/:nodeKey</code> as a real post-deploy file channel with no schema, no size limit and no example. It is sanctioned <strong>only</strong> as a rehearsal-time clip swap or log pull; <strong>nothing deployed may differ from its image tag</strong>, so no subtask depends on it and the clip reaches the node through <code>COPY media/</code> alone</td>
+<td>recorded, no action</td>
+</tr>
+<tr>
+<td>9</td>
+<td><strong>No documented registry size ceiling.</strong> <a href="requirements-m1-video-source-and-ivi-dashcam.html">§10 item 1</a> — a ~1.2 GB artifact is observed succeeding on the platform, so a ~30 MB image is unremarkable, but the number is unverified. <code>5.3.7.3</code>'s real <code>docker push</code> either holds or fails with the registry's error recorded</td>
+<td><code>5.3.7.3</code></td>
+</tr>
+<tr>
+<td>10</td>
+<td><strong>The clip's provenance record attributes its ffmpeg encode to <code>12.3.7.2</code></strong>, and the encode landed under <code>12.3.7.1</code>; <code>12.3.7.2</code> is the image line alone. The plan is not the place to restate the encode, so the record's header line is what needs correcting</td>
+<td>[[project-architecture]]</td>
+</tr>
+<tr>
+<td>11</td>
+<td><strong>The rejected-alternative rationale for plain-git binary tracking has no home.</strong> Why Git LFS is not used for <code>models/yolo11n.onnx</code> and <code>media/ego-b-occluding-c.mp4</code> is design record, which belongs in <code>ADA_ECU/doc/</code> (<a href="claude-rules-node-code-layout.html#where-a-nodes-documents-live">node-code-layout § Where a node's documents live</a>) rather than in this plan</td>
+<td>[[project-architecture]]</td>
+</tr>
+<tr>
+<td>12</td>
+<td><strong><code>5.3.7.3</code> closes no Phase 3 milestone box.</strong> Its acceptance traces to <a href="requirements-m1-video-source-and-ivi-dashcam.html">m1-video-source-and-ivi-dashcam.md §7</a> KPIs 7–8 and is R5-traceable, but no box in <a href="documents-plan-milestone1-high-level-plan.html#phase-3--object-detection-from-video-r12--runs--with-phase-4">milestone1_high_level_plan.md §5</a> covers it. Two resolutions: record it there as a fifth Phase 3 check, or move it to the phase that owns the image push</td>
+<td>[[project-planner]]</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<p><em>Phase 3 = 7 task groups, 24 subtasks, every one <code>AI</code>; <code>5.3.6.2</code>, <code>5.3.7.3</code> and <code>22.3.6.3</code> go to [[car-sky]] and the rest to an implementation subagent. 21 are done (branch <code>feat/phase3-object-detection</code>); the three car-sky readings wait on Phase 4 <code>18.4.11.1</code>'s saved Room log and the registry push. Run evidence: <a href="plans-doc-phase3-ada-detector-run.html">doc/phase3-ada-detector-run.md</a>.</em></p>
+      </article>
+    </main>
+  </div>
+  <script src="../js/site-data.js"></script>
+  <script src="../js/theme.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/doc-page.js"></script>
+</body>
+</html>

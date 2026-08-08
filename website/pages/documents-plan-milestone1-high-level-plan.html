@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en" data-theme="sketch">
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="kis-build-pages">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Milestone 1 — Cooperative Vehicle Awareness (A ← B ← C) — KIS</title>
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/doc.css">
+  <link rel="stylesheet" href="../css/themes.css">
+</head>
+<body class="DocBody" data-root=".." data-doc-node="plans" data-doc-title="Milestone 1 — Cooperative Vehicle Awareness (A ← B ← C)" data-doc-source="documents/Plan/milestone1_high_level_plan.md">
+  <div class="DocLayout">
+    <aside class="DocLayout__aside" id="doc-toc"></aside>
+    <main class="Page DocPage">
+      <header class="PageHeader" id="doc-header"></header>
+      <article class="Markdown" id="doc-body">
+<h1 id="milestone-1-cooperative-vehicle-awareness-a-b-c">Milestone 1 — Cooperative Vehicle Awareness (A ← B ← C)<a class="headerlink" href="#milestone-1-cooperative-vehicle-awareness-a-b-c" title="Link to this section">¶</a></h1>
+<blockquote>
+<p>Requirements, scope, and tech stacks live in the authoritative report <a href="requirements-m1-cooperative-awareness.html">m1-cooperative-awareness.md</a> (R1–R19), extended by <a href="requirements-m1-run-timing-and-event-triggering.html">m1-run-timing-and-event-triggering.md</a> (R20–R22, run timing and demo choreography); this plan references R-numbers instead of restating them, and on any conflict the report wins. Phase structure follows the <a href="../../presentation/assets/m1-phase-timeline.svg">proposal-deck timeline</a> (second authority).</p>
+</blockquote>
+<h2 id="1-introduction">1. Introduction<a class="headerlink" href="#1-introduction" title="Link to this section">¶</a></h2>
+<p>Milestone 1 demonstrates <strong>cooperative (non-line-of-sight) awareness</strong> over V2X: making a vehicle aware of a hazard it cannot see, by relaying another vehicle's perception (report §1).</p>
+<p>Three vehicles drive in a collinear convoy — <strong>A</strong> follows <strong>B</strong> follows <strong>C</strong>. Vehicle A's view of C is <strong>blocked by B</strong>, so A's own camera can never detect C. Vehicle B sees C and <strong>broadcasts that perception to A over V2X</strong>, and A displays C and its relative position without ever seeing it. <strong>M1 builds only A's vehicle (ego)</strong> — B and C exist as bench-generated V2X messages (R11) and as content of the provided video; the bench Scenario Player is sanctioned test equipment, not a mock to eliminate.</p>
+<p><img alt="Convoy geometry: A cannot see C; B sees C and relays it to A over V2X" src="requirements-m1-convoy-nlos-relay-geometry.png" /></p>
+<p><em>Objective — B's perception of C reaches A over a V2X relay. A reconstructs C's position by composing its own measurement of B with B's reported measurement of C:</em> <code>d_AC ≈ d_AB + d_BC</code> <em>(valid for the near-collinear convoy; absolute/GPS composition is a later milestone).</em></p>
+<hr />
+<h2 id="2-scope-assumptions">2. Scope &amp; Assumptions<a class="headerlink" href="#2-scope-assumptions" title="Link to this section">¶</a></h2>
+<p>Report §1 plus its §4 decision record are the hard scope boundary; each assumption below traces there.</p>
+<ul>
+<li><strong>Ego-only build on CarSky.</strong> One blueprint with four nodes — V2X ECU, ADA ECU, IVI ECU (provided AAOS), bench Scenario Player — over one Ethernet Bridge (R5, R6); the Cortex-M ECU is omitted.</li>
+<li><strong>Video is provided</strong> (saved files) — no live camera bring-up. The detector sees <strong>B, the visible occluder</strong> — C is by definition never in ego's frame (R12).</li>
+<li><strong>Pretrained detector, no training</strong>; CPU-only — no GPU requested from BTC (§4 decisions).</li>
+<li><strong>Video input spec is unconfirmed</strong> — format / frame rate / data rate are to be studied and proposed to FPT-Mentor (report § Input constraints); Phase 2 carries that study.</li>
+<li><strong>Wire encoding is standard ASN.1 UPER</strong> via the Vanetza ITS2 codec (R1); JSON is used only on the intra-ego links (R2, R4).</li>
+<li><strong>Messages are unsigned</strong> — no signing/PKI stack in M1 (the R1 profile carries no security envelope).</li>
+<li><strong>No GNSS path</strong> — sender pose values originate in bench-generated CPM contents (R11); the IVI renders relative geometry only, no map and no GNSS injection (§4 decisions).</li>
+<li><strong>Composition assumes a near-collinear, same-heading convoy</strong> (§1 objective note).</li>
+<li><strong>Risk</strong> is the R14 Collision Risk Assessment (CRA) abstraction with the M1 NLOS plugin on the fixed distance criterion (R13); speed-scaled risk and further hazard types are future plugins (report § Future developments).</li>
+</ul>
+<hr />
+<h2 id="3-development-plan-order-of-implementation">3. Development Plan &amp; Order of Implementation<a class="headerlink" href="#3-development-plan-order-of-implementation" title="Link to this section">¶</a></h2>
+<p>The plan is <strong>contract-first</strong>: the contracts are the report's R1–R6, frozen in Phase 0 before dependent work, so every later phase is "swap mock data for real data" inside a shape that already works.</p>
+<blockquote>
+<p>Deviation from the deck, flagged: the deck timeline places the ADA↔IVI message definition inside Phase 2, but the display track (Phase 5) starts in parallel with Phase 2 and must build against a frozen R4 mock — so this plan freezes R4 in Phase 0 with the other contracts (contract-first principle; report authority over deck).</p>
+</blockquote>
+<p>With the contracts frozen, three tracks run in parallel and converge at Phase 6 (<a href="../../presentation/assets/m1-phase-timeline.svg">timeline</a>):</p>
+<ul>
+<li><strong>Comms track — Phase 1:</strong> V2X ECU + bench Scenario Player exchanging real R1 CPMs (mock perception contents until Phase 6).</li>
+<li><strong>ADA track — Phase 2 first</strong> (skeleton + store + state machine), <strong>then Phases 3 ∥ 4</strong> side by side. They never call each other — they share only the R3 store: detection (R12) writes <code>own_sensor</code> entries through the JSONL subprocess boundary; fusion (R13/R14/R15) consumes the store and the live R2 feed.</li>
+<li><strong>Display track — Phase 5:</strong> IVI HMI built against mock R4 warnings from the start.</li>
+</ul>
+<h3 id="order-of-implementation">Order of implementation<a class="headerlink" href="#order-of-implementation" title="Link to this section">¶</a></h3>
+<blockquote>
+<p><strong>Step 0 — Phase 0:</strong> freeze R1–R6.</p>
+<p><strong>Step 1 — run three tracks in parallel:</strong> Phase 1 (comms) · Phase 2 → 3 ∥ 4 (ADA) · Phase 5 (display).</p>
+<p><strong>Step 2 — converge:</strong> Phase 6 replaces every mock with real data and records the R19 run.</p>
+<p><strong>Single-developer fallback:</strong> run the phases sequentially 0 → 1 → 2 → 3 → 4 → 5 → 6. The parallel plan is the optimization for multiple people.</p>
+</blockquote>
+<h3 id="platform-portability">Platform &amp; portability<a class="headerlink" href="#platform-portability" title="Link to this section">¶</a></h3>
+<ul>
+<li>Node/blueprint/Room mechanics, deployment steps, and the per-node table: report § Cloud development constraints and R5/R6 — not restated here.</li>
+<li>All team code is plain Linux processes; the V2X ECU touches the radio only through the R7 adapter seam, so the layers above it move to real modem hardware unchanged — that node's focus goal.</li>
+</ul>
+<hr />
+<h2 id="4-global-definitions">4. Global Definitions<a class="headerlink" href="#4-global-definitions" title="Link to this section">¶</a></h2>
+<p>The contracts are defined once, in the report: <strong>R1</strong> CPM profile · <strong>R2</strong> V2X→ADA object message · <strong>R3</strong> TrackedObject schema · <strong>R4</strong> ADA→IVI warning/state messages · <strong>R5</strong> node deployment · <strong>R6</strong> Ethernet-bridge network.</p>
+<h3 id="track-admission-gate-r13">Track admission gate (R13)<a class="headerlink" href="#track-admission-gate-r13" title="Link to this section">¶</a></h3>
+<p>Gate constants are <strong>externalized configuration, never literals</strong>. R13 fixes the 30 m admission threshold; the exit hysteresis and the N/M counters come from its attached state-machine diagram — N and M are proposals to confirm.</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Constant</th>
+<th>Value</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>gate_enter</code></td>
+<td>30 m</td>
+<td>admit C when its reported distance (R2 <code>object.distance</code>) is within this</td>
+</tr>
+<tr>
+<td><code>gate_exit</code></td>
+<td>35 m</td>
+<td>drop C only beyond this (hysteresis — no flicker at the boundary)</td>
+</tr>
+<tr>
+<td><code>confirm_hits</code> (N)</td>
+<td>proposed 3</td>
+<td>consecutive in-range updates before admission</td>
+</tr>
+<tr>
+<td><code>miss_limit</code> (M)</td>
+<td>proposed 5</td>
+<td>consecutive missed updates before expiry — <strong>realized as wall-clock, see below</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong><code>miss_limit</code> change of form, awaiting the user's re-ratification.</strong> The <a href="documents-design-ada-ecu-ada-ecu-design-decisions.html#d3--r13-admission-one-state-machine-both-sources">Phase 2–4 ADA HLD, decision D3</a> implements M as a wall-clock <code>TRACK_TIMEOUT_MS</code> (default 1000 ms = 5 periods at the slower of the two sources), not as a count. Reason: "its messages stop" is a time condition that a counter cannot express — nothing arrives to increment it — and the two sources run at independently configured cadences, so one count M would mean two different real timeouts. Intent is unchanged; the form is. Flagged here rather than silently overridden (<a href="plans-phase2-tasks.html#open-items--flags-no-phase-2-subtask-may-silently-close-them">phase2_tasks.md § Open items item 1</a>).</p>
+<p><img alt="Track admission state machine with proximity gate and hysteresis" src="requirements-vehiclec-track-admission-state-machine.png" /></p>
+<p><em>Own-sensor objects traverse <code>not_tracked → tentative → tracked</code>; relayed C is admitted on R2 distance within the gate, dropped on leaving it or when messages stop, and carries <code>source = v2x_relayed</code> only. ~~Ego's own Tx (R10) snapshots <code>own_sensor</code> tracks~~ — </em><em>R10 moved to the future plan</em><em>; the B-side relay trigger is simulated by the bench scenarios (R11), so nothing in M1 consumes an ego Tx snapshot.</em></p>
+<hr />
+<h2 id="5-phases">5. Phases<a class="headerlink" href="#5-phases" title="Link to this section">¶</a></h2>
+<p>Per-phase demo methods follow the deck's "defined output for each phase" table. Contradiction fixed, not absorbed: that table labels the HMI row "6" and the integration row "5", contradicting the deck's own timeline and narrative (phases 1, 2, <strong>5</strong> start in parallel; all converge at <strong>6</strong>) — this plan follows the timeline: <strong>Phase 5 = HMI, Phase 6 = convergence</strong>, matching the previous plan's numbering.</p>
+<h3 id="phase-0-freeze-the-contracts-r1r6">Phase 0 — Freeze the contracts (R1–R6)<a class="headerlink" href="#phase-0-freeze-the-contracts-r1r6" title="Link to this section">¶</a></h3>
+<p><strong>Objective.</strong> Every cross-track contract versioned and committed before dependent work starts.</p>
+<p><strong>Tasks.</strong>
+- R1 profile document: fields, units, encoding, and the V2X exchange call flow.
+- R2 / R3 / R4 schema files with per-language bindings; golden vectors for the R1 codec seam.
+- Blueprint topology decided: node set (R5) and pin/edge wiring matching the communication topology (R6).</p>
+<p><strong>Acceptance Criteria.</strong>
+- [x] R1 profile document committed; golden-vector CPMs encode/decode through the Vanetza codec seam.
+- [x] R2, R3, R4 schemas committed; round-trip tests pass in each consumer language (C++ / Python / Kotlin).
+- [x] The R4 additive-version test is defined (a consumer parsing an unknown <code>warningType</code> degrades gracefully).
+- [x] Blueprint topology documented (nodes, <code>ethernet</code> pins, edges to the bridge) and validated by the baseline connectivity smoke test.</p>
+<p>The baseline blueprint deployed as <code>trial2_minh_netcheck</code> with all nodes <code>Running</code> and smoke-test criteria C1–C5 met (<a href="plans-doc-phase0-smoke-test-run.html">run record</a>); the non-blocking residuals O3 (MTU headroom) and O4 (AAOS listener) stay open in <a href="plans-phase0-tasks.html">phase0_tasks.md</a>.</p>
+<h3 id="phase-1-comms-bring-up-v2x-ecu-scenario-player-r5r9-r11-r10-moved-to-the-future-plan">Phase 1 — Comms bring-up: V2X ECU + Scenario Player (R5–R9, R11 — <strong>R10 moved to the future plan</strong>)<a class="headerlink" href="#phase-1-comms-bring-up-v2x-ecu-scenario-player-r5r9-r11-r10-moved-to-the-future-plan" title="Link to this section">¶</a></h3>
+<p><strong>Objective.</strong> Bench CPMs reach the deployed Room and decode into R2 messages at the ADA ECU. <strong>Receive-only</strong> — ego broadcasts nothing.</p>
+<p><strong>Tasks.</strong>
+- Build &amp; push the OCI images, author the blueprint, deploy, verify all nodes Running (R5); prove pair-wise UDP reachability (R6).
+- Radio adapter seam <code>init · configure · subscribeRx · send</code> (R7); modem stub FSM with fault injection (R8).
+- Rx pipeline decode → validate → dedupe → forward (R9). ~~Ego Tx via the adapter <code>send</code> (R10)~~ — <strong>moved to the future plan; not implemented in M1.</strong> The R7 seam still declares <code>send</code>, but nothing calls it.
+- Bench scenario-configurable CPM generation (R11).
+- V2X-side JSONL event logs (message rx/tx, decode results) — the R18 evidence stream starts here.</p>
+<p><strong>Acceptance Criteria.</strong>
+- [ ] The blueprint deploys to a Room; the Deployment Viewer shows every node Running; the team APK launches on the AAOS node (R5).
+- [ ] UDP reachability between every communicating pair; traffic captured on the bridge network (R6).
+- [ ] CI import check passes — no direct transport imports above the seam; telux parity notes + port plan committed (R7).
+- [ ] The full scripted call flow is acked and logged; each injected fault produces a defined, logged recovery (R8).
+- [ ] Golden-vector CPMs decode correctly; the malformed-input corpus is fully rejected with zero crashes (R9).
+- [ ] Different bench scenario configurations produce observably different message streams (R11).
+- [ ] R2 messages observed at the ADA ECU carrying decoded bench-scenario values, not constants (R2).
+- [ ] <strong>Demo:</strong> Wireshark capture of V2X PDUs correctly sent/received at the V2X ECU interface.</p>
+<h3 id="phase-2-ada-scaffolding-store-state-machine-no-detector-r3-r13">Phase 2 — ADA scaffolding: store + state machine, no detector (R3, R13)<a class="headerlink" href="#phase-2-ada-scaffolding-store-state-machine-no-detector-r3-r13" title="Link to this section">¶</a></h3>
+<p><strong>Objective.</strong> Stand up the ADA skeleton, the R3 track store, and the R13 admission state machine on <strong>mock input</strong>, so the pipeline works before any ML.</p>
+<p><strong>Tasks.</strong> Decomposed in <a href="plans-phase2-tasks.html">phase2_tasks.md</a>; design of record is <a href="documents-design-ada-ecu-ada-ecu-hld.html">ada-ecu-hld.md</a>, which realizes <a href="requirements-ada-ecu.svg">ada-ecu.svg</a>.</p>
+<ul>
+<li>ADA C++17 module skeleton inside <a href="ada-ecu-readme.html">ADA_ECU/</a>; CRA interface + registry + database schema defined (consumed by R14 in Phase 4).</li>
+<li>R3-shaped store; R13 state machine driven by mock R2 messages and mock own-sensor entries — the mocks are external stimulus (a JSONL fixture through the real detector-reader, real datagrams from <code>tools/mock_v2x_sender.py</code>), never a branch inside <code>src/</code>.</li>
+<li>Video-input study — <strong>produced</strong>: the video-input study §3 was the format / frame rate / data rate proposal for FPT-Mentor (report § Input constraints); what remains is sending it. <strong>The clip itself is already in the repo</strong> (<code>ADA_ECU/media/ego-b-occluding-c.mp4</code>, landed by Phase 3 <code>12.3.7.1</code>), so nothing here blocks Phase 3.</li>
+</ul>
+<p><strong>Acceptance Criteria.</strong>
+- [x] The store exposes all R3 fields; detector-shaped and relayed-shaped entries enter through the identical interface (R3).
+- [x] Mock-driven state transitions are observable in logs and match the R13 diagram; toggling the mock off yields no tracks.
+- [x] Mock C is admitted only within <code>gate_enter</code> and dropped only beyond <code>gate_exit</code> or after <code>miss_limit</code> — no add/remove flicker.
+- [x] Gate constants are read from configuration — no literals.
+- [x] CRA database schema committed; video-input proposal sent to FPT-Mentor.
+- [x] <strong>Demo:</strong> build + CI round-trip tests green on the frozen contracts (golden vectors).</p>
+<h3 id="phase-3-object-detection-from-video-r12-runs-with-phase-4">Phase 3 — Object detection from video (R12) — runs ∥ with Phase 4<a class="headerlink" href="#phase-3-object-detection-from-video-r12-runs-with-phase-4" title="Link to this section">¶</a></h3>
+<p><strong>Objective.</strong> Replace the mock own-sensor input with real detection: a pretrained detector finds <strong>B, the visible occluder</strong>, in the provided video and estimates its distance.</p>
+<p><strong>Tasks.</strong> Decomposed in <a href="plans-phase3-tasks.html">phase3_tasks.md</a>.</p>
+<ul>
+<li>YOLO11n exported to ONNX on ONNX Runtime CPU; OpenCV video decode behind the frame-source seam.</li>
+<li>Per-frame detection + distance estimation; stream R3 JSONL over stdout into the store (subprocess contract — no FFI, no RPC).</li>
+<li><strong>The clip is landed</strong> at <code>ADA_ECU/media/ego-b-occluding-c.mp4</code> with its provenance sidecar (task group 3.7, <code>12.3.7.1</code>): openly-licensed dashcam footage under the Pexels License, cut and re-encoded with ffmpeg to the the video-input study's §3 spec — 1280×720, 20 fps CFR, 200 frames / 10.0 s, ~5 MB. It is baked into the image as one early <code>COPY media/ /app/media/</code> layer, the only way a file reaches a Container Node (<a href="requirements-m1-video-source-and-ivi-dashcam.html">m1-video-source-and-ivi-dashcam.md §5</a>). B occludes the ego lane in every sampled frame, closing from ~60 m to ~10 m; <strong>C is synthetic</strong> — it exists only as a position the bench asserts over V2X, so "C never visible" holds by construction and what the footage had to avoid was a decoy vehicle held in the ego lane beyond B. The clip is 10 s, and a longer run comes from <strong>looping</strong> it (<code>DETECTOR_LOOP=true</code>); reasoning in <a href="ada-ecu-media-ego-b-occluding-c-source.html">the sidecar</a>. The synthetic generator stays a CI fixture and cannot produce R12 evidence.</li>
+</ul>
+<p><strong>Acceptance Criteria.</strong>
+- [x] Detection log over the provided clip with per-frame objects and distance estimates (R12).
+- [x] Entries enter the store via the same R3 interface as relayed entries, <code>source = own_sensor</code> — mock no longer required.
+- [x] <strong>Zero detections labeled C</strong> — checked on the detection log by <code>ADA_ECU/tools/check_zero_c.py</code> (feeds the R19 zero-C check).
+- [ ] Runs CPU-only on the provided clip; offline pace acceptable — effective inference rate ≥ 5 Hz (≤ 200 ms per sampled frame) measured on the deployed node. Live detection at speed is future scope.</p>
+<h3 id="phase-4-obscured-object-fusion-relayed-c-risk-warning-r13r15-runs-with-phase-3">Phase 4 — Obscured-object fusion: relayed C + risk + warning (R13–R15) — runs ∥ with Phase 3<a class="headerlink" href="#phase-4-obscured-object-fusion-relayed-c-risk-warning-r13r15-runs-with-phase-3" title="Link to this section">¶</a></h3>
+<p><strong>Objective.</strong> ADA turns live R2 traffic into a tracked ghost C, assesses NLOS collision risk through the CRA abstraction, and emits R4 warnings carrying the composed scene.</p>
+<p><strong>Tasks.</strong> Decomposed in <a href="plans-phase4-tasks.html">phase4_tasks.md</a>.</p>
+<ul>
+<li>Relayed-C admission per R13 from R2 <code>object.distance</code> (<code>source = v2x_relayed</code>).</li>
+<li>CRA abstraction + the M1 NLOS plugin registered through it, reading/writing the Phase 2 database schema (R14).</li>
+<li>Scene composition (ego, B, ghost C — <code>d_AC = d_AB + d_BC</code>, lateral offsets component-wise) and edge-triggered R4 warning emission on risk transitions (R15); the periodic awareness state only if time permits (optional).</li>
+<li>ADA-side JSONL event logs (track transitions, risk events) completing the R18 collision-risk event list.</li>
+<li><strong>The isolated ADA test is where this phase's deployed evidence comes from</strong> — the ADA node exercised alone against a bench emitter standing in for the V2X ECU and a bench sink standing in for the IVI, both from one <code>tools/ada-bench/</code> image, over the same addresses and ports the full blueprint uses. Procedure: <a href="requirements-car-sky-guide-deploy-ada-ecu-walkthrough.html">deploy-ada-ecu-walkthrough.md</a>; decomposition: <a href="plans-phase4-tasks.html">phase4_tasks.md</a> groups 4.9–4.11. <strong>Its three nodes run two images and GitHub Actions builds and pushes both — <code>m1-ada-ecu:latest</code> for the node under test and <code>m1-ada-bench:latest</code> for the two mocks, the latter deployed twice under different <code>ROLE</code> values. Nothing is built by hand, by anyone, on any machine</strong> (<a href="plans-phase4-tasks.html#image-build-and-push">phase4_tasks.md § Image build and push</a>); the bench's home in <code>tools/</code> is sanctioned by <a href="claude-rules-node-code-layout.html#tools--test-equipment-and-ecu-mocks">node-code-layout.md § <code>tools/</code></a>.</li>
+<li><strong>Then the alternative test — real bench and V2X ECU upstream</strong> (<a href="plans-phase4-tasks.html">phase4_tasks.md</a> group 4.12, one human subtask). The ADA node stays byte-identical and only its neighbours change: the real Scenario Player at <code>10.99.0.10</code> and V2X ECU at <code>.11</code> replace the upstream mock, while the sink at <code>.13</code> stays a container so a downstream log still exists. Relayed C then originates in a real bench scenario and arrives as a real decoded CPM — the <em>"with bench scenarios live"</em> wording of the boxes below, <strong>met without any IVI app</strong>. A swap to <code>c-out-of-range.yaml</code> is the negative case in its real-relay form, and R11's own acceptance observed at the ADA node.</li>
+<li><strong>The full system test is not in this phase</strong>, because it adds the <em>rendering</em> half — the God view drawing ghost C — which is R16/R17 and R19. It is planned once, <a href="plans-phase5-minh-tasks.html#task-group-510--system-verification-test-serves-r4-r5-r6-r16-r17-r18-r19">phase5_minh_tasks.md § Task Group 5.10</a>, and re-recorded in Phase 6. Which configuration closes each criterion: <a href="plans-phase4-tasks.html#acceptance-criteria-and-their-closing-configuration">phase4_tasks.md § Acceptance criteria and their closing configuration</a>.</li>
+</ul>
+<p><strong>Acceptance Criteria.</strong>
+- [ ] With bench scenarios live, C's track appears with <code>source = v2x_relayed</code> only and follows the full R13 lifecycle.
+- [ ] The NLOS plugin registers through the CRA interface; the abstraction + database schema are the committed artifacts (R14).
+- [ ] At least one R4 warning event per scenario run, carrying the risk state and the composed geometry (R15).
+- [ ] The event list reconstructs a full run offline (R18).
+- [ ] <strong>Output check:</strong> with a scenario run live, <strong>(a)</strong> the ADA <code>[EVT]</code> log shows a <code>tracked</code> <code>own_sensor</code> TrackedObject for <strong>B</strong> and a <code>tracked</code> <code>v2x_relayed</code> TrackedObject for <strong>C</strong>, both with full R3 fields, plus at least one <code>r4_tx</code> carrying the emitted R4 body; <strong>and (b)</strong> a pcap of ADA→IVI UDP traffic decodes to the same R4 body — C's full R3 TrackedObject in <code>object</code>, B's position in <code>geometry.vehicleB</code> — correlated to the log by timestamp and length. The frozen R4 carries no full TrackedObject for B; that half is proven from the log, not the wire (<a href="plans-phase4-tasks.html#phase-4-output-acceptance">phase4_tasks.md § Phase 4 output acceptance</a>).
+- [ ] <strong>Demo:</strong> ADA logs — collision-risk event list; optional annotated video export with per-event risk labels (§1 demo table).</p>
+<h3 id="phase-5-ivi-hmi-mock-driven-r16-r17-display-track-parallel-from-the-start">Phase 5 — IVI HMI, mock-driven (R16, R17) — display track, parallel from the start<a class="headerlink" href="#phase-5-ivi-hmi-mock-driven-r16-r17-display-track-parallel-from-the-start" title="Link to this section">¶</a></h3>
+<p><strong>Objective.</strong> The IVI renders the warning view — the God view of ego, B, and ghost C — from R4 messages alone, developed against mock warnings and integrated against real data at Phase 6.</p>
+<p><strong>Tasks.</strong> Decomposed in <a href="plans-phase5-minh-tasks.html">phase5_minh_tasks.md</a> — the authoritative Phase 5 breakdown, and the home of the <strong>system verification test</strong> (group 5.10), which is the only place the 5-node blueprint is run.</p>
+<ul>
+<li>Compose HMI with the R16 layout (central Display area + button/app areas) on the provided AAOS node; UDP ingest service for R4.</li>
+<li>2D Canvas warning view behind the view seam (R17); optional, only if time permits: SceneView 3D through the same seam, multi-process wake-on-warning.</li>
+<li><strong>Not in this phase:</strong> the ego video clip display ("dashcam view") in the Display area — deferred, confirmed by the user 2026-08-02. Itemized in <a href="#6-deferred-to-later-milestones">§6</a>.</li>
+</ul>
+<p><strong>Acceptance Criteria.</strong>
+- [ ] The HMI runs on the AAOS node with the R16 layout; button/app areas switch what the Display area shows.
+- [ ] <strong>(Dev)</strong> A mock R4 warning brings the warning view up showing ego, B, and ghost C at the composed positions.
+- [ ] Ghost C renders from <code>v2x_relayed</code> data only; the 2D drawing is delivered (R17 — 3D stays optional).
+- [ ] A newer message with an unknown <code>warningType</code> degrades gracefully (R4 additive-version test).
+- [ ] Optional paths, only if built: an ADA message wakes the separate warning app; 3D renders through the view seam.</p>
+<h3 id="phase-6-convergence-real-data-end-to-end-r18-r19-r20r22-r10-moved-to-the-future-plan">Phase 6 — Convergence: real data end-to-end (R18, R19, R20–R22 — <strong>R10 moved to the future plan</strong>)<a class="headerlink" href="#phase-6-convergence-real-data-end-to-end-r18-r19-r20r22-r10-moved-to-the-future-plan" title="Link to this section">¶</a></h3>
+<p><strong>Objective.</strong> Replace every mock with <strong>real</strong> data and record the definition-of-done run — a swap-and-verify step, not a new build.</p>
+<p><strong>Tasks.</strong>
+- Point the IVI at live ADA output. ~~Feed ego Tx (R10) from the real R12 store snapshot instead of mock contents.~~ — <strong>moved to the future plan.</strong>
+- Full-chain rehearsal bench → V2X ECU → ADA → IVI across bench scenarios (e.g. C approaching vs C out of range).
+- Record the R19 run with its captures.
+- <strong>Re-record R22's choreography on the recorded run.</strong> The mechanism is built by the phase that owns each file — the bench's paced clock (<a href="plans-phase1-tasks.html">phase1_tasks.md group 1.6</a>) and its <code>start_delay_s</code> value (<a href="plans-phase1-tasks.html">group 1.13</a>), the detector's pacer and warm-up measurement (<a href="plans-phase3-tasks.html">phase3_tasks.md</a> <code>12.3.2.8</code>, <code>22.3.6.3</code>), the K1–K6 checker (<a href="plans-phase4-tasks.html">phase4_tasks.md</a> <code>21.4.3.4</code>) and the D13 warning lifecycle (<a href="plans-phase5-minh-tasks.html">phase5_minh_tasks.md</a> <code>17.5.4.4</code>). This phase runs it once more on the R19 recording, as <a href="plans-phase5-minh-tasks.html">phase5_minh_tasks.md <code>22.5.10.10</code></a> does on the system test.</p>
+<p><strong>Acceptance Criteria.</strong>
+- [ ] No mocks anywhere in the ego path (the bench is sanctioned test equipment, not a mock).
+- ~~[ ] Ego Tx frames captured on the bridge carry live store data, not constants (R10).~~ — <strong>moved to the future plan; not an M1 acceptance criterion.</strong>
+- [ ] One continuous recorded run: the IVI warns and renders ghost C from <code>v2x_relayed</code> only, while the R12 detection log shows zero C for the whole run (R19).
+- [ ] Wireshark/pcap of the V2X exchange and of the ADA→IVI traffic corroborates the chain (R15, R19).
+- [ ] Every §1 demo-evidence method that cites logs is producible from the R18 logs.
+- [ ] <strong>K6</strong> — on the recorded run, the interval from <code>T0</code> (the ADA detector's first emitted R3 line) to the first <code>r4_tx</code> is <strong>8.0 s ≤ Δ &lt; 10.0 s</strong> (R22), with K1–K3 passing and K5 within ±1 % on the same run (R20, R21).
+- [ ] <strong>K7</strong> — the IVI's first <code>[UI] mode=WarningView cause=warning</code> line is the run's first Warning-mode line and follows its startup <code>[UI] mode=HomeView</code> line by <strong>≥ 8.0 s</strong>, so the HMI holds the normal screen for at least the first 8 s (R22).</p>
+<hr />
+<h2 id="6-deferred-to-later-milestones">6. Deferred to Later Milestones<a class="headerlink" href="#6-deferred-to-later-milestones" title="Link to this section">¶</a></h2>
+<p>The single source is the report's § Future developments, mirrored in the <a href="requirements-future-m1-future-features-register.html">future-features register</a>. Standing M1 exclusions live in the report's §4 decision record (<strong>R10 ego Tx deferred — the V2X ECU is receive-only</strong>, Cortex-M omitted, telux port declined, 3D and multi-process optional, ego video clip deferred, no GPU, no map/GNSS on the IVI).</p>
+<p><strong>Ego video clip display on the IVI — re-confirmed deferred, 2026-08-02.</strong> <a href="requirements-m1-video-source-and-ivi-dashcam.html">m1-video-source-and-ivi-dashcam.md §4/§6</a> contains a worked design for it (option B4: ADA serves its own clip over HTTP, the IVI plays it with Media3), and §8 flags that adopting it needs the user's word. <strong>The user's word was no.</strong> The design stays on the shelf, and <strong>no Phase 3, 4, 5 or 6 subtask may implement any part of it</strong> — HTTP clip serving from the ADA node (a <code>http.server</code> line in the entrypoint, <code>CLIP_HTTP_ENABLED</code> / <code>CLIP_HTTP_PORT</code>), an <code>exposedPorts</code> entry and its gateway route, Media3/ExoPlayer and a <code>DASHCAM_MEDIA_URI</code>, a dashcam <code>DisplayMode</code>, a raw-resource clip copy in the APK and its size cost (fallback B5), or any <code>video</code> pin (an R5/R6 re-freeze). §6 is where each has its concrete shape; reading it is not permission to build it.</p>
+<p><strong>Real-time detector pacing is not on that list.</strong> R20 makes it a requirement on its own footing — <a href="documents-design-ada-ecu-ada-ecu-design-decisions.html#d10--clock-domains-and-stimulus-paced-against-clock_monotonic">ada-ecu-design-decisions.md D10</a> — and R22 cannot place any demo instant without it, so <a href="plans-phase3-tasks.html">phase3_tasks.md <code>12.3.2.8</code></a> builds the pacer. What the deferral forbids is the dashcam surface itself, listed above.</p>
+<h2 id="7-definition-of-done">7. Definition of Done<a class="headerlink" href="#7-definition-of-done" title="Link to this section">¶</a></h2>
+<p>R19: all phases pass their acceptance criteria, and one continuous recorded run shows <strong>vehicle C appearing on ego's IVI purely via the V2X relay</strong> — ghost C rendered from <code>v2x_relayed</code> data only, zero direct C detections in ego's own perception — corroborated by the R19 captures.</p>
+      </article>
+    </main>
+  </div>
+  <script src="../js/site-data.js"></script>
+  <script src="../js/theme.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/doc-page.js"></script>
+</body>
+</html>

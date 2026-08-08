@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="en" data-theme="sketch">
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="kis-build-pages">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ADA ECU — design decisions — KIS</title>
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/doc.css">
+  <link rel="stylesheet" href="../css/themes.css">
+</head>
+<body class="DocBody" data-root=".." data-doc-node="plans" data-doc-title="ADA ECU — design decisions" data-doc-source="documents/Design/ADA-ECU/ada-ecu-design-decisions.md">
+  <div class="DocLayout">
+    <aside class="DocLayout__aside" id="doc-toc"></aside>
+    <main class="Page DocPage">
+      <header class="PageHeader" id="doc-header"></header>
+      <article class="Markdown" id="doc-body">
+<h1 id="ada-ecu-design-decisions">ADA ECU — design decisions<a class="headerlink" href="#ada-ecu-design-decisions" title="Link to this section">¶</a></h1>
+<blockquote>
+<p>The decision record for <a href="documents-design-ada-ecu-ada-ecu-hld.html">ada-ecu-hld.md</a>, which cites these by number. Binding on implementation: a decision is revisited by changing its entry here, never by an implementation that departs from it.</p>
+</blockquote>
+<h2 id="d1-one-folder-one-image-one-object-model">D1 — One folder, one image, one object model<a class="headerlink" href="#d1-one-folder-one-image-one-object-model" title="Link to this section">¶</a></h2>
+<p><code>ADA_ECU/</code> is this node's only build context, its only image and its only design authority. Everything the node ships is built from this folder, and the folder reads nothing outside it (<a href="claude-rules-node-code-layout.html#build-rules-all-container-nodes">node-code-layout § Build rules</a>).</p>
+<ul>
+<li><strong><code>src/contracts/</code> is the node's only object model.</strong> <code>TrackedObject</code>, <code>Source</code>, <code>TrackState</code>, <code>R2Message</code> and <code>R4WarningEvent</code> are declared once, in the bindings written against the frozen schemas. A second declaration of any of them — a node-local <code>types.hpp</code>, a detector-side redefinition, a tool's private field list — is a defect. Two models for one message means two answers to what a field is called, and the wire settles the argument at run time.</li>
+<li><strong><code>contracts/</code> holds byte-synced copies of the frozen schemas and nothing else.</strong> A node-local fork — tightening <code>additionalProperties</code>, promoting a field to required, adding an array the producer never emits — is a second, unversioned contract that keeps passing after the real one changes.</li>
+<li><strong>Node-local schemas that are not cross-node contracts live in <code>schema/</code></strong>, which the sync manifest does not govern. The R14 assessment record is the one such file (D4).</li>
+<li>Rejected alternative: per-module private structs mapped at each boundary. It buys decoupling between modules of one process, at the cost of reintroducing exactly the drift the frozen contracts exist to prevent.</li>
+</ul>
+<h2 id="d2-process-thread-and-mock-model">D2 — Process, thread and mock model<a class="headerlink" href="#d2-process-thread-and-mock-model" title="Link to this section">¶</a></h2>
+<ul>
+<li><strong>One image, two processes</strong> (report §3(d)): the C++17 <code>ada_ecu</code> core and the Python 3.11 detector, joined only by argv, exit codes and R3 JSONL over stdout. No FFI, no RPC, no shared file.</li>
+<li><strong>Three threads in the core.</strong> A V2X receive thread blocks on <code>V2X_LISTEN_PORT</code>; a detector-reader thread reads lines from the subprocess stdout pipe; the main thread runs the fusion tick. Both readers push onto one bounded queue, and <strong>the main thread is the single writer</strong> of the store, the assessment database and the R4 output. No lock is needed beyond the queue, event ordering is deterministic, and the <code>[EVT]</code> stream replays a run exactly as it happened.</li>
+<li><strong>The fusion tick runs every <code>FUSION_TICK_MS</code> whether or not anything arrived.</strong> A track must be able to expire, and risk to fall, on silence alone.</li>
+<li><strong>Detector lifecycle.</strong> A clean EOF with <code>DETECTOR_LOOP=true</code> respawns the clip from frame 0, so B stays present for a run longer than the clip. A non-zero exit triggers a logged restart, bounded by <code>DETECTOR_RESTART_MAX</code>. Replaying the same detection path synthesizes no ego data — every frame is still inferred.</li>
+<li><strong>Mocks live outside <code>src/</code>.</strong> A recorded own-sensor stream reaches the core through the real reader (<code>DETECTOR_CMD="cat /app/tests/fixtures/own_sensor_mock.jsonl"</code>); relayed traffic reaches it as real datagrams on the real socket. <strong>There is no mock branch anywhere in the core</strong>, and "no input yields no tracks" is <code>DETECTOR_ENABLED=false</code> plus no traffic.</li>
+</ul>
+<h2 id="d3-r13-admission-one-state-machine-both-sources">D3 — R13 admission: one state machine, both sources<a class="headerlink" href="#d3-r13-admission-one-state-machine-both-sources" title="Link to this section">¶</a></h2>
+<p>Realizes <a href="requirements-vehiclec-track-admission-state-machine.png">vehicleC_track_admission_state_machine.png</a> as <a href="../../documents/Design/ADA-ECU/phase2-4-ada-ecu-admission.puml">phase2-4-ada-ecu-admission.puml</a>. The diagram is source-agnostic, so <code>store/admission</code> holds <strong>one</strong> implementation, parameterized only by what counts as an update.</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Definition fixed here</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>update</td>
+<td>one admission-relevant observation for a track id — for <code>v2x_relayed</code> one R2 message and its <code>object.distance</code>, for <code>own_sensor</code> one detector JSONL line and its <code>distance</code></td>
+</tr>
+<tr>
+<td><code>not_tracked</code></td>
+<td><strong>absent from the store</strong>, per the diagram's "absent from store". A drop erases the entry; it never leaves one flagged <code>not_tracked</code></td>
+</tr>
+<tr>
+<td>hysteresis</td>
+<td><code>distance ≤ GATE_ENTER_M</code> admits and holds a <code>tentative</code> track; only once <code>tracked</code> does the wider <code>distance ≤ GATE_EXIT_M</code> hold it. One Schmitt band, exactly the diagram's <code>≤ 30 m</code> / <code>&gt; 35 m</code> labels</td>
+</tr>
+<tr>
+<td>N — <code>CONFIRM_HITS</code></td>
+<td>consecutive in-gate updates required in <code>tentative</code> before promotion; the counter resets to 0 on every entry to <code>not_tracked</code></td>
+</tr>
+<tr>
+<td>M — <code>TRACK_TIMEOUT_MS</code></td>
+<td>silence measured on <code>CLOCK_MONOTONIC</code> (D10), not a count of missed messages</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>M is a timeout, not a count of consecutive misses.</strong> Two reasons, both structural:</p>
+<ul>
+<li>"Its messages stop" — R13's own wording — is a time condition. A count cannot express silence, because nothing arrives to increment it.</li>
+<li>The two sources run at independently configured cadences: relayed updates at the bench's <code>cpm_rate_hz</code>, own-sensor updates at the detector's paced rate. One count M would mean two different real timeouts, and retuning <em>another node's</em> config would silently change this node's behaviour.</li>
+</ul>
+<p><code>TRACK_TIMEOUT_MS = 1000</code> is the time form of <a href="documents-plan-milestone1-high-level-plan.html#track-admission-gate-r13">milestone1_high_level_plan.md §4</a>'s M = 5, taken at the slower of the two sources — 5 × 200 ms — so neither source expires early.</p>
+<p>Further rules:</p>
+<ul>
+<li><strong>The store is the sole writer of <code>state</code>.</strong> The <code>state</code> field on an incoming detector line or an R2-derived object is ignored; the detector emits <code>not_tracked</code> by convention because it holds no store.</li>
+<li>Track ids are <code>v2x:&lt;stationId&gt;:&lt;objectId&gt;</code> for relayed entries and <code>own:&lt;n&gt;</code> for own-sensor entries, assigned by the detector's frame-to-frame association (D6). Neither namespace can be minted by the other side.</li>
+<li>Every edge writes one <code>track_transition</code> event carrying id, source, from, to, distance and reason.</li>
+<li>A track's last snapshot survives its erasure in the assessment database (D4), never in the store — that is what lets a cleared warning still carry an R3 <code>object</code>.</li>
+</ul>
+<h2 id="d4-r14-the-collision-risk-assessment-interface-registry-and-database">D4 — R14: the Collision Risk Assessment interface, registry and database<a class="headerlink" href="#d4-r14-the-collision-risk-assessment-interface-registry-and-database" title="Link to this section">¶</a></h2>
+<p>Realizes the «interface» block of <a href="requirements-ada-ecu.svg">ada-ecu.svg</a>. Naming reconciliation, stated once: the figure's realization <strong>Chained Collision</strong> is the report's "M1 NLOS plugin" and registers under the frozen R4 registry key <strong><code>nlos_obstruction</code></strong> — one concept, three existing names, no new term coined.</p>
+<pre><code class="language-cpp">// src/cra/i_collision_risk_assessment.hpp
+struct RiskContext { const TrackStore&amp; store; AssessmentDb&amp; db; std::int64_t now_ms; };
+struct RiskFinding {
+  std::string warningType;                        // R4 registry key == plugin name
+  std::string riskState;                          // low | medium | high (frozen R4)
+  std::optional&lt;contracts::TrackedObject&gt; trigger;// R3 snapshot for the R4 `object` field
+  std::string rationale;                          // evidence text for the database and the [EVT] stream
+};
+class ICollisionRiskAssessment {
+ public:
+  virtual ~ICollisionRiskAssessment() = default;
+  virtual std::string name() const = 0;           // registry key
+  virtual RiskFinding assess(RiskContext&amp;) = 0;   // reads the store, reads and writes the database
+};
+</code></pre>
+<ul>
+<li><strong>Registration is explicit, not static-init.</strong> <code>src/cra/builtin_plugins.cpp</code> holds one <code>registry.add(std::make_unique&lt;ChainedCollision&gt;(cfg))</code> line per plugin, and <code>main.cpp</code> enables the subset named by <code>CRA_ENABLED</code>. Adding a future plugin — intersection hazard, curve blind spot, priority-vehicle preemption, speed-scaled risk — is one new file plus one line in that file, with no edit to the interface, the store, the emitter or any existing plugin. That is R14's acceptance. Self-registering static registrars were rejected: in a static library the linker discards the unreferenced objects unless the whole archive is force-linked, which is a build-system trap.</li>
+<li><strong>The plugin never emits.</strong> It returns a <code>RiskFinding</code> and the output stage decides transport, which keeps rules replaceable independently of emission.</li>
+</ul>
+<p><strong>The database is an append-and-upsert record table keyed by track id</strong>, defined by a committed JSON Schema and held in process, with every write also appended to the <code>[EVT]</code> stream so the table is reconstructible offline. R14's acceptance names the schema the assessment reads and writes as a committed artifact; this is that artifact.</p>
+<ul>
+<li>Schema: <code>ADA_ECU/schema/cra-assessment-record.schema.json</code> — node-local, deliberately outside <code>contracts/</code> (D1).</li>
+<li>Accessor: <code>src/cra/assessment_db.{hpp,cpp}</code> — typed <code>get(trackId)</code> / <code>upsert(record)</code> / <code>erase(trackId)</code>, the seam a later milestone swaps for real persistence.</li>
+</ul>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Record field</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>trackId</code>, <code>warningType</code></td>
+<td>the key: which track, assessed by which plugin</td>
+</tr>
+<tr>
+<td><code>riskState</code>, <code>riskStateEnteredMs</code></td>
+<td>the last committed level and when it was entered — the edge-trigger and dwell input</td>
+</tr>
+<tr>
+<td><code>firstSeenMs</code>, <code>lastUpdatedMs</code></td>
+<td>the assessment's lifetime</td>
+</tr>
+<tr>
+<td><code>distanceM</code>, <code>previousDistanceM</code></td>
+<td>the last and prior composed <code>d_AC</code> — the closing-rate input</td>
+</tr>
+<tr>
+<td><code>closingRateMps</code>, <code>ttcS</code></td>
+<td>derived; <code>ttcS</code> is null when the track is not closing</td>
+</tr>
+<tr>
+<td><code>lastSnapshot</code></td>
+<td>the R3 snapshot of the track, carried past its erasure so a cleared warning still has an <code>object</code></td>
+</tr>
+<tr>
+<td><code>lastKnownB</code></td>
+<td>the last own-sensor B position, so a clear can still fill the required <code>geometry.vehicleB</code></td>
+</tr>
+<tr>
+<td><code>emittedCount</code>, <code>rationale</code></td>
+<td>evidence: how many R4 events this track produced, and why the last level was chosen</td>
+</tr>
+</tbody>
+</table></div>
+<p>Rejected alternative: SQLite. It adds a dependency and a file lifecycle to a Container Node that has no volume, and buys nothing over a JSONL append that also <em>leaves</em> the node through its only egress.</p>
+<h2 id="d5-risk-vocabulary-and-edge-triggered-emission">D5 — Risk vocabulary and edge-triggered emission<a class="headerlink" href="#d5-risk-vocabulary-and-edge-triggered-emission" title="Link to this section">¶</a></h2>
+<p>Frozen R4 fixes <code>riskState ∈ {low, medium, high}</code>. For <code>nlos_obstruction</code>, with ego speed unknown in M1 — no GNSS and no Cortex-M ECU, report §1 — the inputs are the composed range <code>d_AC</code>, its change over time from the database, and C's relayed speed.</p>
+<p><strong>The band table is total and ordered.</strong> The first row whose condition holds wins, so no state matches two rows and none matches none.</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th><code>riskState</code></th>
+<th>Meaning for the chained-collision plugin</th>
+<th>Condition</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>high</code></td>
+<td>C is tracked and imminent</td>
+<td>C <code>tracked</code> and (<code>d_AC ≤ RISK_CRITICAL_M</code> <strong>or</strong> <code>ttc ≤ RISK_TTC_CRITICAL_S</code>)</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>medium</code></td>
+<td>C is tracked and relevant — inside the awareness band, or closing fast enough to matter at any range</td>
+<td>C <code>tracked</code> and (<code>d_AC ≤ RISK_NEAR_M</code> <strong>or</strong> <code>ttc ≤ RISK_TTC_WARN_S</code>)</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>low</code></td>
+<td>C is not a present threat: unknown, outside the tracking gate, or tracked but neither near nor closing fast</td>
+<td>every other state — no <code>tracked</code> C, <code>b_unknown</code>, or C <code>tracked</code> with <code>d_AC &gt; RISK_NEAR_M</code> and (<code>ttc</code> null or <code>ttc &gt; RISK_TTC_WARN_S</code>)</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><code>RISK_TTC_WARN_S</code> is the second clause of row 2, and that is its whole effect: a track closing fast enough is <code>medium</code> before its range reaches <code>RISK_NEAR_M</code>.</li>
+<li><code>closingRateMps = -(d_AC(t) − d_AC(t−Δ)) / Δ</code>; <code>ttcS = d_AC / closingRate</code> when the rate is positive, and null otherwise.</li>
+<li><strong>Risk thresholds are separate constants from the R13 gate and never alias it.</strong> Aliasing them collapses R14 into R13 and makes track identity and alarm level indistinguishable.</li>
+<li><strong>The bands and the gate measure different quantities, so no ordering holds between them.</strong> <code>RISK_NEAR_M</code> and <code>RISK_CRITICAL_M</code> are thresholds on the composed range <code>d_AC = d_AB + d_BC</code>. <code>GATE_ENTER_M</code> is a threshold on the relayed range <code>d_BC</code> alone. C is admitted at <code>d_BC ≈ GATE_ENTER_M</code>, so <code>d_AC</code> at that instant is <code>d_AB</code> above the gate value, and 40 m or more for every <code>d_AB</code> the ego clip produces. A <code>RISK_NEAR_M</code> at or below <code>GATE_ENTER_M</code> therefore sits below every composed range the node can observe, and row 2's range clause never fires. The orderings the loader asserts are the ones lying within a single quantity (<a href="documents-design-ada-ecu-ada-ecu-hld.html#6-internal-components">HLD §6</a>).</li>
+<li>Rejected alternative: asserting <code>RISK_CRITICAL_M &lt; RISK_NEAR_M &lt; GATE_ENTER_M</code> at startup, with <code>RISK_NEAR_M</code> 25 and <code>RISK_CRITICAL_M</code> 15. Its right-hand comparison relates two different quantities. The values it admits leave row 2 reachable through its TTC clause alone, which is what D11 rejects.</li>
+<li><strong>Every change of <code>riskState</code> for a <code>(warningType, trackId)</code> emits exactly one R4 warning event, in both directions.</strong> Steady state emits nothing. Downgrades and the return to <code>low</code> are emitted too: R4 carries no separate clear message and the periodic state stream is optional, so the transition back is the only way the IVI learns to stop warning.</li>
+<li>A transition commits only after it holds for <code>RISK_DWELL_MS</code> — one debounce across all three thresholds, independent of the R13 gate hysteresis that protects track identity.</li>
+<li><strong>No B, no chain.</strong> <code>d_AC = d_AB + d_BC</code> needs <code>d_AB</code>, so with no own-sensor B track the composed range does not exist. The plugin returns <code>low</code> with rationale <code>b_unknown</code> and logs <code>assess_skipped_b_unknown</code>. It follows that no <code>medium</code> or <code>high</code> was ever entered without a known B, so a clearing event can always fill the required <code>geometry.vehicleB</code> from <code>lastKnownB</code>. <code>geometry.vehicleC</code> is null exactly when C's track has been erased, which is why the frozen schema allows null there.</li>
+<li>Composition, in <code>fusion/scene_composer</code>: <code>vehicleB = (d_AB, y_B)</code> from the nearest <code>own_sensor</code> track, and <code>vehicleC = (d_AB + d_BC, y_B + y_BC)</code> — longitudinal sum, lateral component-wise, valid for the near-collinear convoy (<a href="documents-plan-milestone1-high-level-plan.html#2-scope--assumptions">milestone1_high_level_plan.md §2</a>).</li>
+</ul>
+<h2 id="d6-r12-detector-frame-source-seam-inference-distance-zero-c-evidence">D6 — R12 detector: frame-source seam, inference, distance, zero-C evidence<a class="headerlink" href="#d6-r12-detector-frame-source-seam-inference-distance-zero-c-evidence" title="Link to this section">¶</a></h2>
+<ul>
+<li><strong>The frame source is a seam.</strong> <code>detector/frame_source.py</code> defines <code>FrameSource.iter_frames() -&gt; Iterator[Frame]</code> with <code>Frame(index, timestamp_ms, image, width, height)</code>. <code>FileFrameSource</code> decodes <code>VIDEO_CLIP_PATH</code> with OpenCV <code>VideoCapture</code>, honouring <code>DETECTOR_FRAME_STRIDE</code> and <code>DETECTOR_LOOP</code>; <code>SyntheticFrameSource</code> needs no clip and serves CI. A live source arrives later as one more implementation, with no change to inference, distance, tracking or emission.</li>
+<li><strong>The clip reaches the container as an image layer and by no other route.</strong> A Container Node has no volume, no bind mount and no declarative file injection, so <code>COPY media/ /app/media/</code> is the transfer and <code>docker push</code> is the upload (<a href="requirements-m1-video-source-and-ivi-dashcam.html">m1-video-source-and-ivi-dashcam.md §5</a>). Rejected alternatives: a <code>video</code> pin, which has no C++ client, an undocumented frame header and 590 Mbit/s of raw RGBA at 720p20; a fetch at container start, which trades a build-time cost for a demo-time network dependency.</li>
+<li><strong>The IVI dashcam view is deferred and no part of it is built here</strong> (<a href="documents-plan-milestone1-high-level-plan.html#6-deferred-to-later-milestones">milestone1_high_level_plan.md §6</a>). That means no HTTP clip server in <code>entrypoint.sh</code>, no <code>CLIP_HTTP_ENABLED</code> or <code>CLIP_HTTP_PORT</code>, no <code>exposedPorts</code> entry and its gateway route, and no <code>video</code> pin. A worked design for it exists; reading it is not permission to build it.</li>
+<li><strong>Inference</strong> (<code>detector/inference.py</code>): an ONNX Runtime CPU session on <code>MODEL_PATH</code>, letterboxing to 640×640, NMS at <code>IOU_THRESHOLD</code> and a score floor of <code>CONF_THRESHOLD</code>. The COCO classes <code>car</code>, <code>truck</code>, <code>bus</code> and <code>motorcycle</code> collapse to the R3 <code>class: "vehicle"</code>. <code>Detector</code> is a protocol, so the model swaps without touching the pipeline.</li>
+<li><strong>Distance is a pinhole known-width estimate.</strong> <code>f_px = (frame_w / 2) / tan(CAMERA_HFOV_DEG / 2)</code>; <code>d = VEHICLE_WIDTH_M × f_px / bbox_w_px</code>; lateral <code>y = (bbox_u_center − frame_w / 2) × d / f_px</code>. Chosen because a user-supplied clip carries no intrinsics and no ground-plane calibration, and a monocular-depth network is a second model on a CPU-only node. The ground-plane bbox-bottom alternative needs camera height <em>and</em> pitch — more unknowns, not fewer. What the gate needs is a monotonic, consistently biased range over B at roughly 10–40 m, which this delivers.</li>
+<li><strong>The risk this carries, and the only sanctioned response.</strong> Absolute accuracy rests on two constants that a user-supplied clip cannot calibrate. If B's estimated range disagrees with the scenario, <code>VEHICLE_WIDTH_M</code> and <code>CAMERA_HFOV_DEG</code> are retuned. <strong>The R13 gate is never moved to compensate</strong> — the gate decides track identity and the risk thresholds decide alarm level, and moving one to fix the other destroys both (<a href="requirements-car-sky-guide-deploy-ada-ecu-walkthrough.html#55-retune-when-no-warning-is-emitted">walkthrough §5.5</a>).</li>
+<li><strong>Association</strong> (<code>detector/tracker.py</code>): greedy IoU matching against the previous sampled frame, holding an id while IoU ≥ <code>TRACK_IOU_MIN</code>. Enough for one dominant occluder, and no tracking library is pulled in.</li>
+<li><strong>Emission</strong> (<code>detector/emit.py</code>): one R3 JSONL line per detection per sampled frame, through the frozen <code>detector/contracts/tracked_object.py</code> binding — <code>source: own_sensor</code>, <code>id: own:&lt;n&gt;</code>, <code>state: not_tracked</code> (D3), <code>confidence</code> from the detection score. <strong><code>speed</code> is the magnitude of the range rate</strong>, <code>|Δdistance| / Δt</code>, and 0 on a track's first sampled frame: frozen R3 bounds <code>speed</code> at ≥ 0, so a signed closing rate is not representable there. The sign lives in the <code>distance</code> series the store keeps.</li>
+<li><strong>Zero detections labelled C is structural, not a filter.</strong> The detector's only input is ego's clip, in which C is never visible; it has no access to relayed data and cannot mint a <code>v2x:</code> id or a <code>v2x_relayed</code> source. <code>tools/check_zero_c.py</code> makes the claim falsifiable: it fails the run if any own-sensor entry claims a relayed source or id namespace, or if any own-sensor track sits within its radius argument of the relayed C position at the same timestamp. A pass is the expected trivial result, which is what R19 asks for.</li>
+<li><strong>Model provenance.</strong> <code>tools/export_yolo11n.py</code> performs the one-off Ultralytics → ONNX export (AGPL-3.0, report §4) and <code>models/yolo11n.onnx</code> is committed, so the image build stays offline-reproducible and CI never depends on the Ultralytics package. Accepted cost: the model and the clip are committed binaries and enter every build context, because a Container Node reaches a file no other way.</li>
+</ul>
+<h2 id="d7-r15-output-stage">D7 — R15 output stage<a class="headerlink" href="#d7-r15-output-stage" title="Link to this section">¶</a></h2>
+<ul>
+<li><code>output/warning_builder</code> maps a <code>RiskFinding</code> plus the composed geometry onto the frozen <code>contracts::R4WarningEvent</code> struct and serializes through its binding. It is the node's only R4 producer, so the wire shape cannot drift from the schema the round-trip tests cover.</li>
+<li><code>output/ivi_sender</code> sends one UDP datagram per event to <code>IVI_ECU_HOST:IVI_ECU_PORT</code> through <code>net/udp_socket</code>, and logs <code>r4_tx</code> carrying the full R4 body.</li>
+<li><strong>The periodic awareness state is optional per R15.</strong> The builder and the binding support <code>R4StateMessage</code>; <code>STATE_RATE_HZ &gt; 0</code> enables a last-value-wins state tick, and the default <code>0</code> leaves it off. No acceptance criterion depends on it.</li>
+</ul>
+<h2 id="d8-r18-the-ada-half-of-the-evidence-stream">D8 — R18: the ADA half of the evidence stream<a class="headerlink" href="#d8-r18-the-ada-half-of-the-evidence-stream" title="Link to this section">¶</a></h2>
+<ul>
+<li><strong>One line per event, flushed per line:</strong> <code>[EVT] {"event":…,"mono_ms":…,"epoch_ms":…,"payload":{…}}</code>. The <code>[EVT]</code> prefix, the per-line flush, the <code>event</code> name and the two clock stamps are the V2X ECU's, so one offline reader walks both nodes' streams; the stamps are the clock pair of D10. This node nests its payload under one <code>payload</code> key rather than a per-event key, which is the shape the walkthrough's checks read.</li>
+<li>Event vocabulary: <code>detector_spawn</code>, <code>detector_eof</code>, <code>detector_restart</code>, <code>own_sensor_ingest</code>, <code>r2_ingest</code>, <code>parse_reject</code>, <code>track_transition</code>, <code>track_expire</code>, <code>assessment</code>, <code>assess_skipped_b_unknown</code>, <code>risk_transition</code>, <code>r4_tx</code>.</li>
+<li><strong>Events carry payloads where the payload is the proof.</strong> <code>r2_ingest</code> embeds the received R2 body, <code>r4_tx</code> the emitted R4 body, <code>track_transition</code> the distance and reason, <code>assessment</code> the <code>d_AC</code>, the TTC and the rationale.</li>
+<li><code>assessment</code> is written on every committed change plus an <code>ASSESS_LOG_EVERY_MS</code> heartbeat. A line per fusion tick would bury the transitions the demo table asks for.</li>
+<li>Sink: stdout always, because the CarSky View Log is the live window, plus <code>EVENT_LOG_PATH</code> when it is set. <code>tools/event_report.py</code> renders the <code>track_transition</code>, <code>risk_transition</code> and <code>r4_tx</code> subset as the collision-risk event list of report §1's demo table.</li>
+</ul>
+<h2 id="d9-deployment-shape">D9 — Deployment shape<a class="headerlink" href="#d9-deployment-shape" title="Link to this section">¶</a></h2>
+<ul>
+<li><strong>Single-platform <code>linux/arm64</code>, one base image for both build stages.</strong> The base is <code>python:3.11-slim</code> — the report's Python 3.11 for the detector <em>and</em> the C++ build base — so the core binary links against the glibc and libstdc++ it runs on by construction. This node carries no Vanetza, so neither the ASN.1 build cost nor the CMake 3.28 floor applies and apt's CMake clears the 3.22 minimum.</li>
+</ul>
+<p><code>docker buildx build --platform linux/arm64 --provenance=false --sbom=false \
+    -t m1-ada-ecu:latest ADA_ECU/</code></p>
+<p><code>--platform</code> and the disabled attestations are a standing requirement: a Container Node rejects a manifest index and hangs in <code>Provisioning</code>.
+- <strong>Layout inside the image:</strong> <code>/app/ada_ecu</code> (the core binary), <code>/app/detector/</code> (the Python package with its <code>requirements.txt</code> installed at build), <code>/app/models/yolo11n.onnx</code>, <code>/app/media/ego-b-occluding-c.mp4</code>, and <code>entrypoint.sh</code> with <code>capture.sh</code> at the workdir root.
+- <strong>The node captures its own egress.</strong> R15 and R19 need a record of ADA→IVI traffic, which the V2X ECU's capture point cannot see. <code>entrypoint.sh</code> starts <code>capture.sh</code> in the background and then <code>exec</code>s the binary, which is why the blueprint <code>command</code> is <code>["./entrypoint.sh"]</code> and <code>capabilities</code> is <code>["NET_RAW"]</code> (<a href="requirements-car-sky-guide-node-ada-ecu.html#blueprint-node-config">node-ada-ecu.md</a>). The <code>exec</code> is load-bearing: the app becomes PID 1 and receives SIGTERM directly.
+- <strong>The scripts are duplicated per folder rather than shared.</strong> Build contexts are self-contained and no folder imports another's sources; the host-side extraction procedure is the shared <a href="requirements-car-sky-guide-traffic-capture-wireshark.html">traffic-capture-wireshark.md</a>.
+- <strong>The image lane proves the detector's wheels resolve on <code>aarch64</code>, rather than assuming it.</strong> <code>onnxruntime</code> and <code>opencv-python-headless</code> are installed at image build under emulation, and a missing wheel means a source build inside QEMU that can exhaust the job's timeout. The lane therefore ends by starting <code>detector/main.py --synthetic</code> inside the pulled <code>linux/arm64</code> image and observing R3 JSONL on stdout: a build that links and a detector that imports are two different claims, and only the second one closes R12's runtime path.</p>
+<h2 id="d10-clock-domains-and-stimulus-paced-against-clock_monotonic">D10 — Clock domains, and stimulus paced against <code>CLOCK_MONOTONIC</code><a class="headerlink" href="#d10-clock-domains-and-stimulus-paced-against-clock_monotonic" title="Link to this section">¶</a></h2>
+<p>Realizes <a href="requirements-m1-run-timing-and-event-triggering.html">m1-run-timing-and-event-triggering.md §6.1–§6.2</a> for this node. No clock is synchronised across nodes, and no component performs arithmetic mixing two nodes' timestamps.</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Purpose</th>
+<th>Clock</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Wire and log stamps — R3 <code>timestamps.*</code>, <code>[EVT] epoch_ms</code></td>
+<td><code>CLOCK_REALTIME</code> (<code>system_clock</code> / <code>time.time()</code>)</td>
+</tr>
+<tr>
+<td>Intervals — the fusion tick, track expiry, detector pacing, <code>[EVT] mono_ms</code></td>
+<td><code>CLOCK_MONOTONIC</code> (<code>steady_clock</code> / <code>time.monotonic()</code>)</td>
+</tr>
+<tr>
+<td>Arithmetic mixing two nodes' stamps</td>
+<td>forbidden</td>
+</tr>
+</tbody>
+</table></div>
+<p>Which clock fills which R3 field, per source, is <a href="documents-design-ada-ecu-ada-ecu-hld.html#102-r3--the-object-model-of-the-store-owned">§10.2</a>.</p>
+<ul>
+<li><strong>Expiry compares a monotonic stamp, never <code>lastUpdated</code>.</strong> <code>track_store</code> keeps a <code>monoMs</code> beside each entry and <code>admission</code> tests <code>now_mono − monoMs &gt; TRACK_TIMEOUT_MS</code>. <code>lastUpdated</code> is <code>CLOCK_REALTIME</code> because it reaches the wire; the host's own NTP daemon stepping the shared wall clock mid-run would otherwise expire every track at once.</li>
+<li><strong>The detector paces sampled frames to wall-clock rate.</strong> With <code>DETECTOR_REALTIME_PACING</code> true, <code>detector/pacer.py</code> holds each sampled frame until its deadline <code>t0 + n × DETECTOR_FRAME_STRIDE / DETECTOR_CLIP_FPS</code> on <code>time.monotonic()</code>. <strong>The deadline is computed, not accumulated</strong> — a fixed sleep per frame folds the inference cost into scenario time and drifts unbounded over a run. <code>DETECTOR_CLIP_FPS</code> defaults to the clip's declared rate and is overridable; <code>DETECTOR_START_DELAY_S</code> is the grace from spawn to the first emitted frame.</li>
+<li><strong>The run start is the operator restarting a node.</strong> There is no orchestrator, no trigger message and no clock exchange: each stimulus source self-schedules from its own process start against its own configured delay.</li>
+<li><strong><code>tools/check_run_alignment.py</code> is a checker, not a trigger.</strong> It reads logs after a run, is never on the ego data path, and is sanctioned test equipment rather than product code. Its checks are <a href="documents-design-ada-ecu-ada-ecu-hld.html#12-test-strategy">§12</a>.</li>
+<li><strong>Pacing serves R20, not the deferred dashcam view.</strong> The deferred item forbids real-time pacing <em>as its own requirement</em> in service of that view; R20 makes it a requirement on its own footing, so building it pulls no deferred surface in (D6).</li>
+</ul>
+<h2 id="d11-r22-run-choreography-the-run-origin-the-paced-clip-and-the-risk-band-pair">D11 — R22 run choreography: the run origin, the paced clip, and the risk band pair<a class="headerlink" href="#d11-r22-run-choreography-the-run-origin-the-paced-clip-and-the-risk-band-pair" title="Link to this section">¶</a></h2>
+<p>Realizes <a href="requirements-m1-run-timing-and-event-triggering.html">m1-run-timing-and-event-triggering.md §6.6</a> for this node. R22 places the first R4 of a cycle in the open interval (<code>T0</code> + 8.0 s, <code>T0</code> + 10.0 s). Below is what this node owes that placement. Every lever is node configuration or bench scenario data, and no frozen contract carries any of it.</p>
+<ul>
+<li><strong><code>T0</code> is this node's own first emitted <code>own_sensor</code> R3 line</strong>, visible in the <code>[EVT]</code> stream. The run origin is therefore read from one clock, which is what keeps K6 inside D10's single-domain rule.</li>
+<li><strong><code>DETECTOR_REALTIME_PACING = true</code> is load-bearing, not a preference.</strong> With pacing off, clip time is not run time: the clip is consumed at whatever rate the CPU allows, and no instant in the choreography is expressible. A demo run with it off has no defined warning onset.</li>
+<li><strong>Alignment is made on the bench, not here.</strong> <code>DETECTOR_START_DELAY_S</code> stays 0, so the detector's warm-up <code>W</code> — ONNX session load plus <code>VideoCapture</code> open — is the only unknown, and the bench's <code>start_delay_s</code> cancels it (<a href="documents-design-scenario-player-scenario-player-design-decisions.html">SP D7</a>).</li>
+<li><strong>The bench cycle period and the clip length are one matched pair</strong>, 10.0 s. A longer bench cycle leaves C tracked across a clip wrap at which B has been dropped and not yet re-admitted. The assessment then falls to <code>low</code> on the <code>b_unknown</code> path of D5, the warning disappears mid-run, and K1 fails for that interval. The constraint binds the two values together, and neither is free to be retuned alone.</li>
+<li><strong><code>RISK_NEAR_M</code> 60 with <code>RISK_CRITICAL_M</code> 30 moves the trigger off a derivative and onto a direct comparison.</strong> <code>d_AC</code> at C's admission is ≈ 47 m, so the range clause of D5's row 2 commits the transition on its own, with a 13 m margin at the detector's nominal range estimate. It tolerates a range-estimate bias up to <code>k ≤ 1.70</code> before the transition leaves R22's window.</li>
+</ul>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Rejected alternative</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>60 / 40</td>
+<td>Adds a <code>high</code> state ≈ 0.7 s after the <code>medium</code> onset, spending the warning window on a second transition rather than a margin</td>
+</tr>
+<tr>
+<td>60 / 50</td>
+<td>Opens at <code>high</code>, and its bias tolerance falls to <code>k ≤ 1.16</code></td>
+</tr>
+<tr>
+<td>25 / 15</td>
+<td><code>medium</code> at 8.3 s through row 2's TTC clause only, with no range-clause margin: <code>d_AC</code> never falls to 25 m inside a cycle, so the onset rides entirely on <code>ttc</code></td>
+</tr>
+<tr>
+<td>Leave the bands and drive the transition from TTC alone</td>
+<td><code>ttc</code> derives from a numerical derivative of the <em>estimated</em> <code>d_AB</code>, the noisiest quantity in the node, and the transition would have to survive that jitter through the <code>RISK_DWELL_MS</code> debounce</td>
+</tr>
+</tbody>
+</table></div>
+      </article>
+    </main>
+  </div>
+  <script src="../js/site-data.js"></script>
+  <script src="../js/theme.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/doc-page.js"></script>
+</body>
+</html>

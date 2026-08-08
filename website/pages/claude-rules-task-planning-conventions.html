@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en" data-theme="sketch">
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="kis-build-pages">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Task Planning Conventions — KIS</title>
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/doc.css">
+  <link rel="stylesheet" href="../css/themes.css">
+</head>
+<body class="DocBody" data-root=".." data-doc-node="plans" data-doc-title="Task Planning Conventions" data-doc-source=".claude/rules/task-planning-conventions.md">
+  <div class="DocLayout">
+    <aside class="DocLayout__aside" id="doc-toc"></aside>
+    <main class="Page DocPage">
+      <header class="PageHeader" id="doc-header"></header>
+      <article class="Markdown" id="doc-body">
+<hr />
+<p>name: task-planning-conventions
+description: Task ID scheme, phase/task/subtask structure, subtask discipline (single objective, atomic commit, build/tests), and parallel/sequential grouping rules governing how the implementation plan must be built.</p>
+<hr />
+<h1 id="task-planning-conventions">Task Planning Conventions<a class="headerlink" href="#task-planning-conventions" title="Link to this section">¶</a></h1>
+<p>Authoritative process rule for how [[project-planner]] must structure the implementation plan. This governs <em>how</em> planning is done, independent of which milestone is active — phase <em>content</em> itself lives in <a href="../../plans/">plans/</a> (currently <a href="documents-plan-milestone1-high-level-plan.html">milestone1_high_level_plan.md</a>).</p>
+<h2 id="task-id-scheme">Task ID scheme<a class="headerlink" href="#task-id-scheme" title="Link to this section">¶</a></h2>
+<p>Every task and subtask is identified as <code>X.Y.Z.W</code>:</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Segment</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>X</code></td>
+<td>Requirement — the enumerated requirement (from [[project-researcher]]'s output) this work serves</td>
+</tr>
+<tr>
+<td><code>Y</code></td>
+<td>Phase — the phase number in the active plan (e.g. 1–6 in milestone1.md)</td>
+</tr>
+<tr>
+<td><code>Z</code></td>
+<td>Task — a group of related subtasks delivering one feature or technical solution within the phase</td>
+</tr>
+<tr>
+<td><code>W</code></td>
+<td>Subtask — the atomic unit of work</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>IDs are assigned once and stay stable — never renumber completed work, even if scope shifts later.</li>
+<li>Every task/subtask must map to a requirement (<code>X</code>) or a phase (<code>Y</code>). No orphan tasks with no traceable origin.</li>
+</ul>
+<h2 id="plan-structure-phases-tasks-subtasks">Plan structure: phases → tasks → subtasks<a class="headerlink" href="#plan-structure-phases-tasks-subtasks" title="Link to this section">¶</a></h2>
+<ul>
+<li>The plan is organized as <strong>phases</strong>, each phase carrying an explicit <strong>input</strong> (what must exist before the phase can start) and <strong>output</strong>, i.e. its <strong>acceptance criteria</strong> — the check that proves the phase is complete.</li>
+<li>Each phase decomposes into <strong>tasks</strong>, and each task into <strong>subtasks</strong>.</li>
+<li><strong>Grouping:</strong> subtasks are grouped into a task when they jointly deliver one feature or one technical solution — don't scatter a single coherent piece of work across unrelated tasks, and don't bundle unrelated work into one task for convenience.</li>
+</ul>
+<h2 id="subtask-discipline-non-negotiable">Subtask discipline (non-negotiable)<a class="headerlink" href="#subtask-discipline-non-negotiable" title="Link to this section">¶</a></h2>
+<p>Every subtask must:</p>
+<ul>
+<li>Have a <strong>strict single objective</strong>, stated unambiguously.</li>
+<li>Contain <strong>no out-of-scope code</strong> — anything not required by that single objective belongs in a different subtask.</li>
+<li>Produce exactly <strong>one atomic commit</strong>.</li>
+<li><strong>Pass build</strong> before being considered complete.</li>
+<li><strong>Pass unit tests</strong> before being considered complete.</li>
+<li>Be <strong>self-contained</strong>: carry all information an implementing subagent needs (file paths, relevant contract fields, acceptance criteria) so the subagent should not need to re-read the wider codebase — only re-read on hitting an actual implementation issue.</li>
+</ul>
+<p>A subtask is marked <strong>done</strong> only when all of the above hold <em>and</em> the commit has been made.</p>
+<h2 id="commit-message-format">Commit message format<a class="headerlink" href="#commit-message-format" title="Link to this section">¶</a></h2>
+<p>Every commit in this project — HLD/design commits included, not just implementation subtasks — follows:</p>
+<pre><code>[&lt;taskID&gt;] &lt;type&gt;: &lt;subject&gt;
+</code></pre>
+<ul>
+<li><code>&lt;taskID&gt;</code> is the <strong>most specific ID known at commit time</strong>:</li>
+<li><strong>Omitted entirely</strong> (<code>&lt;type&gt;: &lt;subject&gt;</code>, no bracket) for research-report commits — the report is what defines the requirement numbers, so no <code>X</code> exists yet (see <a href="claude-rules-research-report-format.html#commit-format">research-report-format.md</a>).</li>
+<li><code>X</code> alone (requirement only) for pre-decomposition commits — e.g. an HLD/design commit made before phase/task/subtask breakdown exists for that requirement.</li>
+<li>Full <code>X.Y.Z.W</code> for implementation commits made against a decomposed subtask.</li>
+<li><code>&lt;type&gt;</code> is one of: <code>design</code> (HLD/architecture artifacts), <code>feat</code> (new implementation), <code>fix</code>, <code>refactor</code>, <code>test</code>, <code>docs</code>, <code>chore</code>.</li>
+<li><code>&lt;subject&gt;</code> is a short, imperative description of the change.</li>
+</ul>
+<p>Examples:
+- <code>docs: add requirement analysis &amp; solution report for the comms track</code> — research-report commit, made before any requirement numbers exist.
+- <code>[2] design: define perception-track MVC module boundaries</code> — requirement-2 HLD, committed before task/subtask IDs exist for that requirement.
+- <code>[2.3.1.2] feat: implement gate hysteresis in track manager</code> — post-decomposition implementation subtask.</p>
+<h2 id="branch-suggestion-per-phase">Branch suggestion per phase<a class="headerlink" href="#branch-suggestion-per-phase" title="Link to this section">¶</a></h2>
+<ul>
+<li>Whenever [[project-planner]] performs task planning for a phase (new plan or update), it <strong>suggests</strong> a development branch name for that phase alongside the task/subtask breakdown — it does not create, check out, or push the branch itself; branch creation is the user's call.</li>
+<li>Naming follows the convention already used in this repo: <code>feat/phase&lt;Y&gt;-&lt;short-slug&gt;</code> — <code>Y</code> is the phase number, <code>&lt;short-slug&gt;</code> a few kebab-case words naming the phase's feature (e.g. <code>feat/phase2-ada-scaffold</code>, <code>feat/phase5-ivi-hmi</code>). A phase whose primary work isn't a <code>feat</code> (e.g. a fix-only or docs-only phase) uses the matching type prefix from the <a href="#commit-message-format">commit message format</a> instead of <code>feat</code>.</li>
+<li>One branch per phase, not per task/subtask — subtasks within a phase commit onto that phase's branch.</li>
+</ul>
+<h2 id="parallel-vs-sequential-execution">Parallel vs. sequential execution<a class="headerlink" href="#parallel-vs-sequential-execution" title="Link to this section">¶</a></h2>
+<ul>
+<li>Tasks and subtasks may run <strong>in parallel</strong> or <strong>sequentially</strong> — the planner must explicitly mark which, based on real dependencies (shared files, data contracts, ordering constraints), not by default assumption.</li>
+<li>Tracks that only share a frozen contract (not each other's internals) default to parallel; a subtask that consumes another subtask's output is sequential after it.</li>
+</ul>
+<h2 id="how-to-apply">How to apply<a class="headerlink" href="#how-to-apply" title="Link to this section">¶</a></h2>
+<ul>
+<li>[[project-planner]] owns and enforces this document when building and updating the plan. Subagents spawned to implement a subtask inherit the subtask-discipline rules above as their definition of done — the planner's brief to a subagent must make that explicit, not assume it.</li>
+<li>[[project-planner]] applies the branch-suggestion rule above every time it plans a phase, alongside the task ID/commit rules — it's part of the same planning output, not a separate step.</li>
+<li>Commit tagging: [[project-researcher]] omits the taskID for report commits (see <a href="claude-rules-research-report-format.html#commit-format">research-report-format.md</a>); [[project-architecture]] uses the <code>X</code>-only form for HLD commits (see <a href="claude-rules-hld-content-and-commit-format.html">hld-content-and-commit-format.md</a>); [[project-planner]] and the subagents it spawns use the full <code>X.Y.Z.W</code> form once tasks/subtasks are decomposed.</li>
+</ul>
+      </article>
+    </main>
+  </div>
+  <script src="../js/site-data.js"></script>
+  <script src="../js/theme.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/doc-page.js"></script>
+</body>
+</html>

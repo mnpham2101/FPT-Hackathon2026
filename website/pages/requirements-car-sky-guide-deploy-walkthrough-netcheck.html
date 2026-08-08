@@ -1,0 +1,691 @@
+<!doctype html>
+<html lang="en" data-theme="sketch">
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="kis-build-pages">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Deploying a Blueprint on CarSky — End-to-End Walkthrough — KIS</title>
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/doc.css">
+  <link rel="stylesheet" href="../css/themes.css">
+</head>
+<body class="DocBody" data-root=".." data-doc-node="plans" data-doc-title="Deploying a Blueprint on CarSky — End-to-End Walkthrough" data-doc-source="requirements/car-sky-guide/deploy-walkthrough-netcheck.md">
+  <div class="DocLayout">
+    <aside class="DocLayout__aside" id="doc-toc"></aside>
+    <main class="Page DocPage">
+      <header class="PageHeader" id="doc-header"></header>
+      <article class="Markdown" id="doc-body">
+<h1 id="deploying-a-blueprint-on-carsky-end-to-end-walkthrough">Deploying a Blueprint on CarSky — End-to-End Walkthrough<a class="headerlink" href="#deploying-a-blueprint-on-carsky-end-to-end-walkthrough" title="Link to this section">¶</a></h1>
+<p>Worked example: the <strong>netcheck</strong> connectivity test (<a href="../../tools/netcheck/">tools/netcheck/</a>), from source file to running Room. Every step <strong>M1–M12</strong> of <a href="plans-doc-research-notes-baseline-connectivity-smoke-test.html">baseline-connectivity-smoke-test.md</a> is covered here in order — several are performed by an agent rather than by hand, and <a href="#5-work-division-between-ai-and-human">§5</a> states which; that note owns the test's <em>design</em> (why each check exists, and the <a href="plans-doc-research-notes-baseline-connectivity-smoke-test.html#2-pass-criteria">pass criteria C1–C5</a> every later mention refers to), this guide owns the <em>doing</em>.</p>
+<p>Use it as the template for deploying any container node — the ECU images follow the identical path with different images and env.</p>
+<hr />
+<h2 id="1-introduction">1. Introduction<a class="headerlink" href="#1-introduction" title="Link to this section">¶</a></h2>
+<p>Getting code onto CarSky is three hand-offs:</p>
+<pre><code>your code  ──build──▶  container image  ──push──▶  registry  ──pull──▶  CarSky node
+ (git repo)            (GitHub Actions)              (Zot)              (Room)
+</code></pre>
+<p>Nothing is ever installed onto a node by hand. A node's config <em>names</em> an image; the platform pulls it when the Room deploys. Change behaviour → edit config and redeploy. Change code → rebuild, push, redeploy.</p>
+<p>The netcheck example proves the network works before any ECU code exists: one image on three nodes, each playing a different role via environment variables, relaying a datagram bench → V2X → ADA → IVI.</p>
+<hr />
+<h2 id="2-tools-and-concepts">2. Tools and concepts<a class="headerlink" href="#2-tools-and-concepts" title="Link to this section">¶</a></h2>
+<h3 id="21-docker">2.1 Docker<a class="headerlink" href="#21-docker" title="Link to this section">¶</a></h3>
+<p><strong>Docker</strong> packages an application with everything it needs to run — OS libraries, runtime, dependencies — into one <strong>image</strong>. A running copy of an image is a <strong>container</strong>. Because the image carries its own environment, it runs identically on a laptop, a CI runner, and a cloud cluster; this is what removes "works on my machine".</p>
+<p>A <strong>Dockerfile</strong> is the recipe. Ours (<a href="../../tools/netcheck/Dockerfile">tools/netcheck/Dockerfile</a>) picks a base OS, installs Python and tcpdump, copies three scripts in, and declares what runs at start.</p>
+<blockquote>
+<p>Reference: <a href="https://docs.docker.com/get-started/docker-overview/">Docker overview</a> · <a href="https://docs.docker.com/reference/dockerfile/">Dockerfile reference</a></p>
+</blockquote>
+<h3 id="22-github-actions">2.2 GitHub Actions<a class="headerlink" href="#22-github-actions" title="Link to this section">¶</a></h3>
+<p><strong>GitHub Actions</strong> runs commands on GitHub's servers when something happens in the repository. We use it because the developer machine has no Docker or Linux — GitHub's Linux machines build and test instead.</p>
+<h3 id="23-workflow-yaml-events-jobs-runners">2.3 Workflow, YAML, events, jobs, runners<a class="headerlink" href="#23-workflow-yaml-events-jobs-runners" title="Link to this section">¶</a></h3>
+<p>A <strong>workflow</strong> is a YAML file in <code>.github/workflows/</code>. Ours is <a href="../../.github/workflows/phase0-ci.yml">phase0-ci.yml</a>.</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Concept</th>
+<th>Meaning</th>
+<th>In our file</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Event</strong></td>
+<td>What triggers the workflow</td>
+<td><code>on: push</code> — every push to any branch</td>
+</tr>
+<tr>
+<td><strong>Job</strong></td>
+<td>A named group of steps; jobs run in parallel by default</td>
+<td><code>netcheck-image</code>, <code>v2x-core-build</code>, <code>ivi-unit-tests</code>, …</td>
+</tr>
+<tr>
+<td><strong>Step</strong></td>
+<td>One command or reusable action inside a job</td>
+<td>"Build netcheck image", "Push to CarSky Zot registry"</td>
+</tr>
+<tr>
+<td><strong>Runner</strong></td>
+<td>The machine executing a job</td>
+<td><code>runs-on: ubuntu-latest</code></td>
+</tr>
+<tr>
+<td><strong>Secret</strong></td>
+<td>Encrypted value injected at run time, never printed</td>
+<td><code>secrets.CARSKY_ZOT_API_KEY</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>Each job starts on a clean machine, so it checks the code out first (<code>actions/checkout</code>).</p>
+<p><strong>Reading the raw YAML, briefly:</strong></p>
+<ul>
+<li><code>key: value</code> — one mapping entry; nesting is indentation (2 spaces), no braces.</li>
+<li><code>- item</code> — a list entry; a job's <code>steps:</code> is a list of these.</li>
+<li><code>${{ ... }}</code> — an expression evaluated at run time, e.g. <code>${{ secrets.CARSKY_ZOT_API_KEY }}</code>.</li>
+<li><code>|</code> before a block — a literal multi-line string, used for a multi-line <code>run:</code> script.</li>
+</ul>
+<blockquote>
+<p>Reference: <a href="https://docs.github.com/actions">GitHub Actions documentation</a> — workflow syntax, contexts, and expressions in full.</p>
+</blockquote>
+<h3 id="24-zot-the-container-registry">2.4 Zot — the container registry<a class="headerlink" href="#24-zot-the-container-registry" title="Link to this section">¶</a></h3>
+<p><strong>Zot</strong> is the image warehouse CarSky runs. Upload an image once; any node can pull it by name. Ours: <code>https://registry.hackathon-2.carsky.io/</code>.</p>
+<p><strong>Credentials.</strong> Sign in to the Zot web UI through <strong>A8 Keycloak</strong> (single sign-on), then create an <strong>API key</strong> (<code>zak_…</code>, shown once). That key is the <em>password</em> for <code>docker login</code>; the username is the registry account. Full procedure: <a href="requirements-car-sky-guide-zot-registry-api-key.html">zot-registry-api-key.md</a>.</p>
+<p><strong>Host caveat:</strong> <code>registry.hackathon-2.carsky.io</code> is the verified <strong>push</strong> host from outside (CI, dev machine); <code>registry.carsky.io</code> answers 502 externally. <strong>Resolved:</strong> nodes pull from this same host — the earlier pull failures were a single-platform-image requirement, not a host mismatch. See <a href="plans-doc-phase0-smoke-test-run.html">phase0-smoke-test-run.md § Standing requirement</a>.</p>
+<p><strong>How the push works from GitHub Actions</strong> — run by the <code>netcheck-image</code> job. Images must be single-platform <code>linux/arm64</code> (<a href="plans-doc-phase0-smoke-test-run.html">phase0-smoke-test-run.md § Standing requirement</a>); attestations stay disabled so the result is one manifest, not an index:</p>
+<pre><code>docker login &lt;registry-host&gt; -u &lt;account&gt; --password-stdin   # key supplied from the secret
+docker buildx build --platform linux/arm64 --provenance=false --sbom=false \
+  -t &lt;registry-host&gt;/m1-netcheck:latest --push tools/netcheck/
+</code></pre>
+<p>The key lives only in GitHub Secrets and is never written to the repository.</p>
+<h3 id="25-carsky-platform-model">2.5 CarSky — platform model<a class="headerlink" href="#25-carsky-platform-model" title="Link to this section">¶</a></h3>
+<p>CarSky simulates a vehicle's electronic architecture in the cloud.</p>
+<p><strong>Two different credentials, easily confused:</strong></p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Credential</th>
+<th>Format</th>
+<th>Used for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Keycloak login</strong></td>
+<td>email + password</td>
+<td>Signing in to the CarSky and Zot web UIs</td>
+</tr>
+<tr>
+<td><strong>CarSky API key</strong></td>
+<td><code>a8k_…</code></td>
+<td>REST API calls (blueprints, deployments, logs)</td>
+</tr>
+<tr>
+<td><strong>Zot API key</strong></td>
+<td><code>zak_…</code></td>
+<td><code>docker login</code> to the registry only</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>The object model:</strong></p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Term</th>
+<th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Blueprint</strong></td>
+<td>The design of one vehicle: which nodes exist, how they are wired. Edited on the Nydus canvas. Not running.</td>
+</tr>
+<tr>
+<td><strong>Node</strong></td>
+<td>One simulated ECU or piece of bench equipment inside a blueprint. Types used here: <strong>Container</strong> (runs an image), <strong>Skycraft</strong> (runs an Android VM), <strong>Ethernet Bridge</strong> (the virtual network).</td>
+</tr>
+<tr>
+<td><strong>Pin / edge</strong></td>
+<td>A node's connector and the wire joining it to the bridge. Our four role nodes each have one <code>ethernet</code> pin wired to the bridge — a star.</td>
+</tr>
+<tr>
+<td><strong>Device</strong></td>
+<td>The Kubernetes resource pool a deployment runs on. <strong>Not</strong> an ECU — just the target machine pool chosen at deploy time.</td>
+</tr>
+<tr>
+<td><strong>Deployment / Room</strong></td>
+<td>A running instance of a blueprint. One blueprint can be deployed several times; the account allows 2 concurrent deployments.</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>What Zot provides to CarSky:</strong> the images. A Container node's <code>image</code> field is a Zot address; at deploy time the platform pulls that image and starts it. If the image is missing, or the host is wrong, the node hangs in <code>Provisioning</code> with <code>trying and failing to pull image</code>.</p>
+<hr />
+<h2 id="3-prerequisites">3. Prerequisites<a class="headerlink" href="#3-prerequisites" title="Link to this section">¶</a></h2>
+<p>All three must hold before M5. Without them the deploy cannot complete, and the failure appears late — as a node stuck in <code>Provisioning</code> or a chain that stops at a hop.</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Prerequisite</th>
+<th>Established by</th>
+<th>Checked at</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The job that builds and pushes this image ran green on the latest push</td>
+<td><a href="../../.github/workflows/phase0-ci.yml">phase0-ci.yml</a>, job <code>netcheck-image</code></td>
+<td><a href="#m3--m4--build-and-push-automatic">M3 + M4</a></td>
+</tr>
+<tr>
+<td>The image is in Zot on the push host of §2.4, single-platform <code>linux/arm64</code></td>
+<td>The same job</td>
+<td><a href="#m3--m4--build-and-push-automatic">M4</a>'s catalog check</td>
+</tr>
+<tr>
+<td>The blueprint exists, and each role node has one <code>ethernet</code> pin wired to the bridge at <code>10.99.0.10</code>–<code>.13</code></td>
+<td>Drawn by hand on the Nydus canvas</td>
+<td><a href="#m6--check-the-wiring">M6</a></td>
+</tr>
+</tbody>
+</table></div>
+<p>All three credentials of §2.5 are in hand: the Keycloak login for the web UIs, the CarSky API key for REST, and the Zot key stored as the GitHub secret of <a href="#m2--store-the-registry-credential-as-a-github-secret">M2</a>.</p>
+<hr />
+<h2 id="4-step-by-step-deploying-netcheck-m1m12">4. Step-by-step: deploying netcheck (M1–M12)<a class="headerlink" href="#4-step-by-step-deploying-netcheck-m1m12" title="Link to this section">¶</a></h2>
+<h3 id="m1-write-the-application-code">M1 — Write the application code<a class="headerlink" href="#m1-write-the-application-code" title="Link to this section">¶</a></h3>
+<p><a href="../../tools/netcheck/">tools/netcheck/</a> holds four files: <code>netcheck.py</code> (send / receive / relay), <code>capture.sh</code> (tcpdump), <code>entrypoint.sh</code> (starts capture in the background, netcheck in the foreground), and <code>Dockerfile</code>.</p>
+<p>Two rules make one image serve three roles:</p>
+<ul>
+<li><strong>Nothing about the topology is in the code</strong> — addresses, ports, and role come from environment variables.</li>
+<li><strong>The container starts the test itself</strong>, so a deploy alone produces evidence; no shell session is ever needed.</li>
+</ul>
+<h3 id="m2-store-the-registry-credential-as-a-github-secret">M2 — Store the registry credential as a GitHub secret<a class="headerlink" href="#m2-store-the-registry-credential-as-a-github-secret" title="Link to this section">¶</a></h3>
+<ol>
+<li>Create the Zot API key (<a href="requirements-car-sky-guide-zot-registry-api-key.html">zot-registry-api-key.md</a>).</li>
+<li>GitHub repository → <strong>Settings → Secrets and variables → Actions → New repository secret</strong>.</li>
+<li>Name <code>CARSKY_ZOT_API_KEY</code>, value <code>zak_…</code>.</li>
+</ol>
+<p>The registry account is not secret and lives in the workflow (<code>REGISTRY_USER</code>); override it with the <code>CARSKY_REGISTRY_USER</code> repository <em>variable</em> if the account changes.</p>
+<h3 id="m3-m4-build-and-push-automatic">M3 + M4 — Build and push (automatic)<a class="headerlink" href="#m3-m4-build-and-push-automatic" title="Link to this section">¶</a></h3>
+<p>Both are done by the <code>netcheck-image</code> job on every push — no local Docker required.</p>
+<p><strong>Requires the CI workflow script.</strong> This is automatic only because <a href="../../.github/workflows/phase0-ci.yml">phase0-ci.yml</a> already has a <code>netcheck-image</code> job that builds and pushes this exact image. If that job doesn't exist yet, or its <code>PLATFORMS</code>/tag/registry don't match the target, fix the <code>.yml</code> first — there is nothing to verify without it.</p>
+<p><strong>Verify:</strong> GitHub → <strong>Actions</strong> → newest <strong>phase0-ci</strong> run → job <strong>netcheck-image</strong>:</p>
+<ul>
+<li><em>"Build netcheck image"</em> green → <strong>M3 done</strong>.</li>
+<li><em>"Push to CarSky Zot registry"</em> prints <code>pushed …/m1-netcheck:latest</code> → <strong>M4 done</strong>. If it prints <code>secret not set</code>, M2 is incomplete.</li>
+</ul>
+<p><strong>Independent check:</strong> the image appears in the Zot UI image list, or via the registry API <code>GET /v2/_catalog</code>.</p>
+<h3 id="m5-choose-the-blueprint">M5 — Choose the blueprint<a class="headerlink" href="#m5-choose-the-blueprint" title="Link to this section">¶</a></h3>
+<p>Nydus → blueprint list → open the target. <strong>This walkthrough's blueprint is <code>baseline_m1</code></strong> — the five-node topology whose three container nodes all carry <code>m1-netcheck:latest</code>, kept for exactly this test (<a href="requirements-car-sky-guide-carsky-4-node-blueprint.html#8-the-blueprints-on-carsky">carsky-4-node-blueprint.md § The blueprints on CarSky</a>).</p>
+<p>Work on a <strong>clone</strong> of it, so the known-good baseline stays untouched. Deploying also creates a snapshot named <code>&lt;name&gt;-deploy</code>; <strong>always edit the original</strong>, never the snapshot.</p>
+<p>Clicking empty canvas shows the <strong>blueprint</strong> Inspector — the panel that owns the whole design rather than one node:</p>
+<p><img alt="Nydus Inspector — blueprint panel with name, deployments, ownership" src="requirements-car-sky-guide-images-nydus-inspector-blueprint.png" /></p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Name / Description</td>
+<td>Identify the trial — put the differentiator here, never in code</td>
+</tr>
+<tr>
+<td><strong>Locked</strong></td>
+<td>Freezes topology and metadata edits; leave off while configuring</td>
+</tr>
+<tr>
+<td><strong>Deployments (n)</strong> + <strong>New Deployment</strong></td>
+<td>Live Rooms from this blueprint, and where M9 starts</td>
+</tr>
+<tr>
+<td>Public / Owner</td>
+<td>Private by default; owner is the CarSky account (the same identity used for the registry)</td>
+</tr>
+<tr>
+<td><strong>Delete Blueprint</strong></td>
+<td>Only after its deployments are deleted (M12)</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="m6-check-the-wiring">M6 — Check the wiring<a class="headerlink" href="#m6-check-the-wiring" title="Link to this section">¶</a></h3>
+<p>Confirm each of the four role nodes has one <code>ethernet</code> pin wired to the Ethernet Bridge, with addresses <code>10.99.0.10</code> (bench), <code>.11</code> (V2X), <code>.12</code> (ADA), <code>.13</code> (IVI).</p>
+<blockquote>
+<p><strong>Warning — do not add nodes or pins here.</strong> The REST API cannot create <code>ETHERNET</code> pins, and a JSON import silently drops them. If a clone lost its pins, re-draw the four edges by hand on the canvas. On our blueprint the wiring is already correct: nothing to do.</p>
+</blockquote>
+<h3 id="m7-configure-the-three-container-nodes">M7 — Configure the three container nodes<a class="headerlink" href="#m7-configure-the-three-container-nodes" title="Link to this section">¶</a></h3>
+<p><strong>The most important step.</strong> Click a node, edit in the Inspector, click the canvas to commit.</p>
+<p><img alt="Nydus Inspector — V2X ECU node configuration" src="requirements-car-sky-guide-images-nydus-inspector-v2x-ecu.png" /></p>
+<blockquote>
+<p>Capture that screenshot <strong>only after the values are verified correct</strong> (§7). The first run's screenshot showed <code>NEXT_HOP_HOST = 10.99.0.2</code> and <code>ROLE = V2X</code> — both wrong — and would teach the mistakes it was meant to prevent.</p>
+</blockquote>
+<p><strong>Common to all three nodes:</strong></p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Value</th>
+<th>Explanation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Image</td>
+<td><code>registry.hackathon-2.carsky.io/m1-netcheck:latest</code></td>
+<td>Same host CI pushes to. Must be single-platform <code>linux/arm64</code> (<a href="plans-doc-phase0-smoke-test-run.html">phase0-smoke-test-run.md § Standing requirement</a>) — a multi-platform manifest index fails to pull.</td>
+</tr>
+<tr>
+<td>Command</td>
+<td><code>./entrypoint.sh</code></td>
+<td>Overrides the container entrypoint. Relative to the image's workdir <code>/app</code> — <code>/entrypoint.sh</code> (absolute) does not exist and the container dies at start. May be left empty: the Dockerfile already defaults to it.</td>
+</tr>
+<tr>
+<td>Args</td>
+<td><em>(empty)</em></td>
+<td>Not used.</td>
+</tr>
+<tr>
+<td>Capabilities</td>
+<td><code>NET_RAW</code></td>
+<td>Linux privilege for opening raw sockets, required by <code>tcpdump</code> in <code>capture.sh</code>. Without it capture degrades to packet counters and criterion C4 weakens.</td>
+</tr>
+<tr>
+<td>Exposed Ports</td>
+<td><em>(empty)</em></td>
+<td>Only needed to reach a container from outside the Room. Node-to-node traffic on <code>10.99.0.x</code> needs nothing.</td>
+</tr>
+<tr>
+<td>Pins / Part Prefix</td>
+<td><em>(unchanged)</em></td>
+<td>Set by the baseline; touching them breaks the wiring or the log routing.</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Per node — environment variables.</strong> Names are read verbatim by <a href="../../tools/netcheck/netcheck.py">netcheck.py</a>; a misspelling is silently ignored, and a wrong address produces <code>[ERR] no route</code>.</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Node</th>
+<th>Field</th>
+<th>Value</th>
+<th>Explanation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Bench</strong> <code>10.99.0.10</code></td>
+<td><code>ROLE</code></td>
+<td><code>bench</code></td>
+<td>Read as <code>ROLE</code>; labels every log line and is appended as the stamp <code>\|bench</code>. Lowercase, to match the expected log.</td>
+</tr>
+<tr>
+<td></td>
+<td><code>NEXT_HOP_HOST</code></td>
+<td><code>10.99.0.11</code></td>
+<td>Read as <code>NH</code>; destination of <code>sendto()</code>. The V2X node's pin address.</td>
+</tr>
+<tr>
+<td></td>
+<td><code>NEXT_HOP_PORT</code></td>
+<td><code>47100</code></td>
+<td>Read as <code>NP</code>; must equal V2X's <code>LISTEN_PORT</code>.</td>
+</tr>
+<tr>
+<td></td>
+<td><em>(no <code>LISTEN_PORT</code>)</em></td>
+<td>—</td>
+<td>The bench only sends. Setting it would make it a relay.</td>
+</tr>
+<tr>
+<td><strong>V2X ECU</strong> <code>10.99.0.11</code></td>
+<td><code>ROLE</code></td>
+<td><code>v2x</code></td>
+<td>Adds the <code>\|v2x</code> stamp proving the datagram transited this node (criterion C5).</td>
+</tr>
+<tr>
+<td></td>
+<td><code>LISTEN_PORT</code></td>
+<td><code>47100</code></td>
+<td>Read as <code>LISTEN</code>; the receiver binds <code>0.0.0.0:47100</code>. Must equal the bench's <code>NEXT_HOP_PORT</code>.</td>
+</tr>
+<tr>
+<td></td>
+<td><code>NEXT_HOP_HOST</code></td>
+<td><code>10.99.0.12</code></td>
+<td>ADA's pin address. <strong>Type carefully — <code>10.99.0.2</code> is a different, non-existent host.</strong></td>
+</tr>
+<tr>
+<td></td>
+<td><code>NEXT_HOP_PORT</code></td>
+<td><code>47200</code></td>
+<td>Must equal ADA's <code>LISTEN_PORT</code>.</td>
+</tr>
+<tr>
+<td><strong>ADA ECU</strong> <code>10.99.0.12</code></td>
+<td><code>ROLE</code></td>
+<td><code>ada</code></td>
+<td>Adds the <code>\|ada</code> stamp.</td>
+</tr>
+<tr>
+<td></td>
+<td><code>LISTEN_PORT</code></td>
+<td><code>47200</code></td>
+<td><strong>Add this name.</strong> The baseline's <code>V2X_LISTEN_PORT</code> is a different variable and is not read by this image — keep it, but add <code>LISTEN_PORT</code> alongside.</td>
+</tr>
+<tr>
+<td></td>
+<td><code>NEXT_HOP_HOST</code></td>
+<td><code>10.99.0.13</code></td>
+<td>The IVI node.</td>
+</tr>
+<tr>
+<td></td>
+<td><code>NEXT_HOP_PORT</code></td>
+<td><code>47300</code></td>
+<td>The IVI hop (see M10).</td>
+</tr>
+</tbody>
+</table></div>
+<p>Optional, defaults are fine: <code>HZ</code> (1 message/second), <code>PAD</code> (payload padding, for the MTU check), <code>START_DELAY_S</code> (20 s, so receivers are listening first), <code>CAPTURE_FILTER</code> (<code>udp</code>).</p>
+<p>Leftover baseline variables (<code>ADA_ECU_HOST</code>, <code>SCENARIO_CONFIG</code>, <code>GATE_ENTER_M</code>, …) are ignored and harmless.</p>
+<h3 id="m8-leave-the-ivi-node-alone">M8 — Leave the IVI node alone<a class="headerlink" href="#m8-leave-the-ivi-node-alone" title="Link to this section">¶</a></h3>
+<p>The Skycraft node runs an Android VM, not a container — it cannot run these scripts. It only needs its <strong>VM image artifact</strong> attached (artifact <code>AAOS</code>, version <code>0.0.1</code>, arch <code>aarch64</code> — <a href="requirements-car-sky-guide-node-ivi-ecu.html">node-ivi-ecu.md</a>). Without it the deploy is rejected outright:</p>
+<blockquote>
+<p><code>invalid blueprint: node 'IVI ECU': skycraft requires 'image' config with VM image artifact details</code></p>
+</blockquote>
+<h3 id="m9-deploy-criterion-c1">M9 — Deploy → criterion C1<a class="headerlink" href="#m9-deploy-criterion-c1" title="Link to this section">¶</a></h3>
+<p><strong>New Deployment</strong> opens the Deploy dialog:</p>
+<p><img alt="Deploy Blueprint dialog — deployment name and device selection" src="requirements-car-sky-guide-images-nydus-deploy-dialog.png" /></p>
+<ul>
+<li><strong>Deployment Name</strong> — defaults to <code>&lt;blueprint&gt;-deploy</code>; keep it unless running two Rooms from one blueprint.</li>
+<li><strong>Device</strong> — pick an <strong>existing</strong> entry from the dropdown (§2.5: the K8s resource pool, not an ECU). <code>+ Create new device</code> is unnecessary here and eats into the 2-concurrent-deployment budget.</li>
+</ul>
+<p>Then <strong>Deploy</strong>, and wait until every node badge reads <code>Running</code> with restart count 0 — that is <strong>C1</strong>. The Android node takes longer than the containers.</p>
+<p><em>Stuck in <code>Provisioning</code></em> almost always means the image could not be pulled: re-check the M7 image field, host, and that M4 actually pushed. Diagnosis procedure: <a href="claude-skills-carsky-room-diagnostics-skill.html">carsky-room-diagnostics</a>.</p>
+<h3 id="m10-read-the-logs-criteria-c2c5">M10 — Read the logs → criteria C2–C5<a class="headerlink" href="#m10-read-the-logs-criteria-c2c5" title="Link to this section">¶</a></h3>
+<p>Click each node → <strong>View Log</strong>. The programs are already running; nothing to type.</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Node</th>
+<th>Expect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Bench</td>
+<td><code>[NET] bench route to 10.99.0.11:47100 OK, egress address 10.99.0.10</code> then <code>[TX] bench #0 …</code></td>
+</tr>
+<tr>
+<td>V2X</td>
+<td><code>[RX] v2x #1 from 10.99.0.10 … body=seq=0\|bench</code> then <code>[TX] v2x #1 relayed to 10.99.0.12:47200</code></td>
+</tr>
+<tr>
+<td>ADA</td>
+<td><code>[RX] ada #1 … body=seq=0\|bench\|v2x</code> — the accumulated stamps are <strong>C5</strong></td>
+</tr>
+<tr>
+<td>any</td>
+<td><code>[CAP] … IP 10.99.0.10.x &gt; 10.99.0.11.47100: UDP</code> — tcpdump on the wire, <strong>C4</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>Zero <code>[ERR]</code> lines is <strong>C2</strong>; a live, readable log per node is <strong>C3</strong>.</p>
+<h3 id="checking-ivi-rx-traffic-hop-3">Checking IVI RX traffic (hop 3)<a class="headerlink" href="#checking-ivi-rx-traffic-hop-3" title="Link to this section">¶</a></h3>
+<p>Until the IVI listener is installed on the Android node, it produces no <code>[RX]</code>/<code>[TX]</code> logs like the other three nodes. Two ways to check it received ADA's relay, strongest first — per <a href="plans-doc-research-notes-baseline-connectivity-smoke-test.html#7-the-ivi-hop">baseline-connectivity-smoke-test.md §7</a> — and record which was used.</p>
+<p><strong>Note:</strong> a REST-driven listener (<code>POST</code> a <code>toybox nc -u -l -p 47300</code> to the VM shell route, <code>GET</code> the result) is not doable — the VM shell route returns 502 on this deployment, same as <code>screenshot</code>/<code>accessibility</code>/<code>container-exec</code> (<a href="requirements-car-sky-guide-carsky-rest-api-blueprint.html">carsky-rest-api-blueprint.md</a>). Toybox's availability can't even be checked until that's fixed.</p>
+<h4 id="option-1-ada-side-evidence-currently-the-only-working-option">Option 1 — ADA-side evidence (currently the only working option)<a class="headerlink" href="#option-1-ada-side-evidence-currently-the-only-working-option" title="Link to this section">¶</a></h4>
+<p>ADA's <code>[TX] … relayed to 10.99.0.13:47300</code> plus its <code>[CAP]</code> line proves the datagram was put on the wire — it does not prove IVI received it.</p>
+<h4 id="option-2-wait-for-the-real-r4-listener">Option 2 — Wait for the real R4 listener<a class="headerlink" href="#option-2-wait-for-the-real-r4-listener" title="Link to this section">¶</a></h4>
+<p>Once the IVI listener is installed, hop 3 verifies through the actual UDP path and this whole check retires — no netcheck-specific verification needed from then on.</p>
+<h3 id="m11-optional-mtu-headroom">M11 — Optional: MTU headroom<a class="headerlink" href="#m11-optional-mtu-headroom" title="Link to this section">¶</a></h3>
+<p>Set <code>PAD=1400</code> on the bench node and redeploy. If large datagrams do not arrive while small ones do, bisect the value to find the ceiling — the bridge is a tunnelled fabric, so 1500 bytes is not guaranteed. Feeds the CPM message-size budget.</p>
+<h3 id="m12-tear-down">M12 — Tear down<a class="headerlink" href="#m12-tear-down" title="Link to this section">¶</a></h3>
+<p><strong>Delete Deployment</strong> when finished; the blueprint is untouched and redeployable. Only 2 deployments may run at once, so releasing one matters.</p>
+<hr />
+<h2 id="5-work-division-between-ai-and-human">5. Work division between AI and human<a class="headerlink" href="#5-work-division-between-ai-and-human" title="Link to this section">¶</a></h2>
+<p>The split is not a preference — it follows from what an agent can reach. An agent runs CLI tools and authenticated REST calls; it cannot use the Nydus canvas, a browser download, or its own eyes. The <code>M</code> labels are step names, not the assignment.</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Action</th>
+<th>AI / Human</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="#m1--write-the-application-code">M1 — Write the application code</a></td>
+<td>Neither</td>
+<td>A development deliverable; the four source files exist before the procedure starts</td>
+</tr>
+<tr>
+<td><a href="#m2--store-the-registry-credential-as-a-github-secret">M2 — Store the registry credential</a></td>
+<td>Human</td>
+<td>GitHub repository settings; the key is pasted once and never echoed</td>
+</tr>
+<tr>
+<td><a href="#m3--m4--build-and-push-automatic">M3 + M4 — Trigger the build and push</a></td>
+<td>AI</td>
+<td>Push a commit; the <code>netcheck-image</code> job runs on every push</td>
+</tr>
+<tr>
+<td><a href="#m3--m4--build-and-push-automatic">M4 — Confirm the run passed</a></td>
+<td>Human</td>
+<td>Actions web UI; an agent session holds no GitHub token</td>
+</tr>
+<tr>
+<td><a href="#m3--m4--build-and-push-automatic">M4 — Confirm the image reached the registry</a></td>
+<td>AI</td>
+<td>Registry catalog and tag list over <code>curl</code></td>
+</tr>
+<tr>
+<td><a href="#m5--choose-the-blueprint">M5 — Choose the blueprint</a></td>
+<td>Human</td>
+<td>Nydus blueprint list and Inspector; edit the original, never the snapshot</td>
+</tr>
+<tr>
+<td><a href="#m6--check-the-wiring">M6 — Check the wiring</a></td>
+<td>AI</td>
+<td><code>GET /api/v1/blueprints/{id}</code> returns every pin, edge and address</td>
+</tr>
+<tr>
+<td><a href="#m6--check-the-wiring">M6 — Draw a missing pin or edge</a></td>
+<td>Human</td>
+<td>Nydus canvas; REST cannot create <code>ETHERNET</code> pins</td>
+</tr>
+<tr>
+<td><a href="#m7--configure-the-three-container-nodes">M7 — Configure the three container nodes</a></td>
+<td>Human</td>
+<td>Node Inspector; no REST route updates an existing node's config</td>
+</tr>
+<tr>
+<td><a href="#m7--configure-the-three-container-nodes">M7 — Read the stored config back</a></td>
+<td>AI</td>
+<td>The same blueprint read-back returns image, command, env and capabilities</td>
+</tr>
+<tr>
+<td><a href="#m8--leave-the-ivi-node-alone">M8 — Confirm the IVI node's VM artifact</a></td>
+<td>AI</td>
+<td>Also in that read-back; its absence gets the deploy rejected outright</td>
+</tr>
+<tr>
+<td><a href="#m8--leave-the-ivi-node-alone">M8 — Attach a missing VM artifact</a></td>
+<td>Human</td>
+<td>Node Inspector, from the artifact store</td>
+</tr>
+<tr>
+<td><a href="#m9--deploy--criterion-c1">M9 — Deploy</a></td>
+<td>Human</td>
+<td><strong>New Deployment</strong> dialog; picking the Device is a human call</td>
+</tr>
+<tr>
+<td><a href="#m9--deploy--criterion-c1">M9 — Poll node phases until Running</a></td>
+<td>AI</td>
+<td><code>GET /api/v1/deployments/{roomId}/nodes</code>; also yields each <code>nodeKey</code></td>
+</tr>
+<tr>
+<td><a href="#m10--read-the-logs--criteria-c2c5">M10 — Read every node's log</a></td>
+<td>AI</td>
+<td>Logs route with <code>container=user</code>; C2–C5 are all text</td>
+</tr>
+<tr>
+<td><a href="#checking-ivi-rx-traffic-hop-3">M10 — Record the hop-3 evidence</a></td>
+<td>AI</td>
+<td>The ADA node's <code>[TX]</code> and <code>[CAP]</code> lines, and which method was used</td>
+</tr>
+<tr>
+<td><a href="#m11--optional-mtu-headroom">M11 — Set <code>PAD</code> and redeploy</a></td>
+<td>Human</td>
+<td>A bench node config edit, then a fresh deployment</td>
+</tr>
+<tr>
+<td><a href="#m11--optional-mtu-headroom">M11 — Read the logs for the ceiling</a></td>
+<td>AI</td>
+<td>Compare arrivals across <code>PAD</code> values on the same logs route</td>
+</tr>
+<tr>
+<td><a href="#m12--tear-down">M12 — Tear down</a></td>
+<td>Human</td>
+<td><strong>Delete Deployment</strong>; releases one of the two Room slots</td>
+</tr>
+</tbody>
+</table></div>
+<p>Five notes on the rows above:</p>
+<ul>
+<li><strong>M1 belongs to neither column.</strong> The deploying agent writes no product code, and no human writes it at bring-up time — the sources are a development deliverable this procedure consumes.</li>
+<li><strong>M7 has no agent route.</strong> <code>/batch</code> adds nodes, pins and edges; no update or delete op exists anywhere in the API, so an existing node's config is edited in the UI and only read back over REST.</li>
+<li><strong>Confirming the run flips to AI</strong> on a machine with an authenticated <code>gh</code> CLI. Without it, the Actions web UI is the only route.</li>
+<li><strong>Deploy and teardown have REST calls and stay Human anyway.</strong> Each consumes or releases one of the two Room slots, and that call is the user's.</li>
+<li><strong>Every AI row needs a credential supplied at run time</strong> — the CarSky API key for the REST rows, the registry account and key for the registry check. An agent stores neither.</li>
+</ul>
+<hr />
+<h2 id="6-expected-outputs-and-acceptance">6. Expected outputs and acceptance<a class="headerlink" href="#6-expected-outputs-and-acceptance" title="Link to this section">¶</a></h2>
+<p>One output: the node logs read at M10. They carry all five pass criteria <strong>C1–C5</strong>, defined in <a href="plans-doc-research-notes-baseline-connectivity-smoke-test.html#2-pass-criteria">baseline-connectivity-smoke-test.md § 2</a> — restated below only as what to accept.</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Output</th>
+<th>Retrieved at</th>
+<th>Accepted when</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>One live log per container node — bench, V2X, ADA</td>
+<td><a href="#m10--read-the-logs--criteria-c2c5">M10</a></td>
+<td><strong>C1</strong> every node <code>Running</code>, restart count 0 · <strong>C2</strong> no <code>[ERR]</code> line · <strong>C3</strong> a live, readable log per node · <strong>C4</strong> a <code>[CAP]</code> line on the sending node · <strong>C5</strong> the accumulated stamp <code>seq=0\|bench\|v2x</code> at ADA</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p><strong>Note — Wireshark is out of scope here.</strong> <a href="../../tools/netcheck/capture.sh">capture.sh</a> runs <code>tcpdump -l</code> and prefixes each line <code>[CAP]</code>; it writes no capture file, so this procedure produces no <code>.pcap</code>. The <code>[CAP]</code> lines in the log are the traffic evidence, and <strong>C4</strong> is what accepts them.</p>
+</blockquote>
+<hr />
+<h2 id="7-mistakes-already-made-check-these-first">7. Mistakes already made — check these first<a class="headerlink" href="#7-mistakes-already-made-check-these-first" title="Link to this section">¶</a></h2>
+<p>Every row below cost real time on the first run (2026-07-31). They are ordered by how expensive they were.</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Mistake</th>
+<th>Symptom</th>
+<th>Fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>Deployed before doing M7.</strong> The clone carried the baseline's ECU images (<code>registry.carsky.io/m1-v2x-ecu:latest</code> …), which do not exist yet.</td>
+<td>All three container nodes stuck in <code>Provisioning</code>; the bridge and IVI reach <code>Running</code>. Log API reports <code>waiting to start: trying and failing to pull image</code>.</td>
+<td>Apply M7 to all three nodes, delete the failed deployment, redeploy.</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>Wrong registry host in CI</strong> — <code>registry.carsky.io</code> instead of <code>registry.hackathon-2.carsky.io</code> for the <em>push</em>.</td>
+<td>The push itself fails (502) or lands nowhere the catalog shows.</td>
+<td>Push to the <code>hackathon-2</code> host — nodes pull from the same host (M7); the image also needs to be single-platform <code>linux/arm64</code> (see <a href="plans-doc-phase0-smoke-test-run.html">§ Standing requirement</a>).</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>Typo in an address</strong> — <code>NEXT_HOP_HOST = 10.99.0.2</code> instead of <code>10.99.0.12</code>.</td>
+<td>Node runs and logs, but <code>[ERR] no route to 10.99.0.2:47200</code>; the chain stops at that hop, so C5 never appears downstream.</td>
+<td>Re-read each address digit by digit; they differ by one character.</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong><code>ROLE</code> in uppercase</strong> (<code>V2X</code> instead of <code>v2x</code>).</td>
+<td>Runs, but log lines and the datagram stamp read <code>\|V2X</code>, so the expected <code>seq=0\|bench\|v2x</code> never matches and C5 cannot be confirmed by eye.</td>
+<td>Lowercase: <code>bench</code>, <code>v2x</code>, <code>ada</code>.</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>Absolute command path</strong> — <code>/entrypoint.sh</code> instead of <code>./entrypoint.sh</code>.</td>
+<td>Container exits immediately; restart count climbs. The script lives in the image workdir <code>/app</code>, not at the filesystem root.</td>
+<td>Use <code>./entrypoint.sh</code>, or clear the field and let the image's own default run.</td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>IVI node missing its VM artifact.</strong></td>
+<td>Deploy rejected outright: <code>skycraft requires 'image' config with VM image artifact details</code>.</td>
+<td>Attach artifact <code>AAOS</code> v<code>0.0.1</code>, arch <code>aarch64</code> (M8).</td>
+</tr>
+<tr>
+<td>7</td>
+<td><strong>Renaming instead of adding on ADA</strong> — the baseline's <code>V2X_LISTEN_PORT</code> is not read by this image.</td>
+<td>ADA never binds a socket, so it receives nothing.</td>
+<td><strong>Add</strong> <code>LISTEN_PORT=47200</code>; leave the old variable in place.</td>
+</tr>
+<tr>
+<td>8</td>
+<td><strong>Editing the <code>-deploy</code> snapshot.</strong> Deploying creates a copy named <code>&lt;blueprint&gt;-deploy</code>.</td>
+<td>Edits appear to save but the next deploy ignores them.</td>
+<td>Always edit the original blueprint.</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Before deploying, verify by reading the config back</strong> rather than trusting the Inspector's truncated fields — <code>GET /api/v1/blueprints/{id}</code> returns each node's stored <code>config</code> exactly, and catches #2, #3, #4 and #5 in one look.</p>
+<h2 id="8-quick-reference">8. Quick reference<a class="headerlink" href="#8-quick-reference" title="Link to this section">¶</a></h2>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Thing</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Registry host (push)</td>
+<td><code>registry.hackathon-2.carsky.io</code></td>
+</tr>
+<tr>
+<td>Image (node pull reference)</td>
+<td><code>registry.hackathon-2.carsky.io/m1-netcheck:latest</code>, single-platform <code>linux/arm64</code></td>
+</tr>
+<tr>
+<td>GitHub secret</td>
+<td><code>CARSKY_ZOT_API_KEY</code> (<code>zak_…</code>)</td>
+</tr>
+<tr>
+<td>Node addresses</td>
+<td>bench <code>.10</code> · V2X <code>.11</code> · ADA <code>.12</code> · IVI <code>.13</code> on <code>10.99.0.0/24</code></td>
+</tr>
+<tr>
+<td>Ports</td>
+<td>bench→V2X <code>47100</code> · V2X→ADA <code>47200</code> · ADA→IVI <code>47300</code></td>
+</tr>
+<tr>
+<td>Pass criteria (<a href="plans-doc-research-notes-baseline-connectivity-smoke-test.html#2-pass-criteria">defined here</a>)</td>
+<td>C1 Running · C2 no <code>[ERR]</code> · C3 live log · C4 <code>[CAP]</code> capture · C5 accumulated stamps</td>
+</tr>
+</tbody>
+</table></div>
+<p><em>Screenshots referenced above live in <code>requirements/car-sky-guide/images/</code>; capture them from Nydus when exporting this guide to slides.</em></p>
+      </article>
+    </main>
+  </div>
+  <script src="../js/site-data.js"></script>
+  <script src="../js/theme.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/doc-page.js"></script>
+</body>
+</html>

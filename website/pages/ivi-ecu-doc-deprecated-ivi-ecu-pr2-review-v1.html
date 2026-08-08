@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="en" data-theme="sketch">
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="kis-build-pages">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IVI ECU — PR #2 review, v1 — KIS</title>
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/doc.css">
+  <link rel="stylesheet" href="../css/themes.css">
+</head>
+<body class="DocBody" data-root=".." data-doc-node="module-design" data-doc-title="IVI ECU — PR #2 review, v1" data-doc-source="IVI_ECU/doc/deprecated/ivi-ecu-pr2-review-v1.md">
+  <div class="DocLayout">
+    <aside class="DocLayout__aside" id="doc-toc"></aside>
+    <main class="Page DocPage">
+      <header class="PageHeader" id="doc-header"></header>
+      <article class="Markdown" id="doc-body">
+<h1 id="ivi-ecu-pr-2-review-v1">IVI ECU — PR #2 review, v1<a class="headerlink" href="#ivi-ecu-pr-2-review-v1" title="Link to this section">¶</a></h1>
+<blockquote>
+<p><strong>Version:</strong> v1 — 2026-08-05. First review of this pull request; no previous version.
+<strong>Pull request:</strong> #2 — branch <code>feat/phase5-ivi-hmi-dev</code> → <code>main</code> (title not read; <code>gh</code> was unauthenticated, so the PR body was not consulted and this review judges the branch content alone)
+<strong>Reviewed commit:</strong> <code>f7f2f55</code> — <em>fix(ivi): prevent Log.w RuntimeException in unit tests and use R4Json for deserialization</em>
+<strong>Base:</strong> <code>main</code> at <code>f5e8a31</code>; merge base <code>e4991a9</code>; diff range <code>main...pr-2</code> — 21 files, +1261 / −22. Phase 3 and Phase 4 landed on <code>main</code> after this branch forked and touched no file under <code>IVI_ECU/</code>, so the range is unaffected by them.
+<strong>Judged against:</strong> <a href="documents-design-ivi-ecu-ivi-ecu-hld.html">ivi-ecu-hld.md</a> and <a href="documents-design-ivi-ecu-ivi-ecu-design-decisions.html">ivi-ecu-design-decisions.md</a> · <a href="requirements-m1-cooperative-awareness.html">m1-cooperative-awareness.md §2</a> · <a href="plans-phase5-minh-tasks.html">phase5_minh_tasks.md</a>, the authoritative Phase 5 plan · the frozen schemas <a href="../../IVI_ECU/contracts/r4-ada-ivi.schema.json">r4-ada-ivi.schema.json</a> and <a href="../../IVI_ECU/contracts/r3-tracked-object.schema.json">r3-tracked-object.schema.json</a>
+<strong>Verified:</strong> unit tests 15/15 pass (<code>R4DeserializerTest</code> 5, <code>WarningViewModelTest</code> 4, <code>R4RoundTripTest</code> 3, <code>R4AdditiveVersionTest</code> 3) and <code>app-debug.apk</code> builds, both read from the build output in the review worktree. <strong>Not verified:</strong> any behaviour in a deployed Room — no <code>phase5-ci.yml</code> lane exists on the branch and no run evidence is recorded.</p>
+</blockquote>
+<p>Two facts frame everything below, and neither is a criticism of the code itself.</p>
+<p><strong>The branch does not contain the node's design.</strong> <code>IVI_ECU/doc/</code> — this file's own folder, holding the HLD, the decision record and the diagrams — exists on <code>main</code> and not on <code>pr-2</code>. Per <a href="claude-rules-hld-content-and-commit-format.html">hld-content-and-commit-format.md</a> that HLD is the IVI node's <em>sole</em> design authority, so it is what this review scores against. The gap between the two is the single largest cause of the findings here.</p>
+<p><strong><code>main</code> already reverted an earlier version of this work.</strong> Commit <code>ff032ff</code> — <em>"[4] fix: revert the unsanctioned R4 binding that broke the IVI build"</em> — removed an off-contract R4 binding and named this branch as the correct implementation of the receive path. That judgement holds: <code>R4Deserializer</code>, <code>R4Repository</code> and <code>R4ListenerService</code> here are a real improvement on what was reverted. Several of the specific defects that revert called out have nonetheless reappeared in softer form, and they are marked below.</p>
+<hr />
+<h2 id="1-architecture-review">1 · Architecture review<a class="headerlink" href="#1-architecture-review" title="Link to this section">¶</a></h2>
+<p>Rows are the components the IVI HLD defines (<a href="documents-design-ivi-ecu-ivi-ecu-hld.html#3-the-component-architecture">§3</a>, <a href="documents-design-ivi-ecu-ivi-ecu-hld.html#6-internal-components">§6</a>), each at the path <a href="documents-design-ivi-ecu-ivi-ecu-hld.html#4-folder-structure">§4</a> designates. A component the branch never created is a row at 0% rather than an omission — that is what makes this a completion measure. Rows marked <em>inherited</em> came from the merge base and were not touched by this PR; they are scored for <strong>where the branch leaves them</strong>, since this PR's work was supposed to reach them.</p>
+<p>The design is <strong>five Gradle modules</strong> (<code>:contract</code>, <code>:serializer</code>, <code>:observer</code>, <code>:app</code>, <code>:r4-simulator</code>). The branch has one — <code>settings.gradle.kts</code> includes <code>:app</code> only — so every component below lands in <code>:app</code> regardless of the layer it belongs to. That single fact drives most of the "does not abide" comments.</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Module in design</th>
+<th>% complete</th>
+<th>Abides by the architecture? Relations to other components</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong><code>:contract</code></strong> — <code>model/R4Message</code>, <code>R3Snapshot</code>, <code>SceneGeometry</code>, <code>VehiclePosition</code>, <code>R4Json</code> <em>(Data)</em></td>
+<td><strong>55%</strong></td>
+<td><strong>No — module absent and the frozen binding was loosened.</strong> Types live in <code>:app/model/</code>, so nothing can share them with <code>:serializer</code> or <code>:r4-simulator</code> as the design intends. Worse, <a href="../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/model/R3Snapshot.kt#L20-L27">R3Snapshot.kt:20-27</a> now gives defaults to <code>class</code>, <code>distance</code>, <code>speed</code>, <code>confidence</code>, <code>state</code> and <code>timestamps</code>, and <a href="../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/model/SceneGeometry.kt#L30">SceneGeometry.kt:30</a> defaults <code>vehicleC</code> — all nine R3 fields and all three geometry fields are <code>required</code> in the frozen schemas. The binding now silently accepts messages the contract rejects, and invents <code>class="vehicle"</code>, <code>state="tracked"</code>, <code>confidence=1.0</code> for data ADA never sent. <code>id</code>, <code>source</code> and <code>position</code> were correctly left required.</td>
+</tr>
+<tr>
+<td><strong><code>model/R4ServiceError</code></strong> <em>(not in the design)</em></td>
+<td>—</td>
+<td><strong>Unsanctioned.</strong> <a href="../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/model/R4Message.kt#L57-L62">R4Message.kt:57-62</a> adds a third member to the sealed R4 hierarchy with <code>@SerialName("error")</code>. R4 is a <strong>frozen</strong> contract whose <code>oneOf</code> admits <code>warning</code> and <code>state</code> only. A transport-failure signal is real and needed — but it is an internal event type, not an R4 message, and putting it in the wire binding is the same class of drift <code>ff032ff</code> reverted.</td>
+</tr>
+<tr>
+<td><strong><code>model/VehicleState</code></strong> <em>(not in the design)</em></td>
+<td>—</td>
+<td><strong>Unsanctioned and unreachable.</strong> <a href="../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/model/R4Message.kt#L65-L70">R4Message.kt:65-70</a> is referenced by nothing. Its <code>{position, speed}</code> shape matches what <code>mock_r4_sender.py</code> emits, while <code>R4Vehicles</code> binds the contract's <code>{x, y}</code> — the orphan is the visible seam of that disagreement.</td>
+</tr>
+<tr>
+<td><strong><code>:serializer/R4Deserializer</code></strong> <em>(Business logic)</em></td>
+<td><strong>50%</strong></td>
+<td><strong>Partly.</strong> The core judgement is right and matches the design: returns <code>Result</code> instead of throwing, so one bad datagram cannot stop the next, and unknown <code>warningType</code> degrades rather than failing — the R4 acceptance clause, and well tested. Three departures: it sits in <code>:app/data/</code>, an Android-importing module, against a design that keeps it plain-JVM; it takes <code>ByteArray</code> rather than the designed <code>(buffer, offset, length)</code>, so it cannot express a slice; and <a href="../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/data/R4Deserializer.kt#L59-L64">R4Deserializer.kt:59-64</a> <strong>rewrites</strong> the unknown <code>warningType</code> to <code>"unknown"</code>. The design splits this deliberately — the parser preserves the wire value, <code>WarningClassifier</code> decides its presentation — and rewriting destroys the original before any consumer or log sees it. <code>schemaVersionAhead</code> is not surfaced.</td>
+</tr>
+<tr>
+<td><strong><code>:observer/JdkDatagramSource</code></strong> — the only socket holder <em>(Business logic)</em></td>
+<td><strong>10%</strong></td>
+<td><strong>No.</strong> The component does not exist; the socket is opened inline at <a href="../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/service/R4ListenerService.kt#L103">R4ListenerService.kt:103</a>, inside the Android service. That collapses the layer the <a href="documents-design-ivi-ecu-ivi-ecu-hld.html#8-interfaces-ports-and-the-layer-rule">HLD §8</a> rule protects, and removes the seam (<code>R4DatagramSource</code>) that makes the receive loop testable without a device — which is why no test covers this file. The design's one-line description of this component ("resets packet length before every receive") is the defect noted under § Findings below.</td>
+</tr>
+<tr>
+<td><strong><code>:observer/R4SocketObserver</code></strong> — receive loop, truncation check, back-off, link state <em>(Business logic)</em></td>
+<td><strong>30%</strong></td>
+<td><strong>Partly, and inline.</strong> Rebind back-off is implemented (5 attempts, 1 s) and is genuinely the right shape. Missing: the truncation check, the <code>DROP_OLDEST</code> bounded flow (this uses a suspending <code>extraBufferCapacity = 64</code>, so a slow collector <em>can</em> stall the socket), <code>R4LinkState</code>, and the <code>[LINK]</code> / <code>[RX]</code> / <code>[DROP]</code> evidence lines. No seam, so no test.</td>
+</tr>
+<tr>
+<td><strong><code>warning/WarningClassifier</code></strong> <em>(Business logic)</em></td>
+<td><strong>0%</strong></td>
+<td><strong>Absent, and its job was absorbed upstream.</strong> <code>isKnownWarningType</code> at <a href="../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/data/R4Deserializer.kt#L74-L75">R4Deserializer.kt:74-75</a> hardcodes the M1 registry into a boolean in the parser. R4 calls the registry extensible and CLAUDE.md principle 5 forbids the literal; more importantly this is the component that should own it.</td>
+</tr>
+<tr>
+<td><strong><code>ui/view/SceneCoordinateMapper</code></strong> <em>(Business logic)</em></td>
+<td><strong>100%</strong> <em>(inherited)</em></td>
+<td>Correct and untouched. Pure math, no Android types, correctly outside the view.</td>
+</tr>
+<tr>
+<td><strong><code>data/R4Repository</code></strong> <em>(Data)</em></td>
+<td><strong>55%</strong></td>
+<td><strong>Right shape, no owner.</strong> Routing <code>warning</code> → <code>SharedFlow</code> and <code>state</code> → last-value-wins <code>StateFlow</code> is exactly the designed responsibility, and it holds zero Android imports as required. But <code>attachToService</code> is called by nothing in <code>main/</code>, so the repository never collects anything at runtime. It also swallows the error case: <a href="../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/data/R4Repository.kt#L51">R4Repository.kt:51</a> maps <code>R4ServiceError → Unit</code> with the comment <em>"handled by WarningViewModel"</em>, while the repository is the flow's only collector — so the view-model never learns. No link state, and no dev-injector entry point. Untested.</td>
+</tr>
+<tr>
+<td><strong><code>ui/WarningViewModel</code></strong> <em>(UI logic)</em></td>
+<td><strong>50%</strong></td>
+<td><strong>Right layer, incomplete behaviour, unreachable states.</strong> No drawing code and no socket — the layer rule holds, and Idle → Active → Idle on <code>WARNING_TIMEOUT_MS</code> works and is tested. But <code>onServiceError()</code> at <a href="../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/ui/WarningViewModel.kt#L85-L87">WarningViewModel.kt:85-87</a> has no caller, so <code>WarningUiState.Error</code> cannot occur; the <code>currentState</code> collector at <a href="../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/ui/WarningViewModel.kt#L60-L64">lines 60-64</a> has an empty body, so R15 state messages update nothing. Decision <strong>D13</strong> (a <code>low</code> risk updates the scene <em>without</em> leaving Active) is not implemented — any warning re-arms the same 10 s timeout. The R19 provenance snapshot is never forwarded to the renderer.</td>
+</tr>
+<tr>
+<td><strong><code>ui/MainViewModel</code> + <code>ui/DisplayMode</code></strong> <em>(UI logic)</em></td>
+<td><strong>40%</strong> <em>(inherited)</em></td>
+<td>Untouched by this PR. Wake-on-warning is the connection this PR's work existed to enable, and no <code>WarningUiState</code> reaches it — the two view-models have no relation at all.</td>
+</tr>
+<tr>
+<td><strong><code>config/IviRuntimeConfig</code></strong> <em>(UI logic)</em></td>
+<td><strong>0%</strong></td>
+<td><strong>Absent, and the port is wrong.</strong> <a href="../../IVI_ECU/app/build.gradle.kts#L29">build.gradle.kts:29</a> sets <code>R4_UDP_PORT = 5004</code>; the designated ADA→IVI port is <strong>47300</strong>. A <code>buildConfigField</code> is also compile-time only, where D10 requires a runtime merge point so the blueprint's node config can set it — which is what CLAUDE.md principle 5 asks for. See § Findings for why 47300 is now settled rather than merely designated.</td>
+</tr>
+<tr>
+<td><strong><code>ui/screen/MainScreen</code></strong> <em>(UI)</em></td>
+<td><strong>90%</strong> <em>(inherited)</em></td>
+<td>The R16 layout composable is present and good. It is called by nothing outside <code>@Preview</code> — see the host row.</td>
+</tr>
+<tr>
+<td><strong><code>ui/view/IviWarningViewSeam</code></strong> <em>(UI)</em></td>
+<td><strong>100%</strong> <em>(inherited)</em></td>
+<td>The R17 swap point is correctly defined and correctly realized by <code>CanvasWarningView</code>. Nothing this PR added uses it.</td>
+</tr>
+<tr>
+<td><strong><code>ui/view/CanvasWarningView</code></strong> + the provenance guard <em>(UI)</em></td>
+<td><strong>85%</strong> <em>(inherited)</em></td>
+<td>The renderer and the R19 guard are present and are the strongest existing asset. The guard reads <code>SceneGeometry.vehicleCSnapshot</code>; this PR's <code>WarningViewModel</code> publishes <code>event.geometry</code>, which the ADA producer does not populate with a snapshot — so on this branch the guard would receive <code>null</code> and treat C as trusted.</td>
+</tr>
+<tr>
+<td><strong><code>ui/view/WarningBannerOverlay</code></strong> <em>(UI)</em></td>
+<td><strong>100%</strong> <em>(inherited)</em></td>
+<td>Correctly built and correctly mounted nowhere, per D11.</td>
+</tr>
+<tr>
+<td><strong><code>MainActivity</code> + <code>IviApplication</code> + <code>di/IviGraph</code></strong> <em>(Host)</em></td>
+<td><strong>0%</strong></td>
+<td><strong>Absent — and this is the finding that gates the rest.</strong> No activity class, no <code>&lt;activity&gt;</code> in <a href="../../IVI_ECU/app/src/main/AndroidManifest.xml">AndroidManifest.xml</a>, no <code>Application</code>, no composition root. The APK builds and installs but has <strong>no launchable component</strong>, and nothing constructs <code>WarningViewModel</code>, starts <code>R4ListenerService</code>, or calls <code>attachService</code>. Every component above is correct in isolation and connected to nothing.</td>
+</tr>
+<tr>
+<td><strong><code>service/R4ListenerService</code></strong> <em>(Host)</em></td>
+<td><strong>60%</strong></td>
+<td><strong>Exists, but holds three components' work.</strong> As a foreground host it is sound: channel, notification, <code>dataSync</code> type, <code>SupervisorJob</code> scope. It also owns the socket and the receive loop, which the design assigns to <code>:observer</code> — so the layer collapse noted above lives here. It is declared in the manifest but started by nobody. <code>onDestroy</code> cancels the job (<a href="../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/service/R4ListenerService.kt#L64-L67">lines 64-67</a>) without closing the socket, and <code>socket.receive()</code> is a blocking call — cancellation will not interrupt it, so the thread survives until a datagram arrives.</td>
+</tr>
+<tr>
+<td><strong><code>service/AndroidR4Logger</code></strong> — the <code>IVI_V2X</code> evidence bridge <em>(Host)</em></td>
+<td><strong>0%</strong></td>
+<td><strong>Absent.</strong> Logging is ad-hoc <code>Log.w</code> on per-class tags, so <code>adb logcat -s IVI_V2X</code> returns nothing and R18's single-tag structured surface does not exist. See § The event raised when a warning arrives for what this costs on the happy path. Relatedly, <code>safeLogW</code> at <a href="../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/data/R4Deserializer.kt#L77-L83">R4Deserializer.kt:77-83</a> wraps <code>Log.w</code> in <code>runCatching</code> to survive unit tests — a test concern solved in production code, and redundant with <code>isReturnDefaultValues = true</code> already set in <code>build.gradle.kts</code>. The designed <code>R4Logger</code> seam removes the need for both.</td>
+</tr>
+<tr>
+<td><strong><code>r4-simulator/</code> → <code>m1-r4-sim:latest</code></strong> <em>(Test equipment)</em></td>
+<td><strong>20%</strong></td>
+<td><strong>Delivered as something else, in the wrong place, off-contract.</strong> <code>IVI_ECU/mock-sender/</code> is a genuinely useful harness, but <a href="claude-rules-node-code-layout.html">node-code-layout.md § <code>tools/</code></a> permits a mock inside a consumer node folder only when all four conditions hold — this one shares no build with <code>IVI_ECU</code>'s Gradle project, so its home is <code>tools/</code>. Its payloads also disagree with the contract: <a href="../../IVI_ECU/mock-sender/mock_r4_sender.py#L55-L64">mock_r4_sender.py:55-64</a> emits <code>vehicles.B</code> as <code>{position, speed}</code> where the schema and <code>R4Vehicles</code> require <code>vehicles.vehicleB</code> as <code>{x, y}</code>, so <strong>every state message it sends fails to decode</strong>; and it omits <code>class</code> from the R3 object, which is precisely why the model gained defaults.</td>
+</tr>
+<tr>
+<td><strong><code>debug/DevInjectorReceiver</code></strong> <em>(Test equipment)</em></td>
+<td><strong>0%</strong></td>
+<td>Absent. The no-network UI path has no way to be exercised.</td>
+</tr>
+<tr>
+<td><strong>Hilt / KSP stack</strong> <em>(not in the design)</em></td>
+<td>—</td>
+<td><strong>Unsanctioned and inert.</strong> <code>build.gradle.kts</code> applies <code>com.google.dagger.hilt.android</code> and <code>ksp</code>, and <code>@HiltViewModel</code> / <code>@Singleton</code> / <code>@Inject</code> annotate the new classes — but with no <code>@HiltAndroidApp</code> and no <code>@AndroidEntryPoint</code> anywhere, nothing is ever injected. Decision <strong>D7</strong> chose a manual composition root (<code>IviGraph</code>) instead, and the authoritative plan's <code>4.5.1.6</code> removes this stack outright.</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="the-event-raised-when-a-warning-arrives">The event raised when a warning arrives<a class="headerlink" href="#the-event-raised-when-a-warning-arrives" title="Link to this section">¶</a></h3>
+<p>The question a reader of this node most often needs answered, and the answer is not obvious from any one file.</p>
+<p><strong>No dedicated event type is raised. The wire model is emitted directly as the event</strong>, twice, and terminates in a state change:</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Where</th>
+<th>What is raised</th>
+<th>Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><a href="../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/service/R4ListenerService.kt#L109">R4ListenerService.kt:109</a></td>
+<td><code>_r4EventFlow.emit(message)</code> — the decoded message itself</td>
+<td><code>MutableSharedFlow&lt;R4Message&gt;</code>, <code>extraBufferCapacity = 64</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td><a href="../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/data/R4Repository.kt#L49">R4Repository.kt:49</a></td>
+<td><code>_warningEvents.emit(message)</code> after <code>is R4WarningEvent</code> narrows the sealed type</td>
+<td><code>MutableSharedFlow&lt;R4WarningEvent&gt;</code>, <code>extraBufferCapacity = 32</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td><a href="../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/ui/WarningViewModel.kt#L67-L71">WarningViewModel.kt:67-71</a></td>
+<td><code>WarningUiState.Idle → WarningUiState.Active(event)</code>, and <code>_latestScene.value = event.geometry</code></td>
+<td><code>MutableStateFlow&lt;WarningUiState&gt;</code> / <code>MutableStateFlow&lt;SceneGeometry?&gt;</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>So the mechanism is <strong>Kotlin coroutine flow emission</strong> throughout — no Android <code>Intent</code>, no <code>BroadcastReceiver</code>, no <code>LiveData</code>, no listener callback, no event bus. The sealed-class narrowing at step 2 is the only routing decision, and <code>R4StateMessage</code> diverges there to <code>_currentState</code> while <code>R4ServiceError</code> is dropped.</p>
+<p>This differs from the design in one way worth naming: the HLD's <code>:observer</code> raises a <strong>distinct domain event</strong> — <code>R4Event.Message</code> / <code>R4Event.Dropped</code>, alongside <code>R4LinkState</code> — so that a drop, a truncation and a link change are all first-class and observable. Here the wire model <em>is</em> the event, which is why a dropped datagram has nowhere to be represented and why <code>R4ServiceError</code> had to be smuggled into the frozen contract to signal a transport failure. That is the root of two separate findings above.</p>
+<p><strong>At runtime none of this fires.</strong> Nothing calls <code>attachService</code>, so step 1 has no collector and steps 2 and 3 are never reached.</p>
+<h3 id="is-the-event-logged-and-is-the-schema-deduction-evidenced">Is the event logged, and is the schema deduction evidenced?<a class="headerlink" href="#is-the-event-logged-and-is-the-schema-deduction-evidenced" title="Link to this section">¶</a></h3>
+<p>Checked directly, and the answer to both is <strong>no</strong>.</p>
+<p><strong>Every log statement on the receive path is on a failure or a setup path.</strong> A successful warning arrival produces no log line at all:</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Line</th>
+<th>When it fires</th>
+<th>Path</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Log.i</code> "UDP socket open on port …" — <a href="../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/service/R4ListenerService.kt#L104">R4ListenerService.kt:104</a></td>
+<td>once, at socket open</td>
+<td>setup</td>
+</tr>
+<tr>
+<td><code>Log.w</code> "Skipping bad packet: …" — <a href="../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/service/R4ListenerService.kt#L110">line 110</a></td>
+<td>decode failed</td>
+<td>failure</td>
+</tr>
+<tr>
+<td><code>Log.w</code> "UDP socket error (attempt n/5)" — <a href="../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/service/R4ListenerService.kt#L80">line 80</a></td>
+<td>socket threw</td>
+<td>failure</td>
+</tr>
+<tr>
+<td><code>Log.e</code> "Max retries reached" / "Unexpected error" — <a href="../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/service/R4ListenerService.kt#L82-L88">lines 82, 88</a></td>
+<td>loop giving up</td>
+<td>failure</td>
+</tr>
+<tr>
+<td><code>safeLogW</code> — <a href="../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/data/R4Deserializer.kt#L41">R4Deserializer.kt:41, 54, 60</a></td>
+<td>parse failure, or unknown <code>warningType</code> degradation</td>
+<td>failure / degradation</td>
+</tr>
+</tbody>
+</table></div>
+<p><code>_r4EventFlow.emit(...)</code> at line 109, <code>_warningEvents.emit(...)</code> in the repository, and the <code>Idle → Active</code> transition in the view-model are all <strong>silent</strong>. There is no <code>[RX]</code>, no <code>[EVT]</code>, no per-message line of any kind — so on a live node a received warning and a node that received nothing at all look identical in logcat. That is what the missing <code>AndroidR4Logger</code> and the <code>IVI_V2X</code> tag cost, and it is why R18 scores 5% below.</p>
+<p><strong>The schema deduction is correct but unevidenced, and the version half is not checked at all.</strong></p>
+<ul>
+<li><em>Type</em> is deduced correctly. <code>R4Json</code> sets <code>classDiscriminator = "type"</code> (<a href="../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/model/R4Message.kt#L77-L80">R4Message.kt:77-80</a>), and <code>R4Deserializer</code> additionally pre-reads <code>root["type"]</code> to pick the branch. A <code>warning</code> decodes to <code>R4WarningEvent</code>, a <code>state</code> to <code>R4StateMessage</code>, anything else to <code>UnknownMessageTypeException</code>. Correct — and never logged, so nothing records which variant was deduced for a given datagram.</li>
+<li><em>Version</em> is not checked anywhere. <code>schemaVersion</code> appears in the models and is read by no code — no comparison against a supported version, no constant to compare to, and none of the <code>schemaVersionAhead</code> signal the design asks the deserializer to surface. A message stamped <code>schemaVersion: 9</code> decodes and renders exactly as a <code>1</code>, with no warning to anyone.</li>
+</ul>
+<p>The unknown-<code>warningType</code> degradation <em>is</em> logged, which makes the asymmetry sharper: the one additive-evolution case that is handled is announced, and the two that are not — a newer <code>schemaVersion</code>, and a successful decode worth confirming — are silent.</p>
+<h3 id="findings-that-cross-several-rows">Findings that cross several rows<a class="headerlink" href="#findings-that-cross-several-rows" title="Link to this section">¶</a></h3>
+<ul>
+<li><strong>Buffer reuse silently truncates every datagram after the first.</strong> <a href="../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/service/R4ListenerService.kt#L101-L111">R4ListenerService.kt:101-111</a> builds one <code>DatagramPacket</code> outside the loop and never restores its length. <code>DatagramSocket.receive</code> sets <code>packet.length</code> to the bytes received, and the next <code>receive</code> will not write more than that — so a 900-byte warning following a 200-byte state message is delivered as 200 bytes and fails to parse. A real runtime defect that unit tests cannot see, because no test exercises the socket. The HLD names the fix in <code>JdkDatagramSource</code>'s own description, and <a href="../../plans/doc/research_notes/TruncationRepro.java">plans/doc/research_notes/TruncationRepro.java</a> exists for this exact case.</li>
+<li><strong>The port disagreement is now settled against this branch, not merely designated.</strong> <code>main</code> ships <code>ADA_ECU/src/output/ivi_sender</code> (commit <code>8afd294</code>), whose egress the ADA HLD fixes at <code>udp → 10.99.0.13:47300</code> — matching the baseline blueprint, the node guide and the Phase 0 smoke-test evidence. This branch listens on <strong>5004</strong>. The real producer now exists and this consumer cannot hear it.</li>
+<li><strong>Oversized datagrams are truncated without detection.</strong> <code>BUFFER_SIZE = 4096</code> with no check for <code>packet.length == buffer.size</code>; a larger message becomes a parse failure rather than a reported truncation.</li>
+<li><strong>The non-local <code>return</code> inside <code>runCatching</code> bypasses the failure logging.</strong> At <a href="../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/data/R4Deserializer.kt#L27-L43">R4Deserializer.kt:27-43</a> the <code>return Result.failure(...)</code> and <code>return when(...)</code> return from <code>deserialize</code> directly, so the <code>.onFailure</code> block is unreachable for every path that actually fails.</li>
+<li><strong>The state path is broken end to end</strong>, from <code>mock_r4_sender.py</code> through <code>R4StateMessage</code> to the empty collector in <code>WarningViewModel</code> — three independent breaks in one path, none covered by a test.</li>
+<li><strong>No CI.</strong> <a href="claude-rules-ci-lane-placement.html">ci-lane-placement.md</a> designates <code>ivi-unit-tests</code>, <code>ivi-assemble</code> and <code>r4-sim-image</code> to <code>.github/workflows/phase5-ci.yml</code>. That file does not exist on this branch, so the 15 passing tests are a local result only.</li>
+<li><strong>Document placement.</strong> <code>requirements/blueprint-2node-task51-test-guide.md</code> is a deploy procedure, and <a href="claude-rules-walkthrough-driven-delivery.html">walkthrough-driven-delivery.md</a> puts those in <code>requirements/car-sky-guide/</code> as a <code>*-walkthrough.md</code> authored by <code>project-researcher</code>. <code>plans/doc/session-summary-2026-07-30.md</code> is a progress record, which the documentation rules exclude from <code>doc/</code>.</li>
+</ul>
+<hr />
+<h2 id="2-low-level-review">2 · Low-level review<a class="headerlink" href="#2-low-level-review" title="Link to this section">¶</a></h2>
+<p><strong>Variant used: requirements, not task IDs — the IDs do not resolve against the authoritative plan.</strong> The branch carries its own <code>plans/phase5_tasks.md</code>, which <code>main</code> does not have, and <code>main</code> carries <a href="plans-phase5-minh-tasks.html">phase5_minh_tasks.md</a>, which the branch does not. Both assign the <strong>same IDs to different work</strong>:</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Means, in the branch's plan</th>
+<th>Means, in the authoritative plan on <code>main</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>4.5.1.1</code></td>
+<td>Define R4 Kotlin data models</td>
+<td>Version catalog <code>gradle/libs.versions.toml</code> + root plugin aliases</td>
+</tr>
+<tr>
+<td><code>4.5.1.2</code></td>
+<td>Implement R4 JSON deserializer</td>
+<td>Move <code>:app</code> onto the catalog</td>
+</tr>
+<tr>
+<td><code>4.5.1.3</code></td>
+<td>Implement UDP listener foreground service</td>
+<td>Create the <code>:contract</code> module skeleton + <code>R4Contract.kt</code></td>
+</tr>
+<tr>
+<td><code>4.5.1.4</code></td>
+<td>Build R4 repository &amp; ViewModel bridge</td>
+<td>Relocate the models, tests and samples into <code>:contract</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>Task IDs are the project's traceability anchor (<a href="claude-rules-task-planning-conventions.html">task-planning-conventions.md</a>), so a commit tagged <code>[4.5.1.3]</code> now points at two different pieces of work depending on which branch is read. Scoring commit-by-commit would compound that, so the delivered features are scored against the requirements instead.</p>
+<h3 id="completion-against-requirements">Completion against requirements<a class="headerlink" href="#completion-against-requirements" title="Link to this section">¶</a></h3>
+<p>Percentages are against each requirement's <strong>acceptance</strong> clause in <a href="requirements-m1-cooperative-awareness.html">m1-cooperative-awareness.md §2</a>, not its headline. Only requirements this branch touches are listed.</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Requirement</th>
+<th>% complete</th>
+<th>What is missing or deviated</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>R3</strong> — Ego object/track contract (IVI binding)</td>
+<td><strong>60%</strong></td>
+<td>Round-trip tests pass (inherited). Deviated: the Kotlin binding no longer matches the frozen schema — 6 of 9 <code>required</code> fields carry defaults in <code>R3Snapshot</code>, so a snapshot missing <code>class</code> or <code>state</code> decodes with fabricated values instead of being rejected. The defaults were added to accommodate <code>mock_r4_sender.py</code>, which omits <code>class</code> — the contract was moved to fit the test equipment.</td>
+</tr>
+<tr>
+<td><strong>R4</strong> — ADA → IVI warning message</td>
+<td><strong>70%</strong></td>
+<td>The strongest area. Schema committed and byte-synced (inherited); round-trip and additive-version tests pass; <strong>unknown <code>warningType</code> degrades gracefully</strong> — the explicit acceptance clause — is implemented and tested. Deviated: <code>R4ServiceError</code> adds a third <code>type</code> to a frozen two-member <code>oneOf</code>; <code>geometry.vehicleC</code> made optional though <code>required</code>; the parser overwrites the unknown value rather than preserving it; <code>schemaVersion</code> is never checked; and the <code>state</code> half of the contract does not decode from the only producer on the branch.</td>
+</tr>
+<tr>
+<td><strong>R5</strong> — ECU deployment onto CarSky nodes</td>
+<td><strong>10%</strong></td>
+<td>The APK builds, and that is the whole of it. The acceptance clause is <em>"the team APK launches on the AAOS node"</em> — with no <code>&lt;activity&gt;</code> in the manifest and no <code>MainActivity</code>, it cannot. <code>blueprint-2node-task51-test.json</code> is a useful bring-up aid but is not the R5 blueprint, and no deployment of either is recorded.</td>
+</tr>
+<tr>
+<td><strong>R6</strong> — Inter-ECU network: Ethernet Bridge + <code>ethernet</code> pins</td>
+<td><strong>15%</strong></td>
+<td>The listener binds <strong>5004</strong>; the R6 topology assigns ADA→IVI <strong>47300</strong>, and <code>main</code> now ships an ADA sender that targets it. The mock sender and the 2-node blueprint agree with 5004 and therefore with each other, but not with the deployed network — this branch's IVI node would hear nothing from the real ADA node. No UDP reachability demonstrated in a Room.</td>
+</tr>
+<tr>
+<td><strong>R16</strong> — HMI on the AAOS node</td>
+<td><strong>25%</strong></td>
+<td><code>MainScreen</code> is a good R16 layout (inherited) but is mounted by nothing, so the HMI does not run. <em>"An R4 warning brings the warning view up in the Display area"</em> is the acceptance clause this PR's data layer was built to satisfy, and the connection from <code>WarningViewModel</code> to <code>MainViewModel</code> to <code>MainScreen</code> was not made. The button/app areas do not switch anything at runtime.</td>
+</tr>
+<tr>
+<td><strong>R17</strong> — Warning view: God view of the 3 vehicles</td>
+<td><strong>30%</strong></td>
+<td><code>CanvasWarningView</code>, the seam, the mapper and the provenance guard are inherited and in good shape. This PR added no wiring to them: <code>latestScene</code> reaches no composable. The <code>v2x_relayed</code>-only check cannot be demonstrated, and since the producer never fills <code>vehicleCSnapshot</code>, the guard would read <code>null</code> and pass C as trusted.</td>
+</tr>
+<tr>
+<td><strong>R18</strong> — Evidence logging</td>
+<td><strong>5%</strong></td>
+<td>No structured JSONL and no <code>IVI_V2X</code> tag, and — per § Is the event logged — no line at all on a successful receive. A run cannot be reconstructed offline, which is the acceptance clause.</td>
+</tr>
+<tr>
+<td><strong>R19</strong> — End-to-end demo run</td>
+<td><strong>0%</strong></td>
+<td>Blocked by R5, R6, R16 and R17 above. No recorded run, no capture, no ghost-C source check.</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="commit-inventory">Commit inventory<a class="headerlink" href="#commit-inventory" title="Link to this section">¶</a></h3>
+<p>Supporting evidence for the variant choice, and for the discipline findings.</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Commit</th>
+<th>Tag</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>ca2e185</code> chore: ignore local .agents runtime files and skills lock</td>
+<td>none</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>78c7c43</code> feat: add 2-node test blueprint + mock R4 sender</td>
+<td>none — this is the branch plan's <code>4.5.1.5</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>0649d8a</code> docs: add 2-node blueprint answer for team review</td>
+<td>none</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>50a6a5f</code> <strong>[4.5.1.0]</strong> chore: add R4_UDP_PORT BuildConfig, coroutines, deps</td>
+<td><code>W = 0</code>, which no plan defines</td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>423f0ef</code> <strong>[4.5.1.1]</strong> feat: define R4 Kotlin sealed models</td>
+<td>collides</td>
+</tr>
+<tr>
+<td>6</td>
+<td><code>7c9df5c</code> <strong>[4.5.1.2]</strong> feat: implement R4 JSON deserializer</td>
+<td>collides</td>
+</tr>
+<tr>
+<td>7</td>
+<td><code>a9d0267</code> <strong>[4.5.1.3]</strong> feat: implement R4 UDP foreground service</td>
+<td>collides</td>
+</tr>
+<tr>
+<td>8</td>
+<td><code>c6aa9ad</code> <strong>[4.5.1.4]</strong> feat: add R4Repository and WarningViewModel bridge</td>
+<td>collides</td>
+</tr>
+<tr>
+<td>9</td>
+<td><code>e5161d7</code> docs: add session summary 2026-07-30</td>
+<td>none</td>
+</tr>
+<tr>
+<td>10</td>
+<td><code>aaf1997</code> merge: sync latest origin/main, resolve conflicts</td>
+<td>none; <code>merge</code> is not a sanctioned <code>&lt;type&gt;</code></td>
+</tr>
+<tr>
+<td>11</td>
+<td><code>b7351a6</code> fix(ivi): resolve Kotlin compilation errors for R4Message imports</td>
+<td>none; <code>fix(scope)</code> is not the project format</td>
+</tr>
+<tr>
+<td>12</td>
+<td><code>92794da</code> fix(test): provide default parameters for R3Snapshot</td>
+<td>none — this is the commit that loosened the frozen R3 binding, to make a test compile</td>
+</tr>
+<tr>
+<td>13</td>
+<td><code>f7f2f55</code> fix(ivi): prevent Log.w RuntimeException in unit tests</td>
+<td>none</td>
+</tr>
+</tbody>
+</table></div>
+<p>Five of thirteen commits carry a <code>[X.Y.Z.W]</code> tag; the format is <code>[&lt;taskID&gt;] &lt;type&gt;: &lt;subject&gt;</code> for every commit. Commits 11–13 are fix-ups to subtasks 4.5.1.1–4.5.1.4, which means those subtasks were committed with a failing build — against the non-negotiable rule that a subtask passes build and unit tests before it is done. Commit 12 is the clearest case of the cost: a contract binding was relaxed to resolve a compile error in a test.</p>
+<hr />
+<h2 id="3-conclusion">3 · Conclusion<a class="headerlink" href="#3-conclusion" title="Link to this section">¶</a></h2>
+<p>There is real, careful engineering in this branch, and it deserves saying before anything else. The <code>R4Deserializer</code> → <code>R4Repository</code> → <code>WarningViewModel</code> chain is a sound piece of design: the parser returns a <code>Result</code> so one bad datagram cannot kill the loop, the repository routes edge-triggered events and last-value state through the right flow types and holds no Android imports, and the view-model owns the warning lifecycle without touching a socket or a canvas. That is the MVC separation the HLD asks for, arrived at independently. The unknown-<code>warningType</code> degradation is implemented <em>and</em> tested, and it is the acceptance clause R4 is most likely to be judged on. The rebind back-off, the foreground-service framing, and the mock sender as a bring-up aid are all good instincts. Fifteen tests pass and the APK builds — the branch is in far better shape than the version <code>main</code> had to revert.</p>
+<p>Four themes are worth your attention.</p>
+<p><strong>The pieces are excellent and nothing connects them.</strong> This is the big one. There is no <code>MainActivity</code>, no <code>&lt;activity&gt;</code> in the manifest, no Application class — so the APK has nothing to launch, nothing constructs the view-model, nothing starts the listener service, and <code>attachService</code> is never called. <code>MainScreen</code> and <code>CanvasWarningView</code> are reached only from <code>@Preview</code>. Every component scores well on its own and the runtime path from socket to screen does not exist, which is why R16 and R17 sit near a quarter despite good code on both ends. Green unit tests are exactly what makes this easy to miss — they exercise the components, not the path between them.</p>
+<p><strong>Nothing on the branch can tell you it worked.</strong> A warning that arrives, decodes and reaches the UI writes no log line at all; only failures speak. Combined with a <code>schemaVersion</code> that no code reads, that leaves no way to distinguish "received and rendered a valid message" from "received nothing" on a live node — which is the exact question a demo has to answer. The <code>IVI_V2X</code> tag and the <code>[RX]</code> line are not paperwork; they are how anyone, you included, will debug this in the Room.</p>
+<p><strong>The frozen contract moved to fit the test equipment, rather than the other way round.</strong> The mock sender omits <code>class</code> and sends <code>vehicles.B</code> where the schema says <code>vehicles.vehicleB</code>; the response was to give six required R3 fields defaults and add a third member to a two-member sealed hierarchy. The contracts are frozen precisely so a disagreement between two implementations surfaces as a decode failure instead of being absorbed — and the ADA side is written against the schema, so these defaults hide a mismatch rather than resolve one. It is worth reading <code>ff032ff</code>'s message in full; the direction of drift it describes is the same one, and the state path is already broken today because of it.</p>
+<p><strong>The branch is working from a different plan and a different design than the repo's.</strong> <code>plans/phase5_tasks.md</code> here and <code>phase5_minh_tasks.md</code> on <code>main</code> assign the same four IDs to different work, and <code>IVI_ECU/doc/</code> — the HLD, the decision record, the diagrams — is on <code>main</code> but not here. Almost everything in the architecture table traces back to that: the five-module split, <code>IviRuntimeConfig</code> and port 47300, <code>WarningClassifier</code> owning the registry, <code>AndroidR4Logger</code> and the <code>IVI_V2X</code> tag, <code>IviGraph</code> instead of Hilt, <code>r4-simulator</code> instead of <code>mock-sender</code>. None of that was knowable from where this branch stands, and syncing with <code>main</code> before the next push will resolve more of this list than any amount of rework here — the more so now that Phase 4 has landed a real ADA sender to talk to.</p>
+<p>Merging as-is would put an unlaunchable APK and a loosened frozen contract on <code>main</code>, so this is not ready yet — but the distance is shorter than the length of this review suggests. The judgement calls in the data layer are good ones, and most of what is left is connecting work and reconciling with <code>main</code>'s design rather than rethinking anything. Nice work on the parser in particular; it is the part that is hardest to get right and you got it right.</p>
+      </article>
+    </main>
+  </div>
+  <script src="../js/site-data.js"></script>
+  <script src="../js/theme.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/doc-page.js"></script>
+</body>
+</html>

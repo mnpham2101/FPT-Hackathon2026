@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en" data-theme="sketch">
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="kis-build-pages">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Research Report Format — KIS</title>
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/doc.css">
+  <link rel="stylesheet" href="../css/themes.css">
+</head>
+<body class="DocBody" data-root=".." data-doc-node="plans" data-doc-title="Research Report Format" data-doc-source=".claude/rules/research-report-format.md">
+  <div class="DocLayout">
+    <aside class="DocLayout__aside" id="doc-toc"></aside>
+    <main class="Page DocPage">
+      <header class="PageHeader" id="doc-header"></header>
+      <article class="Markdown" id="doc-body">
+<h1 id="research-report-format">Research Report Format<a class="headerlink" href="#research-report-format" title="Link to this section">¶</a></h1>
+<p>Governs the artifact [[project-researcher]] produces whenever it runs <a href="claude-skills-requirement-analysis-and-solutioning-skill.html">requirement-analysis-and-solutioning</a>. Every analysis run ends in a written report file — conversation output alone is not a deliverable.</p>
+<h2 id="location-naming">Location &amp; naming<a class="headerlink" href="#location-naming" title="Link to this section">¶</a></h2>
+<ul>
+<li>Reports live in <a href="../../requirements/">requirements/</a> at the repo root, one file per analysed feature or requirement set: <code>requirements/&lt;feature-slug&gt;.md</code>.</li>
+<li>Requirement numbers are <strong>project-global and stable</strong>: a new report continues the numbering, and published numbers are never reused or renumbered — they are the <code>X</code> segment of task IDs <code>X.Y.Z.W</code> (<a href="claude-rules-task-planning-conventions.html#task-id-scheme">task-planning-conventions.md</a>).</li>
+</ul>
+<h2 id="required-content">Required content<a class="headerlink" href="#required-content" title="Link to this section">¶</a></h2>
+<ol>
+<li><strong>Enumerated requirements</strong> — numbered list; each requirement a precise, testable statement meeting <a href="claude-rules-requirement-quality-criteria.html">requirement-quality-criteria.md</a> (measurable output / KPI, vague → precise translations recorded).</li>
+<li><strong>Feasibility study result</strong> — the whole-input verdict plus each requirement's achievable / at-risk / infeasible verdict, with reasoning.</li>
+<li><strong>Technical solution analysis</strong> — for each requirement (or group) needing a technical decision: the candidate solutions considered (always more than one), their comparison against the ranked criteria in <a href="claude-rules-solution-selection-criteria.html">solution-selection-criteria.md</a>, and the proposed best solution stating which criteria drove the pick.</li>
+</ol>
+<h2 id="commit-format">Commit format<a class="headerlink" href="#commit-format" title="Link to this section">¶</a></h2>
+<p>Report commits are the one exception to the mandatory <code>[&lt;taskID&gt;]</code> prefix in <a href="claude-rules-task-planning-conventions.html#commit-message-format">task-planning-conventions.md</a>: the report is what <em>defines</em> the requirement numbers, so no <code>X</code> exists at commit time. Omit the taskID and commit as:</p>
+<pre><code>docs: &lt;subject&gt;
+</code></pre>
+<p>e.g. <code>docs: add requirement analysis &amp; solution report for the comms track</code>.</p>
+<h2 id="downstream-use">Downstream use<a class="headerlink" href="#downstream-use" title="Link to this section">¶</a></h2>
+<p>The report is the traceability anchor for everything after it: [[project-planner]]'s plan, tasks, and subtasks — and [[project-architecture]]'s HLDs — refer to requirements by number from these files instead of restating them.</p>
+<h2 id="how-to-apply">How to apply<a class="headerlink" href="#how-to-apply" title="Link to this section">¶</a></h2>
+<p>[[project-researcher]] writes the report as the final step of every <a href="claude-skills-requirement-analysis-and-solutioning-skill.html">requirement-analysis-and-solutioning</a> run, before handing off to [[project-architecture]] or [[project-planner]]. No analysis is complete until its report exists under <code>requirements/</code>.</p>
+      </article>
+    </main>
+  </div>
+  <script src="../js/site-data.js"></script>
+  <script src="../js/theme.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/doc-page.js"></script>
+</body>
+</html>

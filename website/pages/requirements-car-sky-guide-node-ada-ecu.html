@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en" data-theme="sketch">
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="kis-build-pages">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Node: ADA ECU — KIS</title>
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/doc.css">
+  <link rel="stylesheet" href="../css/themes.css">
+</head>
+<body class="DocBody" data-root=".." data-doc-node="plans" data-doc-title="Node: ADA ECU" data-doc-source="requirements/car-sky-guide/node-ada-ecu.md">
+  <div class="DocLayout">
+    <aside class="DocLayout__aside" id="doc-toc"></aside>
+    <main class="Page DocPage">
+      <header class="PageHeader" id="doc-header"></header>
+      <article class="Markdown" id="doc-body">
+<h1 id="node-ada-ecu">Node: ADA ECU<a class="headerlink" href="#node-ada-ecu" title="Link to this section">¶</a></h1>
+<ul>
+<li><strong>CarSky node type:</strong> Container Node</li>
+<li><strong>Virtualization level:</strong> App-level (Linux container) — developed fully (report §1 node table)</li>
+<li><strong>Focus goal:</strong> structured, low-latency architecture — not object-detection performance</li>
+<li><strong>Part of:</strong> <a href="requirements-car-sky-guide-carsky-4-node-blueprint.html">carsky-4-node-blueprint.md</a></li>
+</ul>
+<h2 id="responsibility">Responsibility<a class="headerlink" href="#responsibility" title="Link to this section">¶</a></h2>
+<ul>
+<li>Detects objects (B, the visible occluder) from provided saved video files — no live camera (R12).</li>
+<li>Maintains the R3 track store with R13 admission state machine (own-sensor + <code>v2x_relayed</code>).</li>
+<li>Runs the R14 Collision Risk Assessment abstraction with the M1 NLOS plugin.</li>
+<li>Emits R4 warning events (and optionally periodic state) to the IVI ECU (R15).</li>
+<li>Does not receive GNSS or other sensor data from the Cortex-M ECU (that ECU is not built in M1).</li>
+</ul>
+<h2 id="tech-stack">Tech stack<a class="headerlink" href="#tech-stack" title="Link to this section">¶</a></h2>
+<p>C++17 core (store, CRA, emission, logging) + Python 3.11 detector subprocess; YOLO11n (AGPL-3.0) on ONNX Runtime CPU; OpenCV video decode; the two processes join only through argv + exit codes + R3 JSONL over stdout (report §3(d)/(g)).</p>
+<h2 id="build-push-the-image">Build &amp; push the image<a class="headerlink" href="#build-push-the-image" title="Link to this section">¶</a></h2>
+<pre><code>docker login registry.hackathon-2.carsky.io -u &lt;your_carsky_username&gt;
+docker tag m1-ada-ecu:latest registry.hackathon-2.carsky.io/m1-ada-ecu:latest
+docker push registry.hackathon-2.carsky.io/m1-ada-ecu:latest
+</code></pre>
+<ul>
+<li><strong>Registry host is <code>registry.hackathon-2.carsky.io</code></strong> — the host that actually serves Zot; <code>registry.carsky.io</code> does not (<a href="requirements-car-sky-guide-zot-registry-api-key.html#registry-host-caveat-open-item-o1">zot-registry-api-key.md § Registry host caveat</a>). The same host must appear in the login, the tag and the <code>image</code> field below; a mismatch is the "push succeeded, node cannot pull" failure.</li>
+<li><strong>Single-platform <code>linux/arm64</code>, attestations off</strong> — a Container Node rejects a multi-platform manifest index and hangs in <code>Provisioning</code> (<a href="documents-design-ada-ecu-ada-ecu-design-decisions.html#d9--deployment-shape">ADA decision D9</a>).</li>
+<li>The image is built and pushed by CI, not by hand; that procedure is <a href="requirements-car-sky-guide-deploy-ada-ecu-walkthrough.html#3-build-the-images-on-ci">deploy-ada-ecu-walkthrough.md §3</a>.</li>
+</ul>
+<p>The provided video clip(s) ship inside the image (<code>COPY</code> at build time) — no live video pin is used in M1 (per report §1, live camera bring-up is out of scope).</p>
+<h2 id="blueprint-node-config">Blueprint node config<a class="headerlink" href="#blueprint-node-config" title="Link to this section">¶</a></h2>
+<pre><code class="language-json">{
+  &quot;container&quot;: {
+    &quot;image&quot;: &quot;registry.hackathon-2.carsky.io/m1-ada-ecu:latest&quot;,
+    &quot;command&quot;: [&quot;./entrypoint.sh&quot;],
+    &quot;capabilities&quot;: [&quot;NET_RAW&quot;],
+    &quot;env&quot;: {
+      &quot;V2X_LISTEN_PORT&quot;: &quot;47200&quot;,
+      &quot;IVI_ECU_HOST&quot;: &quot;10.99.0.13&quot;,
+      &quot;IVI_ECU_PORT&quot;: &quot;47300&quot;,
+      &quot;GATE_ENTER_M&quot;: &quot;30&quot;,
+      &quot;GATE_EXIT_M&quot;: &quot;35&quot;
+    }
+  }
+}
+</code></pre>
+<p><code>command</code> is <code>./entrypoint.sh</code>, never the bare binary — the same shape the <a href="requirements-car-sky-guide-node-v2x-ecu.html#blueprint-node-config">V2X ECU</a> already ships, and product code in the node image rather than a netcheck or test artifact:</p>
+<ul>
+<li>It launches <code>capture.sh</code> in the background (the ADA→IVI traffic evidence R15/R19 needs, which the V2X ECU's capture point cannot see) and then <code>exec</code>s the node binary.</li>
+<li>The <code>exec</code> is load-bearing: the app becomes PID 1 and receives the platform's SIGTERM directly, which is what makes the clean-shutdown path run and keeps the app's exit code as the container's. Behind a non-exec parent shell the signal lands on the shell and the app is killed on the grace-period timeout instead.</li>
+<li>The path is relative to the image workdir <code>/app</code>; <code>/entrypoint.sh</code> does not exist and the container dies at start.</li>
+</ul>
+<p><code>capabilities: ["NET_RAW"]</code> (flat in <code>config</code>, verified shape per <a href="../../requirements/development-platform-doc/blueprint-KIS.json">blueprint-KIS.json</a>) is <strong>always part of this node's config, never conditional</strong>: without it <code>tcpdump</code> cannot open a capture handle, <code>capture.sh</code> degrades to a <code>/proc/net/dev</code> packet counter, and the node's traffic evidence weakens to "bytes moved on this interface". Capture procedure and pcap retrieval: <a href="requirements-car-sky-guide-traffic-capture-wireshark.html">traffic-capture-wireshark.md</a>.</p>
+<p><strong>The image must ship both scripts.</strong> <code>command: ["./entrypoint.sh"]</code> requires <code>entrypoint.sh</code> and <code>capture.sh</code> at the image workdir, and a node whose image lacks them dies at start. Their target paths are designated in <a href="documents-design-ada-ecu-ada-ecu-hld.html#4-folder-structure">ADA HLD §4</a>; the pattern to follow is <a href="../../V2X_ECU/entrypoint.sh">V2X_ECU/entrypoint.sh</a> and <a href="../../V2X_ECU/capture.sh">V2X_ECU/capture.sh</a>.</p>
+<p><code>V2X_LISTEN_PORT</code> receives R2 JSON from the V2X ECU; <code>IVI_ECU_HOST</code>/<code>IVI_ECU_PORT</code> target the IVI ECU's static address for R4 emission. <code>GATE_ENTER_M</code>/<code>GATE_EXIT_M</code> are the R13 admission-gate constants — externalized configuration, never literals in code (CLAUDE.md governing principle 5; <a href="documents-plan-milestone1-high-level-plan.html">milestone1_high_level_plan.md</a> §4). The full env surface — detector, risk, capture and evidence tunables with their defaults — is <a href="documents-design-ada-ecu-ada-ecu-hld.html#6-internal-components">ADA HLD §6</a>; anything the blueprint omits falls through to the app's own default, never to an <code>ENV</code> baked into the image.</p>
+<h2 id="pins">Pins<a class="headerlink" href="#pins" title="Link to this section">¶</a></h2>
+<p>Container Node available pin kinds: <code>can</code>, <code>lin</code>, <code>kuksa</code>, <code>gpio</code>, <code>ethernet</code>, <code>video</code>, <code>usb</code>, <code>tunnel</code> (<a href="requirements-car-sky-guide-carsky-4-node-blueprint.html#pin-kinds-by-node-type">full table</a>).</p>
+<p><strong>M1 wires exactly one — <code>ethernet</code>, <code>OUTPUT</code>, targeting the Ethernet Bridge node.</strong> Added manually in the Nydus UI canvas after import — <a href="../../requirements/car-sky-guide/blueprint-m1-cooperative-awareness.json">blueprint-m1-cooperative-awareness.json</a> creates this node via Import from File but carries no pins (JSON import silently drops <code>ethernet</code> pins, same limitation as the REST <code>addPin</code> endpoint — see <a href="requirements-car-sky-guide-carsky-rest-api-blueprint.html">carsky-rest-api-blueprint.md</a>). Verified pin shape, per the real platform export <a href="../../requirements/development-platform-doc/blueprint-KIS.json">blueprint-KIS.json</a> — <code>id</code> is platform-assigned when the pin is created, and there is no <code>prefixLen</code> field; only <code>address</code> (the eth-bridge node's own <code>subnet</code> config supplies the mask):</p>
+<pre><code class="language-json">{
+  &quot;id&quot;: &quot;&lt;platform-assigned&gt;&quot;,
+  &quot;name&quot;: &quot;eth&quot;,
+  &quot;pinType&quot;: &quot;ETHERNET&quot;,
+  &quot;direction&quot;: &quot;OUTPUT&quot;,
+  &quot;side&quot;: null,
+  &quot;port&quot;: null,
+  &quot;properties&quot;: {
+    &quot;address&quot;: &quot;10.99.0.12&quot;
+  }
+}
+</code></pre>
+<p>This pin's edge targets the Ethernet Bridge node's single <code>ETHERNET</code>/<code>INPUT</code> pin (star topology).</p>
+<p><strong>Why nothing else:</strong>
+- No <code>kuksa</code> — "the ADA ECU does not receive GNSS or other sensor data from the Cortex-M ECU" (report §1); KUKSA/VSS is exactly that vehicle-signal path, so it's intentionally absent in M1.
+- No <code>video</code> — the provided clip(s) are baked into the image at build time (see § Build &amp; push above), not streamed through a live video pin; no live camera bring-up is a frozen M1 scope boundary.
+- No <code>can</code>/<code>lin</code>/<code>gpio</code>/<code>usb</code>/<code>tunnel</code> — nothing in R12–R15 needs them.</p>
+<h2 id="verification-feeds-r12r15-r18-acceptance">Verification (feeds R12–R15, R18 acceptance)<a class="headerlink" href="#verification-feeds-r12r15-r18-acceptance" title="Link to this section">¶</a></h2>
+<p>What this node must be observed doing. <strong>How</strong> it is deployed and checked — the isolated Room, its bench stand-ins, the log route and the pass criteria — is <a href="requirements-car-sky-guide-deploy-ada-ecu-walkthrough.html">deploy-ada-ecu-walkthrough.md</a>; that procedure is not repeated here.</p>
+<ul>
+<li>The observable surface is the node's own stdout: one <code>[EVT]</code>-prefixed JSON line per event (<code>r2_ingest</code>, <code>own_sensor_ingest</code>, <code>track_transition</code>, <code>parse_reject</code>, <code>assessment</code>, <code>risk_transition</code>, <code>r4_tx</code>), plus the <code>[CAP]</code> lines <code>capture.sh</code> emits.</li>
+<li>Detection log over the provided clip with per-frame objects and distance estimates; <strong>zero detections labeled C</strong>.</li>
+<li>R13 state transitions observable in logs, matching the admission state-machine diagram.</li>
+<li>The NLOS plugin registers through the CRA interface (R14).</li>
+<li>At least one R4 warning event per scenario run, carrying risk state and composed geometry, observed at the IVI ECU (R15).</li>
+<li>JSONL event logs reconstruct a full run offline (R18).</li>
+</ul>
+      </article>
+    </main>
+  </div>
+  <script src="../js/site-data.js"></script>
+  <script src="../js/theme.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/doc-page.js"></script>
+</body>
+</html>

@@ -1,0 +1,1171 @@
+<!doctype html>
+<html lang="en" data-theme="sketch">
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="kis-build-pages">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ADA ECU — high-level design (R3, R12–R15; R18 ADA side) — KIS</title>
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/doc.css">
+  <link rel="stylesheet" href="../css/themes.css">
+</head>
+<body class="DocBody" data-root=".." data-doc-node="plans" data-doc-title="ADA ECU — high-level design (R3, R12–R15; R18 ADA side)" data-doc-source="documents/Design/ADA-ECU/ada-ecu-hld.md">
+  <div class="DocLayout">
+    <aside class="DocLayout__aside" id="doc-toc"></aside>
+    <main class="Page DocPage">
+      <header class="PageHeader" id="doc-header"></header>
+      <article class="Markdown" id="doc-body">
+<h1 id="ada-ecu-high-level-design-r3-r12r15-r18-ada-side">ADA ECU — high-level design (R3, R12–R15; R18 ADA side)<a class="headerlink" href="#ada-ecu-high-level-design-r3-r12r15-r18-ada-side" title="Link to this section">¶</a></h1>
+<blockquote>
+<p><strong>The ADA node's HLD, and the sole design authority for <code>ADA_ECU/</code>.</strong> Every component this node runs, its role, input and output, where it lives, and how the components connect. Decision record: <a href="documents-design-ada-ecu-ada-ecu-design-decisions.html">ada-ecu-design-decisions.md</a> (D1–D11). Frozen contracts: <a href="../../contracts/r2-v2x-object.schema.json">r2-v2x-object.schema.json</a> in, <a href="../../contracts/r3-tracked-object.schema.json">r3-tracked-object.schema.json</a> as the store's object model, <a href="../../contracts/r4-ada-ivi.schema.json">r4-ada-ivi.schema.json</a> out. Deploy and verify: <a href="requirements-car-sky-guide-deploy-ada-ecu-walkthrough.html">deploy-ada-ecu-walkthrough.md</a>. Node facts: <a href="requirements-car-sky-guide-node-ada-ecu.html">node-ada-ecu.md</a>.</p>
+<p>Diagrams: <a href="documents-design-ada-ecu-ada-ecu-module-architecture.svg">ada-ecu-module-architecture.svg</a> (components, paired with its <code>.drawio</code>) · <a href="../../documents/Design/ADA-ECU/phase2-4-ada-ecu-components.puml">phase2-4-ada-ecu-components.puml</a> (module graph) · <a href="../../documents/Design/ADA-ECU/phase2-4-ada-ecu-callflow.puml">phase2-4-ada-ecu-callflow.puml</a> (sequence) · <a href="../../documents/Design/ADA-ECU/phase2-4-ada-ecu-admission.puml">phase2-4-ada-ecu-admission.puml</a> (the R13 state machine).</p>
+</blockquote>
+<p><strong>Abridged version.</strong> A reader who does not need the full document can take the design deck instead: <a href="../../presentation/phase2-4/phase2-4-ada-ecu-design-deck.html">Phases 2-4 — ADA ECU Design</a> (<a href="../../presentation/phase2-4/phase2-4-ada-ecu-design-deck.html">HTML</a>). It presents this HLD; where the two differ, this document governs.</p>
+<h2 id="1-scope-and-authority">1. Scope and authority<a class="headerlink" href="#1-scope-and-authority" title="Link to this section">¶</a></h2>
+<p><code>ADA_ECU/</code> only — ego's perception and fusion node, from the R2 datagram arriving on the wire and the clip frame leaving the decoder, to the R4 warning datagram leaving the node.</p>
+<ul>
+<li><strong>In scope:</strong> this folder's C++17 core and Python detector, their components and seams, the node's two network endpoints, the model and clip it ships, and the host-side scripts that read its own logs.</li>
+<li><strong>Out of scope:</strong> what the V2X ECU does before R2 and what the IVI does after R4, which are those nodes' designs; the deploy and verify procedure, which the walkthrough owns; the task breakdown, which the plan owns; the radar and live-camera inputs drawn in <a href="requirements-ada-ecu.svg">ada-ecu.svg</a> — M1 has no radar and no live camera bring-up.</li>
+</ul>
+<p><strong>This is the only design document governing this node.</strong> It fixes the component set and each component's responsibility, every deliverable's path, the seams, the configuration keys, and the evidence log lines.</p>
+<ul>
+<li><strong>Task planning decomposes from this document plus the requirements report, and nothing else.</strong> Requirement numbers and acceptance come from <a href="requirements-m1-cooperative-awareness.html">m1-cooperative-awareness.md</a>; everything structural comes from here — which component a subtask creates, its path, the interface it satisfies, the log line that closes it. Deploy and verify subtasks come from the walkthrough, per <a href="claude-rules-walkthrough-driven-delivery.html">walkthrough-driven-delivery.md</a>.</li>
+<li><strong>Plans cite; they do not restate.</strong> A brief links the section governing its step, so a change lands in one place.</li>
+<li><strong>Implementation does not extend this silently.</strong> A component, path or configuration key not designated here is not created ad hoc — the design changes first.</li>
+<li><strong>What overrides it:</strong> the requirements report, the frozen R2/R3/R4 contracts, and the walkthrough for procedure. On conflict, the CLAUDE.md authority order decides.</li>
+</ul>
+<h2 id="2-required-reading-and-sourced-notes">2. Required reading and sourced notes<a class="headerlink" href="#2-required-reading-and-sourced-notes" title="Link to this section">¶</a></h2>
+<h3 id="requirement-documents">Requirement documents<a class="headerlink" href="#requirement-documents" title="Link to this section">¶</a></h3>
+<p><strong>Read in full before this design is written or changed.</strong> The requirements decide what the node must do; this document only decides how.</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Document</th>
+<th>What it fixes for this node</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="requirements-m1-cooperative-awareness.html">m1-cooperative-awareness.md</a> — <strong>the authority</strong></td>
+<td>R3, R12, R13, R14, R15 whole — definition, dependency, acceptance, tech stack. R2 as the input contract and R4 as the output contract. R5/R6: node type, bridge, address, ports. R18: the evidence stream. R19: zero direct C detections for the whole run. §1: this node's responsibility list and the demo table. §3(d)/(f)/(g): the stack. §4: the standing decisions</td>
+</tr>
+<tr>
+<td>Its figures — <a href="requirements-ada-ecu.svg">ada-ecu.svg</a> · <a href="requirements-vehiclec-track-admission-state-machine.png">vehicleC_track_admission_state_machine.png</a></td>
+<td>The R14 module shape this design realizes — DataObserver, Data Parser, Current Input, Collision Risk Assessment, Current TrackedObject/Risk — and the R13 lifecycle, realized as <a href="../../documents/Design/ADA-ECU/phase2-4-ada-ecu-admission.puml">phase2-4-ada-ecu-admission.puml</a></td>
+</tr>
+<tr>
+<td><a href="../../contracts/r2-v2x-object.schema.json">r2-v2x-object.schema.json</a> · <a href="../../contracts/r3-tracked-object.schema.json">r3-tracked-object.schema.json</a> · <a href="../../contracts/r4-ada-ivi.schema.json">r4-ada-ivi.schema.json</a></td>
+<td>The three frozen contracts, field for field, with their bounds and their nullable fields (§10)</td>
+</tr>
+<tr>
+<td><a href="requirements-m1-run-timing-and-event-triggering.html">m1-run-timing-and-event-triggering.md</a></td>
+<td>R20/R21/R22 whole. §6.2's clock-domain ruling, which this design makes (D10); §6.1's three detector pacing keys and the two risk-band values; §6.6's run choreography — <code>T0</code>, the paced clip, the matched bench-cycle and clip periods, and the band pair on the composed range (D11); §6.4's <code>tools/check_run_alignment.py</code> and its K1–K6 checks (§12)</td>
+</tr>
+<tr>
+<td><a href="requirements-m1-video-source-and-ivi-dashcam.html">m1-video-source-and-ivi-dashcam.md</a></td>
+<td>The clip reaches the container as one image layer and by no other route. The IVI dashcam view is deferred, and no part of it is built here (D6)</td>
+</tr>
+<tr>
+<td><a href="documents-plan-milestone1-high-level-plan.html">milestone1_high_level_plan.md</a></td>
+<td>§4's R13 gate constants; §2's near-collinear composition assumption; Phases 2, 3 and 4 acceptance; §6's deferred scope</td>
+</tr>
+<tr>
+<td><a href="requirements-car-sky-guide-node-ada-ecu.html">node-ada-ecu.md</a></td>
+<td>Image tag, blueprint <code>command</code> and <code>capabilities</code>, env set, pin, address</td>
+</tr>
+<tr>
+<td><a href="requirements-car-sky-guide-deploy-ada-ecu-walkthrough.html">deploy-ada-ecu-walkthrough.md</a></td>
+<td>The isolated-Room configuration and the observables its § Expected outputs and acceptance names (§12)</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="research-notes">Research notes<a class="headerlink" href="#research-notes" title="Link to this section">¶</a></h3>
+<p>Non-authoritative scratch; on any conflict the CLAUDE.md authority order wins.</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Note</th>
+<th>Adopted here</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="deprecated-phase0-contract-freeze-hld.html">phase0-contract-freeze-hld.md</a></td>
+<td>D1's access model — byte-synced schema copies, no cross-folder reads; D2's bindings as pure model code; D4's additive-version tolerance. The bindings in <code>src/contracts/</code> are the only message models this design uses (D1)</td>
+</tr>
+<tr>
+<td><a href="documents-design-v2x-ecu-v2x-ecu-hld.html">v2x-ecu-hld.md</a> and its <a href="documents-design-v2x-ecu-v2x-ecu-design-decisions.html">decisions</a></td>
+<td>The sole-socket-holder rule; the <code>[EVT]</code> line's <code>mono_ms</code>/<code>epoch_ms</code> pair and its payload-carrying events, so one offline reader walks both nodes (D8); the clock discipline this node continues (D10); the <code>entrypoint.sh</code> plus <code>capture.sh</code> tcpdump pattern, reused here for the ADA→IVI hop (D9)</td>
+</tr>
+<tr>
+<td><a href="documents-design-scenario-player-scenario-player-hld.html">scenario-player-hld.md</a> and its <a href="documents-design-scenario-player-scenario-player-design-decisions.html">decisions</a></td>
+<td>The bench cadence <code>cpm_rate_hz</code> (10 Hz default), which is the relayed-update rate this design sizes <code>TRACK_TIMEOUT_MS</code> against; the two committed scenarios — <code>default.yaml</code> closing C from 70 m to 20.5 m across a 10.0 s cycle, crossing the gate 8.0 s in, and <code>c-out-of-range.yaml</code> held beyond the exit gate — as the R13 and R14 exercise inputs; the bench half of the R22 alignment, <code>start_delay_s</code> set to this node's detector warm-up (D11)</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="3-the-component-architecture">3. The component architecture<a class="headerlink" href="#3-the-component-architecture" title="Link to this section">¶</a></h2>
+<p><img alt="ADA ECU component architecture" src="documents-design-ada-ecu-ada-ecu-module-architecture.svg" /></p>
+<p>Source: <a href="documents-design-ada-ecu-ada-ecu-module-architecture.svg">research_notes/ada-ecu-module-architecture.svg</a>, paired with its <a href="../../documents/Design/ADA-ECU/ada-ecu-module-architecture.drawio"><code>.drawio</code></a>. The module graph alone is <a href="../../documents/Design/ADA-ECU/phase2-4-ada-ecu-components.puml">phase2-4-ada-ecu-components.puml</a>.</p>
+<p>A UML component diagram. Fill colour is the component's role; <code>«use»</code> dependencies are dashed with an open arrowhead; realization is dashed with a hollow triangle; a seam is a provided interface meeting a required one. The two packages inside the image are the processes of D2: the C++17 <code>ada_ecu</code> core and the Python <code>detector</code> subprocess. The core's inner packages carry <a href="requirements-ada-ecu.svg">ada-ecu.svg</a>'s block names — DataObserver, Data Parser, Current Input, Collision Risk Assessment, Current TrackedObject/Risk. Component names below are the short <code>package/module</code> form — §4 resolves each to its path.</p>
+<h3 id="mvc-separation">MVC separation<a class="headerlink" href="#mvc-separation" title="Link to this section">¶</a></h3>
+<p>Every component sits in exactly one layer, held there by the rule in the right-hand column.</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Where</th>
+<th>Rule that keeps it separate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Data</strong></td>
+<td><code>src/contracts/</code>, <code>detector/contracts/</code>, <code>store/track_store</code>, <code>cra/assessment_db</code> with <code>schema/</code>, <code>config/config</code>, <code>log/event_log</code></td>
+<td>Models and stores hold no rules: the store keeps, refreshes and erases entries but never decides what a distance means, and the bindings carry no transport</td>
+</tr>
+<tr>
+<td><strong>Business logic</strong></td>
+<td><code>store/admission</code>, <code>cra/plugins/chained_collision</code>, <code>fusion/scene_composer</code>, and the detector's <code>inference</code>, <code>distance</code> and <code>tracker</code></td>
+<td>Pure functions of their inputs. None opens a socket, reads the environment, or formats a wire message</td>
+</tr>
+<tr>
+<td><strong>UI logic (controller)</strong></td>
+<td><code>main</code>, <code>observer/</code>, <code>parser/</code>, <code>output/warning_builder</code>, <code>output/ivi_sender</code>, and the detector's <code>main</code>, <code>pacer</code> and <code>emit</code></td>
+<td>The controller owns the clock, the threads, the subprocess and the sockets. It holds no rules, and it is what builds the message the IVI's view model consumes</td>
+</tr>
+<tr>
+<td><strong>UI</strong></td>
+<td>none — the node is headless</td>
+<td>The rendering surface is the IVI's God view (R16/R17), which consumes R4; the local observation surface is the <code>[EVT]</code> stream (§12)</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="4-folder-structure">4. Folder structure<a class="headerlink" href="#4-folder-structure" title="Link to this section">¶</a></h2>
+<p><strong>The tree designates the path of every component this document names.</strong> The image workdir <code>/app</code> mirrors this folder, so <code>/app/detector/main.py</code> is <code>detector/main.py</code> here.</p>
+<pre><code>ADA_ECU/
+├── Dockerfile                      two stages, one base image, single-platform arm64 (D9)
+├── entrypoint.sh                   starts capture.sh, then execs ./ada_ecu (D9)
+├── capture.sh                      ADA→IVI live [CAP] text and rotating pcap (D9)
+├── .dockerignore                   keeps doc/, tests/ and tools/ out of the build context
+├── CMakeLists.txt                  the ada_ecu executable, the module libraries, the CTest targets
+├── README.md                       one-screen orientation; points here
+│
+├── contracts/                      byte-synced r2 · r3 · r4 schema copies (D1)
+├── schema/
+│   └── cra-assessment-record.schema.json   the R14 record schema — node-local, not a synced contract (D4)
+│
+├── src/                            the ada_ecu core — C++17
+│   ├── main.cpp                    the composition root and process entry (D2)
+│   ├── config/config.{hpp,cpp}     the node's only env reader
+│   ├── net/udp_socket.{hpp,cpp}    the only socket-API holder
+│   ├── observer/
+│   │   ├── input_queue.hpp         the bounded queue: two producers, one consumer (D2)
+│   │   ├── v2x_listener.{hpp,cpp}  the R2 receive thread
+│   │   └── detector_reader.{hpp,cpp}   detector spawn, lifecycle, and the stdout JSONL read thread
+│   ├── parser/
+│   │   ├── r2_parser.{hpp,cpp}     R2Message → TrackedObject, source v2x_relayed
+│   │   └── r3_parser.{hpp,cpp}     detector JSONL line → TrackedObject, source own_sensor
+│   ├── store/
+│   │   ├── track_store.{hpp,cpp}   the R3 store: single writer, monotonic expiry stamp (D10)
+│   │   └── admission.{hpp,cpp}     the R13 state machine — pure, no I/O (D3)
+│   ├── cra/
+│   │   ├── i_collision_risk_assessment.hpp   the R14 interface (D4)
+│   │   ├── registry.{hpp,cpp}      the plugin registry, lookup by warningType
+│   │   ├── builtin_plugins.cpp     the one file edited when a plugin is added (D4)
+│   │   ├── assessment_db.{hpp,cpp} the typed accessor over the schema/ record (D4)
+│   │   └── plugins/chained_collision.{hpp,cpp}   the M1 NLOS plugin (D5)
+│   ├── fusion/scene_composer.{hpp,cpp}   d_AC = d_AB + d_BC, lateral component-wise (D5)
+│   ├── output/
+│   │   ├── warning_builder.{hpp,cpp}   RiskFinding + geometry → R4WarningEvent (D7)
+│   │   └── ivi_sender.{hpp,cpp}    the R4 UDP egress (D7)
+│   ├── log/event_log.{hpp,cpp}     the R18 [EVT] JSONL writer (D8)
+│   └── contracts/{r2_message,tracked_object,r4_message}.{hpp,cpp}   the frozen bindings (D1)
+│
+├── detector/                       the R12 detector — Python 3.11 subprocess
+│   ├── main.py                     argv, wiring, exit codes — the process contract's detector side
+│   ├── config.py                   the detector's only env reader
+│   ├── frame_source.py             the frame-source seam, FileFrameSource and SyntheticFrameSource (D6)
+│   ├── pacer.py                    the CLOCK_MONOTONIC deadline scheduler over sampled frames (D10)
+│   ├── inference.py                the YOLO11n ONNX session, letterbox, NMS, class mapping
+│   ├── distance.py                 the pinhole known-width range and lateral offset
+│   ├── tracker.py                  greedy IoU association → stable own:&lt;n&gt; ids
+│   ├── emit.py                     R3 JSONL on stdout through the frozen binding
+│   ├── contracts/tracked_object.py the R3 Python binding (D1)
+│   ├── requirements.txt            runtime: onnxruntime · opencv-python-headless · numpy
+│   ├── requirements-dev.txt        pytest · jsonschema
+│   └── tests/                      test_r3_roundtrip · test_frame_source · test_pacer
+│                                   test_distance · test_tracker · test_emit_contract
+│
+├── models/yolo11n.onnx             exported once by tools/export_yolo11n.py, committed (D6)
+├── media/
+│   ├── ego-b-occluding-c.mp4       the ego clip, baked into the image (D6)
+│   └── ego-b-occluding-c.source.md its provenance and licence
+│
+├── tools/                          host-side scripts: no image, no data path, outside the build context
+│   ├── export_yolo11n.py           the one-off Ultralytics → ONNX export (D6)
+│   ├── make_sample_video.py        the CI decode fixture generator, never the demo source
+│   ├── check_zero_c.py             the R12/R19 zero-C check (D6)
+│   ├── check_run_alignment.py      the R21/R22 run-alignment check, K1–K6 (D10, D11)
+│   ├── event_report.py             [EVT] → the collision-risk event list (D8)
+│   └── extract_pcap.sh             host-side log → .pcap (D9)
+│
+├── tests/                          GoogleTest + CTest
+│   ├── test_sanity.cpp
+│   ├── contracts/                  test_r2_roundtrip · test_r3_roundtrip · test_r4_roundtrip
+│   │                               test_r4_additive_version
+│   ├── store/                      test_track_store · test_admission_own_sensor
+│   │                               test_admission_relayed · test_expiry_monotonic
+│   ├── parser/                     test_r2_parser · test_r3_parser
+│   ├── cra/                        test_registry · test_assessment_db · test_chained_collision
+│   ├── fusion/test_scene_composer.cpp
+│   ├── output/test_warning_builder.cpp
+│   └── fixtures/
+│       ├── samples/                byte-synced contract samples
+│       ├── own_sensor_mock.jsonl   the recorded own-sensor stream the reader replays (D2)
+│       └── malformed/              the R2 and R3 rejection corpus
+│
+└── doc/                            this document, the decision record, the diagrams, research_notes/
+</code></pre>
+<h2 id="5-platform-and-boundary">5. Platform and boundary<a class="headerlink" href="#5-platform-and-boundary" title="Link to this section">¶</a></h2>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Role</th>
+<th>Input</th>
+<th>Output</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>CarSky Container Node</strong></td>
+<td>the platform this node runs on: one pod, one image, no volume</td>
+<td>the image pulled from Zot; env from the blueprint node config</td>
+<td>a process on the Room network at <code>10.99.0.12</code>, and its stdout</td>
+</tr>
+<tr>
+<td><code>«interface»</code> <strong>V2X-ECU</strong></td>
+<td>the producer's side of R2 — a dependency on an address, never on an implementation</td>
+<td>the CPM it decoded</td>
+<td>one R2 JSON datagram per perceived-object update, to <code>10.99.0.12:47200</code></td>
+</tr>
+<tr>
+<td><code>«interface»</code> <strong>IVI-ECU</strong></td>
+<td>the consumer's side of R4 — a dependency on an address</td>
+<td>the warning this node composes</td>
+<td>nothing; the wire is one way</td>
+</tr>
+<tr>
+<td><strong>the ego clip</strong></td>
+<td>the R12 frame source: a file inside the image, not a stream and not a pin (D6)</td>
+<td>—</td>
+<td>H.264 frames to <code>FileFrameSource</code></td>
+</tr>
+<tr>
+<td><strong>View Log</strong> — CarSky</td>
+<td>the node's only observation surface</td>
+<td>the process stdout</td>
+<td>the <code>[EVT]</code> and <code>[CAP]</code> streams, live in the Deployment Viewer or over the logs route</td>
+</tr>
+</tbody>
+</table></div>
+<p>The V2X ECU is a Container node at <code>10.99.0.11</code>; the IVI is the Skycraft node at <code>10.99.0.13</code>. Two things can stand at each address — the real node, or a <code>tools/ada-bench/</code> role in the isolated Room (§7). <strong>Nothing on this side changes with either swap</strong>, which is why the node's image and env are identical in both blueprints (<a href="requirements-car-sky-guide-deploy-ada-ecu-walkthrough.html#56-the-full-blueprint-route">walkthrough §5.6</a>).</p>
+<h2 id="6-internal-components">6. Internal components<a class="headerlink" href="#6-internal-components" title="Link to this section">¶</a></h2>
+<p>Each row is one component's single responsibility. A component does what its row says and no more; work fitting no row belongs to a component this document has not defined.</p>
+<h3 id="business-logic">Business logic<a class="headerlink" href="#business-logic" title="Link to this section">¶</a></h3>
+<p>Pure functions of their inputs, free of the clock, the socket and the environment.</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Role</th>
+<th>Input</th>
+<th>Output</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>store/admission</code></td>
+<td>the R13 machine of D3: one implementation for both sources, holding the Schmitt band, the confirm counter and the expiry test</td>
+<td>a track id, its source, an update's distance, the current monotonic time</td>
+<td>the next state, or erasure; one <code>track_transition</code> per edge</td>
+</tr>
+<tr>
+<td><code>cra/plugins/chained_collision</code></td>
+<td>the M1 NLOS rules of D5: composed range, closing rate and TTC against the three risk bands, debounced by <code>RISK_DWELL_MS</code></td>
+<td>a <code>RiskContext</code> — the store, the assessment database, the current time</td>
+<td>a <code>RiskFinding</code>; the updated assessment record</td>
+</tr>
+<tr>
+<td><code>fusion/scene_composer</code></td>
+<td>the geometry: <code>vehicleB</code> from the nearest own-sensor track, <code>vehicleC = (d_AB + d_BC, y_B + y_BC)</code>, ego at the origin</td>
+<td>the two tracks</td>
+<td>the R4 <code>geometry</code> triple</td>
+</tr>
+<tr>
+<td><code>detector/inference</code></td>
+<td>the YOLO11n ONNX session: letterbox, run, NMS, and the COCO-to-<code>vehicle</code> class collapse</td>
+<td>one <code>Frame</code></td>
+<td>zero or more scored bounding boxes</td>
+</tr>
+<tr>
+<td><code>detector/distance</code></td>
+<td>the pinhole known-width estimate of D6: range from box width, lateral offset from box centre</td>
+<td>a box, the frame width, <code>VEHICLE_WIDTH_M</code>, <code>CAMERA_HFOV_DEG</code></td>
+<td><code>distance</code> and <code>position.y</code>, metres</td>
+</tr>
+<tr>
+<td><code>detector/tracker</code></td>
+<td>greedy IoU association against the previous sampled frame, holding an id while IoU ≥ <code>TRACK_IOU_MIN</code></td>
+<td>this frame's boxes, the previous frame's ids</td>
+<td>a stable <code>own:&lt;n&gt;</code> per box</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="data">Data<a class="headerlink" href="#data" title="Link to this section">¶</a></h3>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Role</th>
+<th>Input</th>
+<th>Output</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>src/contracts/</code> — <code>R2Message</code>, <code>TrackedObject</code>, <code>R4WarningEvent</code>, <code>R4StateMessage</code></td>
+<td>the typed C++ binding of the three frozen schemas, and the node's only object model (D1)</td>
+<td>decoded JSON, constructed values</td>
+<td>the structs every other component passes around</td>
+</tr>
+<tr>
+<td><code>detector/contracts/tracked_object</code></td>
+<td>the R3 Python binding: the same fields, the same wire keys, on the detector side of the process boundary</td>
+<td>constructed values, JSONL lines</td>
+<td><code>TrackedObject</code> and its JSONL form</td>
+</tr>
+<tr>
+<td><code>store/track_store</code></td>
+<td>the R3 store — the figure's Current Input: <code>id → TrackedObject</code> with a parallel monotonic stamp per entry (D10), and the sole writer of <code>state</code> (D3)</td>
+<td>upserts from the two parsers, erasures from admission</td>
+<td>the current track set; <code>nearest(source)</code> for composition</td>
+</tr>
+<tr>
+<td><code>cra/assessment_db</code></td>
+<td>the R14 record table of D4: typed <code>get</code> / <code>upsert</code> / <code>erase</code> over the committed record schema, carrying a track's last snapshot past its erasure</td>
+<td>assessment records</td>
+<td>the prior record a plugin's edge-trigger and closing-rate need</td>
+</tr>
+<tr>
+<td><code>config/config</code></td>
+<td>the node's only env reader; validates and fails loud, naming the offending key</td>
+<td><code>environ</code></td>
+<td>an immutable configuration struct</td>
+</tr>
+<tr>
+<td><code>log/event_log</code></td>
+<td>the R18 writer of D8: one <code>[EVT]</code> JSONL line per event, both clock stamps, flushed per line, to stdout and optionally to a file</td>
+<td>event name and payload</td>
+<td>the evidence stream</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="ui-logic-the-controller">UI logic — the controller<a class="headerlink" href="#ui-logic-the-controller" title="Link to this section">¶</a></h3>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Role</th>
+<th>Input</th>
+<th>Output</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>main</code></td>
+<td>the composition root: load config, register plugins, bind the socket, spawn the detector, run the fusion tick, and turn any startup or fatal exception into one logged line and a non-zero exit</td>
+<td>the process environment</td>
+<td>the running node</td>
+</tr>
+<tr>
+<td><code>observer/v2x_listener</code></td>
+<td>the R2 receive thread: one blocking receive per datagram on <code>V2X_LISTEN_HOST:V2X_LISTEN_PORT</code></td>
+<td>UDP datagrams</td>
+<td>raw bodies onto the input queue</td>
+</tr>
+<tr>
+<td><code>observer/detector_reader</code></td>
+<td>the detector's lifecycle and its stdout: spawn <code>DETECTOR_CMD</code>, read lines, respawn on EOF or a non-zero exit within <code>DETECTOR_RESTART_MAX</code> (D2)</td>
+<td>the subprocess pipe</td>
+<td>raw JSONL lines onto the queue; <code>detector_spawn</code>, <code>detector_eof</code>, <code>detector_restart</code></td>
+</tr>
+<tr>
+<td><code>observer/input_queue</code></td>
+<td>the one bounded queue: two producers, one consumer, so the main thread stays the single writer</td>
+<td>items from both readers</td>
+<td>items in arrival order</td>
+</tr>
+<tr>
+<td><code>parser/r2_parser</code></td>
+<td>R2 → <code>TrackedObject</code> with <code>source = v2x_relayed</code> and id <code>v2x:&lt;stationId&gt;:&lt;objectId&gt;</code>, applying §10.1's mapping rules. A malformed body is rejected and counted, never fatal</td>
+<td>a raw R2 body</td>
+<td>one <code>TrackedObject</code>, or one <code>parse_reject</code></td>
+</tr>
+<tr>
+<td><code>parser/r3_parser</code></td>
+<td>one detector JSONL line → <code>TrackedObject</code> with <code>source = own_sensor</code>, ignoring the incoming <code>state</code> (D3)</td>
+<td>a raw JSONL line</td>
+<td>one <code>TrackedObject</code>, or one <code>parse_reject</code></td>
+</tr>
+<tr>
+<td><code>output/warning_builder</code></td>
+<td>the node's only R4 producer: <code>RiskFinding</code> plus geometry onto the frozen binding (D7)</td>
+<td>a committed risk transition</td>
+<td>one serialized R4 warning event</td>
+</tr>
+<tr>
+<td><code>output/ivi_sender</code></td>
+<td>the only R4 egress: one datagram per event to <code>IVI_ECU_HOST:IVI_ECU_PORT</code></td>
+<td>the serialized event</td>
+<td>one UDP datagram; one <code>r4_tx</code> carrying the body</td>
+</tr>
+<tr>
+<td><code>net/udp_socket</code></td>
+<td>the only code that includes a socket header; both the listener and the sender consume it, and transient errors are counted and logged rather than thrown</td>
+<td>bind, receive, send calls</td>
+<td>datagrams and error counts</td>
+</tr>
+<tr>
+<td><code>detector/main</code></td>
+<td>the detector's composition root: read env, open the frame source, drive source → pacer → inference → distance → tracker → emit, and exit non-zero on an unrecoverable error</td>
+<td>the process environment</td>
+<td>the R3 JSONL stream on stdout</td>
+</tr>
+<tr>
+<td><code>detector/pacer</code></td>
+<td>the D10 deadline scheduler: hold each sampled frame until its wall-clock instant, and apply <code>DETECTOR_START_DELAY_S</code> before the first</td>
+<td>sampled frames, <code>DETECTOR_CLIP_FPS</code>, the stride</td>
+<td>the same frames, released on schedule</td>
+</tr>
+<tr>
+<td><code>detector/emit</code></td>
+<td>one R3 JSONL line per detection per sampled frame, through the frozen binding</td>
+<td>a tracked detection</td>
+<td>one line on stdout</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="configuration-and-descriptors">Configuration and descriptors<a class="headerlink" href="#configuration-and-descriptors" title="Link to this section">¶</a></h3>
+<p>Every runtime value the deployment wires enters through env. Core values are read by <code>config/config</code>, detector values by <code>detector/config</code>, and each is read in exactly one place.</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Env — core</th>
+<th>Default</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>V2X_LISTEN_HOST</code> · <code>V2X_LISTEN_PORT</code></td>
+<td><code>0.0.0.0</code> · <code>47200</code></td>
+<td>the R2 ingress</td>
+</tr>
+<tr>
+<td><code>IVI_ECU_HOST</code> · <code>IVI_ECU_PORT</code></td>
+<td><code>10.99.0.13</code> · <code>47300</code></td>
+<td>the R4 egress</td>
+</tr>
+<tr>
+<td><code>GATE_ENTER_M</code> · <code>GATE_EXIT_M</code></td>
+<td><code>30</code> · <code>35</code></td>
+<td>the R13 admission and drop gate (D3)</td>
+</tr>
+<tr>
+<td><code>CONFIRM_HITS</code></td>
+<td><code>3</code></td>
+<td>in-gate updates before <code>tracked</code> (D3)</td>
+</tr>
+<tr>
+<td><code>TRACK_TIMEOUT_MS</code></td>
+<td><code>1000</code></td>
+<td>monotonic silence before a track is erased (D3, D10)</td>
+</tr>
+<tr>
+<td><code>FUSION_TICK_MS</code></td>
+<td><code>100</code></td>
+<td>the expiry and assessment tick (D2)</td>
+</tr>
+<tr>
+<td><code>DETECTOR_ENABLED</code> · <code>DETECTOR_CMD</code></td>
+<td><code>true</code> · <code>python3 /app/detector/main.py</code></td>
+<td>the detector spawn; the fixture override is how the core runs without a model (D2)</td>
+</tr>
+<tr>
+<td><code>DETECTOR_RESTART_MAX</code></td>
+<td><code>5</code></td>
+<td>bounded restarts after a non-zero exit (D2)</td>
+</tr>
+<tr>
+<td><code>CRA_ENABLED</code></td>
+<td><code>nlos_obstruction</code></td>
+<td>the active plugin list (D4)</td>
+</tr>
+<tr>
+<td><code>RISK_NEAR_M</code> · <code>RISK_CRITICAL_M</code></td>
+<td><code>60</code> · <code>30</code></td>
+<td>the <code>medium</code> and <code>high</code> thresholds on the composed range <code>d_AC</code> (D5, D11)</td>
+</tr>
+<tr>
+<td><code>RISK_TTC_WARN_S</code> · <code>RISK_TTC_CRITICAL_S</code></td>
+<td><code>6</code> · <code>3</code></td>
+<td>the <code>medium</code> and <code>high</code> TTC thresholds (D5)</td>
+</tr>
+<tr>
+<td><code>RISK_DWELL_MS</code></td>
+<td><code>300</code></td>
+<td>the debounce before a transition commits (D5)</td>
+</tr>
+<tr>
+<td><code>STATE_RATE_HZ</code></td>
+<td><code>0</code></td>
+<td>the optional R15 periodic awareness state (D7)</td>
+</tr>
+<tr>
+<td><code>EVENT_LOG_PATH</code> · <code>ASSESS_LOG_EVERY_MS</code></td>
+<td><em>(empty = stdout only)</em> · <code>1000</code></td>
+<td>the R18 file sink and the assessment heartbeat (D8)</td>
+</tr>
+<tr>
+<td><code>CAPTURE_FILTER</code> · <code>PCAP_DIR</code> · <code>CAPTURE_ROTATE_S</code></td>
+<td><code>udp</code> · <code>/data/capture</code> · <code>60</code></td>
+<td>the capture (D9)</td>
+</tr>
+</tbody>
+</table></div>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Env — detector</th>
+<th>Default</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>VIDEO_CLIP_PATH</code></td>
+<td><code>/app/media/ego-b-occluding-c.mp4</code></td>
+<td>the clip <code>FileFrameSource</code> opens (D6)</td>
+</tr>
+<tr>
+<td><code>DETECTOR_FRAME_STRIDE</code></td>
+<td><code>4</code></td>
+<td>decimation: every Nth decoded frame is sampled</td>
+</tr>
+<tr>
+<td><code>DETECTOR_LOOP</code></td>
+<td><code>true</code></td>
+<td>restart the clip at EOF (D2)</td>
+</tr>
+<tr>
+<td><code>DETECTOR_REALTIME_PACING</code></td>
+<td><code>true</code></td>
+<td>release sampled frames at wall-clock rate rather than as fast as the CPU allows; <code>true</code> for every demo run, since clip time is run time only under pacing (D10, D11)</td>
+</tr>
+<tr>
+<td><code>DETECTOR_CLIP_FPS</code></td>
+<td><code>20.0</code> — the committed clip's declared rate</td>
+<td>the rate pacing targets; overridable (D10)</td>
+</tr>
+<tr>
+<td><code>DETECTOR_START_DELAY_S</code></td>
+<td><code>0.0</code></td>
+<td>grace from spawn before the first emitted frame (D10)</td>
+</tr>
+<tr>
+<td><code>MODEL_PATH</code></td>
+<td><code>/app/models/yolo11n.onnx</code></td>
+<td>the ONNX session</td>
+</tr>
+<tr>
+<td><code>CONF_THRESHOLD</code> · <code>IOU_THRESHOLD</code></td>
+<td><code>0.35</code> · <code>0.45</code></td>
+<td>the detection score floor and the NMS overlap</td>
+</tr>
+<tr>
+<td><code>TRACK_IOU_MIN</code></td>
+<td><code>0.3</code></td>
+<td>the frame-to-frame association floor (D6)</td>
+</tr>
+<tr>
+<td><code>VEHICLE_WIDTH_M</code> · <code>CAMERA_HFOV_DEG</code></td>
+<td><code>1.8</code> · <code>60</code></td>
+<td>the pinhole distance inputs (D6)</td>
+</tr>
+</tbody>
+</table></div>
+<p>The addresses, the ports and the two gate constants are fixed by a committed source — <a href="requirements-car-sky-guide-node-ada-ecu.html#blueprint-node-config">node-ada-ecu.md</a> and <a href="documents-plan-milestone1-high-level-plan.html#track-admission-gate-r13">milestone1_high_level_plan.md §4</a>. Every other default above is this design's proposal. A value the blueprint omits falls through to the app's own default, never to an <code>ENV</code> baked into the image.</p>
+<p><strong>Startup validation.</strong> <code>config/config</code> asserts the rules below and nothing beyond them. A violation names the offending key and exits non-zero. Each rule orders values of one quantity, or bounds a single value. <strong>No rule relates a risk threshold to a gate threshold</strong>, because the two measure different ranges (D5).</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Rule</th>
+<th>Quantity it constrains</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>0 &lt; GATE_ENTER_M &lt; GATE_EXIT_M</code></td>
+<td>the relayed or estimated range of one source, <code>d_BC</code> or <code>d_AB</code> — the R13 Schmitt band (D3)</td>
+</tr>
+<tr>
+<td><code>0 &lt; RISK_CRITICAL_M &lt; RISK_NEAR_M</code></td>
+<td>the composed range <code>d_AC</code> — the R14 bands (D5)</td>
+</tr>
+<tr>
+<td><code>0 &lt; RISK_TTC_CRITICAL_S &lt; RISK_TTC_WARN_S</code></td>
+<td>time to collision on <code>d_AC</code> (D5)</td>
+</tr>
+<tr>
+<td><code>CONFIRM_HITS ≥ 1</code>; <code>TRACK_TIMEOUT_MS &gt; 0</code>; <code>FUSION_TICK_MS &gt; 0</code>; <code>RISK_DWELL_MS ≥ 0</code>; <code>STATE_RATE_HZ ≥ 0</code>; <code>DETECTOR_RESTART_MAX ≥ 0</code></td>
+<td>a single value's domain</td>
+</tr>
+<tr>
+<td>ports in 1–65535; hosts non-empty; <code>CRA_ENABLED</code> naming registered plugins only</td>
+<td>a single value's domain</td>
+</tr>
+<tr>
+<td><code>DETECTOR_CLIP_FPS &gt; 0</code>; <code>DETECTOR_FRAME_STRIDE ≥ 1</code>; <code>DETECTOR_START_DELAY_S ≥ 0</code>, asserted by <code>detector/config</code></td>
+<td>a single value's domain, detector side</td>
+</tr>
+</tbody>
+</table></div>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Artifact</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>contracts/*.schema.json</code></td>
+<td>the byte-synced R2, R3 and R4 schemas the bindings bind against (D1)</td>
+</tr>
+<tr>
+<td><code>schema/cra-assessment-record.schema.json</code></td>
+<td>the R14 assessment-record schema, node-local (D4)</td>
+</tr>
+<tr>
+<td><code>Dockerfile</code> · <code>entrypoint.sh</code> · <code>capture.sh</code></td>
+<td>the image, the process launch and the capture (D9)</td>
+</tr>
+<tr>
+<td><code>media/ego-b-occluding-c.source.md</code></td>
+<td>the clip's provenance, licence and encode parameters</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="7-external-related-components">7. External related components<a class="headerlink" href="#7-external-related-components" title="Link to this section">¶</a></h2>
+<p>Outside the node boundary: the <code>V2X-ECU</code> and <code>IVI-ECU</code> interfaces and the View Log of §5, plus the contract sources and the test equipment below.</p>
+<ul>
+<li><strong>The frozen schemas live in <code>contracts/</code> at the repo root.</strong> This folder holds byte-synced copies gated by <code>contracts/check_sync.py</code>; a copy edited in place is a drift defect the gate fails on (D1).</li>
+<li><strong>The shared samples live there too</strong> and are synced into <code>tests/fixtures/samples/</code> and the detector's test resources.</li>
+</ul>
+<h3 id="test-equipment">Test equipment<a class="headerlink" href="#test-equipment" title="Link to this section">¶</a></h3>
+<p>Scaffolding for exercising this node alone. None of it ships in the node image.</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Role</th>
+<th>Input</th>
+<th>Output</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>tools/ada-bench/</code> → <code>m1-ada-bench:latest</code>, at the repo root</td>
+<td>replaces both neighbours in the isolated Room: <code>ROLE=v2x_mock</code> emits R2 at <code>10.99.0.11</code>, <code>ROLE=ivi_mock</code> binds <code>47300</code> at <code>10.99.0.13</code> and checks every warning</td>
+<td>env-configured profile, rate and distance walk</td>
+<td>R2 datagrams; <code>[RX]</code>, <code>[CHECK]</code>, <code>[SUMMARY]</code> and <code>[CAP]</code> lines</td>
+</tr>
+<tr>
+<td><code>tests/fixtures/own_sensor_mock.jsonl</code></td>
+<td>a recorded own-sensor stream the real <code>detector_reader</code> replays through <code>DETECTOR_CMD</code>, so the core runs with no model and no clip (D2)</td>
+<td>—</td>
+<td>R3 JSONL lines</td>
+</tr>
+<tr>
+<td><code>tools/make_sample_video.py</code></td>
+<td>a synthetic clip proving the decoder and the JSONL path in CI; it cannot produce R12 detection evidence (D6)</td>
+<td>—</td>
+<td>a short <code>.mp4</code></td>
+</tr>
+<tr>
+<td><code>tools/check_zero_c.py</code> · <code>tools/check_run_alignment.py</code> · <code>tools/event_report.py</code></td>
+<td>host-side readers of this node's own output</td>
+<td>the <code>[EVT]</code> stream, the detector's R3 JSONL, the bench's <code>[TX]</code> JSONL</td>
+<td>the zero-C verdict, the K1–K6 verdict, the collision-risk event list</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>A mock of another node never lives in this folder.</strong> <code>tools/ada-bench/</code> sits at the repo root so it can change without rebuilding the thing it tests, and so bench code cannot ship inside the real image (<a href="claude-rules-node-code-layout.html#tools--test-equipment-and-ecu-mocks">node-code-layout § <code>tools/</code></a>, <a href="requirements-car-sky-guide-deploy-ada-ecu-walkthrough.html#24-where-the-bench-sources-live-and-why">walkthrough §2.4</a>). The scripts in <code>ADA_ECU/tools/</code> mock nothing: they read this node's own logs, build no image, and are excluded from the build context.</p>
+<h2 id="8-interfaces-ports-and-the-layer-rule">8. Interfaces, ports and the layer rule<a class="headerlink" href="#8-interfaces-ports-and-the-layer-rule" title="Link to this section">¶</a></h2>
+<ul>
+<li><strong><code>V2X-ECU</code> and <code>IVI-ECU</code></strong> — the node's two outside dependencies, and addresses rather than implementations (§5).</li>
+<li><strong><code>udp :47200</code></strong> — bound by <code>observer/v2x_listener</code> through <code>net/udp_socket</code>; the node's only listening port.</li>
+<li><strong><code>udp → 10.99.0.13:47300</code></strong> — the egress on <code>output/ivi_sender</code> through the same holder; the node's only outbound socket. Nothing else opens one.</li>
+<li><strong>The detector process contract</strong> — argv in, exit code out, one R3 JSONL object per stdout line. <code>observer/detector_reader</code> requires it; <code>detector/main.py</code> provides it in a run, and a fixture replayed through <code>DETECTOR_CMD</code> provides it in a test (D2).</li>
+<li><strong><code>ICollisionRiskAssessment</code></strong> — the R14 seam. <code>cra/registry</code> requires it; <code>ChainedCollision</code> and every future plugin provide it (D4).</li>
+<li><strong><code>FrameSource</code></strong> — the detector's acquisition seam. <code>detector/main</code> requires it; <code>FileFrameSource</code> and <code>SyntheticFrameSource</code> provide it, and a live source would be a third (D6).</li>
+<li><strong><code>Detector</code></strong> — the model seam inside <code>detector/inference</code>, so the network swaps without touching the pipeline.</li>
+</ul>
+<p>No layer is collapsed: the admission machine cannot reach a socket, a plugin cannot send a datagram, and the detector cannot reach the store — its only route in is one JSONL line through a parser.</p>
+<h3 id="protocol-stack">Protocol stack<a class="headerlink" href="#protocol-stack" title="Link to this section">¶</a></h3>
+<p><img alt="The protocol stack carrying the two network channels this node terminates" src="../../presentation/assets/phase2-4-ada-protocol-stack.svg" /></p>
+<p>Source: <a href="../../presentation/assets/phase2-4-ada-protocol-stack.svg">phase2-4-ada-protocol-stack.svg</a>.</p>
+<p>Two channels cross the network — R2 inbound and R4 outbound — and they share every layer below the encoding row. Which component owns each layer:</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Owned here by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Message</td>
+<td><code>contracts/r2_message</code>'s <code>R2Message</code> inbound (§10.1); <code>contracts/r4_message</code>'s <code>R4WarningEvent</code> outbound (§10.3), with the <code>contracts/tracked_object</code> record nested inside it (§10.2)</td>
+</tr>
+<tr>
+<td>Encoding</td>
+<td>the nlohmann/json bindings inside those three contract types — UTF-8 JSON, one object per datagram, unknown fields ignored on the inbound side</td>
+</tr>
+<tr>
+<td>Transport, network, link</td>
+<td><code>net/udp_socket</code> alone — the layer rule above is what keeps it there</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>The stack carries no ASN.1 and no ITS envelope.</strong> This node never sees a CPM; the air message is decoded one hop upstream, so nothing here links a codec (<a href="#11-tech-stack-build-and-ci">§11</a>).</li>
+<li><strong>IPv4 is static and routerless.</strong> Every peer sits on <code>10.99.0.0/24</code> with this node at <code>10.99.0.12</code>, and the link layer is the CarSky Ethernet Bridge — one simulated L2 segment, since the pod has no physical interface (R6).</li>
+<li><strong>The detector channel is outside the stack.</strong> <code>observer/detector_reader</code> spawns <code>detector/main.py</code> as a child process in the same container and reads R3 records from its standard output: an OS pipe supplies no addressing, no ports and no framing, so newlines delimit the messages and nothing sits beneath the JSON (D2).</li>
+<li><strong>That asymmetry is a behavioural difference, not a notational one.</strong> The pipe is ordered and lossless and blocks when its buffer fills, where UDP discards the datagram — which is why back-pressure appears on the detector path and loss appears on the network paths.</li>
+</ul>
+<h2 id="9-call-flow">9. Call flow<a class="headerlink" href="#9-call-flow" title="Link to this section">¶</a></h2>
+<p><a href="../../documents/Design/ADA-ECU/phase2-4-ada-ecu-callflow.puml">phase2-4-ada-ecu-callflow.puml</a> — PlantUML sequence: bring-up and detector spawn, then B detected in the clip → R3 JSONL → store, relayed C → store, and the fusion tick driving expiry → R13 admission → R14 assessment → R15 emission → IVI, with the parse-reject, <code>b_unknown</code> and detector-EOF branches.</p>
+<h2 id="10-the-contract">10. The contract<a class="headerlink" href="#10-the-contract" title="Link to this section">¶</a></h2>
+<p>This node sits between two frozen contracts and owns a third. It <strong>consumes R2</strong> from the V2X ECU, <strong>produces R4</strong> to the IVI ECU, and holds every object in the <strong>R3</strong> shape in between. All three are frozen: a field change is a re-freeze across every consumer, and the node's copies under <code>contracts/</code> are byte-synced to the normative files (D1).</p>
+<h3 id="101-r2-the-message-set-from-the-v2x-ecu-consumed">10.1 R2 — the message set from the V2X ECU (consumed)<a class="headerlink" href="#101-r2-the-message-set-from-the-v2x-ecu-consumed" title="Link to this section">¶</a></h3>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Direction</td>
+<td>V2X-ECU → ADA-ECU, one way</td>
+</tr>
+<tr>
+<td>Transport</td>
+<td>UDP to <code>10.99.0.12:47200</code>, one message per datagram</td>
+</tr>
+<tr>
+<td>Encoding</td>
+<td>UTF-8 JSON, one <code>type: "v2x_object"</code> message per perceived-object update</td>
+</tr>
+<tr>
+<td>Normative schema</td>
+<td><a href="../../contracts/r2-v2x-object.schema.json">r2-v2x-object.schema.json</a></td>
+</tr>
+<tr>
+<td>Node copy</td>
+<td><code>ADA_ECU/contracts/r2-v2x-object.schema.json</code>; <code>src/contracts/r2_message</code> binds against it</td>
+</tr>
+</tbody>
+</table></div>
+<p>The schema's field table is normative and is not restated. What this node owes it, at the <code>parser/r2_parser</code> boundary:</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Obligation</th>
+<th>How it is met</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>object.distance</code> is R13's admission input, and the V2X ECU derives it — this node never recomputes it</td>
+<td><code>admission</code> reads the field as received</td>
+</tr>
+<tr>
+<td><code>object.confidence</code> is nullable when the CPM confidence was unavailable, while R3 <code>confidence</code> is required in 0–1</td>
+<td>a null maps to <code>0.0</code>, the lowest confidence; the received value stays visible in the <code>r2_ingest</code> payload</td>
+</tr>
+<tr>
+<td><code>position.confidence</code> is a position accuracy in metres and has no R3 home</td>
+<td>it is carried in the <code>r2_ingest</code> payload and dropped from the track</td>
+</tr>
+<tr>
+<td><code>sender.speed</code> is nullable until the V2X ECU has seen two CPMs from that station</td>
+<td>this node reads it for evidence only; no rule depends on it</td>
+</tr>
+<tr>
+<td>Track identity must not collide with an own-sensor id</td>
+<td>the id is <code>v2x:&lt;stationId&gt;:&lt;objectId&gt;</code>, a namespace the detector cannot mint (D3)</td>
+</tr>
+<tr>
+<td><code>rxTime</code> is the V2X ECU's clock</td>
+<td>it is a record value; no arithmetic mixes it with this node's clock (D10)</td>
+</tr>
+<tr>
+<td>Unknown extra fields are tolerated</td>
+<td>the binding ignores them, per the Phase 0 additive-version rule</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="102-r3-the-object-model-of-the-store-owned">10.2 R3 — the object model of the store (owned)<a class="headerlink" href="#102-r3-the-object-model-of-the-store-owned" title="Link to this section">¶</a></h3>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Role</td>
+<td>the one schema every perception source conforms to, so sources are interchangeable behind one interface</td>
+</tr>
+<tr>
+<td>Crossing points</td>
+<td>the detector's stdout JSONL (own-sensor entries), and the <code>object</code> field of an R4 warning (§10.3)</td>
+</tr>
+<tr>
+<td>Normative schema</td>
+<td><a href="../../contracts/r3-tracked-object.schema.json">r3-tracked-object.schema.json</a></td>
+</tr>
+<tr>
+<td>Node copies</td>
+<td><code>ADA_ECU/contracts/r3-tracked-object.schema.json</code>, bound by <code>src/contracts/tracked_object</code> in the core and <code>detector/contracts/tracked_object</code> in the detector</td>
+</tr>
+</tbody>
+</table></div>
+<p>Two fields need a rule beyond the schema, because the schema cannot say who fills them.</p>
+<ul>
+<li><strong><code>state</code> is written by the store alone</strong> (D3). An incoming detector line or R2-derived object carries <code>not_tracked</code> by convention, and that value is ignored.</li>
+<li><strong><code>timestamps</code> are filled per source</strong>, all from <code>CLOCK_REALTIME</code> (D10):</li>
+</ul>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Field</th>
+<th><code>v2x_relayed</code></th>
+<th><code>own_sensor</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>measured</code></td>
+<td><code>rxTime + timeOfMeasurement</code> — both from the same R2 message, so one clock domain</td>
+<td>the detector's stamp at frame capture</td>
+</tr>
+<tr>
+<td><code>received</code></td>
+<td><code>rxTime</code> — the V2X ECU's clock, as a record value</td>
+<td>the detector's emit time</td>
+</tr>
+<tr>
+<td><code>lastUpdated</code></td>
+<td>this node's clock at the store write</td>
+<td>this node's clock at the store write</td>
+</tr>
+</tbody>
+</table></div>
+<p>Track expiry does not read <code>lastUpdated</code>; it compares the parallel monotonic stamp <code>track_store</code> keeps beside each entry (D10).</p>
+<h3 id="103-r4-the-message-set-to-the-ivi-ecu-produced">10.3 R4 — the message set to the IVI ECU (produced)<a class="headerlink" href="#103-r4-the-message-set-to-the-ivi-ecu-produced" title="Link to this section">¶</a></h3>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Direction</td>
+<td>ADA-ECU → IVI-ECU, one way</td>
+</tr>
+<tr>
+<td>Transport</td>
+<td>UDP to <code>10.99.0.13:47300</code>, one message per datagram, no framing header</td>
+</tr>
+<tr>
+<td>Encoding</td>
+<td>UTF-8 JSON</td>
+</tr>
+<tr>
+<td>Normative schema</td>
+<td><a href="../../contracts/r4-ada-ivi.schema.json">r4-ada-ivi.schema.json</a>, embedding the R3 schema</td>
+</tr>
+<tr>
+<td>Node copy</td>
+<td><code>ADA_ECU/contracts/r4-ada-ivi.schema.json</code>; <code>src/contracts/r4_message</code> binds against it, and <code>output/warning_builder</code> is its only producer (D7)</td>
+</tr>
+</tbody>
+</table></div>
+<p>Two message kinds share the port, discriminated by <code>type</code>.</p>
+<p><strong><code>type: "warning"</code></strong> — edge-triggered, the committed message, emitted on every committed change of <code>riskState</code> for a <code>(warningType, trackId)</code> in both directions (D5):</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Filled from</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>schemaVersion</code> · <code>type</code></td>
+<td>the binding's constants</td>
+</tr>
+<tr>
+<td><code>warningType</code></td>
+<td>the plugin's registry key; M1 emits <code>nlos_obstruction</code> (D4)</td>
+</tr>
+<tr>
+<td><code>riskState</code></td>
+<td>the <code>RiskFinding</code>'s level — <code>low</code>, <code>medium</code> or <code>high</code> (D5)</td>
+</tr>
+<tr>
+<td><code>object</code></td>
+<td>the R3 snapshot of the triggering track C, from the store, or from the assessment record's <code>lastSnapshot</code> once the track has been erased (D4)</td>
+</tr>
+<tr>
+<td><code>geometry.ego</code></td>
+<td>the frame origin</td>
+</tr>
+<tr>
+<td><code>geometry.vehicleB</code></td>
+<td>the nearest own-sensor track, or <code>lastKnownB</code> on a clearing event — the field is required and never null (D5)</td>
+</tr>
+<tr>
+<td><code>geometry.vehicleC</code></td>
+<td>the composed C position, and null exactly when C's track has been erased</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong><code>object.source</code> is what the R19 claim rests on.</strong> It is <code>v2x_relayed</code> on every warning this node emits, because only a relayed track can be C (D6); the IVI's provenance guard renders ghost C on that value alone.</p>
+<p><strong><code>type: "state"</code></strong> — the optional periodic awareness state of R15: <code>schemaVersion</code>, <code>type</code>, <code>seq</code> and <code>vehicles</code> with the same three positions, last-value-wins by <code>seq</code>. <code>STATE_RATE_HZ = 0</code> leaves it off, and no acceptance criterion depends on it (D7).</p>
+<h2 id="11-tech-stack-build-and-ci">11. Tech stack, build and CI<a class="headerlink" href="#11-tech-stack-build-and-ci" title="Link to this section">¶</a></h2>
+<p>No dependency outside this table enters the node without a design change. Traces are to <a href="requirements-m1-cooperative-awareness.html">m1-cooperative-awareness.md</a> and to the <a href="documents-design-ada-ecu-ada-ecu-design-decisions.html">decision record</a>.</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Area</th>
+<th>Stack</th>
+<th>Trace</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Core</td>
+<td>C++17: one process, two receive threads, a single-writer main loop</td>
+<td>report §3(d); D2</td>
+</tr>
+<tr>
+<td>Messages</td>
+<td>nlohmann/json through the frozen bindings — R2 in, R3 in the store, R4 out</td>
+<td>R2/R3/R4 tech stack; D1</td>
+</tr>
+<tr>
+<td>Transport</td>
+<td>POSIX UDP through <code>src/net/</code></td>
+<td>report §3(f), R6</td>
+</tr>
+<tr>
+<td>Detector</td>
+<td>Python 3.11; YOLO11n exported to ONNX on ONNX Runtime CPU; OpenCV <code>opencv-python-headless</code> decode; numpy</td>
+<td>report §3(g), R12; D6</td>
+</tr>
+<tr>
+<td>Process boundary</td>
+<td>argv, exit codes and R3 JSONL over stdout — no FFI, no RPC</td>
+<td>report §3(d); D2</td>
+</tr>
+<tr>
+<td>Build and test</td>
+<td>CMake ≥ 3.22 with GoogleTest and CTest; pytest with jsonschema</td>
+<td>Phase 0 toolchain</td>
+</tr>
+<tr>
+<td>Evidence</td>
+<td>JSONL <code>[EVT]</code> stream; tcpdump for the ADA→IVI capture</td>
+<td>R18; R15/R19; D8, D9</td>
+</tr>
+<tr>
+<td>Image</td>
+<td>Docker multi-stage, one base <code>python:3.11-slim</code>, single-platform <code>linux/arm64</code></td>
+<td>R5; D9</td>
+</tr>
+</tbody>
+</table></div>
+<p>Deliberately absent: Vanetza, since this node never touches UPER; any database engine (D4); any tracking or monocular-depth library (D6).</p>
+<p>Build commands, from the repo root:</p>
+<pre><code>cmake -S ADA_ECU -B ADA_ECU/build &amp;&amp; cmake --build ADA_ECU/build -j
+ctest --test-dir ADA_ECU/build --output-on-failure
+python -m pytest ADA_ECU/detector/tests
+docker buildx build --platform linux/arm64 --provenance=false --sbom=false -t m1-ada-ecu:latest ADA_ECU/
+</code></pre>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>CI lane</th>
+<th>File</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ada-core-build</code></td>
+<td><a href="../../.github/workflows/phase2-ci.yml">phase2-ci.yml</a></td>
+<td>configure, build and <code>ctest</code> the C++ core on a plain runner</td>
+</tr>
+<tr>
+<td><code>ada-detector-tests</code></td>
+<td><code>phase3-ci.yml</code></td>
+<td>the detector suite, against <code>SyntheticFrameSource</code></td>
+</tr>
+<tr>
+<td><code>contracts-gate</code></td>
+<td><a href="../../.github/workflows/phase0-ci.yml">phase0-ci.yml</a></td>
+<td>byte-identity of this folder's schema and sample copies (D1)</td>
+</tr>
+<tr>
+<td><code>ada-ecu-image</code></td>
+<td><a href="../../.github/workflows/phase4-ci.yml">phase4-ci.yml</a></td>
+<td>the <code>linux/arm64</code> image build from context <code>ADA_ECU/</code>, pushed to Zot when <code>CARSKY_ZOT_API_KEY</code> is set</td>
+</tr>
+</tbody>
+</table></div>
+<p>The image lane runs under emulation on an x86_64 runner, so its timeout matches the existing image lanes. A green image lane is not evidence that a tag reached the registry — the push step is gated on the secret (<a href="claude-rules-node-code-layout.html#build-rules-all-container-nodes">node-code-layout § Build rules</a>). The bench image the isolated Room needs is built by its own lane from <code>tools/ada-bench/</code> (<a href="requirements-car-sky-guide-deploy-ada-ecu-walkthrough.html#32-build-and-push-the-images-on-ci">walkthrough §3.2</a>).</p>
+<h2 id="12-test-strategy">12. Test strategy<a class="headerlink" href="#12-test-strategy" title="Link to this section">¶</a></h2>
+<p>Four configurations exercise the same node, differing only in what stands at the two edges.</p>
+<ul>
+<li><strong>Unit — no network, no subprocess.</strong> GoogleTest over the pure modules with injected values and fixtures; pytest over the detector modules with <code>SyntheticFrameSource</code>. This is where the D3 gate boundaries at 30 m and 35 m, the D5 band table, the composed geometry and the pinhole maths are proved against hand-computed values.</li>
+<li><strong>Fixture-driven core.</strong> <code>DETECTOR_ENABLED=true</code> with <code>DETECTOR_CMD</code> replaying <code>tests/fixtures/own_sensor_mock.jsonl</code> through the real reader, and relayed traffic arriving as real datagrams on the real socket. The core runs whole with no model and no clip, and no branch inside <code>src/</code> knows the difference (D2).</li>
+<li><strong>Isolated Room</strong> — the walkthrough's four-node blueprint: the bridge, <code>tools/ada-bench/</code> as <code>v2x_mock</code> at <code>.11</code>, this node at <code>.12</code>, and <code>ada-bench</code> as <code>ivi_mock</code> at <code>.13</code>.</li>
+<li><strong>Full blueprint</strong> — the real bench, V2X ECU and IVI Skycraft node at the same addresses and ports.</li>
+</ul>
+<p><strong>Expected output is identical in the last two</strong>, because this node's image, <code>command</code>, <code>capabilities</code> and env are unchanged between them (§5) — a difference between the runs is a neighbour finding, not an ADA one.</p>
+<p>Expected observables, per <a href="requirements-car-sky-guide-deploy-ada-ecu-walkthrough.html#8-expected-outputs-and-acceptance">walkthrough § Expected outputs and acceptance</a>:</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Observable</th>
+<th>Produced by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>detector_spawn</code>, then <code>own_sensor_ingest</code> one line per detection per sampled frame</td>
+<td><code>observer/detector_reader</code>, <code>detector/emit</code></td>
+</tr>
+<tr>
+<td><code>r2_ingest</code> carrying the received R2 body, at ≥ 90 % of the producer's send count</td>
+<td><code>observer/v2x_listener</code> → <code>parser/r2_parser</code> → <code>log/event_log</code></td>
+</tr>
+<tr>
+<td><code>parse_reject</code> count 0 against a conforming producer</td>
+<td><code>parser/r2_parser</code>, <code>parser/r3_parser</code></td>
+</tr>
+<tr>
+<td><code>track_transition</code> to <code>tentative</code> then <code>tracked</code> for <code>v2x:&lt;stationId&gt;:&lt;objectId&gt;</code>, <code>"source":"v2x_relayed"</code></td>
+<td><code>store/admission</code></td>
+</tr>
+<tr>
+<td><code>track_transition</code> to <code>tracked</code> for <code>own:&lt;n&gt;</code>, <code>"source":"own_sensor"</code></td>
+<td><code>store/admission</code></td>
+</tr>
+<tr>
+<td>zero own-sensor entries claiming a relayed source or a <code>v2x:</code> id, and zero relayed entries claiming an <code>own:</code> id</td>
+<td>structural (D6), asserted by <code>tools/check_zero_c.py</code></td>
+</tr>
+<tr>
+<td><code>assessment</code> carrying <code>d_AC</code>, the TTC and the rationale; <code>risk_transition</code> on each committed change</td>
+<td><code>cra/plugins/chained_collision</code></td>
+</tr>
+<tr>
+<td><code>r4_tx</code> carrying the emitted R4 body, with <code>object.source</code> <code>v2x_relayed</code> and numeric <code>geometry.vehicleB</code></td>
+<td><code>output/warning_builder</code> → <code>output/ivi_sender</code></td>
+</tr>
+<tr>
+<td><code>[CAP] IP 10.99.0.12.&lt;port&gt; &gt; 10.99.0.13.47300: UDP</code></td>
+<td><code>capture.sh</code></td>
+</tr>
+<tr>
+<td>with the relayed object held beyond the gate, <code>r2_ingest</code> still counting up and no relayed <code>track_transition</code> at all</td>
+<td><code>store/admission</code>'s gate — the negative case</td>
+</tr>
+</tbody>
+</table></div>
+<p>The single strongest line is <code>r4_tx</code>: it proves both tracks existed at the same instant rather than at two different times, which is Phase 4's output acceptance.</p>
+<p>R20/R21/R22 alignment is checked after a run by <code>tools/check_run_alignment.py</code> (D10, D11). K1–K3 and K6 read this node's <code>[EVT]</code> stream, K4 the detector's R3 JSONL, K5 the bench's <code>[TX]</code> JSONL — each check stays inside one clock domain.</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Check</th>
+<th>Bound</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>K1</td>
+<td>at every <code>r4_tx</code>, a <code>tracked</code> <code>own_sensor</code> B entry exists whose <code>lastUpdated</code> is within <code>TRACK_TIMEOUT_MS</code></td>
+<td>pass</td>
+</tr>
+<tr>
+<td>K2</td>
+<td>the first <code>own_sensor</code> → <code>tracked</code> transition precedes the first <code>v2x_relayed</code> → <code>tracked</code> transition</td>
+<td>≥ 1.0 s</td>
+</tr>
+<tr>
+<td>K3</td>
+<td><code>max │lastUpdated(own_sensor B) − lastUpdated(v2x_relayed C)│</code> over all <code>r4_tx</code></td>
+<td>≤ 1000 ms</td>
+</tr>
+<tr>
+<td>K4</td>
+<td>the detector's frame-index advance against its own emit-timestamp advance, over ≥ 60 s</td>
+<td>±2 % of <code>DETECTOR_CLIP_FPS / DETECTOR_FRAME_STRIDE</code></td>
+</tr>
+<tr>
+<td>K5</td>
+<td>the bench's <code>scenario_time_s</code> advance against its <code>mono_ms</code> advance, over ≥ 60 s</td>
+<td>±1 %</td>
+</tr>
+<tr>
+<td>K6</td>
+<td>the interval from <code>T0</code> — the run's first <code>own_sensor</code> R3 line — to the first <code>r4_tx</code></td>
+<td>8.0 s ≤ Δ &lt; 10.0 s</td>
+</tr>
+</tbody>
+</table></div>
+<p>K6 is R22's ADA-side observable, and it is what the D11 configuration exists to produce. Its IVI-side counterpart, K7, is read from the guest and belongs to that node (<a href="documents-design-ivi-ecu-ivi-ecu-hld.html#12-test-strategy">ivi-ecu-hld.md §12</a>).</p>
+<h2 id="13-design-decisions">13. Design decisions<a class="headerlink" href="#13-design-decisions" title="Link to this section">¶</a></h2>
+<p><a href="documents-design-ada-ecu-ada-ecu-design-decisions.html">ada-ecu-design-decisions.md</a> — D1–D11, binding on implementation and cited by number throughout this document: the one folder and one object model (D1), the process and thread model (D2), R13 admission (D3), the R14 interface, registry and database (D4), the risk vocabulary and edge-triggered emission (D5), the R12 detector (D6), the R15 output stage (D7), the R18 evidence stream (D8), the deployment shape (D9), the clock domains with paced stimulus (D10), and the R22 run choreography (D11).</p>
+      </article>
+    </main>
+  </div>
+  <script src="../js/site-data.js"></script>
+  <script src="../js/theme.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/doc-page.js"></script>
+</body>
+</html>

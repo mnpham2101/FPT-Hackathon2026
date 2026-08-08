@@ -53,5 +53,5 @@ sample_video*.mp4
 
 # Generated source references for the sketch backdrop - the derived
 # bg-sketch-board.jpg is committed, its AI-generated sources are not
-tools/website-builder/assets/Gemini_Generated_Image_v1.png
-tools/website-builder/assets/Gemini_Generated_Image_v2.png
+website/assets/Gemini_Generated_Image_v1.png
+website/assets/Gemini_Generated_Image_v2.png

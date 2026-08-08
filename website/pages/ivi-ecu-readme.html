@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en" data-theme="sketch">
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="kis-build-pages">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IVI_ECU — IVI ECU node (R4, R16–R17) — KIS</title>
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/doc.css">
+  <link rel="stylesheet" href="../css/themes.css">
+</head>
+<body class="DocBody" data-root=".." data-doc-node="module-design" data-doc-title="IVI_ECU — IVI ECU node (R4, R16–R17)" data-doc-source="IVI_ECU/README.md">
+  <div class="DocLayout">
+    <aside class="DocLayout__aside" id="doc-toc"></aside>
+    <main class="Page DocPage">
+      <header class="PageHeader" id="doc-header"></header>
+      <article class="Markdown" id="doc-body">
+<h1 id="ivi_ecu-ivi-ecu-node-r4-r16r17">IVI_ECU — IVI ECU node (R4, R16–R17)<a class="headerlink" href="#ivi_ecu-ivi-ecu-node-r4-r16r17" title="Link to this section">¶</a></h1>
+<p>The AAOS head unit: renders the R16 HMI layout and the R17 warning view — the God view of ego (A), occluder (B), and ghost C — from R4 messages alone. Ghost C is drawn from <code>v2x_relayed</code> data only, which is what the R19 definition of done turns on.</p>
+<ul>
+<li><strong>Requirements:</strong> R4, R16–R17 — <a href="requirements-m1-cooperative-awareness.html">m1-cooperative-awareness.md</a> §2; HMI layout reference <a href="requirements-ivi-ecu.svg">ivi-ecu.svg</a>.</li>
+<li><strong>Node/deploy guide:</strong> <a href="requirements-car-sky-guide-node-ivi-ecu.html">node-ivi-ecu.md</a> — VM artifact prep, blueprint config, pins, post-deploy <code>adb install</code>, verification.</li>
+<li><strong>Build &amp; bring-up (authoritative):</strong> <a href="requirements-car-sky-guide-deploy-ivi-hmi-walkthrough.html">deploy-ivi-hmi-walkthrough.md</a> — the local and CI builds, the <code>app-debug-apk</code> CI artifact, blueprint deploy, <code>adb install</code>, launch, and the verification ladder.</li>
+<li><strong>Layout &amp; build rules:</strong> <a href="claude-rules-node-code-layout.html">node-code-layout.md</a> — Kotlin / Jetpack Compose, APK via <code>./gradlew assembleDebug</code> from this folder.</li>
+<li><strong>Plan:</strong> Phase 5 of <a href="documents-plan-milestone1-high-level-plan.html">milestone1_high_level_plan.md</a>, decomposed in <a href="plans-phase5-minh-tasks.html">phase5_minh_tasks.md</a>; wired to real ADA output in Phase 6.</li>
+</ul>
+<p>Unlike the container nodes, this is a <strong>Skycraft Node (AAOS guest)</strong> — the VM artifact ships in the starter pack, and only the team APK is built here and installed post-deploy over ADB; there is no image to push to the registry.</p>
+<h2 id="current-structure">Current structure<a class="headerlink" href="#current-structure" title="Link to this section">¶</a></h2>
+<p>Gradle project, application id <code>com.hackathon.v2x.ivi</code> (minSdk 29 / targetSdk 33, the Skycraft AAOS baseline):</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Path</th>
+<th>Holds</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/model/">app/src/main/java/com/hackathon/v2x/ivi/model/</a></td>
+<td>R4/R3-derived data types (<code>R3Snapshot</code>, <code>SceneGeometry</code>)</td>
+</tr>
+<tr>
+<td><a href="../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/ui/">app/src/main/java/com/hackathon/v2x/ivi/ui/</a></td>
+<td>UI logic — <code>MainViewModel</code>, <code>DisplayMode</code></td>
+</tr>
+<tr>
+<td><a href="../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/ui/screen/">app/src/main/java/com/hackathon/v2x/ivi/ui/screen/</a></td>
+<td>R16 layout composables</td>
+</tr>
+<tr>
+<td><a href="../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/ui/view/">app/src/main/java/com/hackathon/v2x/ivi/ui/view/</a></td>
+<td>R17 warning view behind the view seam (<code>IviWarningViewSeam</code>, <code>CanvasWarningView</code>, <code>SceneCoordinateMapper</code>)</td>
+</tr>
+</tbody>
+</table></div>
+<p>The view seam is what keeps optional 3D (SceneView/Filament) additive — new renderers implement the seam rather than editing the 2D Canvas view. Tunables are <code>buildConfigField</code>s (e.g. <code>WARNING_TIMEOUT_MS</code>), never literals in source (<a href="claude.html">CLAUDE.md</a> governing principle 5).</p>
+      </article>
+    </main>
+  </div>
+  <script src="../js/site-data.js"></script>
+  <script src="../js/theme.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/doc-page.js"></script>
+</body>
+</html>

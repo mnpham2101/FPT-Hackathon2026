@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en" data-theme="sketch">
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="kis-build-pages">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Zot Registry API Key — Get &amp; Use — KIS</title>
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/doc.css">
+  <link rel="stylesheet" href="../css/themes.css">
+</head>
+<body class="DocBody" data-root=".." data-doc-node="plans" data-doc-title="Zot Registry API Key — Get &amp; Use" data-doc-source="requirements/car-sky-guide/zot-registry-api-key.md">
+  <div class="DocLayout">
+    <aside class="DocLayout__aside" id="doc-toc"></aside>
+    <main class="Page DocPage">
+      <header class="PageHeader" id="doc-header"></header>
+      <article class="Markdown" id="doc-body">
+<h1 id="zot-registry-api-key-get-use">Zot Registry API Key — Get &amp; Use<a class="headerlink" href="#zot-registry-api-key-get-use" title="Link to this section">¶</a></h1>
+<p>The CarSky container registry runs <a href="https://registry.hackathon-2.carsky.io/">Zot</a>. Its API key (format <code>zak_...</code>) is the <strong>password for <code>docker login</code></strong> — required for every image push in this project: the netcheck smoke-test image (steps M2–M4 of <a href="plans-doc-research-notes-baseline-connectivity-smoke-test.html">baseline-connectivity-smoke-test.md</a>), the three team ECU images (<a href="requirements-car-sky-guide-carsky-4-node-blueprint.html#4-steps">carsky-4-node-blueprint.md §4</a> step 1), and the CI push job (§ CI secret below). Source: the platform doc's "Log In to Zot Registry &amp; Get API Key" module in <a href="../../requirements/development-platform-doc/Car-Sky-Platform.html">Car-Sky-Platform.html</a>.</p>
+<h2 id="not-to-be-confused-with">Not to be confused with<a class="headerlink" href="#not-to-be-confused-with" title="Link to this section">¶</a></h2>
+<ul>
+<li><strong>CarSky REST API key</strong> (<code>a8k_...</code>, Settings → Credentials) — authenticates the blueprint/deployment REST API, not the registry. Formats and failure modes: <a href="claude-skills-carsky-credential-verify-skill.html">carsky-credential-verify</a>.</li>
+<li><strong>Keycloak login</strong> (CarSky username + password) — your interactive login; it <em>creates</em> the Zot key but is never used as a docker password.</li>
+</ul>
+<h2 id="get-the-key">Get the key<a class="headerlink" href="#get-the-key" title="Link to this section">¶</a></h2>
+<ol>
+<li>Open the registry UI: click <strong>Registry</strong> on the CarSky Dock, or browse to <code>https://registry.hackathon-2.carsky.io/</code> directly — that is the host serving Zot, not the <code>registry.carsky.io</code> the platform doc names (§ Registry host caveat below).</li>
+<li>Click <strong>Sign in with A8 Keycloak</strong>; log in with your CarSky username/password if prompted.</li>
+<li>Top-right <strong>user icon</strong> → <strong>API Keys</strong> → <strong>Create new API key</strong> → review name/expiry → <strong>Create</strong>.</li>
+<li><strong>Copy the <code>zak_...</code> string immediately</strong> — Zot shows it exactly once; after the dialog closes it cannot be viewed again. Lost key = revoke it and create a new one. No <strong>API Keys</strong> menu = your account lacks registry access — ask the organizers.</li>
+</ol>
+<h2 id="registry-host-caveat-open-item-o1">Registry host caveat (open item O1)<a class="headerlink" href="#registry-host-caveat-open-item-o1" title="Link to this section">¶</a></h2>
+<p><strong>Resolved — the registry host is <code>registry.hackathon-2.carsky.io</code>.</strong> (Section title kept for the links that cite it.) The platform doc names <code>registry.carsky.io</code>; that host returns <strong>502</strong> and serves nothing (probed 2026-07-30, <a href="plans-doc-research-notes-baseline-connectivity-smoke-test.html#9-open-items">smoke-test note § Open items</a>). A 502 is an origin-level failure, so it covers the Zot web UI and the <code>/v2/</code> Docker endpoint alike; there is no split where one works and the other does not.</p>
+<p>The working host is established by a full push → pull → deploy loop, not merely by a probe answering: <a href="plans-doc-phase0-smoke-test-run.html">phase0-smoke-test-run.md</a> (2026-07-31) records the netcheck image pushed to <code>registry.hackathon-2.carsky.io</code> and three Container nodes running that exact tag in a live Room, and <a href="plans-doc-phase1-comms-run.html">phase1-comms-run.md</a> records both ECU lanes pushing there from CI. Every live operational config in this repo — the node guides, the blueprint <code>image</code> fields, CI, and the deploy agent/preflight instructions — names that host; none still names the 502 one.</p>
+<p><strong>Carry the rule, not this round's value.</strong> The registry host mirrors the round's <em>environment</em> host, exactly as the REST base URL <code>https://hackathon-2.carsky.io</code> does. <code>registry.carsky.io</code> remains a true statement about the vendor's generic documentation rather than an error in it, and the organizers may rotate environment hosts between rounds — so next round, re-derive the registry host from the environment instead of assuming <code>hackathon-2</code>.</p>
+<p>Whichever host is current, use <strong>the same one</strong> consistently in <code>docker login</code>, image tags, blueprint <code>image</code> fields, and CI — a mismatched host is the "push succeeds but image missing" / <code>ImagePullBackOff</code> failure mode.</p>
+<h2 id="use-the-key">Use the key<a class="headerlink" href="#use-the-key" title="Link to this section">¶</a></h2>
+<p>Local docker (password prompt = paste the <code>zak_...</code> key):</p>
+<pre><code>docker login &lt;registry-host&gt; -u &lt;your-carsky-username&gt;
+docker tag my-image:latest &lt;registry-host&gt;/my-image:latest
+docker push &lt;registry-host&gt;/my-image:latest
+</code></pre>
+<h3 id="ci-secret-carsky_zot_api_key">CI secret (<code>CARSKY_ZOT_API_KEY</code>)<a class="headerlink" href="#ci-secret-carsky_zot_api_key" title="Link to this section">¶</a></h3>
+<p>The Phase 0 CI workflow builds images on GitHub Actions (no Docker on the dev machine) and needs the key to push:</p>
+<ol>
+<li>GitHub → <code>mnpham2101/FPT-Hackathon2026</code> → <strong>Settings → Secrets and variables → Actions → New repository secret</strong>.</li>
+<li>Name: <code>CARSKY_ZOT_API_KEY</code> · Value: the <code>zak_...</code> string. The docker-login username is not secret and lives in the workflow as a variable.</li>
+<li>The CI push job stays disabled until this secret exists — build-only jobs run regardless.</li>
+</ol>
+<h2 id="security-rules">Security rules<a class="headerlink" href="#security-rules" title="Link to this section">¶</a></h2>
+<ul>
+<li>The key is displayed once and stored nowhere retrievable — treat the copy in GitHub Secrets as the only copy.</li>
+<li>Never commit, echo, log, or paste the key into chat, code, or markdown (same rule as <a href="claude-skills-carsky-login-skill.html">carsky-login</a>).</li>
+<li>Revoke keys you no longer use (Zot → API Keys → <strong>Revoke</strong>).</li>
+</ul>
+<h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Link to this section">¶</a></h2>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>401 Unauthorized</code> on <code>docker login</code></td>
+<td>Key wrong or expired — create a new one</td>
+</tr>
+<tr>
+<td>Registry panel in CarSky UI shows auth error</td>
+<td>Log in at the registry URL directly, then refresh the panel</td>
+</tr>
+<tr>
+<td>No <strong>API Keys</strong> menu in Zot</td>
+<td>Account lacks registry access — contact an admin</td>
+</tr>
+<tr>
+<td>Push succeeds but image not visible / <code>ImagePullBackOff</code> on deploy</td>
+<td>Registry-host mismatch — see § Registry host caveat</td>
+</tr>
+</tbody>
+</table></div>
+      </article>
+    </main>
+  </div>
+  <script src="../js/site-data.js"></script>
+  <script src="../js/theme.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/doc-page.js"></script>
+</body>
+</html>

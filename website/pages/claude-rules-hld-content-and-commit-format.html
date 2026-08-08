@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en" data-theme="sketch">
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="kis-build-pages">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HLD Structure, Content &amp; Commit Format — KIS</title>
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/doc.css">
+  <link rel="stylesheet" href="../css/themes.css">
+</head>
+<body class="DocBody" data-root=".." data-doc-node="plans" data-doc-title="HLD Structure, Content &amp; Commit Format" data-doc-source=".claude/rules/hld-content-and-commit-format.md">
+  <div class="DocLayout">
+    <aside class="DocLayout__aside" id="doc-toc"></aside>
+    <main class="Page DocPage">
+      <header class="PageHeader" id="doc-header"></header>
+      <article class="Markdown" id="doc-body">
+<hr />
+<p>name: hld-content-and-commit-format
+description: The mandatory section structure, content and diagram rules for every node HLD project-architecture writes — one HLD per R5 node, modelled on documents/Design/IVI-ECU/ivi-ecu-hld.md — and the commit format for design commits.</p>
+<hr />
+<h1 id="hld-structure-content-commit-format">HLD Structure, Content &amp; Commit Format<a class="headerlink" href="#hld-structure-content-commit-format" title="Link to this section">¶</a></h1>
+<p>Governs every high-level design [[project-architecture]] produces — the artifact of the "make the HLD" and "propose HLD, commit design" steps of <a href="claude-skills-high-level-design-procedure-skill.html">high-level-design-procedure</a>.</p>
+<p><strong>Worked example, correct in every respect: <a href="documents-design-ivi-ecu-ivi-ecu-hld.html">ivi-ecu-hld.md</a>.</strong> Follow its shape rather than inventing one. Where that file and this document disagree, the file is what an author copies and this document is what gets corrected.</p>
+<h2 id="one-hld-per-node-not-per-phase">One HLD per node, not per phase<a class="headerlink" href="#one-hld-per-node-not-per-phase" title="Link to this section">¶</a></h2>
+<p>Every node of the R5 blueprint carries exactly one HLD, in that node's design folder under <a href="documents-design-readme.html">documents/Design/</a>, named for the node rather than for the phase that produced it:</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Node folder</th>
+<th>Design folder</th>
+<th>HLD</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="scenario-player-readme.html">Scenario_Player/</a> — the bench</td>
+<td><a href="documents-design-scenario-player-readme.html">documents/Design/SCENARIO-PLAYER/</a></td>
+<td><code>scenario-player-hld.md</code></td>
+</tr>
+<tr>
+<td><a href="../../V2X_ECU/">V2X_ECU/</a></td>
+<td><a href="documents-design-v2x-ecu-readme.html">documents/Design/V2X-ECU/</a></td>
+<td><code>v2x-ecu-hld.md</code></td>
+</tr>
+<tr>
+<td><a href="ada-ecu-readme.html">ADA_ECU/</a></td>
+<td><a href="documents-design-ada-ecu-readme.html">documents/Design/ADA-ECU/</a></td>
+<td><code>ada-ecu-hld.md</code></td>
+</tr>
+<tr>
+<td><a href="ivi-ecu-readme.html">IVI_ECU/</a></td>
+<td><a href="documents-design-ivi-ecu-readme.html">documents/Design/IVI-ECU/</a></td>
+<td><code>ivi-ecu-hld.md</code></td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>The design lives apart from the code it governs.</strong> An HLD is read by a planner writing briefs and by a reviewer judging a branch, neither of whom is inside the node folder; collecting all four in one section is what lets a reader compare them. The node folder keeps its code and its <code>doc/deprecated/</code> (<a href="claude-rules-node-code-layout.html#where-a-nodes-documents-live">node-code-layout.md § Where a node's documents live</a>).</li>
+<li><strong>The decision record and the diagram sources sit beside the HLD</strong>, in the same design folder: <code>&lt;node-slug&gt;-design-decisions.md</code>, the <code>.puml</code> sequence and component sources, and the <code>.drawio</code>/<code>.svg</code> component map.</li>
+<li><strong>The bench is a node and gets the full document.</strong> Being test equipment changes what its sections say, not whether it has them.</li>
+<li><strong>A later phase extends the node's HLD; it does not add a second one.</strong> Two design documents for one node means two answers to "where does this file go", and the implementer picks the wrong one.</li>
+<li><strong>The HLD is that node's sole design authority.</strong> Where it exists, no other document defines the node's components, paths, seams, configuration keys or evidence lines.</li>
+<li><strong>A note that is not about one of our nodes is not design.</strong> Technique, platform findings and protocol study go to <a href="documents-knowledgebase-readme.html">documents/KnowledgeBase/</a>, which [[project-researcher]] owns.</li>
+</ul>
+<h2 id="section-order-is-mandatory">Section order is mandatory<a class="headerlink" href="#section-order-is-mandatory" title="Link to this section">¶</a></h2>
+<p>Nothing may be used before it is defined, and a planner must be able to reach any fact by section number. A document that reorders or omits a required section is not done.</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Section</th>
+<th>Required</th>
+<th>Must contain</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>Scope and authority</strong></td>
+<td>always</td>
+<td>What the node covers and does not; that the HLD is binding for work in the folder; that task planning decomposes from it plus the requirements report; what overrides it</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>Required reading and sourced notes</strong></td>
+<td>always</td>
+<td>The requirement documents that had to be read in full to write the design, each with what it fixes for this node; then one row per research note with what the design adopts from it</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>The component architecture</strong></td>
+<td>always</td>
+<td>The component diagram, its legend, and an <strong>MVC separation</strong> subsection placing every component in exactly one layer</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>Folder structure</strong></td>
+<td>always</td>
+<td>The tree designating the target path of every component the document names</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>Platform and boundary</strong></td>
+<td>always</td>
+<td>The runtime platform, the interfaces at the node's edge, and the observation surfaces the evidence comes from</td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>Internal components</strong></td>
+<td>always</td>
+<td>One row per component — role, input, output — grouped by MVC layer, plus the configuration and descriptor files</td>
+</tr>
+<tr>
+<td>7</td>
+<td><strong>External related components</strong></td>
+<td>when anything outside the node is named</td>
+<td>What sits outside the boundary, and a <strong>test equipment</strong> subsection for the mocks and simulators that exercise the node alone</td>
+</tr>
+<tr>
+<td>8</td>
+<td><strong>Interfaces, ports and the layer rule</strong></td>
+<td>always</td>
+<td>Each seam, which component requires it and which provides it, the node's network endpoints, and the rule that no layer is collapsed</td>
+</tr>
+<tr>
+<td>9</td>
+<td><strong>Call flow</strong></td>
+<td>always</td>
+<td>A link to the <code>.puml</code> sequence source and one sentence naming the path and its branches</td>
+</tr>
+<tr>
+<td>10</td>
+<td><strong>The contract</strong></td>
+<td>always</td>
+<td>The node's message schema — direction, transport, encoding, normative schema file, node copy, freeze status, and a field table per message kind</td>
+</tr>
+<tr>
+<td>11</td>
+<td><strong>Tech stack, build and CI</strong></td>
+<td>always</td>
+<td>Languages, libraries and versions traced to the report; the build commands; the CI lanes</td>
+</tr>
+<tr>
+<td>12</td>
+<td><strong>Test strategy</strong></td>
+<td>always</td>
+<td>The configurations that exercise the node, and the expected observables with the component that produces each</td>
+</tr>
+<tr>
+<td>13</td>
+<td><strong>Design decisions</strong></td>
+<td>always</td>
+<td>A link to the node's decision record, <code>&lt;node-slug&gt;-design-decisions.md</code>, beside it, and one line naming what D1…Dn cover</td>
+</tr>
+</tbody>
+</table></div>
+<p>A header blockquote precedes §1: what the document is, the frozen contract, the procedure documents beside it, and the diagram sources.</p>
+<h2 id="what-each-section-must-get-right">What each section must get right<a class="headerlink" href="#what-each-section-must-get-right" title="Link to this section">¶</a></h2>
+<ul>
+<li><strong>§2 is the reading list, and it is not optional reading.</strong> Before writing or changing an HLD, [[project-architecture]] reads the requirement documents that bear on the node <strong>in full</strong> — the whole requirement entries with their definition, dependency, acceptance and tech stack, the figures they embed, the frozen contract files, the §4 decision record, and any later report that adds requirement numbers or defers work touching the node. Skimming for requirement numbers produces a design that satisfies the headline and contradicts an acceptance clause. §2 then lists exactly what was read and what each document fixed, so a reviewer can tell a sourced design from a plausible one, and so a requirement that lands later has a visible place to be checked against.</li>
+<li><strong>§1 is what makes the document usable by a planner.</strong> State plainly that task planning decomposes from this HLD plus the requirements report, that briefs cite sections rather than restating them, and that a component, path or configuration key not designated here is not created ad hoc.</li>
+<li><strong>§4 designates paths; it does not sketch them.</strong> Every component named anywhere in the document has exactly one path in the tree. An implementer who has to choose a location is reading a defective HLD.</li>
+<li><strong>§6 gives each component one responsibility.</strong> Role, input, output, in a table. Work that fits no row belongs to a component the design has not defined yet — a design change, not an implementer's judgement call.</li>
+<li><strong>§10 names which message set the contract is, and its direction.</strong> Say it explicitly — "the message set from ADA-ECU" — and point at the normative schema file plus the node's byte-synced copy. A contract section that describes a format without naming producer and consumer leaves the reader guessing who sends it. A node that both consumes and produces gets one subsection per direction.</li>
+<li><strong>§12's observables are the acceptance evidence.</strong> Log lines and rendered output, each traced to the component that produces it. Where more than one configuration exists (mock producer versus real), state that the expected output is identical in both, so a difference is a finding about the other node.</li>
+<li><strong>§13 is a pointer; the decisions live in a companion file.</strong> <code>documents/Design/&lt;NODE&gt;/&lt;node-slug&gt;-design-decisions.md</code> holds <code>D1…Dn</code>, each a titled decision with its rationale and its rejected alternative — worked example: <a href="documents-design-ivi-ecu-ivi-ecu-design-decisions.html">ivi-ecu-design-decisions.md</a>. The HLD cites decisions by number wherever they bind a component, and keeps §13 to the link plus one line of coverage. Decisions are binding: one is revisited by changing its entry, never by an implementation that departs from it.</li>
+</ul>
+<h2 id="diagrams">Diagrams<a class="headerlink" href="#diagrams" title="Link to this section">¶</a></h2>
+<ul>
+<li><strong>Written as source, not as pre-rendered images</strong> — <code>.puml</code> for sequence, component and activity diagrams, so they stay diffable and reviewable in the same commit as the design text. A hand-authored component map may be <code>.drawio</code> with an exported <code>.svg</code> beside it, which is what the deck and the HLD both embed.</li>
+<li><strong>Mandatory:</strong> a call-flow sequence diagram (§9) and a component diagram (§3). Any further component or activity diagram is included only when it clarifies something the tables cannot.</li>
+<li>Diagram sources live in the node's <code>doc/</code>, or its <code>doc/research_notes/</code> for drawn assets, and are listed in the header blockquote.</li>
+</ul>
+<h2 id="writing-rules">Writing rules<a class="headerlink" href="#writing-rules" title="Link to this section">¶</a></h2>
+<p>An HLD is read under context pressure, by a planner writing briefs and by an implementer about to write code. Every extra clause costs both. <a href="claude-skills-markdown-writing-style-skill.html">markdown-writing-style</a> applies in full; these are what it means here, and <a href="documents-design-ivi-ecu-ivi-ecu-hld.html">ivi-ecu-hld.md</a> is the style reference as well as the structural one.</p>
+<ul>
+<li><strong>One claim per sentence.</strong> Split a sentence carrying two facts joined by "and", "which" or an em-dash aside. Long compound sentences are the main defect this rule exists to catch.</li>
+<li><strong>Tables carry the facts; prose carries only what a table cannot.</strong> A component's role, input and output belong in its row. A lead-in of one or two sentences per section is the budget.</li>
+<li><strong>Say a fact once, in the section that owns it, and cite <code>§n</code> elsewhere.</strong> Two statements of one fact become two answers the moment either is edited. A mapping table restating what a tree and a component table already show is deleted, not maintained.</li>
+<li><strong>No filler openers.</strong> Cut "It is worth noting", "Note that", "In other words", and any sentence that restates the one before it.</li>
+<li><strong>Current state only — no history.</strong> No committed-versus-missing tables, no decision dates, no "now", "already", "until X exists", "must change". Describe the design, not its progress. Design rationale is not history: "rejected alternative X because Y" belongs in §13; "we used to do X" belongs nowhere.</li>
+<li><strong>Reference, never repeat.</strong> Requirement definitions stay in the report, procedures stay in the walkthrough, platform facts stay in the node reference — cited by section.</li>
+<li><strong>No slang, no hedging.</strong> "an interface rather than a concrete producer", not "an interface, not a box".</li>
+<li>Everything else follows <a href="claude-skills-markdown-writing-style-skill.html">markdown-writing-style</a>.</li>
+</ul>
+<h2 id="commit-format">Commit format<a class="headerlink" href="#commit-format" title="Link to this section">¶</a></h2>
+<p>HLD commits follow the project-wide format defined in <a href="claude-rules-task-planning-conventions.html#commit-message-format">task-planning-conventions.md</a>:</p>
+<pre><code>[&lt;taskID&gt;] &lt;type&gt;: &lt;subject&gt;
+</code></pre>
+<p>using <code>type = design</code> and the <strong>requirement-only <code>X</code></strong> form of the taskID — HLD happens before phase/task/subtask decomposition exists for that requirement, so <code>Y.Z.W</code> aren't assignable yet.</p>
+<h2 id="how-to-apply">How to apply<a class="headerlink" href="#how-to-apply" title="Link to this section">¶</a></h2>
+<ul>
+<li>[[project-architecture]] applies the section list at the outline step of <a href="claude-skills-high-level-design-procedure-skill.html">high-level-design-procedure</a>, and again before committing. Do not commit an HLD without its <code>[X] design: ...</code> tagged message. A deliverable placed outside the sanctioned work-folder locations of <a href="claude-rules-node-code-layout.html#where-a-nodes-documents-live">node-code-layout.md § Where a node's documents live</a> is called out with its rationale and goes through that procedure's approval pause.</li>
+<li>[[project-planner]] reads the node's HLD as the structural input to task planning and cites its sections in every brief; a missing section is flagged back to architecture rather than filled in by the plan.</li>
+</ul>
+      </article>
+    </main>
+  </div>
+  <script src="../js/site-data.js"></script>
+  <script src="../js/theme.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/doc-page.js"></script>
+</body>
+</html>

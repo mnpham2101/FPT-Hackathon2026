@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en" data-theme="sketch">
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="kis-build-pages">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ECU Implementation Scoping (project-architecture) — KIS</title>
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/doc.css">
+  <link rel="stylesheet" href="../css/themes.css">
+</head>
+<body class="DocBody" data-root=".." data-doc-node="plans" data-doc-title="ECU Implementation Scoping (project-architecture)" data-doc-source=".claude/skills/ecu-implementation-scoping/SKILL.md">
+  <div class="DocLayout">
+    <aside class="DocLayout__aside" id="doc-toc"></aside>
+    <main class="Page DocPage">
+      <header class="PageHeader" id="doc-header"></header>
+      <article class="Markdown" id="doc-body">
+<hr />
+<p>name: ecu-implementation-scoping
+description: Procedure project-architecture follows when asked to design against a phase or requirement rather than an already folder-scoped feature — resolves which node folder(s) (Scenario_Player, V2X_ECU, ADA_ECU, IVI_ECU) the work belongs to, investigates their current state, then hands off into high-level-design-procedure.</p>
+<hr />
+<h1 id="ecu-implementation-scoping-project-architecture">ECU Implementation Scoping (project-architecture)<a class="headerlink" href="#ecu-implementation-scoping-project-architecture" title="Link to this section">¶</a></h1>
+<p>Trigger: [[project-architecture]] is asked to design for a <strong>phase or requirement</strong> (e.g. "design Phase 3", "architect R12") rather than being handed an already folder-scoped feature + solution — the entry point one step before <a href="claude-skills-high-level-design-procedure-skill.html">high-level-design-procedure</a>, which assumes the target folder is already known.</p>
+<h2 id="procedure">Procedure<a class="headerlink" href="#procedure" title="Link to this section">¶</a></h2>
+<ol>
+<li><strong>Resolve phase/requirement → node(s).</strong> Cross-reference the requested phase in <a href="documents-plan-milestone1-high-level-plan.html">milestone1_high_level_plan.md</a> §5 and the requirement's home node in the report (<a href="requirements-m1-cooperative-awareness.html">m1-cooperative-awareness.md</a> §2) against the folder → node → requirement map in <a href="claude-rules-node-code-layout.html">node-code-layout.md</a>, which also fixes each node's language and build artifact.</li>
+</ol>
+<p>Two traps that table exists to prevent: the bench Scenario Player is its own node and its own folder, so R11 work never lands in <code>V2X_ECU/</code>; and multi-node phases (Phase 0 contracts, Phase 1 comms bring-up, Phase 6 convergence) implicate more than one folder — list every folder touched, not just the first match.</p>
+<ol start="2">
+<li><strong>Investigate each implicated folder's current state</strong> (Glob/Read) — what exists, what's missing, and whether it matches the report's §3 per-node tech stack (bench: Python; V2X: C++17; ADA: C++17 core + Python detector subprocess; IVI: Kotlin/Jetpack Compose/AndroidX). Flag mismatches back to the user instead of silently reconciling.</li>
+<li><strong>Consult <a href="../../requirements/development-platform-doc/Car-Sky-Platform.html">Car-Sky-Platform.html</a></strong> for blueprint/node/pin mechanics whenever the folder's deployment shape (OCI image layout, AAOS module layout) is in question.</li>
+<li><strong>Hand off</strong> the resolved folder(s) + current-state findings as the "feature set + chosen solution" input to <a href="claude-skills-high-level-design-procedure-skill.html">high-level-design-procedure</a> — that skill's own folder-analysis step then operates inside the folder(s) this step resolved, not the repo root.</li>
+</ol>
+<h2 id="output">Output<a class="headerlink" href="#output" title="Link to this section">¶</a></h2>
+<ul>
+<li>The node folder(s) implicated by the phase/requirement, with current-state findings and any tech-stack mismatches flagged.</li>
+<li>No HLD content and no folder creation here — that's <a href="claude-skills-high-level-design-procedure-skill.html">high-level-design-procedure</a>'s job once this step hands off.</li>
+</ul>
+<h2 id="how-to-apply">How to apply<a class="headerlink" href="#how-to-apply" title="Link to this section">¶</a></h2>
+<p>Owned by [[project-architecture]]. Run only when the request is phase/requirement-driven without a named folder scope; skip straight to <a href="claude-skills-high-level-design-procedure-skill.html">high-level-design-procedure</a> when a folder-scoped feature + solution is already in hand. Produces folder/module suggestions only — no task IDs, no implementation, no subagent spawning; task/subtask breakdown stays [[project-planner]]'s job.</p>
+      </article>
+    </main>
+  </div>
+  <script src="../js/site-data.js"></script>
+  <script src="../js/theme.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/doc-page.js"></script>
+</body>
+</html>
