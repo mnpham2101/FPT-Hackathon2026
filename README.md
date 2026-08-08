@@ -39,11 +39,14 @@ Layouts, styles, and HTML components live in [presentation/template/template.md]
 
 ## Building the website
 
-[website/](website/) is a dependency-free static site: a mind map on the home page whose leaves open the project's documents. Open `website/index.html` directly, or serve the folder:
+[website/](website/) is a dependency-free static site: a mind map on the home page whose leaves open the project's documents. Open `website/index.html` directly, or serve **the repository root**:
 
 ```bash
-python -m http.server 8080   # from website/
+python -m http.server 8080   # from the repo root, not from website/
+# then open http://localhost:8080/website/index.html
 ```
+
+Serve the repo root, not `website/`. A document page links out to the deck exports in [presentation/](presentation/) and to schemas and diagrams elsewhere — nothing but images is copied into the site — so serving `website/` alone puts those targets above the web root and they 404.
 
 The pages under `website/pages/` are generated from the Markdown in [documents/](documents/). Rebuild after changing any document it renders:
 

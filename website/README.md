@@ -8,11 +8,14 @@ It renders [documents/](../documents/) but does not own it. That folder stays wh
 
 ## Run it
 
-Open `index.html` directly, or serve the folder:
+Open `website/index.html` directly, or serve **the repository root**:
 
 ```bash
-python -m http.server 8080   # from website/
+python -m http.server 8080        # from the repo root, not from website/
+# then open http://localhost:8080/website/index.html
 ```
+
+**The root is the repo, not this folder.** A document page links out to the deck exports in [../presentation/](../presentation/) and to schemas and diagrams elsewhere in the repo, because only images are copied in (§ What happens to each link target). Serving `website/` alone puts those targets above the web root, and every one of them 404s — the "Abridged version" links on the HLD pages are the ones a reader hits first. Opening the files directly works for the same reason: `file://` has no root to climb above.
 
 The document pages in `pages/` are generated. Rebuild them after any change to the markdown they render:
 
@@ -102,7 +105,7 @@ A flat folder makes every link between two generated pages a plain same-level `h
 | **file** | anything else — decks, PDFs, schemas, source files | a relative link to where it already lives in the repo |
 | **dead** | nothing at that path | the anchor loses its `href` and renders as struck-through muted text, so a broken link looks broken instead of 404ing when clicked |
 
-Only images are copied, because only images have to be *inside* the site to render. Everything else is linked in place — copying it would make `pages/` a second, staler copy of the repository. **The consequence: those out-links resolve when the site is opened from a checkout or served from the repo root, and 404 when `website-builder/` is itself the web root.**
+Only images are copied, because only images have to be *inside* the site to render. Everything else is linked in place — copying it would make `pages/` a second, staler copy of the repository. **This is what fixes the web root at the repo rather than at this folder** (§ Run it): a link to a deck reaches out of `website/`, so `website/` cannot be the root.
 
 `presentation/` is never re-rendered. Its decks are Marp markdown with an HTML export already built beside them by `slide-build-tool/build-slides.py`; a link to a deck's `.md` is retargeted to that export, and neither file is touched.
 
