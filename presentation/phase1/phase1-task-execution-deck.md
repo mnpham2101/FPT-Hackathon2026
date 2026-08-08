@@ -65,7 +65,7 @@ Three distinct concepts are referred to as a *track* or a *lane*. They are not i
 
 | Term               | Definition                                                                         | Specified in                                      | Phase 1 example           |
 | ------------------ | ---------------------------------------------------------------------------------- | ------------------------------------------------- | ------------------------- |
-| **Track**          | a workstream spanning whole phases, executed by different people concurrently      | [milestone1_high_level_plan.md](../../documents/Plan%20and%20Proposal/milestone1_high_level_plan.md)        | the comms track = Phase 1 |
+| **Track**          | a workstream spanning whole phases, executed by different people concurrently      | [milestone1_high_level_plan.md](../../documents/Plan-Proposal/milestone1_high_level_plan.md)        | the comms track = Phase 1 |
 | **Phase**          | one stage, with an input list and acceptance criteria                              | [task-planning-conventions.md](../../.claude/rules/task-planning-conventions.md) | Phase 1 |
 | **Execution lane** | subtasks ordered by dependency, named after the folder they write into             | the phase plan, *Execution order & parallelism*   | Lane V = `V2X_ECU/`       |
 | **CI lane**        | one job in the GitHub Actions workflow; it builds, tests, and passes or fails      | [phase1-ci.yml](../../.github/workflows/phase1-ci.yml) | `v2x-comms-check`    |

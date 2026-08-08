@@ -33,7 +33,7 @@
 | [r2-v2x-object.schema.json](../../../contracts/r2-v2x-object.schema.json) · [r3-tracked-object.schema.json](../../../contracts/r3-tracked-object.schema.json) · [r4-ada-ivi.schema.json](../../../contracts/r4-ada-ivi.schema.json) | The three frozen contracts, field for field, with their bounds and their nullable fields (§10) |
 | [m1-run-timing-and-event-triggering.md](../../../requirements/m1-run-timing-and-event-triggering.md) | R20/R21/R22 whole. §6.2's clock-domain ruling, which this design makes (D10); §6.1's three detector pacing keys and the two risk-band values; §6.6's run choreography — `T0`, the paced clip, the matched bench-cycle and clip periods, and the band pair on the composed range (D11); §6.4's `tools/check_run_alignment.py` and its K1–K6 checks (§12) |
 | [m1-video-source-and-ivi-dashcam.md](../../../requirements/m1-video-source-and-ivi-dashcam.md) | The clip reaches the container as one image layer and by no other route. The IVI dashcam view is deferred, and no part of it is built here (D6) |
-| [milestone1_high_level_plan.md](../../Plan%20and%20Proposal/milestone1_high_level_plan.md) | §4's R13 gate constants; §2's near-collinear composition assumption; Phases 2, 3 and 4 acceptance; §6's deferred scope |
+| [milestone1_high_level_plan.md](../../Plan-Proposal/milestone1_high_level_plan.md) | §4's R13 gate constants; §2's near-collinear composition assumption; Phases 2, 3 and 4 acceptance; §6's deferred scope |
 | [node-ada-ecu.md](../../../requirements/car-sky-guide/node-ada-ecu.md) | Image tag, blueprint `command` and `capabilities`, env set, pin, address |
 | [deploy-ada-ecu-walkthrough.md](../../../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md) | The isolated-Room configuration and the observables its § Expected outputs and acceptance names (§12) |
 
@@ -248,7 +248,7 @@ Every runtime value the deployment wires enters through env. Core values are rea
 | `TRACK_IOU_MIN` | `0.3` | the frame-to-frame association floor (D6) |
 | `VEHICLE_WIDTH_M` · `CAMERA_HFOV_DEG` | `1.8` · `60` | the pinhole distance inputs (D6) |
 
-The addresses, the ports and the two gate constants are fixed by a committed source — [node-ada-ecu.md](../../../requirements/car-sky-guide/node-ada-ecu.md#blueprint-node-config) and [milestone1_high_level_plan.md §4](../../Plan%20and%20Proposal/milestone1_high_level_plan.md#track-admission-gate-r13). Every other default above is this design's proposal. A value the blueprint omits falls through to the app's own default, never to an `ENV` baked into the image.
+The addresses, the ports and the two gate constants are fixed by a committed source — [node-ada-ecu.md](../../../requirements/car-sky-guide/node-ada-ecu.md#blueprint-node-config) and [milestone1_high_level_plan.md §4](../../Plan-Proposal/milestone1_high_level_plan.md#track-admission-gate-r13). Every other default above is this design's proposal. A value the blueprint omits falls through to the app's own default, never to an `ENV` baked into the image.
 
 **Startup validation.** `config/config` asserts the rules below and nothing beyond them. A violation names the offending key and exits non-zero. Each rule orders values of one quantity, or bounds a single value. **No rule relates a risk threshold to a gate threshold**, because the two measure different ranges (D5).
 

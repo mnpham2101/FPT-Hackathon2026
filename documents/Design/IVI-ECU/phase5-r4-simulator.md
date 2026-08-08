@@ -1,6 +1,6 @@
 # Simulating the ADA ECU and driving IVI logic
 
-Research note: how Phase 5 produces R4 traffic without an ADA ECU, and how each layer of the IVI app is exercised by it. The display track is mock-driven by definition ([milestone1_high_level_plan.md](../../Plan%20and%20Proposal/milestone1_high_level_plan.md) § Phase 5) — the simulator is sanctioned test equipment, not a mock to be deleted later (CLAUDE.md governing principle 2).
+Research note: how Phase 5 produces R4 traffic without an ADA ECU, and how each layer of the IVI app is exercised by it. The display track is mock-driven by definition ([milestone1_high_level_plan.md](../../Plan-Proposal/milestone1_high_level_plan.md) § Phase 5) — the simulator is sanctioned test equipment, not a mock to be deleted later (CLAUDE.md governing principle 2).
 
 ## 1. Four injection points, weakest coupling first
 

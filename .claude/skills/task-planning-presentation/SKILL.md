@@ -68,7 +68,7 @@ Project-coined terms that collide with ordinary usage. Define each on its own sl
 
 | Term | What it groups | Defined in |
 |---|---|---|
-| **Track** | a workstream of whole phases, run by different people at once | [milestone1_high_level_plan.md](../../../documents/Plan%20and%20Proposal/milestone1_high_level_plan.md) |
+| **Track** | a workstream of whole phases, run by different people at once | [milestone1_high_level_plan.md](../../../documents/Plan-Proposal/milestone1_high_level_plan.md) |
 | **Phase** | the `Y` segment — a stage with input and acceptance criteria | [task-planning-conventions.md](../../rules/task-planning-conventions.md) |
 | **Task group** | the `Z` segment — subtasks delivering one feature or solution | as above |
 | **Subtask** | the `W` segment — one objective, one commit, tests green | as above |

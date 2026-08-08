@@ -18,7 +18,7 @@
 
 Created [.claude/skills/implementation-step-proposal/SKILL.md](../skills/implementation-step-proposal/SKILL.md) — the procedure project-researcher follows when requirements are already analysed and the ask is implementation guidance:
 
-- **Reference documentation** — all four CLAUDE.md Document-authority documents in authority order, plus [milestone1_high_level_plan.md](../../documents/Plan%20and%20Proposal/milestone1_high_level_plan.md) for the requirement's phase and acceptance criteria.
+- **Reference documentation** — all four CLAUDE.md Document-authority documents in authority order, plus [milestone1_high_level_plan.md](../../documents/Plan-Proposal/milestone1_high_level_plan.md) for the requirement's phase and acceptance criteria.
 - **Procedure** — locate Rx + its phase, extract implementation constraints, enumerate dependency-ordered steps (one action each, self-contained enough for an implementing agent), save as `plans/Rx_[Phase].md` (e.g. `plans/R7_1.md`), hand off to project-planner for `X.Y.Z.W` decomposition.
 - **Explicit skips** — no requirement-analysis-and-solutioning run, no requirement-quality-criteria / solution-selection-criteria / research-report-format pass; flag ambiguities back instead of re-analysing.
 - **File format** — title, references, enumerated implementation steps, acceptance mapping (uncovered acceptance item = incomplete step list).

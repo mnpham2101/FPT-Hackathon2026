@@ -1,7 +1,7 @@
 # Phase 0 — Contract Freeze (R1–R6): Full Task Breakdown
 
 > **Authority & context:**
-> - **Phase content:** [milestone1_high_level_plan.md § Phase 0](../documents/Plan%20and%20Proposal/milestone1_high_level_plan.md#phase-0--freeze-the-contracts-r1r6) — its four acceptance checkboxes are the phase output.
+> - **Phase content:** [milestone1_high_level_plan.md § Phase 0](../documents/Plan-Proposal/milestone1_high_level_plan.md#phase-0--freeze-the-contracts-r1r6) — its four acceptance checkboxes are the phase output.
 > - **Design:** [phase0-contract-freeze-hld.md](../deprecated/phase0-contract-freeze-hld.md) (commits `d807c37` + `70796c0`) — every target path below is cited verbatim from its §5 folder map; design decisions D1–D4, seam shape §7, conventions §4.
 > - **Requirements:** [m1-cooperative-awareness.md §2](../requirements/m1-cooperative-awareness.md) R1–R6 — referenced by number, never restated.
 > - **Smoke-test procedure:** [deploy-walkthrough-netcheck.md](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md) — steps M1–M12, the AI/Human work division [§5](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#5-work-division-between-ai-and-human), and acceptance [§6](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#6-expected-outputs-and-acceptance). Group 0.8 decomposes from it per [walkthrough-driven-delivery.md § Stage 2](../.claude/rules/walkthrough-driven-delivery.md); nothing is restated.
