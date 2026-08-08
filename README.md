@@ -39,16 +39,38 @@ Layouts, styles, and HTML components live in [presentation/template/template.md]
 
 ## Building the website
 
-[website/](website/) is a dependency-free static site: a mind map on the home page whose leaves open the project's documents. Open `website/index.html` directly, or serve **the repository root**:
+[website/](website/) is a dependency-free static site: a mind map on the home page whose leaves open the project's documents.
+
+### 1 · Build it
+
+`website/pages/` is generated and gitignored, so **a fresh clone has no pages until you run this**:
+
+```bash
+pip install -r website/requirements.txt   # once
+python website/build-pages.py             # builds website/pages/
+```
+
+Rerun it after changing any document it renders. Two extra forms:
+
+```bash
+python website/build-pages.py --clean                      # drop stale pages first
+python website/build-pages.py documents/Design/README.md   # render just one
+```
+
+`build-pages.py` starts at the document behind each leaf node, then follows every relative link and builds a page for each Markdown it reaches — so a document linked from a page is a page too. It prints any link it could not resolve, which is how a document pointing at a moved or deleted file gets noticed. Editing the Markdown is enough; never hand-edit a generated page, as the next build overwrites it.
+
+### 2 · View it
+
+Open `website/index.html` directly, or serve **the repository root**:
 
 ```bash
 python -m http.server 8080   # from the repo root, not from website/
-# then open http://localhost:8080/website/index.html
+# then open http://localhost:8080/
 ```
 
-Serve the repo root, not `website/`. A document page links out to the deck exports in [presentation/](presentation/) and to schemas and diagrams elsewhere — nothing but images is copied into the site — so serving `website/` alone puts those targets above the web root and they 404. The root [index.html](index.html) redirects to the site, so `http://localhost:8080/` lands on it.
+Serve the repo root, not `website/`. A document page links out to the deck exports in [presentation/](presentation/) and to schemas and diagrams elsewhere — nothing but images is copied into the site — so serving `website/` alone puts those targets above the web root and they 404. The root [index.html](index.html) redirects to the site, so plain `http://localhost:8080/` lands on it.
 
-### Sending the site to someone
+### 3 · Send it to someone
 
 `--bundle` writes a self-contained copy that needs no server and no Python:
 
@@ -56,18 +78,7 @@ Serve the repo root, not `website/`. A document page links out to the deck expor
 python website/build-pages.py --bundle        # writes dist/
 ```
 
-Zip `dist/` and send it; the reader opens `dist/index.html` by double-clicking. It carries every file the site reaches — the decks and their images, the diagrams, the schemas — so all of it works from any folder on any machine. About 20 MB. `dist/` is generated and gitignored; rebuild it rather than committing it.
-
-**`website/pages/` is generated and gitignored, so a fresh clone has no pages until you build them.** One command produces the whole site; rerun it after changing any document it renders:
-
-```bash
-pip install -r website/requirements.txt   # once
-python website/build-pages.py             # rebuild every page
-python website/build-pages.py --clean     # drop stale pages first
-python website/build-pages.py documents/Design/README.md   # render just one
-```
-
-`build-pages.py` starts at the document behind each leaf node, then follows every relative link and builds a page for each Markdown it reaches — so a document linked from a page is a page too. It prints any link it could not resolve, which is how a document pointing at a moved or deleted file gets noticed. Editing the Markdown is enough; never hand-edit a generated page, as the next build overwrites it.
+Zip `dist/` and send it; the reader opens `dist/index.html` by double-clicking. It carries every file the site reaches — the decks and their images, the diagrams, the schemas — so all of it works from any folder on any machine. About 20 MB, generated and gitignored; rebuild it rather than committing it.
 
 Which node opens which document, why the output is flat, and what happens to each kind of link are in [website/README.md](website/README.md).
 
