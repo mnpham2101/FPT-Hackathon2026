@@ -237,6 +237,110 @@ window.KIS.createLogoFrame = function (props) {
   return ring;
 };
 
+/* A heading's own text, without the section permalink a generator may have
+   appended to it. Reading h.textContent directly drags that glyph into the
+   index, so every entry ends in a stray ¶. Cloning and stripping, rather
+   than trimming the character off the end, keeps this correct whatever the
+   permalink is rendered as. */
+function headingText(h) {
+  var clone = h.cloneNode(true);
+  clone.querySelectorAll('.headerlink, .toclink, [aria-hidden="true"]').forEach(function (el) {
+    el.remove();
+  });
+  return clone.textContent.trim();
+}
+
+/* TableOfContents — a nested index of the headings inside some region.
+
+   Input props (all optional except scope):
+     scope     — the element whose headings are indexed
+     label     — the heading above the list (default 'On this page')
+     minLevel  — shallowest heading indexed (default 2, i.e. h2)
+     maxLevel  — deepest heading indexed (default 6, i.e. every section)
+     minItems  — below this many headings the factory returns null, since a
+                 one-line index costs more attention than it saves
+     spy       — highlight the entry for the section currently on screen
+                 (default true)
+
+   Reads the DOM rather than taking a list of headings, so any page can hand
+   it a region and get an index: a generated document body, a hand-written
+   page, or a region another component built. Headings with no id are
+   skipped — an entry that cannot be linked to is not an entry — so a
+   generator feeding this must emit ids on every heading. */
+window.KIS.createTableOfContents = function (props) {
+  var p = props || {};
+  var scope = p.scope;
+  if (!scope) return null;
+
+  var min = p.minLevel || 2;
+  var max = p.maxLevel || 6;
+  var sel = [];
+  for (var lv = min; lv <= max; lv++) sel.push('h' + lv);
+
+  var heads = Array.prototype.filter.call(
+    scope.querySelectorAll(sel.join(',')),
+    function (h) { return h.id; }
+  );
+  if (heads.length < (p.minItems == null ? 2 : p.minItems)) return null;
+
+  var nav = document.createElement('nav');
+  nav.className = 'TableOfContents';
+  nav.setAttribute('aria-label', p.label || 'On this page');
+
+  var title = document.createElement('div');
+  title.className = 'TableOfContents__title';
+  title.textContent = p.label || 'On this page';
+  nav.append(title);
+
+  var list = document.createElement('ul');
+  list.className = 'TableOfContents__list';
+  var links = {};
+
+  heads.forEach(function (h) {
+    var depth = Math.min(parseInt(h.tagName.slice(1), 10) - min, 3);
+    var li = document.createElement('li');
+    li.className = 'TableOfContents__item TableOfContents__item--l' + depth;
+
+    var a = document.createElement('a');
+    a.className = 'TableOfContents__link';
+    a.href = '#' + h.id;
+    a.textContent = headingText(h);
+    li.append(a);
+    list.append(li);
+    links[h.id] = a;
+  });
+
+  nav.append(list);
+
+  /* Scroll spy. The observer reports which headings are inside the band, not
+     which one the reader is under — a heading scrolled off the top stops
+     intersecting while its section is still what fills the screen. So track
+     the set of headings above the fold and mark the last of them; that stays
+     correct through a section taller than the viewport, which the naive
+     "last one that intersected" version does not. */
+  if (p.spy !== false && window.IntersectionObserver) {
+    var above = {};
+    var mark = function () {
+      var current = null;
+      heads.forEach(function (h) { if (above[h.id]) current = h.id; });
+      if (!current) current = heads[0].id;
+      Object.keys(links).forEach(function (id) {
+        links[id].classList.toggle('is-active', id === current);
+      });
+    };
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        above[e.target.id] = e.boundingClientRect.top < 0 || e.isIntersecting;
+      });
+      mark();
+    }, { rootMargin: '0px 0px -70% 0px', threshold: 0 });
+    heads.forEach(function (h) { io.observe(h); });
+  }
+
+  window.KIS.applyEnter(nav, p.animation);
+  return nav;
+};
+
 /* ThemeSwitch — cycles through KIS.THEMES */
 window.KIS.createThemeSwitch = function () {
   var btn = document.createElement('button');

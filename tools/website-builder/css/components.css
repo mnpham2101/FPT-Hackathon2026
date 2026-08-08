@@ -359,6 +359,76 @@
   color: var(--accent);
 }
 
+/* ---- TableOfContents — the heading index built by
+   js/components.js's createTableOfContents(). Tokens only, so it reads
+   correctly under every theme; the panel matches PageLink--card's, so an
+   index and a card look like parts of one site. ---- */
+
+.TableOfContents {
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--node-bg);
+  border: 1.5px solid var(--node-border);
+  box-shadow: var(--card-shadow);
+  font-size: 0.87rem;
+}
+
+.TableOfContents__title {
+  font-weight: 600;
+  font-size: 0.74rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+
+.TableOfContents__list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+/* One indent step per heading level below the shallowest indexed one. The
+   rule is on the item rather than the link so it runs the full height of a
+   wrapped two-line entry. */
+.TableOfContents__item {
+  border-left: 2px solid transparent;
+}
+
+.TableOfContents__item--l1 { padding-left: 11px; }
+.TableOfContents__item--l2 { padding-left: 22px; }
+.TableOfContents__item--l3 { padding-left: 33px; }
+
+.TableOfContents__item--l2 .TableOfContents__link,
+.TableOfContents__item--l3 .TableOfContents__link {
+  font-size: 0.94em;
+  color: var(--muted);
+}
+
+.TableOfContents__link {
+  display: block;
+  padding: 3px 8px;
+  border-radius: 7px;
+  color: var(--ink);
+  text-decoration: none;
+  line-height: 1.35;
+}
+
+.TableOfContents__link:hover {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.TableOfContents__link.is-active {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.TableOfContents__item:has(> .is-active) {
+  border-left-color: var(--accent);
+}
+
 /* ---- ThemeSwitch ---- */
 
 .ThemeSwitch {
