@@ -27,7 +27,6 @@ Learning notes by Vũ Xuân Bách — explanatory, not authoritative.
 
 | Document | Form | Topic |
 |---|---|---|
-| [ivi-android-screen-lifecycle.md](ivi-android-screen-lifecycle.md) | Wiki (long) | How one screen reaches the AAOS display: Manifest → Activity → Compose modes |
 | [ivi-r4-observation-pipeline.md](ivi-r4-observation-pipeline.md) | Wiki (long) | How the IVI app observes R4 from the ADA ECU |
 
 ## Elsewhere

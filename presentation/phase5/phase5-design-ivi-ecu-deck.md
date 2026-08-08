@@ -165,7 +165,7 @@ IVI_ECU/
 3. Compose `setContent` — `WarningViewModel` + bind service → `attachService(r4EventFlow)`.
 4. Default Display Area = **HomeView**; status aims at **BOUND :47300**.
 
-Learning walkthrough: [documents/ivi-android-screen-lifecycle.md](../../documents/Design/IVI-ECU/ivi-android-screen-lifecycle.md).
+Learning walkthrough: [documents/KnowledgeBase/android-screen-lifecycle.md](../../documents/KnowledgeBase/android-screen-lifecycle.md).
 
 ---
 

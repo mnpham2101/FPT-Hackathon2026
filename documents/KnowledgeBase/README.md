@@ -14,6 +14,7 @@ Notes here are written for a reader outside this project. They use engineering v
 | Document | Topic |
 |---|---|
 | [android-automotive-os.md](android-automotive-os.md) | Android Automotive OS as an application target: what the platform provides and what it constrains |
+| [android-screen-lifecycle.md](android-screen-lifecycle.md) | How one screen reaches an automotive display, and why the receive loop lives in a service rather than the UI |
 | [UDP-msg-parsing.md](UDP-msg-parsing.md) | Deserialising a UDP JSON payload into typed Kotlin: buffer slicing, library selection, and the handling the library does not provide |
 | [producer-simulation-harness.md](producer-simulation-harness.md) | Simulating a message producer so its consumer can be exercised alone |
 

@@ -108,7 +108,7 @@ Design rules (HLD / D4):
 | Draw | `CanvasWarningView` behind `IviWarningViewSeam`; provenance guard requires `source == v2x_relayed` for ghost C |
 | Silence | After `BuildConfig.WARNING_TIMEOUT_MS`, Active → Idle; Display Area restores previous mode (unless user override) |
 
-UI shell details: [ivi-android-screen-lifecycle.md](ivi-android-screen-lifecycle.md).
+UI shell details: [android-screen-lifecycle.md](../../KnowledgeBase/android-screen-lifecycle.md).
 
 ---
 
