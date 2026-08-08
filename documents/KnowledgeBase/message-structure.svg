@@ -56,7 +56,7 @@
   <text x="46" y="530" font-size="11" fill="#3e6a86">edge-triggered; wakes the warning view</text>
 
   <!-- variant: state -->
-  <rect x="370" y="396" width="300" height="150" rx="4" fill="#e4eef7" stroke="#2f6f9f" stroke-width="1.8"/>
+  <rect x="370" y="396" width="300" height="108" rx="4" fill="#e4eef7" stroke="#2f6f9f" stroke-width="1.8"/>
   <text x="386" y="418" font-size="12.5" font-weight="600" fill="#1f4d6d" font-family="Consolas, monospace">type = "state"</text>
   <text x="386" y="442" font-size="12" fill="#1f2933" font-family="Consolas, monospace">seq : Int</text>
   <text x="386" y="464" font-size="12" fill="#1f2933" font-family="Consolas, monospace">vehicles : Array</text>
@@ -71,7 +71,10 @@
   <text x="726" y="348" font-size="11" fill="#7b8794">ego-relative, metres</text>
   <text x="726" y="366" font-size="11" fill="#b0521f">null while C is untracked</text>
 
-  <path d="M330,470 L690,470 L690,312 L710,312" fill="none" stroke="#8a97a6" stroke-width="1.3" stroke-dasharray="4 3"/>
+  <!-- geometry detail link: leaves the warning box on its geometry row, drops
+       below the shortened state box, and climbs in the corridor between that
+       box (right edge 670) and the detail box (left edge 710) -->
+  <path d="M330,508 L350,508 L350,536 L690,536 L690,312 L710,312" fill="none" stroke="#8a97a6" stroke-width="1.3" stroke-dasharray="4 3"/>
   <polygon points="702,308 710,312 702,316" fill="#8a97a6"/>
 
   <!-- legend -->
