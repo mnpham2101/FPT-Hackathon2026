@@ -2,11 +2,11 @@
 
 CarSky **Container Node**: ego's perception and fusion node — requirements R3 and R12–R15 of [m1-cooperative-awareness.md](../requirements/m1-cooperative-awareness.md) §2.
 
-Two processes, one image: the C++17 `ada_ecu` core and the Python detector subprocess, joined by argv, exit codes and R3 JSONL over stdout — [design decision D2](doc/ada-ecu-design-decisions.md#d2--process-thread-and-mock-model).
+Two processes, one image: the C++17 `ada_ecu` core and the Python detector subprocess, joined by argv, exit codes and R3 JSONL over stdout — [design decision D2](../documents/Design/ADA-ECU/ada-ecu-design-decisions.md#d2--process-thread-and-mock-model).
 
 ## Design of record
 
-- [doc/ada-ecu-hld.md](doc/ada-ecu-hld.md) — the HLD, this folder's sole design authority.
+- [doc/ada-ecu-hld.md](../documents/Design/ADA-ECU/ada-ecu-hld.md) — the HLD, this folder's sole design authority.
 - [node-ada-ecu.md](../requirements/car-sky-guide/node-ada-ecu.md) — node guide: image tag, blueprint config, env vars, pins, verification.
 - [phase2_tasks.md § Per-node build commands](../plans/phase2_tasks.md#per-node-build-commands-cited-in-acceptance-below) — the acceptance-cited build/test rows.
 

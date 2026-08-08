@@ -12,7 +12,7 @@ Reviews live in the **reviewed node's own `doc/`**, beside the HLD that judged t
 <Node_Folder>/doc/<node-slug>-pr<N>-review-v<K>.md
 ```
 
-Worked example: [ivi-ecu-pr2-review-v1.md](../../IVI_ECU/doc/ivi-ecu-pr2-review-v1.md).
+Worked example: [ivi-ecu-pr2-review-v1.md](../../IVI_ECU/doc/deprecated/ivi-ecu-pr2-review-v1.md).
 
 | Element | Value |
 |---|---|

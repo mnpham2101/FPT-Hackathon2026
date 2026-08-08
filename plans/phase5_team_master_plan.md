@@ -39,7 +39,7 @@
 | **MOCK-1** | Fix mock sender schema: `object.class` field bị thiếu, `vehicles` key sai (§4.4 MOCK-1) | 🟡 P2 | **Bạn đồng đội** |
 | **DEPLOY** | ADB tunnel + install APK + smoke test trên CarSky AAOS node thật | 🔴 P1 | **Cả hai** |
 | **PRES-1** | Slide deck Phase 5 (`presentation/phase5/`) — working demo video + kỹ thuật | 🟡 P2 | **Bạn đồng đội** |
-| **WIKI-1** | Technical Deep-Dive Wiki (`IVI_ECU/doc/ivi-technical-wiki.md`) | 🟡 P2 | **Vinh** |
+| **WIKI-1** | Technical Deep-Dive Wiki (`documents/Design/IVI-ECU/ivi-technical-wiki.md`) | 🟡 P2 | **Vinh** |
 
 ---
 
@@ -100,7 +100,7 @@ DisplayMode.HomeView -> HomeScreen(linkStatus = v2xLinkStatus)
 
 #### Task V-3: Technical Deep-Dive Wiki (2–3 giờ)
 
-**File:** `IVI_ECU/doc/ivi-technical-wiki.md` (NEW)
+**File:** `documents/Design/IVI-ECU/ivi-technical-wiki.md` (NEW)
 
 Trả lời các câu hỏi anh Minh đặt ra (dùng AI prompt):
 1. **AAOS là gì?** Tại sao ô tô cần AAOS thay vì Android điện thoại?

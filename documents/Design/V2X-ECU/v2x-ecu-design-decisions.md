@@ -84,7 +84,7 @@ Two scripts in `tools/comms_check/`, at the repo root rather than in this node f
 
 ## D8 — Clock domains, and `rxTime` as the one cross-node timestamp of record
 
-This node stamps the only timestamp another node records, so its clock discipline is a contract obligation rather than an implementation detail ([m1-run-timing-and-event-triggering.md §6.2](../../requirements/m1-run-timing-and-event-triggering.md), R21).
+This node stamps the only timestamp another node records, so its clock discipline is a contract obligation rather than an implementation detail ([m1-run-timing-and-event-triggering.md §6.2](../../../requirements/m1-run-timing-and-event-triggering.md), R21).
 
 | Value | Clock | Stamped by |
 |---|---|---|

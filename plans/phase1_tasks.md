@@ -2,13 +2,13 @@
 
 > **Authority & context:**
 > - **Phase content:** [milestone1.md § Phase 1](milestone1.md#phase-1--comms-bring-up-v2x-ecu--scenario-player-r5r9-r11--r10-moved-to-the-future-plan) — its eight acceptance checkboxes are the phase output.
-> - **Design (V2X ECU):** [v2x-ecu-hld.md](../V2X_ECU/doc/v2x-ecu-hld.md) — §4 folder structure, §6 components and env table, §11 build and CI, and the [decision record](../V2X_ECU/doc/v2x-ecu-design-decisions.md) D1–D8 (D4 payload-carrying events; D7 the bench↔V2X comms check). Every V2X_ECU path below is cited from its §4; the D7 script pair lives at repo-root `tools/comms_check/`, sanctioned by [node-code-layout.md § tools/](../.claude/rules/node-code-layout.md#tools--test-equipment-and-ecu-mocks) and V2X D7.
-> - **Design (Scenario Player):** [scenario-player-hld.md](../Scenario_Player/doc/scenario-player-hld.md) — §4 folder structure, §6 components and configuration, §12 test strategy, and the [decision record](../Scenario_Player/doc/scenario-player-design-decisions.md) D1–D7. Every Scenario_Player path below is cited from its §4.
+> - **Design (V2X ECU):** [v2x-ecu-hld.md](../documents/Design/V2X-ECU/v2x-ecu-hld.md) — §4 folder structure, §6 components and env table, §11 build and CI, and the [decision record](../documents/Design/V2X-ECU/v2x-ecu-design-decisions.md) D1–D8 (D4 payload-carrying events; D7 the bench↔V2X comms check). Every V2X_ECU path below is cited from its §4; the D7 script pair lives at repo-root `tools/comms_check/`, sanctioned by [node-code-layout.md § tools/](../.claude/rules/node-code-layout.md#tools--test-equipment-and-ecu-mocks) and V2X D7.
+> - **Design (Scenario Player):** [scenario-player-hld.md](../documents/Design/SCENARIO-PLAYER/scenario-player-hld.md) — §4 folder structure, §6 components and configuration, §12 test strategy, and the [decision record](../documents/Design/SCENARIO-PLAYER/scenario-player-design-decisions.md) D1–D7. Every Scenario_Player path below is cited from its §4.
 > - **Run timing:** [m1-run-timing-and-event-triggering.md §7](../requirements/m1-run-timing-and-event-triggering.md) R20 and R22 — the bench's paced scenario clock (group 1.6) and the R22 demo cycle it emits (group 1.13).
 > - **Requirements:** [m1-cooperative-awareness.md §2](../requirements/m1-cooperative-awareness.md) R2, R5–R9, R11, R18 — referenced by number, never restated. **R10 is deferred**: the R7 seam declares `send`, nothing calls it, no subtask implements it.
 > - **Phase 0 baseline (do not re-plan):** [phase0_tasks.md § Phase 0 overview](phase0_tasks.md#phase-0-overview) — contracts frozen, codec seam + R2 binding + golden vectors + `check_sync.py` landed, smoke test C1–C5 green on a `baseline_m1` clone, CI lanes live.
 > - **Deploy procedure:** [deploy-walkthrough-netcheck.md](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md) is the subject walkthrough for group 1.10; every subtask there cites the section governing its step and takes its acceptance from [§6](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#6-expected-outputs-and-acceptance).
-> - **Node guides:** [node-v2x-ecu.md](../requirements/car-sky-guide/node-v2x-ecu.md) and [traffic-capture-wireshark.md](../requirements/car-sky-guide/traffic-capture-wireshark.md) already carry the Phase 1 shape; [node-scenario-player.md](../requirements/car-sky-guide/node-scenario-player.md) is unchanged by design ([SP HLD §11](../Scenario_Player/doc/scenario-player-hld.md#11-tech-stack-build-and-ci)).
+> - **Node guides:** [node-v2x-ecu.md](../requirements/car-sky-guide/node-v2x-ecu.md) and [traffic-capture-wireshark.md](../requirements/car-sky-guide/traffic-capture-wireshark.md) already carry the Phase 1 shape; [node-scenario-player.md](../requirements/car-sky-guide/node-scenario-player.md) is unchanged by design ([SP HLD §11](../documents/Design/SCENARIO-PLAYER/scenario-player-hld.md#11-tech-stack-build-and-ci)).
 > - **Rules:** [task-planning-conventions.md](../.claude/rules/task-planning-conventions.md) (`X.Y.Z.W`; subtask discipline restated once in § Subtask discipline below) and [walkthrough-driven-delivery.md](../.claude/rules/walkthrough-driven-delivery.md) (group 1.10 decomposes from the walkthrough, never from the platform).
 >
 > **Task ID legend:** `X.1.Z.W` — X = requirement served · 1 = this phase · Z = task group · W = subtask position within the group. IDs are stable; never renumber.
@@ -153,7 +153,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 ## Task Group 1.2 — V2X ECU foundation: config, socket, event log, forwarder (serves R8, R7, R18, R2)
 
-> The transport-blind foundation modules of [V2X HLD §4](../V2X_ECU/doc/v2x-ecu-hld.md#4-folder-structure). All paths inside `V2X_ECU/`, test files included — the HLD's §4 tree designates each one. Build/test = V2X row of § Per-node build commands (CI `v2x-core-build`).
+> The transport-blind foundation modules of [V2X HLD §4](../documents/Design/V2X-ECU/v2x-ecu-hld.md#4-folder-structure). All paths inside `V2X_ECU/`, test files included — the HLD's §4 tree designates each one. Build/test = V2X row of § Per-node build commands (CI `v2x-core-build`).
 
 ### [x] `8.1.2.1` — Env config loader `src/config/config.{hpp,cpp}` *(agent)*
 
@@ -161,7 +161,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Scope:**
 
-- Fields + defaults exactly per [HLD §6](../V2X_ECU/doc/v2x-ecu-hld.md#6-internal-components): `LISTEN_PORT` (47100), `ADA_ECU_HOST`/`ADA_ECU_PORT` (10.99.0.12/47200), `FAULT_PLAN` (`none·init_fail·configure_reject·subscription_drop`, default `none`), `INIT_RETRY_MAX` (3), `RETRY_BACKOFF_MS` (500), `DEDUPE_WINDOW_MS` (1500), `EVENT_LOG_PATH` (empty = stdout only). The three *(proposal)* defaults proceed as proposed — user ratification stays open (§ Open items item 1). `CAPTURE_*`/`PCAP_DIR` are consumed by `capture.sh` directly, not by this loader.
+- Fields + defaults exactly per [HLD §6](../documents/Design/V2X-ECU/v2x-ecu-hld.md#6-internal-components): `LISTEN_PORT` (47100), `ADA_ECU_HOST`/`ADA_ECU_PORT` (10.99.0.12/47200), `FAULT_PLAN` (`none·init_fail·configure_reject·subscription_drop`, default `none`), `INIT_RETRY_MAX` (3), `RETRY_BACKOFF_MS` (500), `DEDUPE_WINDOW_MS` (1500), `EVENT_LOG_PATH` (empty = stdout only). The three *(proposal)* defaults proceed as proposed — user ratification stays open (§ Open items item 1). `CAPTURE_*`/`PCAP_DIR` are consumed by `capture.sh` directly, not by this loader.
 - Validation: ports 1–65535, non-empty host, `FAULT_PLAN` enum, non-negative retry ceiling, positive backoff/window; invalid value → descriptive error (exception), caller exits non-zero. Env read via an injectable getter so tests never mutate process env.
 - Test `tests/config/test_config.cpp`: defaults when unset; each override parsed; each rejection case.
 
@@ -291,7 +291,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Scope:** markdown per [markdown-writing-style](../.claude/skills/markdown-writing-style/SKILL.md): mapping table `IRadioAdapter` methods ↔ telux `Cv2x` radio API calls (init/configure/subscribe/send parity, call-order constraints); port plan — replace `StubRadioAdapter` with a telux-backed implementation, config/threading deltas, everything above the seam unchanged (the node's focus goal); `send` row marked R10-deferred. References the frozen header, never restates it.
 
-**Acceptance:** doc committed at `V2X_ECU/doc/telux-parity-and-port-plan.md`; method names match `i_radio_adapter.hpp` exactly. Doc-only — no build target.
+**Acceptance:** doc committed at `documents/Design/V2X-ECU/telux-parity-and-port-plan.md`; method names match `i_radio_adapter.hpp` exactly. Doc-only — no build target.
 
 **Dependencies:** after 7.1.3.1. **Commit:** `[7.1.3.6] docs: author telux parity notes and port plan`
 
@@ -305,7 +305,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 ### [x] `9.1.4.1` — Profile validator `src/pipeline/validator.{hpp,cpp}` *(agent)*
 
-**Objective:** stage 2 — profile-range validation of a decoded `CpmContent` and F9, reject + count by reason. Mandatory-field presence is structural and is caught by the seam ([HLD §6](../V2X_ECU/doc/v2x-ecu-hld.md#6-internal-components)).
+**Objective:** stage 2 — profile-range validation of a decoded `CpmContent` and F9, reject + count by reason. Mandatory-field presence is structural and is caught by the seam ([HLD §6](../documents/Design/V2X-ECU/v2x-ecu-hld.md#6-internal-components)).
 
 **Scope:** range set = the wire-native bounds of `V2X_ECU/contracts/r1-cpm-content.schema.json` (stationId, lat/lon, orientation, coordinates, confidences 1..101) plus F9 `|measurementDeltaTime| ≤ 2047` — note the wire legally carries −2048 but F9 bans it (profile rule; decode alone won't reject it). Violations return a typed reject reason (enum) for counting; no logging inside the class. Bounds sourced from named constants mirroring the schema — contract bounds, not tunables. Test `tests/pipeline/test_validator.cpp`: nominal golden content passes; one case per reject reason incl. mdt = −2048.
 
@@ -336,7 +336,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 - F7: `object.distance = hypot(x, y)` in metres from the 0.01 m wire units — derived here, never transmitted.
 - F6: confidence conversions per the profile doc — `ConfidenceLevel 101 → null` (`std::optional`), coordinate confidence to metres.
 - F1: `sender.speed` derived from consecutive `referencePosition`/`referenceTime` deltas per `stationId` — nullable until the 2nd message; per-station state lives in the builder; document the planar small-delta approximation in code.
-- Unit conversions: lat/lon 10⁻⁷ ° → °, orientation 0.1 ° → °, positions/velocities 0.01 → SI; `rxTime` stamped from a value passed in by the pipeline (receipt time); `object.timeOfMeasurement` carried through from `CpmContent.measurementDeltaTime` unchanged ([V2X HLD §10.2](../V2X_ECU/doc/v2x-ecu-hld.md#102-r2--the-message-set-this-node-produces-for-the-ada-ecu)) — the frozen R2 schema bounds it at −2048..2047 as a delta against the CPM reference time, so an absolute timestamp is schema-invalid there.
+- Unit conversions: lat/lon 10⁻⁷ ° → °, orientation 0.1 ° → °, positions/velocities 0.01 → SI; `rxTime` stamped from a value passed in by the pipeline (receipt time); `object.timeOfMeasurement` carried through from `CpmContent.measurementDeltaTime` unchanged ([V2X HLD §10.2](../documents/Design/V2X-ECU/v2x-ecu-hld.md#102-r2--the-message-set-this-node-produces-for-the-ada-ecu)) — the frozen R2 schema bounds it at −2048..2047 as a delta against the CPM reference time, so an absolute timestamp is schema-invalid there.
 - Test `tests/pipeline/test_r2_builder.cpp`: nominal golden content → values cross-checked against the node-local sample `tests/fixtures/samples/r2-object.json` (distance 25.03 = hypot(25.0, 1.2)); F6 101→null; F1 null-then-derived across two messages.
 
 **Acceptance:** V2X build + ctest green on CI.
@@ -361,7 +361,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Objective:** the R9 acceptance corpus: `tests/fixtures/malformed/` fully rejected, zero crashes, counters correct.
 
-**Scope:** commit the ten-case corpus at `tests/fixtures/malformed/`, one file per kind named in [V2X HLD §6](../V2X_ECU/doc/v2x-ecu-hld.md#6-internal-components) — `empty.uper`, `truncated-nominal.uper`, `truncated-mid-object.uper`, `random.uper`, `bit-flipped-payload.uper`, `trailing-garbage.uper`, `oversized.uper`, `wrong-message-id.uper`, `wrong-protocol-version.uper`, `r1-variant.uper`. Provenance of each documented in test comments, generation deterministic. Local fixtures, **not** synced contracts (HLD §4). Test `tests/pipeline/test_rx_pipeline_malformed.cpp`: one parameterized suite over the whole corpus, each case asserting its expected disposition — `Reject` (sink never called, `decode_reject` or `validate_reject` counted) or `ToleratedControl` (decoded and forwarded, as profile §3's ignore-on-decode rule mandates) — with no either-outcome branch, and the process never crashing.
+**Scope:** commit the ten-case corpus at `tests/fixtures/malformed/`, one file per kind named in [V2X HLD §6](../documents/Design/V2X-ECU/v2x-ecu-hld.md#6-internal-components) — `empty.uper`, `truncated-nominal.uper`, `truncated-mid-object.uper`, `random.uper`, `bit-flipped-payload.uper`, `trailing-garbage.uper`, `oversized.uper`, `wrong-message-id.uper`, `wrong-protocol-version.uper`, `r1-variant.uper`. Provenance of each documented in test comments, generation deterministic. Local fixtures, **not** synced contracts (HLD §4). Test `tests/pipeline/test_rx_pipeline_malformed.cpp`: one parameterized suite over the whole corpus, each case asserting its expected disposition — `Reject` (sink never called, `decode_reject` or `validate_reject` counted) or `ToleratedControl` (decoded and forwarded, as profile §3's ignore-on-decode rule mandates) — with no either-outcome branch, and the process never crashing.
 
 **Acceptance:** V2X build + ctest green on CI — closes the malformed half of the R9 box (golden decode half closed by Phase 0 `1.0.2.5` + 9.1.4.4's test).
 
@@ -419,7 +419,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 ### [x] `5.1.5.4` — `V2X_ECU/Dockerfile` + `entrypoint.sh` *(agent)*
 
-**Objective:** the deployable V2X ECU image — local tag `v2x-ecu:latest`, pushed as `registry.hackathon-2.carsky.io/m1-v2x-ecu:latest` ([HLD §4](../V2X_ECU/doc/v2x-ecu-hld.md#4-folder-structure) designates the `Dockerfile` path, [§11](../V2X_ECU/doc/v2x-ecu-hld.md#11-tech-stack-build-and-ci) the build): multi-stage — cmake build stage → runtime stage with tcpdump.
+**Objective:** the deployable V2X ECU image — local tag `v2x-ecu:latest`, pushed as `registry.hackathon-2.carsky.io/m1-v2x-ecu:latest` ([HLD §4](../documents/Design/V2X-ECU/v2x-ecu-hld.md#4-folder-structure) designates the `Dockerfile` path, [§11](../documents/Design/V2X-ECU/v2x-ecu-hld.md#11-tech-stack-build-and-ci) the build): multi-stage — cmake build stage → runtime stage with tcpdump.
 
 **Scope:**
 
@@ -437,11 +437,11 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 ## Task Group 1.6 — Scenario Player application (serves R11)
 
-> All paths from [SP HLD §4](../Scenario_Player/doc/scenario-player-hld.md#4-folder-structure); build/test = Scenario_Player Python row of § Per-node build commands (local pytest **and** CI `python-tests`). Wire-native conversion authority: the callflow note §4.2 mapping ([scenario-player-v2x-callflow-messages.md](../Scenario_Player/doc/research_notes/scenario-player-v2x-callflow-messages.md)); content dataclass: `Scenario_Player/player/contracts/cpm_content.py` (Phase 0). Test files are designated by the same §4 tree.
+> All paths from [SP HLD §4](../documents/Design/SCENARIO-PLAYER/scenario-player-hld.md#4-folder-structure); build/test = Scenario_Player Python row of § Per-node build commands (local pytest **and** CI `python-tests`). Wire-native conversion authority: the callflow note §4.2 mapping ([scenario-player-v2x-callflow-messages.md](../documents/Design/SCENARIO-PLAYER/scenario-player-v2x-callflow-messages.md)); content dataclass: `Scenario_Player/player/contracts/cpm_content.py` (Phase 0). Test files are designated by the same §4 tree.
 
 ### [x] `11.1.6.1` — Config loader `player/config.py` + runtime manifest *(agent)*
 
-**Objective:** env + scenario-YAML loading/validation — the bench's **only env reader** ([SP HLD §6](../Scenario_Player/doc/scenario-player-hld.md#6-internal-components), D3).
+**Objective:** env + scenario-YAML loading/validation — the bench's **only env reader** ([SP HLD §6](../documents/Design/SCENARIO-PLAYER/scenario-player-hld.md#6-internal-components), D3).
 
 **Scope:**
 
@@ -456,13 +456,13 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Status:** done 2026-08-01 — pytest 69 passed locally (config loader + env defaults + rejections); requirements.txt created with -r include from dev. Closed: CI run 30697863324 green (`python-tests`).
 
-**Follow-up (not this subtask's scope, do not reopen it):** [SP HLD §6](../Scenario_Player/doc/scenario-player-hld.md#6-internal-components) and D5 add two scenario keys this loader validates — `start_delay_s` (default `0.0`) and `reference_time_epoch` (default `its`). Both land in `11.1.6.9`.
+**Follow-up (not this subtask's scope, do not reopen it):** [SP HLD §6](../documents/Design/SCENARIO-PLAYER/scenario-player-hld.md#6-internal-components) and D5 add two scenario keys this loader validates — `start_delay_s` (default `0.0`) and `reference_time_epoch` (default `its`). Both land in `11.1.6.9`.
 
 ### [x] `11.1.6.2` — Committed scenario variants `scenarios/*.yaml` *(agent)*
 
 **Objective:** the two R11-acceptance scenario files (SP HLD D3) — observably different by construction.
 
-**Scope:** `scenarios/default.yaml` — C approaching, 70.0 m closing at 5.0 m/s to 20.5 m across a 10.0 s looping cycle, crossing the 30 m admission gate 8.0 s in ([SP D7](../Scenario_Player/doc/scenario-player-design-decisions.md#d7--the-demo-cycle-is-one-clip-length-and-its-geometry-is-solved-backwards-from-the-first-warning)); `scenarios/c-out-of-range.yaml` — C static beyond the 35 m exit gate (value deliberately > `gate_exit`; the pairing with the R13 gate constants is a property of the data, per SP HLD D3). All tunables live in the YAML — new variants are new files, never code. Extend `tests/test_config.py`: both committed files load through `player.config` and differ in the D3 kinematic fields.
+**Scope:** `scenarios/default.yaml` — C approaching, 70.0 m closing at 5.0 m/s to 20.5 m across a 10.0 s looping cycle, crossing the 30 m admission gate 8.0 s in ([SP D7](../documents/Design/SCENARIO-PLAYER/scenario-player-design-decisions.md#d7--the-demo-cycle-is-one-clip-length-and-its-geometry-is-solved-backwards-from-the-first-warning)); `scenarios/c-out-of-range.yaml` — C static beyond the 35 m exit gate (value deliberately > `gate_exit`; the pairing with the R13 gate constants is a property of the data, per SP HLD D3). All tunables live in the YAML — new variants are new files, never code. Extend `tests/test_config.py`: both committed files load through `player.config` and differ in the D3 kinematic fields.
 
 **Acceptance:** pytest green locally + CI.
 
@@ -532,7 +532,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Status:** done 2026-08-01 — pytest 107 passed locally; cadence/loop-restart/duration-exit/[TX]-shape/encode-skip covered with fake clock. Closed: CI run 30697863324 green (`python-tests`).
 
-**Follow-up — this loop is the bench half of the SP D5 scenario clock, and of R20:** as shipped, scenario time is a tick counter (`t = cycle_tick * period`) advanced by a fixed `sleep(period)` with no drift correction, so it diverges from wall time by the per-tick work cost, ~1 % accumulating and unbounded over a run; and the `[TX]` line carries no timestamp, so [SP HLD §12](../Scenario_Player/doc/scenario-player-hld.md#12-test-strategy)'s `scenario_time_s` within ±1 % of `mono_ms` — R20's K5 — has nothing to read. D5 mandates both, so `11.1.6.11` replaces the fixed sleep with deadline scheduling and `11.1.6.12` adds `mono_ms`.
+**Follow-up — this loop is the bench half of the SP D5 scenario clock, and of R20:** as shipped, scenario time is a tick counter (`t = cycle_tick * period`) advanced by a fixed `sleep(period)` with no drift correction, so it diverges from wall time by the per-tick work cost, ~1 % accumulating and unbounded over a run; and the `[TX]` line carries no timestamp, so [SP HLD §12](../documents/Design/SCENARIO-PLAYER/scenario-player-hld.md#12-test-strategy)'s `scenario_time_s` within ±1 % of `mono_ms` — R20's K5 — has nothing to read. D5 mandates both, so `11.1.6.11` replaces the fixed sleep with deadline scheduling and `11.1.6.12` adds `mono_ms`.
 
 ### [x] `11.1.6.8` — Entrypoint `main.py` *(agent)*
 
@@ -548,7 +548,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 ### [ ] `11.1.6.9` — Validate the two D5 scenario keys in `player/config.py` *(agent)*
 
-**Objective:** `player/config.py` loads and validates the two scenario keys [SP HLD §6](../Scenario_Player/doc/scenario-player-hld.md#6-internal-components) designates and D5 mandates — nothing else changes.
+**Objective:** `player/config.py` loads and validates the two scenario keys [SP HLD §6](../documents/Design/SCENARIO-PLAYER/scenario-player-hld.md#6-internal-components) designates and D5 mandates — nothing else changes.
 
 **Scope:**
 
@@ -563,7 +563,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 ### [ ] `11.1.6.10` — Stamp `referenceTime` against `reference_time_epoch` in `player/scenario.py` *(agent)*
 
-**Objective:** `referenceTime` leaves the bench as `TimestampIts` — milliseconds since 2004-01-01T00:00:00.000 TAI — with the epoch taken from configuration ([SP HLD §10](../Scenario_Player/doc/scenario-player-hld.md#10-the-contract--r1-the-message-set-this-node-produces), D5).
+**Objective:** `referenceTime` leaves the bench as `TimestampIts` — milliseconds since 2004-01-01T00:00:00.000 TAI — with the epoch taken from configuration ([SP HLD §10](../documents/Design/SCENARIO-PLAYER/scenario-player-hld.md#10-the-contract--r1-the-message-set-this-node-produces), D5).
 
 **Scope:**
 
@@ -593,7 +593,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 ### [ ] `11.1.6.12` — Add `mono_ms` to the `[TX]` line *(agent)*
 
-**Objective:** the `[TX]` JSONL line carries `mono_ms`, so `scenario_time_s` can be regressed against elapsed time ([SP HLD §12](../Scenario_Player/doc/scenario-player-hld.md#12-test-strategy), D5).
+**Objective:** the `[TX]` JSONL line carries `mono_ms`, so `scenario_time_s` can be regressed against elapsed time ([SP HLD §12](../documents/Design/SCENARIO-PLAYER/scenario-player-hld.md#12-test-strategy), D5).
 
 **Scope:**
 
@@ -639,7 +639,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 ### [x] `5.1.7.3` — `Scenario_Player/Dockerfile` *(agent)*
 
-**Objective:** the deployable Scenario Player image — local tag `scenario-player:latest`, pushed as `registry.hackathon-2.carsky.io/m1-scenario-player:latest` ([SP HLD §11](../Scenario_Player/doc/scenario-player-hld.md#11-tech-stack-build-and-ci), D4): stage 1 cmake-builds `codec_helper` → stage 2 python runtime.
+**Objective:** the deployable Scenario Player image — local tag `scenario-player:latest`, pushed as `registry.hackathon-2.carsky.io/m1-scenario-player:latest` ([SP HLD §11](../documents/Design/SCENARIO-PLAYER/scenario-player-hld.md#11-tech-stack-build-and-ci), D4): stage 1 cmake-builds `codec_helper` → stage 2 python runtime.
 
 **Scope:** **both stages resolve the same base image, `python:3.11-slim`, through one `ARG`** (SP D4), so `cpm_encode` links against exactly the glibc and libstdc++ it runs on. CMake comes from a pip wheel pinned `cmake>=3.28,<4`, because this base's apt CMake is below the 3.28 floor the helper needs. Stage 1 builds `cpm_encode`; stage 2 carries `pip install -r requirements.txt`, `main.py`, `player/`, `scenarios/`, and `cpm_encode` at `/app/cpm_encode` (workdir `/app`). LGPLv3 dynamic posture (report §4, SP HLD §11 + D4): copy `libvanetza_asn1*.so` into stage 2, or configure shared as 5.1.5.4 does. `codec_helper/src`, `tests/`, `doc/` never enter stage 2. Blueprint config unchanged ([node-scenario-player.md](../requirements/car-sky-guide/node-scenario-player.md)). arm64/QEMU build-time risk: § Open items item 3.
 
@@ -689,7 +689,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 ### [x] `2.1.9.1` — Parameterize netcheck `BODY_PREVIEW` *(agent)*
 
-**Objective:** the D6 netcheck sink made real ([V2X HLD D6](../V2X_ECU/doc/v2x-ecu-design-decisions.md), §7 test-equipment row): the `[RX]` body-preview length becomes the `BODY_PREVIEW` env var so the ADA sink can show whole R2 JSON bodies.
+**Objective:** the D6 netcheck sink made real ([V2X HLD D6](../documents/Design/V2X-ECU/v2x-ecu-design-decisions.md), §7 test-equipment row): the `[RX]` body-preview length becomes the `BODY_PREVIEW` env var so the ADA sink can show whole R2 JSON bodies.
 
 **Scope:** `tools/netcheck/netcheck.py` only (explicitly in write scope): replace the literal `96` in the `[RX]` log line with `BODY_PREVIEW` read from env, **default 96** (spec-preserving); add it to the module docstring's env list. No other behavior change; `Dockerfile`/`entrypoint.sh`/`capture.sh` untouched. The sink deployment sets `BODY_PREVIEW=512` (5.1.10.2); the image re-push rides the existing `netcheck-image` lane (5.1.10.1).
 
@@ -705,7 +705,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 > The subject walkthrough is [deploy-walkthrough-netcheck.md](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md), whose M1–M12 are the clone, configure, deploy, read-logs and teardown sequence this group performs with different images and env. Every subtask below cites the section governing its step, takes its executor from [§5](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#5-work-division-between-ai-and-human), and takes its acceptance from [§6](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#6-expected-outputs-and-acceptance); the commands stay in the walkthrough. Registry push runs in the image CI lanes; the remaining Nydus UI work is Human, because no REST route updates an existing node's config ([§5](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#5-work-division-between-ai-and-human), row M7). Evidence accumulates in `plans/doc/phase1-comms-run.md` (created by 5.1.10.1). Standing requirement: images single-platform `linux/arm64` ([phase0-smoke-test-run.md](doc/phase0-smoke-test-run.md)).
 
-> **Acceptance for an ECU Room.** [§6](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#6-expected-outputs-and-acceptance)'s C1–C4 apply unchanged: every node `Running` with restart 0, no `[ERR]` line, a live readable log per node, and a `[CAP]` line on the capturing node. C5's accumulated `|bench|v2x` stamp is netcheck's payload; the equivalent per-node observables for these images are [V2X HLD §12](../V2X_ECU/doc/v2x-ecu-hld.md#12-test-strategy) and [SP HLD §12](../Scenario_Player/doc/scenario-player-hld.md#12-test-strategy), which each subtask names.
+> **Acceptance for an ECU Room.** [§6](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#6-expected-outputs-and-acceptance)'s C1–C4 apply unchanged: every node `Running` with restart 0, no `[ERR]` line, a live readable log per node, and a `[CAP]` line on the capturing node. C5's accumulated `|bench|v2x` stamp is netcheck's payload; the equivalent per-node observables for these images are [V2X HLD §12](../documents/Design/V2X-ECU/v2x-ecu-hld.md#12-test-strategy) and [SP HLD §12](../documents/Design/SCENARIO-PLAYER/scenario-player-hld.md#12-test-strategy), which each subtask names.
 
 ### [x] `5.1.10.1` — Push the three images to the CarSky registry *(AI — executed by the image CI lanes)*
 
@@ -774,7 +774,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 1. Read the ADA node's log over the logs route.
 2. Extract the `[RX]` bodies at the 512-character preview `2.1.9.1` enables.
-3. Confirm `object.distance` changes across successive messages, as `default.yaml`'s approach kinematics require — the observable [V2X HLD §12](../V2X_ECU/doc/v2x-ecu-hld.md#12-test-strategy) names for this box.
+3. Confirm `object.distance` changes across successive messages, as `default.yaml`'s approach kinematics require — the observable [V2X HLD §12](../documents/Design/V2X-ECU/v2x-ecu-hld.md#12-test-strategy) names for this box.
 
 **Acceptance:** criteria C2 and C3 of [§6](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#6-expected-outputs-and-acceptance) on the ADA node — no `[ERR]` line, a live readable log — plus the `[RX]` excerpts showing a changing `object.distance`, recorded in `plans/doc/phase1-comms-run.md`.
 
@@ -790,7 +790,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 2. Run `python tools/comms_check/check_v2x_log.py <saved.log>` in stream mode against it.
 3. Record the exit status and the checker's output.
 
-Exit 0 asserts `rx_datagram` → `decode_ok` (CpmContent JSON) → `r2_forwarded` (R2 JSON) per received message, which is the chain [V2X HLD §12](../V2X_ECU/doc/v2x-ecu-hld.md#12-test-strategy) lists as this node's deployed observable. The same checker in expected-vector mode already closed the CI half in `9.1.12.3`.
+Exit 0 asserts `rx_datagram` → `decode_ok` (CpmContent JSON) → `r2_forwarded` (R2 JSON) per received message, which is the chain [V2X HLD §12](../documents/Design/V2X-ECU/v2x-ecu-hld.md#12-test-strategy) lists as this node's deployed observable. The same checker in expected-vector mode already closed the CI half in `9.1.12.3`.
 
 **Acceptance:** `check_v2x_log.py` exits 0 on the saved export, with its output recorded in `plans/doc/phase1-comms-run.md`; criteria C2 and C3 of [§6](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#6-expected-outputs-and-acceptance) hold on the V2X node.
 
@@ -803,7 +803,7 @@ Exit 0 asserts `rx_datagram` → `decode_ok` (CpmContent JSON) → `r2_forwarded
 **Scope — steps, all AI per row [M10](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#m10--read-the-logs--criteria-c2c5):**
 
 1. Read the V2X node's log from the first seconds after node start; the bring-up sequence prints once and does not repeat.
-2. Extract the three `[EVT] stub_transition` lines and the two `[BOOT]` lines, the observables [V2X HLD §12](../V2X_ECU/doc/v2x-ecu-hld.md#12-test-strategy) names for R8's scripted call flow.
+2. Extract the three `[EVT] stub_transition` lines and the two `[BOOT]` lines, the observables [V2X HLD §12](../documents/Design/V2X-ECU/v2x-ecu-hld.md#12-test-strategy) names for R8's scripted call flow.
 3. Where `5.1.10.2` step 4 supplied a `FAULT_PLAN=init_fail` Room, extract the `fault_injected`, `recovery` and retry lines from it as supplementary evidence.
 
 Step 3 is optional: R8's box is closed at unit and loopback level by `8.1.3.2`/`8.1.3.3`, and this subtask does not gate it.
@@ -835,7 +835,7 @@ Step 3 is optional: R8's box is closed at unit and loopback level by `8.1.3.2`/`
 2. Compare them against the `default.yaml` baseline captured in `2.1.10.3`: a static beyond-gate distance instead of the approaching sequence.
 3. Record the paired before/after excerpts.
 
-This is R11's acceptance at Room level, which [SP HLD §12](../Scenario_Player/doc/scenario-player-hld.md#12-test-strategy) places on the consumer's log.
+This is R11's acceptance at Room level, which [SP HLD §12](../documents/Design/SCENARIO-PLAYER/scenario-player-hld.md#12-test-strategy) places on the consumer's log.
 
 **Acceptance:** paired before/after log excerpts recorded in `plans/doc/phase1-comms-run.md`, differing in the object's distance sequence and in nothing else.
 
@@ -923,7 +923,7 @@ Dissection caveat (D5): raw UPER without GN/BTP shows as UDP data, so the eviden
 
 ## Task Group 1.13 — Bench run timing: paced scenario clock and the R22 demo cycle (serves R20, R22, R11)
 
-> **The bench half of R20 and R22.** Design of record: [SP HLD §6](../Scenario_Player/doc/scenario-player-hld.md#6-internal-components) (the scenario-key table), [§12](../Scenario_Player/doc/scenario-player-hld.md#12-test-strategy) (the `[TX]` observable), **[D5](../Scenario_Player/doc/scenario-player-design-decisions.md#d5--the-scenario-clock-is-deadline-scheduled-and-every-offset-is-configuration)** (the deadline-scheduled clock and its configuration) and **[D7](../Scenario_Player/doc/scenario-player-design-decisions.md#d7--the-demo-cycle-is-one-clip-length-and-its-geometry-is-solved-backwards-from-the-first-warning)** (the demo cycle). Requirements: [m1-run-timing-and-event-triggering.md §7](../requirements/m1-run-timing-and-event-triggering.md) R20 and R22, §6.1's key table, §6.6's geometry.
+> **The bench half of R20 and R22.** Design of record: [SP HLD §6](../documents/Design/SCENARIO-PLAYER/scenario-player-hld.md#6-internal-components) (the scenario-key table), [§12](../documents/Design/SCENARIO-PLAYER/scenario-player-hld.md#12-test-strategy) (the `[TX]` observable), **[D5](../documents/Design/SCENARIO-PLAYER/scenario-player-design-decisions.md#d5--the-scenario-clock-is-deadline-scheduled-and-every-offset-is-configuration)** (the deadline-scheduled clock and its configuration) and **[D7](../documents/Design/SCENARIO-PLAYER/scenario-player-design-decisions.md#d7--the-demo-cycle-is-one-clip-length-and-its-geometry-is-solved-backwards-from-the-first-warning)** (the demo cycle). Requirements: [m1-run-timing-and-event-triggering.md §7](../requirements/m1-run-timing-and-event-triggering.md) R20 and R22, §6.1's key table, §6.6's geometry.
 >
 > `scenarios/default.yaml` already carries the R22 geometry — `duration_s` 10.0, `initial_distance_m` 70.0, `closing_speed_mps` 5.0, `cpm_rate_hz` 10, `loop` true. **This group does not re-derive those values**, and it does not repeat group 1.6: the scenario keys, the deadline-scheduled clock and `mono_ms` are `11.1.6.9`–`11.1.6.12`. What is left is the test the retimed file broke, and the one value only a deployed measurement can supply.
 >
@@ -943,7 +943,7 @@ Dissection caveat (D5): raw UPER without GN/BTP shows as UDP data, so the eviden
 - **`test_x_sequences_differ_at_every_positive_t`** no longer states a property the two scenarios have. Default sweeps *through* the static variant's constant range — at `t = 2.0 s` it is exactly 60.0 m, so both read `6000` — and pointwise difference is therefore false at one grid point whatever the guard. Assert the invariant that does hold: the two sequences are not the same sequence, and a strictly decreasing stream meets a constant one **at most once**.
 - **`test_config.py`'s `TestCommittedScenarioVariants`** asserts `initial_distance_m == 60.0` and a final distance ≈ 10 m. Retune it to the R22 geometry, and make it the **one** place the geometry appears as literals: it pins intent (including the 30 m gate crossing landing at 8.0 s, inside R22's open interval), while `test_streams_differ.py` derives from the same files and checks only the wiring from data to wire. Without both halves the derived tests cannot catch a wrong YAML value.
 - **`test_scenario_kinematics.py`'s `_default_config()`** mirrors `default.yaml` in code and is documented as doing so. It is green but stale — 60.0 / 2.5 / 20.0 with hand-computed `6000/3500/1000` at `t = 0/10/20`. Update the values, the sample points and the docstring so the mirror is true.
-- **The module docstring** of `test_streams_differ.py` states the 20 s / 60 m grid. Restate it against the committed files, and cite [SP D7](../Scenario_Player/doc/scenario-player-design-decisions.md#d7--the-demo-cycle-is-one-clip-length-and-its-geometry-is-solved-backwards-from-the-first-warning) rather than repeating the derivation.
+- **The module docstring** of `test_streams_differ.py` states the 20 s / 60 m grid. Restate it against the committed files, and cite [SP D7](../documents/Design/SCENARIO-PLAYER/scenario-player-design-decisions.md#d7--the-demo-cycle-is-one-clip-length-and-its-geometry-is-solved-backwards-from-the-first-warning) rather than repeating the derivation.
 - **Do not touch** `test_out_of_range_x_constant` or `test_non_kinematic_fields_identical_at_equal_t`. `test_out_of_range_x_static_beyond_exit_gate` keeps its `c-out-of-range.yaml` pairing (unchanged at 60.0 m static) but takes its expected value from the loaded config like the rest.
 
 **Acceptance:** `python -m pytest Scenario_Player/tests` green locally and on CI `python-tests` **and** `sp-codec-helper` — the two lanes the retiming reddened. In `test_streams_differ.py` no assertion carries a re-typed kinematic constant; every expected value is computed from the loaded `ScenarioConfig`.
@@ -954,7 +954,7 @@ Dissection caveat (D5): raw UPER without GN/BTP shows as UDP data, so the eviden
 
 ### [ ] `22.1.13.4` — Set `start_delay_s` in `scenarios/default.yaml` from the measured warm-up *(agent)*
 
-**Objective:** cancel the ADA detector's warm-up so bench scenario time equals clip time — the one value R22's alignment budget is written against ([D7](../Scenario_Player/doc/scenario-player-design-decisions.md#d7--the-demo-cycle-is-one-clip-length-and-its-geometry-is-solved-backwards-from-the-first-warning); [§6.6(g)](../requirements/m1-run-timing-and-event-triggering.md)).
+**Objective:** cancel the ADA detector's warm-up so bench scenario time equals clip time — the one value R22's alignment budget is written against ([D7](../documents/Design/SCENARIO-PLAYER/scenario-player-design-decisions.md#d7--the-demo-cycle-is-one-clip-length-and-its-geometry-is-solved-backwards-from-the-first-warning); [§6.6(g)](../requirements/m1-run-timing-and-event-triggering.md)).
 
 **Scope — one key in one data file. No code, no other scenario:**
 
@@ -1036,18 +1036,18 @@ Four plan-tracked deliverables carry no milestone box of their own:
 
 | # | Item | Owner / closes at |
 |---|---|---|
-| 1 | Three defaults await user ratification: `INIT_RETRY_MAX=3`, `RETRY_BACKOFF_MS=500`, `DEDUPE_WINDOW_MS=1500` ([V2X HLD §6](../V2X_ECU/doc/v2x-ecu-hld.md#6-internal-components) states them as design values). They are externalized as env either way, and the `v2x-comms-check` lane overrides `DEDUPE_WINDOW_MS=1` for its back-to-back golden sends, which proves the externalization rather than the values. The HLD carries no "unratified" marker for them, so architecture is asked to add one or to record the values as ratified | **user** ratifies; [[project-architecture]] records which |
+| 1 | Three defaults await user ratification: `INIT_RETRY_MAX=3`, `RETRY_BACKOFF_MS=500`, `DEDUPE_WINDOW_MS=1500` ([V2X HLD §6](../documents/Design/V2X-ECU/v2x-ecu-hld.md#6-internal-components) states them as design values). They are externalized as env either way, and the `v2x-comms-check` lane overrides `DEDUPE_WINDOW_MS=1` for its back-to-back golden sends, which proves the externalization rather than the values. The HLD carries no "unratified" marker for them, so architecture is asked to add one or to record the values as ratified | **user** ratifies; [[project-architecture]] records which |
 | 2 | R5 box clause "the team APK launches on the AAOS node": neither Phase 1 HLD covers IVI work and the deploy keeps the provided AAOS artifact — needs a ruling (build+install the Phase 0 IVI skeleton APK manually, or defer the clause to Phase 5) | user / [[project-architecture]] |
 | 3 | arm64 image builds compile Vanetza under QEMU emulation in both C++-bearing image lanes. They complete within `timeout-minutes: 360`, so no cross-compilation is needed; the buildx `gha` cache scopes are per-image and leave the `actions/cache` `_deps` entries intact | **closed** by CI run `30698630956` |
 | 4 | The phase's registry push is executed by the image CI lanes' secret-gated push step | **closed** by CI run `30698630956` |
-| 5 | ~~Planner-designated test paths beyond the HLDs' explicit test lists~~ — closed: both HLD §4 trees now designate every test file this phase creates ([V2X HLD §4](../V2X_ECU/doc/v2x-ecu-hld.md#4-folder-structure), [SP HLD §4](../Scenario_Player/doc/scenario-player-hld.md#4-folder-structure)) | **closed** — no planner-designated path remains |
+| 5 | ~~Planner-designated test paths beyond the HLDs' explicit test lists~~ — closed: both HLD §4 trees now designate every test file this phase creates ([V2X HLD §4](../documents/Design/V2X-ECU/v2x-ecu-hld.md#4-folder-structure), [SP HLD §4](../documents/Design/SCENARIO-PLAYER/scenario-player-hld.md#4-folder-structure)) | **closed** — no planner-designated path remains |
 | 6 | The registry host is environment-scoped and is re-derived per round, not assumed to be `hackathon-2` | **closed** — [[project-architecture]] |
 | 7 | Smoke-test O3 (bridge MTU headroom) is open — the nominal CPM is 58 bytes, so it carries no Phase 1 risk; an optional `PAD` probe may ride a group 1.10 run ([M11](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#m11--optional-mtu-headroom)) | group 1.10 (optional) |
 | 8 | **R9 "malformed" scope.** Under the frozen [contracts/r1-cpm-profile.md](../contracts/r1-cpm-profile.md) §3, `protocolVersion` and `messageId` are ignored on decode and `CpmContent` carries no header field. `wrong-message-id`, `wrong-protocol-version` and `r1-variant` are therefore valid-but-different-header inputs rather than malformed ones, and R9's "fully rejected" governs structurally invalid input. No frozen contract changes and no requirement is re-worded. `9.1.4.5` asserts an explicit expected `Disposition` for each of its ten fixtures | **closed** by the [[project-architecture]] ruling and CI run 30700052056, which measures all 10 dispositions |
-| 9 | The SP D5 scenario clock is planned work, not an open decision: [scenario-player-design-decisions.md D5](../Scenario_Player/doc/scenario-player-design-decisions.md) and [SP HLD §6](../Scenario_Player/doc/scenario-player-hld.md#6-internal-components), [§10](../Scenario_Player/doc/scenario-player-hld.md#10-the-contract--r1-the-message-set-this-node-produces) and [§12](../Scenario_Player/doc/scenario-player-hld.md#12-test-strategy) mandate the `start_delay_s` and `reference_time_epoch` keys, the `TimestampIts` epoch stamp, `CLOCK_MONOTONIC` deadline pacing, and `mono_ms` on the `[TX]` line. The HLD outranks the plan, so all four are scheduled | `11.1.6.9` · `11.1.6.10` · `11.1.6.11` · `11.1.6.12` |
+| 9 | The SP D5 scenario clock is planned work, not an open decision: [scenario-player-design-decisions.md D5](../documents/Design/SCENARIO-PLAYER/scenario-player-design-decisions.md) and [SP HLD §6](../documents/Design/SCENARIO-PLAYER/scenario-player-hld.md#6-internal-components), [§10](../documents/Design/SCENARIO-PLAYER/scenario-player-hld.md#10-the-contract--r1-the-message-set-this-node-produces) and [§12](../documents/Design/SCENARIO-PLAYER/scenario-player-hld.md#12-test-strategy) mandate the `start_delay_s` and `reference_time_epoch` keys, the `TimestampIts` epoch stamp, `CLOCK_MONOTONIC` deadline pacing, and `mono_ms` on the `[TX]` line. The HLD outranks the plan, so all four are scheduled | `11.1.6.9` · `11.1.6.10` · `11.1.6.11` · `11.1.6.12` |
 | 10 | `measurementDeltaTime` is always 0 on the wire, because the generator never passes the third argument to `Scenario.sample` ([m1-run-timing-and-event-triggering.md §6.5(c)](../requirements/m1-run-timing-and-event-triggering.md)). It is inside the F9 bound and changes no M1 behaviour, and no HLD or frozen contract requires a non-zero value, so it stays a user decision | **user** |
 | 11 | **The `[EVT] ready` line of the §4.2 B-1 readiness pick is unscheduled, on every node.** [§4.2](../requirements/m1-run-timing-and-event-triggering.md)'s selected mechanism is R5's Deployment-Viewer check **plus one `[EVT] ready` line per node** plus the bench `start_delay_s`. Two of the three are covered — R5's check by group 1.10, `start_delay_s` by `11.1.6.9` and `22.1.13.4` — and the ready line is written by no node. It gates no acceptance box, because the operator reads the Deployment Viewer rather than the log line. **Visible and unscheduled, not absorbed** | **user** |
 
 ---
 
-*This plan decomposes [milestone1.md § Phase 1](milestone1.md#phase-1--comms-bring-up-v2x-ecu--scenario-player-r5r9-r11--r10-moved-to-the-future-plan) against the two Phase 1 HLDs, with group 1.13 decomposed from [m1-run-timing-and-event-triggering.md §6.6](../requirements/m1-run-timing-and-event-triggering.md) and [SP D7](../Scenario_Player/doc/scenario-player-design-decisions.md#d7--the-demo-cycle-is-one-clip-length-and-its-geometry-is-solved-backwards-from-the-first-warning). 13 task groups, 54 subtasks: 45 are agent-implemented, and group 1.10's 9 carry the walkthrough's AI and Human labels. 40 are closed against three CI runs — `30697863324` on `16b8674`, `30698630956` on `7a02fb5`, and `30700052056` on `31d0347`. The 14 open are group 1.10's deploy and verification work, group 1.6's scenario-clock subtasks and group 1.13's two — § Remaining work. Retired IDs, never reused: `20.1.13.2`, `20.1.13.3`.*
+*This plan decomposes [milestone1.md § Phase 1](milestone1.md#phase-1--comms-bring-up-v2x-ecu--scenario-player-r5r9-r11--r10-moved-to-the-future-plan) against the two Phase 1 HLDs, with group 1.13 decomposed from [m1-run-timing-and-event-triggering.md §6.6](../requirements/m1-run-timing-and-event-triggering.md) and [SP D7](../documents/Design/SCENARIO-PLAYER/scenario-player-design-decisions.md#d7--the-demo-cycle-is-one-clip-length-and-its-geometry-is-solved-backwards-from-the-first-warning). 13 task groups, 54 subtasks: 45 are agent-implemented, and group 1.10's 9 carry the walkthrough's AI and Human labels. 40 are closed against three CI runs — `30697863324` on `16b8674`, `30698630956` on `7a02fb5`, and `30700052056` on `31d0347`. The 14 open are group 1.10's deploy and verification work, group 1.6's scenario-clock subtasks and group 1.13's two — § Remaining work. Retired IDs, never reused: `20.1.13.2`, `20.1.13.3`.*

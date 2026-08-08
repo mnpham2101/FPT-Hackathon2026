@@ -26,7 +26,7 @@
 
 ## Outcome
 
-- **Research (`75c9373`)** — four notes in `IVI_ECU/doc/research_notes/`: mini-blueprint (3 nodes, clone-then-delete because REST/import cannot create `ethernet` pins), R4 simulator (injection points I1–I4; `adb forward` has no UDP), R4 parsing (**no application header exists** — de-framing is `DatagramPacket` offset/length slicing), and the implementation-facts inventory.
+- **Research (`75c9373`)** — four notes in `documents/Design/IVI-ECU/`: mini-blueprint (3 nodes, clone-then-delete because REST/import cannot create `ethernet` pins), R4 simulator (injection points I1–I4; `adb forward` has no UDP), R4 parsing (**no application header exists** — de-framing is `DatagramPacket` offset/length slicing), and the implementation-facts inventory.
 - **User decision mid-run:** the reusable JSON submodule is kotlinx.serialization in a pure-JVM Gradle module; nlohmann/json stays C++/ADA-side (it cannot parse JSON in a Kotlin APK without NDK/JNI).
 - **HLD (`85387b5`)** — `IVI_ECU/doc/phase5-ivi-hld.md` + component and call-flow `.puml`. Five modules `:contract` ← `:serializer` ← `:observer` ← `:app`, plus `:r4-simulator`; decisions D1–D11; Hilt removed for a manual composition root.
 - **Plan (`de1f939`, gap-fixed `f4c3b1a`)** — `plans/phase5_minh_tasks.md`, 9 groups / 45 subtasks (39 agent, 6 user-manual), written from zero without reading `phase5_tasks.md`, then diffed against it.

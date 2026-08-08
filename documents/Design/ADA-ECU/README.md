@@ -1,11 +1,27 @@
-# ADA ECU — contributor documents
+# ADA ECU — design
 
-Learning notes and short reports on the ADA ECU: the detector, the fusion of own perception with relayed objects, and the R4 warning it emits.
-
-| Document | Form | Topic |
-|---|---|---|
-| _none yet_ | | |
+The authoritative design of the ADA ECU: the detector, the fusion of own perception with relayed objects, and the R4 warning it emits. [[project-architecture]] produces and owns everything here.
 
 **Code:** [ADA_ECU/](../../../ADA_ECU/)
 
-**Authorities (do not duplicate):** [ada-ecu-hld.md](../../../ADA_ECU/doc/ada-ecu-hld.md) · [m1-cooperative-awareness.md](../../../requirements/m1-cooperative-awareness.md) · [deploy-ada-ecu-walkthrough.md](../../../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md)
+## Design authority
+
+| Document | What it fixes |
+|---|---|
+| [ada-ecu-hld.md](ada-ecu-hld.md) | The node's components, folder structure, seams, contract and test strategy — the sole design authority for work in `ADA_ECU/` |
+| [ada-ecu-design-decisions.md](ada-ecu-design-decisions.md) | `D1…Dn`, each with its rationale and rejected alternative; cited by number from the HLD |
+
+## Diagram sources
+
+| Source | Renders |
+|---|---|
+| [ada-ecu-module-architecture.drawio](ada-ecu-module-architecture.drawio) | [ada-ecu-module-architecture.svg](ada-ecu-module-architecture.svg) — the component map |
+| [phase2-4-ada-ecu-components.puml](phase2-4-ada-ecu-components.puml) | The component diagram |
+| [phase2-4-ada-ecu-callflow.puml](phase2-4-ada-ecu-callflow.puml) | The call-flow sequence |
+| [phase2-4-ada-ecu-admission.puml](phase2-4-ada-ecu-admission.puml) | The track-admission state machine |
+
+## Elsewhere
+
+- **General knowledge** applied to this node: [documents/KnowledgeBase/](../../KnowledgeBase/) — including [video-source-for-r12.md](../../KnowledgeBase/video-source-for-r12.md)
+- **Superseded documents:** [ADA_ECU/doc/deprecated/](../../../ADA_ECU/doc/deprecated/)
+- **How to deploy and collect evidence:** [deploy-ada-ecu-walkthrough.md](../../../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md)

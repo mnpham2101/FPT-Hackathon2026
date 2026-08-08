@@ -1,6 +1,6 @@
 # R1 CPM Profile — M1 Cooperative Awareness (v1)
 
-> **Normative status:** the frozen R1 contract. Profile version **1** (matches R2 `schemaVersion: 1`); frozen 2026-07-31 by Phase 0 subtask 1.0.1.1 — changes require a re-freeze across every consumer. Authority: [m1-cooperative-awareness.md §2 R1](../requirements/m1-cooperative-awareness.md); design: [phase0-contract-freeze-hld.md §4, §7](../deprecated/phase0-contract-freeze-hld.md); field research: [scenario-player-v2x-callflow-messages.md §4](../Scenario_Player/doc/research_notes/scenario-player-v2x-callflow-messages.md).
+> **Normative status:** the frozen R1 contract. Profile version **1** (matches R2 `schemaVersion: 1`); frozen 2026-07-31 by Phase 0 subtask 1.0.1.1 — changes require a re-freeze across every consumer. Authority: [m1-cooperative-awareness.md §2 R1](../requirements/m1-cooperative-awareness.md); design: [phase0-contract-freeze-hld.md §4, §7](../deprecated/phase0-contract-freeze-hld.md); field research: [scenario-player-v2x-callflow-messages.md §4](../documents/Design/SCENARIO-PLAYER/scenario-player-v2x-callflow-messages.md).
 
 ## 1. Scope & wire format
 
@@ -86,7 +86,7 @@ Nominal CpmContent JSON (the `nominal` golden vector, F7-consistent with the sha
 ## 6. Exchange call flow
 
 - The sole live flow: **B (bench, R11) → A's V2X ECU** — B detects C → encodes a CPM per this profile → sends one UDP datagram (F5) to the V2X ECU (`10.99.0.11:47100` on the R6 bridge) → R9 decodes through the seam, validates (F9), converts (F6), derives (F1, F7) → emits R2 to the ADA ECU.
-- Unidirectional: R10 ego-Tx is deferred (decision 2026-07-30) — no reply, no ack, no handshake, no in-band auth. Diagrams: [callflow note §2](../Scenario_Player/doc/research_notes/scenario-player-v2x-callflow-messages.md).
+- Unidirectional: R10 ego-Tx is deferred (decision 2026-07-30) — no reply, no ack, no handshake, no in-band auth. Diagrams: [callflow note §2](../documents/Design/SCENARIO-PLAYER/scenario-player-v2x-callflow-messages.md).
 
 ## 7. Golden-vector corpus (6 cases)
 

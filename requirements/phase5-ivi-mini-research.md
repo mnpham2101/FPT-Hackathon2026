@@ -33,10 +33,10 @@ Ordering: **urgency** (what blocks HMI demo and Room smoke first).
 
 Detail notes (agent reference):
 
-- [IVI_ECU/doc/research_notes/phase5-mini-blueprint-ada-ivi.md](../IVI_ECU/doc/research_notes/phase5-mini-blueprint-ada-ivi.md)
-- [IVI_ECU/doc/research_notes/phase5-r4-simulation-harness.md](../IVI_ECU/doc/research_notes/phase5-r4-simulation-harness.md)
-- [IVI_ECU/doc/research_notes/phase5-r4-parse-approach.md](../IVI_ECU/doc/research_notes/phase5-r4-parse-approach.md)
-- [IVI_ECU/doc/research_notes/phase5-ivi-implementation-notes.md](../IVI_ECU/doc/research_notes/phase5-ivi-implementation-notes.md)
+- [documents/Design/IVI-ECU/phase5-mini-blueprint-ada-ivi.md](../documents/Design/IVI-ECU/phase5-mini-blueprint-ada-ivi.md)
+- [documents/KnowledgeBase/phase5-r4-simulation-harness.md](../documents/KnowledgeBase/phase5-r4-simulation-harness.md)
+- [documents/KnowledgeBase/phase5-r4-parse-approach.md](../documents/KnowledgeBase/phase5-r4-parse-approach.md)
+- [documents/Design/IVI-ECU/phase5-ivi-implementation-notes.md](../documents/Design/IVI-ECU/phase5-ivi-implementation-notes.md)
 
 ## Hand-off to project-architecture
 

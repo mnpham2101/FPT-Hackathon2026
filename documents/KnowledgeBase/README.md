@@ -7,6 +7,7 @@ Topic notes that outlive the milestone: the platform, the protocols, the toolcha
 | [phase5-r4-parse-approach.md](phase5-r4-parse-approach.md) | Approaches to parsing a JSON message contract, and what each costs |
 | [phase5-r4-parsing.md](phase5-r4-parsing.md) | Parsing an evolving contract additively, so an added field breaks no reader |
 | [phase5-r4-simulation-harness.md](phase5-r4-simulation-harness.md) | Standing a producer up as a harness, to exercise a consumer alone |
+| [video-source-for-r12.md](video-source-for-r12.md) | What the platform serves as camera input, and the constraints that puts on a detector |
 
 A note belongs here rather than in [Design/](../Design/) when it is about a **subject** rather than about one of our nodes — V2X message structure, how AAOS boots, what a CarSky blueprint is. Anything specific to a node goes in that node's Design subfolder.
 

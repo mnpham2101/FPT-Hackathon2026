@@ -1,28 +1,28 @@
 # Phase 2–4 HLD — ADA ECU: store, admission, risk assessment, warning output (R3, R12–R15, R18 ADA side)
 
-> High-level design for the ADA ECU's share of [milestone1.md](../../plans/milestone1.md) §5 Phases 2, 3 and 4, per [hld-content-and-commit-format.md](../../.claude/rules/hld-content-and-commit-format.md). Requirement definitions, field tables and tech stacks live in [m1-cooperative-awareness.md](../../requirements/m1-cooperative-awareness.md) §2 R3/R12–R15/R18 and §3(d)/(g) — referenced, never restated.
+> High-level design for the ADA ECU's share of [milestone1.md](../../../plans/milestone1.md) §5 Phases 2, 3 and 4, per [hld-content-and-commit-format.md](../../../.claude/rules/hld-content-and-commit-format.md). Requirement definitions, field tables and tech stacks live in [m1-cooperative-awareness.md](../../../requirements/m1-cooperative-awareness.md) §2 R3/R12–R15/R18 and §3(d)/(g) — referenced, never restated.
 >
-> Authoritative design inputs this document realizes rather than reinterprets: [ada-ecu.svg](../../requirements/ada-ecu.svg) (module shape, R14) and [vehicleC_track_admission_state_machine.png](../../requirements/vehicleC_track_admission_state_machine.png) (R13 lifecycle).
+> Authoritative design inputs this document realizes rather than reinterprets: [ada-ecu.svg](../../../requirements/ada-ecu.svg) (module shape, R14) and [vehicleC_track_admission_state_machine.png](../../../requirements/vehicleC_track_admission_state_machine.png) (R13 lifecycle).
 >
-> Diagram sources: [components](phase2-4-ada-ecu-components.puml) · [call flow](phase2-4-ada-ecu-callflow.puml) · [admission state machine](phase2-4-ada-ecu-admission.puml).
+> Diagram sources: [components](../../../documents/Design/ADA-ECU/phase2-4-ada-ecu-components.puml) · [call flow](../../../documents/Design/ADA-ECU/phase2-4-ada-ecu-callflow.puml) · [admission state machine](../../../documents/Design/ADA-ECU/phase2-4-ada-ecu-admission.puml).
 >
-> **This HLD resolves the standing consolidation question** raised in [video-source-for-r12.md](research_notes/video-source-for-r12.md) §5 ("two ADA folders exist") — decision D1.
+> **This HLD resolves the standing consolidation question** raised in [video-source-for-r12.md](../../../documents/KnowledgeBase/video-source-for-r12.md) §5 ("two ADA folders exist") — decision D1.
 
 ## 1. Scope
 
 - The ADA ECU application across three phases: the C++17 core skeleton, R3 track store and R13 admission state machine (Phase 2); the R12 Python detector subprocess (Phase 3); relayed-C fusion, the R14 Collision Risk Assessment abstraction with its database, and R15 R4 emission (Phase 4). The ADA half of the R18 evidence stream runs through all three.
 - Deployment shape of this node for R5/R6: image layout, entrypoint, blueprint node-config additions, and the ADA→IVI traffic capture that R15/R19 acceptance needs.
-- **Prerequisite, not redesigned here:** the Phase 0 contract layer already in this folder ([phase0-contract-freeze-hld.md](../../plans/doc/phase0-contract-freeze-hld.md)) — `contracts/` synced schemas, `src/contracts/` R2/R3/R4 bindings, `detector/contracts/tracked_object.py`, `tests/contracts/`, `CMakeLists.txt`. Phases 2–4 extend that tree.
+- **Prerequisite, not redesigned here:** the Phase 0 contract layer already in this folder ([phase0-contract-freeze-hld.md](../../../plans/doc/phase0-contract-freeze-hld.md)) — `contracts/` synced schemas, `src/contracts/` R2/R3/R4 bindings, `detector/contracts/tracked_object.py`, `tests/contracts/`, `CMakeLists.txt`. Phases 2–4 extend that tree.
 - **Out of scope here:** the IVI-side R4 consumption and rendering (Phase 5, R16/R17) — §11 item 4 flags one defect found there without designing it; the V2X ECU (Phase 1) and the bench (R11).
 
 ## 2. Sourced research notes and prior designs
 
 | Source | Adopted |
 |---|---|
-| [video-source-for-r12.md](research_notes/video-source-for-r12.md) | Wholesale as the R12 input decision: no CarSky video content exists, the clip is user-supplied and baked into the image at `media/ego-b-occluding-c.mp4`, reached via `VIDEO_CLIP_PATH` / `DETECTOR_FRAME_STRIDE` (§3 spec, §4 deliverable). Its §2 (a′) rejection rests on frame acquisition sitting behind a seam — designed as D6. `make_sample_video.py` kept as a CI fixture only. |
-| [Phase 0 HLD](../../plans/doc/phase0-contract-freeze-hld.md) | D1 access model (byte-synced schema copies, no cross-folder reads), D2 bindings as pure model code, D4 additive-version tolerance. The frozen R2/R3/R4 bindings in `src/contracts/` are the only message models this design uses. |
-| [V2X ECU Phase 1 HLD](../../V2X_ECU/doc/phase1-v2x-ecu-comms-hld.md) | D1 sole-socket-holder rule, D4 `[EVT]` JSONL line shape and payload-carrying events (so one offline reader reconstructs both nodes), D5 tcpdump capture pattern reused for the ADA→IVI hop (D9). |
-| [Scenario Player Phase 1 HLD](../../Scenario_Player/doc/phase1-scenario-player-hld.md) | Bench cadence `cpm_rate_hz` (10 Hz default) as the relayed-update rate this design sizes timeouts against; the two committed scenarios (`default.yaml` approaching, `c-out-of-range.yaml` beyond the exit gate) as the R13/R14 exercise inputs; §10 item 2's ratified one-base-image Docker pattern reused in D9. |
+| [video-source-for-r12.md](../../../documents/KnowledgeBase/video-source-for-r12.md) | Wholesale as the R12 input decision: no CarSky video content exists, the clip is user-supplied and baked into the image at `media/ego-b-occluding-c.mp4`, reached via `VIDEO_CLIP_PATH` / `DETECTOR_FRAME_STRIDE` (§3 spec, §4 deliverable). Its §2 (a′) rejection rests on frame acquisition sitting behind a seam — designed as D6. `make_sample_video.py` kept as a CI fixture only. |
+| [Phase 0 HLD](../../../plans/doc/phase0-contract-freeze-hld.md) | D1 access model (byte-synced schema copies, no cross-folder reads), D2 bindings as pure model code, D4 additive-version tolerance. The frozen R2/R3/R4 bindings in `src/contracts/` are the only message models this design uses. |
+| [V2X ECU Phase 1 HLD](../../../V2X_ECU/doc/phase1-v2x-ecu-comms-hld.md) | D1 sole-socket-holder rule, D4 `[EVT]` JSONL line shape and payload-carrying events (so one offline reader reconstructs both nodes), D5 tcpdump capture pattern reused for the ADA→IVI hop (D9). |
+| [Scenario Player Phase 1 HLD](../../../Scenario_Player/doc/phase1-scenario-player-hld.md) | Bench cadence `cpm_rate_hz` (10 Hz default) as the relayed-update rate this design sizes timeouts against; the two committed scenarios (`default.yaml` approaching, `c-out-of-range.yaml` beyond the exit gate) as the R13/R14 exercise inputs; §10 item 2's ratified one-base-image Docker pattern reused in D9. |
 
 Notes are non-authoritative scratch; on any conflict the CLAUDE.md document-authority order wins.
 
@@ -30,7 +30,7 @@ Notes are non-authoritative scratch; on any conflict the CLAUDE.md document-auth
 
 ### D1 — Consolidation: `ada-ecu/` is deleted; nothing is moved wholesale
 
-`ADA_ECU/` is the canonical node folder ([node-code-layout.md](../../.claude/rules/node-code-layout.md)). The branch's lowercase `ada-ecu/` is a parallel implementation built outside the frozen contracts, and it cannot be merged file-by-file: every source file there depends on `ada-ecu/include/ada/types.hpp`, a **second** `TrackedObject`/`Source`/`TrackState` model that duplicates and contradicts the frozen binding in `src/contracts/tracked_object.hpp`. Copying any `.cpp` drags the duplicate model in.
+`ADA_ECU/` is the canonical node folder ([node-code-layout.md](../../../.claude/rules/node-code-layout.md)). The branch's lowercase `ada-ecu/` is a parallel implementation built outside the frozen contracts, and it cannot be merged file-by-file: every source file there depends on `ada-ecu/include/ada/types.hpp`, a **second** `TrackedObject`/`Source`/`TrackState` model that duplicates and contradicts the frozen binding in `src/contracts/tracked_object.hpp`. Copying any `.cpp` drags the duplicate model in.
 
 **Verdict: `ada-ecu/` is removed in one commit. Salvage is by rewrite against the frozen types — the algorithm and file shape are reused, the code is not.** Two folders would also mean two Dockerfiles and two build contexts for one CarSky node.
 
@@ -72,7 +72,7 @@ R12 and R14 were never implemented in `ada-ecu/`, and R13 was implemented incomp
 
 ### D3 — R13 admission: one state machine, both sources
 
-Realizes [vehicleC_track_admission_state_machine.png](../../requirements/vehicleC_track_admission_state_machine.png) exactly, as [phase2-4-ada-ecu-admission.puml](phase2-4-ada-ecu-admission.puml). The diagram is source-agnostic, so there is **one** implementation in `store/admission.{hpp,cpp}`, parameterized only by what counts as an update.
+Realizes [vehicleC_track_admission_state_machine.png](../../../requirements/vehicleC_track_admission_state_machine.png) exactly, as [phase2-4-ada-ecu-admission.puml](../../../documents/Design/ADA-ECU/phase2-4-ada-ecu-admission.puml). The diagram is source-agnostic, so there is **one** implementation in `store/admission.{hpp,cpp}`, parameterized only by what counts as an update.
 
 | Term | Definition fixed here |
 |---|---|
@@ -87,7 +87,7 @@ Realizes [vehicleC_track_admission_state_machine.png](../../requirements/vehicle
 - "Its messages stop" (R13's own wording) is a time condition. A count cannot express silence — nothing arrives to increment it, which is precisely why the branch implementation needed a clock inside its `expire()` anyway.
 - The two sources run at independently configured cadences — relayed updates at the bench's `cpm_rate_hz` (10 Hz default), own-sensor at `DETECTOR_FRAME_STRIDE`-reduced 5 Hz. One count M would mean two different real timeouts, and re-tuning *another node's* config would silently change ADA behavior.
 
-Default `TRACK_TIMEOUT_MS = 1000` is the wall-clock form of [milestone1.md](../../plans/milestone1.md) §4's proposed M = 5, taken at the slower of the two sources (5 × 200 ms), so neither source expires early. The plan's wording is flagged for re-ratification (§11 item 1) rather than silently overridden.
+Default `TRACK_TIMEOUT_MS = 1000` is the wall-clock form of [milestone1.md](../../../plans/milestone1.md) §4's proposed M = 5, taken at the slower of the two sources (5 × 200 ms), so neither source expires early. The plan's wording is flagged for re-ratification (§11 item 1) rather than silently overridden.
 
 Further rules:
 
@@ -98,7 +98,7 @@ Further rules:
 
 ### D4 — R14: the Collision Risk Assessment interface, registry and database
 
-Realizes the «interface» block of [ada-ecu.svg](../../requirements/ada-ecu.svg). Naming reconciliation, stated once: the SVG's realization **`Chained Collision`** is the report's "M1 NLOS plugin" and registers under the frozen R4 registry key **`nlos_obstruction`** — one concept, three existing names, no new term coined.
+Realizes the «interface» block of [ada-ecu.svg](../../../requirements/ada-ecu.svg). Naming reconciliation, stated once: the SVG's realization **`Chained Collision`** is the report's "M1 NLOS plugin" and registers under the frozen R4 registry key **`nlos_obstruction`** — one concept, three existing names, no new term coined.
 
 ```cpp
 // src/cra/i_collision_risk_assessment.hpp
@@ -153,7 +153,7 @@ Frozen R4 fixes `riskState ∈ {low, medium, high}`. For `nlos_obstruction`, wit
 - **Every change of `riskState` for a `(warningType, trackId)` emits exactly one R4 warning event — both directions.** Steady state emits nothing. Downgrades and the return to `low` are emitted too: R4 carries no separate "clear" message and the periodic state stream is optional, so the transition back is the only way the IVI learns to stop warning.
 - A transition commits only after it holds for `RISK_DWELL_MS` (default 300 ms) — one debounce covering all three thresholds, independent of the R13 gate hysteresis that protects track identity.
 - **No B, no chain.** `d_AC = d_AB + d_BC` needs `d_AB`; with no own-sensor B track the composed range does not exist, so the plugin returns `low` with rationale `b_unknown` and logs `assess_skipped_b_unknown`. It follows that no `medium`/`high` was ever entered without a known B, so the clearing event can always fill the required `geometry.vehicleB` from `lastKnownB`. `geometry.vehicleC` is `null` exactly when C's track has been erased — which is why the frozen schema allows null there.
-- Composition (`fusion/scene_composer`): `vehicleB = (d_AB, y_B)` from the nearest `own_sensor` track, `vehicleC = (d_AB + d_BC, y_B + y_BC)` — longitudinal sum, lateral component-wise, valid for the near-collinear convoy ([milestone1.md](../../plans/milestone1.md) §2).
+- Composition (`fusion/scene_composer`): `vehicleB = (d_AB, y_B)` from the nearest `own_sensor` track, `vehicleC = (d_AB + d_BC, y_B + y_BC)` — longitudinal sum, lateral component-wise, valid for the near-collinear convoy ([milestone1.md](../../../plans/milestone1.md) §2).
 
 ### D6 — R12 detector: frame-source seam, inference, distance, zero-C evidence
 
@@ -187,14 +187,14 @@ Frozen R4 fixes `riskState ∈ {low, medium, high}`. For `nlos_obstruction`, wit
     -t m1-ada-ecu:latest ADA_ECU/
   ```
 
-  `--platform` and the disabled attestations are a standing requirement, not a preference: a Container Node rejects a multi-platform manifest index and hangs in Provisioning ([phase0-smoke-test-run.md](../../plans/doc/phase0-smoke-test-run.md)).
+  `--platform` and the disabled attestations are a standing requirement, not a preference: a Container Node rejects a multi-platform manifest index and hangs in Provisioning ([phase0-smoke-test-run.md](../../../plans/doc/phase0-smoke-test-run.md)).
 - **Layout in the image:** `/app/ada_ecu` (binary), `/app/detector/` (Python package + `requirements.txt` installed at build), `/app/models/yolo11n.onnx` from `COPY models/`, `/app/media/ego-b-occluding-c.mp4` from `COPY media/` — the only way a file reaches a Container Node, since no volume or bind-mount field exists (research note §1).
-- **Capture on this node.** R15 and R19 require a pcap of ADA→IVI traffic, which the V2X ECU's capture point cannot see. This node therefore carries the same `entrypoint.sh` + `capture.sh` + tcpdump pattern (V2X HLD D5), which changes the blueprint `command` to `["./entrypoint.sh"]` and requires `"capabilities": ["NET_RAW"]`. The scripts are duplicated per folder rather than shared — self-contained build contexts, no cross-node source imports; the host-side extraction procedure is the shared [traffic-capture-wireshark.md](../../requirements/car-sky-guide/traffic-capture-wireshark.md).
-- **Node guide update is a deliverable of this design:** [node-ada-ecu.md](../../requirements/car-sky-guide/node-ada-ecu.md) gains the `command`/`capabilities` change and the additive env rows of §6. Additive only — no frozen contract moves, R6 keeps one `ethernet` pin and no `video` pin.
+- **Capture on this node.** R15 and R19 require a pcap of ADA→IVI traffic, which the V2X ECU's capture point cannot see. This node therefore carries the same `entrypoint.sh` + `capture.sh` + tcpdump pattern (V2X HLD D5), which changes the blueprint `command` to `["./entrypoint.sh"]` and requires `"capabilities": ["NET_RAW"]`. The scripts are duplicated per folder rather than shared — self-contained build contexts, no cross-node source imports; the host-side extraction procedure is the shared [traffic-capture-wireshark.md](../../../requirements/car-sky-guide/traffic-capture-wireshark.md).
+- **Node guide update is a deliverable of this design:** [node-ada-ecu.md](../../../requirements/car-sky-guide/node-ada-ecu.md) gains the `command`/`capabilities` change and the additive env rows of §6. Additive only — no frozen contract moves, R6 keeps one `ethernet` pin and no `video` pin.
 
 ## 4. Folder structure map — file-location designations
 
-Every deliverable and its target path; no implementer picks a path ad hoc. `P0` = exists (Phase 0), listed for context; `P2`/`P3`/`P4` = the phase that lands it. Everything is inside the node folder, so every designation is a sanctioned location ([node-code-layout.md](../../.claude/rules/node-code-layout.md#per-folder-doc)) — no approval pause applies.
+Every deliverable and its target path; no implementer picks a path ad hoc. `P0` = exists (Phase 0), listed for context; `P2`/`P3`/`P4` = the phase that lands it. Everything is inside the node folder, so every designation is a sanctioned location ([node-code-layout.md](../../../.claude/rules/node-code-layout.md#per-folder-doc)) — no approval pause applies.
 
 ```
 ADA_ECU/
@@ -327,9 +327,9 @@ Every value is env-injected by the blueprint or falls through to `src/config/con
 
 ## 7. Diagrams
 
-- **Call flow** — [phase2-4-ada-ecu-callflow.puml](phase2-4-ada-ecu-callflow.puml): bring-up, B detected in the clip → R3 JSONL → store, relayed C → store, then the fusion tick expiry → R13 admission → R14 assessment → R15 R4 warning → IVI, with the parse-reject, `b_unknown` and detector-EOF branches.
-- **Component map** — [phase2-4-ada-ecu-components.puml](phase2-4-ada-ecu-components.puml): the [ada-ecu.svg](../../requirements/ada-ecu.svg) blocks as modules and their dependencies.
-- **Admission state machine** — [phase2-4-ada-ecu-admission.puml](phase2-4-ada-ecu-admission.puml): D3 made unambiguous, one machine for both sources.
+- **Call flow** — [phase2-4-ada-ecu-callflow.puml](../../../documents/Design/ADA-ECU/phase2-4-ada-ecu-callflow.puml): bring-up, B detected in the clip → R3 JSONL → store, relayed C → store, then the fusion tick expiry → R13 admission → R14 assessment → R15 R4 warning → IVI, with the parse-reject, `b_unknown` and detector-EOF branches.
+- **Component map** — [phase2-4-ada-ecu-components.puml](../../../documents/Design/ADA-ECU/phase2-4-ada-ecu-components.puml): the [ada-ecu.svg](../../../requirements/ada-ecu.svg) blocks as modules and their dependencies.
+- **Admission state machine** — [phase2-4-ada-ecu-admission.puml](../../../documents/Design/ADA-ECU/phase2-4-ada-ecu-admission.puml): D3 made unambiguous, one machine for both sources.
 
 ## 8. MVC mapping
 
@@ -342,13 +342,13 @@ No module spans two layers.
 
 ## 9. Deployment shape (R5/R6)
 
-- Image `ada-ecu:latest` → `registry.carsky.io/m1-ada-ecu:latest`, built from `ADA_ECU/` alone (self-contained context), per [node-ada-ecu.md](../../requirements/car-sky-guide/node-ada-ecu.md) with the D9 changes to `command` and `capabilities` plus the §6 env rows.
+- Image `ada-ecu:latest` → `registry.carsky.io/m1-ada-ecu:latest`, built from `ADA_ECU/` alone (self-contained context), per [node-ada-ecu.md](../../../requirements/car-sky-guide/node-ada-ecu.md) with the D9 changes to `command` and `capabilities` plus the §6 env rows.
 - Pins unchanged: exactly one `ethernet` `OUTPUT` pin at `10.99.0.12` into the bridge. No `video` pin — the clip is baked in (research note §1).
 - Execution split for the planner: image build/push and node-config values are [[car-sky]]-executable; blueprint edits and deploy/verify clicks stay user Nydus UI steps.
 
 ## 10. Acceptance traceability
 
-| Acceptance ([milestone1.md](../../plans/milestone1.md) §5) | Closed by |
+| Acceptance ([milestone1.md](../../../plans/milestone1.md) §5) | Closed by |
 |---|---|
 | Phase 2 — store exposes all R3 fields; detector-shaped and relayed-shaped entries enter through the identical interface | frozen R3 binding + `store/track_store` with both parsers writing the same `upsert` (D2, D3); `tests/store/test_track_store.cpp` |
 | Phase 2 — mock-driven transitions observable and matching the R13 diagram; mock off ⇒ no tracks | D3 machine + `track_transition` events (D8); `DETECTOR_ENABLED=false` (D2) |
@@ -370,7 +370,7 @@ No module spans two layers.
 
 | # | Item | Owner / closes at |
 |---|---|---|
-| 1 | **`miss_limit` semantics changed in form, not intent** — [milestone1.md](../../plans/milestone1.md) §4 words M as "consecutive missed updates (proposed 5)"; D3 realizes it as `TRACK_TIMEOUT_MS` wall-clock (default 1000 ms = 5 periods at the slower source). Flagged for re-ratification, not absorbed silently. | user / project-planner (plan §4 wording) |
+| 1 | **`miss_limit` semantics changed in form, not intent** — [milestone1.md](../../../plans/milestone1.md) §4 words M as "consecutive missed updates (proposed 5)"; D3 realizes it as `TRACK_TIMEOUT_MS` wall-clock (default 1000 ms = 5 periods at the slower source). Flagged for re-ratification, not absorbed silently. | user / project-planner (plan §4 wording) |
 | 2 | **Deleting `ada-ecu/` removes ~1,900 lines of committed work** (D1). The rule, not this design, makes `ADA_ECU/` canonical, but the deletion should carry the user's explicit go-ahead in the subtask that performs it. | user, at planning |
 | 3 | **Distance accuracy is unvalidated** — the pinhole known-width estimate (D6) has no calibration target in a user-supplied clip. `VEHICLE_WIDTH_M` / `CAMERA_HFOV_DEG` are proposals; if the delivered clip's geometry makes B's estimated range disagree with the scenario, the two constants are retuned, never the gate. | Phase 3, on the real clip |
 | 4 | **IVI-side defect found, not designed here (Phase 5's work):** `IVI_ECU/app/.../model/R4WarningMessage.kt` on this branch declares `R4Geometry(ego, b, c)` with no `@SerialName`, so it cannot decode this node's `geometry.vehicleB`/`vehicleC`, and it requires a `trackedObjects` array this design does not emit. **`R4Message.kt` on main (sealed `R4WarningEvent`/`R4StateMessage` + `SceneGeometry.kt`) is the binding the IVI uses**; the branch's parallel model is superseded. | project-planner → Phase 5 |

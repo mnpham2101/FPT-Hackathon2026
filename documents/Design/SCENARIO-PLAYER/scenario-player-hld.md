@@ -1,8 +1,8 @@
 # Scenario Player — high-level design (R11; R1 producer side)
 
-> **The bench node's HLD, and the sole design authority for `Scenario_Player/`.** Every component this node runs, its role, input and output, where it lives, and how the components connect. Decision record: [scenario-player-design-decisions.md](scenario-player-design-decisions.md) (D1–D7). Frozen contract: [r1-cpm-profile.md](../../contracts/r1-cpm-profile.md) with [r1-cpm-content.schema.json](../../contracts/r1-cpm-content.schema.json). Node facts: [node-scenario-player.md](../../requirements/car-sky-guide/node-scenario-player.md).
+> **The bench node's HLD, and the sole design authority for `Scenario_Player/`.** Every component this node runs, its role, input and output, where it lives, and how the components connect. Decision record: [scenario-player-design-decisions.md](scenario-player-design-decisions.md) (D1–D7). Frozen contract: [r1-cpm-profile.md](../../../contracts/r1-cpm-profile.md) with [r1-cpm-content.schema.json](../../../contracts/r1-cpm-content.schema.json). Node facts: [node-scenario-player.md](../../../requirements/car-sky-guide/node-scenario-player.md).
 >
-> Diagrams: [scenario-player-module-architecture.svg](research_notes/scenario-player-module-architecture.svg) (components, paired with its `.drawio`) · [scenario-player-components.puml](scenario-player-components.puml) (module graph) · [phase1-scenario-player-callflow.puml](phase1-scenario-player-callflow.puml) (sequence).
+> Diagrams: [scenario-player-module-architecture.svg](scenario-player-module-architecture.svg) (components, paired with its `.drawio`) · [scenario-player-components.puml](scenario-player-components.puml) (module graph) · [phase1-scenario-player-callflow.puml](phase1-scenario-player-callflow.puml) (sequence).
 
 ## 1. Scope and authority
 
@@ -13,7 +13,7 @@
 
 **This is the only design document governing this node.** It fixes the component set and each component's responsibility, every deliverable's path, the seams, the configuration keys, and the evidence log lines.
 
-- **Task planning decomposes from this document plus the requirements report, and nothing else.** Requirement numbers and acceptance come from [m1-cooperative-awareness.md](../../requirements/m1-cooperative-awareness.md); everything structural comes from here — which component a subtask creates, its path, the interface it satisfies, the log line that closes it.
+- **Task planning decomposes from this document plus the requirements report, and nothing else.** Requirement numbers and acceptance come from [m1-cooperative-awareness.md](../../../requirements/m1-cooperative-awareness.md); everything structural comes from here — which component a subtask creates, its path, the interface it satisfies, the log line that closes it.
 - **Plans cite; they do not restate.** A brief links the section governing its step, so a change lands in one place.
 - **Implementation does not extend this silently.** A component, path or configuration key not designated here is not created ad hoc — the design changes first.
 - **The bench is sanctioned test equipment, not a mock to eliminate** (CLAUDE.md governing principle 2). It is a node of the R5 blueprint with its own address, its own image and its own requirement number.
@@ -27,11 +27,11 @@
 
 | Document | What it fixes for this node |
 |---|---|
-| [m1-cooperative-awareness.md](../../requirements/m1-cooperative-awareness.md) — **the authority** | R11 whole — definition, dependency, acceptance, tech stack. R1: the message family and the codec source this node shares. R5/R6: node type, bridge, address, port. §1: the bench emulates the modem connection point and simulates B. §3(c): the self-written Python generator. §4: the standing decisions, restated in D6 |
-| [r1-cpm-profile.md](../../contracts/r1-cpm-profile.md) · [r1-cpm-content.schema.json](../../contracts/r1-cpm-content.schema.json) | The frozen output contract, field for field, with conventions F1, F2, F5, F8, F9 and VF (§10) |
-| [m1-run-timing-and-event-triggering.md](../../requirements/m1-run-timing-and-event-triggering.md) | R20 obliges this node with the bench half of paced stimulus: scenario time advances on `CLOCK_MONOTONIC` deadlines, `start_delay_s` and `reference_time_epoch` are configuration, and `[TX]` carries `mono_ms` (D5). R21's run start is the operator restarting this node — no orchestrator, no trigger message, no clock exchange. R22 fixes the demo cycle this node emits: §6.6's geometry, the cycle period matched to the ego clip, and `start_delay_s` set to the ADA detector's warm-up (D7) |
-| [milestone1.md](../../plans/milestone1.md) | §4's R13 gate values, which the committed scenarios are authored against (D3); Phase 1's bench acceptance |
-| [node-scenario-player.md](../../requirements/car-sky-guide/node-scenario-player.md) | Image tag, blueprint `command`, env set, pin and address |
+| [m1-cooperative-awareness.md](../../../requirements/m1-cooperative-awareness.md) — **the authority** | R11 whole — definition, dependency, acceptance, tech stack. R1: the message family and the codec source this node shares. R5/R6: node type, bridge, address, port. §1: the bench emulates the modem connection point and simulates B. §3(c): the self-written Python generator. §4: the standing decisions, restated in D6 |
+| [r1-cpm-profile.md](../../../contracts/r1-cpm-profile.md) · [r1-cpm-content.schema.json](../../../contracts/r1-cpm-content.schema.json) | The frozen output contract, field for field, with conventions F1, F2, F5, F8, F9 and VF (§10) |
+| [m1-run-timing-and-event-triggering.md](../../../requirements/m1-run-timing-and-event-triggering.md) | R20 obliges this node with the bench half of paced stimulus: scenario time advances on `CLOCK_MONOTONIC` deadlines, `start_delay_s` and `reference_time_epoch` are configuration, and `[TX]` carries `mono_ms` (D5). R21's run start is the operator restarting this node — no orchestrator, no trigger message, no clock exchange. R22 fixes the demo cycle this node emits: §6.6's geometry, the cycle period matched to the ego clip, and `start_delay_s` set to the ADA detector's warm-up (D7) |
+| [milestone1.md](../../../plans/milestone1.md) | §4's R13 gate values, which the committed scenarios are authored against (D3); Phase 1's bench acceptance |
+| [node-scenario-player.md](../../../requirements/car-sky-guide/node-scenario-player.md) | Image tag, blueprint `command`, env set, pin and address |
 
 ### Research notes
 
@@ -39,14 +39,14 @@ Non-authoritative scratch; on any conflict the CLAUDE.md authority order wins.
 
 | Note | Adopted here |
 |---|---|
-| [scenario-player-v2x-callflow-messages.md](research_notes/scenario-player-v2x-callflow-messages.md) | §2's wire model — the bench is the sole talker and the wire is unidirectional, so no listener and no reply path exists here; §4's M1 CPM profile as the content the generator produces; F3's ranked codec-path candidates, from which D1 picks the helper subprocess |
-| [phase0-contract-freeze-hld.md](../../deprecated/phase0-contract-freeze-hld.md) | D3's codec seam (`CpmContent` + `ICpmCodec`, wire-native units) as the exact source this bench reuses; D1's access model — byte-synced copies under `sync-manifest.json`, extended to the codec sources by D2 |
+| [scenario-player-v2x-callflow-messages.md](scenario-player-v2x-callflow-messages.md) | §2's wire model — the bench is the sole talker and the wire is unidirectional, so no listener and no reply path exists here; §4's M1 CPM profile as the content the generator produces; F3's ranked codec-path candidates, from which D1 picks the helper subprocess |
+| [phase0-contract-freeze-hld.md](../../../deprecated/phase0-contract-freeze-hld.md) | D3's codec seam (`CpmContent` + `ICpmCodec`, wire-native units) as the exact source this bench reuses; D1's access model — byte-synced copies under `sync-manifest.json`, extended to the codec sources by D2 |
 
 ## 3. The component architecture
 
-![Scenario Player component architecture](research_notes/scenario-player-module-architecture.svg)
+![Scenario Player component architecture](scenario-player-module-architecture.svg)
 
-Source: [research_notes/scenario-player-module-architecture.svg](research_notes/scenario-player-module-architecture.svg), paired with its [`.drawio`](research_notes/scenario-player-module-architecture.drawio). The module graph alone is [scenario-player-components.puml](scenario-player-components.puml).
+Source: [research_notes/scenario-player-module-architecture.svg](scenario-player-module-architecture.svg), paired with its [`.drawio`](scenario-player-module-architecture.drawio). The module graph alone is [scenario-player-components.puml](scenario-player-components.puml).
 
 A UML component diagram. Fill colour is the component's role; `«use»` dependencies are dashed with an open arrowhead; realization is dashed with a hollow triangle; a seam is a provided interface meeting a required one. The `player` package is the Python process the blueprint starts; `cpm_encode` is the C++ helper it spawns. Component names below are the short `package/module` form — §4 resolves each to its path.
 
@@ -210,7 +210,7 @@ No layer is collapsed: the scenario model cannot reach the socket, the sender ca
 | Direction | Bench → V2X-ECU, one way |
 | Transport | UDP to `10.99.0.11:47100`, one message per datagram, no GeoNetworking/BTP envelope (F5) |
 | Encoding | ASN.1 UPER `CollectivePerceptionMessage`, ETSI TS 103 324 v2.1.1, release 2 |
-| Normative contract | [r1-cpm-profile.md](../../contracts/r1-cpm-profile.md) with [r1-cpm-content.schema.json](../../contracts/r1-cpm-content.schema.json) |
+| Normative contract | [r1-cpm-profile.md](../../../contracts/r1-cpm-profile.md) with [r1-cpm-content.schema.json](../../../contracts/r1-cpm-content.schema.json) |
 | Node copy | `Scenario_Player/contracts/r1-cpm-content.schema.json`, byte-synced; `player/contracts/cpm_content.py` binds against it |
 | Status | Frozen at profile version 1 — a field change is a re-freeze across every consumer |
 
@@ -227,7 +227,7 @@ One message carries exactly two containers and exactly one perceived object. `Cp
 
 ## 11. Tech stack, build and CI
 
-No dependency outside this table enters the node without a design change. Traces are to [m1-cooperative-awareness.md](../../requirements/m1-cooperative-awareness.md) and to the [decision record](scenario-player-design-decisions.md).
+No dependency outside this table enters the node without a design change. Traces are to [m1-cooperative-awareness.md](../../../requirements/m1-cooperative-awareness.md) and to the [decision record](scenario-player-design-decisions.md).
 
 | Area | Stack | Trace |
 |---|---|---|
@@ -247,11 +247,11 @@ docker buildx build --platform linux/arm64 --provenance=false --sbom=false -t m1
 
 | CI lane | File | What it does |
 |---|---|---|
-| `sp-unit-tests` | [phase1-ci.yml](../../.github/workflows/phase1-ci.yml) | the pytest suite against the fake helper, on a plain Python runner |
-| `sp-codec-helper` | [phase1-ci.yml](../../.github/workflows/phase1-ci.yml) | builds `cpm_encode` natively and runs `test_encoder_golden.py` against the real binary |
-| `scenario-player-image` | [phase1-ci.yml](../../.github/workflows/phase1-ci.yml) | the `linux/arm64` image build, pushed to Zot when `CARSKY_ZOT_API_KEY` is set |
+| `sp-unit-tests` | [phase1-ci.yml](../../../.github/workflows/phase1-ci.yml) | the pytest suite against the fake helper, on a plain Python runner |
+| `sp-codec-helper` | [phase1-ci.yml](../../../.github/workflows/phase1-ci.yml) | builds `cpm_encode` natively and runs `test_encoder_golden.py` against the real binary |
+| `scenario-player-image` | [phase1-ci.yml](../../../.github/workflows/phase1-ci.yml) | the `linux/arm64` image build, pushed to Zot when `CARSKY_ZOT_API_KEY` is set |
 
-A green image lane is not evidence that a tag reached the registry — the push step is gated on the secret ([node-code-layout.md § Build rules](../../.claude/rules/node-code-layout.md#build-rules-all-container-nodes)).
+A green image lane is not evidence that a tag reached the registry — the push step is gated on the secret ([node-code-layout.md § Build rules](../../../.claude/rules/node-code-layout.md#build-rules-all-container-nodes)).
 
 ## 12. Test strategy
 

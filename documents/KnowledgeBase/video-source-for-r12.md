@@ -1,6 +1,6 @@
 # Video Source for the R12 Detector
 
-Researcher artifact — environment/platform study, **not an HLD**. It resolves the Phase 2 "video-input study" deliverable of [milestone1.md](../../../plans/milestone1.md) §5 and the § Input constraints open item of the report ("Video format, frame rate, data rate, and capture conditions are not yet known"). It defines **no new requirement numbers** — R1–R19 are frozen; this serves R12.
+Researcher artifact — environment/platform study, **not an HLD**. It resolves the Phase 2 "video-input study" deliverable of [milestone1.md](../../plans/milestone1.md) §5 and the § Input constraints open item of the report ("Video format, frame rate, data rate, and capture conditions are not yet known"). It defines **no new requirement numbers** — R1–R19 are frozen; this serves R12.
 
 Diagrams: [video-source-environment.puml](video-source-environment.puml) (environment), [video-source-flow.puml](video-source-flow.puml) (frame-to-track flow).
 
@@ -22,11 +22,11 @@ Diagrams: [video-source-environment.puml](video-source-environment.puml) (enviro
 Two further platform facts that bound the options:
 
 - **No bind mount.** The documented Container Node config fields are `image`, `env`, `exposedPorts`, `capabilities`, `gpu`, `cgroupV2`, `kuksaIntercepts`, `socketcanShim`, `devices`. There is **no volume / host-path / bind-mount field**. A file reaches a Container Node only by being in its image.
-- **`VIDEO` pins are API-creatable**, unlike `ETHERNET` — the `addPin` enum is `VHAL|KUKSA|CAN|LIN|VIDEO|GPIO|GENERIC` ([carsky-rest-api-blueprint.md](../../../requirements/car-sky-guide/carsky-rest-api-blueprint.md)). Relevant only if the pin path is ever adopted.
+- **`VIDEO` pins are API-creatable**, unlike `ETHERNET` — the `addPin` enum is `VHAL|KUKSA|CAN|LIN|VIDEO|GPIO|GENERIC` ([carsky-rest-api-blueprint.md](../../requirements/car-sky-guide/carsky-rest-api-blueprint.md)). Relevant only if the pin path is ever adopted.
 
 ## 2. Candidate comparison
 
-Hard constraints ([solution-selection-criteria.md](../../../.claude/rules/solution-selection-criteria.md)) pass for all three: open-source tooling, Linux-targeted. Ranked criteria C1 accomplishability · C2 fastest for M1 · C3 future features · C4 smaller library.
+Hard constraints ([solution-selection-criteria.md](../../.claude/rules/solution-selection-criteria.md)) pass for all three: open-source tooling, Linux-targeted. Ranked criteria C1 accomplishability · C2 fastest for M1 · C3 future features · C4 smaller library.
 
 | # | Candidate | Verdict |
 |---|---|---|
@@ -49,7 +49,7 @@ Hard constraints ([solution-selection-criteria.md](../../../.claude/rules/soluti
 
 ### Why (b) wins
 
-- **C1 (accomplishability):** it is the path already written into [node-ada-ecu.md](../../../requirements/car-sky-guide/node-ada-ecu.md) ("the provided video clip(s) ship inside the image (`COPY` at build time) — no live video pin is used in M1"), the path the report fixes as scope ("Detects objects only from provided saved video files"), and BTC's recommended default ("app reads the file directly — simplest"). Zero platform unknowns: `open(path)` inside the container.
+- **C1 (accomplishability):** it is the path already written into [node-ada-ecu.md](../../requirements/car-sky-guide/node-ada-ecu.md) ("the provided video clip(s) ship inside the image (`COPY` at build time) — no live video pin is used in M1"), the path the report fixes as scope ("Detects objects only from provided saved video files"), and BTC's recommended default ("app reads the file directly — simplest"). Zero platform unknowns: `open(path)` inside the container.
 - **C2 (fastest):** no new pins, no blueprint change, no contract re-freeze, no iceoryx2 reader. One `COPY` line and one env var.
 - **C3 (future):** the deferred "camera live feed" item returns as a different implementation behind the detector's frame-source seam; nothing here forecloses it.
 - **C4 (smaller library):** OpenCV's `VideoCapture` is already the R12 tech stack; no additional dependency is introduced.
@@ -99,10 +99,10 @@ These are R12/R19 evidence, not new requirements:
 | Repo path | `ADA_ECU/media/ego-b-occluding-c.mp4` |
 | How it reaches the container | `COPY media/ /app/media/` in `ADA_ECU/Dockerfile` — baked into the image; **bind mounts do not exist on a Container Node** (§1) |
 | Path inside the container | `/app/media/ego-b-occluding-c.mp4` |
-| How the detector learns the path | env var `VIDEO_CLIP_PATH`, set in the blueprint node config, default `/app/media/ego-b-occluding-c.mp4` — never a literal in code (CLAUDE.md principle 5, [node-code-layout.md](../../../.claude/rules/node-code-layout.md)) |
+| How the detector learns the path | env var `VIDEO_CLIP_PATH`, set in the blueprint node config, default `/app/media/ego-b-occluding-c.mp4` — never a literal in code (CLAUDE.md principle 5, [node-code-layout.md](../../.claude/rules/node-code-layout.md)) |
 | Companion env var | `DETECTOR_FRAME_STRIDE`, default `4` |
 
-Adding two env vars to the ADA node config is additive to [node-ada-ecu.md § Blueprint node config](../../../requirements/car-sky-guide/node-ada-ecu.md) and touches no frozen contract.
+Adding two env vars to the ADA node config is additive to [node-ada-ecu.md § Blueprint node config](../../requirements/car-sky-guide/node-ada-ecu.md) and touches no frozen contract.
 
 **If no such clip exists**, in preference order: trim a real dashcam recording of a car directly ahead in the same lane; use an openly-licensed driving-POV clip; render an ego POV from a road sim (BTC option ii — costs a 3D renderer and GPU-class load, explicitly discouraged for a shared server). The synthetic generator (§2c) is the last resort and forfeits R12's detection evidence.
 
@@ -119,7 +119,7 @@ Adding two env vars to the ADA node config is additive to [node-ada-ecu.md § Bl
 
 Flags for the decision owner (user), not silently absorbed:
 
-- **ADA folder is consolidated.** `ADA_ECU/` is the canonical node folder per [node-code-layout.md](../../../.claude/rules/node-code-layout.md). Detector tools and runtime live under `ADA_ECU/`; no lowercase ADA runtime should be used for build, test, demo, or Docker context.
+- **ADA folder is consolidated.** `ADA_ECU/` is the canonical node folder per [node-code-layout.md](../../.claude/rules/node-code-layout.md). Detector tools and runtime live under `ADA_ECU/`; no lowercase ADA runtime should be used for build, test, demo, or Docker context.
 - **The §3 numbers are proposals.** They become authoritative only when FPT-Mentor confirms them or supplies a clip; until then Phase 3 builds against them and re-encodes if a delivered clip differs.
 - **No GPU** (report §4). If a delivered clip is 1080p at 30 fps, the stride is raised rather than the model changed.
 
@@ -129,9 +129,9 @@ Flags for the decision owner (user), not silently absorbed:
 
 ## Sources
 
-- [Car-Sky-Platform.html](../../../requirements/development-platform-doc/Car-Sky-Platform.html) — node types, pin kinds, Container Node coding (`a8_pin.video`, iceoryx2 RGBA, publisher-before-subscriber), Container Node config fields, Artifacts categories, Videos module, Screen/Road Simulator widgets, USB disk image.
-- [BTC_phan_hoi_V2X_team.pdf](../../../requirements/development-platform-doc/BTC_phan_hoi_V2X_team.pdf) — §3 ADA row ("video: read the file directly, or receive a stream over the video pin"), §4 scenario layer and LOS filtering, §6(3) video-source answer, §3 GPU guidance.
-- [m1-cooperative-awareness.md](../../../requirements/m1-cooperative-awareness.md) — §1 § Input constraints, R12, §3(g), §4.
-- [milestone1.md](../../../plans/milestone1.md) — §2 assumptions, Phase 2 video-input study, Phase 3 acceptance.
-- [node-ada-ecu.md](../../../requirements/car-sky-guide/node-ada-ecu.md), [carsky-4-node-blueprint.md](../../../requirements/car-sky-guide/carsky-4-node-blueprint.md), [carsky-rest-api-blueprint.md](../../../requirements/car-sky-guide/carsky-rest-api-blueprint.md).
+- [Car-Sky-Platform.html](../../requirements/development-platform-doc/Car-Sky-Platform.html) — node types, pin kinds, Container Node coding (`a8_pin.video`, iceoryx2 RGBA, publisher-before-subscriber), Container Node config fields, Artifacts categories, Videos module, Screen/Road Simulator widgets, USB disk image.
+- [BTC_phan_hoi_V2X_team.pdf](../../requirements/development-platform-doc/BTC_phan_hoi_V2X_team.pdf) — §3 ADA row ("video: read the file directly, or receive a stream over the video pin"), §4 scenario layer and LOS filtering, §6(3) video-source answer, §3 GPU guidance.
+- [m1-cooperative-awareness.md](../../requirements/m1-cooperative-awareness.md) — §1 § Input constraints, R12, §3(g), §4.
+- [milestone1.md](../../plans/milestone1.md) — §2 assumptions, Phase 2 video-input study, Phase 3 acceptance.
+- [node-ada-ecu.md](../../requirements/car-sky-guide/node-ada-ecu.md), [carsky-4-node-blueprint.md](../../requirements/car-sky-guide/carsky-4-node-blueprint.md), [carsky-rest-api-blueprint.md](../../requirements/car-sky-guide/carsky-rest-api-blueprint.md).
 - [Ultralytics YOLOv8 vs YOLO11 comparison](https://docs.ultralytics.com/compare/yolov8-vs-yolo11/) — YOLO11n ONNX CPU speed 56.1 ms at 640.
