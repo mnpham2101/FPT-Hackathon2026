@@ -14,10 +14,15 @@ Full mission, scope, contracts, and phase plan live in [CLAUDE.md](CLAUDE.md) an
 |---|---|
 | [CLAUDE.md](CLAUDE.md) | Project constitution — read this first |
 | [requirements/](requirements/) | Requirements documents, analysis, frozen contracts (R1–R6), and deployment guides |
-| [Scenario_Player/](Scenario_Player/), [V2X_ECU/](V2X_ECU/), [ADA_ECU/](ADA_ECU/), [IVI_ECU/](IVI_ECU/) | Implementation code per node; each includes source, build config, tests, and `doc/` (HLDs, design notes) |
-| [plans/](plans/) | Implementation plan (phases, tasks, acceptance criteria); includes `doc/` with design documents |
-| [presentation/](presentation/) | Project presentations and reports sourced from Markdown; includes the Python build script, the shared deck template, and asset images |
+| [Scenario_Player/](Scenario_Player/), [V2X_ECU/](V2X_ECU/), [ADA_ECU/](ADA_ECU/), [IVI_ECU/](IVI_ECU/) | Implementation code per node: source, build config, and tests |
+| [documents/](documents/) | The project's written record — `Design/` (one HLD per node), `KnowledgeBase/`, `Plan/`, `Proposals/`, `Requirements/`, `Delivery/` |
+| [plans/](plans/) | Implementation plan (phases, tasks, acceptance criteria); includes `doc/` with run records |
+| [presentation/](presentation/) | The slide decks, their shared template, and `slide-build-tool/` |
+| [website/](website/) | The static hub site: its `css/`, `js/`, `pages/`, and `build-pages.py` |
+| [tools/](tools/) | Test equipment — diagnostic tools and containers that stand in for a node |
 | [.claude/](\.claude/) | Tooling: `rules/` (process conventions), `agents/` (agent specs), `skills/` (procedures), `prompts/` (saved prompts) |
+
+[presentation/](presentation/) and [website/](website/) are the two human-facing publications, each self-contained with its own content, design system and generator. Both render [documents/](documents/); neither owns it.
 
 ## Building slide decks
 
@@ -31,6 +36,27 @@ python presentation/slide-build-tool/build-slides.py presentation/phase0/phase0-
 The export always lands beside its Markdown source with the same basename. Edit only the Markdown — the next build overwrites the HTML.
 
 Layouts, styles, and HTML components live in [presentation/template/template.md](presentation/template/template.md); a deck can override colors and fonts in its own frontmatter. File placement, the asset policy, and the build workflow are in [.claude/rules/deck-authoring-conventions.md](.claude/rules/deck-authoring-conventions.md).
+
+## Building the website
+
+[website/](website/) is a dependency-free static site: a mind map on the home page whose leaves open the project's documents. Open `website/index.html` directly, or serve the folder:
+
+```bash
+python -m http.server 8080   # from website/
+```
+
+The pages under `website/pages/` are generated from the Markdown in [documents/](documents/). Rebuild after changing any document it renders:
+
+```bash
+pip install -r website/requirements.txt   # once
+python website/build-pages.py             # rebuild every page
+python website/build-pages.py --clean     # drop stale pages first
+python website/build-pages.py documents/Design/README.md   # render just one
+```
+
+`build-pages.py` starts at the document behind each leaf node, then follows every relative link and builds a page for each Markdown it reaches — so a document linked from a page is a page too. It prints any link it could not resolve, which is how a document pointing at a moved or deleted file gets noticed. Editing the Markdown is enough; never hand-edit a generated page, as the next build overwrites it.
+
+Which node opens which document, why the output is flat, and what happens to each kind of link are in [website/README.md](website/README.md).
 
 ## Platform access & credentials
 
