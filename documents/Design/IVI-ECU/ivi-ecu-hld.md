@@ -332,6 +332,10 @@ The following deployment scheme supports IVI-ECU isolated tests and system tests
 
 Post-deploy always: build APK → ADB tunnel to Skycraft → `adb install` ([phase5-ivi-deploy.md](../../../IVI_ECU/deployment/phase5-ivi-deploy.md)). Ethernet pins often missing after JSON import — add/wire in Nydus UI.
 
+## Mini-blueprint: ADA ECU + IVI ECU
+
+The following section describes how to set up a mini blueprint for isolated IVI ECU test [Mini Blueprint](./phase5-mini-blueprint-ada-ivi.md)
+
 ## 13. Design decisions
 
 [ivi-ecu-design-decisions.md](ivi-ecu-design-decisions.md) — D1–D13, binding on implementation and cited by number throughout this document: the contract submodule and module graph (D1, D2), de-framing (D3), unknown-`warningType` handling (D4), the foreground service (D5), the frozen samples (D6), the composition root (D7), the version catalog (D8), the simulator (D9), configuration (D10), the standing decisions (D11), the provenance guard's fail-open property (D12), and the warning lifecycle's response to `riskState` (D13).
