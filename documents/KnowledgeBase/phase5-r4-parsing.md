@@ -1,6 +1,6 @@
 # Parsing the R4 message on the IVI side
 
-Research note: the technical approach for turning a datagram arriving on `10.99.0.13:47300` into a typed R4 message the UI can render. The contract itself is [contracts/r4-ada-ivi.schema.json](../../../contracts/r4-ada-ivi.schema.json) (byte-synced to [IVI_ECU/contracts/](../../contracts/)) — this note covers how it is consumed, not what it says.
+Research note: the technical approach for turning a datagram arriving on `10.99.0.13:47300` into a typed R4 message the UI can render. The contract itself is [contracts/r4-ada-ivi.schema.json](../../contracts/r4-ada-ivi.schema.json) (byte-synced to [IVI_ECU/contracts/](../../IVI_ECU/contracts/)) — this note covers how it is consumed, not what it says.
 
 ## 1. What is actually on the wire — there is no application header
 
@@ -25,7 +25,7 @@ Two further wire notes: strip a UTF-8 BOM and surrounding whitespace before deco
 
 ## 2. Decoding — kotlinx.serialization, sealed on `type`
 
-The binding already exists and is contract-tested: [R4Message.kt](../../app/src/main/java/com/hackathon/v2x/ivi/model/R4Message.kt) declares a sealed `R4Message` with `@SerialName("warning")` / `@SerialName("state")` subclasses, and the `R4Json` instance configured `classDiscriminator = "type"`, `ignoreUnknownKeys = true`. Round-trip and additive-version tests pass against the frozen samples.
+The binding already exists and is contract-tested: [R4Message.kt](../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/model/R4Message.kt) declares a sealed `R4Message` with `@SerialName("warning")` / `@SerialName("state")` subclasses, and the `R4Json` instance configured `classDiscriminator = "type"`, `ignoreUnknownKeys = true`. Round-trip and additive-version tests pass against the frozen samples.
 
 The decoder built on top of it needs only to add failure handling:
 
@@ -52,7 +52,7 @@ Design points:
 Replacing the wire value with `"unknown"` at parse time is the tempting reading, and the committed test rules it out.
 
 - The frozen contract says: *"Unknown values must degrade gracefully at the consumer"* — it does not say the value is replaced.
-- The committed additive-version test asserts the opposite of replacement: `r4-unknown-warning.json` carries `warningType: "slippery_road"` and [R4AdditiveVersionTest](../../app/src/test/java/com/hackathon/v2x/ivi/model/R4AdditiveVersionTest.kt) asserts the parsed value **is** `"slippery_road"`, merely not equal to the M1 `nlos_obstruction` constant.
+- The committed additive-version test asserts the opposite of replacement: `r4-unknown-warning.json` carries `warningType: "slippery_road"` and [R4AdditiveVersionTest](../../IVI_ECU/app/src/test/java/com/hackathon/v2x/ivi/model/R4AdditiveVersionTest.kt) asserts the parsed value **is** `"slippery_road"`, merely not equal to the M1 `nlos_obstruction` constant.
 
 **Recommended:** the parser preserves the wire value verbatim; a separate classification step maps *known* types to their presentation and everything else to a generic warning presentation. Rewriting the field at parse time destroys information the log needs (which unknown type arrived), breaks the committed round-trip equality, and pushes a UI concern into the data layer. The user-visible behaviour the acceptance box asks for — a newer message degrades gracefully instead of crashing — is delivered either way.
 
@@ -60,13 +60,13 @@ Replacing the wire value with `"unknown"` at parse time is the tempting reading,
 
 Type-correct JSON can still be semantically wrong. Two checks belong above the parser:
 
-- **Provenance guard.** `object.source` must be `v2x_relayed` before anything renders as ghost C. This is the R19 claim made mechanical, and it is already implemented in the renderer ([CanvasWarningView](../../app/src/main/java/com/hackathon/v2x/ivi/ui/view/CanvasWarningView.kt): non-relayed source renders a yellow `[?]` marker and logs at ERROR).
+- **Provenance guard.** `object.source` must be `v2x_relayed` before anything renders as ghost C. This is the R19 claim made mechanical, and it is already implemented in the renderer ([CanvasWarningView](../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/ui/view/CanvasWarningView.kt): non-relayed source renders a yellow `[?]` marker and logs at ERROR).
 - **`geometry.vehicleC` may legitimately be `null`** — C not yet tracked. It is `null`, not absent, in the frozen schema; the Kotlin model declares it nullable and every consumer must accept it. This is a normal state, not an error, and must not be logged as one.
 
 ## 5. Where the parsing code should live
 
-A **pure Kotlin/JVM Gradle submodule** holding the models, the configured `Json`, and the byte-slice-to-message entry point — depended on by the APK and by the R4 simulator ([phase5-r4-simulator.md](phase5-r4-simulator.md)), so producer and consumer cannot drift.
+A **pure Kotlin/JVM Gradle submodule** holding the models, the configured `Json`, and the byte-slice-to-message entry point — depended on by the APK and by the R4 simulator ([phase5-r4-simulator.md](../Design/IVI-ECU/phase5-r4-simulator.md)), so producer and consumer cannot drift.
 
 - The submodule must have **zero Android dependencies**, which keeps it testable in the plain-JVM CI job and reusable by a command-line tool.
 - The models currently sit in the app module; moving them is a relocation, not a rewrite — the committed round-trip and additive-version tests move with them and must keep passing unchanged.
-- The contract copies under [IVI_ECU/contracts/](../../contracts/) and the test-resource samples are byte-synced by [check_sync.py](../../../contracts/check_sync.py); any new location for the samples must be registered in [sync-manifest.json](../../../contracts/sync-manifest.json) or the integrity gate stops matching.
+- The contract copies under [IVI_ECU/contracts/](../../IVI_ECU/contracts/) and the test-resource samples are byte-synced by [check_sync.py](../../contracts/check_sync.py); any new location for the samples must be registered in [sync-manifest.json](../../contracts/sync-manifest.json) or the integrity gate stops matching.

@@ -1,6 +1,8 @@
-# Phase 5 — Technical approach: parse R4 (ADA→IVI)
+# Technical approach: parse UDP Diagram 
 
-R4 is UDP + JSON on the R6 bridge. Schema authority: [r4-ada-ivi.schema.json](../../../contracts/r4-ada-ivi.schema.json); requirement R4 in [m1-cooperative-awareness.md](../../../requirements/m1-cooperative-awareness.md). Report tech stack: **nlohmann/json on ADA (C++)**, **kotlinx.serialization on IVI (Kotlin)**.
+UDP Diagram carries warning messages (R4) from IVI-ECU to ADA-ECU
+
+R4 is UDP + JSON on the R6 bridge. Schema authority: [r4-ada-ivi.schema.json](../../contracts/r4-ada-ivi.schema.json); requirement R4 in [m1-cooperative-awareness.md](../../requirements/m1-cooperative-awareness.md). Report tech stack: **nlohmann/json on ADA (C++)**, **kotlinx.serialization on IVI (Kotlin)**.
 
 ## Message surface (consumer view)
 
@@ -15,7 +17,7 @@ Discriminate on `type`:
 
 Additive-version: unknown `warningType` string → degrade, do not throw.
 
-Fixtures: [contracts/samples/](../../../contracts/samples/).
+Fixtures: [contracts/samples/](../../contracts/samples/).
 
 ## Ethernet / framing
 
@@ -49,4 +51,4 @@ ADA producer remains nlohmann ↔ same schema (Phase 0 bindings).
 ## Related
 
 - Simulation: [phase5-r4-simulation-harness.md](phase5-r4-simulation-harness.md)
-- Implementation notes: [phase5-ivi-implementation-notes.md](phase5-ivi-implementation-notes.md)
+- Design notes: [IVI ECU High Level Design](../Design/IVI-ECU/ivi-ecu-hld.md)

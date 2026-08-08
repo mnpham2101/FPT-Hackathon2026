@@ -4,8 +4,8 @@ How a sanctioned test tool invokes IVI R4 ingest and HMI without a live ADA cont
 
 ## Feasibility
 
-- Achievable now: [IVI_ECU/mock-sender/](../../mock-sender/) already emits UDP R4 JSON cycles (approach → state → leave → unknown `warningType`).
-- Preferred for Phase 5 parallel display work (report + [milestone1.md](../../../plans/milestone1.md) Phase 5: mock-driven).
+- Achievable now: [IVI_ECU/mock-sender/](../../IVI_ECU/mock-sender/) already emits UDP R4 JSON cycles (approach → state → leave → unknown `warningType`).
+- Preferred for Phase 5 parallel display work (report + [milestone1.md](../../plans/milestone1.md) Phase 5: mock-driven).
 - Does not prove R15 emission quality; that stays on ADA + Phase 6.
 
 ## Solution comparison (producer side)
@@ -27,12 +27,12 @@ cd IVI_ECU/mock-sender
 IVI_ECU_HOST=127.0.0.1 IVI_ECU_PORT=5004 CYCLES=2 python mock_r4_sender.py
 ```
 
-IVI must listen on the same port (`BuildConfig.R4_UDP_PORT`, default 5004). See [phase5-ivi-deploy.md](../../deployment/phase5-ivi-deploy.md).
+IVI must listen on the same port (`BuildConfig.R4_UDP_PORT`, default 5004). See [phase5-ivi-deploy.md](../../IVI_ECU/deployment/phase5-ivi-deploy.md).
 
 ### 2. CarSky Room (mock container → Skycraft)
 
 - Image: build/push `registry.carsky.io/m1-mock-r4-sender:latest` from `mock-sender/Dockerfile`.
-- Blueprint: [blueprint-2node-task51-test.json](../../../requirements/blueprint-2node-task51-test.json) + manual ethernet pins ([guide](../../../requirements/blueprint-2node-task51-test-guide.md)).
+- Blueprint: [blueprint-2node-task51-test.json](../../requirements/blueprint-2node-task51-test.json) + manual ethernet pins ([guide](../../requirements/blueprint-2node-task51-test-guide.md)).
 - Env on mock node: `IVI_ECU_HOST=<ivi-pin-ip>`, `IVI_ECU_PORT=5004` (or 47300 if IVI build aligned).
 
 ### 3. Unit / instrumentation (no network)
@@ -57,6 +57,6 @@ IVI must listen on the same port (`BuildConfig.R4_UDP_PORT`, default 5004). See 
 
 ## Related
 
-- Mini real-ADA Room: [phase5-mini-blueprint-ada-ivi.md](phase5-mini-blueprint-ada-ivi.md)
-- Parse approach: [phase5-r4-parse-approach.md](phase5-r4-parse-approach.md)
-- Schema: [r4-ada-ivi.schema.json](../../../contracts/r4-ada-ivi.schema.json)
+- Mini real-ADA Room: [phase5-mini-blueprint-ada-ivi.md](../Design/IVI-ECU/phase5-mini-blueprint-ada-ivi.md)
+- UDP Diagram parsing at IVI: [How IVI parses UDP Diagram at from ADA ECU](phase5-r4-parse-approach.md)
+- Schema: [r4-ada-ivi.schema.json](../../contracts/r4-ada-ivi.schema.json)

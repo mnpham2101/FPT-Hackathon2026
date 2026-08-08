@@ -2,9 +2,11 @@
 
 Topic notes that outlive the milestone: the platform, the protocols, the toolchain, and anything a teammate had to work out once and should not have to work out again.
 
-| Document | Form | Topic |
-|---|---|---|
-| _none yet_ | | |
+| Document | Topic |
+|---|---|
+| [phase5-r4-parse-approach.md](phase5-r4-parse-approach.md) | Approaches to parsing a JSON message contract, and what each costs |
+| [phase5-r4-parsing.md](phase5-r4-parsing.md) | Parsing an evolving contract additively, so an added field breaks no reader |
+| [phase5-r4-simulation-harness.md](phase5-r4-simulation-harness.md) | Standing a producer up as a harness, to exercise a consumer alone |
 
 A note belongs here rather than in [Design/](../Design/) when it is about a **subject** rather than about one of our nodes — V2X message structure, how AAOS boots, what a CarSky blueprint is. Anything specific to a node goes in that node's Design subfolder.
 
