@@ -311,6 +311,19 @@ Below both sits the plain-JVM unit layer: `:contract`, `:serializer` and `:obser
 - **Round-trip** over every frozen sample — what makes this side of the contract match the producer's.
 - **Additive version** — a message with a newer `schemaVersion`, an unknown `warningType` and an unknown extra field decodes and degrades instead of failing.
 
+### Deployment shape (R5 / Phase 5)
+
+The following deployment scheme supports IVI-ECU isolated tests and system tests
+
+| Path | Topology | Port | Guide |
+|---|---|---|---|
+| Local / emulator | mock-sender → `127.0.0.1` | 5004 | [mock-sender/README.md](../mock-sender/README.md) |
+| Mock 2-node Room | `m1-mock-r4-sender` + Skycraft IVI + bridge | 5004 (align both) | [task51-2node-blueprint-answer.md](../../plans/doc/task51-2node-blueprint-answer.md), [blueprint-2node-task51-test-guide.md](../../requirements/blueprint-2node-task51-test-guide.md) |
+| Mini ADA+IVI (optional) | ADA + IVI + bridge | **47300** | [phase5-mini-blueprint-ada-ivi.md](research_notes/phase5-mini-blueprint-ada-ivi.md) — see §10 gap |
+| Full M1 | 4 nodes + bridge | 47300 | [node-ivi-ecu.md](../../requirements/car-sky-guide/node-ivi-ecu.md) |
+
+Post-deploy always: build APK → ADB tunnel to Skycraft → `adb install` ([phase5-ivi-deploy.md](../deployment/phase5-ivi-deploy.md)). Ethernet pins often missing after JSON import — add/wire in Nydus UI.
+
 ## 13. Design decisions
 
 [ivi-ecu-design-decisions.md](ivi-ecu-design-decisions.md) — D1–D13, binding on implementation and cited by number throughout this document: the contract submodule and module graph (D1, D2), de-framing (D3), unknown-`warningType` handling (D4), the foreground service (D5), the frozen samples (D6), the composition root (D7), the version catalog (D8), the simulator (D9), configuration (D10), the standing decisions (D11), the provenance guard's fail-open property (D12), and the warning lifecycle's response to `riskState` (D13).
