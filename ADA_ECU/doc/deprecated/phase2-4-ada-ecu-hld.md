@@ -12,7 +12,7 @@
 
 - The ADA ECU application across three phases: the C++17 core skeleton, R3 track store and R13 admission state machine (Phase 2); the R12 Python detector subprocess (Phase 3); relayed-C fusion, the R14 Collision Risk Assessment abstraction with its database, and R15 R4 emission (Phase 4). The ADA half of the R18 evidence stream runs through all three.
 - Deployment shape of this node for R5/R6: image layout, entrypoint, blueprint node-config additions, and the ADA→IVI traffic capture that R15/R19 acceptance needs.
-- **Prerequisite, not redesigned here:** the Phase 0 contract layer already in this folder ([phase0-contract-freeze-hld.md](../../../plans/doc/phase0-contract-freeze-hld.md)) — `contracts/` synced schemas, `src/contracts/` R2/R3/R4 bindings, `detector/contracts/tracked_object.py`, `tests/contracts/`, `CMakeLists.txt`. Phases 2–4 extend that tree.
+- **Prerequisite, not redesigned here:** the Phase 0 contract layer already in this folder ([phase0-contract-freeze-hld.md](../../../deprecated/phase0-contract-freeze-hld.md)) — `contracts/` synced schemas, `src/contracts/` R2/R3/R4 bindings, `detector/contracts/tracked_object.py`, `tests/contracts/`, `CMakeLists.txt`. Phases 2–4 extend that tree.
 - **Out of scope here:** the IVI-side R4 consumption and rendering (Phase 5, R16/R17) — §11 item 4 flags one defect found there without designing it; the V2X ECU (Phase 1) and the bench (R11).
 
 ## 2. Sourced research notes and prior designs
@@ -20,7 +20,7 @@
 | Source | Adopted |
 |---|---|
 | [video-source-for-r12.md](../../../documents/KnowledgeBase/video-source-for-r12.md) | Wholesale as the R12 input decision: no CarSky video content exists, the clip is user-supplied and baked into the image at `media/ego-b-occluding-c.mp4`, reached via `VIDEO_CLIP_PATH` / `DETECTOR_FRAME_STRIDE` (§3 spec, §4 deliverable). Its §2 (a′) rejection rests on frame acquisition sitting behind a seam — designed as D6. `make_sample_video.py` kept as a CI fixture only. |
-| [Phase 0 HLD](../../../plans/doc/phase0-contract-freeze-hld.md) | D1 access model (byte-synced schema copies, no cross-folder reads), D2 bindings as pure model code, D4 additive-version tolerance. The frozen R2/R3/R4 bindings in `src/contracts/` are the only message models this design uses. |
+| [Phase 0 HLD](../../../deprecated/phase0-contract-freeze-hld.md) | D1 access model (byte-synced schema copies, no cross-folder reads), D2 bindings as pure model code, D4 additive-version tolerance. The frozen R2/R3/R4 bindings in `src/contracts/` are the only message models this design uses. |
 | [V2X ECU Phase 1 HLD](../../../V2X_ECU/doc/phase1-v2x-ecu-comms-hld.md) | D1 sole-socket-holder rule, D4 `[EVT]` JSONL line shape and payload-carrying events (so one offline reader reconstructs both nodes), D5 tcpdump capture pattern reused for the ADA→IVI hop (D9). |
 | [Scenario Player Phase 1 HLD](../../../Scenario_Player/doc/phase1-scenario-player-hld.md) | Bench cadence `cpm_rate_hz` (10 Hz default) as the relayed-update rate this design sizes timeouts against; the two committed scenarios (`default.yaml` approaching, `c-out-of-range.yaml` beyond the exit gate) as the R13/R14 exercise inputs; §10 item 2's ratified one-base-image Docker pattern reused in D9. |
 
