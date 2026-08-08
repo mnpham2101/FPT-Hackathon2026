@@ -2,8 +2,8 @@
 
 **Audience:** learning note for the delivery report (code freeze).  
 **Author:** Vũ Xuân Bách · Phase 5 IVI  
-**Contract:** [r4-ada-ivi.schema.json](../contracts/r4-ada-ivi.schema.json)  
-**Authorities:** [R4ListenerService.kt](../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/service/R4ListenerService.kt) · [R4Repository.kt](../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/data/R4Repository.kt) · [R4Deserializer.kt](../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/data/R4Deserializer.kt) · [WarningViewModel.kt](../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/ui/WarningViewModel.kt) · [ivi-technical-wiki.md](../IVI_ECU/doc/ivi-technical-wiki.md) §2 · [ivi-ecu-hld.md](../IVI_ECU/doc/ivi-ecu-hld.md)
+**Contract:** [r4-ada-ivi.schema.json](../../../contracts/r4-ada-ivi.schema.json)  
+**Authorities:** [R4ListenerService.kt](../../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/service/R4ListenerService.kt) · [R4Repository.kt](../../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/data/R4Repository.kt) · [R4Deserializer.kt](../../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/data/R4Deserializer.kt) · [WarningViewModel.kt](../../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/ui/WarningViewModel.kt) · [ivi-technical-wiki.md](../../../IVI_ECU/doc/ivi-technical-wiki.md) §2 · [ivi-ecu-hld.md](../../../IVI_ECU/doc/ivi-ecu-hld.md)
 
 This note answers Lead’s topic: *app IVI dùng gì để observe bản tin từ ADA-ECU?* It cites the technical wiki; it does not replace it.
 
@@ -43,7 +43,7 @@ MainViewModel.collect(uiWarningState)   → wake-on-warning DisplayMode
 MainScreen.collectAsStateWithLifecycle  → CanvasWarningView.Render
 ```
 
-Producer and pin facts: [node-ada-ecu.md](../requirements/car-sky-guide/node-ada-ecu.md) · [node-ivi-ecu.md](../requirements/car-sky-guide/node-ivi-ecu.md).
+Producer and pin facts: [node-ada-ecu.md](../../../requirements/car-sky-guide/node-ada-ecu.md) · [node-ivi-ecu.md](../../../requirements/car-sky-guide/node-ivi-ecu.md).
 
 ---
 
@@ -132,4 +132,4 @@ UI shell details: [ivi-android-screen-lifecycle.md](ivi-android-screen-lifecycle
 | Guest logcat | Tags `R4ListenerService` / `R4Deserializer` / designed `IVI_V2X` lines |
 | Screen | `MODE: WARNING`, God View, status `BOUND :47300` |
 
-Procedure ladder: [deploy-ivi-hmi-walkthrough.md](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md) §4.8.
+Procedure ladder: [deploy-ivi-hmi-walkthrough.md](../../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md) §4.8.

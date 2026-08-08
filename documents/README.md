@@ -1,17 +1,19 @@
 # Contributor documents — Milestone 1
 
-Folder for team learning notes and short reports during code freeze (product code unchanged). Lead aggregates into the delivery report.
+Team learning notes and short reports written during code freeze, with product code unchanged. The lead aggregates them into the delivery report.
 
-## IVI ECU — Vũ Xuân Bách
+These are **contributor write-ups, not authorities**. A node's design is fixed by its HLD and the requirements report; a document here explains, summarises or teaches — it never redefines. Where the two disagree, the authority wins.
 
-| Document | Form | Topic |
-| --- | --- | --- |
-| [ivi-android-screen-lifecycle.md](ivi-android-screen-lifecycle.md) | Wiki (long) | How one screen reaches the AAOS display: Manifest → Activity → Compose modes |
-| [ivi-r4-observation-pipeline.md](ivi-r4-observation-pipeline.md) | Wiki (long) | How the IVI app observes R4 from the ADA ECU |
-| [ivi-design-report-summary.md](ivi-design-report-summary.md) | Short pointer | Design presentation companion (module-by-module), vs the demo deck |
+| Folder | What goes in it |
+|---|---|
+| [Design/](Design/) | How a node is built and why, one subfolder per ECU |
+| [Delivery/](Delivery/) | Reports on what was delivered, and the evidence behind it |
+| [KnowledgeBase/](KnowledgeBase/) | Topic notes that outlive the milestone — platform, protocol, tooling |
 
-**Design deck (presentation):** [phase5-design-ivi-ecu-deck.md](../presentation/phase5/phase5-design-ivi-ecu-deck.md) · HTML [phase5-design-ivi-ecu-deck.html](../presentation/phase5/phase5-design-ivi-ecu-deck.html)
+## Authorities these documents defer to
 
-**Demo deck (unchanged):** [phase5-ivi-deck.md](../presentation/phase5/phase5-ivi-deck.md)
-
-**Authorities (do not duplicate):** [ivi-ecu-hld.md](../IVI_ECU/doc/ivi-ecu-hld.md) · [ivi-technical-wiki.md](../IVI_ECU/doc/ivi-technical-wiki.md) · [deploy-ivi-hmi-walkthrough.md](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md)
+| Document | Fixes |
+|---|---|
+| [m1-cooperative-awareness.md](../requirements/m1-cooperative-awareness.md) | The requirements R1–R19 and the decision record |
+| `<Node>/doc/<node-slug>-hld.md` | That node's components, paths, seams and contracts |
+| [car-sky-guide/](../requirements/car-sky-guide/) | The platform, its nodes, and the deploy/verify walkthroughs |

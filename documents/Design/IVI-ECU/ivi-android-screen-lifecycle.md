@@ -3,7 +3,7 @@
 **Audience:** learning note for the delivery report (code freeze).  
 **Author:** Vũ Xuân Bách · Phase 5 IVI  
 **Scope:** the shipped APK under `IVI_ECU/app/` on AAOS (Skycraft).  
-**Authorities:** [AndroidManifest.xml](../IVI_ECU/app/src/main/AndroidManifest.xml) · [MainActivity.kt](../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/MainActivity.kt) · [MainScreen.kt](../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/ui/screen/MainScreen.kt) · [DisplayMode.kt](../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/ui/DisplayMode.kt) · [ivi-ecu-hld.md](../IVI_ECU/doc/ivi-ecu-hld.md)
+**Authorities:** [AndroidManifest.xml](../../../IVI_ECU/app/src/main/AndroidManifest.xml) · [MainActivity.kt](../../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/MainActivity.kt) · [MainScreen.kt](../../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/ui/screen/MainScreen.kt) · [DisplayMode.kt](../../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/ui/DisplayMode.kt) · [ivi-ecu-hld.md](../../../IVI_ECU/doc/ivi-ecu-hld.md)
 
 This note answers: *what happens from process start until the driver sees Home or the God View?* It is not a second HLD.
 
@@ -18,7 +18,7 @@ This note answers: *what happens from process start until the driver sees Home o
 | Listener stays up during the recorded run | `FOREGROUND_SERVICE` + `FOREGROUND_SERVICE_DATA_SYNC` + service `foregroundServiceType=dataSync` |
 | Application class | `android:name=".IviApplication"` (Hilt / app graph) |
 
-A phone image without the automotive feature rejects the APK at install. The CarSky Skycraft guest is the intended host ([node-ivi-ecu.md](../requirements/car-sky-guide/node-ivi-ecu.md)).
+A phone image without the automotive feature rejects the APK at install. The CarSky Skycraft guest is the intended host ([node-ivi-ecu.md](../../../requirements/car-sky-guide/node-ivi-ecu.md)).
 
 ---
 
@@ -49,7 +49,7 @@ Android does not start from an arbitrary Kotlin file. The system reads the packa
 | **Fragment** | **Not used.** One Activity; views swap inside Compose by `DisplayMode` |
 | **Multi-Activity** | **Not used.** Home / Warning / Apps / Settings are modes of one Display Area |
 
-Traditional phone apps often map one screen → one `Activity` or one `Fragment` transaction. This IVI app maps **one Activity → one Compose tree → many `DisplayMode` values**, which matches R16’s single Display Area with side chrome ([ivi-ecu.svg](../requirements/ivi-ecu.svg)).
+Traditional phone apps often map one screen → one `Activity` or one `Fragment` transaction. This IVI app maps **one Activity → one Compose tree → many `DisplayMode` values**, which matches R16’s single Display Area with side chrome ([ivi-ecu.svg](../../../requirements/ivi-ecu.svg)).
 
 ---
 
@@ -77,7 +77,7 @@ First frame: DisplayMode.HomeView (default)
 
 ### 3.1 `MainActivity` responsibilities
 
-- Start the UDP listener as a **foreground** service so reception is not tied to the Activity being resumed ([design D5](../IVI_ECU/doc/ivi-ecu-design-decisions.md)).
+- Start the UDP listener as a **foreground** service so reception is not tied to the Activity being resumed ([design D5](../../../IVI_ECU/doc/ivi-ecu-design-decisions.md)).
 - Inject `IviWarningViewSeam` (Canvas God View implementation).
 - `setContent` — replace the classic `setContentView(R.layout…)` with Jetpack Compose.
 - Bind the service for the composition lifetime (`DisposableEffect` → `bindService` / `unbindService`) and call `WarningViewModel.attachService(listener.r4EventFlow)`.
@@ -153,4 +153,4 @@ IVI_ECU/app/src/main/
         └── view/                ← IviWarningViewSeam, CanvasWarningView, …
 ```
 
-Further reading: [ivi-technical-wiki.md](../IVI_ECU/doc/ivi-technical-wiki.md) · [deploy-ivi-hmi-walkthrough.md](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md) §4.7–4.8.
+Further reading: [ivi-technical-wiki.md](../../../IVI_ECU/doc/ivi-technical-wiki.md) · [deploy-ivi-hmi-walkthrough.md](../../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md) §4.7–4.8.
