@@ -10,7 +10,6 @@ The authoritative design of the IVI ECU: the high-level design, the decisions be
 |---|---|
 | [ivi-ecu-hld.md](ivi-ecu-hld.md) | The node's components, folder structure, seams, contract and test strategy — the sole design authority for work in `IVI_ECU/` |
 | [ivi-ecu-design-decisions.md](ivi-ecu-design-decisions.md) | `D1…Dn`, each with its rationale and rejected alternative; cited by number from the HLD |
-| [ivi-technical-wiki.md](ivi-technical-wiki.md) | How the built node actually works, module by module |
 | [phase5-mini-blueprint-ada-ivi.md](phase5-mini-blueprint-ada-ivi.md) | The reduced ADA→IVI blueprint the node is exercised in |
 | [phase5-r4-simulator.md](phase5-r4-simulator.md) | The R4 simulator's design — the stand-in that feeds the node its input |
 
@@ -33,7 +32,7 @@ Learning notes by Vũ Xuân Bách — explanatory, not authoritative.
 
 ## Elsewhere
 
-- **General knowledge** applied to this node, rather than unique to it: [documents/KnowledgeBase/](../../KnowledgeBase/)
+- **General knowledge** applied to this node, rather than unique to it: [documents/KnowledgeBase/](../../KnowledgeBase/) — including [android-automotive-os.md](../../KnowledgeBase/android-automotive-os.md), the platform this node runs on
 - **Superseded reviews and audits:** [IVI_ECU/doc/deprecated/](../../../IVI_ECU/doc/deprecated/)
 - **How to deploy and collect evidence:** [deploy-ivi-hmi-walkthrough.md](../../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md)
 - **Decks:** design [phase5-design-ivi-ecu-deck.md](../../../presentation/phase5/phase5-design-ivi-ecu-deck.md) · demo [phase5-ivi-deck.md](../../../presentation/phase5/phase5-ivi-deck.md)

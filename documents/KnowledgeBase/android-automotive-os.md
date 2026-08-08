@@ -1,4 +1,4 @@
-# Technical Deep-Dive Wiki — IVI ECU & HMI System
+# Android Automotive OS
 
 **Module:** `IVI_ECU/`  
 **Target Platform:** Android Automotive OS (AAOS - API 29+ / Target 33)  

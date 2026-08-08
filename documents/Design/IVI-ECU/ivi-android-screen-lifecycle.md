@@ -153,4 +153,4 @@ IVI_ECU/app/src/main/
         └── view/                ← IviWarningViewSeam, CanvasWarningView, …
 ```
 
-Further reading: [ivi-technical-wiki.md](ivi-technical-wiki.md) · [deploy-ivi-hmi-walkthrough.md](../../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md) §4.7–4.8.
+Further reading: [android-automotive-os.md](../../KnowledgeBase/android-automotive-os.md) · [deploy-ivi-hmi-walkthrough.md](../../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md) §4.7–4.8.
