@@ -58,3 +58,7 @@ website/assets/Gemini_Generated_Image_v2.png
 
 # website/build-pages.py --bundle output: a derived, self-contained copy of the site
 dist/
+
+# website/pages/ is generated in full by website/build-pages.py — the document
+# pages, the node mount pages, and the images they render. Rebuild, never commit.
+website/pages/

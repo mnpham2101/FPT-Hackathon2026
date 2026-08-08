@@ -18,7 +18,7 @@ Full mission, scope, contracts, and phase plan live in [CLAUDE.md](CLAUDE.md) an
 | [documents/](documents/) | The project's written record — `Design/` (one HLD per node), `KnowledgeBase/`, `Plan/`, `Proposals/`, `Requirements/`, `Delivery/` |
 | [plans/](plans/) | Implementation plan (phases, tasks, acceptance criteria); includes `doc/` with run records |
 | [presentation/](presentation/) | The slide decks, their shared template, and `slide-build-tool/` |
-| [website/](website/) | The static hub site: its `css/`, `js/`, `pages/`, and `build-pages.py` |
+| [website/](website/) | The static hub site: its `css/`, `js/`, assets and `build-pages.py`. `pages/` is generated — build it after cloning |
 | [tools/](tools/) | Test equipment — diagnostic tools and containers that stand in for a node |
 | [.claude/](\.claude/) | Tooling: `rules/` (process conventions), `agents/` (agent specs), `skills/` (procedures), `prompts/` (saved prompts) |
 
@@ -58,7 +58,7 @@ python website/build-pages.py --bundle        # writes dist/
 
 Zip `dist/` and send it; the reader opens `dist/index.html` by double-clicking. It carries every file the site reaches — the decks and their images, the diagrams, the schemas — so all of it works from any folder on any machine. About 20 MB. `dist/` is generated and gitignored; rebuild it rather than committing it.
 
-The pages under `website/pages/` are generated from the Markdown in [documents/](documents/). Rebuild after changing any document it renders:
+**`website/pages/` is generated and gitignored, so a fresh clone has no pages until you build them.** One command produces the whole site; rerun it after changing any document it renders:
 
 ```bash
 pip install -r website/requirements.txt   # once

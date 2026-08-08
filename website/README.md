@@ -60,7 +60,7 @@ A node is just a `PageLink` — an icon + label `<div>` built by `createPageLink
 | Path | What it is |
 |---|---|
 | `index.html` | The home page: `NodeCanvas` + `ConnectorLayer` SVG; behaviour in `js/mindmap.js`. Carries no table of contents — it is a mind map, not a document |
-| `pages/*.html` | Two kinds, in one flat folder: the hand-written node pages (content from `js/site-data.js` via `js/page.js`), and the document pages `build-pages.py` generates (rendered markdown via `js/doc-page.js`) |
+| `pages/` | **Generated in full — gitignored, never committed, never hand-edited.** Two kinds in one flat folder: the document pages rendered from markdown (via `js/doc-page.js`), and a mount page per site node that opens no document (via `js/page.js`). Run the build after cloning |
 | `build-pages.py` | The markdown → HTML generator |
 | `requirements.txt` | Build-time Python packages; the site itself stays dependency-free |
 | `assets/` | The logo SVGs (`kis-logo.svg`, `kis-logo-blueprint.svg`), `icons/*.svg`, and the `bg-*.jpg` backgrounds |
@@ -99,7 +99,9 @@ The same pairs are `ENTRIES` in `build-pages.py` and the `href`/`source` pair on
 
 The remaining leaves — System Design, Acceptance Evidence, Test Guide — have no folder yet and keep their hand-written page. Adding one is two edits: the folder's document, and a row in both tables above.
 
-`--clean` deletes only pages carrying this tool's `<meta name="generator">` mark, so the hand-written node pages in the same folder survive it, and a page whose source document was deleted does not.
+A node with no folder of its own — System Design, Acceptance Evidence, Test Guide — still gets a page: a mount point `js/page.js` fills from the site graph at load time. Those are generated from `js/site-data.js` too, which is what makes `pages/` derived in full and safe to gitignore. Adding a node to the graph is enough; no file is written by hand.
+
+`--clean` deletes every page carrying this tool's `<meta name="generator">` mark, which is now all of them, so a page whose source document was deleted goes with it.
 
 ### Everything lands flat in `pages/`
 

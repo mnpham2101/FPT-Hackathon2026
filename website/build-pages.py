@@ -353,6 +353,60 @@ def traverse(entries):
 
 
 # =========================================================================
+#  2b · node pages — the boilerplate for a node that opens no document
+# =========================================================================
+
+# A node page carries no content of its own: js/page.js builds its header,
+# summary and child cards from js/site-data.js at load time. The file is the
+# mount point and nothing else, which is why generating it is safe and why
+# leaving seven of them hand-written was what stopped pages/ being derived.
+NODE_PAGE = """<!doctype html>
+<html lang="en" data-theme="sketch">
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="{marker}">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>KIS</title>
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/themes.css">
+</head>
+<body data-page="{node}" data-root="..">
+  <main id="app" class="Page"></main>
+  <script src="../js/site-data.js"></script>
+  <script src="../js/theme.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/page.js"></script>
+</body>
+</html>
+"""
+
+SITE_NODE_RE = re.compile(r"\{\s*id:\s*'([\w-]+)'[^}]*?href:\s*'pages/([^']+)'", re.S)
+
+
+def build_node_pages(document_pages):
+    """Write the mount page for every site node that opens no document.
+
+    The node list is read from js/site-data.js rather than kept here: that
+    file is where the site graph is defined, and a second list would drift
+    from it the first time a node was added.
+
+    `document_pages` is what this run already rendered from markdown. A node
+    naming one of those opens a real document and is skipped -- tested
+    against the run's output rather than against what is on disk, so a
+    template change here still reaches every node page on a rebuild."""
+    data = (SITE / "js" / "site-data.js").read_text(encoding="utf-8")
+    written = []
+    for node, filename in SITE_NODE_RE.findall(data):
+        if filename in document_pages:
+            continue
+        (PAGES / filename).write_text(
+            NODE_PAGE.format(marker=GENERATOR, node=node), encoding="utf-8")
+        written.append(filename)
+    return written
+
+
+# =========================================================================
 #  3 · bundle — a copy of the site that opens with no server
 # =========================================================================
 
@@ -508,7 +562,9 @@ def main():
         return
 
     build = traverse(ENTRIES)
+    nodes = build_node_pages({page_name(rel) for rel in build.built})
     print("pages   %d" % len(build.built))
+    print("nodes   %d" % len(nodes))
     print("assets  %d" % len(build.assets))
     if args.bundle:
         dest = (ROOT / args.bundle).resolve()
