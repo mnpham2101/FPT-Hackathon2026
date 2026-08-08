@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="440" viewBox="0 0 980 440" font-family="Helvetica, Arial, sans-serif">
+  <rect width="980" height="440" fill="#ffffff"/>
+
+  <!-- expanded subnet: Bench domain -->
+  <rect x="30" y="40" width="380" height="200" rx="8" fill="#eef6ff" stroke="#6c8ebf" stroke-dasharray="6 3"/>
+  <text x="46" y="64" font-size="13" font-weight="bold" fill="#31527a">Subnet 10.99.0.0/24 — Bench domain</text>
+  <text x="46" y="82" font-size="11" fill="#6c8ebf">one L2 broadcast domain</text>
+
+  <rect x="52" y="100" width="105" height="55" rx="6" fill="#dae8fc" stroke="#6c8ebf"/>
+  <text x="104" y="123" font-size="11" fill="#1a1a1a" text-anchor="middle">Bench</text>
+  <text x="104" y="140" font-size="11" fill="#444444" text-anchor="middle">.10</text>
+
+  <rect x="180" y="100" width="100" height="55" rx="6" fill="#f5f5f5" stroke="#999999"/>
+  <text x="230" y="123" font-size="11" fill="#1a1a1a" text-anchor="middle">Bench</text>
+  <text x="230" y="140" font-size="11" fill="#1a1a1a" text-anchor="middle">Bridge</text>
+
+  <rect x="300" y="100" width="95" height="55" rx="6" fill="#d5e8d4" stroke="#82b366"/>
+  <text x="347" y="123" font-size="11" fill="#1a1a1a" text-anchor="middle">Bench GW</text>
+  <text x="347" y="140" font-size="11" fill="#444444" text-anchor="middle">.11</text>
+
+  <line x1="157" y1="127" x2="180" y2="127" stroke="#555555" stroke-width="1.5"/>
+  <line x1="280" y1="127" x2="300" y2="127" stroke="#555555" stroke-width="1.5"/>
+  <text x="52" y="187" font-size="11" fill="#31527a">Bench reaches .11 only — same subnet AND same bridge.</text>
+  <text x="52" y="205" font-size="11" fill="#31527a">Nothing outside this box is reachable directly.</text>
+  <text x="52" y="223" font-size="11" fill="#777777">The other three subnets have the identical shape.</text>
+
+  <!-- collapsed subnets -->
+  <rect x="660" y="55" width="290" height="60" rx="8" fill="#eef6ff" stroke="#6c8ebf" stroke-dasharray="6 3"/>
+  <text x="676" y="79" font-size="12" font-weight="bold" fill="#31527a">Subnet 10.99.1.0/24 — V2X domain</text>
+  <text x="676" y="99" font-size="11" fill="#444444">V2X ECU .10 · V2X Bridge · V2X GW .11</text>
+
+  <rect x="660" y="180" width="290" height="60" rx="8" fill="#eef6ff" stroke="#6c8ebf" stroke-dasharray="6 3"/>
+  <text x="676" y="204" font-size="12" font-weight="bold" fill="#31527a">Subnet 10.99.2.0/24 — ADA domain</text>
+  <text x="676" y="224" font-size="11" fill="#444444">ADA ECU .10 · ADA Bridge · ADA GW .11</text>
+
+  <rect x="660" y="305" width="290" height="60" rx="8" fill="#f6f0fa" stroke="#9673a6" stroke-dasharray="6 3"/>
+  <text x="676" y="329" font-size="12" font-weight="bold" fill="#6b4a86">Subnet 10.99.3.0/24 — IVI domain</text>
+  <text x="676" y="349" font-size="11" fill="#444444">IVI ECU .10 · IVI Bridge · IVI GW .11</text>
+
+  <!-- broker -->
+  <rect x="455" y="180" width="150" height="70" rx="6" fill="#ffe6cc" stroke="#d79b00"/>
+  <text x="530" y="208" font-size="12" fill="#1a1a1a" text-anchor="middle">KUKSA</text>
+  <text x="530" y="226" font-size="12" fill="#1a1a1a" text-anchor="middle">Databroker</text>
+  <text x="530" y="243" font-size="10" fill="#996600" text-anchor="middle">outside every subnet</text>
+
+  <polyline points="395,127 425,127 425,205 455,205" fill="none" stroke="#d79b00" stroke-width="1.5"/>
+  <polyline points="660,85 630,85 630,200 605,200" fill="none" stroke="#d79b00" stroke-width="1.5"/>
+  <line x1="660" y1="210" x2="605" y2="212" stroke="#d79b00" stroke-width="1.5"/>
+  <polyline points="660,335 630,335 630,232 605,232" fill="none" stroke="#d79b00" stroke-width="1.5"/>
+
+  <text x="530" y="285" font-size="11" fill="#996600" text-anchor="middle">only cross-subnet path</text>
+
+  <line x1="30" y1="392" x2="950" y2="392" stroke="#dddddd"/>
+  <text x="30" y="412" font-size="11" fill="#333333">A packet leaves an ECU only if the destination is in the same subnet AND on the same bridge. No ECU-to-ECU pair satisfies both.</text>
+  <text x="30" y="428" font-size="11" fill="#333333">One subnet per bridge is deliberate: a shared subnet across separate bridges fails silently (ARP timeout) instead of loudly (ENETUNREACH).</text>
+</svg>

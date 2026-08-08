@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en" data-theme="sketch">
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="kis-build-pages">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Authoring draw.io / SVG Pairs by Hand — KIS</title>
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/doc.css">
+  <link rel="stylesheet" href="../css/themes.css">
+</head>
+<body class="DocBody" data-root=".." data-doc-node="plans" data-doc-title="Authoring draw.io / SVG Pairs by Hand" data-doc-source=".claude/skills/task-planning-presentation/references/drawio-svg-pairs.md">
+  <div class="DocLayout">
+    <aside class="DocLayout__aside" id="doc-toc"></aside>
+    <main class="Page DocPage">
+      <header class="PageHeader" id="doc-header"></header>
+      <article class="Markdown" id="doc-body">
+<h1 id="authoring-drawio-svg-pairs-by-hand">Authoring draw.io / SVG Pairs by Hand<a class="headerlink" href="#authoring-drawio-svg-pairs-by-hand" title="Link to this section">¶</a></h1>
+<p>Reference for step 5 of <a href="claude-skills-task-planning-presentation-skill.html">task-planning-presentation</a>. Applies to any diagram authored for a deck in <a href="../../../presentation/">presentation/</a>.</p>
+<h2 id="why-by-hand">Why by hand<a class="headerlink" href="#why-by-hand" title="Link to this section">¶</a></h2>
+<p><strong>There is no draw.io CLI on the dev host</strong> (verified 2026-08-02: no <code>drawio</code> on PATH, no desktop install). Nothing can convert <code>.drawio</code> → <code>.svg</code> automatically, so both halves are authored and both are verified. Do not plan around a converter that is not there, and do not ship a <code>.drawio</code> without its <code>.svg</code> — the deck embeds the SVG, so a missing export means a missing diagram.</p>
+<p>Worked reference pair, already in the repo and correct in every respect: <a href="../../../requirements/system-design.drawio">system-design.drawio</a> and <a href="requirements-system-design.svg">system-design.svg</a>. Open both before authoring the first diagram.</p>
+<h2 id="the-two-files">The two files<a class="headerlink" href="#the-two-files" title="Link to this section">¶</a></h2>
+<p><strong><code>&lt;name&gt;.drawio</code></strong> — plain mxGraphModel XML, uncompressed so it stays diffable:</p>
+<pre><code class="language-xml">&lt;mxfile host=&quot;app.diagrams.net&quot;&gt;
+  &lt;diagram name=&quot;&lt;name&gt;&quot; id=&quot;&lt;name&gt;&quot;&gt;
+    &lt;mxGraphModel dx=&quot;1368&quot; dy=&quot;788&quot; grid=&quot;1&quot; gridSize=&quot;10&quot; page=&quot;1&quot; pageWidth=&quot;1320&quot; pageHeight=&quot;720&quot; math=&quot;0&quot; shadow=&quot;0&quot;&gt;
+      &lt;root&gt;
+        &lt;mxCell id=&quot;0&quot; /&gt;
+        &lt;mxCell id=&quot;1&quot; parent=&quot;0&quot; /&gt;
+        &lt;!-- shapes and edges, each parent=&quot;1&quot; --&gt;
+      &lt;/root&gt;
+    &lt;/mxGraphModel&gt;
+  &lt;/diagram&gt;
+&lt;/mxfile&gt;
+</code></pre>
+<p><strong><code>&lt;name&gt;.svg</code></strong> — a standalone SVG that draw.io can also reopen, because the whole <code>mxfile</code> above is XML-escaped into the root <code>content</code> attribute:</p>
+<pre><code class="language-xml">&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
+&lt;!-- Editable SVG: the diagram source lives in the root svg content attribute; open with draw.io to edit. Paired source: &lt;name&gt;.drawio --&gt;
+&lt;svg xmlns=&quot;http://www.w3.org/2000/svg&quot; xmlns:xlink=&quot;http://www.w3.org/1999/xlink&quot; version=&quot;1.1&quot;
+     width=&quot;1320px&quot; height=&quot;720px&quot; viewBox=&quot;0 0 1320 720&quot;
+     font-family=&quot;Segoe UI, Arial, sans-serif&quot;
+     content=&quot;&amp;lt;mxfile host=&amp;quot;app.diagrams.net&amp;quot;&amp;gt;…&amp;lt;/mxfile&amp;gt;&quot;&gt;
+  &lt;!-- painted geometry: rects, paths, text --&gt;
+&lt;/svg&gt;
+</code></pre>
+<p>The SVG carries <em>both</em> the escaped source and real painted geometry. Only the geometry renders; only the <code>content</code> attribute reopens in draw.io. Omitting either breaks one of the two consumers.</p>
+<h2 id="generate-both-from-one-shape-list">Generate both from one shape list<a class="headerlink" href="#generate-both-from-one-shape-list" title="Link to this section">¶</a></h2>
+<p>Hand-maintaining two representations of the same picture guarantees they drift. Write the diagram once as a list of shapes and edges in a throwaway script, then emit the <code>.drawio</code> XML and the <code>.svg</code> geometry from that same list. The two files then cannot disagree, and the <code>content</code> attribute is produced by escaping the emitted <code>.drawio</code> text rather than by transcribing it.</p>
+<p>Keep the generator in the scratchpad, not the repo — it is a means of production, not a deliverable.</p>
+<h2 id="sizing-and-style">Sizing and style<a class="headerlink" href="#sizing-and-style" title="Link to this section">¶</a></h2>
+<ul>
+<li><strong>Canvas ~1200 px wide</strong>, at an aspect ratio the render box below accepts — the deck's assets are 1200×540–660, which render close to 1:1. A taller canvas is scaled down until its type stops being readable.</li>
+<li><strong>Palette and typography</strong> come from <a href="../../../presentation/template/template.md">template.md</a>; the house reference for diagram style is <a href="../../../presentation/assets/m1-phase-timeline.svg">m1-phase-timeline.svg</a>. Do not introduce a colour the deck does not already use.</li>
+<li><strong>Minimum ~13px type</strong> on a 1320-wide canvas. If the content will not fit legibly, split the diagram across slides — never shrink to fit.</li>
+<li><strong>Escape <code>&amp;</code>, <code>&lt;</code>, <code>&gt;</code>, <code>"</code> in shape labels</strong> as <code>&amp;amp;</code>, <code>&amp;lt;</code>, <code>&amp;gt;</code>, <code>&amp;quot;</code> — labels land in an XML <em>attribute</em> value (<code>&lt;mxCell value="…"&gt;</code>), where a bare quote closes the attribute early. An unescaped ampersand is the most common way one of these files stops parsing; an unescaped quote is the most deceptive, because it corrupts the <code>.drawio</code> while the <code>.svg</code> still renders perfectly and passes every visual check.</li>
+</ul>
+<h2 id="the-render-box-and-fitting-an-existing-diagram-into-it">The render box, and fitting an existing diagram into it<a class="headerlink" href="#the-render-box-and-fitting-an-existing-diagram-into-it" title="Link to this section">¶</a></h2>
+<p>A slide is 1280×720 and its content area is smaller. An image on a content slide gets <strong>at most ~1152 px wide and ~520 px tall</strong> — the width after the 64 px side padding, and what is left of the height once the 44/58 px padding, the slide header and the caption are taken. <code>h:495</code>–<code>h:520</code> is therefore the working range, and the deck's own assets are ~1200 px wide so they render near 1:1.</p>
+<p><strong>The rendered type size is what decides whether a diagram is usable</strong>, and it follows from the canvas, not from the <code>h:</code> value:</p>
+<pre><code>scale = min(1152 / canvas_width, 520 / canvas_height)
+rendered_pt = source_font_size × scale        # keep ≥ 10 px; below ~8 px is unreadable
+</code></pre>
+<p>An HLD component diagram is drawn for a page — 1700–1900 px wide with 12–17 px type — and lands at 6–7 px on a slide. A PlantUML render of a sequence <code>.puml</code> is worse and in the wrong visual language. Neither is dropped onto a slide as-is.</p>
+<p>To derive a deck copy from an HLD diagram, keeping the HLD copy authoritative:</p>
+<ol>
+<li><strong>Copy both halves</strong> into <code>presentation/assets/</code> under a <code>phase&lt;N&gt;-</code> name, and add a header comment naming the source file and stating that the HLD copy is authoritative.</li>
+<li><strong>Drop the diagram's own title, subtitle and legend</strong> from both halves — the slide title carries the first, and the legend becomes its own slide. Drop by identity, not by eye: cells whose geometry lies entirely inside the legend band, and text whose <code>y</code> is entirely above the first content row.</li>
+<li><strong>Re-crop.</strong> Recompute the content bounding box from what survived, translate it to a 20 px margin, and set <code>pageWidth</code>/<code>pageHeight</code> on the <code>.drawio</code> and <code>width</code>/<code>height</code>/<code>viewBox</code> on the <code>.svg</code> to match. Wrapping the surviving SVG elements in one <code>&lt;g transform="translate(…)"&gt;</code> is enough; do not renumber coordinates by hand.</li>
+<li><strong>Re-inject</strong> the edited <code>.drawio</code> into the <code>.svg</code> <code>content</code> attribute, so verification 2 still holds.</li>
+<li><strong>Diff the label sets</strong> of source and copy, and confirm that everything lost is title or legend. This is what proves a component was not silently dropped.</li>
+<li><strong>Recompute the scale.</strong> Still below the floor, split the diagram across two slides along a subsystem boundary rather than accepting unreadable type.</li>
+</ol>
+<p>Do the whole transform in a throwaway script, for the same reason the pair is generated from one shape list: hand-editing two files toward one geometry drifts.</p>
+<h2 id="verification-all-four-every-diagram">Verification — all four, every diagram<a class="headerlink" href="#verification-all-four-every-diagram" title="Link to this section">¶</a></h2>
+<ol>
+<li><strong>Both files parse as XML.</strong> A truncated <code>content</code> attribute still parses as an SVG while being useless to draw.io — check the extracted source parses too.</li>
+<li><strong>The <code>content</code> attribute is byte-identical to the <code>.drawio</code></strong> after unescaping. This is what proves the pair cannot have drifted.</li>
+<li><strong>The SVG renders non-empty.</strong> Count painted elements; a file with a valid root and zero rects/paths is a blank diagram that passes every syntax check.</li>
+<li><strong>Rasterise it and look at the image.</strong> Headless Chrome (<code>--headless --screenshot</code>) is sufficient. This is the only check that catches text overflowing its shape, overlapping nodes, or content clipped past the viewBox — and it is the check most worth not skipping, because all three failures render as a plausible-looking file.</li>
+</ol>
+<p>An automated geometry assertion — every text span fits inside its shape and inside the canvas — catches most of (4) cheaply and is worth adding to the generator once more than a couple of diagrams are in play.</p>
+      </article>
+    </main>
+  </div>
+  <script src="../js/site-data.js"></script>
+  <script src="../js/theme.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/doc-page.js"></script>
+</body>
+</html>

@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en" data-theme="sketch">
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="kis-build-pages">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Node Code Layout &amp; Build — KIS</title>
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/doc.css">
+  <link rel="stylesheet" href="../css/themes.css">
+</head>
+<body class="DocBody" data-root=".." data-doc-node="plans" data-doc-title="Node Code Layout &amp; Build" data-doc-source=".claude/rules/node-code-layout.md">
+  <div class="DocLayout">
+    <aside class="DocLayout__aside" id="doc-toc"></aside>
+    <main class="Page DocPage">
+      <header class="PageHeader" id="doc-header"></header>
+      <article class="Markdown" id="doc-body">
+<h1 id="node-code-layout-build">Node Code Layout &amp; Build<a class="headerlink" href="#node-code-layout-build" title="Link to this section">¶</a></h1>
+<p>Where implementation code lives, and how each node's artifact is built. Authoritative for the folder scoping done in <a href="claude-skills-ecu-implementation-scoping-skill.html">ecu-implementation-scoping</a> and <a href="claude-skills-high-level-design-procedure-skill.html">high-level-design-procedure</a>, and for the file paths [[project-planner]] writes into subtask briefs.</p>
+<h2 id="one-top-level-folder-per-r5-node">One top-level folder per R5 node<a class="headerlink" href="#one-top-level-folder-per-r5-node" title="Link to this section">¶</a></h2>
+<p>The repo has exactly four <strong>node</strong> code folders — one per node in the R5 blueprint (<a href="requirements-car-sky-guide-carsky-4-node-blueprint.html">carsky-4-node-blueprint.md</a>). No product code lives outside them; the one sanctioned category outside is test equipment, in <code>tools/</code> (§ <code>tools/</code> below).</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Folder</th>
+<th>CarSky node</th>
+<th>Requirements</th>
+<th>Language / runtime (report §3(d))</th>
+<th>Artifact</th>
+<th>Node guide</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="scenario-player-readme.html">Scenario_Player/</a></td>
+<td>Container Node (bench)</td>
+<td>R11</td>
+<td>Python</td>
+<td>OCI image <code>m1-scenario-player:latest</code></td>
+<td><a href="requirements-car-sky-guide-node-scenario-player.html">node-scenario-player.md</a></td>
+</tr>
+<tr>
+<td><a href="../../../V2X_ECU/">V2X_ECU/</a></td>
+<td>Container Node</td>
+<td>R1, R7–R9 (R10 deferred)</td>
+<td>C++17 (Vanetza codec in-process)</td>
+<td>OCI image <code>m1-v2x-ecu:latest</code></td>
+<td><a href="requirements-car-sky-guide-node-v2x-ecu.html">node-v2x-ecu.md</a></td>
+</tr>
+<tr>
+<td><a href="ada-ecu-readme.html">ADA_ECU/</a></td>
+<td>Container Node</td>
+<td>R3, R12–R15</td>
+<td>C++17 core + Python detector subprocess</td>
+<td>OCI image <code>m1-ada-ecu:latest</code></td>
+<td><a href="requirements-car-sky-guide-node-ada-ecu.html">node-ada-ecu.md</a></td>
+</tr>
+<tr>
+<td><a href="ivi-ecu-readme.html">IVI_ECU/</a></td>
+<td>Skycraft Node (AAOS)</td>
+<td>R4, R16–R17</td>
+<td>Kotlin / Jetpack Compose</td>
+<td>APK via Gradle</td>
+<td><a href="requirements-car-sky-guide-node-ivi-ecu.html">node-ivi-ecu.md</a></td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>Bench ≠ V2X ECU.</strong> The Scenario Player is a separate node with its own folder and its own image — it is sanctioned test equipment sharing the Room network (CLAUDE.md governing principle 2), not a module of <code>V2X_ECU/</code>. R11 code never lands in <code>V2X_ECU/</code>.</li>
+<li>Cross-cutting requirements (R2, R5, R6, R18, R19) touch more than one folder — list every folder touched, never just the first match.</li>
+</ul>
+<h2 id="tools-test-equipment-and-ecu-mocks"><code>tools/</code> — test equipment and ECU mocks<a class="headerlink" href="#tools-test-equipment-and-ecu-mocks" title="Link to this section">¶</a></h2>
+<p>Not every container in this repo is a node. <strong>Diagnostic tools, simulators, and containers that mock another ECU</strong> — so a node can be exercised alone in a reduced mini-blueprint — live at <code>tools/&lt;name&gt;/</code>, one folder per tool, outside the four node folders. The table below is the inventory of this repo's test equipment; one entry sits inside a node folder under the narrow exception in the boundary list, and carries its real path.</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Folder</th>
+<th>What it is</th>
+<th>Artifact</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="../../netcheck/">tools/netcheck/</a></td>
+<td>Baseline connectivity check; deploys as three Container nodes, role selected by <code>ROLE</code></td>
+<td>OCI image <code>m1-netcheck:latest</code></td>
+</tr>
+<tr>
+<td><a href="../../comms_check/">tools/comms_check/</a></td>
+<td>Golden-vector UDP sender and <code>[EVT]</code>-stream assertion for the V2X comms chain; runs locally and in CI</td>
+<td>Python scripts, never deployed</td>
+</tr>
+<tr>
+<td><code>tools/ada-bench/</code></td>
+<td>The V2X emitter and IVI sink standing in for those nodes in the isolated ADA Room, two roles selected by <code>ROLE</code> (<a href="requirements-car-sky-guide-deploy-ada-ecu-walkthrough.html#23-the-bench-image--one-image-two-roles">deploy-ada-ecu-walkthrough.md §2.3</a>). Stays in <code>tools/</code>: stdlib-only Python sharing no build with the C++ ADA node, so the consumer-folder exception below does not apply</td>
+<td>OCI image <code>m1-ada-bench:latest</code></td>
+</tr>
+<tr>
+<td><code>IVI_ECU/r4-simulator/</code></td>
+<td>The ADA node's stand-in, emitting the scenario-driven R4 stream the IVI node consumes; in <code>IVI_ECU/</code> under the consumer-folder exception below</td>
+<td>OCI image <code>m1-r4-sim:latest</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>The boundary — this carves out test equipment, it does not weaken the product-code rule above:</p>
+<ul>
+<li><strong>Test equipment only.</strong> A container that <em>replaces</em> a node in a reduced blueprint belongs here; a node's own real image never does. <code>tools/</code> is not a second home for product code that was awkward to place in a node folder.</li>
+<li><strong>A mock of node X does not live in X's folder.</strong> It must be able to change without rebuilding the thing it tests, and must never ship inside the real image — so the four node folders stay one folder → one node → one image.</li>
+<li><strong>A mock may live in the <em>consumer</em> node's folder when it cannot leave that node's build.</strong> A narrow exception to the placement above, never to what that bullet protects. All four conditions must hold, or it goes to <code>tools/</code>:</li>
+<li>It mocks a <strong>different node than the one hosting it</strong> — the producer whose messages the host node consumes. The mocked node's own folder still holds no mock of itself.</li>
+<li><strong>Moving it to <code>tools/</code> would break a contract rule</strong>: it shares the host folder's build and its frozen-contract module, so a move either duplicates the contract models — a second, unversioned contract — or forces the cross-folder source import § Build rules forbids.</li>
+<li>Its <strong>artifact is separate from the host folder's own</strong>, and the dependency runs one way: the mock depends on the shared contract module, never the host's shipped artifact on the mock. Changing the mock therefore rebuilds neither the node it mocks nor the artifact it feeds, and nothing of it ships inside a real image.</li>
+<li>It is <strong>listed in the table above</strong> with its real path, and the design that placed it there records why.</li>
+</ul>
+<p>The one sanctioned case today is <code>IVI_ECU/r4-simulator/</code>, which shares <code>IVI_ECU/</code>'s Gradle build, wrapper, version catalog and <code>:contract</code> module, and builds <code>m1-r4-sim:latest</code> — separate from the node's APK, which does not depend on it. Rationale: <a href="documents-design-ivi-ecu-ivi-ecu-hld.html">ivi-ecu-hld.md</a> decisions D1, D2 and D9.
+- <strong>These are not R5 nodes.</strong> They may deploy as Container nodes, but they stand in for nodes rather than being them: no row in the node table above, no requirement number of their own, and no place in the full blueprint.
+- <strong>The Scenario Player stays a node folder.</strong> Being test equipment is not what puts a folder here — <em>replacing a node</em> is. The bench is a node of the R5 blueprint with its own address and pin (R11), so it keeps <a href="scenario-player-readme.html">Scenario_Player/</a>.
+- <strong>Same build rules.</strong> A test-equipment folder that builds an image — a <code>tools/&lt;name&gt;/</code>, or the in-folder mock above — is self-contained under § Build rules exactly as a node folder is: own <code>Dockerfile</code> (that section fixes where it may sit), own dependency manifest, own tests, no cross-folder source imports, no hardcoded tunables (role, peer addresses, ports and cadences come from env). A host-side tool that builds no image still obeys everything but the <code>Dockerfile</code> line.
+- <strong>Take contract fields from the node's <code>contracts/</code> file, never a private copy.</strong> A tool whose field list has drifted accepts messages the real node would reject — the test passes and the system is still broken.</p>
+<h2 id="where-a-nodes-documents-live">Where a node's documents live<a class="headerlink" href="#where-a-nodes-documents-live" title="Link to this section">¶</a></h2>
+<p>A node's documents are filed by <strong>what they are</strong>, not by which folder the code sits in. Three destinations, three owners:</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Kind</th>
+<th>Location</th>
+<th>Owner</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Design authority — HLD, decision record, node-specific design notes, diagram sources</td>
+<td><a href="documents-design-readme.html">documents/Design/<code>&lt;NODE&gt;</code>/</a></td>
+<td>[[project-architecture]]</td>
+</tr>
+<tr>
+<td>General knowledge — technique, platform findings, protocol study; anything not unique to one node</td>
+<td><a href="documents-knowledgebase-readme.html">documents/KnowledgeBase/</a></td>
+<td>[[project-researcher]]</td>
+</tr>
+<tr>
+<td>Superseded and point-in-time documents — old design notes, and reviews of work that has moved on</td>
+<td><code>&lt;Node_Folder&gt;/doc/deprecated/</code></td>
+<td>whoever supersedes the document</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>The test is what the document is about, not what it is called.</strong> A study of what the platform serves as camera input is knowledge even though only one node consumes it; a port plan that a node's HLD names as its own deliverable is design even though it reads like research.</li>
+<li><strong>A knowledge note is written for a reader outside this project</strong> — engineering vocabulary, no requirement numbers, no phase or milestone framing, no project-internal terms of art. Concrete identifiers are allowed as worked examples where a subject cannot be taught without something specific to point at, a field or a message type or a test, provided the note teaches the general case; where the lesson does not turn on the specifics, prefer a generic role name. The two notes in <a href="documents-knowledgebase-readme.html">documents/KnowledgeBase/</a> are the worked examples of each: <a href="documents-knowledgebase-android-automotive-os.html">android-automotive-os.md</a> names an <code>IncomingMessageListener</code> because nothing in its lesson depends on what the type is called, while <a href="documents-knowledgebase-udp-msg-parsing.html">UDP-msg-parsing.md</a> names real fields and tests because the decode behaviour it describes is only checkable against them.</li>
+<li><strong>Read before writing.</strong> Any agent working on a node reads that node's design folder first — it is the local context (why the design is what it is, what was already investigated and rejected) that the requirements report and plan do not carry.</li>
+<li><strong>Write design &amp; rationale there, not in code comments or the plan.</strong> The HLD content and commit rules still apply (<a href="claude-rules-hld-content-and-commit-format.html">hld-content-and-commit-format.md</a>).</li>
+<li><strong>A node folder holds no design.</strong> After the move, <code>&lt;Node_Folder&gt;/doc/</code> holds <code>deprecated/</code> and nothing else; a new document goes to one of the three homes above rather than back beside the code.</li>
+<li>Documents are documentation only — never implementation code, and never part of a built image.</li>
+<li>A folder is created when its first document lands (git does not track empty directories), so a missing one means "nothing written yet", not "convention does not apply".</li>
+<li>Documents follow <a href="claude-skills-markdown-writing-style-skill.html">markdown-writing-style</a>; reference the report's requirement numbers instead of restating requirements.</li>
+</ul>
+<p><a href="../../../plans/">plans/</a> keeps its own <code>doc/</code> for run records and planning research — it is not a node, and its documents are about the plan rather than about a node's design.</p>
+<h2 id="build-rules-all-container-nodes">Build rules (all container nodes)<a class="headerlink" href="#build-rules-all-container-nodes" title="Link to this section">¶</a></h2>
+<p>These apply unchanged to any image-building folder that is not a container node — a <code>tools/&lt;name&gt;/</code>, or the sanctioned in-folder mock of § <code>tools/</code>; read "node folder" as "build folder" there.</p>
+<ul>
+<li>Each node folder is <strong>self-contained and independently buildable</strong>: its own <code>Dockerfile</code> at the folder root, its own dependency manifest, its own tests. Build from the repo root, e.g. <code>docker build -t m1-scenario-player:latest Scenario_Player/</code>.</li>
+<li><strong>Self-containment, not the <code>Dockerfile</code>'s path, is what that rule protects.</strong> A folder whose primary artifact is not an image may carry a secondary image's <code>Dockerfile</code> in a subfolder, provided the <strong>build context stays inside the folder</strong> — the build still reads nothing outside it. Today: <code>IVI_ECU/r4-simulator/Dockerfile</code> built with context <code>IVI_ECU/</code>, because that folder's primary artifact is the APK and the image is secondary test equipment (<a href="documents-design-ivi-ecu-ivi-ecu-hld.html#11-tech-stack-build-and-ci">ivi-ecu-hld.md §11</a>). A folder whose primary artifact <em>is</em> an image keeps its <code>Dockerfile</code> at the root.</li>
+<li>Local image tag → registry tag → blueprint <code>image</code> field: the tag/push commands and the node's blueprint config are in that node's guide, not restated here.</li>
+<li><strong>CI builds every image, but pushes only when <code>CARSKY_ZOT_API_KEY</code> is set.</strong> Each image lane's push step is gated on that secret: without it the image is built, the step emits a <code>::notice::</code> saying it was not pushed, the pull-back verification is skipped, and the job still ends green. <strong>A green lane is therefore not evidence that an image reached the registry</strong> — read the run's push notice, or query the registry, before treating a tag as deployable.</li>
+<li><strong>No cross-node source imports.</strong> Folders couple only through the frozen R1–R4 contracts; a shared artifact needed by two nodes is a contract deliverable, not a relative import across folders.</li>
+<li><strong>No hardcoded tunables</strong> (CLAUDE.md governing principle 5): peer addresses, ports, thresholds, and cadences come from env vars or config files, with the values injected by the blueprint node config — see each node's guide for its env set.</li>
+<li>Unit tests live inside the node folder they test and must pass before a subtask is done (<a href="claude-rules-task-planning-conventions.html#subtask-discipline-non-negotiable">task-planning-conventions.md</a>).</li>
+</ul>
+<h2 id="scenario_player-specifics-r11">Scenario_Player specifics (R11)<a class="headerlink" href="#scenario_player-specifics-r11" title="Link to this section">¶</a></h2>
+<ul>
+<li><strong>Entrypoint</strong> <code>main.py</code> at the image workdir <code>/app</code>, which mirrors <code>Scenario_Player/</code> — fixed by the blueprint node config <code>command: ["python", "main.py"]</code> (<a href="requirements-car-sky-guide-node-scenario-player.html#blueprint-node-config">node-scenario-player.md</a>).</li>
+<li><strong>Scenario configs are data, not code</strong>: files under <code>Scenario_Player/scenarios/</code>, selected at runtime by the <code>SCENARIO_CONFIG</code> env var (default <code>/app/scenarios/default.yaml</code>). Different configs must produce observably different message streams — that is R11's acceptance, so scenario variants (e.g. C approaching vs C out of range) are added as config files, never as code branches.</li>
+<li><strong>Target peer</strong> is the V2X ECU via <code>V2X_ECU_HOST</code>/<code>V2X_ECU_PORT</code>; the bench wires exactly one <code>ethernet</code> OUTPUT pin to the Ethernet Bridge (R6).</li>
+<li><strong>Codec path:</strong> how Python reaches the R1 encoder is fixed by <a href="documents-design-scenario-player-scenario-player-design-decisions.html#d1--python-reaches-the-r1-encoder-through-a-cpm_encode-helper-subprocess">scenario-player-design-decisions.md D1</a> — a <code>cpm_encode</code> C++ helper subprocess built inside <code>Scenario_Player/codec_helper/</code> from byte-synced copies of the V2X ECU codec-seam sources (sync-manifest extension, D2). Implementation follows that decision — no agent may improvise a different codec path.</li>
+</ul>
+<h2 id="how-to-apply">How to apply<a class="headerlink" href="#how-to-apply" title="Link to this section">¶</a></h2>
+<ul>
+<li>[[project-architecture]] resolves the target folder(s) against the table above before any HLD, and creates the folder's structure inside it — never at the repo root; the HLD and its diagrams go in that folder's <code>doc/</code>. A deliverable that is test equipment rather than node code goes to <code>tools/&lt;name&gt;/</code> — or, where all four conditions of the consumer-folder exception in § <code>tools/</code> hold, the consuming node's folder — with the design that places it there recording why.</li>
+<li>[[project-planner]] cites paths from these folders in every subtask brief, and pairs each node's feature tasks with its deployment tasks from that node's guide; a brief that depends on a design decision points at the <code>doc/</code> document that records it.</li>
+<li>Implementation subagents write only inside the folder their subtask names — a node folder, or the <code>tools/&lt;name&gt;/</code> a test-equipment subtask names — and read its <code>doc/</code> before making design-affecting choices.</li>
+</ul>
+      </article>
+    </main>
+  </div>
+  <script src="../js/site-data.js"></script>
+  <script src="../js/theme.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/doc-page.js"></script>
+</body>
+</html>

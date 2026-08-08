@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en" data-theme="sketch">
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="kis-build-pages">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mock R4 Sender — 2-node Task 5.1 Test Node — KIS</title>
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/doc.css">
+  <link rel="stylesheet" href="../css/themes.css">
+</head>
+<body class="DocBody" data-root=".." data-doc-node="knowledge-base" data-doc-title="Mock R4 Sender — 2-node Task 5.1 Test Node" data-doc-source="IVI_ECU/mock-sender/README.md">
+  <div class="DocLayout">
+    <aside class="DocLayout__aside" id="doc-toc"></aside>
+    <main class="Page DocPage">
+      <header class="PageHeader" id="doc-header"></header>
+      <article class="Markdown" id="doc-body">
+<h1 id="mock-r4-sender-2-node-task-51-test-node">Mock R4 Sender — 2-node Task 5.1 Test Node<a class="headerlink" href="#mock-r4-sender-2-node-task-51-test-node" title="Link to this section">¶</a></h1>
+<p>Container node that fires scripted R4 UDP warning events at the IVI ECU node.</p>
+<blockquote>
+<p>Lead note: production stimulus is Kotlin <code>:r4-simulator</code> (group 5.6). This Python sender is interim only — defaults match CarSky blueprint <code>10.99.0.13:47300</code>.</p>
+</blockquote>
+<h2 id="build-push">Build &amp; Push<a class="headerlink" href="#build-push" title="Link to this section">¶</a></h2>
+<pre><code class="language-bash">docker build -t registry.carsky.io/m1-mock-r4-sender:latest .
+docker push registry.carsky.io/m1-mock-r4-sender:latest
+</code></pre>
+<h2 id="environment-variables">Environment Variables<a class="headerlink" href="#environment-variables" title="Link to this section">¶</a></h2>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>IVI_ECU_HOST</code></td>
+<td><code>10.99.0.13</code></td>
+<td>IVI Skycraft ethernet pin (CarSky blueprint)</td>
+</tr>
+<tr>
+<td><code>IVI_ECU_PORT</code></td>
+<td><code>47300</code></td>
+<td>UDP port of R4ListenerService (<code>BuildConfig.R4_UDP_PORT</code>)</td>
+</tr>
+<tr>
+<td><code>INTERVAL_MS</code></td>
+<td><code>2000</code></td>
+<td>Milliseconds between packets</td>
+</tr>
+<tr>
+<td><code>CYCLES</code></td>
+<td><code>5</code></td>
+<td>Number of full approach/leave/unknown cycles</td>
+</tr>
+<tr>
+<td><code>SCHEMA_VERSION</code></td>
+<td><code>1</code></td>
+<td>R4 schema version to embed in packets</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="test-scenario-per-cycle">Test Scenario (per cycle)<a class="headerlink" href="#test-scenario-per-cycle" title="Link to this section">¶</a></h2>
+<ol>
+<li><strong>C approaching</strong> — 5 packets, distance 40m → 20m, <code>warningType=nlos_obstruction</code></li>
+<li><strong>State heartbeat</strong> — 1 <code>type=state</code> packet</li>
+<li><strong>C leaving</strong> — 3 packets, distance 20m → 50m, risk=low</li>
+<li><strong>Additive-version test</strong> — 1 packet <code>warningType=future_unknown_type</code> (IVI must not crash)</li>
+</ol>
+<h2 id="local-test-without-carsky">Local test (without CarSky)<a class="headerlink" href="#local-test-without-carsky" title="Link to this section">¶</a></h2>
+<pre><code class="language-bash"># Terminal 1 — listen to see what's being sent
+nc -ulv 47300
+
+# Terminal 2 — run sender
+IVI_ECU_HOST=127.0.0.1 IVI_ECU_PORT=47300 CYCLES=2 python mock_r4_sender.py
+</code></pre>
+      </article>
+    </main>
+  </div>
+  <script src="../js/site-data.js"></script>
+  <script src="../js/theme.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/doc-page.js"></script>
+</body>
+</html>

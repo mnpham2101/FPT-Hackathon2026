@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en" data-theme="sketch">
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="kis-build-pages">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Blueprint 2-Node Task 5.1 Test — Setup Guide — KIS</title>
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/doc.css">
+  <link rel="stylesheet" href="../css/themes.css">
+</head>
+<body class="DocBody" data-root=".." data-doc-node="module-design" data-doc-title="Blueprint 2-Node Task 5.1 Test — Setup Guide" data-doc-source="requirements/blueprint-2node-task51-test-guide.md">
+  <div class="DocLayout">
+    <aside class="DocLayout__aside" id="doc-toc"></aside>
+    <main class="Page DocPage">
+      <header class="PageHeader" id="doc-header"></header>
+      <article class="Markdown" id="doc-body">
+<h1 id="blueprint-2-node-task-51-test-setup-guide">Blueprint 2-Node Task 5.1 Test — Setup Guide<a class="headerlink" href="#blueprint-2-node-task-51-test-setup-guide" title="Link to this section">¶</a></h1>
+<p>Blueprint tối giản để test Task 5.1 (R4 Data Layer). Thay vì dùng đủ 4 nodes + ADA ECU + V2X ECU, blueprint này bỏ qua tất cả, chỉ cần:</p>
+<ul>
+<li><strong>Node 1: Mock R4 Sender</strong> — Container Node, bắn gói UDP R4 JSON trực tiếp đến IVI ECU</li>
+<li><strong>Node 2: IVI ECU</strong> — Skycraft AAOS Node, chạy app Kotlin + vẽ Warning View HMI</li>
+</ul>
+<pre><code>[Mock R4 Sender] ──eth──► [Ethernet Bridge] ◄──eth── [IVI ECU]
+  10.88.0.11                                           10.88.0.12
+  port 5004 (sender)                           port 5004 (listener)
+</code></pre>
+<h2 id="buoc-1-build-push-docker-image-cho-mock-sender">Bước 1: Build &amp; Push Docker image cho Mock Sender<a class="headerlink" href="#buoc-1-build-push-docker-image-cho-mock-sender" title="Link to this section">¶</a></h2>
+<pre><code class="language-bash">cd IVI_ECU/mock-sender
+docker build -t registry.carsky.io/m1-mock-r4-sender:latest .
+docker push registry.carsky.io/m1-mock-r4-sender:latest
+</code></pre>
+<h2 id="buoc-2-import-blueprint-vao-nydus">Bước 2: Import blueprint vào Nydus<a class="headerlink" href="#buoc-2-import-blueprint-vao-nydus" title="Link to this section">¶</a></h2>
+<ol>
+<li>Nydus → Blueprint list → <strong>Import from File</strong></li>
+<li>Chọn file <code>requirements/blueprint-2node-task51-test.json</code></li>
+<li>Blueprint sẽ tạo 3 nodes (Mock Sender, Bridge, IVI ECU) — <strong>KHÔNG có ethernet pins</strong> (giới hạn của platform)</li>
+</ol>
+<h2 id="buoc-3-them-ethernet-pins-thu-cong-tren-nydus-ui-canvas">Bước 3: Thêm Ethernet pins thủ công trên Nydus UI Canvas<a class="headerlink" href="#buoc-3-them-ethernet-pins-thu-cong-tren-nydus-ui-canvas" title="Link to this section">¶</a></h2>
+<p>Đây là bước <strong>BẮT BUỘC</strong> vì REST API không hỗ trợ tạo ETHERNET pin.</p>
+<ol>
+<li>Mở blueprint trên Nydus canvas</li>
+<li><strong>Mock R4 Sender node</strong>: Inspector → Add Pin → type <code>ETHERNET</code> → address <code>10.88.0.11</code></li>
+<li><strong>IVI ECU node</strong>: Inspector → Add Pin → type <code>ETHERNET</code> → address <code>10.88.0.12</code></li>
+<li><strong>Wire</strong>: Kéo từ pin eth của Mock Sender → Ethernet Bridge. Kéo từ pin eth của IVI ECU → Ethernet Bridge.</li>
+</ol>
+<h2 id="buoc-4-build-install-ivi-apk-len-aaos">Bước 4: Build &amp; Install IVI APK lên AAOS<a class="headerlink" href="#buoc-4-build-install-ivi-apk-len-aaos" title="Link to this section">¶</a></h2>
+<pre><code class="language-bash">cd IVI_ECU
+./gradlew assembleDebug
+# Sau khi AAOS node chạy, install APK qua ADB tunnel của CarSky
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+</code></pre>
+<h2 id="buoc-5-deploy-va-verify">Bước 5: Deploy và Verify<a class="headerlink" href="#buoc-5-deploy-va-verify" title="Link to this section">¶</a></h2>
+<ol>
+<li>Nydus → Inspector (empty canvas) → <strong>New Deployment</strong> → chọn Device → <strong>Deploy</strong></li>
+<li>Chờ <code>2/3</code> nodes Running (Bridge không tính)</li>
+<li>Mock Sender sẽ tự động chạy → IVI ECU sẽ nhận packets → Warning View hiện lên</li>
+</ol>
+<h2 id="verify-tung-buoc">Verify từng bước<a class="headerlink" href="#verify-tung-buoc" title="Link to this section">¶</a></h2>
+<pre><code class="language-bash"># Check logs của Mock Sender
+GET /api/v1/deployments/{roomId}/logs/{mockSenderNodeKey}
+
+# Screenshot IVI ECU để xem HMI
+GET /api/v1/vms/{roomId}/{iviNodeKey}/screenshot
+
+# ADB shell vào IVI ECU để xem logcat
+POST /api/v1/vms/{roomId}/{iviNodeKey}/shell
+# body: {&quot;command&quot;: &quot;adb logcat -s IVI_V2X&quot;}
+</code></pre>
+<h2 id="test-additive-version-warningtype-khong-biet">Test additive-version (warningType không biết)<a class="headerlink" href="#test-additive-version-warningtype-khong-biet" title="Link to this section">¶</a></h2>
+<p>Mock Sender sẽ tự động gửi 1 packet <code>warningType=future_unknown_type</code> mỗi cycle.
+IVI ECU <strong>phải không crash</strong>, log WARN và hiển thị generic warning.
+Verify bằng logcat: tìm <code>WARN</code> với <code>future_unknown_type</code> — <strong>không có</strong> <code>FATAL EXCEPTION</code>.</p>
+<h2 id="teardown">Teardown<a class="headerlink" href="#teardown" title="Link to this section">¶</a></h2>
+<p>Nydus → Deployment Viewer → <strong>Delete Deployment</strong></p>
+      </article>
+    </main>
+  </div>
+  <script src="../js/site-data.js"></script>
+  <script src="../js/theme.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/doc-page.js"></script>
+</body>
+</html>

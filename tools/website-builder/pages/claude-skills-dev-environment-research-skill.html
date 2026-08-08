@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en" data-theme="sketch">
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="kis-build-pages">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Development Environment &amp; Toolchain Research (project-researcher) — KIS</title>
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/doc.css">
+  <link rel="stylesheet" href="../css/themes.css">
+</head>
+<body class="DocBody" data-root=".." data-doc-node="plans" data-doc-title="Development Environment &amp; Toolchain Research (project-researcher)" data-doc-source=".claude/skills/dev-environment-research/SKILL.md">
+  <div class="DocLayout">
+    <aside class="DocLayout__aside" id="doc-toc"></aside>
+    <main class="Page DocPage">
+      <header class="PageHeader" id="doc-header"></header>
+      <article class="Markdown" id="doc-body">
+<hr />
+<p>name: dev-environment-research
+description: Procedure project-researcher follows when asked about the development/working environment, platform capabilities, toolchain, or library support (e.g. "how does tool X support Y", "what environment does Phase N need") — source ingestion, tool-support research, requirement mapping, and a diagrammed research note.</p>
+<hr />
+<h1 id="development-environment-toolchain-research-project-researcher">Development Environment &amp; Toolchain Research (project-researcher)<a class="headerlink" href="#development-environment-toolchain-research-project-researcher" title="Link to this section">¶</a></h1>
+<p>Trigger: [[project-researcher]] receives a question about the working environment, platform
+(e.g. CARSKY), toolchain, or a specific library/tool — narrower than a full
+<a href="claude-skills-requirement-analysis-and-solutioning-skill.html">requirement-analysis-and-solutioning</a> run:
+it clarifies <em>how existing requirements will be met in a concrete environment</em>, and defines
+<strong>no new requirement numbers</strong>.</p>
+<h2 id="procedure">Procedure<a class="headerlink" href="#procedure" title="Link to this section">¶</a></h2>
+<ol>
+<li><strong>Ingest the given sources first</strong> — platform docs (PDF/slides), mentor/organizer Q&amp;A,
+   the active plan (<a data-missing="../../../documents/Plan-Proposal/milestone1_high_level_plan.md">milestone1_high_level_plan.md</a>), and existing reports under
+   <code>requirements/</code>. Extract the environment model as explicit facts (what the platform provides,
+   what the team must build, what is out of scope).</li>
+<li><strong>Research tool/library support</strong> (WebSearch/WebFetch) for each open question. Candidates
+   must pass the hard constraints in
+   <a href="claude-rules-solution-selection-criteria.html">solution-selection-criteria.md</a> (open-source,
+   Linux); note version/feature caveats (e.g. a library implementing an older spec revision)
+   rather than assuming from memory.</li>
+<li><strong>Map findings to existing requirement numbers</strong> from the reports in <code>requirements/</code>.
+   Flag — never silently absorb — any conflict with a frozen contract, the plan's
+   scope/assumptions, or a published requirement; name the decision owner.</li>
+<li><strong>Write the research note</strong> under <code>requirements/</code> (e.g. <code>m1-&lt;topic&gt;.md</code>), clearly marked as
+   a researcher artifact, <strong>not an HLD</strong>: environment model, module/role mapping with
+   requirement numbers, tool-support findings, open items, and <strong>sources</strong> (links).</li>
+<li><strong>Diagram the environment and flow</strong> as <code>.puml</code> files next to the note — typically a
+   component diagram (working environment / nodes / modules) and a swimlane activity diagram
+   (end-to-end flow). Validate the PlantUML renders before delivering; keep activity labels on
+   single lines so boxes use full width.</li>
+</ol>
+<h2 id="output">Output<a class="headerlink" href="#output" title="Link to this section">¶</a></h2>
+<ul>
+<li>A research note + <code>.puml</code> diagrams under <code>requirements/</code>, cross-referenced from the plan doc
+  where relevant. Conversation output alone is not a deliverable.</li>
+<li>Commit (when asked) as <code>docs: &lt;subject&gt;</code> — no taskID, per
+  <a href="claude-rules-research-report-format.html">research-report-format.md</a>.</li>
+</ul>
+<h2 id="how-to-apply">How to apply<a class="headerlink" href="#how-to-apply" title="Link to this section">¶</a></h2>
+<p>Owned by [[project-researcher]]. If the research uncovers a genuinely <em>new</em> requirement or a
+solution decision needing formal comparison, escalate to
+<a href="claude-skills-requirement-analysis-and-solutioning-skill.html">requirement-analysis-and-solutioning</a> instead
+of extending this note. Design consequences hand off to [[project-architecture]].</p>
+      </article>
+    </main>
+  </div>
+  <script src="../js/site-data.js"></script>
+  <script src="../js/theme.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/doc-page.js"></script>
+</body>
+</html>

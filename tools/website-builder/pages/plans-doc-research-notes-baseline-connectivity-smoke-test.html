@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="en" data-theme="sketch">
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="kis-build-pages">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Baseline Blueprint — Node Connectivity Smoke Test — KIS</title>
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/doc.css">
+  <link rel="stylesheet" href="../css/themes.css">
+</head>
+<body class="DocBody" data-root=".." data-doc-node="plans" data-doc-title="Baseline Blueprint — Node Connectivity Smoke Test" data-doc-source="plans/doc/research_notes/baseline-connectivity-smoke-test.md">
+  <div class="DocLayout">
+    <aside class="DocLayout__aside" id="doc-toc"></aside>
+    <main class="Page DocPage">
+      <header class="PageHeader" id="doc-header"></header>
+      <article class="Markdown" id="doc-body">
+<h1 id="baseline-blueprint-node-connectivity-smoke-test">Baseline Blueprint — Node Connectivity Smoke Test<a class="headerlink" href="#baseline-blueprint-node-connectivity-smoke-test" title="Link to this section">¶</a></h1>
+<blockquote>
+<p><strong>Status:</strong> research note (scratch). Not authoritative — authority is <a href="requirements-m1-cooperative-awareness.html">m1-cooperative-awareness.md</a> R5/R6 and its <a href="requirements-m1-cooperative-awareness.html#baseline-propose-topology">baseline topology</a>; platform mechanics are <a href="requirements-car-sky-guide-carsky-4-node-blueprint.html">carsky-4-node-blueprint.md</a>.</p>
+</blockquote>
+<h2 id="1-objective">1. Objective<a class="headerlink" href="#1-objective" title="Link to this section">¶</a></h2>
+<p>Prove a datagram travels <strong>bench <code>10.99.0.10</code> → V2X <code>.11</code> → ADA <code>.12</code> → IVI <code>.13</code></strong> on the real ports (<code>47100</code>/<code>47200</code>/<code>47300</code>), before any ECU code exists.</p>
+<p>Method: one small image, baked with two programs, deployed to the three Container nodes. The node starts → the programs run by themselves → the user clicks the node → <strong>View Log</strong> → reads the result. No interactive session, no API scripting.</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Program</th>
+<th>Started by</th>
+<th>Job</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>capture.sh</code></td>
+<td>entrypoint, <strong>background</strong></td>
+<td>traffic capture — <code>tcpdump</code> on the wire, independent of the app</td>
+</tr>
+<tr>
+<td><code>netcheck.py</code></td>
+<td>entrypoint, <strong>foreground</strong></td>
+<td>the network check — send / receive / relay, and log every datagram</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="2-pass-criteria">2. Pass criteria<a class="headerlink" href="#2-pass-criteria" title="Link to this section">¶</a></h2>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Check</th>
+<th>Where seen</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>C1</td>
+<td>Node is functional: reaches <strong>Running</strong> and stays there (restart count stays 0)</td>
+<td>Deployment Viewer</td>
+</tr>
+<tr>
+<td>C2</td>
+<td>No error: <strong>zero <code>[ERR]</code> lines</strong> in any node's log</td>
+<td>View Log</td>
+</tr>
+<tr>
+<td>C3</td>
+<td>Log is observable and live per node</td>
+<td>View Log</td>
+</tr>
+<tr>
+<td>C4</td>
+<td>Traffic captured: <code>[CAP]</code> tcpdump lines show the UDP datagrams on the wire</td>
+<td>View Log</td>
+</tr>
+<tr>
+<td>C5</td>
+<td>Chain proven: the token reaching the last hop carries the <code>\|v2x\|ada</code> stamps each relay added</td>
+<td>View Log on ADA/IVI</td>
+</tr>
+</tbody>
+</table></div>
+<p>C5 is the real objective — it is what distinguishes "the chain works" from "three nodes each happen to be alive".</p>
+<h2 id="3-why-not-ping">3. Why not <code>ping</code><a class="headerlink" href="#3-why-not-ping" title="Link to this section">¶</a></h2>
+<p>Containers get no <code>NET_RAW</code> by default (the platform doc calls it out as <em>"required so the container may open raw sockets"</em>), so ICMP can fail on a perfectly healthy UDP path. <code>netcheck.py</code> instead uses <strong><code>connect()</code> on a UDP socket</strong> — that forces a kernel route lookup and sends no packet, so an unreachable peer fails instantly and loudly, with no ICMP involved.</p>
+<p><code>NET_RAW</code> is granted explicitly in the node config (§ 6, step M7) so that <code>tcpdump</code> works — verified as a real, honored field: CarSky's own <a href="../../../requirements/development-platform-doc/blueprint-KIS.json">blueprint-KIS.json</a> has a container node carrying <code>"capabilities": ["NET_RAW", "NET_ADMIN", …]</code> flat alongside <code>image</code>/<code>env</code>. If it turns out not to be granted, <code>capture.sh</code> falls back to <code>/proc/net/dev</code> packet counters, which need no privilege at all — C4 is then met at counter level instead of packet level.</p>
+<h2 id="4-tool-implementation">4. Tool implementation<a class="headerlink" href="#4-tool-implementation" title="Link to this section">¶</a></h2>
+<h3 id="41-where-the-code-goes">4.1 Where the code goes<a class="headerlink" href="#41-where-the-code-goes" title="Link to this section">¶</a></h3>
+<p>Create a new folder <strong><code>tools/netcheck/</code></strong> at the repo root and write all four files below into it.</p>
+<p>It is deliberately <strong>not</strong> one of the four node folders. <code>Scenario_Player/</code>, <code>V2X_ECU/</code>, <code>ADA_ECU/</code>, and <code>IVI_ECU/</code> hold node product code only (<a href="claude-rules-node-code-layout.html">node-code-layout.md</a>); this tool is throwaway test equipment that is deleted, or left unbuilt, once the real ECU images exist.</p>
+<pre><code>tools/netcheck/
+├── Dockerfile        # recipe that packages the three files below into one image
+├── entrypoint.sh     # starts capture.sh in the background, then netcheck.py in the foreground
+├── capture.sh        # program 1 — traffic capture (tcpdump, or /proc counters as fallback)
+└── netcheck.py       # program 2 — the network check (send / receive / relay)
+</code></pre>
+<h3 id="42-program-1-capturesh">4.2 Program 1 — <code>capture.sh</code><a class="headerlink" href="#42-program-1-capturesh" title="Link to this section">¶</a></h3>
+<p>Captures traffic on the wire, independently of whether the check program works. Prefixes every line <code>[CAP]</code> so it is distinguishable in the mixed log stream.</p>
+<pre><code class="language-sh">#!/bin/sh
+if tcpdump -D &gt;/dev/null 2&gt;&amp;1; then
+  echo &quot;[CAP] tcpdump active, filter: ${CAPTURE_FILTER:-udp}&quot;
+  tcpdump -i any -n -l -tttt &quot;${CAPTURE_FILTER:-udp}&quot; 2&gt;&amp;1 | sed 's/^/[CAP] /'
+else
+  echo &quot;[CAP] no NET_RAW - falling back to /proc/net/dev packet counters&quot;
+  while :; do
+    awk 'NR&gt;2 {gsub(&quot;:&quot;,&quot;&quot;); if ($3+$11 &gt; 0) printf &quot;[CAP] %s rx_pkts=%s tx_pkts=%s\n&quot;, $1, $3, $11}' /proc/net/dev
+    sleep &quot;${CAPTURE_INTERVAL_S:-5}&quot;
+  done
+fi
+</code></pre>
+<h3 id="43-program-2-netcheckpy">4.3 Program 2 — <code>netcheck.py</code><a class="headerlink" href="#43-program-2-netcheckpy" title="Link to this section">¶</a></h3>
+<p>The network check. One file serves all three roles; which role it plays is decided <strong>only</strong> by the environment variables the node config supplies (§ 6, step M7) — nothing about the topology is compiled in (CLAUDE.md governing principle 5).</p>
+<pre><code class="language-python">#!/usr/bin/env python3
+&quot;&quot;&quot;Baseline connectivity check. Env: ROLE, LISTEN_PORT?, NEXT_HOP_HOST?, NEXT_HOP_PORT?, HZ, PAD, START_DELAY_S.&quot;&quot;&quot;
+import os, socket, threading, time
+
+ROLE   = os.environ.get(&quot;ROLE&quot;, &quot;node&quot;)
+LISTEN = os.environ.get(&quot;LISTEN_PORT&quot;)                  # relay/sink nodes only
+NH, NP = os.environ.get(&quot;NEXT_HOP_HOST&quot;), os.environ.get(&quot;NEXT_HOP_PORT&quot;)
+HZ     = float(os.environ.get(&quot;HZ&quot;, &quot;1&quot;))               # 1 Hz: log stays readable and live
+PAD    = int(os.environ.get(&quot;PAD&quot;, &quot;0&quot;))                # payload padding, for the MTU check
+DELAY  = float(os.environ.get(&quot;START_DELAY_S&quot;, &quot;20&quot;))   # let the downstream nodes come up first
+
+def log(tag, msg): print(f&quot;[{tag}] {ROLE} {msg}&quot;, flush=True)
+
+def route_check():
+    &quot;&quot;&quot;Reachability without ICMP: connect() forces a route lookup and sends nothing.&quot;&quot;&quot;
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect((NH, int(NP)))
+        log(&quot;NET&quot;, f&quot;route to {NH}:{NP} OK, egress address {s.getsockname()[0]}&quot;)
+    except OSError as e:
+        log(&quot;ERR&quot;, f&quot;no route to {NH}:{NP} - {e}&quot;)
+    finally:
+        s.close()
+
+def receiver():
+    rx = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    rx.bind((&quot;0.0.0.0&quot;, int(LISTEN)))     # never bind a named interface - the bridge NIC's name is not guaranteed
+    log(&quot;NET&quot;, f&quot;listening on udp/{LISTEN}&quot;)
+    fwd, n = socket.socket(socket.AF_INET, socket.SOCK_DGRAM), 0
+    while True:
+        data, src = rx.recvfrom(65535); n += 1
+        log(&quot;RX&quot;, f&quot;#{n} from {src[0]}:{src[1]} len={len(data)} body={data[:96].decode('ascii','replace')}&quot;)
+        if NH:                            # relay: stamp, then forward
+            out = data + f&quot;|{ROLE}&quot;.encode()
+            fwd.sendto(out, (NH, int(NP)))
+            log(&quot;TX&quot;, f&quot;#{n} relayed to {NH}:{NP} len={len(out)}&quot;)
+
+def sender():
+    time.sleep(DELAY)
+    tx, i = socket.socket(socket.AF_INET, socket.SOCK_DGRAM), 0
+    while True:                           # runs forever, so the log is alive whenever it is opened
+        out = f&quot;seq={i}|{ROLE}&quot;.encode() + b&quot;x&quot; * PAD
+        try:
+            tx.sendto(out, (NH, int(NP)))
+            log(&quot;TX&quot;, f&quot;#{i} to {NH}:{NP} len={len(out)}&quot;)
+        except OSError as e:
+            log(&quot;ERR&quot;, f&quot;send failed - {e}&quot;)
+        i += 1; time.sleep(1 / HZ)
+
+if NH: route_check()
+if LISTEN: threading.Thread(target=receiver, daemon=True).start()
+if NH and not LISTEN: sender()            # source node
+while True: time.sleep(3600)              # keep the pod Running so View Log stays open
+</code></pre>
+<h3 id="44-entrypointsh">4.4 <code>entrypoint.sh</code><a class="headerlink" href="#44-entrypointsh" title="Link to this section">¶</a></h3>
+<p>This is what makes the node <em>functional</em>: the container has something to run, so the pod stays up and produces a log. It launches the capture program in the background and the check program in the foreground.</p>
+<pre><code class="language-sh">#!/bin/sh
+set -u
+echo &quot;[BOOT] role=${ROLE:-unset} listen=${LISTEN_PORT:-none} next=${NEXT_HOP_HOST:-none}:${NEXT_HOP_PORT:-none}&quot;
+./capture.sh &amp;                  # capture runs alongside, independent of the traffic program
+exec python3 -u netcheck.py     # foreground = the pod's lifetime
+</code></pre>
+<h3 id="45-dockerfile">4.5 <code>Dockerfile</code><a class="headerlink" href="#45-dockerfile" title="Link to this section">¶</a></h3>
+<p>The Dockerfile is the recipe that turns the three files into the deployable image: it picks a base OS, installs Python and tcpdump, copies the scripts in, and names the entrypoint.</p>
+<pre><code class="language-dockerfile">FROM alpine:3.20
+RUN apk add --no-cache python3 tcpdump
+WORKDIR /app
+COPY netcheck.py capture.sh entrypoint.sh ./
+RUN chmod +x capture.sh entrypoint.sh
+CMD [&quot;./entrypoint.sh&quot;]
+</code></pre>
+<p>Docker references: <a href="https://docs.docker.com/reference/dockerfile/">Dockerfile syntax</a> for the instructions above · <a href="../../../requirements/development-platform-doc/Car-Sky-Platform.html">Car-Sky-Platform.html</a> § <em>"Log In to Zot Registry &amp; Get API Key"</em> for the platform's own <code>docker login</code> / <code>tag</code> / <code>push</code> walkthrough · <a href="requirements-car-sky-guide-node-scenario-player.html#build--push-the-image">node-scenario-player.md</a> for the same three commands in this project's shape.</p>
+<h2 id="5-how-the-tool-reaches-the-nodes">5. How the tool reaches the nodes<a class="headerlink" href="#5-how-the-tool-reaches-the-nodes" title="Link to this section">¶</a></h2>
+<p><strong>Nothing is installed onto a node by hand.</strong> The flow is: build <strong>one</strong> image → push it <strong>once</strong> to the CarSky registry → each node's blueprint config names that image → the platform pulls it when the Room deploys.</p>
+<ul>
+<li><strong>One image, three nodes.</strong> All three Container nodes reference the <em>same</em> tag. Do not build three images. The bench, V2X, and ADA nodes differ only by the env vars in their node config, which is exactly how the real ECU nodes are configured.</li>
+<li><strong>Build once, redeploy to change behaviour.</strong> Editing env (e.g. <code>PAD=1400</code>) needs no rebuild — change the node config and redeploy. Editing the scripts needs a rebuild, a push under the same tag, and a redeploy.</li>
+<li><strong>The IVI node is not part of this.</strong> It is a Skycraft (AAOS) node: it runs the Android VM artifact, not a container image, so it cannot run these scripts at all (§ 7).</li>
+</ul>
+<h2 id="6-manual-steps">6. Manual steps<a class="headerlink" href="#6-manual-steps" title="Link to this section">¶</a></h2>
+<p>Everything the user does, start to finish. Steps M1–M4 happen once on a machine with Docker; M5–M12 happen in the Nydus UI.</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Step</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>M1</strong></td>
+<td>Create <code>tools/netcheck/</code> and write the four files from § 4 into it.</td>
+</tr>
+<tr>
+<td><strong>M2</strong></td>
+<td>Confirm the registry hostname with the organizers, then log in: <code>docker login &lt;registry-host&gt; -u &lt;username&gt;</code>, using your Zot API key as the password.</td>
+</tr>
+<tr>
+<td><strong>M3</strong></td>
+<td>Build the image: <code>docker build -t m1-netcheck:latest tools/netcheck/</code> — add <code>--platform linux/&lt;arch&gt;</code> for the cluster's architecture if your machine differs.</td>
+</tr>
+<tr>
+<td><strong>M4</strong></td>
+<td>Tag and push it: <code>docker tag m1-netcheck:latest &lt;registry-host&gt;/m1-netcheck:latest</code> then <code>docker push &lt;registry-host&gt;/m1-netcheck:latest</code>.</td>
+</tr>
+<tr>
+<td><strong>M5</strong></td>
+<td>Open the baseline blueprint in Nydus. Optionally clone it first (<code>trial2_minh-netcheck</code>) so the committed topology stays untouched — if the clone loses its <code>ethernet</code> pins, re-wire the four edges to the bridge by hand.</td>
+</tr>
+<tr>
+<td><strong>M6</strong></td>
+<td>Check that the four <code>ethernet</code> pins and their four edges into the bridge are present. <strong>Do not add a new node</strong> for this test — the REST <code>addPin</code> enum has no <code>ETHERNET</code>, so a new node cannot be wired to the bridge except by hand in the canvas.</td>
+</tr>
+<tr>
+<td><strong>M7</strong></td>
+<td>In each Container node's Inspector, set <code>image</code>, <code>command</code>, <code>capabilities</code>, and the env vars per the table below. This is a UI step: node config cannot be edited over REST (<code>PATCH /nodes/{id}</code> 404s, and <code>/batch</code> is add-only).</td>
+</tr>
+<tr>
+<td><strong>M8</strong></td>
+<td>Leave the IVI node's AAOS artifact reference as it is, and confirm it has one — without it the Room never reaches all-nodes-ready.</td>
+</tr>
+<tr>
+<td><strong>M9</strong></td>
+<td>Click <strong>New Deployment</strong>, then wait until every node badge reads <code>Running</code> and the restart count stays 0 — that is <strong>C1</strong>.</td>
+</tr>
+<tr>
+<td><strong>M10</strong></td>
+<td>Click each node → <strong>View Log</strong> and read it against § 6.2 — that covers <strong>C2–C5</strong>.</td>
+</tr>
+<tr>
+<td><strong>M11</strong></td>
+<td><em>(optional)</em> Set <code>PAD=1400</code> on the bench node and redeploy to check MTU headroom, then bisect if 1400 does not arrive while small datagrams do.</td>
+</tr>
+<tr>
+<td><strong>M12</strong></td>
+<td>Click <strong>Delete Deployment</strong> when finished — the account allows only 2 concurrent deployments.</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="61-node-config-for-m7">6.1 Node config for M7<a class="headerlink" href="#61-node-config-for-m7" title="Link to this section">¶</a></h3>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Node</th>
+<th><code>image</code></th>
+<th><code>command</code></th>
+<th>env</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Bench <code>.10</code></td>
+<td><code>&lt;registry-host&gt;/m1-netcheck:latest</code></td>
+<td><code>["./entrypoint.sh"]</code></td>
+<td><code>ROLE=bench</code>, <code>NEXT_HOP_HOST=10.99.0.11</code>, <code>NEXT_HOP_PORT=47100</code></td>
+</tr>
+<tr>
+<td>V2X <code>.11</code></td>
+<td>same</td>
+<td>same</td>
+<td><code>ROLE=v2x</code>, <code>LISTEN_PORT=47100</code>, <code>NEXT_HOP_HOST=10.99.0.12</code>, <code>NEXT_HOP_PORT=47200</code></td>
+</tr>
+<tr>
+<td>ADA <code>.12</code></td>
+<td>same</td>
+<td>same</td>
+<td><code>ROLE=ada</code>, <code>LISTEN_PORT=47200</code>, <code>NEXT_HOP_HOST=10.99.0.13</code>, <code>NEXT_HOP_PORT=47300</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>Plus <code>"capabilities": ["NET_RAW"]</code> on all three, flat in <code>config</code> next to <code>image</code> (§ 3).</p>
+<ul>
+<li>The next-hop values are copies of the addresses already in each node's blueprint env, so the test exercises the real addressing rather than a parallel set of constants.</li>
+<li>V2X already carries <code>LISTEN_PORT=47100</code>. ADA's existing key is <code>V2X_LISTEN_PORT</code> — <strong>add</strong> <code>LISTEN_PORT=47200</code> alongside it rather than renaming, so the real config stays intact.</li>
+</ul>
+<h3 id="62-what-a-passing-log-looks-like-m10">6.2 What a passing log looks like (M10)<a class="headerlink" href="#62-what-a-passing-log-looks-like-m10" title="Link to this section">¶</a></h3>
+<p><strong>Bench</strong> — boot, capture starts, route check, first send:</p>
+<pre><code>[BOOT] role=bench listen=none next=10.99.0.11:47100
+[CAP]  tcpdump active, filter: udp
+[NET]  bench route to 10.99.0.11:47100 OK, egress address 10.99.0.10
+[TX]   bench #0 to 10.99.0.11:47100 len=12
+[CAP]  … IP 10.99.0.10.51234 &gt; 10.99.0.11.47100: UDP, length 12
+</code></pre>
+<p>The <code>[NET] … egress address 10.99.0.10</code> line is the address-binding check: it proves the bridge NIC is the one carrying the traffic, with no need to inspect interfaces.</p>
+<p><strong>V2X</strong> — receives from the bench and relays onward:</p>
+<pre><code>[RX] v2x #1 from 10.99.0.10:51234 len=12 body=seq=0|bench
+[TX] v2x #1 relayed to 10.99.0.12:47200 len=16
+</code></pre>
+<p><strong>ADA</strong> — the <code>|v2x</code> stamp is <strong>C5</strong>: the datagram provably transited the V2X node rather than arriving some other way.</p>
+<pre><code>[RX] ada #1 from 10.99.0.11:40112 len=16 body=seq=0|bench|v2x
+[TX] ada #1 relayed to 10.99.0.13:47300 len=20
+</code></pre>
+<p>Traffic is continuous at 1 Hz and the bench waits <code>START_DELAY_S=20</code> before its first send, so the log is alive and complete whenever it is opened — nothing has to be caught in the moment.</p>
+<h2 id="7-the-ivi-hop">7. The IVI hop<a class="headerlink" href="#7-the-ivi-hop" title="Link to this section">¶</a></h2>
+<p>The IVI is an AAOS guest: it cannot run <code>netcheck.py</code>, and its R4 UDP listener (<code>R4ListenerService</code>, a Phase 5 deliverable) is not built yet. Options, strongest first:</p>
+<ol>
+<li><strong>ADB Shell widget</strong> on the Skycraft node → <code>nc -u -l -p 47300</code> (run <code>toybox</code> first to confirm the applet exists). Direct proof of hop 3.</li>
+<li><strong>ADA-side evidence</strong> — ADA's <code>[TX] … relayed to 10.99.0.13:47300</code> plus its <code>[CAP]</code> tcpdump line showing the datagram on the wire. Proves the packet was sent onto the bridge, not that it was received.</li>
+<li><strong>Wait for the APK.</strong> Once <code>4.5.1.3</code> lands, hop 3 is verified by the real R4 path and this test retires.</li>
+</ol>
+<p>Hops 1 and 2 are fully proven by the container logs regardless — record which of the three was used for hop 3.</p>
+<h2 id="8-troubleshooting-network-issue">8. Troubleshooting network issue<a class="headerlink" href="#8-troubleshooting-network-issue" title="Link to this section">¶</a></h2>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Symptom</th>
+<th>Cause</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Node never leaves Pending / <code>ImagePullBackOff</code></td>
+<td>wrong registry host (M2)</td>
+<td>fix <code>image</code>, re-push</td>
+</tr>
+<tr>
+<td>Restart count climbing</td>
+<td>script crashed at start</td>
+<td>read the log — <code>netcheck.py</code> keeps the pod alive on purpose, so a restart means the entrypoint itself failed</td>
+</tr>
+<tr>
+<td><code>[ERR] no route to …</code></td>
+<td>pin not wired to the bridge, or wrong address</td>
+<td>re-check the node's <code>ethernet</code> pin and edge in the canvas</td>
+</tr>
+<tr>
+<td><code>[NET] … egress address</code> shows an unexpected IP</td>
+<td>traffic is leaving via the K8s CNI NIC, not the bridge</td>
+<td>re-check the pin's <code>properties.address</code></td>
+</tr>
+<tr>
+<td>Sender logs <code>[TX]</code>, receiver logs nothing</td>
+<td>port mismatch, or the receiving node started late</td>
+<td>compare <code>NEXT_HOP_PORT</code> against the peer's <code>LISTEN_PORT</code>; raise <code>START_DELAY_S</code></td>
+</tr>
+<tr>
+<td><code>[CAP] no NET_RAW</code></td>
+<td><code>capabilities</code> not applied</td>
+<td>C4 falls back to counter level; accept, or fix the node config</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="9-open-items">9. Open items<a class="headerlink" href="#9-open-items" title="Link to this section">¶</a></h2>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Item</th>
+<th>Closes at</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>O1</td>
+<td>Correct registry host — the baseline says <code>registry.carsky.io</code>, which returns <strong>502</strong> live, while <code>registry.hackathon-2.carsky.io</code> answers with a <code>401</code> auth challenge. Affects the real ECU images too, not just this test.</td>
+<td>M2, before the first push</td>
+</tr>
+<tr>
+<td>O2</td>
+<td>Does the flat node config honor <code>capabilities</code>?</td>
+<td>M10 — a <code>[CAP] tcpdump active</code> line answers it</td>
+</tr>
+<tr>
+<td>O3</td>
+<td>Bridge MTU ceiling — the bridge is a tunnelled userspace fabric, so 1500 is not guaranteed</td>
+<td>M11 — feeds the R1 CPM size budget</td>
+</tr>
+<tr>
+<td>O4</td>
+<td>Does the AAOS guest have <code>nc</code>?</td>
+<td>§ 7 option 1</td>
+</tr>
+</tbody>
+</table></div>
+<p>Also owed to the committed guides, found while researching this note: <a href="requirements-car-sky-guide-carsky-4-node-blueprint.html#4-steps">carsky-4-node-blueprint.md §4 step 10</a> refers to a <em>"platform packet-capture facility"</em> that does not exist (there is no pcap endpoint anywhere — capture is in-container, as above), and its step 3 sets <code>bridgeMode</code>/<code>subnet</code> on the bridge node although every real export has bridge <code>config: null</code>.</p>
+      </article>
+    </main>
+  </div>
+  <script src="../js/site-data.js"></script>
+  <script src="../js/theme.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/doc-page.js"></script>
+</body>
+</html>

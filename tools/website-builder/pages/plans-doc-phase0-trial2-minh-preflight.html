@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en" data-theme="sketch">
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="kis-build-pages">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Phase 0 — trial2_minh Preflight (read-only, 2026-07-31) — KIS</title>
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/doc.css">
+  <link rel="stylesheet" href="../css/themes.css">
+</head>
+<body class="DocBody" data-root=".." data-doc-node="plans" data-doc-title="Phase 0 — trial2_minh Preflight (read-only, 2026-07-31)" data-doc-source="plans/doc/phase0-trial2-minh-preflight.md">
+  <div class="DocLayout">
+    <aside class="DocLayout__aside" id="doc-toc"></aside>
+    <main class="Page DocPage">
+      <header class="PageHeader" id="doc-header"></header>
+      <article class="Markdown" id="doc-body">
+<h1 id="phase-0-trial2_minh-preflight-read-only-2026-07-31">Phase 0 — <code>trial2_minh</code> Preflight (read-only, 2026-07-31)<a class="headerlink" href="#phase-0-trial2_minh-preflight-read-only-2026-07-31" title="Link to this section">¶</a></h1>
+<p>Evidence for smoke-test task group 0.8 (<a href="plans-phase0-tasks.html">phase0_tasks.md</a>): REST inspection of the baseline blueprint before the manual M5–M12 steps of <a href="plans-doc-research-notes-baseline-connectivity-smoke-test.html">baseline-connectivity-smoke-test.md</a>. No mutations were made (validate is a non-mutating check).</p>
+<h2 id="identity">Identity<a class="headerlink" href="#identity" title="Link to this section">¶</a></h2>
+<ul>
+<li>Blueprint <strong><code>trial2_minh</code></strong> — id <code>WX2ungPR-1ZbdJUUWn68u</code>, created 2026-07-30, not locked.</li>
+<li>A clone <strong><code>baseline_m1</code></strong> (id <code>g63_Ay5XWUANvCE39cWxQ</code>, <code>parentBlueprintId</code> = trial2_minh) already exists — usable as the M5 scratch copy; if cloning again, re-verify the clone kept its pins/edges.</li>
+</ul>
+<h2 id="headline-findings">Headline findings<a class="headerlink" href="#headline-findings" title="Link to this section">¶</a></h2>
+<ul>
+<li><strong>Topology is complete — M6 requires nothing.</strong> All 4 <code>ETHERNET</code> pins (addresses <code>10.99.0.10–.13</code>) and all 4 star edges to the bridge exist (hand-wired in the UI 2026-07-30); the feared import-dropped-pins case did not materialize.</li>
+<li><strong>Validate passes verbatim:</strong> <code>{"valid":true,"errors":[]}</code>.</li>
+<li><strong>M8 attention:</strong> the IVI skycraft node's REST-visible config has <strong>no AAOS artifact reference</strong> (only <code>prefix=ivi</code>, <code>gpuBackend=virglrenderer</code>, 1920×1080). Confirm in the UI that the ANDROID IMAGE artifact (image + host_package roles) is bound; without it the Room never reaches all-nodes-ready.</li>
+<li>Node configs already carry the real images/env per the node guides (<code>m1-scenario-player</code>/<code>m1-v2x-ecu</code>/<code>m1-ada-ecu</code> tags, ports 47100/47200/47300, <code>GATE_ENTER_M=30</code>/<code>GATE_EXIT_M=35</code>).</li>
+<li>No <code>capabilities</code> field exists on any node yet (M7 must add <code>NET_RAW</code>).</li>
+<li>Image refs use host <code>registry.carsky.io</code> — open item O1 (that host answered 502 live; <code>registry.hackathon-2.carsky.io</code> answered) applies when M7 swaps in the netcheck tag.</li>
+<li>Observations, not defects: bridge <code>config: null</code> (matches every real export; guide §4 step 3 errata already noted in the smoke-test note); all role pins are direction <code>OUTPUT</code>, including the receivers.</li>
+</ul>
+<h2 id="remaining-manual-work-m5m8">Remaining manual work (M5–M8)<a class="headerlink" href="#remaining-manual-work-m5m8" title="Link to this section">¶</a></h2>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Required by hand</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>M5</td>
+<td>Trivial — open <code>trial2_minh</code> (ready-wired) or use the existing <code>baseline_m1</code> clone</td>
+</tr>
+<tr>
+<td>M6</td>
+<td><strong>Nothing</strong> — pins/edges present, validate green</td>
+</tr>
+<tr>
+<td>M7</td>
+<td>UI-only, per container node: swap <code>image</code> to the netcheck tag (resolve O1 host first), <code>command: ["./entrypoint.sh"]</code>, add <code>capabilities: ["NET_RAW"]</code>, add env — bench <code>ROLE=bench</code> + <code>NEXT_HOP_HOST/PORT</code> (copy from its <code>V2X_ECU_HOST/PORT</code>); V2X <code>ROLE=v2x</code> + <code>NEXT_HOP_HOST/PORT</code> (keep <code>LISTEN_PORT=47100</code>); ADA <code>ROLE=ada</code>, <strong>add</strong> <code>LISTEN_PORT=47200</code> beside <code>V2X_LISTEN_PORT</code>, + <code>NEXT_HOP_HOST/PORT</code></td>
+</tr>
+<tr>
+<td>M8</td>
+<td>Verify/set the IVI AAOS artifact binding (see headline finding)</td>
+</tr>
+</tbody>
+</table></div>
+      </article>
+    </main>
+  </div>
+  <script src="../js/site-data.js"></script>
+  <script src="../js/theme.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/doc-page.js"></script>
+</body>
+</html>

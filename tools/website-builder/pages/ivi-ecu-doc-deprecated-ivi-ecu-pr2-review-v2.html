@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="en" data-theme="sketch">
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="kis-build-pages">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IVI ECU — PR #2 review, v2 — KIS</title>
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/doc.css">
+  <link rel="stylesheet" href="../css/themes.css">
+</head>
+<body class="DocBody" data-root=".." data-doc-node="module-design" data-doc-title="IVI ECU — PR #2 review, v2" data-doc-source="IVI_ECU/doc/deprecated/ivi-ecu-pr2-review-v2.md">
+  <div class="DocLayout">
+    <aside class="DocLayout__aside" id="doc-toc"></aside>
+    <main class="Page DocPage">
+      <header class="PageHeader" id="doc-header"></header>
+      <article class="Markdown" id="doc-body">
+<h1 id="ivi-ecu-pr-2-review-v2">IVI ECU — PR #2 review, v2<a class="headerlink" href="#ivi-ecu-pr-2-review-v2" title="Link to this section">¶</a></h1>
+<blockquote>
+<p><strong>Version:</strong> v2 — 2026-08-06. Re-review of pull request #2 after its merge to <code>main</code>.
+<strong>Pull request:</strong> #2 — branch <code>feat/phase5-ivi-hmi-dev</code> → <code>main</code> (title not read; <code>gh</code> remains unauthenticated, so the PR body and its check runs were not consulted)
+<strong>Reviewed commit:</strong> <code>24fa852</code> — the merge of PR #2 onto <code>main</code>, branch tip <code>723c7a8</code>. No IVI commit has landed after it, so this is also a review of the node's current state on <code>main</code>.
+<strong>Base:</strong> the merge's first parent <code>f7bbd03</code>; diff range <code>f7bbd03..24fa852</code> — 60 files, +6181 / −113.
+<strong>Judged against:</strong> <a href="documents-design-ivi-ecu-ivi-ecu-hld.html">ivi-ecu-hld.md</a> and <a href="documents-design-ivi-ecu-ivi-ecu-design-decisions.html">ivi-ecu-design-decisions.md</a> · <a href="requirements-m1-cooperative-awareness.html">m1-cooperative-awareness.md §2</a> · <a data-missing="../../../documents/Plan-Proposal/milestone1_high_level_plan.md">milestone1_high_level_plan.md § Phase 5</a> and <a href="plans-phase5-minh-tasks.html">phase5_minh_tasks.md</a>, the authoritative Phase 5 plan · the frozen schemas <a href="../../../IVI_ECU/contracts/r4-ada-ivi.schema.json">r4-ada-ivi.schema.json</a> and <a href="../../../IVI_ECU/contracts/r3-tracked-object.schema.json">r3-tracked-object.schema.json</a> · <a href="requirements-car-sky-guide-deploy-ivi-hmi-walkthrough.html">deploy-ivi-hmi-walkthrough.md</a> for deployment-facing claims.
+<strong>Previous version:</strong> <a href="ivi-ecu-doc-deprecated-ivi-ecu-pr2-review-v1.html">ivi-ecu-pr2-review-v1.md</a>, committed as <code>40687ad</code>, judged branch commit <code>f7f2f55</code>.
+<strong>Verified:</strong> none of the build or test results below were reproduced on this host — the only JDK carrying a compiler here is 25.0.2, which Gradle 8.13 refuses to run under, and the default Java is a compiler-less JRE 21. Test and build status therefore comes from what the repo records: <code>phase5-ci.yml</code> exists on <code>main</code> with the <code>ivi-unit-tests</code> and <code>ivi-assemble</code> lanes, the test tree carries 60 <code>@Test</code> methods across 11 files, and <a href="plans-phase5-vinh-progress.html">phase5_vinh_progress.md</a> and the branch's completion report claim green — but <strong>no CI run ID for either IVI lane is recorded anywhere in the repo</strong>, so "the tests pass" is a recorded claim, not a verified fact of this review. No behaviour in a deployed Room is verified: the repo records no install, launch, or logcat evidence from the AAOS node.</p>
+</blockquote>
+<h2 id="since-v1">Since v1<a class="headerlink" href="#since-v1" title="Link to this section">¶</a></h2>
+<p><strong>Fixed — and fixed well.</strong> Four of v1's hardest findings were answered by commits that name them, and the answers are correct:</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>v1 finding</th>
+<th>Fix on this branch</th>
+<th>Where it now stands</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>No launchable component; nothing constructs or connects anything</td>
+<td><code>79f6e66</code>, <code>7520804</code></td>
+<td><a href="../../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/MainActivity.kt">MainActivity.kt</a> starts and binds <code>R4ListenerService</code>, calls <code>attachService</code>, and mounts <code>MainScreen</code>; the manifest has a LAUNCHER activity. The datagram→screen path exists at runtime</td>
+</tr>
+<tr>
+<td>Buffer reuse truncates every datagram after the first</td>
+<td><code>7c48b1b</code></td>
+<td><code>packet.setLength(buffer.size)</code> before every receive (<a href="../../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/service/R4ListenerService.kt#L135">R4ListenerService.kt:135</a>); the socket is now also closed in <code>onDestroy</code> so cancellation unblocks the blocking receive</td>
+</tr>
+<tr>
+<td>Parser rewrites unknown <code>warningType</code> to <code>"unknown"</code></td>
+<td><code>3cdbc6b</code></td>
+<td>The wire value is preserved verbatim (<a href="../../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/data/R4Deserializer.kt#L53-L60">R4Deserializer.kt:53-60</a>) — D4's parser half</td>
+</tr>
+<tr>
+<td><code>R4ServiceError</code> added a third member to the frozen two-member R4 hierarchy</td>
+<td><code>6542211</code></td>
+<td>It is no longer an <code>R4Message</code> subtype and no longer <code>@Serializable</code> (<a href="../../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/model/R4Message.kt#L58-L69">R4Message.kt:58-69</a>) — the drift is undone</td>
+</tr>
+<tr>
+<td>Listener on port 5004 while the deployed ADA sender targets 47300</td>
+<td><code>06cb936</code></td>
+<td><code>R4_UDP_PORT</code> defaults to <strong>47300</strong> (<a href="../../../IVI_ECU/app/build.gradle.kts#L37">build.gradle.kts:37</a>); the mock sender agrees</td>
+</tr>
+<tr>
+<td>Producer never fills <code>vehicleCSnapshot</code>, so the R19 guard reads <code>null</code> and passes C as trusted</td>
+<td><code>8203714</code></td>
+<td><code>WarningViewModel</code> copies the message's <code>object</code> into <code>SceneGeometry.vehicleCSnapshot</code> (<a href="../../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/ui/WarningViewModel.kt#L73">WarningViewModel.kt:73</a>) — D12's obligation, met</td>
+</tr>
+<tr>
+<td>A successful receive writes no log line</td>
+<td><code>14feee1</code></td>
+<td><code>[RX]</code> and <code>[DROP]</code> lines on the <code>IVI_V2X</code> tag (<a href="../../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/service/R4ListenerService.kt#L140-L143">R4ListenerService.kt:140-143</a>)</td>
+</tr>
+<tr>
+<td>No CI</td>
+<td><code>31fc214</code> and main-side work</td>
+<td><code>phase5-ci.yml</code> carries <code>ivi-unit-tests</code> and <code>ivi-assemble</code>, uploading <code>app-debug-apk</code> under the walkthrough's artifact name</td>
+</tr>
+<tr>
+<td>Mock sender omits <code>class</code> and mis-shapes <code>vehicles</code></td>
+<td><code>f72d8a6</code></td>
+<td>The <strong>warning</strong> payload is now schema-correct field for field. The <strong>state</strong> payload is not — see below</td>
+</tr>
+</tbody>
+</table></div>
+<p>Wake-on-warning also now exists and is tested: <code>MainViewModel</code> forces <code>WarningView</code> on Active, restores <code>previousMode</code> on Idle, and respects a user override (<a href="../../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/ui/MainViewModel.kt#L61-L79">MainViewModel.kt:61-79</a>). The test suite grew from 15 to 60 tests, including a genuine full-stack loopback test — real UDP through the real service to both view-models (<a href="../../../IVI_ECU/app/src/test/java/com/hackathon/v2x/ivi/integration/FullStackIntegrationTest.kt#L93-L123">FullStackIntegrationTest.kt:93-123</a>).</p>
+<p><strong>Still standing from v1:</strong></p>
+<ul>
+<li>One Gradle module instead of five — <code>settings.gradle.kts</code> includes <code>:app</code> only; <code>:contract</code>, <code>:serializer</code>, <code>:observer</code> and <code>:r4-simulator</code> do not exist, and the socket, loop and back-off still live inside the Android service.</li>
+<li><code>R3Snapshot</code> still gives defaults to 6 of 9 <code>required</code> R3 fields, and <code>R3Timestamps</code> defaults all three (<a href="../../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/model/R3Snapshot.kt#L20-L27">R3Snapshot.kt:20-27</a>, <a href="../../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/model/R3Snapshot.kt#L35-L41">35-41</a>). The mock that motivated them is fixed; the drift remains.</li>
+<li><code>WarningClassifier</code>, <code>AndroidR4Logger</code>/<code>R4Logger</code>, <code>IviRuntimeConfig</code>, <code>DevInjectorReceiver</code> and <code>R4Contract</code> are still absent; <code>schemaVersion</code> is still read by no code; the <code>[LINK]</code> and <code>[UI]</code> evidence lines still do not exist.</li>
+<li>Hilt instead of D7's manual <code>IviGraph</code> — now active rather than inert, at exactly the costs D7 predicted: a Guava runtime patch (<code>f93fc19</code>) and a hand-written factory because Hilt cannot inject one view-model into another (<a href="../../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/MainActivity.kt#L91-L101">MainActivity.kt:91-101</a>).</li>
+<li>The state path: the mock's heartbeat sends <code>{position, speed}</code> objects where <code>R4Vehicles</code> binds bare <code>{x, y}</code> (<a href="../../../IVI_ECU/mock-sender/mock_r4_sender.py#L69-L71">mock_r4_sender.py:69-71</a> against the schema's <code>stateMessage</code>), so every mock state message still fails to decode; the repository's <code>currentState</code> collector is still an empty body (<a href="../../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/ui/WarningViewModel.kt#L60-L64">WarningViewModel.kt:60-64</a>); the <code>VehicleState</code> orphan — the visible seam of that disagreement — is still declared and used by nothing (<a href="../../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/model/R4Message.kt#L71-L76">R4Message.kt:71-76</a>).</li>
+<li>D13 is still not implemented: any warning, <code>low</code> included, raises Idle → Active (<a href="../../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/ui/WarningViewModel.kt#L67-L75">WarningViewModel.kt:67-75</a>); D13 requires a <code>low</code> to update the scene without raising the view.</li>
+<li><code>WarningUiState.Error</code> is still unreachable — the service exposes <code>serviceError</code>, nothing collects it, and <code>onServiceError()</code> has no caller.</li>
+<li><code>mock-sender/</code> is still in <code>IVI_ECU/</code> though it shares nothing with the Gradle build — <a href="claude-rules-node-code-layout.html">node-code-layout.md § tools/</a> sends it to <code>tools/</code>; the designed <code>r4-simulator/</code> (scenario files as data, image <code>m1-r4-sim:latest</code>) does not exist, and the designated <code>r4-sim-image</code> CI lane is absent even though <code>phase5-ci.yml</code>'s own header names it.</li>
+<li>No deployment evidence: nothing in the repo records the APK installed, launched or receiving on the AAOS node.</li>
+</ul>
+<p><strong>Newly broken.</strong> The largest new findings are in §1 and §2; in one line each:</p>
+<ul>
+<li>A <strong>fabricated scene stamped <code>v2x_relayed</code></strong> renders whenever the Warning view is shown with no live warning (<a href="../../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/ui/screen/MainScreen.kt#L255-L277">MainScreen.kt:255-277</a>).</li>
+<li>The <strong>view seam is bypassed</strong> — the injected <code>IviWarningViewSeam</code> is ignored and both renderers are constructed directly (<a href="../../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/ui/screen/MainScreen.kt#L282-L287">MainScreen.kt:282-287</a>).</li>
+<li><code>WarningBannerOverlay</code> is <strong>mounted</strong> (<a href="../../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/ui/screen/MainScreen.kt#L291-L295">MainScreen.kt:291-295</a>), against D11 and R17's "no banner".</li>
+<li>The default renderer is a new <strong>3D view that draws the annotated figure</strong> R17 says is never rendered, at fixed canvas anchors that ignore the message's positions.</li>
+<li>A <strong>second HLD</strong> (<code>phase5-ivi-ecu-hld.md</code>), a <code>deployment/</code> procedure folder, and four more Phase 5 plan files landed on <code>main</code>, each a competing authority to one this review judges by.</li>
+<li>The shared <strong><code>verify-arm64-image</code> action was weakened</strong> from by-digest-only to a mutable-tag fallback (<code>3c0e518</code>), and a machine-specific <code>.vscode/settings.json</code> with absolute <code>C:\Program Files\…</code> paths was committed at the repo root.</li>
+</ul>
+<hr />
+<h2 id="1-architecture-review">1 · Architecture review<a class="headerlink" href="#1-architecture-review" title="Link to this section">¶</a></h2>
+<p>Rows are the components <a href="documents-design-ivi-ecu-ivi-ecu-hld.html#3-the-component-architecture">ivi-ecu-hld.md §3/§6</a> defines, at the paths §4 designates. A designed component the branch never created is a row at a low percentage, not an omission. The second HLD the branch merged (<code>phase5-ivi-ecu-hld.md</code>) is <strong>not</strong> an authority here — <a href="claude-rules-hld-content-and-commit-format.html">hld-content-and-commit-format.md</a> fixes one HLD per node, and <code>ivi-ecu-hld.md</code> §1 names itself the sole design authority; the second document's existence is itself a finding (its own header even says "Commit deferred — no <code>[X] design:</code> commit until explicitly requested", yet it was committed, untagged).</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Module in design</th>
+<th>% complete</th>
+<th>Abides by the architecture? Relations to other components</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong><code>:contract</code></strong> — <code>model/</code>, <code>R4Json</code>, <code>R4Contract</code> <em>(Data)</em></td>
+<td><strong>60%</strong></td>
+<td><strong>Partly.</strong> Still a package in <code>:app</code>, not a module, so nothing else can share it. <code>R4ServiceError</code> is off the wire hierarchy again — the worst drift is undone. Remaining: the R3 required-field defaults (above), the <code>VehicleState</code> orphan, and no <code>R4Contract.kt</code>, so <code>KNOWN_SCHEMA_VERSION</code> has nowhere to live and the version half of additive evolution has no anchor.</td>
+</tr>
+<tr>
+<td><strong><code>:serializer/R4Deserializer</code></strong> <em>(Business logic)</em></td>
+<td><strong>60%</strong></td>
+<td><strong>Partly.</strong> Preserves <code>warningType</code> (D4) and returns <code>Result</code> — the two judgements that matter most are now both right. Still in <code>:app/data/</code> with an <code>android.util.Log</code> import; still <code>ByteArray</code> rather than the designed <code>(buffer, offset, length)</code> slice; no <code>R4DecodeResult</code>, no BOM strip, no <code>schemaVersionAhead</code>. The M1 registry is still a hardcoded boolean in the parser (<a href="../../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/data/R4Deserializer.kt#L70-L71">R4Deserializer.kt:70-71</a>), now used only for a log line.</td>
+</tr>
+<tr>
+<td><strong><code>:observer/JdkDatagramSource</code></strong> <em>(Business logic)</em></td>
+<td><strong>20%</strong></td>
+<td><strong>No.</strong> The component does not exist; the socket is opened inline in the service. Its two designed behaviours are now present <em>inline</em>: length reset each receive, close on destroy. The seam (<code>R4DatagramSource</code>) still does not exist, which is why only the Robolectric integration test can reach the loop.</td>
+</tr>
+<tr>
+<td><strong><code>:observer/R4SocketObserver</code></strong> <em>(Business logic)</em></td>
+<td><strong>45%</strong></td>
+<td><strong>Partly, and inline.</strong> Back-off, <code>[RX]</code> and <code>[DROP]</code> exist. Missing: the truncation-suspect check (<code>BUFFER_SIZE = 4096</code>, no <code>length == buffer.size</code> test), <code>R4LinkState</code> and the <code>[LINK]</code> line, and the bounded <code>DROP_OLDEST</code>/<code>tryEmit</code> policy of D5 — <code>emit</code> on a full 64-slot buffer suspends, so a slow collector can still stall the socket.</td>
+</tr>
+<tr>
+<td><strong><code>warning/WarningClassifier</code></strong> <em>(Business logic)</em></td>
+<td><strong>10%</strong></td>
+<td><strong>Absent.</strong> Presentation mapping is inlined in each renderer's <code>riskColor</code>, with unknown risk failing safe to high — a good instinct in the wrong place, duplicated across two files (<a href="../../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/ui/view/CanvasWarningView.kt#L112-L117">CanvasWarningView.kt:112-117</a>, <a href="../../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/ui/view/Canvas3DWarningView.kt#L86-L90">Canvas3DWarningView.kt:86-90</a>).</td>
+</tr>
+<tr>
+<td><strong><code>ui/view/SceneCoordinateMapper</code></strong> <em>(Business logic)</em></td>
+<td><strong>100%</strong></td>
+<td>Correct, tested — and used only by the 2D renderer. The default 3D renderer bypasses it entirely (next section).</td>
+</tr>
+<tr>
+<td><strong><code>data/R4Repository</code></strong> <em>(Data)</em></td>
+<td><strong>75%</strong></td>
+<td><strong>Yes, and now attached.</strong> Routes <code>warning</code> → <code>SharedFlow</code>, <code>state</code> → last-value <code>StateFlow</code>, zero Android imports, tested, and <code>attachToService</code> is called at runtime via the activity's service binding. Missing: link state, the transport-error route (it drops the topic entirely now that <code>R4ServiceError</code> is out of the flow's type), and the dev-injector entry point.</td>
+</tr>
+<tr>
+<td><strong><code>ui/WarningViewModel</code></strong> <em>(UI logic)</em></td>
+<td><strong>70%</strong></td>
+<td><strong>Right layer, mostly right behaviour.</strong> Idle ↔ Active with <code>WARNING_TIMEOUT_MS</code>, and the D12 snapshot fill — the R19-critical line — is here and regression-relevant. Not implemented: D13 (<code>low</code> raises the view like any other risk), the state collector (empty body), and <code>Error</code> (uncallable).</td>
+</tr>
+<tr>
+<td><strong><code>ui/MainViewModel</code> + <code>ui/DisplayMode</code></strong> <em>(UI logic)</em></td>
+<td><strong>85%</strong></td>
+<td><strong>Yes.</strong> Wake-on-warning, previous-mode restore, user-override — implemented and tested (6 tests). The <code>DisplayMode</code> set is exactly the sanctioned four. Missing only the <code>[UI] mode=… cause=…</code> evidence line, so no observer can tell <em>why</em> the mode changed.</td>
+</tr>
+<tr>
+<td><strong><code>config/IviRuntimeConfig</code></strong> <em>(UI logic)</em></td>
+<td><strong>35%</strong></td>
+<td><strong>Absent, defaults improved.</strong> <code>R4_UDP_PORT=47300</code> and <code>WARNING_TIMEOUT_MS</code> are <code>BuildConfig</code> fields — no literals in logic, and the port now matches the blueprint. But D10's launch-time intent-extra merge point does not exist, so an installed APK still cannot be reconfigured without a rebuild, and the other D10 keys (buffer, flow capacity, back-off, scene scale) are ad-hoc constants in the service.</td>
+</tr>
+<tr>
+<td><strong><code>ui/screen/MainScreen</code></strong> <em>(UI)</em></td>
+<td><strong>75%</strong></td>
+<td><strong>Mounted and real, with three defects.</strong> The R16 layout runs, the side buttons switch the Display Area, <code>HomeView</code> is the default. Defects: (1) <code>defaultMockScene</code> — a fabricated ghost-C scene whose snapshot claims <code>source="v2x_relayed"</code> and whose risk defaults to <code>"high"</code>, rendered whenever the Warning view is open with no live data, reachable any time via the "3D HUD" side button (<a href="../../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/ui/screen/MainScreen.kt#L253-L277">MainScreen.kt:253-277</a>) — hardcoded scene literals against principle 5, and a display that can show a relayed warning <strong>no message produced</strong>, which is the one image the R19 evidence chain cannot afford; (2) the seam bypass below; (3) the status bar hardcodes <code>"BOUND :&lt;port&gt;"</code> regardless of whether the socket ever bound (<a href="../../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/ui/screen/MainScreen.kt#L144">MainScreen.kt:144</a>).</td>
+</tr>
+<tr>
+<td><strong><code>ui/view/IviWarningViewSeam</code></strong> <em>(UI)</em></td>
+<td><strong>60%</strong></td>
+<td><strong>Exists, is realized twice, and is bypassed by its only consumer.</strong> <code>AppModule</code> binds it to <code>Canvas3DWarningView</code>, <code>MainActivity</code> injects it and passes it down — and <code>WarningViewContent</code> ignores the parameter, constructing <code>Canvas3DWarningView()</code> and <code>CanvasWarningView()</code> directly with a local toggle (<a href="../../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/ui/screen/MainScreen.kt#L281-L287">MainScreen.kt:281-287</a>). <code>FullStackIntegrationTest</code> asserts the Hilt binding the runtime never uses (<a href="../../../IVI_ECU/app/src/test/java/com/hackathon/v2x/ivi/integration/FullStackIntegrationTest.kt#L84-L90">FullStackIntegrationTest.kt:84-90</a>) — a green test over a dead wire.</td>
+</tr>
+<tr>
+<td><strong><code>ui/view/CanvasWarningView</code></strong> + provenance guard <em>(UI)</em></td>
+<td><strong>85%</strong></td>
+<td>The committed 2D renderer, guard live and fed a real snapshot at last. Deviations: it draws <code>d_AB</code>/<code>d_AC</code> labels and the <code>[V2X]</code> badge, which R17's "nothing else is drawn" and this HLD's own row exclude; and it is reachable only through the in-canvas 2D/3D toggle, not as the default.</td>
+</tr>
+<tr>
+<td><strong><code>ui/view/WarningBannerOverlay</code></strong> <em>(UI)</em></td>
+<td>built, <strong>mounted in violation of D11</strong></td>
+<td>The component is fine; mounting it (<a href="../../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/ui/screen/MainScreen.kt#L291-L295">MainScreen.kt:291-295</a>, commit <code>56bc897</code>) contradicts D11 — a standing decision recording the user's own call — and R17's "no banner". It also shows for the fabricated mock scene, banner and all.</td>
+</tr>
+<tr>
+<td><strong><code>MainActivity</code> + <code>IviApplication</code> + <code>di/IviGraph</code></strong> <em>(Host)</em></td>
+<td><strong>80%</strong></td>
+<td><strong>Exists and connects everything — the v1 gating finding is closed.</strong> Composition is Hilt (<code>@HiltAndroidApp</code>, <code>@AndroidEntryPoint</code>, <code>AppModule</code>), not D7's <code>IviGraph</code>; the departure is now load-bearing and paid for (Guava patch, manual <code>MainViewModelFactory</code>). A decision is revisited by changing its entry, not by an implementation that departs from it — either D7 changes or this does.</td>
+</tr>
+<tr>
+<td><strong><code>service/R4ListenerService</code></strong> <em>(Host)</em></td>
+<td><strong>75%</strong></td>
+<td><strong>Sound host, still holding three components' work.</strong> Foreground, bound, started by the activity, socket closed on destroy, truncation reset in place. The layer collapse (socket + loop + parse dispatch inside an Android service) is the same as v1; it is now mitigated rather than fixed.</td>
+</tr>
+<tr>
+<td><strong><code>service/AndroidR4Logger</code></strong> <em>(Host)</em></td>
+<td><strong>25%</strong></td>
+<td><strong>Absent as a component.</strong> The <code>IVI_V2X</code> tag now exists ad hoc: <code>[RX]</code>/<code>[DROP]</code> in the service, the guard's ERROR in the 2D view. No <code>R4Logger</code> seam, no <code>key=value</code> structure, no <code>[LINK]</code>/<code>[UI]</code> — and the <strong>3D renderer logs its guard ERROR on <code>IVI_V2X_GODVIEW</code></strong> (<a href="../../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/ui/view/Canvas3DWarningView.kt#L92">Canvas3DWarningView.kt:92</a>), which <code>adb logcat -s IVI_V2X</code> — the command every walkthrough and the node's own deploy note cite — does not show.</td>
+</tr>
+<tr>
+<td><strong><code>r4-simulator/</code> → <code>m1-r4-sim:latest</code></strong> <em>(Test equipment)</em></td>
+<td><strong>35%</strong></td>
+<td><strong>Still <code>mock-sender/</code>, still misplaced, half on-contract.</strong> The warning payload now round-trips (verified by reading it against the schema). The state payload does not (<code>{position, speed}</code> vs <code>{x, y}</code>). Scenarios are code branches, not D9's data files; no image lane builds its Dockerfile; and sharing nothing with the Gradle build, it fails all four conditions of the consumer-folder exception — its home is <code>tools/</code>.</td>
+</tr>
+<tr>
+<td><strong><code>debug/DevInjectorReceiver</code></strong> <em>(Test equipment)</em></td>
+<td><strong>0%</strong></td>
+<td>Absent. With the seam bypass above, the only no-network path to the UI is the fabricated mock scene — which is presumably why it exists.</td>
+</tr>
+<tr>
+<td><strong><code>Canvas3DWarningView</code> + <code>Scene3DProjection</code> + <code>HomeScreen</code></strong> <em>(not in the design)</em></td>
+<td>—</td>
+<td><strong>Unsanctioned, and the 3D view is the runtime default.</strong> R17 admits an optional 3D renderer <em>through the seam</em>; this one arrived without a design change, was made the default (<code>AppModule</code>, and <code>is3DMode = true</code>), and: draws the legend panel, distance rails, header and status bar of the <strong>annotated figure R17 and the HLD §2 say is never rendered</strong> — including a static <code>"source: v2x_relayed"</code> caption (<a href="../../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/ui/view/Canvas3DWarningView.kt#L524">Canvas3DWarningView.kt:524</a>) that asserts provenance as decoration; places all three vehicles at fixed canvas anchors, ignoring the message's actual positions (<a href="../../../IVI_ECU/app/src/main/java/com/hackathon/v2x/ivi/ui/view/Canvas3DWarningView.kt#L142-L147">Canvas3DWarningView.kt:142-147</a>); implements the guard as log-and-hide with no <code>[? UNKNOWN SOURCE]</code> marker, so an untrusted C on the default screen is indistinguishable from no C. <code>Scene3DProjection</code> — the actual projection math — is tested by 8 tests and called by <strong>no production code</strong>. <code>HomeScreen</code> is benign Display-Area content but a path §4 does not designate.</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="findings-that-cross-several-rows">Findings that cross several rows<a class="headerlink" href="#findings-that-cross-several-rows" title="Link to this section">¶</a></h3>
+<ul>
+<li><strong>The runtime and the test suite disagree about what renders.</strong> Hilt binds <code>Canvas3DWarningView</code> as the seam; the integration test asserts that binding; the composable ignores both and picks a renderer from local state. Whichever is intended, one of the three is wrong today.</li>
+<li><strong>Two Phase 5 plans, a second HLD and a second deploy procedure now live on <code>main</code>.</strong> The PR merged <code>plans/phase5_team_master_plan.md</code>, <code>phase5_bach_tasks.md</code>, <code>phase5_tasks_for_teammate.md</code> and <code>phase5_vinh_progress.md</code> beside the authoritative <code>phase5_minh_tasks.md</code>; <code>IVI_ECU/doc/phase5-ivi-ecu-hld.md</code> (+ its two <code>.puml</code> twins) beside <code>ivi-ecu-hld.md</code>; and <code>IVI_ECU/deployment/phase5-ivi-deploy.md</code> beside <a href="requirements-car-sky-guide-deploy-ivi-hmi-walkthrough.html">deploy-ivi-hmi-walkthrough.md</a>, which CLAUDE.md names authoritative for exactly this procedure. Both <code>deployment/</code> documents link <code>plans/phase5_tasks.md</code>, which does not exist on <code>main</code>, and the completion report still describes port 5004 and the <code>warningType</code> rewrite — the state this same branch later fixed.</li>
+<li><strong><code>deployment/</code> is not a sanctioned location.</strong> <a href="claude-rules-node-code-layout.html">node-code-layout.md § Per-folder doc/</a> puts a node's report-style documents in <code>doc/</code>; procedures belong to the walkthrough. <code>phase5_completion_report.md</code> is additionally a progress record, which the documentation rules keep out of the repo.</li>
+<li><strong>Cross-cutting edits rode along:</strong> the shared <code>verify-arm64-image</code> action now falls back from digest to mutable tag on pull failure (<code>3c0e518</code>) — trading away the "the thing verified is the thing pushed" guarantee its own comments state — and <code>.vscode/settings.json</code> hardcodes one developer's absolute JDK paths.</li>
+</ul>
+<hr />
+<h2 id="2-low-level-review">2 · Low-level review<a class="headerlink" href="#2-low-level-review" title="Link to this section">¶</a></h2>
+<p><strong>Variant used: requirements, not task IDs — the commits' IDs do not resolve against the authoritative plan.</strong> Of the ~63 commits the merge introduced, ten carry <code>[X.Y.Z.W]</code> tags in five distinct IDs: <code>4.5.1.0</code>–<code>4.5.1.5</code>, <code>16.5.2.4</code>, <code>16.5.2.5</code>, <code>16.5.4.1</code>, <code>17.5.4.2</code>. Checked against <a href="plans-phase5-minh-tasks.html">phase5_minh_tasks.md</a> (named authoritative by <a data-missing="../../../documents/Plan-Proposal/milestone1_high_level_plan.md">milestone1_high_level_plan.md § Phase 5</a>): <code>4.5.1.1</code>–<code>4.5.1.4</code> collide with different work (v1 §2 documents the collision), <code>4.5.1.5</code> is the plan's <em>ProGuard keep rules</em> subtask while commit <code>3a650cd</code> used it for "save current progress before pulling IP changes", and <code>16.5.2.4</code>, <code>16.5.2.5</code>, <code>16.5.4.1</code>, <code>17.5.4.2</code> <strong>exist in no plan file on <code>main</code> at all — including the branch's own merged plans</strong>. Several IDs are also reused across commits (<code>16.5.2.5</code> three times, for a deck, a completion report and deploy instructions), against one-subtask-one-commit.</p>
+<h3 id="completion-against-requirements">Completion against requirements<a class="headerlink" href="#completion-against-requirements" title="Link to this section">¶</a></h3>
+<p>Percentages are against each requirement's <strong>acceptance</strong> clause in <a href="requirements-m1-cooperative-awareness.html">m1-cooperative-awareness.md §2</a>. Only requirements this PR touches are listed.</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Requirement</th>
+<th>% complete</th>
+<th>What is missing or deviated</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>R3</strong> — Ego object/track contract (IVI binding)</td>
+<td><strong>60%</strong></td>
+<td>Unchanged from v1: 6 of 9 <code>required</code> fields carry defaults in <code>R3Snapshot</code>, so a snapshot missing <code>class</code> or <code>state</code> decodes with fabricated values instead of failing. The mock that once forced this now sends every field — the defaults protect nothing and still mask producer drift.</td>
+</tr>
+<tr>
+<td><strong>R4</strong> — ADA → IVI warning message</td>
+<td><strong>85%</strong></td>
+<td>The acceptance clause — schema committed, round-trip tests, unknown <code>warningType</code> degrades gracefully — is now met on this side: preserved verbatim, rendered fail-safe, tested (<code>R4AdditiveVersionTest</code>, <code>R4DeserializerTest</code>). Remaining deviations are design-level rather than acceptance-level: <code>schemaVersion</code> unread, and the <code>state</code> half undecodable from the only in-folder producer.</td>
+</tr>
+<tr>
+<td><strong>R5</strong> — ECU deployment onto CarSky nodes</td>
+<td><strong>45%</strong></td>
+<td>The APK now has a launcher activity, so the clause <em>"the team APK launches on the AAOS node"</em> is finally satisfiable — but no launch on the node is recorded anywhere in the repo, so it is unverified, not done. The walkthrough's CI route exists (<code>ivi-assemble</code>, artifact <code>app-debug-apk</code>); no run ID is recorded.</td>
+</tr>
+<tr>
+<td><strong>R6</strong> — Inter-ECU network</td>
+<td><strong>40%</strong></td>
+<td>The port disagreement is resolved: 47300 on both this listener and <code>main</code>'s ADA sender, matching the blueprint. UDP reachability in a deployed Room — the clause itself — remains undemonstrated.</td>
+</tr>
+<tr>
+<td><strong>R16</strong> — HMI on the AAOS node</td>
+<td><strong>80%</strong></td>
+<td>The layout, the Display-Area switch on an R4 warning, and the button areas all work in code and under test (<code>MainViewModelTest</code>, <code>FullStackIntegrationTest</code>). Unverified on the AAOS node itself. The fabricated idle scene and always-<code>BOUND</code> status bar are the deviations that would mislead the person doing that verification.</td>
+</tr>
+<tr>
+<td><strong>R17</strong> — Warning view: God view of the 3 vehicles</td>
+<td><strong>65%</strong></td>
+<td>The 2D deliverable exists with a live provenance guard, but it is not what shows: the default is the unsanctioned 3D view, which draws the annotated variant R17 excludes ("no legend, no distance labels, no text overlay, no banner — the scene alone is the warning"), fixes vehicle positions to canvas anchors instead of drawing the message's geometry, mounts the banner, and — combined with <code>defaultMockScene</code> — can show "ghost C from <code>v2x_relayed</code>" with <strong>zero messages received</strong>, which inverts the clause's meaning.</td>
+</tr>
+<tr>
+<td><strong>R18</strong> — Evidence logging (IVI share)</td>
+<td><strong>25%</strong></td>
+<td><code>[RX]</code>, <code>[DROP]</code> and the 2D guard's ERROR now exist on <code>IVI_V2X</code> — a run's receive half is reconstructible from logcat for the first time. Not structured <code>key=value</code>, no <code>[LINK]</code>/<code>[UI]</code>, and the default renderer's guard logs on a tag the documented filter misses.</td>
+</tr>
+<tr>
+<td><strong>R19</strong> — End-to-end demo run</td>
+<td><strong>10%</strong></td>
+<td>The IVI-side prerequisite — a live guard fed a real snapshot — now exists, and that is the 10%. No run, no capture; and the ghost-C source check would today have to explain away a renderer that can fabricate the exact evidence the check looks for.</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="commit-inventory">Commit inventory<a class="headerlink" href="#commit-inventory" title="Link to this section">¶</a></h3>
+<p>Evidence for the variant choice and the discipline findings; ~63 commits total, of which six are merges and eleven are <strong>duplicate re-commits</strong> of v1's inventoried work under new SHAs (the <code>feat/phase5-ivi-hmi-complete</code> lineage merged at <code>12ee3b1</code>, so <code>2300321</code>…<code>f5357c7</code> repeat <code>78c7c43</code>…<code>f7f2f55</code> verbatim — the same work now exists twice in history). Notable commits, in topic groups:</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Group</th>
+<th>Commits</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>The four v1-defect fixes</strong></td>
+<td><code>7c48b1b</code> (truncation) · <code>8203714</code> (guard wiring) · <code>3cdbc6b</code> (warningType) · <code>6542211</code> (R4ServiceError) — all untagged, <code>fix(ivi):</code> format</td>
+</tr>
+<tr>
+<td><strong>The wiring</strong></td>
+<td><code>79f6e66</code> <strong>[16.5.4.1]</strong> feat: wire full R4 service → UI stack with Hilt DI · <code>7520804</code> <strong>[16.5.2.4]</strong> feat: auto-switch Display Area · <code>06cb936</code> <strong>[16.5.2.4]</strong> feat: align HMI with main contract, default HomeView</td>
+</tr>
+<tr>
+<td><strong>Tests</strong></td>
+<td><code>ab67f3a</code> <strong>[16.5.4.1]</strong> test: full-stack integration diagnostics · <code>d9ad460</code> <strong>[17.5.4.2]</strong> test: Phase 5 full acceptance test suite</td>
+</tr>
+<tr>
+<td><strong>The 3D God View arc</strong></td>
+<td><code>910aff2</code> 3D HUD with toggle → <code>b262cdc</code> <strong>render default 3D scene when idle</strong> (the fabricated scene) → <code>bb51111</code> WarningView as default mode (later reverted to Home by <code>06cb936</code>) → <code>5ea669b</code> redesign "per ivi-god-view-warning-screen.svg" (the figure R17 says is never rendered) → <code>96981ce</code>, <code>53f192e</code>, <code>e3e168f</code> polish → <code>56bc897</code> <strong>mount WarningBannerOverlay</strong></td>
+</tr>
+<tr>
+<td><strong>Logging</strong></td>
+<td><code>14feee1</code> <code>[RX]</code>/<code>[DROP]</code> under <code>IVI_V2X</code></td>
+</tr>
+<tr>
+<td><strong>Fix-up chains</strong></td>
+<td><code>0dafd90</code> (committed merge-conflict markers repaired "CI fix"), <code>0a78011</code>, <code>0dd4af0</code>, <code>904871a</code>, <code>b454cf2</code>, <code>ebb16b3</code>, <code>513ea84</code>, <code>5ee8ef4</code>, <code>f93fc19</code>, <code>84aaeab</code>, <code>1d20656</code> (replay=1, undone by <code>9fc31aa</code>) — each a build or test broken by a prior commit, against the pass-build-before-done rule</td>
+</tr>
+<tr>
+<td><strong>Documents and plans</strong></td>
+<td><code>85977e5</code>, <code>f00ad89</code>, <code>eb3c5a3</code> (the parallel plan files) · <code>306873b</code>/<code>d287bf3</code>/<code>723c7a8</code> all tagged <strong>[16.5.2.5]</strong> for three different artifacts, the last mixing a deck, a credit note and a Gradle change in one commit · <code>ff3608e</code> wiki · <code>06ef283</code>, <code>10d3205</code>, <code>908a219</code>, <code>7f4e409</code></td>
+</tr>
+<tr>
+<td><strong>Cross-cutting</strong></td>
+<td><code>3c0e518</code> fix(ci): verify-arm64-image tag fallback · <code>e502e34</code>, <code>6115ca5</code>, <code>8b75294</code> (prompt-record housekeeping) · <code>4ed1967</code> compileOnly test deps for a language server</td>
+</tr>
+</tbody>
+</table></div>
+<p>Ten of ~63 commits carry a task ID; none of the IDs bind to the authoritative plan. The project format is <code>[&lt;taskID&gt;] &lt;type&gt;: &lt;subject&gt;</code> for every commit; <code>fix(scope):</code>, <code>ci:</code>, <code>merge:</code> and bare <code>docs:</code> (outside research reports) are all off-format.</p>
+<hr />
+<h2 id="3-conclusion">3 · Conclusion<a class="headerlink" href="#3-conclusion" title="Link to this section">¶</a></h2>
+<p>The distance closed since v1 is real and worth stating plainly. The finding that gated everything — excellent pieces connected to nothing — is gone: the APK launches, the service starts and binds, the repository collects, the view-models drive the screen, and a datagram sent to 47300 ends as a rendered warning. Every one of v1's four sharpest code defects was fixed by a commit that names the defect, understands it, and fixes it the right way — the truncation reset, the preserved <code>warningType</code>, the de-serialized <code>R4ServiceError</code>, and the snapshot wiring that made the R19 guard real. The full-stack loopback test is the best test in the node: real UDP, real service, both view-models, and an assertion on the mode switch. Wake-on-warning with previous-mode restore and user override is exactly the behaviour the design asks for. That is a strong round of work.</p>
+<p>Three themes are worth your attention now.</p>
+<p><strong>The screen can say things the data never said, and that is the one thing this node must never do.</strong> The fabricated idle scene carries <code>source="v2x_relayed"</code> and a default risk of <code>high</code>; the default renderer captions ghost C "source: v2x_relayed" as static text and draws vehicles at fixed anchors rather than at the message's positions; the status bar reads <code>BOUND</code> whether or not the socket bound; the banner announces a warning for the mock scene. Each of these was added to make the demo look alive — and together they mean a judge, a teammate, or you cannot tell a working system from a painting of one. The whole point of R19 is that ghost C on screen <em>proves</em> a relay happened; a screen that can show ghost C from nothing spends that proof. The provenance guard you wired in is genuinely load-bearing now — these additions are what it is load-bearing against.</p>
+<p><strong>The seams exist, are tested, and the runtime walks around them.</strong> The injected view seam is ignored by the composable that should consume it; <code>Scene3DProjection</code> is tested by eight tests and called by no production code; <code>serviceError</code> flows to a collector that does not exist; the state collector is an empty block. This is the same pattern v1 flagged in a new place: green tests over unwired parts. The check that catches it costs one question per component — <em>what constructs this, and what consumes its output?</em></p>
+<p><strong><code>main</code> now carries two answers to most questions about this node.</strong> Two HLDs, two Phase 5 plan systems, two deploy procedures, task IDs that exist in no plan, and a completion report describing code this same branch later fixed. Every future reader — including the next reviewer — has to re-derive which document is real before they can act, and the answer this review had to establish is: <code>ivi-ecu-hld.md</code>, <code>phase5_minh_tasks.md</code>, and the walkthrough. The design departures the branch made — Hilt, the single module, the 3D default — may each be defensible, but the way to make them real is to change the decision record, not to merge a second record beside it.</p>
+<p>None of this diminishes the core achievement: the receive path is correct, connected, and honest about failures, and the HMI behaves the way the design says it should when a real message arrives. The system underneath is now good enough that the remaining work is mostly subtraction — removing what the screen invents, and removing the duplicate authorities — rather than construction. The parser was the hardest part and you got it right in v1's round; the wiring was the hardest part of this round and you got that right too.</p>
+      </article>
+    </main>
+  </div>
+  <script src="../js/site-data.js"></script>
+  <script src="../js/theme.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/doc-page.js"></script>
+</body>
+</html>

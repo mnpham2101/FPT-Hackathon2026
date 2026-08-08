@@ -1,0 +1,867 @@
+<!doctype html>
+<html lang="en" data-theme="sketch">
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="kis-build-pages">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Requirement Analysis &amp; Technical Solution Report — M1: Cooperative Vehicle Awareness — KIS</title>
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/doc.css">
+  <link rel="stylesheet" href="../css/themes.css">
+</head>
+<body class="DocBody" data-root=".." data-doc-node="plans" data-doc-title="Requirement Analysis &amp; Technical Solution Report — M1: Cooperative Vehicle Awareness" data-doc-source="requirements/m1-cooperative-awareness.md">
+  <div class="DocLayout">
+    <aside class="DocLayout__aside" id="doc-toc"></aside>
+    <main class="Page DocPage">
+      <header class="PageHeader" id="doc-header"></header>
+      <article class="Markdown" id="doc-body">
+<h1 id="requirement-analysis-technical-solution-report-m1-cooperative-vehicle-awareness">Requirement Analysis &amp; Technical Solution Report — M1: Cooperative Vehicle Awareness<a class="headerlink" href="#requirement-analysis-technical-solution-report-m1-cooperative-vehicle-awareness" title="Link to this section">¶</a></h1>
+<blockquote>
+<p>Sources of authority: <a href="../../../presentation/m1-proposal-deck.html">m1-proposal-deck.md</a> — the authoritative proposal; <a href="../../../requirements/development-platform-doc/Car-Sky-Platform.html">Car-Sky-Platform.html</a> — authoritative on the CarSky development &amp; deployment platform (blueprint/node/pin model).</p>
+<p>Requirement numbers R1–R19 are project-global and frozen — they are the <code>X</code> segment of task IDs <code>X.Y.Z.W</code> (<a href="claude-rules-task-planning-conventions.html">task-planning-conventions.md</a>).</p>
+<p><strong>Extension requirements live in their own reports and continue the same numbering.</strong> <a href="requirements-m1-run-timing-and-event-triggering.html">m1-run-timing-and-event-triggering.md</a> §7 defines <strong>R20</strong> (real-time paced stimulus sources), <strong>R21</strong> (run alignment and cross-source temporal correlation) and <strong>R22</strong> (demo run choreography — warning onset after the eighth second), together with the run-timing solution analysis they rest on.</p>
+</blockquote>
+<h2 id="1-project-description">1. Project description<a class="headerlink" href="#1-project-description" title="Link to this section">¶</a></h2>
+<h3 id="project-goals">Project goals<a class="headerlink" href="#project-goals" title="Link to this section">¶</a></h3>
+<p>The system makes a vehicle aware of a hazard it cannot see by relaying another vehicle's perception.</p>
+<h3 id="milestone-1-development-goals">Milestone 1 development goals<a class="headerlink" href="#milestone-1-development-goals" title="Link to this section">¶</a></h3>
+<p>Milestone 1, developed for the FPT Hackathon, scopes implementation to a single scenario running entirely on a cloud virtual environment:</p>
+<p>Three vehicles drive in a collinear convoy — <strong>A</strong> follows <strong>B</strong> follows <strong>C</strong>. Vehicle A's view of C is <strong>blocked by B</strong>, so A's own camera can never detect C. Vehicle B <em>can</em> see C, detects it, and <strong>broadcasts that perception to A over V2X</strong>. The result: A displays vehicle C and its relative position, even though A never sees C directly. (M1 builds only A's vehicle; B and C are simulated by the bench.)</p>
+<p><img alt="Convoy geometry: A cannot see C; B sees C and relays it to A over V2X" src="requirements-m1-convoy-nlos-relay-geometry.png" /></p>
+<p><em>Objective — B's perception of C reaches A over a V2X relay. A reconstructs C's position by composing its own measurement of B with B's reported measurement of C:</em> <code>d_AC ≈ d_AB + d_BC</code> <em>(valid for the near-collinear convoy; absolute/GPS composition is a later milestone).</em></p>
+<p>Distance to C is the admission criterion for tracking and for assessing collision risk (track-admission state machine attached at R13). A future milestone should scale the distance criterion with traffic speed (§ Future developments).</p>
+<h3 id="system-design">System design<a class="headerlink" href="#system-design" title="Link to this section">¶</a></h3>
+<p>The 4-ECU design below realizes the goals above; per-ECU M1 scope is in the responsibility list right after it.</p>
+<p><img alt="System Design" src="requirements-system-design.svg" /></p>
+<h3 id="ecu-and-scenario-player-responsibility">ECU and Scenario Player responsibility<a class="headerlink" href="#ecu-and-scenario-player-responsibility" title="Link to this section">¶</a></h3>
+<p>Responsibility of each ECU and the Scenario Player in Milestone 1; the Cortex-M ECU is listed only to record its exclusion.</p>
+<ul>
+<li><strong>V2X ECU</strong></li>
+<li>Configures the modem and interfaces with it — simulated only.</li>
+<li>Connects to the V2X network — either simulated or handled entirely by a 3rd-party library.</li>
+<li>Receives V2X message payloads, applies business logic, forwards results to the ADA ECU — informing it of an obstruction outside ego's line of sight. <strong>This is the whole of the M1 V2X data path: receive-only.</strong></li>
+<li>~~Receives information from the ADA ECU, constructs V2X message payloads, broadcasts them over the V2X network.~~ — <strong>deferred (R10)</strong>, user decision 2026-07-30.</li>
+<li><strong>ADA ECU</strong></li>
+<li>Incorporates information from the V2X ECU and detected objects from the video feed to construct a warning message for the IVI ECU, via a <strong>Collision Risk Assessment abstraction</strong> that analyzes and categorizes risk — built so future warning scenarios can be added as extensions without reworking this code (§ Future developments: modular warning scenarios).</li>
+<li>M1 need not classify every risk type or filter by criticality; the warning message is designed so new hazard types and criticality levels can be added later without reworking this design (§ Future developments: criticality filtering, other hazard-warning types).</li>
+<li>Configures the camera and receives live video feeds — neither is implemented (no live camera bring-up is a frozen scope boundary; § Future developments: camera live feed in the IVI Display area).</li>
+<li>Detects objects only from provided saved video files — not a live feed (§ Future developments: live object detection at speed).</li>
+<li>Does not receive GNSS or other sensor data from the Cortex-M ECU.</li>
+<li><strong>IVI ECU</strong></li>
+<li>Displays GUI and applications, and renders information received from the ADA ECU.</li>
+<li>View goals (2D or 3D god view of all vehicles) — M1 delivers the 2D drawing; 3D is optional (R17).</li>
+<li>Multi-process applications are optional in M1: the warning view may be a separate app woken on an ADA message (R16).</li>
+<li><strong>Scenario Player</strong></li>
+<li>Emulates the Quectel modem's connection point toward the V2X ECU.</li>
+<li>Generates V2X messages informing the V2X ECU of vehicle C (R11).</li>
+<li><strong>Cortex-M ECU</strong></li>
+<li>Not developed — sensor data is omitted.</li>
+</ul>
+<h3 id="baseline-propose-topology">Baseline Propose Topology<a class="headerlink" href="#baseline-propose-topology" title="Link to this section">¶</a></h3>
+<p>The committed network layout for the nodes above. It realizes R5 and R6 as frozen: four role nodes, one Ethernet Bridge, one subnet.</p>
+<ul>
+<li>Blueprint: <a href="../../../requirements/baseline-blueprint-1EthBridge-1SubDomain-3ECU-1Bench.json">baseline-blueprint-1EthBridge-1SubDomain-3ECU-1Bench.json</a>.</li>
+</ul>
+<p><img alt="Baseline single-bridge topology" src="requirements-baseline-topology-single-bridge.svg" /></p>
+<p><em>Source: <a href="../../../requirements/baseline-topology-single-bridge.drawio">baseline-topology-single-bridge.drawio</a></em></p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Node</th>
+<th>Address</th>
+<th>Sends to</th>
+<th>Port</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Bench — Scenario Player</td>
+<td><code>10.99.0.10</code></td>
+<td>V2X ECU</td>
+<td><code>47100</code></td>
+</tr>
+<tr>
+<td>V2X ECU</td>
+<td><code>10.99.0.11</code></td>
+<td>ADA ECU</td>
+<td><code>47200</code></td>
+</tr>
+<tr>
+<td>ADA ECU</td>
+<td><code>10.99.0.12</code></td>
+<td>IVI ECU</td>
+<td><code>47300</code></td>
+</tr>
+<tr>
+<td>IVI ECU</td>
+<td><code>10.99.0.13</code></td>
+<td>—</td>
+<td>terminal</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>Each node declares exactly one <code>ethernet</code> pin, wired to the single bridge — a star, not a chain.</li>
+<li>Every hop is same-subnet and same-bridge, so each ECU addresses the next one directly. No routing, gateway, or broker.</li>
+<li>Open item: the IVI Skycraft node needs its <code>image</code> artifact reference before the Room can reach 5/5 Running.</li>
+<li>An explored alternative that segments the network per ECU is recorded in §5.</li>
+</ul>
+<h3 id="cloud-development-constraints">Cloud development constraints<a class="headerlink" href="#cloud-development-constraints" title="Link to this section">¶</a></h3>
+<p>Development runs entirely on the CarSky cloud platform, under its blueprint/node/pin model (<a href="../../../requirements/development-platform-doc/Car-Sky-Platform.html">Car-Sky-Platform.html</a>):</p>
+<ul>
+<li><strong>Blueprint:</strong> a JSON topology of nodes, pins, and edges plus artifact references — 1 blueprint = 1 car; this project builds <strong>one blueprint</strong> containing the three ego ECU nodes, the bench node, and the network bridge node.</li>
+<li><strong>Node:</strong> 1 node = 1 ECU. V2X ECU, ADA ECU, and the bench Scenario Player run as Container Nodes (team-built OCI images); the IVI runs as the provided Skycraft AAOS node. The bench node is conceptually test equipment outside the car, deployed in the same blueprint so it shares the Room network (R5).</li>
+<li><strong>Pin &amp; edge:</strong> a node communicates only through declared pins; wiring two compatible pins with an edge creates the channel. All ECUs use <code>ethernet</code> pins into one Ethernet Bridge node (R6).</li>
+<li><strong>Room:</strong> deploying the blueprint creates a Room (Kubernetes namespace, one pod per node) — the working and demo environment; teardown/redeploy leaves the blueprint intact (R5).</li>
+</ul>
+<p>The table below covers the ECUs and the Scenario Player — node roles are described in § ECU and Scenario Player responsibility. Per node it states the virtualization level, the scope of development within it, and the goals to achieve.</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Node name</th>
+<th>Virtualization level</th>
+<th>Focus goals</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>IVI ECU</td>
+<td>Full vECU — developed fully; the container itself ships in the starter pack</td>
+<td>God view of the 3 vehicles with every instance displayed — 2D drawing delivered, 3D optional; switching to another app</td>
+</tr>
+<tr>
+<td>V2X ECU</td>
+<td>App-level (Linux container) — developed in part: only certain layers</td>
+<td>Portability to different hardware — the developed layers move across hardware unchanged</td>
+</tr>
+<tr>
+<td>ADA ECU</td>
+<td>App-level (Linux container) — developed fully</td>
+<td>Structured, high-performance architecture receiving and sending inputs: condensed messages, low bandwidth, low latency; object detection / AI deep learning is not an M1 focus</td>
+</tr>
+<tr>
+<td>Bench node — Scenario Player</td>
+<td>Container — team-built, developed fully</td>
+<td>V2X message generation across different scenarios (§ ECU and Scenario Player responsibility)</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="input-constraints">Input constraints<a class="headerlink" href="#input-constraints" title="Link to this section">¶</a></h3>
+<ul>
+<li>V2X control messages and V2X data (broadcast messages) are inputs to the V2X ECU and carry inter-vehicle communication. <strong>M1 develops only the extracting half</strong> — "a broadcast was received, check what it is." Constructing application-layer data ("there is an obstruction ahead of me, broadcast it") is deferred with R10.</li>
+<li>The V2X protocol stack ships in the modem and stays out of scope for the whole project, not just M1 (this enables the portability goal in § Cloud development constraints).</li>
+<li>The V2X ECU implements modem↔Cortex-A interfacing (boot-up, configuration) at the interface layer (R7) and constructs the control-plane messages sent to the modem stub for the simplified 3GPP call flow (R8).</li>
+<li>Live video is the ADA ECU's eventual input; in M1, video files are provided instead.</li>
+<li>Video format, frame rate, data rate, and capture conditions are not yet known — these <em>should be studied and proposed</em> to FPT-Mentor so a supported input spec can be provided.</li>
+<li>A pre-trained model <em>should be used</em> to detect the obstruction — no training in M1.</li>
+<li>The ADA ECU → IVI ECU data path <em>must be</em> developed.</li>
+</ul>
+<h3 id="system-demo-requirements">System demo requirements<a class="headerlink" href="#system-demo-requirements" title="Link to this section">¶</a></h3>
+<p>Candidate demonstration methods, scored 1 (low) – 10 (high) by jury-convincingness (independent of M1 scope). The <strong>M1 scope</strong> column marks each method committed (M1 baseline), optional (built if time permits), or deferred (future — § Future developments). Invest effort in the committed methods first, then optional ones in score order.</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Demonstrates</th>
+<th>Prefer score</th>
+<th>M1 scope</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>3D drawing on A's IVI HMI</td>
+<td>Bird's-eye (god) view of the 3-vehicle convoy, showing occluded vehicle C</td>
+<td>10</td>
+<td>Optional</td>
+</tr>
+<tr>
+<td>2D drawing on A's IVI HMI</td>
+<td>2D top-down view of the convoy, showing occluded vehicle C</td>
+<td>8</td>
+<td>Committed</td>
+</tr>
+<tr>
+<td>Video feed on A's IVI HMI</td>
+<td>A's video feed, showing B — the vehicle occluding C</td>
+<td>8</td>
+<td>Deferred</td>
+</tr>
+<tr>
+<td>Wireshark capture</td>
+<td>V2X messages on the wire — confirms V2X data PDUs are correctly sent/received at the V2X ECU's interface</td>
+<td>7</td>
+<td>Committed</td>
+</tr>
+<tr>
+<td>Logging in ADA ECU — collision-risk event list</td>
+<td>Shows the ADA ECU correctly incorporates both V2X information and its own object detection</td>
+<td>7</td>
+<td>Committed</td>
+</tr>
+<tr>
+<td>Logging in ADA ECU — annotated video export</td>
+<td>Risk-level label per dangerous event; corroborates that ADA correctly detects in-range objects from video</td>
+<td>6</td>
+<td>Optional</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="future-developments">Future developments<a class="headerlink" href="#future-developments" title="Link to this section">¶</a></h3>
+<p>Milestone 1's design is deliberately extensible toward the following features, all out of M1 scope:</p>
+<ul>
+<li><strong>Modular warning scenarios.</strong> ADA's warning-scenario logic is a self-contained module; future warning scenarios (intersection hazards, curve blind spots) plug in as new realizations of a shared Collision Risk Assessment abstraction.</li>
+<li><strong>Priority-vehicle preemption warning.</strong> Drawn as a future realization in <a href="requirements-ada-ecu.svg">ada-ecu.svg</a> (user decision 2026-07-12): warn when an emergency/priority vehicle approaches so the driver can yield — plugs in as a new realization of the Collision Risk Assessment abstraction (§ Modular warning scenarios).</li>
+<li><strong>Speed-scaled collision risk assessment.</strong> Collision Risk Assessment extends from M1's set distance criterion (§ Milestone 1 development goals) to one that scales with traffic speed.</li>
+<li><strong>Warning on B alone before C is admitted.</strong> ADA warns on the visible occluder B on its own while C's relayed range (R2 <code>object.distance</code>) is outside R13's admission threshold, and extends the same warning to the B-and-C scene once C is admitted and tracked. The inputs already exist in M1 — the bench and the Rx pipeline deliver B→C range on every message regardless of admission (R11, R9), R13 owns the admission decision, R14 assesses over the store, and R15 emits on risk transition. What this has to resolve is the R4 message set: <code>geometry.vehicleC</code> is already nullable, but <code>object</code> is <strong>required</strong> and defined as the R3 snapshot of the triggering track (C), so a warning event describing B alone is not representable today; the message that does carry a B-only scene is the periodic awareness state (R15), optional and deferred in M1. It therefore returns as an R4 contract change plus an R15 emission change, not a redesign.</li>
+<li><strong>Camera live feed in the IVI Display area.</strong> The Display area (R16) renders live camera frames. Live video also feeds ADA's obstruction algorithm.</li>
+<li><strong>Live object detection at speed.</strong> B travels up to 120 km/h (33.3 m/s) and must detect obstructions within stopping + broadcast distance: detect a car at ≥ 130–150 m dry / ≥ 190 m wet (braking + reaction + broadcast margin; ≥ 100/160 m with automated braking). Detection range, not frame rate, is the binding constraint — reliable detection at that range needs ≥ 1280–1920 px inference at ≥ 10 Hz, beyond CPU capacity, so this requires GPU-class acceleration.</li>
+<li><strong>Ego video clip display on the IVI.</strong> The provided ego-POV clip (B occluding the view ahead) plays in the Display area (R16) — §1's demo-table "video feed" method. Deferred from M1 for time; the Display area already hosts video feeds by design, so this is an added surface, not a rework.</li>
+<li><strong>2D ⇄ 3D view switching.</strong> A user-facing toggle between the 2D and the optional 3D God view (R17) — a future extension behind R17's view seam.</li>
+<li><strong>Multi-process wake-on-warning.</strong> A dedicated sleeping app wakes and draws the scene on an ADA event; M1's optional multi-process path (R16) is its foundation.</li>
+<li><strong>Custom appearance / themes.</strong> Vehicle's avatar could be customized.</li>
+<li><strong>Fast-UI + C2X benchmark criteria.</strong> Extremely fast UI behavior alongside C2X services — e.g. a foreground media app plus 2D/3D display or notification of vehicle C / V2X message arrival; benchmark thresholds are negotiable against technical feasibility.</li>
+<li><strong>Multiple hidden obstructions detection.</strong> ADA detects and tracks multiple objects outside line of sight simultaneously (M1 is single-object only).</li>
+<li><strong>Single-message aggregation.</strong> Multiple detected obstructions collapse into one V2X message — no broadcast storm.</li>
+<li><strong>User-opt message reduction.</strong> The user can opt for fewer V2X messages.</li>
+<li><strong>Criticality filtering.</strong> The user can opt to receive only warnings at or above a chosen criticality level; criticality is looked up from the ADA→IVI message's <code>warningType</code> field (R4), not carried as its own value.</li>
+<li><strong>Other hazard-warning types.</strong> Slippery roads, falling rocks, road holes, road condition, presence of children, police, speed limits, no-horn/other road rules, traffic conditions. Carried by DENM (event position + cause code), the named message family for these types.</li>
+<li><strong>Extensible V2X message-type dispatch.</strong> The Rx pipeline (R9) dispatches on message type, so further families enter as a new codec module plus one dispatch entry. Deferred from M1 for time — M1 decodes CPM only (R1).</li>
+<li><strong>Ego Tx: broadcast own perception (R10).</strong> The V2X ECU constructs CPMs from the ADA store snapshot and broadcasts them via the adapter <code>send</code>, so ego can relay what <em>it</em> perceives onward to a following vehicle. Deferred from M1 (user decision 2026-07-30): M1's V2X data path is <strong>receive-only</strong> — the ego is the warned vehicle A, never the relaying vehicle B, and B is simulated by the bench (R11). The R7 adapter seam already declares <code>send</code>, so this returns as an implementation behind an existing seam, not a redesign.</li>
+<li><strong>Commands to other ECUs.</strong> The <a href="requirements-ada-ecu.svg">ada-ecu.svg</a> output stage sends Current TrackedObject/Risk/<strong>Commands</strong> to other ECUs/hardware (user decision 2026-07-12); M1 implements no ADA→V2X output at all (the R10 store snapshot is deferred above) — command/actuation output to further ECUs is a future path.</li>
+</ul>
+<hr />
+<h2 id="2-enumerated-requirements">2. Enumerated requirements<a class="headerlink" href="#2-enumerated-requirements" title="Link to this section">¶</a></h2>
+<p>Ordering: contracts first (R1–R6), then data-flow order — V2X ECU (R7–R10, <strong>R10 deferred</strong>), bench (R11), ADA (R12–R15), IVI (R16–R17), evidence &amp; end-to-end (R18–R19).</p>
+<h3 id="contracts">Contracts<a class="headerlink" href="#contracts" title="Link to this section">¶</a></h3>
+<p><strong>R1 — V2X message contract: ETSI CPM (TS 103 324), single message type.</strong> <em>(analysed)</em></p>
+<ul>
+<li><strong>Definition:</strong> the Collective Perception Message (CPM) informs other vehicles of vehicle C — one message carries B's own pose together with its perceived objects. <strong>CPM is the only V2X message type in M1</strong> (selection rationale: §3(a)).</li>
+<li><strong>Note:</strong> DENM carries an event position + cause code; it is the named message family for future hazard types (§ Future developments).</li>
+<li>Information required in the message:</li>
+</ul>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Information</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Station ID</td>
+<td>unique identifier of the sending vehicle (B)</td>
+</tr>
+<tr>
+<td>Reference time</td>
+<td>message generation timestamp</td>
+</tr>
+<tr>
+<td>Sender reference position</td>
+<td>B's WGS84 position (lat/lon) with confidence</td>
+</tr>
+<tr>
+<td>Sender heading &amp; speed</td>
+<td>B's motion state</td>
+</tr>
+<tr>
+<td>Perceived object ID</td>
+<td>B-assigned track ID of the perceived object (C)</td>
+</tr>
+<tr>
+<td>Time of measurement</td>
+<td>offset of C's measurement relative to the reference time</td>
+</tr>
+<tr>
+<td>Object relative position</td>
+<td>C's position relative to B (longitudinal/lateral distance) with confidence</td>
+</tr>
+<tr>
+<td>Object velocity</td>
+<td>C's velocity relative to B</td>
+</tr>
+<tr>
+<td>Object classification</td>
+<td>object class (vehicle) with confidence</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>Call flow:</strong> B detects C → B encodes a CPM (this profile) → B broadcasts on the V2X network → A's V2X ECU receives → decode/validate (R9) → C's data forwarded to A's ADA ECU (R2).</li>
+<li><strong>Dependency:</strong> none — <a href="https://forge.etsi.org/rep/ITS/asn1/cpm_ts103324">ETSI forge ASN.1</a> is public.</li>
+<li><strong>Acceptance:</strong> message structure defined in a versioned profile document (fields, units, encoding); the V2X exchange call flow between vehicles defined; a CPM sent and received between connected nodes in the working CarSky environment (bench ↔ V2X ECU).</li>
+<li><strong>Tech stack:</strong> <a href="https://github.com/riebl/vanetza">Vanetza</a> ITS2 ASN.1 codecs (ETSI release-2 CPM, ASN.1 UPER wire encoding; LGPLv3) behind one codec seam shared by every encoder/decoder.</li>
+</ul>
+<p><strong>R2 — V2X ECU → ADA ECU message (JSON over UDP).</strong> <em>(analysed)</em></p>
+<ul>
+<li><strong>Definition:</strong> after decoding and validating a received CPM, the V2X ECU constructs one JSON message per perceived-object update and sends it to the ADA ECU:</li>
+</ul>
+<pre><code class="language-json">{
+  &quot;schemaVersion&quot;: 1,
+  &quot;type&quot;: &quot;v2x_object&quot;,
+  &quot;stationId&quot;: 1201,
+  &quot;rxTime&quot;: 1789000000123,
+  &quot;sender&quot;: { &quot;lat&quot;: 21.028511, &quot;lon&quot;: 105.804817, &quot;heading&quot;: 90.0, &quot;speed&quot;: 16.7 },
+  &quot;object&quot;: {
+    &quot;objectId&quot;: 7,
+    &quot;timeOfMeasurement&quot;: -50,
+    &quot;distance&quot;: 25.4,
+    &quot;position&quot;: { &quot;x&quot;: 25.0, &quot;y&quot;: 1.2, &quot;confidence&quot;: 0.9 },
+    &quot;speed&quot;: 15.2,
+    &quot;classification&quot;: &quot;vehicle&quot;,
+    &quot;confidence&quot;: 0.95
+  }
+}
+</code></pre>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>schemaVersion</td>
+<td>contract version, for additive evolution</td>
+</tr>
+<tr>
+<td>type</td>
+<td>message discriminator (<code>v2x_object</code>)</td>
+</tr>
+<tr>
+<td>stationId</td>
+<td>sender (B) station ID from the CPM</td>
+</tr>
+<tr>
+<td>rxTime</td>
+<td>receive timestamp at the V2X ECU [ms epoch]</td>
+</tr>
+<tr>
+<td>sender</td>
+<td>B's decoded pose: WGS84 lat/lon, heading [°], speed [m/s]</td>
+</tr>
+<tr>
+<td>object.objectId</td>
+<td>B-assigned ID of the perceived object (C)</td>
+</tr>
+<tr>
+<td>object.timeOfMeasurement</td>
+<td>measurement offset vs the CPM reference time [ms]</td>
+</tr>
+<tr>
+<td>object.distance</td>
+<td>B→C range [m] — the input to R13 track admission</td>
+</tr>
+<tr>
+<td>object.position</td>
+<td>C relative to B: x longitudinal / y lateral [m], with confidence</td>
+</tr>
+<tr>
+<td>object.speed</td>
+<td>C's speed [m/s]</td>
+</tr>
+<tr>
+<td>object.classification, object.confidence</td>
+<td>object class + confidence</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>Dependency:</strong> R1.</li>
+<li><strong>Acceptance:</strong> schema committed; sample messages validate against it; live V2X ECU → ADA traffic observed on connected nodes carrying decoded bench-scenario values.</li>
+<li><strong>Tech stack:</strong> nlohmann/json (C++, MIT).</li>
+</ul>
+<p><strong>R3 — Ego object/track contract (TrackedObject).</strong> <em>(analysed)</em></p>
+<ul>
+<li><strong>Definition:</strong> one language-neutral schema for every object the ego system handles — shared by the ADA store, the video detector output, and V2X-relayed entries — so perception sources are interchangeable behind one interface.</li>
+</ul>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>id</td>
+<td>unique track ID in the ego store</td>
+</tr>
+<tr>
+<td>class</td>
+<td>object class (vehicle)</td>
+</tr>
+<tr>
+<td>source</td>
+<td><code>own_sensor</code> | <code>v2x_relayed</code></td>
+</tr>
+<tr>
+<td>position</td>
+<td>object position in the ego frame: x longitudinal / y lateral [m]</td>
+</tr>
+<tr>
+<td>distance</td>
+<td>range from ego [m]</td>
+</tr>
+<tr>
+<td>speed</td>
+<td>object speed [m/s]</td>
+</tr>
+<tr>
+<td>confidence</td>
+<td>detection/track confidence 0–1</td>
+</tr>
+<tr>
+<td>state</td>
+<td><code>not_tracked</code> | <code>tentative</code> | <code>tracked</code> (per the R13 state machine)</td>
+</tr>
+<tr>
+<td>timestamps</td>
+<td>measured / received / last-updated</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>Dependency:</strong> R1 (relayed entries map losslessly from the CPM profile).</li>
+<li><strong>Acceptance:</strong> single schema file committed (JSON Schema + per-language bindings); round-trip tests in each consumer language; ADA consumes detector objects (R12) and relayed objects (R9) through the identical schema.</li>
+<li><strong>Tech stack:</strong> JSON Schema; nlohmann/json (C++), Python stdlib <code>json</code>, kotlinx.serialization (Kotlin).</li>
+</ul>
+<p><strong>R4 — ADA → IVI warning message.</strong> <em>(analysed)</em></p>
+<ul>
+<li><strong>Definition:</strong> versioned JSON message set the ADA ECU sends to the IVI ECU over UDP: edge-triggered warning events (committed) plus a periodic awareness state of the three vehicle poses (optional in M1 — R15); extensible by the <code>warningType</code> registry (criticality lookup per § Future developments). The warning event carries the full scene geometry, so the IVI renders the view without the state stream.</li>
+</ul>
+<p>Warning event:</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>schemaVersion</td>
+<td>contract version</td>
+</tr>
+<tr>
+<td>type</td>
+<td><code>warning</code></td>
+</tr>
+<tr>
+<td>warningType</td>
+<td>string from the warning registry (M1: <code>nlos_obstruction</code>)</td>
+</tr>
+<tr>
+<td>riskState</td>
+<td>risk level produced by the R14 assessment</td>
+</tr>
+<tr>
+<td>object</td>
+<td>R3 snapshot of the triggering track (C)</td>
+</tr>
+<tr>
+<td>geometry</td>
+<td>composed scene: ego, B, C relative positions</td>
+</tr>
+</tbody>
+</table></div>
+<p>Awareness state (optional — R15):</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>schemaVersion</td>
+<td>contract version</td>
+</tr>
+<tr>
+<td>type</td>
+<td><code>state</code></td>
+</tr>
+<tr>
+<td>seq</td>
+<td>sequence number, last-value-wins</td>
+</tr>
+<tr>
+<td>vehicles</td>
+<td>poses of ego, B, C in the ego frame (C absent until relayed)</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>Dependency:</strong> R3; producer R15; consumers R16/R17.</li>
+<li><strong>Acceptance:</strong> schema committed; round-trip tests both ends; a consumer parsing a newer message with an unknown <code>warningType</code> degrades gracefully (additive-version test).</li>
+<li><strong>Tech stack:</strong> nlohmann/json (ADA side); kotlinx.serialization (IVI side).</li>
+</ul>
+<p><strong>R5 — ECU deployment onto CarSky nodes.</strong> <em>(analysed)</em></p>
+<ul>
+<li><strong>Definition:</strong> every ECU runs as one node of one CarSky blueprint; deploying the blueprint creates the Room that is the working environment. Deployability was verified against the platform doc — all four ECUs map onto existing node types:</li>
+</ul>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>ECU</th>
+<th>CarSky node type</th>
+<th>What must be done</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>V2X ECU</td>
+<td>Container Node</td>
+<td>build a Linux OCI image (C++ app), push to the platform registry (Zot), reference it in the blueprint</td>
+</tr>
+<tr>
+<td>ADA ECU</td>
+<td>Container Node</td>
+<td>build a Linux OCI image (C++ core + Python detector), push, reference</td>
+</tr>
+<tr>
+<td>IVI ECU</td>
+<td>Skycraft Node (AAOS guest)</td>
+<td>use the provided AAOS artifact (image + host-package roles); install the team APK via the node's ADB access</td>
+</tr>
+<tr>
+<td>Bench — Scenario Player</td>
+<td>Container Node</td>
+<td>team-built image, deployed in the same blueprint as bench equipment</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>General steps: build &amp; push the container images → author the blueprint in Nydus (nodes, pins, edges, artifact references) → New Deployment → verify all nodes Running in the Deployment Viewer → teardown/redeploy as needed.</li>
+<li><strong>Dependency:</strong> platform access; starter pack (AAOS artifact).</li>
+<li><strong>Acceptance:</strong> the blueprint containing the four nodes (+ the R6 bridge) deploys to a Room; the Deployment Viewer reports every node Running; the team APK launches on the AAOS node.</li>
+<li><strong>Tech stack:</strong> Docker/OCI image builds; CarSky registry (Zot); Nydus blueprint editor.</li>
+</ul>
+<p><strong>R6 — Inter-ECU network: Ethernet Bridge + <code>ethernet</code> pins.</strong> <em>(analysed)</em></p>
+<ul>
+<li><strong>Definition:</strong> one Ethernet Bridge node forms the Room's virtual L2 network; every ECU node declares an <code>ethernet</code> pin wired to the bridge (pins connect like-to-like only); the bridge subnet auto-assigns container IPs and pins the Skycraft guest to its declared address. All inter-ECU traffic — V2X wire messages (R1), V2X→ADA (R2), ADA→IVI (R4) — is UDP over this network; no additional middleware.</li>
+<li><strong>Dependency:</strong> R5.</li>
+<li><strong>Acceptance:</strong> blueprint wiring matches the communication topology (bench ↔ V2X ECU, V2X ECU → ADA, ADA → IVI); UDP reachability demonstrated between every communicating pair in the deployed Room; traffic captured on the bridge network.</li>
+<li><strong>Tech stack:</strong> CarSky Ethernet Bridge node; POSIX UDP sockets.</li>
+</ul>
+<h3 id="v2x-ecu-app-level-linux-container">V2X ECU (app-level Linux container)<a class="headerlink" href="#v2x-ecu-app-level-linux-container" title="Link to this section">¶</a></h3>
+<p><strong>R7 — Radio adapter seam (hardware portability).</strong> <em>(analysed)</em></p>
+<ul>
+<li><strong>Definition:</strong> the V2X application touches the radio only via a thin adapter — <code>init · configure · subscribeRx · send</code> — mirroring the production telux API surface; below the seam, the hackathon implementation is UDP over the R6 network toward the bench. The application layer above the seam ports to real modem hardware unchanged — the node's focus goal.</li>
+<li><strong>Dependency:</strong> R1, R6.</li>
+<li><strong>Acceptance:</strong> the application layer has no direct transport imports above the seam (CI import check); telux parity notes and a written port plan committed, enumerating exactly which functions change on real hardware.</li>
+<li><strong>Tech stack:</strong> — (telux is the mirrored reference API, not a linked dependency).</li>
+</ul>
+<p><strong>R8 — Modem stub: configuration call flow.</strong> <em>(analysed)</em></p>
+<ul>
+<li><strong>Definition:</strong> in-node stub with the state machine <code>idle → initialized → configured → rx-subscribed</code>, acking the application's init/configure/subscribe sequence (simplified 3GPP-flavored call flow); config-driven fault injection (init failure, configure reject, subscription drop) exercises the application's error handling.</li>
+<li><strong>Dependency:</strong> R7.</li>
+<li><strong>Acceptance:</strong> the full scripted call flow acked and logged; each injected fault produces a defined, logged recovery.</li>
+<li><strong>Tech stack:</strong> —.</li>
+</ul>
+<p><strong>R9 — Rx pipeline: decode → validate → dedupe → forward.</strong> <em>(analysed)</em></p>
+<ul>
+<li><strong>Definition:</strong> adapter datagram → CPM decode (R1) → semantic validation (mandatory fields, ranges) → dedupe (stationId + objectId + measurement time) → construct the R2 message → send to the ADA ECU. Malformed or unknown input is rejected and counted, never crashes the node.</li>
+<li><strong>Dependency:</strong> R1, R2, R7.</li>
+<li><strong>Acceptance:</strong> golden-vector CPMs decode correctly; a malformed-input corpus is fully rejected and logged with zero crashes; R2 messages observed at the ADA ECU.</li>
+<li><strong>Tech stack:</strong> Vanetza ITS2 codec; nlohmann/json.</li>
+</ul>
+<p><strong>R10 — Ego Tx: broadcast own perception.</strong> <em>(analysed — </em><em>DEFERRED to a future milestone</em><em>, user decision 2026-07-30)</em></p>
+<blockquote>
+<p><strong>Not implemented in M1.</strong> In M1 the V2X ECU is <strong>receive-only on the V2X side</strong>: it decodes relayed CPMs and forwards R2 messages to the ADA ECU informing it of an obstruction outside ego's line of sight. It constructs and broadcasts nothing. Requirement number R10 is retained (numbers are never reused) but carries no M1 deliverable, no acceptance check, and no task decomposition — mirrored in <a href="#future-developments">§ Future developments</a> and the <a href="requirements-future-m1-future-features-register.html">future-features register</a>. Ego's Tx path returns when ego must relay its <strong>own</strong> perception onward to a following vehicle — a multi-ego scenario M1 does not build.</p>
+</blockquote>
+<ul>
+<li><strong>Definition:</strong> the V2X ECU constructs CPMs (R1 profile) from ADA store data (R3 snapshot of ego's own-sensor objects) and broadcasts them via the adapter <code>send</code>.</li>
+<li><strong>Dependency:</strong> R1, R7, R13.</li>
+<li><strong>Acceptance:</strong> <em>(void for M1)</em> broadcast frames captured on the R6 network with fields populated from live store data, not constants.</li>
+<li><strong>Tech stack:</strong> Vanetza ITS2 codec.</li>
+</ul>
+<h3 id="bench-node-scenario-player">Bench node — Scenario Player<a class="headerlink" href="#bench-node-scenario-player" title="Link to this section">¶</a></h3>
+<p><strong>R11 — V2X message generation (vehicle C awareness).</strong> <em>(analysed)</em></p>
+<ul>
+<li><strong>Definition:</strong> the bench node generates multiple V2X messages (R1 profile) that inform the V2X ECU of vehicle C — its distance and other relevant info (relative position, speed, classification, sender B's pose) — across configurable scenarios and message rates.</li>
+<li><strong>Dependency:</strong> R1, R6.</li>
+<li><strong>Acceptance:</strong> generated messages are received and decoded by the V2X ECU on connected nodes; different scenario configurations produce different message streams (e.g. C approaching vs C out of range).</li>
+<li><strong>Tech stack:</strong> Python; the shared R1 codec (Vanetza-based encoder).</li>
+</ul>
+<h3 id="ada-ecu-app-level-linux-container">ADA ECU (app-level Linux container)<a class="headerlink" href="#ada-ecu-app-level-linux-container" title="Link to this section">¶</a></h3>
+<p><strong>R12 — Object detection from video files.</strong> <em>(analysed)</em></p>
+<ul>
+<li><strong>Definition:</strong> ADA detects objects from the provided video files (no live camera), estimates their distance, and emits R3 TrackedObject entries with <code>source = own_sensor</code> into the R13 store — ego's own perception source (it detects B, the visible occluder; C is by definition not in ego's frame).</li>
+<li><strong>Dependency:</strong> R3; provided video clip.</li>
+<li><strong>Acceptance:</strong> detection log over the provided clip with per-frame objects and distance estimates; detector entries enter the store through the same R3 interface as relayed entries; zero detections labeled C.</li>
+<li><strong>Tech stack:</strong> YOLO11n (Ultralytics, AGPL-3.0) exported to ONNX on ONNX Runtime CPU; OpenCV video decode; Python detector subprocess streaming R3 JSONL over stdout (no FFI, no RPC).</li>
+</ul>
+<p><strong>R13 — Track store + admission state machine.</strong> <em>(analysed)</em></p>
+<ul>
+<li><strong>Definition:</strong> R3-shaped track store with per-source admission. <strong>Vehicle C is tracked based on a set hardcoded distance:</strong> C is admitted to tracking when its reported distance (R2 <code>object.distance</code>) is within the set threshold (30 m) and dropped when it leaves the threshold or its messages stop; own-sensor objects follow <code>not_tracked → tentative → tracked</code>. Full lifecycle per the state machine:</li>
+</ul>
+<p><img alt="Vehicle C track admission state machine" src="requirements-vehiclec-track-admission-state-machine.png" /></p>
+<ul>
+<li><strong>Dependency:</strong> R2, R3; inputs R9, R12.</li>
+<li><strong>Acceptance:</strong> state transitions observable in logs and matching the diagram; C's track carries <code>source = v2x_relayed</code> only.</li>
+<li><strong>Tech stack:</strong> — (C++17 core, standard library).</li>
+</ul>
+<p><strong>R14 — Collision Risk Assessment abstraction.</strong> <em>(analysed)</em></p>
+<ul>
+<li><strong>Definition:</strong> a coding architecture that allows plugging in future risk assessments: risk logic sits behind a common interface consuming the track store and emitting typed warnings (R4 registry). M1's occluded-vehicle (NLOS) risk is the first plugin; §1's future scenarios (intersection hazards, curve blind spots, speed-scaled risk, priority-vehicle preemption) register as new plugins without reworking existing code. Design:</li>
+</ul>
+<p><img alt="ADA ECU high-level design" src="requirements-ada-ecu.svg" /></p>
+<ul>
+<li><strong>Dependency:</strong> R3, R4, R13.</li>
+<li><strong>Acceptance:</strong> the code — the abstraction interface plus the M1 NLOS plugin registered through it — and the database schema the assessment reads and writes.</li>
+<li><strong>Tech stack:</strong> C++17.</li>
+</ul>
+<p><strong>R15 — Warning output to the IVI ECU.</strong> <em>(analysed)</em></p>
+<ul>
+<li><strong>Definition:</strong> the ADA ECU produces output messages to the IVI ECU (structure per R4, over UDP on the R6 network):</li>
+<li><strong>Warning event (committed):</strong> on each R14 risk transition, ADA sends a warning event carrying the risk state and the composed scene (ego, B, ghost C). One warning event carries enough geometry for the IVI to draw the scene.</li>
+<li><strong>Periodic awareness state (optional):</strong> a continuous state stream of the three vehicle poses for smooth view updates between warnings; deferred if time-constrained — the warning event alone triggers and renders the M1 demo.</li>
+<li><strong>Dependency:</strong> R4, R6, R14.</li>
+<li><strong>Acceptance:</strong> demo-captured traffic from ADA to IVI — a pcap/tcpdump on the R6 network showing <strong>at least one</strong> R4 warning event during a scenario run, which triggers the IVI warning view. The periodic awareness state, if built, appears in the same capture.</li>
+<li><strong>Tech stack:</strong> nlohmann/json.</li>
+</ul>
+<h3 id="ivi-ecu-provided-aaos-full-vecu">IVI ECU (provided AAOS full vECU)<a class="headerlink" href="#ivi-ecu-provided-aaos-full-vecu" title="Link to this section">¶</a></h3>
+<p><strong>R16 — HMI on the AAOS node.</strong> <em>(analysed)</em></p>
+<ul>
+<li><strong>Definition:</strong></li>
+<li>The HMI display design resembles the image below: areas for functional buttons/apps around one central <strong>Display area</strong>.</li>
+<li>The warning view — the God view of the vehicles, a 2D drawing with <strong>3D optional</strong> (R17) — is shown in the Display area, which also serves video feeds and application windows.</li>
+<li><strong>Multi-process (optional):</strong> the warning view may be displayed by a separate app woken up when the IVI ECU receives a message from the ADA ECU (R4); a single-app warning view satisfies M1.</li>
+</ul>
+<p><img alt="HMI layout design on the IVI ECU" src="requirements-ivi-ecu.svg" /></p>
+<ul>
+<li><strong>Dependency:</strong> R4, R5 (AAOS node).</li>
+<li><strong>Acceptance:</strong> the HMI runs on the AAOS node with the layout above; an R4 warning brings the warning view up in the Display area; the button/app areas switch what the Display area shows. Optional paths, if built: an ADA message wakes the separate warning app; the 3D drawing renders through R17's view seam.</li>
+<li><strong>Tech stack:</strong> Kotlin, Jetpack Compose, AndroidX.</li>
+</ul>
+<p><strong>R17 — Warning view: God view of the 3 vehicles.</strong> <em>(analysed)</em></p>
+<ul>
+<li><strong>Definition:</strong> implement the warning view — a God view of the 3 vehicles (ego, B, and ghost C rendered from <code>v2x_relayed</code> data), drawn from R4 messages only. <strong>The 2D drawing is the M1 deliverable; the 3D drawing is optional</strong>, both behind one view seam.</li>
+<li><strong>Visual target:</strong> the screen reads like a Tesla-style driving visualisation — a dark canvas and a lane-marked road carrying the three vehicles as car-shaped silhouettes in one lane, ego nearest the viewer. The camera is <strong>slightly inclined rather than strictly overhead</strong>, so vehicles show a shallow rear face and the road converges toward the top. Ego and B are drawn solid; ghost C is a dashed, translucent reconstruction standing on a pulsing ground glow <strong>coloured by the current R14 risk state</strong> (low / medium / high) — that glow and the dashed outline are what distinguish a relayed vehicle from a directly sensed one. Nothing else is drawn: no legend, no distance labels, no text overlay, no banner — the scene alone is the warning. The image below fixes that visual language and the elements to draw, not pixel geometry, fonts, or exact placement.</li>
+</ul>
+<p><img alt="The R17 warning view — ego A, occluder B, and ghost C ahead of B" src="requirements-ivi-god-view-scene.svg" /></p>
+<ul>
+<li>
+<p><strong>Annotated variant</strong> — the same scene with the vehicles, the A→B and A→C distances, a <code>[V2X]</code> provenance badge and the zone B occludes called out. An explanatory figure for describing the demo; <strong>not</strong> what the IVI renders: <a href="requirements-ivi-god-view-warning-screen.svg">ivi-god-view-warning-screen.svg</a>.</p>
+</li>
+<li>
+<p><strong>Dependency:</strong> R4, R16.</p>
+</li>
+<li><strong>Acceptance:</strong> the warning view shows the 3 vehicles with ghost C sourced only from <code>v2x_relayed</code> data; the 2D drawing is delivered. The optional 3D drawing, if built, renders the same scene through the view seam.</li>
+<li><strong>Tech stack:</strong> Compose Canvas (2D); SceneView/Filament (3D, optional).</li>
+</ul>
+<h3 id="evidence-end-to-end-demo">Evidence &amp; end-to-end demo<a class="headerlink" href="#evidence-end-to-end-demo" title="Link to this section">¶</a></h3>
+<p><strong>R18 — Evidence logging.</strong> <em>(analysed)</em></p>
+<ul>
+<li><strong>Definition:</strong> structured JSONL event logs on the V2X ECU and ADA (message rx/tx, decode results, track transitions, risk events) forming the collision-risk event list of §1's demo table.</li>
+<li><strong>Dependency:</strong> R9, R13, R14.</li>
+<li><strong>Acceptance:</strong> the event list reconstructs a full demo run offline; every §1 demo-evidence method that cites logs is producible from them.</li>
+<li><strong>Tech stack:</strong> — (JSONL, standard logging).</li>
+</ul>
+<p><strong>R19 — End-to-end demo run (definition of done).</strong> <em>(analysed)</em></p>
+<ul>
+<li><strong>Definition:</strong> one continuous recorded run of the full live chain — bench → V2X ECU → ADA → IVI — with no scripted shortcuts inside ego software: ego's own detections contain zero C entries for the whole run while the IVI warns and renders ghost C from <code>v2x_relayed</code> data only.</li>
+<li><strong>Dependency:</strong> all committed requirements above.</li>
+<li><strong>Acceptance:</strong> the recorded run; Wireshark/pcap of the V2X exchange (R1) and of the ADA→IVI traffic (R15) corroborating the chain; zero-C check on the R12 detection log; ghost-C source check on the IVI (R17).</li>
+<li><strong>Tech stack:</strong> Wireshark/tcpdump.</li>
+</ul>
+<h2 id="3-technical-solution-analysis">3. Technical solution analysis<a class="headerlink" href="#3-technical-solution-analysis" title="Link to this section">¶</a></h2>
+<p>Hard-constraint screening precedes every comparison (open-source only, Linux-targeted per <a href="claude-rules-solution-selection-criteria.html">solution-selection-criteria.md</a>); C1–C4 below are that rule's ranked criteria. The provided AAOS node and CarSky itself are sanctioned competition infrastructure, not team dependency choices.</p>
+<h3 id="a-v2x-message-family-encoding-serves-r1-r9r11">(a) V2X message family + encoding — serves R1, R9–R11<a class="headerlink" href="#a-v2x-message-family-encoding-serves-r1-r9r11" title="Link to this section">¶</a></h3>
+<ul>
+<li><strong>Family candidates:</strong> SAE J2735 BSM — disqualified (paywalled spec, and Part I carries no perceived objects); ETSI CAM+DENM; ETSI CPM TS 103 324.</li>
+<li><strong>Single-type check:</strong> CAM describes only the sender — cannot carry C; DENM is event notification (position + cause code) without perceived-object kinematics; CPM carries B's reference position <strong>and</strong> the perceived object with position/velocity/classification/confidence in one message. One message type (CPM) covers the full M1 exchange; CAM adds nothing needed, DENM stays the named family for future hazard types (§1 Future developments).</li>
+<li><strong>Pick: CPM TS 103 324</strong> — drivers C1 (Vanetza ships release-2 CPM codecs) and C2 (one message, one codec, one profile).</li>
+<li><strong>Encoding candidates:</strong> asn1tools — disqualified (no X.681/X.683 support needed by CPM); raw asn1c — redundant (Vanetza embeds maintained asn1c output); pycrate — no precompiled CPM; Vanetza ITS2 ASN.1 targets (LGPLv3, usable without the GN/BTP stack).</li>
+<li><strong>Pick: Vanetza ITS2 as the single codec source behind one codec seam</strong> — drivers C1 (one proven codec, golden vectors cannot drift) and C4 (asn1-only build targets, no full-stack pull-in).</li>
+</ul>
+<h3 id="b-radio-transport-under-the-adapter-seam-serves-r7-r8">(b) Radio transport under the adapter seam — serves R7, R8<a class="headerlink" href="#b-radio-transport-under-the-adapter-seam-serves-r7-r8" title="Link to this section">¶</a></h3>
+<ul>
+<li><strong>Candidates:</strong> thin team adapter over UDP; telux porting into the container; generic middleware (ZeroMQ/MQTT) under the seam.</li>
+<li>Middleware screened out on fidelity (inserts semantics production doesn't have — production Rx is already "read from socket"); the telux port is declined for M1 but kept mechanical via the R7 parity notes + port plan.</li>
+<li><strong>Pick: thin adapter + modem stub with call-flow FSM and fault injection</strong> — drivers C2 (least work that still proves the seam) and C3 (the port plan keeps the real-hardware swap open).</li>
+</ul>
+<h3 id="c-bench-message-generation-serves-r11">(c) Bench message generation — serves R11<a class="headerlink" href="#c-bench-message-generation-serves-r11" title="Link to this section">¶</a></h3>
+<ul>
+<li><strong>Candidates:</strong> self-written Python generator; MetaDrive; CARLA (GPU-heavy); SUMO (no perception concept).</li>
+<li><strong>Pick: self-written Python generator</strong> driving the shared R1 codec — drivers C1 (deterministic, no engine unknowns), C2 (smallest build), C4 (zero engine dependency).</li>
+</ul>
+<h3 id="d-languages-per-track-serves-all">(d) Languages per track — serves all<a class="headerlink" href="#d-languages-per-track-serves-all" title="Link to this section">¶</a></h3>
+<ul>
+<li><strong>V2X ECU: C++17.</strong> Portability is the node's focus goal and telux is a C++ API — C++ keeps "developed layers move across hardware unchanged" code-true; Vanetza is C++, so the codec stays in-process.</li>
+<li><strong>ADA ECU: C++17 core + Python detector subprocess.</strong> The core (store, CRA, emission, logging) is C++17; the R12 detector is Python, joined only by the process-level contract (argv + exit codes + R3 JSONL over stdout) — no FFI, no cross-language API.</li>
+<li><strong>Bench: Python.</strong> Fastest to iterate scenario content; reuses the R1 codec for encoding.</li>
+<li><strong>IVI: Kotlin</strong> (§3(e)).</li>
+<li>Cross-language drift is contained by the versioned contracts (R1–R4) with round-trip tests.</li>
+</ul>
+<h3 id="e-ivi-hmi-framework-on-aaos-serves-r16-r17">(e) IVI HMI framework on AAOS — serves R16, R17<a class="headerlink" href="#e-ivi-hmi-framework-on-aaos-serves-r16-r17" title="Link to this section">¶</a></h3>
+<ul>
+<li><strong>Candidates:</strong> Kotlin + Jetpack Compose (+ SceneView/Filament 3D); Flutter-on-Android; web-in-browser (fails the no-JS/WebSocket decision for ego software); Qt-for-Android (JNI/cross-compile friction, no AAOS idiom gain).</li>
+<li><strong>Pick: Kotlin + Compose; 3D via SceneView; 2D via Compose Canvas behind the view seam</strong> — drivers C1 (native toolchain of the provided node; app switching/notifications first-class), C2 (no extra engine layer), C3 (the seam carries the future camera-feed view and themes).</li>
+</ul>
+<h3 id="f-adaivi-data-path-serves-r4-r15-r16">(f) ADA→IVI data path — serves R4, R15, R16<a class="headerlink" href="#f-adaivi-data-path-serves-r4-r15-r16" title="Link to this section">¶</a></h3>
+<ul>
+<li><strong>Candidates:</strong> UDP + versioned JSON into an Android foreground service; TCP stream; gRPC (codegen + streaming surface unneeded); MQTT (broker infrastructure unneeded); WebSocket (banned in the ego software path); AAOS VHAL property injection (platform-support unverified).</li>
+<li><strong>Pick: UDP + versioned JSON</strong> — warning events edge-triggered (committed); the optional periodic state stream last-value-wins with sequence numbers; drivers C1, C2, C4.</li>
+</ul>
+<h3 id="g-perception-stack-serves-r12">(g) Perception stack — serves R12<a class="headerlink" href="#g-perception-stack-serves-r12" title="Link to this section">¶</a></h3>
+<ul>
+<li><strong>Candidates:</strong> YOLO11n ONNX-CPU (AGPL-3.0); YOLOX-s (Apache-2.0); SSD-MobileNet (weaker accuracy).</li>
+<li><strong>Pick: YOLO11n on ONNX Runtime, CPU-only</strong> — driver C1 (best accuracy among CPU-feasible options); no GPU requested from BTC.</li>
+</ul>
+<h3 id="stack-summary-per-track">Stack summary (per track)<a class="headerlink" href="#stack-summary-per-track" title="Link to this section">¶</a></h3>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Track / node</th>
+<th>Language</th>
+<th>Key components</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>V2X ECU (Container Node)</td>
+<td>C++17</td>
+<td>radio adapter seam (R7) + modem stub (R8) + Vanetza CPM decoder + Rx pipeline (R9) — receive-only; ~~ego Tx (R10)~~ deferred</td>
+</tr>
+<tr>
+<td>ADA ECU (Container Node)</td>
+<td>C++17 core + Python 3.11 detector</td>
+<td>track store (R13) + CRA abstraction/plugins (R14) + R4 emission (R15) + evidence logs (R18); YOLO11n ONNX-CPU detector (R12) behind the R3 JSONL subprocess boundary</td>
+</tr>
+<tr>
+<td>IVI (provided AAOS Skycraft node)</td>
+<td>Kotlin</td>
+<td>Compose HMI (R16; multi-process optional) + Canvas 2D / SceneView 3D (optional) behind the view seam (R17) + UDP ingest service</td>
+</tr>
+<tr>
+<td>Bench (Container Node)</td>
+<td>Python</td>
+<td>scenario-configurable CPM generation (R11) via the shared R1 codec</td>
+</tr>
+<tr>
+<td>Contracts / CI</td>
+<td>JSON Schema + ETSI ASN.1</td>
+<td>R1 profile, R2, R3, R4 schemas; golden vectors; round-trip tests</td>
+</tr>
+<tr>
+<td>Platform</td>
+<td>—</td>
+<td>one blueprint: 4 ECU/bench nodes + Ethernet Bridge, <code>ethernet</code> pins, Zot registry (R5, R6)</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="4-decision-record">4. Decision record<a class="headerlink" href="#4-decision-record" title="Link to this section">¶</a></h2>
+<p>Standing user decisions governing §2 and §3:</p>
+<ul>
+<li>CPM is the single M1 V2X message family; DENM is the named family for future hazard types.</li>
+<li><strong>R10 (ego Tx) is deferred to a future milestone (2026-07-30).</strong> The M1 V2X ECU is receive-only: it decodes relayed CPMs and forwards R2 messages to the ADA ECU about an obstruction outside line of sight, and constructs/broadcasts nothing. R10 keeps its number but has no M1 deliverable, acceptance check, or task breakdown (§ Future developments).</li>
+<li>Extensible message-type dispatch in the Rx pipeline is deferred from M1 for schedule reasons (§1 Future developments).</li>
+<li>IVI framework is Kotlin/Compose + SceneView on the provided AAOS node; Flutter-on-Android was evaluated and not selected.</li>
+<li>No JavaScript and no WebSocket in the ego software path (V2X ECU, ADA ECU, IVI app).</li>
+<li>Licensing accepted under open-source-only: Vanetza LGPLv3 (dynamic linking), YOLO11n AGPL-3.0.</li>
+<li>Single-ego blueprint — the multi-real-car variant is declined.</li>
+<li>The IVI multi-process front end is optional in M1: if built, the warning view is a separate app woken on an ADA message (R16).</li>
+<li>The R17 warning view delivers the 2D God view; the 3D drawing is optional, not a committed M1 deliverable.</li>
+<li>Ego video clip display on the IVI is deferred from M1 for schedule reasons (§1 Future developments).</li>
+<li>No GPU requested from BTC — CPU-only perception, display-only video.</li>
+<li>telux porting is declined for M1; the R7 parity notes + port plan keep the hardware swap mechanical.</li>
+<li>The Cortex-M ECU and its mock node are omitted; ego own-sensor objects come from R12.</li>
+<li>The IVI renders relative geometry only — no map and no GNSS injection on the IVI node.</li>
+<li>The single-Ethernet-Bridge topology is adopted (§1 Baseline Propose Topology): all four nodes on one bridge in one subnet — no multi-bridge segmentation and no KUKSA databroker (§5 records the rejected alternative).</li>
+</ul>
+<h2 id="5-suggested-alternative-network-topology">5. Suggested alternative network topology<a class="headerlink" href="#5-suggested-alternative-network-topology" title="Link to this section">¶</a></h2>
+<p>Alternative to the committed layout in §1 <a href="#baseline-propose-topology">Baseline Propose Topology</a>, which stays the design of record.</p>
+<p>Session context only. <strong>Not ratified.</strong> R6 (§2 Contracts) stays frozen: one Ethernet Bridge, every ECU wired to it.</p>
+<ul>
+<li>Blueprint: <a href="../../../requirements/propose-blueprint-4EthBridges-4SubDomains-KUKSADatabroker-3ECU-1Bench.json">propose-blueprint-4EthBridges-4SubDomains-KUKSADatabroker-3ECU-1Bench.json</a> — platform export of <code>trial1_minh</code>, 2026-07-30.</li>
+<li>Shape: 4 <code>eth-bridge</code> + 4 <code>script-node</code> gateways + 1 <code>kuksa-databroker</code>. 13 nodes, 12 edges.</li>
+<li>For more details on KUKSA, see <a href="requirements-kuksa-node-communication.html">kuksa-node-communication.md</a> — what the broker is, node roles, the gateway pattern, and the KIS reference topology.</li>
+</ul>
+<h3 id="node-bridge-gateway">Node, bridge, gateway<a class="headerlink" href="#node-bridge-gateway" title="Link to this section">¶</a></h3>
+<p><img alt="Node / bridge / gateway topology" src="requirements-propose-topology-node-bridge-gateway.svg" /></p>
+<p><em>Source: <a href="../../../requirements/propose-topology-node-bridge-gateway.drawio">propose-topology-node-bridge-gateway.drawio</a></em></p>
+<ul>
+<li>Each ECU owns one <code>ethernet</code> pin into its own bridge.</li>
+<li>Each bridge carries one gateway as its second member.</li>
+<li>Each gateway owns one <code>kuksa</code> pin into the shared databroker.</li>
+<li>Every edge is pin <code>OUTPUT</code> → hub <code>INPUT</code>. Two hubs cannot be wired together.</li>
+</ul>
+<h3 id="subnets">Subnets<a class="headerlink" href="#subnets" title="Link to this section">¶</a></h3>
+<p><img alt="Subnet layout" src="requirements-propose-topology-subnets.svg" /></p>
+<p><em>Source: <a href="../../../requirements/propose-topology-subnets.drawio">propose-topology-subnets.drawio</a></em></p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Bridge</th>
+<th>Subnet</th>
+<th>ECU</th>
+<th>Gateway</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Bench Bridge</td>
+<td><code>10.99.0.0/24</code></td>
+<td>Bench <code>.10</code></td>
+<td>Bench GW <code>.11</code></td>
+</tr>
+<tr>
+<td>V2X Bridge</td>
+<td><code>10.99.1.0/24</code></td>
+<td>V2X ECU <code>.10</code></td>
+<td>V2X GW <code>.11</code></td>
+</tr>
+<tr>
+<td>ADA Bridge</td>
+<td><code>10.99.2.0/24</code></td>
+<td>ADA ECU <code>.10</code></td>
+<td>ADA GW <code>.11</code></td>
+</tr>
+<tr>
+<td>IVI Bridge</td>
+<td><code>10.99.3.0/24</code></td>
+<td>IVI ECU <code>.10</code></td>
+<td>IVI GW <code>.11</code></td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>A bridge is an L2 switch. It never routes between subnets.</li>
+<li>A packet leaves an ECU only if the target is in the same subnet <strong>and</strong> on the same bridge.</li>
+<li>No ECU-to-ECU pair meets both. Only the databroker crosses subnets.</li>
+<li>So each ECU targets <strong>its own gateway</strong>, never the far ECU: bench→<code>10.99.0.11:47100</code>, V2X→<code>10.99.1.11:47200</code>, ADA→<code>10.99.2.11:47300</code>. Ports unchanged from §1.</li>
+<li>One subnet per bridge is deliberate. A shared subnet across separate bridges fails silently (ARP timeout) instead of loudly (<code>ENETUNREACH</code>).</li>
+</ul>
+<h3 id="open-items">Open items<a class="headerlink" href="#open-items" title="Link to this section">¶</a></h3>
+<ul>
+<li>Four gateways need <code>scriptContent</code> (Luau). An ETHERNET pin is a bare NIC (<code>e-&lt;pinname&gt;</code>), so each relay terminates UDP itself via <code>nydus.net.udp()</code> — <a href="requirements-kuksa-node-communication.html">§4.3–4.4</a>.</li>
+<li>Databroker needs the custom VSS artifact for the three signal paths — <a href="requirements-kuksa-node-communication.html">§3</a>.</li>
+<li>Each bridge needs <code>{"ethBridge": {"bridgeMode": "linux", "subnet": "10.99.N.0/24", "port": 29400}}</code>. The Skycraft guest is DHCP-bound to its declared pin address, so a default <code>10.99.0.0/24</code> scope cannot serve IVI's <code>10.99.3.10</code>.</li>
+<li>IVI Skycraft node carries no <code>image</code> artifact reference.</li>
+</ul>
+<h3 id="benefits">Benefits<a class="headerlink" href="#benefits" title="Link to this section">¶</a></h3>
+<ul>
+<li><strong>Domain isolation.</strong> Each ECU sits on its own L2 segment. Broadcast traffic and a misbehaving node stay inside one bridge.</li>
+<li><strong>Realistic E/E shape.</strong> Domain controllers behind their own switches, joined by a central signal broker — the same architecture as the platform's reference blueprint <a href="../../../requirements/development-platform-doc/blueprint-KIS.json">blueprint-KIS.json</a>.</li>
+<li><strong>Signal-level observability.</strong> KUKSA pins unlock <code>POST /api/v1/signals/{roomId}/{nodeKey}/values</code>, which <code>ethernet</code>-only nodes cannot use (<a href="requirements-car-sky-guide-carsky-rest-api-blueprint.html">carsky-rest-api-blueprint.md</a>). Relayed values become readable from the API instead of only from a packet capture — useful for R18 evidence.</li>
+<li><strong>Transport seam.</strong> The ECUs keep speaking plain UDP; the gateway absorbs the transport. Changing transport later is a Lua edit, not an ECU code change.</li>
+<li><strong>Extensibility.</strong> A new consumer (cluster, telematics, logger) attaches as another gateway on the broker — no change to the existing ECUs or to R1–R4.</li>
+</ul>
+<h3 id="trade-offs-against-1-bridge-topology">Trade-offs against 1 bridge topology<a class="headerlink" href="#trade-offs-against-1-bridge-topology" title="Link to this section">¶</a></h3>
+<ul>
+<li>6 hops per flow instead of 1, four Lua relays, one VSS artifact (UI-upload only), plus an requirement R6 re-freeze — for payloads that need no schema translation.</li>
+<li>Only the KUKSA half is scriptable. <code>ETHERNET</code> pins are still absent from the <code>addPin</code> enum, so all bridge wiring stays manual in the Nydus UI.</li>
+</ul>
+      </article>
+    </main>
+  </div>
+  <script src="../js/site-data.js"></script>
+  <script src="../js/theme.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/doc-page.js"></script>
+</body>
+</html>

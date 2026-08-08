@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en" data-theme="sketch">
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="kis-build-pages">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Phase 5 — IVI HMI AAOS build &amp; deployment smoke test — KIS</title>
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/doc.css">
+  <link rel="stylesheet" href="../css/themes.css">
+</head>
+<body class="DocBody" data-root=".." data-doc-node="module-design" data-doc-title="Phase 5 — IVI HMI AAOS build &amp; deployment smoke test" data-doc-source="IVI_ECU/deployment/phase5-ivi-deploy.md">
+  <div class="DocLayout">
+    <aside class="DocLayout__aside" id="doc-toc"></aside>
+    <main class="Page DocPage">
+      <header class="PageHeader" id="doc-header"></header>
+      <article class="Markdown" id="doc-body">
+<h1 id="phase-5-ivi-hmi-aaos-build-deployment-smoke-test">Phase 5 — IVI HMI AAOS build &amp; deployment smoke test<a class="headerlink" href="#phase-5-ivi-hmi-aaos-build-deployment-smoke-test" title="Link to this section">¶</a></h1>
+<p>How to build the team APK, install it on the CarSky Skycraft (AAOS) node, and smoke-test R4 ingest with the mock sender. Node-level blueprint/VM config lives in <a href="requirements-car-sky-guide-node-ivi-ecu.html">node-ivi-ecu.md</a>; this note is the APK path only.</p>
+<h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Link to this section">¶</a></h2>
+<ul>
+<li>JDK 17+ (Android Studio JBR is fine)</li>
+<li>Android SDK Platform-Tools (<code>adb</code> on <code>PATH</code>)</li>
+<li>Gradle wrapper in this tree (<code>IVI_ECU/gradlew</code> / <code>gradlew.bat</code>) — no global Gradle install required</li>
+<li>A CarSky Room with the IVI Skycraft node in <strong>Running</strong> state (blueprint + AAOS artifact per <a href="requirements-car-sky-guide-node-ivi-ecu.html">node-ivi-ecu.md</a>)</li>
+</ul>
+<p>Working directory for all Gradle commands below: <strong><code>IVI_ECU/</code></strong>.</p>
+<h2 id="step-1-build-the-debug-apk">Step 1 — Build the debug APK<a class="headerlink" href="#step-1-build-the-debug-apk" title="Link to this section">¶</a></h2>
+<pre><code class="language-bash"># Linux / macOS
+./gradlew assembleDebug
+
+# Windows
+gradlew.bat assembleDebug
+</code></pre>
+<p>Output APK:</p>
+<pre><code class="language-text">app/build/outputs/apk/debug/app-debug.apk
+</code></pre>
+<p>Acceptance: build succeeds; APK size under 50 MB (<code>dir</code> / <code>ls -lh</code> on the path above).</p>
+<h2 id="step-2-connect-adb-to-the-carsky-skycraft-guest">Step 2 — Connect ADB to the CarSky Skycraft guest<a class="headerlink" href="#step-2-connect-adb-to-the-carsky-skycraft-guest" title="Link to this section">¶</a></h2>
+<ol>
+<li>Open the Room in the CarSky / Rework UI and select the IVI Skycraft node (Device ID example used by the team: <code>zvpi8tzdj8s08wmxaaye2</code> — replace with the live Room's device id if different).</li>
+<li>Enable the <strong>ADB port-forward</strong> (or Gateway ADB tunnel) for that node and note the local port the UI assigns (Starter Pack / device panel — often <code>localhost:&lt;port&gt;</code>).</li>
+<li>Connect and confirm the guest is online:</li>
+</ol>
+<pre><code class="language-bash">adb connect 127.0.0.1:&lt;port&gt;
+# or: adb connect localhost:&lt;port&gt;
+
+adb devices
+</code></pre>
+<p>Expected: a row for <code>127.0.0.1:&lt;port&gt;</code> (or <code>localhost:&lt;port&gt;</code>) in state <code>device</code>. If the state is <code>offline</code> / <code>unauthorized</code>, re-open the tunnel and reconnect.</p>
+<h2 id="step-3-install-the-apk">Step 3 — Install the APK<a class="headerlink" href="#step-3-install-the-apk" title="Link to this section">¶</a></h2>
+<p>From <code>IVI_ECU/</code>:</p>
+<pre><code class="language-bash">adb install -r app/build/outputs/apk/debug/app-debug.apk
+</code></pre>
+<p><code>-r</code> replaces an existing install. Success prints <code>Success</code>.</p>
+<p>Application id: <code>com.hackathon.v2x.ivi</code>.</p>
+<h2 id="step-4-launch-smoke-test">Step 4 — Launch &amp; smoke-test<a class="headerlink" href="#step-4-launch-smoke-test" title="Link to this section">¶</a></h2>
+<h3 id="open-the-hmi">Open the HMI<a class="headerlink" href="#open-the-hmi" title="Link to this section">¶</a></h3>
+<ul>
+<li>In the CarSky interactive view (God View / guest display) for the IVI node, launch <strong>V2X IVI</strong> (or the package above).</li>
+<li>Confirm the R16 layout: central Display Area + side buttons (Home / Apps / Settings) + bottom status bar.</li>
+</ul>
+<h3 id="logcat-filters">Logcat filters<a class="headerlink" href="#logcat-filters" title="Link to this section">¶</a></h3>
+<p>Watch for crash-free startup and R4 UDP activity:</p>
+<pre><code class="language-bash">adb logcat -s R4ListenerService R4Deserializer IVI_V2X MainViewModel WarningViewModel
+</code></pre>
+<p>Also fail the smoke test on any <code>FATAL EXCEPTION</code> for this process:</p>
+<pre><code class="language-bash">adb logcat *:E | findstr /I &quot;FATAL com.hackathon.v2x.ivi&quot;
+# Linux/macOS: adb logcat *:E | grep -E 'FATAL|com.hackathon.v2x.ivi'
+</code></pre>
+<h3 id="mock-r4-sender-udp-port-47300">Mock R4 sender (UDP → port 47300)<a class="headerlink" href="#mock-r4-sender-udp-port-47300" title="Link to this section">¶</a></h3>
+<p><code>BuildConfig.R4_UDP_PORT</code> defaults to <strong>47300</strong> (Lead / CarSky blueprint ADA→IVI). Optional override: set <code>r4.udp.port</code> in <code>IVI_ECU/local.properties</code>. On the Room Ethernet bridge, the IVI pin is <strong><code>10.99.0.13</code></strong> (<a href="requirements-car-sky-guide-node-ivi-ecu.html">node-ivi-ecu.md</a>).</p>
+<p><strong>Local loopback</strong> (emulator / laptop only):</p>
+<pre><code class="language-bash">cd mock-sender
+IVI_ECU_HOST=127.0.0.1 IVI_ECU_PORT=47300 CYCLES=2 python mock_r4_sender.py
+</code></pre>
+<p><strong>Against the CarSky Room</strong> (sender on a container/host that can reach the IVI eth address):</p>
+<pre><code class="language-bash">IVI_ECU_HOST=10.99.0.13 IVI_ECU_PORT=47300 CYCLES=2 python mock_r4_sender.py
+</code></pre>
+<p>See <a href="ivi-ecu-mock-sender-readme.html">mock-sender/README.md</a> for cycles (<code>nlos_obstruction</code>, state heartbeat, <code>future_unknown_type</code>).</p>
+<p>Expected UI (once wake-on-warning + Display Area wiring are active): Display Area switches to Warning View; Ghost C uses <code>v2x_relayed</code> data; unknown <code>warningType</code> must not crash the process. Status bar shows <code>V2X LINK: BOUND :47300</code> (not a hardcoded STANDBY literal).</p>
+<h2 id="smoke-test-checklist">Smoke test checklist<a class="headerlink" href="#smoke-test-checklist" title="Link to this section">¶</a></h2>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Check</th>
+<th>Pass criteria</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Debug APK builds</td>
+<td><code>assembleDebug</code> exits 0</td>
+</tr>
+<tr>
+<td>APK size</td>
+<td><code>app-debug.apk</code> &lt; 50 MB</td>
+</tr>
+<tr>
+<td>ADB connected</td>
+<td><code>adb devices</code> shows <code>device</code></td>
+</tr>
+<tr>
+<td>Install</td>
+<td><code>adb install -r …</code> prints <code>Success</code></td>
+</tr>
+<tr>
+<td>Launch</td>
+<td>App opens on AAOS guest; no <code>FATAL EXCEPTION</code> in logcat</td>
+</tr>
+<tr>
+<td>Layout</td>
+<td>Display Area + side buttons visible (R16)</td>
+</tr>
+<tr>
+<td>Mock R4</td>
+<td>Packets reach <code>R4ListenerService</code> (logcat); UI does not crash on unknown <code>warningType</code></td>
+</tr>
+<tr>
+<td>Wake-on-warning</td>
+<td>Display Area switches to Warning View on Active warning (16.5.2.4) when end-to-end wire is present</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="related">Related<a class="headerlink" href="#related" title="Link to this section">¶</a></h2>
+<ul>
+<li><a href="requirements-car-sky-guide-node-ivi-ecu.html">node-ivi-ecu.md</a> — Skycraft artifact IDs, ethernet pin, post-deploy ADB overview</li>
+<li><a data-missing="../../plans/phase5_tasks.md">phase5_tasks.md</a> — subtask <code>16.5.2.5</code> and Phase 5 acceptance</li>
+<li><a href="ivi-ecu-mock-sender-readme.html">mock-sender/README.md</a> — scripted R4 UDP harness</li>
+</ul>
+      </article>
+    </main>
+  </div>
+  <script src="../js/site-data.js"></script>
+  <script src="../js/theme.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/doc-page.js"></script>
+</body>
+</html>

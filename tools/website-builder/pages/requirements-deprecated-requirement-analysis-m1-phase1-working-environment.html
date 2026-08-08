@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en" data-theme="sketch">
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="kis-build-pages">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Research Note — Phase 1 Working Environment (M1, Carsky bench-node model) — KIS</title>
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/doc.css">
+  <link rel="stylesheet" href="../css/themes.css">
+</head>
+<body class="DocBody" data-root=".." data-doc-node="module-design" data-doc-title="Research Note — Phase 1 Working Environment (M1, Carsky bench-node model)" data-doc-source="requirements/deprecated/requirement-analysis/m1-phase1-working-environment.md">
+  <div class="DocLayout">
+    <aside class="DocLayout__aside" id="doc-toc"></aside>
+    <main class="Page DocPage">
+      <header class="PageHeader" id="doc-header"></header>
+      <article class="Markdown" id="doc-body">
+<h1 id="research-note-phase-1-working-environment-m1-carsky-bench-node-model">Research Note — Phase 1 Working Environment (M1, Carsky bench-node model)<a class="headerlink" href="#research-note-phase-1-working-environment-m1-carsky-bench-node-model" title="Link to this section">¶</a></h1>
+<blockquote>
+<p>Researcher artifact, <strong>not</strong> an HLD. Records the working-environment model for Phase 1 on the Carsky platform, per FPT-Mentor mentor guidance (2026-07). Requirement numbers refer to <a data-missing="m1-cooperative-awareness.md">m1-cooperative-awareness.md</a> (R1–R20); no new numbers are defined here. Control-plane/data-plane analysis and the codec decision live in <a href="requirements-deprecated-requirement-analysis-m1-phase1-control-data-plane.html">m1-phase1-control-data-plane.md</a>; the hardware-variant analysis in <a href="requirements-deprecated-requirement-analysis-m1-product-fit-quectel-modem.html">m1-product-fit-quectel-modem.md</a>.</p>
+</blockquote>
+<h2 id="diagrams">Diagrams<a class="headerlink" href="#diagrams" title="Link to this section">¶</a></h2>
+<ul>
+<li><a href="../../../requirements/deprecated/requirement-analysis/m1-phase1-working-env-component.puml">m1-phase1-working-env-component.puml</a> — the Phase 1 environment: bench node (scenario player) injecting V2X into the ego node(s); <code>V2X_Comm</code> decodes, <code>ADA</code> assesses, <code>IVI</code> displays.</li>
+<li><a href="../../../requirements/deprecated/requirement-analysis/m1-phase1-working-env-activity.puml">m1-phase1-working-env-activity.puml</a> — one scenario tick end-to-end: emission → impairment → decode → situation assessment → warning render.</li>
+<li><a href="../../../requirements/deprecated/requirement-analysis/m1-phase1-v2x-call-flow-sequence.puml">m1-phase1-v2x-call-flow-sequence.puml</a> — call flow with the <code>V2X_Comm</code> Phase 1 boundary (companion to the control/data-plane note).</li>
+</ul>
+<h2 id="the-carsky-working-environment">The Carsky working environment<a class="headerlink" href="#the-carsky-working-environment" title="Link to this section">¶</a></h2>
+<ul>
+<li><strong>Platform:</strong> cloud-hosted node platform, most likely AWS (team information, unconfirmed). The team calls it "Carsky"; FPT-Mentor's note says "CabinSky" — treated as the same platform family, naming unresolved and recorded as-is.</li>
+<li><strong>Scope framing (FPT-Mentor, authoritative):</strong> this is an SDV hackathon — judged on software and the new in-vehicle experience. Simulating the 3GPP radio layer (PC5 PHY/MAC) is out of scope for both the environment and the grading criteria; invest no effort there.</li>
+<li><strong>Project scope corollary:</strong> the team builds the <em>application</em> that sends/receives and consumes already-decoded V2X payloads — not a V2X protocol stack. Libraries are evaluated for codec/message-level use only (§ Suggested tools).</li>
+<li><strong>Environment model:</strong> 1 node = 1 ECU; 1 vehicle = 1 blueprint (a topology of nodes). The team builds exactly one <strong>ego</strong> vehicle from its blueprint.</li>
+<li><strong>Outside world:</strong> a single <strong>bench node</strong> runs a team-written <strong>scenario player</strong> that emits the V2X messages of N simulated vehicles into the ego — the test-equipment role, injecting data from outside (§ Phase 1 work targets).</li>
+<li><strong>No FPT-Mentor-provided V2X stack:</strong> teams bring open-source libraries; everything runs userspace on ordinary sockets, with no special environment dependency. Decode placement: simplest inside the app on the IVI; more SDV-canonical is an extra Linux TCU node that decodes and forwards to the IVI.</li>
+</ul>
+<h3 id="status-confirmed-vs-pending-fpt-mentor-confirmation">Status — confirmed vs pending FPT-Mentor confirmation<a class="headerlink" href="#status-confirmed-vs-pending-fpt-mentor-confirmation" title="Link to this section">¶</a></h3>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Status</th>
+<th>Consequence for the team</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Bench→ego transport</td>
+<td><strong>Pending</strong> — options depend on each node's virtualization strategy; FPT-Mentor advises after the team submits blueprint + use case</td>
+<td>Don't wait: code against a thin send/recv interface (committed for R3/R4); codec and scenario player start now, transport swaps later</td>
+</tr>
+<tr>
+<td>Channel impairment</td>
+<td><strong>FPT-Mentor-recommended: option (b)</strong> — config-driven drop/delay/jitter inside the scenario player; option (a) infra-level impairment on the bench→ego channel is pending the transport decision</td>
+<td>Implement impairment in the scenario player: available immediately, exactly reproducible, infrastructure-independent</td>
+</tr>
+<tr>
+<td>GNSS feed interfaces</td>
+<td><strong>Pending</strong> — FPT-Mentor described the patterns below with an explicit caveat that image support is unconfirmed; if the CabinSky team doesn't confirm it, FPT-Mentor downgrades this to guiding the concrete interface directly as part of the starter pack</td>
+<td>Keep all ego position access behind <code>GnssProvider</code> with a direct position-feed fallback (<a href="requirements-deprecated-requirement-analysis-m1-phase1-control-data-plane.html">control/data-plane §5c</a>)</td>
+</tr>
+<tr>
+<td>Time &amp; identity</td>
+<td><strong>Confirmed model</strong> — nodes share the host clock (synchronized by default); message timestamps (<code>generationDeltaTime</code>) and simulated StationIDs are generated by the scenario player; ego StationID set via config. No real baseband exists</td>
+<td>R5's cross-node offset is ~0 by construction — still measured, never assumed; message-level V2X semantics are fully covered</td>
+</tr>
+<tr>
+<td>Hosting cloud = AWS</td>
+<td><strong>Unconfirmed</strong> (team information)</td>
+<td>Take no AWS-specific dependency until confirmed</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="gnss-feed-patterns-as-described-by-fpt-mentor-pending-confirmation">GNSS feed patterns (as described by FPT-Mentor; pending confirmation)<a class="headerlink" href="#gnss-feed-patterns-as-described-by-fpt-mentor-pending-confirmation" title="Link to this section">¶</a></h3>
+<ul>
+<li><strong>AAOS IVI node (virtualized Android):</strong> the guest GNSS HAL receives data from the host over virtio/vsock (Cuttlefish/Trout pattern). Ego trajectory comes from the scenario player — synchronized with the simulated vehicles by construction — and flows GNSS HAL → LocationManager, so every guest app (maps included) sees it as real GPS; no app changes, no mock-location toggle.</li>
+<li><strong>Linux node (e.g. TCU/gateway):</strong> the scenario player writes NMEA to a pty/TCP endpoint, gpsd attaches, apps read via libgps — or, simpler, the app reads a direct position feed when no real GNSS stack is exercised (recommended primary, <a href="requirements-deprecated-requirement-analysis-m1-phase1-control-data-plane.html">control/data-plane §5c</a>).</li>
+</ul>
+<h2 id="definitions-node-ego-blueprint">Definitions — node, ego, blueprint<a class="headerlink" href="#definitions-node-ego-blueprint" title="Link to this section">¶</a></h2>
+<ul>
+<li><strong>Node</strong> — one ECU, virtualized on the platform. In the single-ECU case, one node hosts <em>all</em> modules of the component diagram (<code>V2X_Comm</code>, <code>ADA</code>, <code>IVI</code>).</li>
+<li><strong>Blueprint</strong> — the ego vehicle's topology: which ECU nodes it comprises and how they link. With multiple ECUs, the diagram's modules split across nodes — e.g. a Linux TCU node running <code>V2X_Comm</code> decode, an AAOS IVI node running the display app.</li>
+<li><strong>Ego</strong> — the one vehicle the team builds per its blueprint. All other vehicles (B, C) exist only as V2X message streams emitted by the bench node.</li>
+<li><strong>Bench node</strong> — the platform node playing the outside world; runs the scenario player; not part of the ego blueprint.</li>
+</ul>
+<h2 id="suggested-tools">Suggested tools<a class="headerlink" href="#suggested-tools" title="Link to this section">¶</a></h2>
+<p>Verdict basis: the project needs message encode/decode plus app-level send/recv — not GeoNetworking routing, DCC, or radio — so each library is judged on its codec/message-level fit, per <a data-missing="../.claude/rules/solution-selection-criteria.md">solution-selection-criteria.md</a> (C1 implementability, C2 M1 speed, C3 future features, C4 smaller lib). All rows pass the hard constraints (open-source, Linux).</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>What it is</th>
+<th>Use here</th>
+<th>Verdict</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Plain UDP sockets</strong> (OS/stdlib)</td>
+<td>Kernel datagram sockets via the language stdlib — no library at all</td>
+<td>Bench→ego data-plane carrier behind the thin send/recv adapter until FPT-Mentor confirms the concrete transport; debuggable with tcpdump/Wireshark</td>
+<td><strong>Should use</strong> — C1+C2: cannot fail on a LAN-like cloud link, hours of effort; C4: zero dependencies. Already the committed transport pick (<a data-missing="m1-cooperative-awareness.md">m1-cooperative-awareness §3(a)</a>)</td>
+</tr>
+<tr>
+<td><strong>asn1tools</strong> (Python, MIT)</td>
+<td>ASN.1 compiler/codec library; encodes/decodes UPER directly from ASN.1 module files</td>
+<td>Encode CAM/CPM in the scenario player and decode on the ego, both against the same official ETSI ASN.1 modules — interoperability by the standard, not a shared library</td>
+<td><strong>Should use</strong> — C1+C2: pure Python end-to-end, no stack bring-up, days of effort; C4: small single-purpose lib. Committed route in <a href="requirements-deprecated-requirement-analysis-m1-phase1-control-data-plane.html">control/data-plane §3</a></td>
+</tr>
+<tr>
+<td><strong>pycrate</strong> (Python, LGPL-2.1)</td>
+<td>Independent ASN.1 compiler + UPER runtime, actively maintained (pycrate-org); ships precompiled ETSI ITS modules (CAM/DENM/VAM)</td>
+<td>Independently decode the scenario player's emitted CPM/CAM bytes at the R1 freeze and in CI — closes the shared-codec blind spot of using asn1tools on both ends</td>
+<td><strong>Should use</strong> (narrow cross-check role) — C1: catches shared codec/module-version bugs cheaply; C2+C4: pure Python, ~a day. CPM TS module compile unverified; fallback = ika <code>etsi_its_cpm_ts_coding</code> (MIT). Analysis: <a href="requirements-deprecated-requirement-analysis-m1-v2x-simulator-tools.html">m1-v2x-simulator-tools.md</a></td>
+</tr>
+<tr>
+<td><strong>Vanetza</strong> (C++, LGPLv3)</td>
+<td>Full ETSI C-ITS stack (GeoNetworking, BTP, DCC, security, CAM/DENM/CPM facilities + ASN.1 codec); socktap demo offers a GN-over-UDP-multicast mode (<code>239.118.122.97:8947</code>), unprivileged userspace</td>
+<td>GN/BTP framing and hardware-interop <strong>upgrade path inside the transport adapter</strong> — not needed for codec-only Phase 1; its networking layers are optional surface under this project's scope</td>
+<td><strong>Could use</strong> (upgrade path only) — C1 risk for Phase 1: C++/CMake + Boost/GeographicLib/Crypto++ integration ≈ 1–2 weeks, no official Python bindings, and its CPM follows the outdated TR 103 562 shape, not R1's TS 103 324 (<a href="https://github.com/riebl/vanetza/issues/194">vanetza#194</a>). Loses C2 to asn1tools</td>
+</tr>
+<tr>
+<td><strong>asn1c</strong> (C, BSD)</td>
+<td>ASN.1-to-C compiler generating standalone codecs</td>
+<td>Generate a C codec for SAE J2735 BSM if the SAE route were chosen (FPT-Mentor-named alternative)</td>
+<td><strong>Could use</strong> — viable, but R1's normative target is ETSI TS 103 324 (freely auditable; J2735 is paywalled), so this activates only if R1's target changes</td>
+</tr>
+<tr>
+<td><strong>gpsd / libgps (+ gpsfake)</strong> (BSD)</td>
+<td>Linux GNSS daemon + client library; gpsfake replays NMEA into gpsd via a pty, no root needed</td>
+<td>Standard-interface GNSS variant on a Linux node: scenario player NMEA → pty/TCP → gpsd → libgps</td>
+<td><strong>Could use</strong> — the FPT-Mentor-described Linux pattern and it works, but the direct position feed is simpler and scenario-consistent by construction (C2); adopt gpsd only if a component requires the standard interface</td>
+</tr>
+<tr>
+<td><strong>chrony</strong> (GPL-2.0)</td>
+<td>NTP client/server with an offset-tracking report</td>
+<td>R5 offset measurement between nodes — trivially satisfied on a shared host clock, but the KPI requires measuring, not assuming</td>
+<td><strong>Should use</strong> — already the committed timebase pick (<a data-missing="m1-cooperative-awareness.md">m1-cooperative-awareness §3(h)</a>); zero-cost sanity check here</td>
+</tr>
+<tr>
+<td><strong>uulm-mrm/v2x_etsi_asn1</strong> (Python)</td>
+<td>Reference project producing UPER-encoded ETSI messages from Python</td>
+<td>Worked example for the asn1tools + official-ETSI-modules workflow</td>
+<td><strong>Could use</strong> — reference/starting point, not a dependency</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="phase-1-work-targets">Phase 1 work targets<a class="headerlink" href="#phase-1-work-targets" title="Link to this section">¶</a></h2>
+<h3 id="deliverable-1-scenario-player-bench-node">Deliverable 1 — Scenario player (bench node)<a class="headerlink" href="#deliverable-1-scenario-player-bench-node" title="Link to this section">¶</a></h3>
+<p>Team-written program on the bench node; the world simulator in the test-equipment role. It must:</p>
+<ul>
+<li>Simulate the outside world: advance the trajectories of N simulated vehicles (M1: B and C) per a scripted, externalized scenario.</li>
+<li>Build and emit their V2X messages toward the ego — CAM (B's state) + CPM (B's perceived object C) — so the ego receives V2X traffic as if real peers existed.</li>
+<li>Generate message-level timestamps (<code>generationDeltaTime</code>) and the simulated vehicles' StationIDs; the ego's StationID stays in ego config.</li>
+<li>Optionally apply the configured impairment profile — drop/delay/jitter with a reproducible seed (FPT-Mentor-recommended option (b)).</li>
+<li>Feed the ego trajectory/GNSS (direct position feed primary; NMEA/gpsd or AAOS-HAL variants per § GNSS feed patterns, pending confirmation).</li>
+<li>Encode with asn1tools against the official ETSI ASN.1 modules (§ Suggested tools); bench-side control plane is plain process control — scenario start/stop, per <a href="requirements-deprecated-requirement-analysis-m1-phase1-control-data-plane.html">control/data-plane §2</a>.</li>
+</ul>
+<p>Requirements served: R3 (peer side), R4 (peer mirror of the parse log), R5 (timebase by construction), R18 (scenario script as a ground-truth source).</p>
+<h3 id="deliverable-2-ego-modules-ecu-nodes-blueprint">Deliverable 2 — Ego modules, ECU node(s), blueprint<a class="headerlink" href="#deliverable-2-ego-modules-ecu-nodes-blueprint" title="Link to this section">¶</a></h3>
+<ul>
+<li><strong>Module set</strong> (component diagram): <code>V2X_Comm</code> — transport adapter + UPER decoder (R3, R4); <code>ADA</code> — <code>GnssProvider</code>, TrackedObject environment model, Phase-1-mocked situation assessment (R8, R12, R14, R15); <code>IVI</code> — <strong>R19 GUI shell app</strong> (buttons + central view window; framework per <a data-missing="m1-cooperative-awareness.md">report §3(i)</a>) whose central view renders the R16 ghost-C 3-car scene, fed by the R20 ADA→IVI data path (mocked seam Phase 5 consumes) — <em>round-2 update 2026-07-08: replaces the earlier "2D BEV occluded-vehicle warning" wording (R16, R19, R20)</em>.</li>
+<li><strong>ECU placement options:</strong> (a) one Linux vECU node hosting all three modules — simplest, matches FPT-Mentor's decode-in-app suggestion; (b) Linux TCU node (<code>V2X_Comm</code>) + IVI node (display) — more SDV-canonical, adds one inter-node link. The placement decision belongs to [[project-architecture]]. <em>(Round-2 note: R20's UDP data path works identically in both placements — the choice stays open.)</em></li>
+<li><strong>Blueprint + use case for FPT-Mentor:</strong> draft the ego blueprint (which ECU nodes; what runs real vs receives data from the bench node) and the use-case description (NLOS occluded-vehicle warning: A is warned about C, relayed by B) — FPT-Mentor's starter-pack, resource, and transport advice is gated on receiving both. FPT-Mentor's own example driver-facing use cases, given for calibration: blind-intersection occluded-vehicle warning, priority-vehicle-approaching alert, hazard-ahead warning, green-light-optimal-speed advisory (GLOSA). M1's NLOS occluded-vehicle warning matches the first example directly. <em>(Round-2 note: the blueprint submission should also raise flag F13 — how the IVI GUI surface is displayed/streamed to judges.)</em></li>
+</ul>
+<h2 id="open-items">Open items<a class="headerlink" href="#open-items" title="Link to this section">¶</a></h2>
+<ul>
+<li>Draft and send blueprint + use-case description to FPT-Mentor; receive the transport confirmation (adapter swap only).</li>
+<li>Confirm GNSS feed interface availability with the CabinSky team before any provider depends on it; if unconfirmed, FPT-Mentor's fallback is to guide the concrete interface directly as part of the starter pack.</li>
+<li>Confirm platform naming (Carsky vs CabinSky) and the AWS hosting assumption.</li>
+<li>R1-freeze ratification of the codec-only UPER route (supersession chain in <a href="requirements-deprecated-requirement-analysis-m1-phase1-control-data-plane.html">control/data-plane §2/§7</a>).</li>
+<li>R1–R18 re-check against this cloud environment <strong>applied 2026-07-08</strong> as inline <em>Env 2026-07-08</em> notes in <a data-missing="m1-cooperative-awareness.md">m1-cooperative-awareness.md</a> (R6 verdict split, R13/R16/R17 re-worded to the bench-node model, flag F9 added) — user review/acceptance pending. <em>(Round 2, same date: F9 closed; R16 revised, R19/R20 added, flags F10–F13/SC-1 raised — see report §4.)</em></li>
+<li>Confirm the IVI GUI surface-delivery mechanism with FPT-Mentor (flag F13) and run the week-4 render spike on the actual vECU (<a data-missing="m1-cooperative-awareness.md">report §3(i)</a>).</li>
+</ul>
+<h2 id="sources">Sources<a class="headerlink" href="#sources" title="Link to this section">¶</a></h2>
+<ul>
+<li>FPT-Mentor mentor Q&amp;A on the working environment (Vietnamese, 2026-07; re-confirmed 2026-07-08 with example use cases and the GNSS-interface caveat) — primary source, ingested verbatim.</li>
+<li><a href="https://www.vanetza.org/">Vanetza — open-source ETSI C-ITS protocol stack</a> and <a href="https://www.vanetza.org/how-to-build/">how to build</a></li>
+<li><a href="https://www.vanetza.org/tools/socktap/">Vanetza socktap tool (UDP link layer)</a> and <a href="https://github.com/riebl/vanetza/issues/67">socktap over UDP — riebl/vanetza issue #67</a></li>
+<li><a href="https://github.com/riebl/vanetza/issues/194">Adding CPM of ETSI TS 103 324 v2.1.1 — riebl/vanetza issue #194</a></li>
+<li><a href="https://www.etsi.org/deliver/etsi_ts/103300_103399/103324/02.01.01_60/ts_103324v020101p.pdf">ETSI TS 103 324 V2.1.1 — Collective Perception Service</a> and <a href="https://forge.etsi.org/rep/ITS/asn1/cpm_ts103324">official ASN.1 modules — ETSI Forge</a></li>
+<li><a href="https://github.com/eerimoq/asn1tools">asn1tools — Python ASN.1 toolkit (UPER codec)</a></li>
+<li><a href="https://github.com/vlm/asn1c">asn1c — open-source ASN.1 compiler</a></li>
+<li><a href="https://gpsd.gitlab.io/gpsd/">gpsd project</a> and <a href="https://gpsd.gitlab.io/gpsd/gpsfake.html">gpsfake(1) — pty + NMEA replay</a></li>
+<li><a href="https://github.com/uulm-mrm/v2x_etsi_asn1">uulm-mrm/v2x_etsi_asn1 — UPER-encoded ETSI messages in Python</a></li>
+<li><a href="https://github.com/pycrate-org/pycrate">pycrate — ASN.1/UPER toolkit with ETSI ITS modules</a> (cross-check role: <a href="requirements-deprecated-requirement-analysis-m1-v2x-simulator-tools.html">m1-v2x-simulator-tools.md</a>)</li>
+</ul>
+      </article>
+    </main>
+  </div>
+  <script src="../js/site-data.js"></script>
+  <script src="../js/theme.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/doc-page.js"></script>
+</body>
+</html>

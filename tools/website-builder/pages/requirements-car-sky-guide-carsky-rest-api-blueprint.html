@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en" data-theme="sketch">
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="kis-build-pages">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CarSky Blueprint via REST API (scripted alternative to the UI) — KIS</title>
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/doc.css">
+  <link rel="stylesheet" href="../css/themes.css">
+</head>
+<body class="DocBody" data-root=".." data-doc-node="plans" data-doc-title="CarSky Blueprint via REST API (scripted alternative to the UI)" data-doc-source="requirements/car-sky-guide/carsky-rest-api-blueprint.md">
+  <div class="DocLayout">
+    <aside class="DocLayout__aside" id="doc-toc"></aside>
+    <main class="Page DocPage">
+      <header class="PageHeader" id="doc-header"></header>
+      <article class="Markdown" id="doc-body">
+<h1 id="carsky-blueprint-via-rest-api-scripted-alternative-to-the-ui">CarSky Blueprint via REST API (scripted alternative to the UI)<a class="headerlink" href="#carsky-blueprint-via-rest-api-scripted-alternative-to-the-ui" title="Link to this section">¶</a></h1>
+<p>Companion to <a href="requirements-car-sky-guide-carsky-4-node-blueprint.html">carsky-4-node-blueprint.md</a>. That guide builds the blueprint by hand on the Nydus canvas; this one drives the REST API for the parts that can be scripted.</p>
+<p>The platform's own reference is <a href="../../../requirements/development-platform-doc/Car-Sky-Platform.html">Car-Sky-Platform.html</a>'s "API &amp; MCP Tools" module (§4–§10) — the full endpoint catalog, MCP tool set, and credential flow. <strong>This doc takes precedence for <code>hackathon-2.carsky.io</code></strong>: some routes it or the OpenAPI spec declare don't work here — e.g. the granular pin routes <code>/api/v1/blueprints/nodes/:nodeId/pins</code> and <code>/api/v1/nodes/{nodeId}/pins</code> both 404; use <code>/batch</code> instead (below).</p>
+<h2 id="key-finding-what-rest-can-and-cannot-do">Key finding: what REST can and cannot do<a class="headerlink" href="#key-finding-what-rest-can-and-cannot-do" title="Link to this section">¶</a></h2>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Task</th>
+<th>REST API</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Create blueprint</td>
+<td>✅ <code>POST /api/v1/blueprints</code></td>
+<td><code>{name, description}</code></td>
+</tr>
+<tr>
+<td>Add nodes (any type + config)</td>
+<td>✅ <code>POST /api/v1/blueprints/{id}/batch</code> <code>addNode</code></td>
+<td><code>container</code>, <code>skycraft</code>, <code>eth-bridge</code>, etc.</td>
+</tr>
+<tr>
+<td>Add CAN/LIN/KUKSA/GPIO/VHAL/VIDEO/GENERIC pins</td>
+<td>✅ <code>addPin</code></td>
+<td>enum-restricted (below)</td>
+</tr>
+<tr>
+<td><strong>Add <code>ETHERNET</code> pins</strong></td>
+<td>❌ rejected</td>
+<td><code>pinType</code> enum is <code>VHAL, KUKSA, CAN, LIN, VIDEO, GPIO, GENERIC</code> — no <code>ETHERNET</code>. Returns 400 <code>"Invalid option: expected one of \"VHAL\"\|\"KUKSA\"\|\"CAN\"\|\"LIN\"\|\"VIDEO\"\|\"GPIO\"\|\"GENERIC\""</code>.</td>
+</tr>
+<tr>
+<td><strong>Wire the Ethernet Bridge</strong></td>
+<td>❌ blocked</td>
+<td>edges need the ethernet pins that REST can't create</td>
+</tr>
+<tr>
+<td>Validate</td>
+<td>✅ <code>POST /api/v1/blueprints/{id}/validate</code></td>
+<td>fails until every node has ≥1 pin</td>
+</tr>
+<tr>
+<td><strong>Import blueprint JSON</strong> (<code>POST /api/v1/blueprints/import</code> and Nydus UI <strong>Import from File</strong>)</td>
+<td>⚠️ nodes only</td>
+<td>Same <code>ETHERNET</code> limitation as <code>addPin</code> — <code>ethernet</code> pins in the imported file are silently dropped during node creation. An imported JSON must carry its nodes with full <code>config</code> and empty <code>pins</code>/<code>edges</code>; add and wire <code>ethernet</code> pins manually in the UI after import.</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Consequence:</strong> the R6 Ethernet Bridge network cannot be built over REST or via JSON import — the UI creates <code>ETHERNET</code> pins through its Zero-sync path, which the public REST/OpenAPI schema doesn't expose. Add and wire them manually in Nydus (<a href="requirements-car-sky-guide-carsky-4-node-blueprint.html">carsky-4-node-blueprint.md §4 step 5</a>); <code>validate</code> returns 422 <code>Node "…" has no pins</code> until they exist.</p>
+<ul>
+<li><strong>Scriptable (REST):</strong> blueprint + all nodes with full config (image, env, command) — done once, reproducibly.</li>
+<li><strong>Manual (UI):</strong> the <code>ethernet</code> pins and edges only.</li>
+</ul>
+<h2 id="authentication">Authentication<a class="headerlink" href="#authentication" title="Link to this section">¶</a></h2>
+<ul>
+<li>The REST API requires an API key credential on every request.</li>
+<li>Send it as <code>Authorization: Bearer &lt;API_KEY&gt;</code> or <code>X-API-Key: &lt;API_KEY&gt;</code> — both are accepted.</li>
+<li>The key format is <code>a8k_&lt;prefix&gt;_&lt;secret&gt;</code>. It is a machine-to-machine (m2m) API key, minted in the UI (<strong>Settings → Credentials → New credential</strong>) and displayed only at the moment of creation.</li>
+<li>The Credentials <strong>list view</strong> shows a display ID styled <code>m2m-&lt;uuid&gt;-&lt;credential-name&gt;</code>. This ID is not the secret — using it as a credential is rejected with <code>{"error":"UNAUTHORIZED","message":"Unrecognized credential format"}</code>. Full explanation: <a href="claude-skills-carsky-credential-verify-skill.html">carsky-credential-verify</a>.</li>
+<li>A CarSky account's email and password is a separate credential (Keycloak login), not the API key.</li>
+<li>When no API key exists yet, a Keycloak login session can bootstrap one without using the UI. Step-by-step procedure: <a href="claude-skills-carsky-login-skill.html">carsky-login</a>.</li>
+</ul>
+<pre><code>export CS=https://hackathon-2.carsky.io
+export KEY=&lt;your_api_key&gt;
+curl -H &quot;Authorization: Bearer $KEY&quot; $CS/api/v1/blueprints         # list
+</code></pre>
+<h2 id="node-config-is-flat-not-wrapped">Node config is flat, not wrapped<a class="headerlink" href="#node-config-is-flat-not-wrapped" title="Link to this section">¶</a></h2>
+<p>The platform doc's Container Node example shows <code>{"container": {"image": …}}</code>, but the <strong>stored</strong> node config is flat — <code>image</code>, <code>command</code>, <code>env</code> sit directly in <code>config</code>:</p>
+<pre><code class="language-json">{&quot;op&quot;:&quot;addNode&quot;,&quot;data&quot;:{
+  &quot;label&quot;:&quot;V2X ECU&quot;,&quot;nodeType&quot;:&quot;container&quot;,
+  &quot;config&quot;:{&quot;image&quot;:&quot;registry.hackathon-2.carsky.io/m1-v2x-ecu:latest&quot;,&quot;command&quot;:[&quot;./v2x_ecu&quot;],
+            &quot;env&quot;:{&quot;LISTEN_PORT&quot;:&quot;47100&quot;,&quot;ADA_ECU_HOST&quot;:&quot;10.99.0.12&quot;,&quot;ADA_ECU_PORT&quot;:&quot;47200&quot;}},
+  &quot;positionX&quot;:-450,&quot;positionY&quot;:-40}}
+</code></pre>
+<p>Node types seen in real blueprints: <code>container</code>, <code>skycraft</code>, <code>eth-bridge</code>, <code>script-node</code>, <code>can-bus</code>, <code>lin-bus</code>, <code>kuksa-databroker</code>, <code>gpio-panel</code>.</p>
+<h2 id="deploy-test-a-room">Deploy &amp; test a Room<a class="headerlink" href="#deploy-test-a-room" title="Link to this section">¶</a></h2>
+<p>Once the blueprint's nodes exist (REST) and its <code>ethernet</code> pins are wired (manual UI step above), deploy and manage the Room with the calls below:</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Endpoint</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Deploy</td>
+<td><code>POST /api/v1/deployments</code> <code>{blueprintId, roomId, name}</code></td>
+<td><code>roomId</code> is the target device's id (§2 Device vs Node in <a href="requirements-car-sky-guide-carsky-4-node-blueprint.html">carsky-4-node-blueprint.md</a> — the K8s resource pool, not an ECU)</td>
+</tr>
+<tr>
+<td>Poll status</td>
+<td><code>GET /api/v1/deployments/{roomId}/status</code> (or <code>.../nodes/watch</code> for SSE)</td>
+<td>Poll until every node reports <code>Running</code> — this is R5's acceptance check</td>
+</tr>
+<tr>
+<td>List nodes</td>
+<td><code>GET /api/v1/deployments/{roomId}/nodes</code></td>
+<td>Resolves each node's <code>nodeKey</code> for the calls below</td>
+</tr>
+<tr>
+<td>Screenshot (IVI)</td>
+<td><code>GET /api/v1/vms/{roomId}/{nodeKey}/screenshot</code></td>
+<td>❌ 502, unavailable on this deployment</td>
+</tr>
+<tr>
+<td>UI tree / find text</td>
+<td><code>GET /api/v1/vms/{roomId}/{nodeKey}/accessibility</code></td>
+<td>❌ 502, unavailable on this deployment</td>
+</tr>
+<tr>
+<td>ADB shell</td>
+<td><code>POST /api/v1/vms/{roomId}/{nodeKey}/shell</code> <code>{command}</code></td>
+<td>❌ 502, unavailable on this deployment. Request/response shape per the OpenAPI spec: <code>{command}</code> in, <code>{ok, exitCode, stdout}</code> out</td>
+</tr>
+<tr>
+<td>Read/write signals</td>
+<td><code>POST /api/v1/signals/{roomId}/{nodeKey}/values</code> / <code>.../actuate</code></td>
+<td>For nodes with CAN/LIN/GPIO/KUKSA pins — not used by the four M1 ECU/bench nodes (they only carry <code>ethernet</code>)</td>
+</tr>
+<tr>
+<td>Logs</td>
+<td><code>GET /api/v1/deployments/{roomId}/logs/{nodeKey}?container=user\|sidecar</code> (<code>.../search</code> for historical)</td>
+<td><strong><code>container</code> is mandatory</strong> — every Room pod runs <code>user</code> (team image) + <code>sidecar</code> (Nydus shim); omitting it returns 500 whose message lists the two. Failure text is itself diagnostic (e.g. <code>waiting to start: trying and failing to pull image</code>). Procedure: <a href="claude-skills-carsky-room-diagnostics-skill.html">carsky-room-diagnostics</a></td>
+</tr>
+<tr>
+<td>Node phases</td>
+<td><code>GET /api/v1/deployments/{roomId}/nodes</code></td>
+<td><code>{displayName, name, nodeType, phase, message}</code> per node — <code>name</code> is the <code>nodeKey</code> the logs/screenshot/shell routes need</td>
+</tr>
+<tr>
+<td>~~List deployments~~</td>
+<td>~~<code>GET /api/v1/deployments</code>~~</td>
+<td>❌ 404 <code>Route not found</code>. Deploying also creates a snapshot blueprint <code>&lt;name&gt;-deploy</code>; edit the original and redeploy</td>
+</tr>
+<tr>
+<td>Find deployment</td>
+<td><code>GET /api/v1/deployments/find?device=&lt;name\|id&gt;</code> or <code>?blueprint=&lt;name&gt;</code></td>
+<td>✅ resolves the active deployment without the dead list route. <code>blueprint</code> matches by <strong>name, not id</strong>, and only the exact deployed name; <code>[]</code> is not proof nothing is deployed — cross-check via the device list below</td>
+</tr>
+<tr>
+<td>List devices (Rooms)</td>
+<td><code>GET /api/v1/devices?limit=…</code></td>
+<td>✅ <code>{id, name, ownerId, operational}</code> per device; <code>id</code> is the <code>roomId</code>, <code>operational: BUSY</code> marks an active deployment. Filter by your <code>ownerId</code> (embedded in the m2m key's display ID) to find your Room</td>
+</tr>
+<tr>
+<td>Pod containers</td>
+<td><code>GET /api/v1/deployments/{roomId}/pods</code></td>
+<td>✅ per-pod <code>phase</code> and per-container <code>{name, state, ready}</code>; shows at a glance whether <code>sidecar</code> runs while <code>user</code> waits (the image-pull-failure signature)</td>
+</tr>
+<tr>
+<td>Restart</td>
+<td><code>POST /api/v1/deployments/{roomId}/restart</code> and <code>.../restart/{node}</code></td>
+<td>⚠️ returns 500 <code>INTERNAL_ERROR</code> even though pods do get recreated — treat as unreliable, prefer teardown + redeploy</td>
+</tr>
+<tr>
+<td>Container exec</td>
+<td><code>POST /api/v1/deployments/{roomId}/container-exec/{nodeKey}</code> <code>{command}</code></td>
+<td>❌ 502, unavailable on this deployment</td>
+</tr>
+<tr>
+<td>Teardown</td>
+<td><code>DELETE /api/v1/deployments/{roomId}</code></td>
+<td>Stops the Room; the blueprint itself is untouched and redeployable</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>None of the ❌ routes above are needed for M1</strong> — deploy status, node phases, and container logs cover every M1 verification, including the netcheck hop-3 check (<a href="requirements-car-sky-guide-deploy-walkthrough-netcheck.html">deploy-walkthrough-netcheck.md</a>).</p>
+<p>An MCP server also wraps this same REST API into named tools (<code>deploy</code>, <code>screenshot</code>, <code>tap</code>, <code>get_signal_values</code>, <code>pod_logs</code>, etc. — see the platform doc's §6–§7 for the full 42-tool catalog). It requires running CarSky's own <code>mcp/</code> server package (<code>node mcp/dist/index.js</code>) against this API, which is not part of this repo — not used for M1; stick to the REST calls above unless that package becomes available.</p>
+<h2 id="api-reference-blueprint-group">API reference (blueprint group)<a class="headerlink" href="#api-reference-blueprint-group" title="Link to this section">¶</a></h2>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GET</td>
+<td><code>/api/v1/blueprints</code></td>
+<td>list (paginate, <code>?name=</code> filter)</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/v1/blueprints</code></td>
+<td>create empty</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/v1/blueprints/{id}</code></td>
+<td>full topology (nodes, pins, edges)</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/v1/blueprints/{id}/batch</code></td>
+<td>add nodes/pins/edges (atomic)</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/v1/blueprints/{id}/validate</code></td>
+<td>check topology</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/v1/blueprints/{id}/clone</code></td>
+<td>duplicate (used for trial variants — <a href="requirements-car-sky-guide-carsky-4-node-blueprint.html#7-multiple-blueprints-trial-variants">§7</a>)</td>
+</tr>
+<tr>
+<td>GET</td>
+<td><code>/api/v1/blueprints/{id}/export</code></td>
+<td>export JSON</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/v1/blueprints/import</code></td>
+<td>import exported JSON (same <code>ETHERNET</code> limitation)</td>
+</tr>
+<tr>
+<td>POST</td>
+<td><code>/api/v1/nodes/{nodeId}/pins</code></td>
+<td>❌ declared in the spec but not live — 404 <code>Route not found</code> even with a valid <code>pinType</code>. Use <code>/batch</code>'s <code>addPin</code> op (with <code>nodeId</code> targeting an existing node) instead — the only working pin-creation path.</td>
+</tr>
+<tr>
+<td>PATCH/DELETE</td>
+<td><code>/api/v1/nodes/{nodeId}</code> · <code>/api/v1/pins/{pinId}</code> · <code>/api/v1/edges/{edgeId}</code></td>
+<td>❌ declared but not live — same 404. <strong>No working delete/remove op exists in this API</strong> — <code>/batch</code>'s <code>operations</code> enum is only <code>addNode</code>|<code>addPin</code>|<code>addEdge</code>. Remove a pin/node by hand in the Nydus UI.</td>
+</tr>
+</tbody>
+</table></div>
+<p>Full spec: <code>GET /api/v1/openapi.json</code> (OpenAPI 3.1) or Swagger UI at <code>/api/v1/docs</code> — the granular node/pin/edge routes it lists are present but unreachable; use <code>/batch</code> instead.</p>
+      </article>
+    </main>
+  </div>
+  <script src="../js/site-data.js"></script>
+  <script src="../js/theme.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/doc-page.js"></script>
+</body>
+</html>

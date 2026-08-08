@@ -1,0 +1,751 @@
+<!doctype html>
+<html lang="en" data-theme="sketch">
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="kis-build-pages">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IVI ECU — high-level design — KIS</title>
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/doc.css">
+  <link rel="stylesheet" href="../css/themes.css">
+</head>
+<body class="DocBody" data-root=".." data-doc-node="module-design" data-doc-title="IVI ECU — high-level design" data-doc-source="documents/Design/IVI-ECU/ivi-ecu-hld.md">
+  <div class="DocLayout">
+    <aside class="DocLayout__aside" id="doc-toc"></aside>
+    <main class="Page DocPage">
+      <header class="PageHeader" id="doc-header"></header>
+      <article class="Markdown" id="doc-body">
+<h1 id="ivi-ecu-high-level-design">IVI ECU — high-level design<a class="headerlink" href="#ivi-ecu-high-level-design" title="Link to this section">¶</a></h1>
+<blockquote>
+<p><strong>The IVI node's HLD, and the sole design authority for <code>IVI_ECU/</code>.</strong> Every component this node runs, its role, input and output, where it lives, and how the components connect. Decision record: <a href="documents-design-ivi-ecu-ivi-ecu-design-decisions.html">ivi-ecu-design-decisions.md</a> (D1–D13). Frozen contract: <a href="../../../contracts/r4-ada-ivi.schema.json">r4-ada-ivi.schema.json</a>. Build, install and verify: <a href="requirements-car-sky-guide-deploy-ivi-hmi-walkthrough.html">deploy-ivi-hmi-walkthrough.md</a>. Node facts: <a href="requirements-car-sky-guide-node-ivi-ecu.html">node-ivi-ecu.md</a>.</p>
+<p>Diagrams: <a href="documents-design-ivi-ecu-ivi-ecu-module-architecture.svg">ivi-ecu-module-architecture.svg</a> (components) · <a href="../../../documents/Design/IVI-ECU/phase5-ivi-callflow.puml">phase5-ivi-callflow.puml</a> (sequence) · <a href="../../../documents/Design/IVI-ECU/phase5-ivi-components.puml">phase5-ivi-components.puml</a> (modules).</p>
+</blockquote>
+<p><strong>Author:</strong> Vũ Xuân Bách </p>
+<p><strong>Abridged version.</strong> A reader who does not need the full document can take the design deck instead: <a href="../../../presentation/phase5/phase5-design-ivi-ecu-deck.html">Phase 5 — IVI ECU Design</a> (<a href="../../../presentation/phase5/phase5-design-ivi-ecu-deck.html">HTML</a>). It presents this HLD; where the two differ, this document governs. The demo deck <a href="../../../presentation/phase5/phase5-ivi-deck.html">Phase 5 — IVI HMI &amp; 2D God View</a> shows the running result rather than the design.</p>
+<h2 id="1-scope-and-authority">1. Scope and authority<a class="headerlink" href="#1-scope-and-authority" title="Link to this section">¶</a></h2>
+<p><code>IVI_ECU/</code> only — the consumer side of R4 and everything downstream, up to the rendered God View and the log lines that evidence it.</p>
+<ul>
+<li><strong>In scope:</strong> this folder's five Gradle modules, their components and seams, the node's one network endpoint, and the test equipment that exercises the node alone.</li>
+<li><strong>Out of scope:</strong> how the R4 message is produced; the deploy/verify procedure, which the walkthrough owns; the task breakdown, which the plan owns; the ADA→IVI wire capture of R15 and R19, which is the ADA node's evidence.</li>
+</ul>
+<p><strong>This is the only design document governing this node.</strong> It fixes the component set and each component's responsibility, the module graph, every deliverable's path, the seams, the configuration keys, and the evidence log lines.</p>
+<ul>
+<li><strong>Task planning decomposes from this document plus the requirements report, and nothing else.</strong> Requirement numbers and acceptance come from <a href="requirements-m1-cooperative-awareness.html">m1-cooperative-awareness.md</a>; everything structural comes from here — which component a subtask creates, its path, the interface it satisfies, the log line or scene that closes it. Deploy and verify subtasks come from the walkthrough, per <a href="claude-rules-walkthrough-driven-delivery.html">walkthrough-driven-delivery.md</a>.</li>
+<li><strong>Plans cite; they do not restate.</strong> A brief links the section governing its step, so a change lands in one place.</li>
+<li><strong>Implementation does not extend this silently.</strong> A component, path or configuration key not designated here is not created ad hoc — the design changes first.</li>
+<li><strong>What overrides it:</strong> the requirements report, the frozen R4/R3 contracts, and the walkthrough for procedure. On conflict, the CLAUDE.md authority order decides.</li>
+</ul>
+<h2 id="2-required-reading-and-sourced-notes">2. Required reading and sourced notes<a class="headerlink" href="#2-required-reading-and-sourced-notes" title="Link to this section">¶</a></h2>
+<h3 id="requirement-documents">Requirement documents<a class="headerlink" href="#requirement-documents" title="Link to this section">¶</a></h3>
+<p><strong>Read in full before this design is written or changed.</strong> The requirements decide what the node must do; this document only decides how.</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Document</th>
+<th>What it fixes for this node</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="requirements-m1-cooperative-awareness.html">m1-cooperative-awareness.md</a> — <strong>the authority</strong></td>
+<td>R4, R16, R17 whole — definition, dependency, acceptance, tech stack. R5/R6: node type, bridge, port. R18/R19: what the run must evidence. §3(e)/(f): the stack. §4: the standing decisions, restated in D11</td>
+</tr>
+<tr>
+<td>Its figures — <a href="requirements-ivi-ecu.svg">ivi-ecu.svg</a> · <a href="requirements-ivi-god-view-scene.svg">ivi-god-view-scene.svg</a> · <a href="requirements-ivi-god-view-warning-screen.svg">ivi-god-view-warning-screen.svg</a></td>
+<td>The R16 layout; R17's visual language; and the annotated variant, which is explanatory and never rendered</td>
+</tr>
+<tr>
+<td><a href="../../../contracts/r4-ada-ivi.schema.json">r4-ada-ivi.schema.json</a> · <a href="../../../contracts/r3-tracked-object.schema.json">r3-tracked-object.schema.json</a></td>
+<td>The frozen input contract, field for field (§10)</td>
+</tr>
+<tr>
+<td><a href="requirements-m1-run-timing-and-event-triggering.html">m1-run-timing-and-event-triggering.md</a></td>
+<td>R20/R21 oblige this node with nothing: R4 carries no timestamp, so the warning timeout is a local countdown, and pacing belongs to the bench and the detector. R22 obliges it with two things: the app is listening on its R4 port before the first warning can arrive at <code>T0</code> + 8.0 s, and the Display Area holds Home until an active-risk warning raises it (D13). K7 is this node's observable (§12)</td>
+</tr>
+<tr>
+<td><a href="requirements-m1-video-source-and-ivi-dashcam.html">m1-video-source-and-ivi-dashcam.md</a></td>
+<td>A dashcam view is deferred (D11). If accepted, the clip arrives over HTTP from the ADA node or as a local copy — never through a <code>video</code> pin</td>
+</tr>
+<tr>
+<td><a href="requirements-car-sky-guide-node-ivi-ecu.html">node-ivi-ecu.md</a></td>
+<td>VM artifact, pin, address</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="research-notes">Research notes<a class="headerlink" href="#research-notes" title="Link to this section">¶</a></h3>
+<p>Non-authoritative scratch, except the walkthrough, which is authoritative for its procedure.</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Note</th>
+<th>Adopted here</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="documents-knowledgebase-udp-msg-parsing.html">UDP-msg-parsing.md</a></td>
+<td>Wire truth — no application header, de-framing is slicing (D3); the decode-failure table as <code>R4DecodeResult</code>; unknown-<code>warningType</code> preservation (D4); pure-JVM module placement (D1, D2)</td>
+</tr>
+<tr>
+<td><a href="documents-design-ivi-ecu-phase5-r4-simulator.html">phase5-r4-simulator.md</a></td>
+<td>The simulator's two run modes and scenario cases; payloads come from the frozen samples, never a literal (D9)</td>
+</tr>
+<tr>
+<td><a href="requirements-car-sky-guide-deploy-ivi-hmi-walkthrough.html">deploy-ivi-hmi-walkthrough.md</a></td>
+<td>The mini-blueprint target (§4.11) and the ADA-node env contract — <code>IVI_ECU_HOST</code> / <code>IVI_ECU_PORT</code> / <code>R4_SCENARIO</code> / <code>R4_RATE_HZ</code> / <code>START_DELAY_S</code> (§4.8) — that the simulator reads verbatim</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="3-the-component-architecture">3. The component architecture<a class="headerlink" href="#3-the-component-architecture" title="Link to this section">¶</a></h2>
+<p><img alt="IVI ECU component architecture" src="documents-design-ivi-ecu-ivi-ecu-module-architecture.svg" /></p>
+<p>Source: <a href="documents-design-ivi-ecu-ivi-ecu-module-architecture.svg">research_notes/ivi-ecu-module-architecture.svg</a>.</p>
+<p>A UML component diagram. Fill colour is the component's role; <code>«use»</code> dependencies are dashed with an open arrowhead; realization is dashed with a hollow triangle; a seam is a provided interface meeting a required one at an assembly connector. The two <code>«node»</code> rectangles are <strong>IVI-ECU</strong>, everything this node runs, and <strong>ADA-ECU</strong>, the producer it depends on; the CarSky observation surfaces sit outside both. Component names below are the short <code>package/File</code> form — §4 resolves each to its path.</p>
+<h3 id="mvc-separation">MVC separation<a class="headerlink" href="#mvc-separation" title="Link to this section">¶</a></h3>
+<p>Every component sits in exactly one layer, held there by the rule in the right-hand column.</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Where</th>
+<th>Rule that keeps it separate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Data</strong></td>
+<td><code>:contract</code> models and samples; <code>:app data/R4Repository</code></td>
+<td>The repository stores and routes; it never decides what a warning <em>means</em> and never formats</td>
+</tr>
+<tr>
+<td><strong>Business logic</strong></td>
+<td><code>:serializer</code>, <code>:observer</code>, <code>warning/WarningClassifier</code>, <code>ui/view/SceneCoordinateMapper</code></td>
+<td>All four are free of Android UI types, three of Android entirely, and every one is testable without a device</td>
+</tr>
+<tr>
+<td><strong>UI logic</strong></td>
+<td><code>ui/WarningViewModel</code>, <code>ui/MainViewModel</code>, <code>config/IviRuntimeConfig</code></td>
+<td>View-models hold no drawing code and no socket; they turn domain state into what the Display Area shows</td>
+</tr>
+<tr>
+<td><strong>UI</strong></td>
+<td><code>ui/screen/MainScreen</code>, <code>ui/view/CanvasWarningView</code> behind <code>IviWarningViewSeam</code></td>
+<td>The seam is the swap point for the optional 3D renderer; <code>MainScreen</code> sees only <code>WarningUiState</code></td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="4-folder-structure">4. Folder structure<a class="headerlink" href="#4-folder-structure" title="Link to this section">¶</a></h2>
+<p>Five Gradle modules under <code>IVI_ECU/</code>, all in package root <code>com.hackathon.v2x.ivi</code> — the Android module at <code>src/main/java/</code>, the four pure-JVM ones at <code>src/main/kotlin/</code>. <strong>The tree designates the path of every component this document names</strong>; each module's build script, tests and resources follow the standard Gradle layout inside it.</p>
+<pre><code>IVI_ECU/
+├── settings.gradle.kts             includes :contract, :serializer, :observer, :app, :r4-simulator
+├── gradle/libs.versions.toml       the version catalog for all five modules (D8)
+├── contracts/                      byte-synced R4 and R3 schema copies
+│
+├── contract/                       :contract — the Data Model, pure JVM
+│   └── src/main/kotlin/…/model/
+│       ├── R4Message.kt            the R4 message set and R4Json
+│       ├── R3Snapshot.kt           the carried snapshot, with its `source` field
+│       ├── SceneGeometry.kt        SceneGeometry and VehiclePosition
+│       └── R4Contract.kt           known schema version, sample paths, registry keys
+│
+├── serializer/                     :serializer — the parser, pure JVM
+│   └── src/main/kotlin/…/serializer/
+│       ├── R4Decoder.kt            the decode seam and R4DecodeResult
+│       ├── R4Deserializer.kt       slice → BOM/UTF-8 → R4Json; never throws
+│       └── PayloadPreview.kt       the bounded preview the [DROP] line carries
+│
+├── observer/                       :observer — the receive path, pure JVM
+│   └── src/main/kotlin/…/observer/
+│       ├── R4DatagramSource.kt     the source seam
+│       ├── JdkDatagramSource.kt    the only socket holder
+│       ├── R4SocketObserver.kt     the receive loop, truncation check, back-off, bounded flow
+│       ├── R4Event.kt              R4Event and R4LinkState
+│       ├── R4ObserverConfig.kt     port, buffer, capacity, back-off bounds
+│       └── R4Logger.kt             the logging seam AndroidR4Logger fills
+│
+├── app/                            :app — the front end, the only Android module
+│   └── src/
+│       ├── main/AndroidManifest.xml    activity, service, automotive feature, permissions
+│       ├── main/java/…/
+│       │   ├── IviApplication.kt       the object graph and application scope
+│       │   ├── MainActivity.kt         the Compose host and process entry
+│       │   ├── di/IviGraph.kt          the composition root (D7)
+│       │   ├── config/IviRuntimeConfig.kt   the one configuration merge point (D10)
+│       │   ├── service/                R4ListenerService.kt, AndroidR4Logger.kt
+│       │   ├── data/R4Repository.kt    the event raiser and injection target
+│       │   ├── warning/WarningClassifier.kt   warningType → presentation
+│       │   ├── ui/                     WarningUiState.kt, WarningViewModel.kt, MainViewModel.kt, DisplayMode.kt
+│       │   ├── ui/screen/MainScreen.kt the R16 layout
+│       │   └── ui/view/                IviWarningViewSeam.kt, CanvasWarningView.kt (with the provenance guard),
+│       │                               SceneCoordinateMapper.kt, WarningBannerOverlay.kt
+│       └── debug/java/…/debug/DevInjectorReceiver.kt   debug source set only
+│
+├── r4-simulator/                   :r4-simulator — test equipment; builds m1-r4-sim:latest
+│   ├── Dockerfile · entrypoint.sh  the image the mini-blueprint's ADA node pulls
+│   ├── scenarios/*.json            scenario data (D9)
+│   └── src/main/kotlin/…/sim/      scenario load, message build, validation, UDP send
+│
+└── doc/                            this document, the decision record, the diagrams, research_notes/
+</code></pre>
+<p>Each module carries its own <code>src/test/</code> mirroring its main package.</p>
+<h2 id="5-platform-and-boundary">5. Platform and boundary<a class="headerlink" href="#5-platform-and-boundary" title="Link to this section">¶</a></h2>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Role</th>
+<th>Input</th>
+<th>Output</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>AAOS</strong></td>
+<td>the platform the app runs on: the Skycraft node's guest</td>
+<td>the APK over ADB; touch and key events</td>
+<td>datagram sockets, the Compose display surface, the logcat buffer</td>
+</tr>
+<tr>
+<td><code>«interface»</code> <strong>ADA-ECU</strong></td>
+<td>the producer's side of R4 — a dependency on the interface, never on a producer</td>
+<td>the scene composed by whatever realizes it</td>
+<td>one R4 JSON datagram per event, to <code>10.99.0.13:47300</code></td>
+</tr>
+<tr>
+<td><strong>Screen widget</strong> — CarSky</td>
+<td>the visual observation surface, part of neither ECU</td>
+<td>the guest's display output</td>
+<td>a recording or screenshot of the God View</td>
+</tr>
+<tr>
+<td><strong>Guest logcat</strong> — CarSky</td>
+<td>the text observation surface</td>
+<td>the <code>IVI_V2X</code> tag</td>
+<td><code>adb logcat -s IVI_V2X</code>, or the Devices panel's Log widget</td>
+</tr>
+</tbody>
+</table></div>
+<p>The ADA ECU is a Container node at <code>10.99.0.12</code>. Two components realize <code>ADA-ECU</code> there — the <code>r4-simulator</code> while the IVI is exercised alone, the real ADA image otherwise. Nothing on this side changes with the swap.</p>
+<h2 id="6-internal-components">6. Internal components<a class="headerlink" href="#6-internal-components" title="Link to this section">¶</a></h2>
+<p>Each row is one component's single responsibility. A component does what its row says and no more; work fitting no row belongs to a component this document has not defined.</p>
+<h3 id="business-logic">Business logic<a class="headerlink" href="#business-logic" title="Link to this section">¶</a></h3>
+<p>Plain-JVM, free of Android types, so the receive path runs without a device.</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Role</th>
+<th>Input</th>
+<th>Output</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>observer/JdkDatagramSource</code></td>
+<td>the only socket holder; binds <code>0.0.0.0:47300</code>, never the node address, and resets packet length before every receive</td>
+<td>UDP datagrams</td>
+<td><code>Received(buffer, offset, length)</code> through <code>R4DatagramSource</code></td>
+</tr>
+<tr>
+<td><code>observer/R4SocketObserver</code></td>
+<td>the receive loop: truncation check, rebind back-off, and a bounded <code>DROP_OLDEST</code> flow so a slow collector cannot stall the socket</td>
+<td><code>Received</code>, the decoder's result</td>
+<td><code>R4Event.Message</code> / <code>.Dropped</code>, <code>R4LinkState</code>, the <code>[LINK]</code> <code>[RX]</code> <code>[DROP]</code> lines</td>
+</tr>
+<tr>
+<td><code>serializer/R4Deserializer</code></td>
+<td>the parser: slice → BOM/UTF-8 → <code>R4Json</code>. Returns a result rather than throwing, so one bad datagram cannot stop the next</td>
+<td><code>buffer, offset, length</code></td>
+<td><code>R4DecodeResult.Decoded</code> (with <code>schemaVersionAhead</code>) or <code>.Failed(reason, detail, preview)</code></td>
+</tr>
+<tr>
+<td><code>warning/WarningClassifier</code></td>
+<td>maps <code>warningType</code> to a presentation; an unrecognised value maps to the generic one and is never rewritten</td>
+<td><code>R4WarningEvent</code></td>
+<td>the presentation the Warning View renders</td>
+</tr>
+</tbody>
+</table></div>
+<p>Graceful degradation is split across the last two on purpose: the parser preserves the wire value and flags a newer schema version; the classifier decides what an unrecognised value looks like. Neither treats it as an error.</p>
+<h3 id="data-model">Data Model<a class="headerlink" href="#data-model" title="Link to this section">¶</a></h3>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Role</th>
+<th>Input</th>
+<th>Output</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>model/</code> — <code>R4Message</code>, <code>R3Snapshot</code>, <code>SceneGeometry</code>, <code>VehiclePosition</code>, <code>R4Json</code></td>
+<td>the typed binding of the R4 message set and its R3 snapshot, including <code>source</code> and the nullable <code>vehicleC</code></td>
+<td>decoded JSON</td>
+<td><code>R4WarningEvent</code> / <code>R4StateMessage</code>, and the <code>SceneGeometry</code> the renderer draws</td>
+</tr>
+<tr>
+<td><code>data/R4Repository</code></td>
+<td>the event raiser: routes received events into app state, and is the dev injector's single target</td>
+<td><code>R4Event</code>, injected samples</td>
+<td>last warning, last <code>state</code> (last-value-wins by <code>seq</code>), link state</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="ui-logic">UI logic<a class="headerlink" href="#ui-logic" title="Link to this section">¶</a></h3>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Role</th>
+<th>Input</th>
+<th>Output</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ui/WarningViewModel</code></td>
+<td>the warning lifecycle Idle ↔ Active: an active-risk warning raises it, a <code>low</code> updates the scene without moving it, and <code>WARNING_TIMEOUT_MS</code> of R4 silence returns it to Idle (D13)</td>
+<td>the presentation and its scene</td>
+<td><code>WarningUiState</code></td>
+</tr>
+<tr>
+<td><code>ui/MainViewModel</code> + <code>ui/DisplayMode</code></td>
+<td>which view the Display Area shows — Warning / Home / Apps / Settings — and whether a message (<code>cause=warning</code>), a tap (<code>cause=user</code>) or the countdown (<code>cause=timeout</code>) changed it</td>
+<td>mode requests, warning state</td>
+<td><code>currentMode</code>, the <code>[UI]</code> line</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="ui-front-end">UI / front-end<a class="headerlink" href="#ui-front-end" title="Link to this section">¶</a></h3>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Role</th>
+<th>Input</th>
+<th>Output</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ui/screen/MainScreen</code></td>
+<td>the R16 layout as <a href="requirements-ivi-ecu.svg">ivi-ecu.svg</a> fixes it: central Display Area, Home / Apps / Settings areas, mode labels, bottom status bar; hosts the Warning View slot</td>
+<td><code>DisplayMode</code>, <code>WarningUiState</code>, <code>R4LinkState</code></td>
+<td>the composed screen</td>
+</tr>
+<tr>
+<td><code>ui/view/IviWarningViewSeam</code></td>
+<td>the R17 render seam, <code>Render(scene, riskState)</code> — what lets an optional 3D renderer swap in with no consumer change</td>
+<td>—</td>
+<td>the interface both renderers realize</td>
+</tr>
+<tr>
+<td><code>ui/view/CanvasWarningView</code></td>
+<td>the God View as R17 fixes it: dark canvas, a lane-marked road converging toward the top, three car silhouettes in one lane with ego nearest. Ego and B solid; ghost C dashed and translucent on a pulsing ground glow coloured by risk; a <code>null</code> <code>vehicleC</code> drawn without C. <strong>The scene alone is the warning</strong> — no legend, no distance labels, no text overlay, no banner. The <code>[V2X]</code> badge and distance callouts belong to R17's annotated figure, not here</td>
+<td><code>SceneGeometry</code>, <code>riskState</code></td>
+<td>Compose Canvas draw calls</td>
+</tr>
+<tr>
+<td><code>ui/view/SceneCoordinateMapper</code></td>
+<td>scene metres → canvas coordinates. R17's camera is inclined, not overhead, so this is an oblique projection: depth compresses toward the top and each vehicle shows a shallow rear face. Pure math, no Android types</td>
+<td><code>SceneGeometry</code>, the base scale</td>
+<td>screen-space geometry</td>
+</tr>
+<tr>
+<td>the <strong>provenance guard</strong> inside <code>CanvasWarningView</code></td>
+<td>draws ghost C only when its snapshot <code>source</code> is <code>v2x_relayed</code>; any other value draws the yellow <code>[? UNKNOWN SOURCE]</code> marker and logs at ERROR. The mechanical form of the R19 claim</td>
+<td><code>SceneGeometry.vehicleCSnapshot</code></td>
+<td>ghost C, or the marker and an ERROR line</td>
+</tr>
+<tr>
+<td><code>ui/view/WarningBannerOverlay</code></td>
+<td>the risk banner, mounted nowhere (D11) so the canvas renders unobstructed</td>
+<td><code>riskState</code></td>
+<td>a banner, unmounted</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="host-and-lifecycle">Host and lifecycle<a class="headerlink" href="#host-and-lifecycle" title="Link to this section">¶</a></h3>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Role</th>
+<th>Input</th>
+<th>Output</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>MainActivity</code> + <code>IviApplication</code> + <code>di/IviGraph</code></td>
+<td>process entry and composition root: one launcher activity, one object graph, one application scope</td>
+<td>the launch <code>Intent</code>, <code>BuildConfig</code> defaults</td>
+<td>the running screen, everything above wired together</td>
+</tr>
+<tr>
+<td><code>service/R4ListenerService</code></td>
+<td>the foreground host keeping the receive loop alive while the Display Area shows something else</td>
+<td>start / stop</td>
+<td>the observer's lifetime and foreground priority</td>
+</tr>
+<tr>
+<td><code>service/AndroidR4Logger</code></td>
+<td>the only bridge from the plain-JVM components to <code>android.util.Log</code>, on the tag <code>IVI_V2X</code>; realizes <code>R4Logger</code></td>
+<td>log calls from every layer</td>
+<td>one <code>key=value</code> line per event: <code>[LINK]</code>, <code>[RX]</code>, <code>[DROP]</code>, <code>[UI]</code></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="configuration-and-descriptors">Configuration and descriptors<a class="headerlink" href="#configuration-and-descriptors" title="Link to this section">¶</a></h3>
+<p>Files rather than components.</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Artifact</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>app/src/main/AndroidManifest.xml</code></td>
+<td>the launcher activity, the listener service, the <code>automotive</code> feature, the permissions</td>
+</tr>
+<tr>
+<td><code>IVI_ECU/contracts/*.schema.json</code></td>
+<td>the byte-synced R4 and R3 schemas the model binds against</td>
+</tr>
+<tr>
+<td><code>BuildConfig</code> / <code>config/IviRuntimeConfig</code></td>
+<td>the node's tunables and their merge point; keys and defaults in D10</td>
+</tr>
+<tr>
+<td><code>r4-simulator/scenarios/*.json</code></td>
+<td>scenario data; a new case is a new file, never a new code branch</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="7-external-related-components">7. External related components<a class="headerlink" href="#7-external-related-components" title="Link to this section">¶</a></h2>
+<p>Outside the node boundary: the <code>ADA-ECU</code> interface and the two observation surfaces of §5, plus the test equipment below.</p>
+<h3 id="test-equipment">Test equipment<a class="headerlink" href="#test-equipment" title="Link to this section">¶</a></h3>
+<p>Scaffolding for exercising the IVI alone. No production component depends on it, and neither piece reaches a release build — the injector is excluded by source set, the simulator is a node away.</p>
+<ul>
+<li><strong>The simulator is a container image.</strong> <code>r4-simulator/</code> builds <code>m1-r4-sim:latest</code>; CI pushes it to the CarSky Zot registry and the mini-blueprint's ADA node pulls that tag, the route every other node image takes (<a href="requirements-car-sky-guide-deploy-ivi-hmi-walkthrough.html#411-the-mini-blueprint-route">walkthrough §4.11</a>, <a href="requirements-car-sky-guide-zot-registry-api-key.html">zot-registry-api-key.md</a>). It is the only place Zot enters IVI work; the APK never touches the registry.</li>
+<li><strong>The injector is not.</strong> <code>DevInjectorReceiver</code> is a <code>BroadcastReceiver</code> in the debug source set — no image, no registry, no node. Hence the diagram places it inside the IVI-ECU boundary and the simulator inside ADA-ECU.</li>
+</ul>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Role</th>
+<th>Input</th>
+<th>Output</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>r4-simulator/</code> → <code>m1-r4-sim:latest</code></td>
+<td>realizes <code>ADA-ECU</code>; runs on the ADA node in place of the real image</td>
+<td>a scenario file and the frozen samples</td>
+<td>R4 datagrams at <code>R4_RATE_HZ</code> to <code>10.99.0.13:47300</code>, <code>[TX]</code> lines in the node log</td>
+</tr>
+<tr>
+<td><code>debug/DevInjectorReceiver</code></td>
+<td>exercises the whole UI path with no network</td>
+<td><code>am broadcast -a com.hackathon.v2x.ivi.DEV_INJECT --es sample …</code></td>
+<td>one sample message onto the repository's flow</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="8-interfaces-ports-and-the-layer-rule">8. Interfaces, ports and the layer rule<a class="headerlink" href="#8-interfaces-ports-and-the-layer-rule" title="Link to this section">¶</a></h2>
+<ul>
+<li><strong><code>ADA-ECU</code></strong> — the node's only outside dependency, and an interface rather than a concrete producer (§5).</li>
+<li><strong><code>udp :47300</code></strong> — a port on <code>JdkDatagramSource</code>, the app's one external endpoint and where it meets <code>ADA-ECU</code>. Nothing else opens a socket.</li>
+<li><strong><code>R4DatagramSource</code></strong> and <strong><code>R4Decoder</code></strong> — the seams that make the receive loop testable: the loop requires them, a fake or the real implementation provides them.</li>
+<li><strong><code>R4Logger</code></strong> — the seam keeping the plain-JVM components free of Android; <code>AndroidR4Logger</code> provides it.</li>
+<li><strong><code>IviWarningViewSeam</code></strong> — realized by <code>CanvasWarningView</code>, used by <code>MainScreen</code>.</li>
+</ul>
+<p>No layer is collapsed: the receive loop cannot reach a Composable, a Composable cannot reach a socket. The only path between them is <code>R4Event → R4Repository → WarningUiState</code>.</p>
+<h2 id="9-call-flow">9. Call flow<a class="headerlink" href="#9-call-flow" title="Link to this section">¶</a></h2>
+<p><a href="../../../documents/Design/IVI-ECU/phase5-ivi-callflow.puml">phase5-ivi-callflow.puml</a> — PlantUML sequence: startup and bind, then the nominal path datagram → <code>JdkDatagramSource</code> → <code>R4SocketObserver</code> → <code>R4Deserializer</code> → <code>R4Repository</code> → <code>WarningViewModel</code> → <code>MainViewModel</code> → <code>MainScreen</code> → <code>CanvasWarningView</code> with the provenance guard, plus the malformed-drop, socket-rebind, warning-timeout and dev-injector branches.</p>
+<h2 id="10-the-contract-r4-the-message-set-from-ada-ecu">10. The contract — R4, the message set from ADA-ECU<a class="headerlink" href="#10-the-contract-r4-the-message-set-from-ada-ecu" title="Link to this section">¶</a></h2>
+<p><strong>This ECU's contract is its input schema: R4, what the ADA ECU sends to the IVI ECU.</strong> It is the only thing crossing the boundary inward, and every component from <code>R4Deserializer</code> onward is written against it. The node consumes and never produces — no reply, no acknowledgement, no outbound message.</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Direction</td>
+<td>ADA-ECU → IVI-ECU, one way</td>
+</tr>
+<tr>
+<td>Transport</td>
+<td>UDP to <code>10.99.0.13:47300</code>, one message per datagram, no framing header (D3)</td>
+</tr>
+<tr>
+<td>Encoding</td>
+<td>UTF-8 JSON</td>
+</tr>
+<tr>
+<td>Normative schema</td>
+<td><a href="../../../contracts/r4-ada-ivi.schema.json">r4-ada-ivi.schema.json</a>, embedding <a href="../../../contracts/r3-tracked-object.schema.json">r3-tracked-object.schema.json</a></td>
+</tr>
+<tr>
+<td>Node copy</td>
+<td><code>IVI_ECU/contracts/*.schema.json</code>, byte-synced; <code>:contract</code>'s models bind against it</td>
+</tr>
+<tr>
+<td>Status</td>
+<td>Frozen — a field change is a re-freeze across every consumer</td>
+</tr>
+</tbody>
+</table></div>
+<p>Two message kinds share the port, discriminated by <code>type</code>.</p>
+<p><strong><code>type: "warning"</code></strong> — edge-triggered, the committed message, the one the God View renders:</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>schemaVersion</code></td>
+<td>integer ≥ 1</td>
+<td>contract version; a value above <code>R4Contract.KNOWN_SCHEMA_VERSION</code> is accepted and flagged, never rejected (D4)</td>
+</tr>
+<tr>
+<td><code>type</code></td>
+<td><code>"warning"</code></td>
+<td>discriminator</td>
+</tr>
+<tr>
+<td><code>warningType</code></td>
+<td>string</td>
+<td>registry key; M1 holds <code>nlos_obstruction</code>. An unrecognised value degrades to the generic presentation (D4)</td>
+</tr>
+<tr>
+<td><code>riskState</code></td>
+<td>string</td>
+<td>the R14 risk level — <code>low</code> / <code>medium</code> / <code>high</code> — which colours ghost C's glow; what each level does to the Display Area is D13</td>
+</tr>
+<tr>
+<td><code>object</code></td>
+<td>R3 TrackedObject</td>
+<td>snapshot of the triggering track C: <code>source</code>, <code>position</code>, <code>distance</code>, <code>speed</code>, <code>confidence</code>, <code>state</code>, <code>timestamps</code></td>
+</tr>
+<tr>
+<td><code>geometry</code></td>
+<td>object</td>
+<td>the composed scene: <code>ego</code> (frame origin), <code>vehicleB</code> (occluder), <code>vehicleC</code> (<code>null</code> until C is tracked). Positions are <code>x</code> longitudinal / <code>y</code> lateral, metres, ego frame</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong><code>object.source</code> is what the R19 claim rests on.</strong> It is <code>own_sensor</code> or <code>v2x_relayed</code>; the provenance guard draws ghost C only for <code>v2x_relayed</code>, so the field must reach <code>SceneGeometry.vehicleCSnapshot</code> intact (D12).</p>
+<p><strong><code>type: "state"</code></strong> — the optional periodic awareness state (R15): <code>schemaVersion</code>, <code>type</code>, <code>seq</code>, and <code>vehicles</code> with the same three positions. The consumer keeps the newest by <code>seq</code>; no acceptance criterion depends on it (D11).</p>
+<p>Evolution is additive, and the schema fixes the consumer's three obligations: ignore unknown fields, tolerate a newer <code>schemaVersion</code>, treat an unknown <code>warningType</code> as generic. None is an error path.</p>
+<h2 id="ivi-r4-message-observation">IVI R4 Message Observation<a class="headerlink" href="#ivi-r4-message-observation" title="Link to this section">¶</a></h2>
+<p>For details how IVI-ECU observes R4 Messages (ADA-ECU -&gt; IVI-ECU), visit <a href="documents-design-ivi-ecu-ivi-r4-observation-pipeline.html">How the IVI app observes ADA→IVI (R4) messages</a></p>
+<h2 id="11-tech-stack-build-and-ci">11. Tech stack, build and CI<a class="headerlink" href="#11-tech-stack-build-and-ci" title="Link to this section">¶</a></h2>
+<p>No dependency outside this table enters the node without a design change. Traces are to <a href="requirements-m1-cooperative-awareness.html">m1-cooperative-awareness.md</a> and to the <a href="documents-design-ivi-ecu-ivi-ecu-design-decisions.html">decision record</a>.</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Area</th>
+<th>Stack</th>
+<th>Trace</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>App language / UI</td>
+<td>Kotlin 2.2.20, Jetpack Compose (BOM 2024.09.03), AndroidX, Material3</td>
+<td>report §3(e); R16/R17</td>
+</tr>
+<tr>
+<td>2D renderer</td>
+<td>Compose Canvas behind <code>IviWarningViewSeam</code>; SceneView/Filament optional</td>
+<td>report §3(e), R17</td>
+</tr>
+<tr>
+<td>Contract binding</td>
+<td>kotlinx.serialization-json</td>
+<td>report R4 tech stack, D1</td>
+</tr>
+<tr>
+<td>Transport</td>
+<td><code>java.net.DatagramSocket</code>, UDP + versioned JSON</td>
+<td>report §3(f), R6</td>
+</tr>
+<tr>
+<td>Concurrency</td>
+<td>kotlinx-coroutines-core (<code>SharedFlow</code>/<code>StateFlow</code>)</td>
+<td>D5</td>
+</tr>
+<tr>
+<td>Build</td>
+<td>Gradle multi-project, AGP 8.13, JDK 17, version catalog; <code>minSdk 29</code> / <code>targetSdk 33</code></td>
+<td>D2, D8</td>
+</tr>
+<tr>
+<td>Tests</td>
+<td>JUnit4 (+ kotlinx-coroutines-test in <code>:observer</code>); <strong>no Robolectric</strong></td>
+<td>D2 — the loop is plain JVM</td>
+</tr>
+<tr>
+<td>Simulator image</td>
+<td>multi-stage Docker; <code>linux/arm64</code> only, <code>--provenance=false --sbom=false</code></td>
+<td>the cluster rejects manifest indexes</td>
+</tr>
+</tbody>
+</table></div>
+<p>Build commands, from <code>IVI_ECU/</code>: <code>./gradlew assembleDebug</code> · <code>./gradlew :contract:test :serializer:test :observer:test :r4-simulator:test :app:testDebugUnitTest</code> · <code>./gradlew lint</code>.</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>CI lane</th>
+<th>File</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ivi-unit-tests</code></td>
+<td><a href="../../../.github/workflows/phase5-ci.yml">phase5-ci.yml</a></td>
+<td>the module tests on a plain JVM, no device</td>
+</tr>
+<tr>
+<td><code>ivi-assemble</code></td>
+<td><a href="../../../.github/workflows/phase5-ci.yml">phase5-ci.yml</a></td>
+<td><code>assembleDebug</code> + <code>lint</code>, uploading <code>app-debug.apk</code> under the artifact name the walkthrough references</td>
+</tr>
+<tr>
+<td>the simulator image</td>
+<td><a href="../../../.github/workflows/phase5-ci.yml">phase5-ci.yml</a></td>
+<td><code>linux/arm64</code> build of <code>m1-r4-sim:latest</code> from context <code>IVI_ECU/</code>, pushed to Zot and verified by pull-back</td>
+</tr>
+</tbody>
+</table></div>
+<p>The simulator's <code>Dockerfile</code> sits at <code>r4-simulator/Dockerfile</code> with context <code>IVI_ECU/</code> — a deviation from "own <code>Dockerfile</code> at the folder root", because this folder's primary artifact is the APK. Self-containment holds: the build reads nothing outside <code>IVI_ECU/</code>.</p>
+<h2 id="12-test-strategy">12. Test strategy<a class="headerlink" href="#12-test-strategy" title="Link to this section">¶</a></h2>
+<p>Two configurations exercise the same node, differing in one component — which realizes <code>ADA-ECU</code>:</p>
+<ul>
+<li><strong>Isolated IVI test — the mini-blueprint.</strong> Ethernet Bridge + ADA node running <code>m1-r4-sim:latest</code> + the IVI Skycraft node. The scenario file selects what the producer sends, including degraded cases a real ADA run cannot reproduce on demand.</li>
+<li><strong>System test — the full blueprint.</strong> The real ADA ECU sends R4 from its own fusion output, over the same bridge to the same port.</li>
+</ul>
+<p><strong>Expected output and observed behaviour are identical in both</strong> — the log lines below, and the God View as §6 describes it. No component here distinguishes the two producers, so a difference between the runs is a producer finding, not an IVI one.</p>
+<p>Expected observables, per <a href="requirements-car-sky-guide-deploy-ivi-hmi-walkthrough.html#6-expected-outputs-and-acceptance">walkthrough §6</a>:</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Observable</th>
+<th>Produced by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>[LINK] state=bound port=47300</code>, and the status bar's link indicator</td>
+<td><code>R4SocketObserver</code> → <code>AndroidR4Logger</code>, <code>MainScreen</code></td>
+</tr>
+<tr>
+<td><code>[RX] type=warning bytes=… from=…</code></td>
+<td><code>JdkDatagramSource</code> → <code>R4SocketObserver</code> → <code>AndroidR4Logger</code></td>
+</tr>
+<tr>
+<td><code>warningType=</code>, <code>risk=</code>, <code>cSource=</code>, <code>cPos=</code> on that line</td>
+<td><code>R4Deserializer</code>, read off the parsed message</td>
+</tr>
+<tr>
+<td><code>[DROP] reason=malformed …</code>, the next valid message still rendering</td>
+<td><code>R4Deserializer</code> returning a result instead of throwing</td>
+</tr>
+<tr>
+<td><code>[UI] mode=WarningView cause=warning</code></td>
+<td><code>R4Repository</code> → <code>WarningViewModel</code> → <code>MainViewModel</code></td>
+</tr>
+<tr>
+<td><code>cause=user</code> on a tap, <code>cause=timeout</code> back to Idle</td>
+<td><code>MainViewModel</code>; <code>WarningViewModel</code>'s <code>WARNING_TIMEOUT_MS</code></td>
+</tr>
+<tr>
+<td>a <code>medium</code> message followed by a <code>low</code> one leaving the Display Area on Warning, with the risk colour updated</td>
+<td><code>WarningViewModel</code> (D13)</td>
+</tr>
+<tr>
+<td>the run's first <code>[UI] mode=WarningView cause=warning</code> line following the startup <code>[UI] mode=HomeView</code> line by ≥ 8.0 s</td>
+<td>R22's K7 — <code>MainViewModel</code> under D13, against the real producer</td>
+</tr>
+<tr>
+<td>the God View in the Display Area</td>
+<td><code>MainScreen</code> → <code>IviWarningViewSeam</code> → <code>CanvasWarningView</code></td>
+</tr>
+<tr>
+<td><code>[? UNKNOWN SOURCE]</code> on an <code>own_sensor</code> message</td>
+<td>the provenance guard</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Where each half of D13 is proved.</strong> The rules themselves — a <code>low</code> raises nothing, a <code>low</code> dismisses nothing, silence dismisses — are view-model tests on a plain JVM, plus a mini-blueprint scenario stepping <code>medium</code> then <code>low</code> on demand. The margin between the countdown and the producer's cycle is a property of the pair, so only a full-blueprint run shows the warning surviving a cycle wrap; K7 and that margin are read from the guest's logcat and the screen recording. A dismissal observed between cycles is a <code>WARNING_TIMEOUT_MS</code> finding against the producer's cycle length, not a defect in the rules.</p>
+<p>Below both sits the plain-JVM unit layer: <code>:contract</code>, <code>:serializer</code> and <code>:observer</code> run against a fake source or a loopback socket, proving the receive path without a Room, and the dev injector reaches the real UI with no network. Two of those tests are R4's own acceptance:</p>
+<ul>
+<li><strong>Round-trip</strong> over every frozen sample — what makes this side of the contract match the producer's.</li>
+<li><strong>Additive version</strong> — a message with a newer <code>schemaVersion</code>, an unknown <code>warningType</code> and an unknown extra field decodes and degrades instead of failing.</li>
+</ul>
+<h3 id="deployment-shape-r5-phase-5">Deployment shape (R5 / Phase 5)<a class="headerlink" href="#deployment-shape-r5-phase-5" title="Link to this section">¶</a></h3>
+<p>The following deployment scheme supports IVI-ECU isolated tests and system tests</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Path</th>
+<th>Topology</th>
+<th>Port</th>
+<th>Guide</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Local / emulator</td>
+<td>mock-sender → <code>127.0.0.1</code></td>
+<td>5004</td>
+<td><a href="ivi-ecu-mock-sender-readme.html">mock-sender/README.md</a></td>
+</tr>
+<tr>
+<td>Mock 2-node Room</td>
+<td><code>m1-mock-r4-sender</code> + Skycraft IVI + bridge</td>
+<td>5004 (align both)</td>
+<td><a href="plans-doc-task51-2node-blueprint-answer.html">task51-2node-blueprint-answer.md</a>, <a href="requirements-blueprint-2node-task51-test-guide.html">blueprint-2node-task51-test-guide.md</a></td>
+</tr>
+<tr>
+<td>Mini ADA+IVI (optional)</td>
+<td>ADA + IVI + bridge</td>
+<td><strong>47300</strong></td>
+<td><a href="documents-design-ivi-ecu-phase5-mini-blueprint-ada-ivi.html">phase5-mini-blueprint-ada-ivi.md</a> — see §10 gap</td>
+</tr>
+<tr>
+<td>Full M1</td>
+<td>4 nodes + bridge</td>
+<td>47300</td>
+<td><a href="requirements-car-sky-guide-node-ivi-ecu.html">node-ivi-ecu.md</a></td>
+</tr>
+</tbody>
+</table></div>
+<p>Post-deploy always: build APK → ADB tunnel to Skycraft → <code>adb install</code> (<a href="ivi-ecu-deployment-phase5-ivi-deploy.html">phase5-ivi-deploy.md</a>). Ethernet pins often missing after JSON import — add/wire in Nydus UI.</p>
+<h2 id="mini-blueprint-ada-ecu-ivi-ecu">Mini-blueprint: ADA ECU + IVI ECU<a class="headerlink" href="#mini-blueprint-ada-ecu-ivi-ecu" title="Link to this section">¶</a></h2>
+<p>The following section describes how to set up a mini blueprint for isolated IVI ECU test <a href="documents-design-ivi-ecu-phase5-mini-blueprint-ada-ivi.html">Mini Blueprint</a></p>
+<h2 id="13-design-decisions">13. Design decisions<a class="headerlink" href="#13-design-decisions" title="Link to this section">¶</a></h2>
+<p><a href="documents-design-ivi-ecu-ivi-ecu-design-decisions.html">ivi-ecu-design-decisions.md</a> — D1–D13, binding on implementation and cited by number throughout this document: the contract submodule and module graph (D1, D2), de-framing (D3), unknown-<code>warningType</code> handling (D4), the foreground service (D5), the frozen samples (D6), the composition root (D7), the version catalog (D8), the simulator (D9), configuration (D10), the standing decisions (D11), the provenance guard's fail-open property (D12), and the warning lifecycle's response to <code>riskState</code> (D13).</p>
+      </article>
+    </main>
+  </div>
+  <script src="../js/site-data.js"></script>
+  <script src="../js/theme.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/doc-page.js"></script>
+</body>
+</html>

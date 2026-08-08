@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en" data-theme="sketch">
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="kis-build-pages">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Requirement Analysis &amp; Solutioning (project-researcher) — KIS</title>
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/doc.css">
+  <link rel="stylesheet" href="../css/themes.css">
+</head>
+<body class="DocBody" data-root=".." data-doc-node="plans" data-doc-title="Requirement Analysis &amp; Solutioning (project-researcher)" data-doc-source=".claude/skills/requirement-analysis-and-solutioning/SKILL.md">
+  <div class="DocLayout">
+    <aside class="DocLayout__aside" id="doc-toc"></aside>
+    <main class="Page DocPage">
+      <header class="PageHeader" id="doc-header"></header>
+      <article class="Markdown" id="doc-body">
+<hr />
+<p>name: requirement-analysis-and-solutioning
+description: Procedure project-researcher follows whenever it receives a feature or a set of requirements — feasibility check, requirement enumeration/ordering, solution proposal, and solution comparison/selection.</p>
+<hr />
+<h1 id="requirement-analysis-solutioning-project-researcher">Requirement Analysis &amp; Solutioning (project-researcher)<a class="headerlink" href="#requirement-analysis-solutioning-project-researcher" title="Link to this section">¶</a></h1>
+<p>Trigger: [[project-researcher]] receives a feature or a set of requirements to analyze. Follow this procedure in order — don't skip to a solution before feasibility and enumeration are done.</p>
+<h2 id="procedure">Procedure<a class="headerlink" href="#procedure" title="Link to this section">¶</a></h2>
+<ol>
+<li>
+<p><strong>Analyse feasibility.</strong> Before decomposing anything, sanity-check whether the input is realistically achievable at all — against the milestone timeline, the active plan's scope/assumptions (<a data-missing="../../../documents/Plan-Proposal/milestone1_high_level_plan.md">milestone1_high_level_plan.md</a> sections 2 and 6), and the hard constraints in <a href="claude-rules-solution-selection-criteria.html">solution-selection-criteria.md</a> (open-source only, Linux-targeted). Flag — don't silently drop — anything that looks infeasible as stated, with reasoning.</p>
+</li>
+<li>
+<p><strong>Determine input type, then enumerate.</strong>
+   - <strong>Given a feature:</strong> break it down into <strong>enumerated requirements</strong>. Each requirement must be optimized for a <strong>clear, unambiguous goal</strong> — one requirement, one testable outcome. Split compound "and" requirements; eliminate vague language.
+   - <strong>Given requirements already:</strong> enumerate them as a numbered list (formalize if not already one), then <strong>re-order</strong> them by whichever is more relevant to the request — <strong>urgency</strong> (what blocks other work / what the milestone needs first) or <strong>ease of implementation</strong> (what unblocks fast wins) — and state explicitly which ordering was used and why.</p>
+</li>
+</ol>
+<p>In both cases, every enumerated requirement must meet <a href="claude-rules-requirement-quality-criteria.html">requirement-quality-criteria.md</a>: its own feasibility verdict, a concrete measurable output (numeric measurement / KPI), and vague wording translated to precise, testable statements.</p>
+<ol start="3">
+<li>
+<p><strong>Propose several available solutions</strong> for each requirement (or requirement group) that needs a technical decision — toolchain, framework, language, or 3rd-party library. Always generate more than one real candidate; a single-option "proposal" is not a comparison. Every candidate must pass the hard constraints in <a href="claude-rules-solution-selection-criteria.html">solution-selection-criteria.md</a> before it is shortlisted — reject disqualified candidates before spending analysis time on them.</p>
+</li>
+<li>
+<p><strong>Compare the solutions and pick the best one</strong>, scored against the four ranked criteria in <a href="claude-rules-solution-selection-criteria.html">solution-selection-criteria.md</a>: possibility of accomplishing the implementation, speed/ease for the current milestone, extensibility to future features, and preference for the smaller open-source dependency when a heavier one isn't functionally needed. Document the comparison itself, not just the winning pick.</p>
+</li>
+</ol>
+<h2 id="cache">Cache<a class="headerlink" href="#cache" title="Link to this section">¶</a></h2>
+<p>Trigger: after reading any external resource (a URL, or a file outside this repo) during the procedure above.</p>
+<ul>
+<li>Write a cache file under <code>.claude/references/&lt;topic-slug&gt;.md</code> — one file per resource, named for its subject, not its source.</li>
+<li>Cache file must contain: source (URL/path), keywords for future lookup, and a summary of the content relevant to the current task — not a full copy of the source.</li>
+<li>Before fetching a resource, check <code>.claude/references/</code> for an existing cache file on the same topic and reuse it instead of re-fetching.</li>
+</ul>
+<h2 id="adversarial-review-record-multi-researcher-runs">Adversarial review record (multi-researcher runs)<a class="headerlink" href="#adversarial-review-record-multi-researcher-runs" title="Link to this section">¶</a></h2>
+<p>Trigger: the run is executed as an adversarial debate between researcher personas (e.g. Alpha the pragmatist vs. Beta the standards/extensibility reviewer), in numbered rounds.</p>
+<ul>
+<li>All debate artifacts for round <code>N</code> live under <code>.claude/prompts/scratchpad-requirement-analysis-round&lt;N&gt;/</code> — position papers, rebuttals, and the round's record file.</li>
+<li>Close every round by writing <strong><code>adversarial-review-record.md</code> in that same directory</strong>: the round's contested points, each with the positions taken and how it resolved, plus the round's key external sources. Contested-point numbering continues across rounds (round 2 continues where round 1 stopped) so cross-references stay stable.</li>
+<li>The report under <code>requirements/</code> carries only a <strong>pointer appendix</strong> — a section titled <code>Appendix — adversarial requirement analysis &amp; solution proposal record</code> (currently <a href="requirements-m1-cooperative-awareness.html">m1-cooperative-awareness.md §6</a>) with one bullet per round linking to that round's record file. Never inline the full record in the report; never let the record drift from the report's converged text.</li>
+<li>Converged outcomes (requirement changes, picks, flags) still land in the report body per <a href="claude-rules-research-report-format.html">research-report-format.md</a> — the record is the <em>why</em> behind them, not a second home for them.</li>
+</ul>
+<h2 id="output">Output<a class="headerlink" href="#output" title="Link to this section">¶</a></h2>
+<ul>
+<li>A feasibility verdict (with reasoning) for the input feature/requirement set.</li>
+<li>An enumerated, unambiguous requirements list — each requirement carrying the checks in <a href="claude-rules-requirement-quality-criteria.html">requirement-quality-criteria.md</a> (feasibility verdict, measurable output/KPI, vague → precise translations) — reordered by urgency or ease of implementation when the input was already requirements, with the ordering rationale stated.</li>
+<li>For each requirement needing a technical decision: the candidate solutions considered, a comparison against the four ranked criteria, and the selected solution with rationale.</li>
+</ul>
+<p>All of the above is delivered as a report file under <code>requirements/</code> per <a href="claude-rules-research-report-format.html">research-report-format.md</a> — the run is not complete until that report is written.</p>
+<h2 id="how-to-apply">How to apply<a class="headerlink" href="#how-to-apply" title="Link to this section">¶</a></h2>
+<p>Owned by [[project-researcher]] — see <a href="claude-agents-project-researcher.html">project-researcher.md</a>. Solution proposals and selections must honor <a href="claude-rules-solution-selection-criteria.html">solution-selection-criteria.md</a> without exception.</p>
+      </article>
+    </main>
+  </div>
+  <script src="../js/site-data.js"></script>
+  <script src="../js/theme.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/doc-page.js"></script>
+</body>
+</html>

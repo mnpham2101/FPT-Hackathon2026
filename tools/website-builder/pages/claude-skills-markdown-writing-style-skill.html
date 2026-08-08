@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en" data-theme="sketch">
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="kis-build-pages">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Markdown Writing Style (all agents) — KIS</title>
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/doc.css">
+  <link rel="stylesheet" href="../css/themes.css">
+</head>
+<body class="DocBody" data-root=".." data-doc-node="plans" data-doc-title="Markdown Writing Style (all agents)" data-doc-source=".claude/skills/markdown-writing-style/SKILL.md">
+  <div class="DocLayout">
+    <aside class="DocLayout__aside" id="doc-toc"></aside>
+    <main class="Page DocPage">
+      <header class="PageHeader" id="doc-header"></header>
+      <article class="Markdown" id="doc-body">
+<hr />
+<p>name: markdown-writing-style
+description: Writing-style rules every agent must follow when authoring or editing any markdown document in this repo (research notes, reports, plans, rules, agent specs) — no hard line-wrapping, concise bulleted language, ambiguity/duplication checks, reference instead of repeat, existing terminology only, conclusions not history, and the right format for the audience (agent reference, human guide, or slide deck).</p>
+<hr />
+<h1 id="markdown-writing-style-all-agents">Markdown Writing Style (all agents)<a class="headerlink" href="#markdown-writing-style-all-agents" title="Link to this section">¶</a></h1>
+<p>Trigger: any agent writing or editing a markdown file in this repo. Apply all six rules before saving, then pick the format under § Audience.</p>
+<h2 id="1-no-hard-line-wrapping">1. No hard line-wrapping<a class="headerlink" href="#1-no-hard-line-wrapping" title="Link to this section">¶</a></h2>
+<ul>
+<li>Never wrap text at a fixed column width. One paragraph, bullet, or blockquote = one source line; let the editor soft-wrap to the full horizontal space.</li>
+<li>Exceptions: fenced code blocks, and formats that are line-structured by nature (tables — one row per line; PlantUML — one label per line).</li>
+</ul>
+<h2 id="2-condensed-concise-language">2. Condensed, concise language<a class="headerlink" href="#2-condensed-concise-language" title="Link to this section">¶</a></h2>
+<ul>
+<li>Prefer bullets over prose paragraphs. List ideas; summarize main points in bullets.</li>
+<li>One idea per bullet. Cut filler, hedging, and restatement — if a sentence adds no new fact or decision, delete it.</li>
+<li>Tables for enumerable facts (options, mappings, verdicts); a short lead-in sentence for context.</li>
+</ul>
+<h2 id="3-check-ambiguity-and-duplication">3. Check ambiguity and duplication<a class="headerlink" href="#3-check-ambiguity-and-duplication" title="Link to this section">¶</a></h2>
+<ul>
+<li>Before saving, re-read for: vague terms (translate to precise, testable wording — per <a href="claude-rules-requirement-quality-criteria.html">requirement-quality-criteria.md</a> when the doc states requirements), terms used with two meanings, and the same fact stated twice.</li>
+<li>Each fact, decision, or number lives in exactly one place; fix duplicates by keeping the authoritative statement and referencing it (rule 4).</li>
+</ul>
+<h2 id="4-reference-dont-repeat-or-move">4. Reference, don't repeat — or move<a class="headerlink" href="#4-reference-dont-repeat-or-move" title="Link to this section">¶</a></h2>
+<ul>
+<li>When content already exists in this or another document, link to it (<code>[file](path)</code>, or <code>§n</code> for a section in the same file) instead of restating it.</li>
+<li>If content fits better in another document (wrong altitude, wrong owner, wrong lifecycle), move it there and leave a link at the original location.</li>
+</ul>
+<h2 id="5-use-existing-terminology-never-invent-a-new-concept-or-label">5. Use existing terminology — never invent a new concept or label<a class="headerlink" href="#5-use-existing-terminology-never-invent-a-new-concept-or-label" title="Link to this section">¶</a></h2>
+<ul>
+<li>Name things the way the canonical source already does: <a href="../../../requirements/development-platform-doc/Car-Sky-Platform.html">Car-Sky-Platform.html</a> for platform concepts, the relevant developer documentation (Docker, GitHub Actions, the language/framework docs in play) for tooling concepts.</li>
+<li>An error message, log line, or one-off platform quirk is evidence, not license to name a mechanism. If no source defines a term for what's observed, describe the behavior plainly instead of coining one — don't turn an unexplained string into a proper noun the doc then treats as understood.</li>
+</ul>
+<h2 id="6-conclusions-only-no-history-forensic-trace-or-verbose-evidence">6. Conclusions only — no history, forensic trace, or verbose evidence<a class="headerlink" href="#6-conclusions-only-no-history-forensic-trace-or-verbose-evidence" title="Link to this section">¶</a></h2>
+<ul>
+<li>State what is true now: what works, what doesn't, what to do about it. Never narrate how it was found — no investigation timelines, no "verified live on [date]" / "confirmed via" / "re-tested", no step-by-step reasoning trail, no preserved list of eliminated hypotheses.</li>
+<li>A fact needs a date only when the fact itself is time-bound (a deadline, a version cutover); it never needs one to prove it was checked.</li>
+<li>If that kind of analysis is wanted for the record, save it under <code>tmp/</code> (git-ignored) instead of the committed doc — only when explicitly requested, never by default.</li>
+<li><strong>Exception — subtask <code>**Status:**</code> lines</strong> (<a href="claude-rules-task-planning-conventions.html">task-planning-conventions.md § Status tracking</a>): these carry the auditable proof of work a subtask closed with — completion date, commit hash, CI run number, and any deviation from the brief. That's engineering traceability, not investigation narrative, and stays exempt from the no-date/no-history rule above. Still write it as a conclusion (what shipped, what it proves) — evidence citations, not a discovery story.</li>
+</ul>
+<h2 id="audience-pick-the-format-for-who-reads-it">Audience: pick the format for who reads it<a class="headerlink" href="#audience-pick-the-format-for-who-reads-it" title="Link to this section">¶</a></h2>
+<ul>
+<li><strong>Agent-context reference</strong> (default — research notes, rule docs, HLDs, per-node guides, API references): rules 1–6 as-is. Dense, scannable, no prose padding. A <strong>node HLD</strong> additionally follows <a href="claude-rules-hld-content-and-commit-format.html">hld-content-and-commit-format.md</a> — the mandatory section order, the companion decision record, and its writing rules (one claim per sentence, facts in tables, each fact stated once); its worked example, <a href="documents-design-ivi-ecu-ivi-ecu-hld.html">ivi-ecu-hld.md</a>, is the style to match.</li>
+<li><strong>Human how-to guide</strong> (a walkthrough read once and followed): simple language, numbered steps, one action per step. Still no hard line-wrap, still no invented terms. An operational walkthrough under <a href="../../../requirements/car-sky-guide/">requirements/car-sky-guide/</a> — the authoritative build/deploy/install/verify procedures — additionally follows <a href="claude-skills-walkthrough-authoring-skill.html">walkthrough-authoring</a>: read it before authoring or editing one.</li>
+<li><strong>Human-facing presentation</strong> (meant to be read or exported as slides): author as a Marp deck — <code>marp: true</code> frontmatter, <code>---</code> slide separators, <code>&lt;!-- _class: lead --&gt;</code> section-divider slides, one idea per slide. Follow <a href="../../../presentation/m1-proposal-deck.html">m1-proposal-deck.md</a> as the template. Write only the markdown source: the HTML export is generated by <a href="../../../presentation/slide-build-tool/build-slides.py">build-slides.py</a> from <a href="../../../presentation/template/template.md">template.md</a>, so the design isn't re-derived from scratch each time. Read <a href="claude-rules-deck-authoring-conventions.html">deck-authoring-conventions.md</a> first — file placement, the asset policy, and the build workflow.</li>
+</ul>
+<h2 id="how-to-apply">How to apply<a class="headerlink" href="#how-to-apply" title="Link to this section">¶</a></h2>
+<p>All agents ([[project-researcher]], [[project-architecture]], [[project-planner]], and implementation subagents) apply this to every markdown deliverable — research notes, reports, HLDs, plans, rules, agent specs. A document violating these rules is not done.</p>
+      </article>
+    </main>
+  </div>
+  <script src="../js/site-data.js"></script>
+  <script src="../js/theme.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/doc-page.js"></script>
+</body>
+</html>

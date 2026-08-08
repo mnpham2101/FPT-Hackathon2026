@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en" data-theme="sketch">
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="kis-build-pages">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sổ ghi nhận tính năng tương lai — Nhận thức phương tiện hợp tác (không thuộc phạm vi M1) — KIS</title>
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/doc.css">
+  <link rel="stylesheet" href="../css/themes.css">
+</head>
+<body class="DocBody" data-root=".." data-doc-node="plans" data-doc-title="Sổ ghi nhận tính năng tương lai — Nhận thức phương tiện hợp tác (không thuộc phạm vi M1)" data-doc-source="requirements/future/m1-future-features-register.vi.md">
+  <div class="DocLayout">
+    <aside class="DocLayout__aside" id="doc-toc"></aside>
+    <main class="Page DocPage">
+      <header class="PageHeader" id="doc-header"></header>
+      <article class="Markdown" id="doc-body">
+<h1 id="so-ghi-nhan-tinh-nang-tuong-lai-nhan-thuc-phuong-tien-hop-tac-khong-thuoc-pham-vi-m1">Sổ ghi nhận tính năng tương lai — Nhận thức phương tiện hợp tác (không thuộc phạm vi M1)<a class="headerlink" href="#so-ghi-nhan-tinh-nang-tuong-lai-nhan-thuc-phuong-tien-hop-tac-khong-thuoc-pham-vi-m1" title="Link to this section">¶</a></h1>
+<blockquote>
+<p>Bản dịch tiếng Việt của <a href="requirements-future-m1-future-features-register.html">m1-future-features-register.md</a> dành cho lập trình viên Việt Nam — khi có mâu thuẫn, bản tiếng Anh và báo cáo gốc thắng.</p>
+<p>Bản đối chiếu (mirror) của <a href="requirements-m1-cooperative-awareness.html#future-developments">m1-cooperative-awareness.md § Future developments</a> — danh sách tính năng tương lai có thẩm quyền; khi có mâu thuẫn, báo cáo thắng, và mọi thay đổi phải vào báo cáo trước. Các tham chiếu Rx trỏ tới §2 của báo cáo (R1–R19). Không mục nào ở đây thuộc phạm vi M1; mỗi mục nêu rõ điểm nối (seam) của M1 mà nó mở rộng.</p>
+</blockquote>
+<ul>
+<li><strong>Kịch bản cảnh báo dạng mô-đun.</strong> Các kịch bản cảnh báo tương lai (nguy cơ tại giao lộ, điểm mù khúc cua) cắm vào dưới dạng hiện thực hóa (realization) mới của lớp trừu tượng Đánh giá rủi ro va chạm (Collision Risk Assessment, R14) mà không phải sửa lại mã hiện có.</li>
+<li><strong>Cảnh báo nhường đường cho xe ưu tiên.</strong> Cảnh báo khi xe khẩn cấp/xe ưu tiên đang tiếp cận để tài xế nhường đường — một hiện thực hóa R14 mới, được vẽ là một realization tương lai trong <a href="requirements-ada-ecu.svg">ada-ecu.svg</a>.</li>
+<li><strong>Đánh giá rủi ro va chạm theo thang tốc độ.</strong> Tiêu chí khoảng cách tiếp nhận/rủi ro (R13) tỉ lệ theo tốc độ giao thông thay vì ngưỡng cố định của M1.</li>
+<li><strong>Cảnh báo chỉ có xe B trước khi xe C được tiếp nhận.</strong> ADA cảnh báo về vật cản nhìn thấy được là xe B khi khoảng cách chuyển tiếp tới xe C còn nằm ngoài ngưỡng tiếp nhận R13, và mở rộng thành khung cảnh gồm cả B và C khi C đã được theo dõi. Xây trên các seam sẵn có: tiếp nhận R13, đánh giá R14 và phát tin R15 — khoảng cách B→C vẫn tới đều bất kể có được tiếp nhận hay không (R9, R11). Hiện bị chặn bởi R4: <code>geometry.vehicleC</code> cho phép null nhưng <code>object</code> là trường bắt buộc, mang snapshot R3 của track kích hoạt (C), nên một sự kiện cảnh báo chỉ mô tả B không biểu diễn được; khung cảnh chỉ có B vốn thuộc về trạng thái nhận thức định kỳ tùy chọn của R15. Quay lại như một thay đổi hợp đồng R4 cộng một thay đổi phát tin R15, không phải thiết kế lại.</li>
+<li><strong>Luồng camera trực tiếp trong vùng Display của IVI.</strong> Vùng Display (R16) hiển thị khung hình camera trực tiếp; video trực tiếp cũng cấp đầu vào cho thuật toán phát hiện vật cản của ADA.</li>
+<li><strong>Phát hiện đối tượng trực tiếp ở tốc độ cao.</strong> Xe B chạy tới 120 km/h (33.3 m/s) và phải phát hiện vật cản trong phạm vi quãng đường dừng + quãng đường phát tin. Đặc tả suy ra:</li>
+<li><strong>Tầm phát hiện, toàn bộ là giả định (A):</strong> phát hiện một ô tô ở ≥ 130–150 m đường khô / ≥ 190 m đường ướt — quãng phanh 79 m khô (a = 7 m/s²) / 139 m ướt (a = 4 m/s²) + phản xạ tài xế 1.0–1.5 s ≈ 33–50 m + biên ~10 m cho ngân sách phát tin đầu-cuối ~300 ms (giả định (A)); biến thể phanh tự động (bỏ thành phần phản xạ) hạ yêu cầu xuống ≥ 100 m khô / ≥ 160 m ướt.</li>
+<li><strong>HFOV của camera là một giả định (A) tường minh</strong> (60° so với 90° làm số pixel một vật thể chiếm thay đổi ~1.5×) — chốt lại khi có spec camera.</li>
+<li><strong>Ràng buộc quyết định là tầm phát hiện (độ phân giải đầu vào), không phải FPS:</strong> suy luận (inference) ở 640 px, một ô tô 1.8 m chỉ chiếm ~10–12 px ở 100 m — dưới sàn tin cậy ~20–30 px của nano-detector (COCO "small" &lt; 32² px) ⇒ cần suy luận ≥ 1280–1920 px ở ≥ 10 Hz.</li>
+<li><strong>Suy luận trên CPU thất bại hoàn toàn</strong> (≈ 224 ms @ 1280 / ≈ 505 ms @ 1920) ⇒ <strong>bắt buộc có tăng tốc cấp GPU</strong> (tham chiếu: T4 TensorRT ≈ 1.5 ms @ 640, mở rộng lên ≈ 6–14 ms). Độ mở của stack tăng tốc (ứng viên mã nguồn mở: ROCm, OpenVINO, ONNX Runtime) là quyết định của người dùng tại milestone đó — M1 không mang phụ thuộc GPU nào (§4).</li>
+<li><strong>Phát video clip ego trên IVI.</strong> Clip góc nhìn ego được cung cấp (B che khuất tầm nhìn phía trước) phát trong vùng Display (R16) — phương pháp "video feed" trong bảng demo §1 của báo cáo; một bề mặt hiển thị bổ sung, không phải làm lại.</li>
+<li><strong>Chuyển đổi góc nhìn 2D ⇄ 3D.</strong> Nút gạt cho người dùng chuyển giữa góc nhìn 2D và God view 3D tùy chọn, nằm sau seam view của R17 (SceneView/Filament là stack 3D tùy chọn).</li>
+<li><strong>Đa tiến trình, đánh thức khi có cảnh báo.</strong> Một ứng dụng riêng đang ngủ được đánh thức và vẽ khung cảnh khi có sự kiện ADA; đường đa tiến trình tùy chọn của M1 (R16) là nền móng.</li>
+<li><strong>Tùy biến giao diện / theme.</strong> Avatar phương tiện có thể được tùy biến.</li>
+<li><strong>Tiêu chí benchmark Fast-UI + C2X.</strong> Hành vi UI cực nhanh chạy song song các dịch vụ C2X — ví dụ một ứng dụng media ở foreground cùng lúc với hiển thị 2D/3D hoặc thông báo về xe C / tin nhắn V2X tới; các ngưỡng benchmark có thể thương lượng theo tính khả thi kỹ thuật.</li>
+<li><strong>Phát hiện nhiều vật cản khuất.</strong> ADA phát hiện và theo dõi đồng thời nhiều đối tượng ngoài tầm nhìn thẳng (M1 chỉ xử lý một đối tượng).</li>
+<li><strong>Gộp thành một tin nhắn duy nhất.</strong> Nhiều vật cản phát hiện được gộp vào một tin nhắn V2X — không gây bão quảng bá (broadcast storm).</li>
+<li><strong>Giảm tin nhắn theo lựa chọn người dùng.</strong> Người dùng có thể chọn nhận ít tin nhắn V2X hơn.</li>
+<li><strong>Lọc theo mức nghiêm trọng.</strong> Người dùng có thể chọn chỉ nhận cảnh báo từ một mức nghiêm trọng (criticality) trở lên; mức nghiêm trọng được tra từ trường <code>warningType</code> của tin nhắn ADA→IVI (R4).</li>
+<li><strong>Các loại cảnh báo nguy cơ khác.</strong> Đường trơn, đá rơi, ổ gà, tình trạng mặt đường, có trẻ em, cảnh sát, giới hạn tốc độ, cấm bấm còi/luật đường bộ khác, tình hình giao thông — được mang bởi DENM (vị trí sự kiện + mã nguyên nhân), họ tin nhắn được chỉ định cho các loại này (ghi chú R1).</li>
+<li><strong>Phân phối theo loại tin nhắn V2X mở rộng được.</strong> Pipeline Rx (R9) phân phối (dispatch) theo loại tin nhắn, nên họ tin nhắn mới chỉ cần thêm một module codec cộng một mục dispatch — M1 chỉ giải mã CPM (R1).</li>
+<li><strong>Ego Tx: quảng bá nhận thức của chính mình (R10).</strong> V2X ECU dựng CPM từ snapshot kho lưu trữ của ADA và quảng bá qua <code>send</code> của seam R7, để ego chuyển tiếp những gì <em>chính nó</em> nhận thức được tới xe phía sau. Hoãn khỏi M1 (2026-07-30): đường dữ liệu V2X của M1 chỉ nhận — ego là xe được cảnh báo A, không bao giờ là xe chuyển tiếp B, và B do bench mô phỏng (R11). Seam <code>send</code> đã có sẵn, nên tính năng này quay lại như một phần hiện thực, không phải thiết kế lại.</li>
+<li><strong>Lệnh tới các ECU khác.</strong> Tầng đầu ra của ADA mở rộng thành đầu ra lệnh/chấp hành tới các ECU/phần cứng khác; M1 không hiện thực đầu ra ADA→V2X nào (snapshot lưu trữ R10 đã hoãn ở mục trên).</li>
+</ul>
+      </article>
+    </main>
+  </div>
+  <script src="../js/site-data.js"></script>
+  <script src="../js/theme.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/doc-page.js"></script>
+</body>
+</html>

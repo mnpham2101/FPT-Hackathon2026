@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en" data-theme="sketch">
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="kis-build-pages">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Android Automotive OS — KIS</title>
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/doc.css">
+  <link rel="stylesheet" href="../css/themes.css">
+</head>
+<body class="DocBody" data-root=".." data-doc-node="knowledge-base" data-doc-title="Android Automotive OS" data-doc-source="documents/KnowledgeBase/android-automotive-os.md">
+  <div class="DocLayout">
+    <aside class="DocLayout__aside" id="doc-toc"></aside>
+    <main class="Page DocPage">
+      <header class="PageHeader" id="doc-header"></header>
+      <article class="Markdown" id="doc-body">
+<h1 id="android-automotive-os">Android Automotive OS<a class="headerlink" href="#android-automotive-os" title="Link to this section">¶</a></h1>
+<p><strong>Target platform:</strong> Android Automotive OS (AAOS — API 29+ / target 33)
+<strong>Author:</strong> Vinh &amp; Team IVI
+<strong>Date:</strong> 03/08/2026</p>
+<p>Class and flow names below are generic role names, not the identifiers of any one codebase. They describe the position a component occupies — listener, repository, view model — so the pattern reads independently of what a given project calls its types.</p>
+<hr />
+<h2 id="1-aaos-android-automotive-os-architecture-overview">1. AAOS (Android Automotive OS) Architecture Overview<a class="headerlink" href="#1-aaos-android-automotive-os-architecture-overview" title="Link to this section">¶</a></h2>
+<h3 id="why-aaos-instead-of-mobile-android">Why AAOS instead of Mobile Android?<a class="headerlink" href="#why-aaos-instead-of-mobile-android" title="Link to this section">¶</a></h3>
+<p>Standard Mobile Android is designed for personal smartphones (touchscreens, battery management, cellular lifecycle, portrait orientation). In contrast, <strong>Android Automotive OS (AAOS)</strong> is a full operating system designed directly for vehicle head units (In-Vehicle Infotainment — IVI):</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Mobile Android</th>
+<th>Android Automotive OS (AAOS)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>OS Footprint</strong></td>
+<td>Companion device (requires Bluetooth/USB to car)</td>
+<td>Embedded directly into vehicle head unit hardware</td>
+</tr>
+<tr>
+<td><strong>Hardware Access</strong></td>
+<td>Standard Sensors (GPS, Gyro, Camera)</td>
+<td>Vehicle HAL (VHAL) access to CAN bus, HVAC, Speed, Gear</td>
+</tr>
+<tr>
+<td><strong>System Lifecycle</strong></td>
+<td>App dies on background/battery saver</td>
+<td>Safety-critical services run continuously as <code>ForegroundService</code></td>
+</tr>
+<tr>
+<td><strong>HMI Layout</strong></td>
+<td>Portrait phone display</td>
+<td>Fixed landscape automotive resolution (e.g., 1280×720, 1920×1080)</td>
+</tr>
+<tr>
+<td><strong>Driving Safety</strong></td>
+<td>Distraction controls handled by app</td>
+<td>System-enforced Driver Distraction Rules (UX Restrictions)</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="2-end-to-end-message-ingest-data-pipeline">2. End-to-End Message Ingest &amp; Data Pipeline<a class="headerlink" href="#2-end-to-end-message-ingest-data-pipeline" title="Link to this section">¶</a></h2>
+<p>A head-unit application ingests warnings from a perception ECU over a local Ethernet link using raw UDP datagrams. The datagram arrives on a service, not on the UI, so reception survives the screen showing something else.</p>
+<pre><code>┌─────────────────┐        UDP datagram       ┌────────────────────────────┐
+│  Perception ECU │ ────────────────────────&gt; │  IncomingMessageListener   │
+│  (Data Source)  │      Raw JSON bytes       │     (ForegroundService)    │
+└─────────────────┘                           └─────────────┬──────────────┘
+                                                            │  messageFlow (SharedFlow)
+                                                            ▼
+┌─────────────────┐   warningEvents (SharedFlow) ┌────────────────────────────┐
+│ AlertViewModel  │ &lt;─────────────────────────── │     MessageRepository      │
+│ (State Machine) │   currentState (StateFlow)   │     (Single Source)        │
+└────────┬────────┘                              └────────────────────────────┘
+         │
+         │ alertUiState &amp; latestScene (StateFlow)
+         ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│                          Jetpack Compose UI                            │
+│    RootScreen (mode switcher)  ──&gt;  CanvasAlertView (2D god view)      │
+└────────────────────────────────────────────────────────────────────────┘
+</code></pre>
+<h3 id="21-serialization-deserialization-protocol">2.1 Serialization &amp; Deserialization Protocol<a class="headerlink" href="#21-serialization-deserialization-protocol" title="Link to this section">¶</a></h3>
+<p>Raw datagrams arrive as byte arrays. A deserialiser parses them via <code>kotlinx.serialization</code>, discriminating variants on a <code>type</code> field:</p>
+<pre><code class="language-kotlin">@Serializable
+sealed class Message {
+    abstract val schemaVersion: Int
+}
+
+@Serializable
+@SerialName(&quot;warning&quot;)
+data class WarningEvent(
+    override val schemaVersion: Int = 1,
+    val warningType: String,
+    val riskState: String,
+    @SerialName(&quot;object&quot;) val objectSnapshot: ObjectSnapshot,
+    val geometry: SceneGeometry,
+) : Message()
+</code></pre>
+<h3 id="22-additive-version-safety-lenient-parsing">2.2 Additive-Version Safety &amp; Lenient Parsing<a class="headerlink" href="#22-additive-version-safety-lenient-parsing" title="Link to this section">¶</a></h3>
+<ul>
+<li><strong>Unknown JSON keys:</strong> ignored silently (<code>ignoreUnknownKeys = true</code>).</li>
+<li><strong>Unknown enumeration value:</strong> preserved verbatim so logs retain diagnostic evidence; classification happens at the UI layer.</li>
+<li><strong>Buffer truncation defence:</strong> <code>packet.setLength(buffer.size)</code> is executed before every <code>socket.receive()</code> call to prevent JDK datagram buffer shrinkage.</li>
+</ul>
+<hr />
+<h2 id="3-automotive-communication-protocols-evaluation">3. Automotive Communication Protocols Evaluation<a class="headerlink" href="#3-automotive-communication-protocols-evaluation" title="Link to this section">¶</a></h2>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Protocol</th>
+<th>Latency</th>
+<th>Overhead</th>
+<th>Schema Enforcement</th>
+<th>Use Case in Automotive</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Raw UDP Socket (Selected)</strong></td>
+<td><strong>&lt; 2 ms</strong></td>
+<td><strong>Minimal (8-byte header)</strong></td>
+<td>Application-layer JSON validator</td>
+<td><strong>Safety warnings, ECU to head unit</strong></td>
+</tr>
+<tr>
+<td><strong>SOME/IP</strong></td>
+<td>5–10 ms</td>
+<td>Moderate</td>
+<td>AUTOSAR FIBEX / ARXML</td>
+<td>ECU-to-ECU service-oriented RPC</td>
+</tr>
+<tr>
+<td><strong>gRPC / Protobuf</strong></td>
+<td>10–20 ms</td>
+<td>Low payload, high CPU</td>
+<td><code>.proto</code> IDL contract</td>
+<td>Cloud-to-Vehicle Telemetry</td>
+</tr>
+<tr>
+<td><strong>MQTT</strong></td>
+<td>30–100 ms</td>
+<td>High (Broker dependency)</td>
+<td>None (Topic string)</td>
+<td>Non-critical Infotainment (Weather/Media)</td>
+</tr>
+<tr>
+<td><strong>Zenoh / DDS</strong></td>
+<td>3–5 ms</td>
+<td>Low-to-Moderate</td>
+<td>Shared Memory / PubSub</td>
+<td>ADAS Sensor Fusion Internal Bus</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Why Raw UDP for safety warnings?</strong>
+Safety warnings require zero-handshake, ultra-low latency broadcast (&lt; 5 ms deadline). If an obstacle is detected at 60 km/h, every millisecond saved in transmission translates directly to vehicle stopping distance.</p>
+<hr />
+<h2 id="4-mvvm-unidirectional-data-flow-state-machine">4. MVVM &amp; Unidirectional Data Flow (State Machine)<a class="headerlink" href="#4-mvvm-unidirectional-data-flow-state-machine" title="Link to this section">¶</a></h2>
+<h3 id="41-state-transition-lifecycle">4.1 State Transition Lifecycle<a class="headerlink" href="#41-state-transition-lifecycle" title="Link to this section">¶</a></h3>
+<pre><code>                 Incoming Warning Event
+             ┌───────────────────────────────┐
+             │                               ▼
+    ┌────────────────┐   10s Timeout   ┌──────────────────┐
+    │  HomeView      │ &lt;────────────── │   WarningView    │
+    │  (Idle Screen) │                 │ (Active Warning) │
+    └────────────────┘                 └──────────────────┘
+             ▲                               │
+             │   Driver Manual Override Tab  │
+             └───────────────────────────────┘
+</code></pre>
+<ol>
+<li><strong>Idle state (<code>HomeView</code>):</strong> displays digital clock, telemetry, link status.</li>
+<li><strong>Active warning state (<code>WarningView</code>):</strong> the mode view model intercepts an incoming warning event and forces a transition to the alert mode with a 200 ms <code>AnimatedContent</code> fade.</li>
+<li><strong>Auto-clear:</strong> after a timeout constant (10,000 ms), state clears back to the idle screen unless a new warning arrives.</li>
+<li><strong>User override:</strong> if the driver manually taps another mode during a warning, the system respects driver intent rather than fighting it.</li>
+</ol>
+<hr />
+<h2 id="5-jetpack-compose-2d-canvas-geometry">5. Jetpack Compose 2D Canvas &amp; Geometry<a class="headerlink" href="#5-jetpack-compose-2d-canvas-geometry" title="Link to this section">¶</a></h2>
+<h3 id="51-coordinate-translation-math">5.1 Coordinate translation math<a class="headerlink" href="#51-coordinate-translation-math" title="Link to this section">¶</a></h3>
+<p>The perception ECU reports positions in metres relative to the ego vehicle: <code>Ego = (0, 0)</code>. A coordinate mapper translates metric coordinates to screen pixels:</p>
+<p>$$\text{Pixel}<em _text_meters="\text{meters">X = \frac{\text{Width}}{2} + (X</em>_X)$$}} \times \text{Scale</p>
+<p>$$\text{Pixel}<em _text_bottom="\text{bottom">Y = \text{Height} - \text{Margin}</em>_Y)$$}} - (Y_{\text{meters}} \times \text{Scale</p>
+<ul>
+<li><strong>Clamping:</strong> off-screen vehicles are clamped 16 px inside canvas boundaries so objects never disappear silently.</li>
+</ul>
+<h3 id="52-defensive-provenance-guard">5.2 Defensive provenance guard<a class="headerlink" href="#52-defensive-provenance-guard" title="Link to this section">¶</a></h3>
+<pre><code class="language-kotlin">val snapshot = scene.relayedVehicleSnapshot
+val sourceTrusted = snapshot == null || snapshot.source == ObjectSnapshot.SOURCE_RELAYED
+</code></pre>
+<ul>
+<li><strong>Safety rationale:</strong> a relayed vehicle — one reported by another vehicle rather than seen by the host's own sensors — is drawn as a hazard <strong>only if</strong> its provenance field says so.</li>
+<li>If an untrusted source arrives (own-sensor data mislabelled, or spoofed), the renderer draws an explicit unknown-source marker and logs at ERROR instead of presenting it as a confirmed hazard.</li>
+</ul>
+<p>A provenance check belongs in the renderer rather than the parser: the parser's job is to accept a well-formed message, and a well-formed message can still carry a value the display must not treat as trustworthy.</p>
+<hr />
+<h2 id="6-automotive-hmi-framework-comparison">6. Automotive HMI Framework Comparison<a class="headerlink" href="#6-automotive-hmi-framework-comparison" title="Link to this section">¶</a></h2>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Framework</th>
+<th>Platform</th>
+<th>Renderer</th>
+<th>Industry Adoption</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Android Automotive (AAOS)</strong></td>
+<td>Linux Kernel / Android</td>
+<td>Jetpack Compose / View</td>
+<td>Google, Volvo, Polestar, Ford, GM</td>
+</tr>
+<tr>
+<td><strong>LG webOS Auto (Tiger)</strong></td>
+<td>Linux</td>
+<td>Qt / HTML5 Enact</td>
+<td>LG, Hyundai Motor Group</td>
+</tr>
+<tr>
+<td><strong>Qt / QML</strong></td>
+<td>Bare Metal / RTOS / Linux</td>
+<td>OpenGL / Vulkan</td>
+<td>Mercedes-Benz (MB.OS), BMW</td>
+</tr>
+<tr>
+<td><strong>Automotive Grade Linux (AGL)</strong></td>
+<td>Yocto Linux</td>
+<td>HTML5 / Flutter</td>
+<td>Toyota, Mazda, Subaru</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="conclusion">Conclusion<a class="headerlink" href="#conclusion" title="Link to this section">¶</a></h3>
+<p>AAOS provides the optimal balance of developer ecosystem (Kotlin, Compose, Hilt) and native automotive hardware integration via VHAL.</p>
+      </article>
+    </main>
+  </div>
+  <script src="../js/site-data.js"></script>
+  <script src="../js/theme.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/doc-page.js"></script>
+</body>
+</html>

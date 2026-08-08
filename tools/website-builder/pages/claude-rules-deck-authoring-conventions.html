@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en" data-theme="sketch">
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="kis-build-pages">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Deck Authoring Conventions — KIS</title>
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/doc.css">
+  <link rel="stylesheet" href="../css/themes.css">
+</head>
+<body class="DocBody" data-root=".." data-doc-node="plans" data-doc-title="Deck Authoring Conventions" data-doc-source=".claude/rules/deck-authoring-conventions.md">
+  <div class="DocLayout">
+    <aside class="DocLayout__aside" id="doc-toc"></aside>
+    <main class="Page DocPage">
+      <header class="PageHeader" id="doc-header"></header>
+      <article class="Markdown" id="doc-body">
+<h1 id="deck-authoring-conventions">Deck Authoring Conventions<a class="headerlink" href="#deck-authoring-conventions" title="Link to this section">¶</a></h1>
+<p>Governs every human-facing presentation in <a href="../../../presentation/">presentation/</a>. Referenced from <a href="claude-skills-markdown-writing-style-skill.html">markdown-writing-style § Audience</a>, human-facing-presentation row — read before authoring a deck or regenerating its HTML.</p>
+<p>The design system itself — layouts, styles, and HTML components — lives in <a href="../../../presentation/template/template.md">template.md</a>, not here. This document carries only what the template cannot: where deck files go, how they are built, and the decisions an author would otherwise re-litigate.</p>
+<h2 id="two-files-per-deck-one-generated">Two files per deck, one generated<a class="headerlink" href="#two-files-per-deck-one-generated" title="Link to this section">¶</a></h2>
+<ul>
+<li><strong>Source:</strong> <code>&lt;deck-slug&gt;-deck.md</code>, a Marp-flavoured markdown file. The only file an author edits.</li>
+<li><strong>Export:</strong> <code>&lt;deck-slug&gt;-deck.html</code>, produced by <a href="../../../presentation/slide-build-tool/build-slides.py">build-slides.py</a> beside the markdown, same basename. Never hand-edited — the next build overwrites it.</li>
+</ul>
+<pre><code class="language-bash">python presentation/slide-build-tool/build-slides.py presentation/&lt;deck-slug&gt;/&lt;deck-slug&gt;-deck.md
+</code></pre>
+<p>A design change belongs in <a href="../../../presentation/template/template.md">template.md</a> followed by a rebuild, never in the generated HTML.</p>
+<h2 id="folder-placement">Folder placement<a class="headerlink" href="#folder-placement" title="Link to this section">¶</a></h2>
+<ul>
+<li><strong>Decks about a phase</strong> group by phase, not by deck: <code>presentation/phase&lt;N&gt;/&lt;deck-slug&gt;-deck.{md,html}</code>, with every deck about that phase in the one folder and its slug prefixed <code>phase&lt;N&gt;-</code>. Example: <a href="../../../presentation/phase0/">presentation/phase0/</a> holds the smoke-test, design-concepts, and task-execution decks. Authoring procedure: <a href="claude-skills-task-planning-presentation-skill.html">task-planning-presentation</a>.</li>
+<li><strong>Any other deck</strong> takes its own subfolder: <code>presentation/&lt;deck-slug&gt;/&lt;deck-slug&gt;-deck.{md,html}</code>. The top-level <code>m1-proposal-deck.*</code> predates this convention and stays at the root.</li>
+<li>Shared assets — background images, team photos, SVG diagrams — live once in <a href="../../../presentation/assets/">presentation/assets/</a>, referenced by every deck through a relative <code>../assets/…</code> path.</li>
+</ul>
+<h2 id="assets-are-referenced-never-embedded">Assets are referenced, never embedded<a class="headerlink" href="#assets-are-referenced-never-embedded" title="Link to this section">¶</a></h2>
+<p>Base64-inlining an image bloats the export beyond usefulness and makes it undiffable — it is why the root proposal deck's HTML is ~1.2 MB. Reference assets by relative path; add a new file to <code>presentation/assets/</code> rather than inlining it.</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Asset</th>
+<th>Page type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>bg-title-city.jpg</code></td>
+<td>cover</td>
+</tr>
+<tr>
+<td><code>bg-navy-motif.png</code></td>
+<td>section pages</td>
+</tr>
+<tr>
+<td><code>bg-fpt-tower.jpg</code></td>
+<td>closing</td>
+</tr>
+</tbody>
+</table></div>
+<p>A gradient layered over a photo must use <code>rgba(…)</code> alpha, not opaque hex — an opaque gradient hides the image entirely.</p>
+<h2 id="slide-titles-are-condensed-phrases">Slide titles are condensed phrases<a class="headerlink" href="#slide-titles-are-condensed-phrases" title="Link to this section">¶</a></h2>
+<p>Every slide title — section dividers and content slides alike — is a short noun phrase naming what the slide is about. Not a sentence, not a claim, not a clause with a verb in it.</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Instead of</th>
+<th>Write</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The four acceptance boxes, and what actually closed them</td>
+<td>The four acceptance boxes</td>
+</tr>
+<tr>
+<td>Six lanes, six places the work could start at once</td>
+<td>Six lanes defining parallel or consecutive works</td>
+</tr>
+<tr>
+<td>Every arrow is a real dependency, never a default assumption</td>
+<td>Relationship between lanes</td>
+</tr>
+<tr>
+<td>What Phase 1 was allowed to assume</td>
+<td>Phase 1's input</td>
+</tr>
+<tr>
+<td>Lane F — the smoke test, and the only lane a human had to finish</td>
+<td>Lane F — the smoke test and human work</td>
+</tr>
+</tbody>
+</table></div>
+<p>A <code>Term — short gloss</code> shape is fine (<code>Execution lanes — sequential subtasks</code>); a trailing subordinate clause is not. The assertion belongs in the slide body, where it has room to be supported; a title that argues the point leaves the body restating it.</p>
+<p>This is a house rule, not a stylistic preference to re-litigate per deck — apply it when authoring and when editing an existing deck.</p>
+<h2 id="how-to-apply">How to apply<a class="headerlink" href="#how-to-apply" title="Link to this section">¶</a></h2>
+<p>Any agent authoring or updating a deck:</p>
+<ol>
+<li>Write the markdown source only — follow <a href="../../../presentation/m1-proposal-deck.html">m1-proposal-deck.md</a> as the worked example, and <a href="../../../presentation/template/template.md">template.md § Source markdown format</a> for the directives the builder understands.</li>
+<li>Run the builder. Do not hand-author or hand-patch the HTML.</li>
+<li>Commit the source and its regenerated export together, so the two never drift.</li>
+</ol>
+      </article>
+    </main>
+  </div>
+  <script src="../js/site-data.js"></script>
+  <script src="../js/theme.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/doc-page.js"></script>
+</body>
+</html>

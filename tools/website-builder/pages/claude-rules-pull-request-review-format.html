@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en" data-theme="sketch">
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="kis-build-pages">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pull-Request Review Format — KIS</title>
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/doc.css">
+  <link rel="stylesheet" href="../css/themes.css">
+</head>
+<body class="DocBody" data-root=".." data-doc-node="plans" data-doc-title="Pull-Request Review Format" data-doc-source=".claude/rules/pull-request-review-format.md">
+  <div class="DocLayout">
+    <aside class="DocLayout__aside" id="doc-toc"></aside>
+    <main class="Page DocPage">
+      <header class="PageHeader" id="doc-header"></header>
+      <article class="Markdown" id="doc-body">
+<h1 id="pull-request-review-format">Pull-Request Review Format<a class="headerlink" href="#pull-request-review-format" title="Link to this section">¶</a></h1>
+<p>Governs every review [[project-reviewer]] produces via <a href="claude-skills-pull-request-review-skill.html">pull-request-review</a>. Fixes <strong>where the review lives, what it must contain, and in what order</strong> — the procedure for producing it is the skill, and the writing style is <a href="claude-skills-markdown-writing-style-skill.html">markdown-writing-style</a>.</p>
+<p>A review is a <strong>verdict on work already done</strong>. It is not a plan, not a design, and not a task list. The rule that keeps it that way is § The conclusion is encouragement, never a plan.</p>
+<h2 id="location-naming">Location &amp; naming<a class="headerlink" href="#location-naming" title="Link to this section">¶</a></h2>
+<p>A review is written to the <strong>reviewed node's own <code>doc/</code></strong>, at:</p>
+<pre><code>&lt;Node_Folder&gt;/doc/&lt;node-slug&gt;-pr&lt;N&gt;-review-v&lt;K&gt;.md
+</code></pre>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Element</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>&lt;Node_Folder&gt;/doc/</code></td>
+<td>the <code>doc/</code> of the node the PR principally develops, per <a href="claude-rules-node-code-layout.html#where-a-nodes-documents-live">node-code-layout.md § Where a node's documents live</a></td>
+</tr>
+<tr>
+<td><code>&lt;node-slug&gt;</code></td>
+<td>the same slug the node's HLD uses — <code>ivi-ecu</code>, <code>ada-ecu</code>, <code>v2x-ecu</code>, <code>scenario-player</code></td>
+</tr>
+<tr>
+<td><code>&lt;N&gt;</code></td>
+<td>the pull-request number</td>
+</tr>
+<tr>
+<td><code>&lt;K&gt;</code></td>
+<td>the review version, from <code>1</code></td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>The review sits with the node, not with the design.</strong> The design authority lives in <a href="documents-design-readme.html">documents/Design/<code>&lt;NODE&gt;</code>/</a> and states what the node <em>should</em> be; a review states what one branch <em>was</em> on one day. Keeping the two apart is what stops a verdict being read as a specification.</li>
+<li><strong>A PR spanning several node folders gets one document</strong>, in the <code>doc/</code> of the node carrying most of the change; cross-node findings stay in it rather than being split. A PR with no principal node goes to <a href="plans-doc-readme.html">plans/doc/</a>.</li>
+<li><strong>Reviews are committed and pushed to <code>main</code></strong>, not to the branch under review. The branch is rewritten, rebased, squashed or deleted as the work lands; the review is the record of what was found and must outlive it.</li>
+</ul>
+<h3 id="archiving-a-review">Archiving a review<a class="headerlink" href="#archiving-a-review" title="Link to this section">¶</a></h3>
+<p><strong>A review moves to <code>&lt;Node_Folder&gt;/doc/deprecated/</code> once the work it judged has landed or been superseded</strong> — not when it is written. Until then it is live: it names gaps someone may still be closing.</p>
+<p>Worked examples, both archived: <a href="ivi-ecu-doc-deprecated-ivi-ecu-pr2-review-v1.html">ivi-ecu-pr2-review-v1.md</a> and <a href="ivi-ecu-doc-deprecated-ivi-ecu-pr2-review-v2.html">ivi-ecu-pr2-review-v2.md</a>.</p>
+<ul>
+<li><strong>Archiving moves the file; it never edits the verdict.</strong> Relative links may be repointed for the new depth, and nothing else.</li>
+<li><strong>A later version does not archive an earlier one.</strong> v1 and v2 judge different commits and travel together — § Versions are enumerated, never overwritten.</li>
+</ul>
+<h2 id="versions-are-enumerated-never-overwritten">Versions are enumerated, never overwritten<a class="headerlink" href="#versions-are-enumerated-never-overwritten" title="Link to this section">¶</a></h2>
+<p><strong>A re-review is a new file at the next <code>&lt;K&gt;</code>.</strong> The previous version is never edited and never deleted.</p>
+<ul>
+<li>Each version is a <strong>point-in-time verdict against one commit</strong>. Editing v1 in place destroys the only evidence of what the branch looked like when it was judged, and with it any way to see whether the next round improved.</li>
+<li><strong>Every version from v2 carries a § Since v<em>K−1</em> section</strong>, immediately after the header block: what was fixed, what still stands, and what is newly broken. A reader opening the latest version alone must be able to follow the arc.</li>
+<li><strong>Version numbers are stable.</strong> They are cited the way task IDs are, and are never renumbered or reused.</li>
+</ul>
+<h2 id="the-header-block">The header block<a class="headerlink" href="#the-header-block" title="Link to this section">¶</a></h2>
+<p>A blockquote before §1 carrying, one per line: the review version and the date, the PR number and title, the branch, the reviewed commit SHA, the base commit the diff was taken against, the documents the review judged the work against, and — from v2 — the previous version's file and commit. A review whose reader cannot tell <strong>which commit was read</strong> is not reproducible.</p>
+<h2 id="section-order-is-mandatory">Section order is mandatory<a class="headerlink" href="#section-order-is-mandatory" title="Link to this section">¶</a></h2>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Section</th>
+<th>Required</th>
+<th>Must contain</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>Architecture review</strong></td>
+<td>always</td>
+<td>The 3-column module table of § The architecture table</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>Low-level review</strong></td>
+<td>always</td>
+<td>Exactly one of the two variants in § The low-level table</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>Conclusion</strong></td>
+<td>always</td>
+<td>The verdict, the themes worth improving, and nothing that schedules work</td>
+</tr>
+</tbody>
+</table></div>
+<p>Findings that fit no section — a misplaced file, a stray build artifact, a commit-format miss — go in the comment cell of the row they affect, or in the conclusion's themes. A review does not grow sections to hold them.</p>
+<h2 id="the-architecture-table">The architecture table<a class="headerlink" href="#the-architecture-table" title="Link to this section">¶</a></h2>
+<p>Three columns, one row per <strong>module in the design</strong> — taken from the node's HLD (§3 component architecture and §6 internal components), never invented by the reviewer.</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Content</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Module in design</strong></td>
+<td>The component's name as the HLD writes it, with its designated path</td>
+</tr>
+<tr>
+<td><strong>% completion</strong></td>
+<td>How much of that component's designed responsibility exists in the branch</td>
+</tr>
+<tr>
+<td><strong>Comment</strong></td>
+<td>Whether it abides by the architecture, and whether its relations to other components are correct — the OOP relation (realizes / uses / owns), the API it provides, the seam it sits behind, the layer it belongs to</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>Rows come from the design, not from the diff.</strong> A designed module the branch never created is a row at 0%, not an omission. This is what makes the table a completion measure rather than a file listing.</li>
+<li><strong>A component the branch added that the design does not define gets a row too</strong>, marked as unsanctioned, with what it collides with.</li>
+<li><strong>The percentage is justified in the comment</strong>, never left bare. "60% — parses and routes, but nothing collects its output" is a review; "60%" is a number.</li>
+<li><strong>Judge the relation, not only the existence.</strong> A component that exists but is wired to nothing, bypasses its seam, or reaches across a layer is a defect the comment must name even at high completion.</li>
+</ul>
+<h2 id="the-low-level-table">The low-level table<a class="headerlink" href="#the-low-level-table" title="Link to this section">¶</a></h2>
+<p>Two variants. <strong>Pick by whether the commits' task IDs resolve against the repo's authoritative plan</strong> — the plan on the base branch, not a plan the PR brought with it.</p>
+<h3 id="variant-a-the-commits-match-the-plan">Variant A — the commits match the plan<a class="headerlink" href="#variant-a-the-commits-match-the-plan" title="Link to this section">¶</a></h3>
+<p>Use when the commit IDs resolve to subtasks of the authoritative plan. Three columns:</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Content</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Task ID</strong></td>
+<td>The <code>X.Y.Z.W</code> from the commit tag</td>
+</tr>
+<tr>
+<td><strong>Commit title</strong></td>
+<td>The commit's subject line</td>
+</tr>
+<tr>
+<td><strong>Review</strong></td>
+<td>Whether the subtask's stated goal is completely implemented, and what deviated</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="variant-b-the-commits-do-not-match-the-plan">Variant B — the commits do not match the plan<a class="headerlink" href="#variant-b-the-commits-do-not-match-the-plan" title="Link to this section">¶</a></h3>
+<p>Use when the commits carry no task IDs, or when their IDs are off from the authoritative plan — including the common case of the branch carrying <strong>its own</strong> plan whose IDs collide with the authoritative one. Judge the delivered features against the requirements instead. Three columns:</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Content</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Requirement</strong></td>
+<td><code>R1</code>, <code>R2</code>, … from <a href="requirements-m1-cooperative-awareness.html">m1-cooperative-awareness.md §2</a></td>
+</tr>
+<tr>
+<td><strong>% completion</strong></td>
+<td>Against that requirement's <strong>acceptance</strong> clause, not its headline</td>
+</tr>
+<tr>
+<td><strong>What is missing or deviated</strong></td>
+<td>Named plainly, with the file or contract field it concerns</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>State which variant was chosen and why</strong>, in one sentence before the table. A reader must be able to see that the choice was forced by the evidence.</li>
+<li><strong>Variant B still lists the commits</strong>, as a short inventory below the table — it is the evidence for the ID mismatch, and it is what shows commit-discipline defects (<a href="claude-rules-task-planning-conventions.html#commit-message-format">task-planning-conventions.md</a>).</li>
+<li><strong>Only requirements the PR touches get rows.</strong> A requirement no part of the branch serves is out of scope, not a 0% row.</li>
+</ul>
+<h2 id="evidence-not-impression">Evidence, not impression<a class="headerlink" href="#evidence-not-impression" title="Link to this section">¶</a></h2>
+<p>Every claim in a review is checkable by the person reading it.</p>
+<ul>
+<li><strong>Cite the file and line</strong> for a code finding, the contract field for a contract finding, the requirement's acceptance clause for a completion finding.</li>
+<li><strong>Run what can be run.</strong> Build output, unit-test counts and CI status are facts; "the tests look thin" is not. Where the reviewer could not run something, say so rather than inferring the result.</li>
+<li><strong>Separate what is broken from what is absent.</strong> A component that exists and misbehaves and a component that was never written are different findings with different fixes.</li>
+<li><strong>No speculation about intent.</strong> Describe what the code does and what the design requires; the gap between them is the finding.</li>
+</ul>
+<h2 id="the-conclusion-is-encouragement-never-a-plan">The conclusion is encouragement, never a plan<a class="headerlink" href="#the-conclusion-is-encouragement-never-a-plan" title="Link to this section">¶</a></h2>
+<p>The conclusion tells the author their work needs improvement, and does it in a way they can act on without being discouraged.</p>
+<ul>
+<li><strong>Open with what genuinely works.</strong> Real strengths, named specifically — not a softening preamble before the criticism.</li>
+<li><strong>Group the gaps into a few themes</strong>, not a re-list of every row above. Three or four themes is the budget.</li>
+<li><strong>Address the author as a colleague.</strong> Plain, warm, direct. No grading language, no scolding, no praise the evidence does not support.</li>
+<li><strong>Do not plan the work.</strong> No task IDs, no subtask breakdown, no phases, no ordering, no estimates, no "next steps" list, no branch names. Naming <em>what</em> falls short is the review's job; deciding <em>how and when</em> it gets fixed belongs to [[project-planner]], and a reviewer who writes it has taken the planner's decision away from them.</li>
+</ul>
+<p>Stating a theme and stating a plan differ in kind, not in politeness. "The receive loop never reaches the screen — nothing constructs the ViewModel" is a finding. "Add <code>MainActivity</code>, then wire <code>IviGraph</code>, then re-run the lane" is a plan, and does not belong in the document however it is phrased.</p>
+<h2 id="how-to-apply">How to apply<a class="headerlink" href="#how-to-apply" title="Link to this section">¶</a></h2>
+<ul>
+<li>[[project-reviewer]] applies the section list when outlining the review, and again before committing it. A review missing a mandatory section, or carrying a plan in its conclusion, is not done.</li>
+<li>[[project-planner]] may read a committed review as input when the user asks for the follow-up work to be planned — the review states the gaps, the planner decides the tasks.</li>
+</ul>
+      </article>
+    </main>
+  </div>
+  <script src="../js/site-data.js"></script>
+  <script src="../js/theme.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/doc-page.js"></script>
+</body>
+</html>

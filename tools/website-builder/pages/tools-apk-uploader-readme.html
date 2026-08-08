@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en" data-theme="sketch">
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="kis-build-pages">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Upload the IVI APK over the reach-backend ADB tunnel — KIS</title>
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/doc.css">
+  <link rel="stylesheet" href="../css/themes.css">
+</head>
+<body class="DocBody" data-root=".." data-doc-node="plans" data-doc-title="Upload the IVI APK over the reach-backend ADB tunnel" data-doc-source="tools/apk uploader/README.md">
+  <div class="DocLayout">
+    <aside class="DocLayout__aside" id="doc-toc"></aside>
+    <main class="Page DocPage">
+      <header class="PageHeader" id="doc-header"></header>
+      <article class="Markdown" id="doc-body">
+<h1 id="upload-the-ivi-apk-over-the-reach-backend-adb-tunnel">Upload the IVI APK over the reach-backend ADB tunnel<a class="headerlink" href="#upload-the-ivi-apk-over-the-reach-backend-adb-tunnel" title="Link to this section">¶</a></h1>
+<p>How to install (sideload) the team APK into the <strong>IVI-ECU Skycraft node</strong> of a deployed blueprint — e.g. <code>m1-system-test</code> — from this Windows machine, using the organizers' <code>reach-backend</code> tunnel CLI kept in this folder.</p>
+<p><strong>Authority:</strong> <a href="requirements-car-sky-guide-deploy-ivi-hmi-walkthrough.html#44-get-an-adb-endpoint">deploy-ivi-hmi-walkthrough.md §4.4–§4.8</a> is the authoritative procedure. This guide pins the machine-specific values that document deliberately leaves as placeholders: the local tool paths, the secrets location, and the exact PowerShell forms. On any conflict, the walkthrough wins.</p>
+<h2 id="what-upload-means-here">What "upload" means here<a class="headerlink" href="#what-upload-means-here" title="Link to this section">¶</a></h2>
+<p>The IVI node takes <strong>no image push</strong>. Its VM image is the platform's stock AAOS artifact; the team deliverable is an APK installed over ADB into the <strong>running</strong> guest, after the Skycraft node reaches <code>Running</code> (<a href="requirements-car-sky-guide-deploy-ivi-hmi-walkthrough.html#41-how-the-apk-reaches-the-ivi-ecu-node">§4.1</a>).</p>
+<h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Link to this section">¶</a></h2>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Where it is</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tunnel CLI</td>
+<td><code>tools\apk uploader\reach_be\reach\reach-backend.exe</code></td>
+<td>Windows build; <code>reach-backend</code> (no <code>.exe</code>) beside it is the macOS/Linux build</td>
+</tr>
+<tr>
+<td>APK</td>
+<td><code>tools\apk uploader\app-debug.apk</code></td>
+<td>Package <code>com.hackathon.v2x.ivi</code></td>
+</tr>
+<tr>
+<td><code>adb</code></td>
+<td><code>%LOCALAPPDATA%\Android\Sdk\platform-tools\adb.exe</code></td>
+<td>From the Android SDK already on this machine</td>
+</tr>
+<tr>
+<td>Gateway URL</td>
+<td><code>https://hackathon-2.carsky.io</code></td>
+<td>The workbench base URL doubles as the A8 gateway — confirmed by the <strong>Local ADB</strong> dialog (step 1); re-read it there if the organizers rotate hosts</td>
+</tr>
+<tr>
+<td><code>a8k_</code> tunnel token</td>
+<td><code>secrets\reach-adb-token-ivi.txt</code></td>
+<td>A <strong>per-device derived token</strong>, shown in the Local ADB dialog (step 1) — it is <em>not</em> the CarSky API key. The folder is git-ignored; never print, log, or commit its contents</td>
+</tr>
+<tr>
+<td>A running Room</td>
+<td>Deployment of the target blueprint with the Skycraft node <code>Running</code></td>
+<td>The tunnel has nothing to dial otherwise; the Skycraft node is the slowest to come up</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="step-1-get-the-gateway-url-and-token-browser-human">Step 1 — Get the gateway URL and token (browser, human)<a class="headerlink" href="#step-1-get-the-gateway-url-and-token-browser-human" title="Link to this section">¶</a></h2>
+<p>The values live in the ADB panel's <strong>Connect from Terminal</strong> dialog. Exact path, click by click:</p>
+<ol>
+<li>Log in to the CarSky workbench at <code>https://hackathon-2.carsky.io</code> (Keycloak SSO).</li>
+<li>Confirm the target deployment's <strong>Skycraft node is <code>Running</code></strong> (<strong>Nydus</strong> on the DockBar → the deployment).</li>
+<li><strong>Devices</strong> on the DockBar → the deployment's device in the list (its row carries the deployment name, e.g. <code>KIS</code> / <code>m1_system_test-deploy</code>) → <strong>Connect</strong>. The button reads <strong>Switch</strong> if another device session is open; after connecting, the dot beside the device name must be green.</li>
+<li>If the device's <strong>Widgets</strong> list has no ADB widget yet: <code>+</code> beside <strong>Widgets</strong> → <strong>ADB</strong>; in the <strong>Inspector</strong> (right column), under <code>PROPERTIES → ADB</code>, pick the part the Skycraft node exposes (e.g. <code>ivi-adb</code>).</li>
+<li>In the panel below the Stage, click the ADB widget's tab (e.g. <strong>IVI ADB</strong>, beside <code>Logs: …</code>). The <strong>ADB SHELL</strong> panel opens with a green <code>connected</code> badge.</li>
+<li>Top-right of the ADB SHELL panel → <strong>Local ADB</strong>. The <strong>Connect from Terminal</strong> dialog opens, showing two copyable commands:
+   - <code>reach-backend adb --gateway https://hackathon-2.carsky.io --key a8k_…</code> — the gateway URL and the <strong>per-device <code>a8k_</code> token</strong>
+   - <code>adb connect localhost:5555</code></li>
+<li>Copy the token (only the <code>a8k_…</code> value) into <code>secrets\reach-adb-token-ivi.txt</code>, one line, no quotes.</li>
+</ol>
+<p>Two facts the dialog settles: the <strong>gateway is the workbench base URL itself</strong> (no separate <code>sslip.io</code> host on this deployment), and the token is <strong>derived per device</strong> — it is not the CarSky API key, and a redeploy may mint a new one, so re-open the dialog after redeploying. If the gateway ever presents a self-signed certificate, add <code>--insecure</code> to the tunnel command (the dialog says so too).</p>
+<h2 id="step-2-start-the-tunnel-powershell-leave-it-running">Step 2 — Start the tunnel (PowerShell, leave it running)<a class="headerlink" href="#step-2-start-the-tunnel-powershell-leave-it-running" title="Link to this section">¶</a></h2>
+<p>From the repo root. The key is loaded from the file into a variable so it never appears on screen or in shell history:</p>
+<pre><code class="language-powershell">$gateway = &quot;https://hackathon-2.carsky.io&quot;
+$key = (Get-Content &quot;secrets\reach-adb-token-ivi.txt&quot; -Raw).Trim()
+&amp; &quot;.\tools\apk uploader\reach_be\reach\reach-backend.exe&quot; adb --gateway $gateway --key $key --port 5555
+</code></pre>
+<p>This opens a local TCP server on <code>localhost:5555</code>. <strong>Leave this terminal open</strong> — closing it drops the tunnel. If the tunnel exits immediately: the token is stale (redeploy mints a new one — re-open the Local ADB dialog, step 1.6), the gateway URL is wrong, or port 5555 is taken (pass a different <code>--port</code> and connect to that port in step 3).</p>
+<h2 id="step-3-connect-and-check-the-guest-new-terminal">Step 3 — Connect and check the guest (new terminal)<a class="headerlink" href="#step-3-connect-and-check-the-guest-new-terminal" title="Link to this section">¶</a></h2>
+<pre><code class="language-powershell">$adb = &quot;$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe&quot;
+&amp; $adb connect localhost:5555
+&amp; $adb devices        # expect: localhost:5555   device
+</code></pre>
+<p><code>offline</code> or an empty list means the tunnel is not serving — see <a href="requirements-car-sky-guide-deploy-ivi-hmi-walkthrough.html#410-troubleshooting">walkthrough §4.10</a> rather than retrying blind.</p>
+<p>Two guest properties decide whether the install can succeed at all:</p>
+<pre><code class="language-powershell">&amp; $adb shell getprop ro.build.version.sdk          # must be ≥ 29 (the APK's minSdk)
+&amp; $adb shell pm list features | Select-String automotive   # android.hardware.type.automotive must be present
+</code></pre>
+<h2 id="step-4-install">Step 4 — Install<a class="headerlink" href="#step-4-install" title="Link to this section">¶</a></h2>
+<pre><code class="language-powershell">&amp; $adb install -r &quot;.\tools\apk uploader\app-debug.apk&quot;
+&amp; $adb shell pm list packages | Select-String hackathon
+</code></pre>
+<p>Expected: <code>Success</code>, then <code>package:com.hackathon.v2x.ivi</code>. <code>-r</code> reinstalls over an existing copy and keeps its data — use it on every reinstall.</p>
+<h2 id="step-5-launch-and-verify">Step 5 — Launch and verify<a class="headerlink" href="#step-5-launch-and-verify" title="Link to this section">¶</a></h2>
+<pre><code class="language-powershell">&amp; $adb shell am start -n com.hackathon.v2x.ivi/.MainActivity
+&amp; $adb logcat -s IVI_V2X
+</code></pre>
+<p>The pass evidence is <code>[LINK] state=bound port=47300</code> on the <code>IVI_V2X</code> tag, and the HMI visible in the Devices panel's <strong>Screen</strong> widget (Connect → <code>+</code> → Screen). The full verification ladder — V1 socket bound through V5 end-to-end warning — and the screen-widget procedure are <a href="requirements-car-sky-guide-deploy-ivi-hmi-walkthrough.html#47-open-the-screen-and-launch-the-app">walkthrough §4.7–§4.8</a>; this guide stops at the install being provably alive.</p>
+<h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Link to this section">¶</a></h2>
+<p>The walkthrough's <a href="requirements-car-sky-guide-deploy-ivi-hmi-walkthrough.html#410-troubleshooting">§4.10 table</a> covers the failure modes. The two seen most on this route: the tunnel terminal was closed (restart step 2), and the Skycraft node was not yet <code>Running</code> when the tunnel dialed (wait, then restart step 2).</p>
+<h2 id="secrets-hygiene">Secrets hygiene<a class="headerlink" href="#secrets-hygiene" title="Link to this section">¶</a></h2>
+<p><code>secrets/</code> is git-ignored (<a href="../../../.gitignore">.gitignore</a>). Keys are loaded into variables from the files, passed as arguments, and never echoed, logged, committed, or pasted into documents — including this one.</p>
+      </article>
+    </main>
+  </div>
+  <script src="../js/site-data.js"></script>
+  <script src="../js/theme.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/doc-page.js"></script>
+</body>
+</html>

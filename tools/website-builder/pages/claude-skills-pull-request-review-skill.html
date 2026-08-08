@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en" data-theme="sketch">
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="kis-build-pages">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pull-Request Review Procedure (project-reviewer) — KIS</title>
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/doc.css">
+  <link rel="stylesheet" href="../css/themes.css">
+</head>
+<body class="DocBody" data-root=".." data-doc-node="plans" data-doc-title="Pull-Request Review Procedure (project-reviewer)" data-doc-source=".claude/skills/pull-request-review/SKILL.md">
+  <div class="DocLayout">
+    <aside class="DocLayout__aside" id="doc-toc"></aside>
+    <main class="Page DocPage">
+      <header class="PageHeader" id="doc-header"></header>
+      <article class="Markdown" id="doc-body">
+<hr />
+<p>name: pull-request-review
+description: Procedure project-reviewer follows when asked to review a pull request or a delivery branch — check out the branch, establish the design and plan authorities it should have been built against, judge the modules against the HLD and the delivered features against the plan or the requirements, and commit a review document on the branch. project-reviewer only.</p>
+<hr />
+<h1 id="pull-request-review-procedure-project-reviewer">Pull-Request Review Procedure (project-reviewer)<a class="headerlink" href="#pull-request-review-procedure-project-reviewer" title="Link to this section">¶</a></h1>
+<p>Trigger: [[project-reviewer]] is asked to review a pull request, a delivery branch, or "the work on branch X". The artifact is one versioned review document in the reviewed node's <code>doc/</code>, shaped by <a href="claude-rules-pull-request-review-format.html">pull-request-review-format.md</a> — this skill is how it gets produced, that rule is what it must look like.</p>
+<p>The review judges <strong>delivered work against the authorities that governed it</strong>. Establishing those authorities is step 2 and it is not optional: a review written against the reviewer's own idea of good design is an opinion, and the author is entitled to reject it.</p>
+<h2 id="procedure">Procedure<a class="headerlink" href="#procedure" title="Link to this section">¶</a></h2>
+<ol>
+<li>
+<p><strong>Get the branch and fix the diff range.</strong> Fetch the PR (<code>gh pr checkout &lt;N&gt;</code>, or the already-fetched <code>pr-&lt;N&gt;</code> branch where <code>gh</code> is unauthenticated) into a <strong>separate worktree</strong>, so the primary working directory stays on its own branch. Record the head SHA, the base branch, and <code>git merge-base base head</code> — every later claim is made about that range. Use <code>git diff base...head</code> (three dots), never <code>base..head</code>: the two-dot form attributes the base branch's own commits to the author.</p>
+</li>
+<li>
+<p><strong>Establish the authorities on the base branch, not on the PR's.</strong> Read, from <code>main</code>:
+   - The <strong>node HLD</strong> for each folder the PR touches, <code>&lt;Node_Folder&gt;/doc/&lt;node-slug&gt;-hld.md</code> — its §3 component architecture, §4 folder structure, §6 internal components and §8 seams are the architecture section's row list. Its companion <code>doc/&lt;node-slug&gt;-design-decisions.md</code> carries the decisions a deviation is measured against.
+   - The <strong>authoritative plan</strong> for the phase, under <a href="../../../plans/">plans/</a> — the source of truth for what a task ID means.
+   - The <strong>requirement entries</strong> the PR serves, in full, from <a href="requirements-m1-cooperative-awareness.html">m1-cooperative-awareness.md §2</a> — definition <em>and</em> acceptance. Completion is scored against the acceptance clause.
+   - The <strong>frozen contract files</strong> the PR's code binds against, <code>&lt;Node_Folder&gt;/contracts/*.schema.json</code>.</p>
+</li>
+</ol>
+<p><strong>A branch that does not contain the HLD was still governed by it.</strong> Judge against the design on the base branch and note the absence as a finding; do not lower the bar to what the branch happened to know about.</p>
+<ol start="3">
+<li>
+<p><strong>Read the git history of the base branch around the same files.</strong> A revert, a fix-forward, or a prior review of the same area is context the author may not have had, and it is often what explains a finding. <code>git log --oneline -20</code> plus the full message of any commit touching the PR's files.</p>
+</li>
+<li>
+<p><strong>Decide the low-level variant, from evidence.</strong> Resolve each commit's <code>X.Y.Z.W</code> tag against the authoritative plan of step 2.
+   - Every ID resolves, and to the work the commit actually did → <strong>Variant A</strong>, the task-ID table.
+   - IDs absent, unresolvable, or resolving to different work — the signature of a branch carrying its own plan — → <strong>Variant B</strong>, the requirement table.</p>
+</li>
+</ol>
+<p>When the branch carries its own plan file, read it: it explains the IDs, and the divergence between the two plans is itself a finding.</p>
+<ol start="5">
+<li>
+<p><strong>Walk the diff file by file, and record findings against the authorities.</strong> Read every changed file whole rather than the hunks alone — a hunk shows what moved, not what the file now does. What to look for, in the order it matters:
+   - <strong>Contract fidelity.</strong> Every field name, type, optionality and default against the frozen schema. A required field given a default, a type added to a frozen sealed hierarchy, or a discriminator value the schema does not define is contract drift, however small the diff.
+   - <strong>Reachability.</strong> Trace each new component to something that constructs or calls it. A component nothing reaches is not complete, whatever its internal quality — and this is the defect that unit tests most reliably hide.
+   - <strong>Layer and seam.</strong> Which layer the HLD assigns the component, and whether it stays there; whether it goes through the seam the design provides or around it.
+   - <strong>Configuration.</strong> Ports, addresses, thresholds and cadences against the blueprint and node guide values. A tunable that disagrees with the deployed blueprint is a defect even when both ends of the PR agree with each other.
+   - <strong>Resource and loop correctness.</strong> Buffers reused across iterations, sockets closed on cancellation, blocking calls inside cancellable scopes, unbounded growth.
+   - <strong>Test coverage against the risk</strong>, not against the line count: which of the findings above a test would have caught, and whether one exists.</p>
+</li>
+<li>
+<p><strong>Verify what can be verified.</strong> Build the artifact and run the unit tests, or read the committed results if a build is already present in the worktree. Check for a CI lane covering the work, in the file <a href="claude-rules-ci-lane-placement.html">ci-lane-placement.md</a> designates. Record counts and outcomes as facts; where a check could not be run, say which and why rather than inferring.</p>
+</li>
+<li>
+<p><strong>Score each row.</strong> Architecture rows are scored against the HLD component's stated responsibility; requirement rows against the acceptance clause. A component that exists, compiles and is wired to nothing sits well below half however polished it is — the design's unit of completion is a working path, not a file.</p>
+</li>
+<li>
+<p><strong>Write the review</strong> to <code>&lt;Node_Folder&gt;/doc/&lt;node-slug&gt;-pr&lt;N&gt;-review-v&lt;K&gt;.md</code> — next unused <code>&lt;K&gt;</code>, never overwriting an existing version — per <a href="claude-rules-pull-request-review-format.html">pull-request-review-format.md</a>: header block, architecture table, low-level table, conclusion. Write the conclusion last and check it against that rule's § The conclusion is encouragement, never a plan — the failure mode is drifting from "this falls short" into "here is how to fix it in order".</p>
+</li>
+<li>
+<p><strong>Commit and push to <code>main</code></strong>, <code>[&lt;taskID&gt;] docs: &lt;subject&gt;</code> where an ID applies and no tag otherwise, then report to the user: the verdict in a sentence, the findings that would block a merge, and the location of the document. Never push, never merge, never open or close the PR — and never edit the branch's code to fix what the review found.</p>
+</li>
+</ol>
+<h2 id="output">Output<a class="headerlink" href="#output" title="Link to this section">¶</a></h2>
+<ul>
+<li>One review document at <code>&lt;Node_Folder&gt;/doc/&lt;node-slug&gt;-pr&lt;N&gt;-review-v&lt;K&gt;.md</code>, committed and pushed to <code>main</code>.</li>
+<li>A user-facing summary carrying the verdict, the blocking findings, and the reasoning behind the low-level variant chosen.</li>
+</ul>
+<h2 id="how-to-apply">How to apply<a class="headerlink" href="#how-to-apply" title="Link to this section">¶</a></h2>
+<p>Owned by [[project-reviewer]] — see <a href="claude-agents-project-reviewer.html">project-reviewer.md</a>. Document shape, table columns and the conclusion rule are governed by <a href="claude-rules-pull-request-review-format.html">pull-request-review-format.md</a>; do not restate them here.</p>
+      </article>
+    </main>
+  </div>
+  <script src="../js/site-data.js"></script>
+  <script src="../js/theme.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/doc-page.js"></script>
+</body>
+</html>

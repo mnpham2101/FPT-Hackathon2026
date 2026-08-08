@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en" data-theme="sketch">
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="kis-build-pages">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CarSky Login (car-sky agent) — KIS</title>
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/doc.css">
+  <link rel="stylesheet" href="../css/themes.css">
+</head>
+<body class="DocBody" data-root=".." data-doc-node="plans" data-doc-title="CarSky Login (car-sky agent)" data-doc-source=".claude/skills/carsky-login/SKILL.md">
+  <div class="DocLayout">
+    <aside class="DocLayout__aside" id="doc-toc"></aside>
+    <main class="Page DocPage">
+      <header class="PageHeader" id="doc-header"></header>
+      <article class="Markdown" id="doc-body">
+<hr />
+<p>name: carsky-login
+description: How the car-sky agent authenticates to CarSky. Use a user-supplied API key if one exists; otherwise create one from a Keycloak login (undocumented method). Never persist, echo, log, or commit the password or key.</p>
+<hr />
+<h1 id="carsky-login-car-sky-agent">CarSky Login (car-sky agent)<a class="headerlink" href="#carsky-login-car-sky-agent" title="Link to this section">¶</a></h1>
+<p>Trigger: [[car-sky]] step 1, alongside <a href="claude-skills-carsky-deploy-preflight-skill.html">carsky-deploy-preflight</a> (picks <em>which</em> credential/environment).</p>
+<h2 id="two-credential-types">Two credential types<a class="headerlink" href="#two-credential-types" title="Link to this section">¶</a></h2>
+<ul>
+<li><strong>Keycloak login</strong> — email + password. Authenticates a human in a browser. Never sent to the REST API directly.</li>
+<li><strong>API key</strong> — m2m secret, format <code>a8k_&lt;prefix&gt;_&lt;secret&gt;</code>. What <code>/api/v1/*</code> accepts, as <code>X-API-Key</code> or <code>Authorization: Bearer</code>.</li>
+</ul>
+<p>Path A uses an existing API key. Path B creates one from a Keycloak login.</p>
+<h2 id="path-a-use-an-existing-api-key-preferred">Path A: use an existing API key (preferred)<a class="headerlink" href="#path-a-use-an-existing-api-key-preferred" title="Link to this section">¶</a></h2>
+<pre><code>export CS=https://hackathon-2.carsky.io
+curl -H &quot;Authorization: Bearer $CS_API_KEY&quot; $CS/api/v1/blueprints   # 200 = key works
+</code></pre>
+<p>Source: a prior run, the <code>CS_API_KEY</code> env var, or Settings → Credentials in the UI. Creating one there requires Admin or Editor role.</p>
+<p>No key? Use Path B. Prefer the user pasting an existing key over handling their password. Verify any key (pasted or new) with <a href="claude-skills-carsky-credential-verify-skill.html">carsky-credential-verify</a> — it catches display-ID-vs-secret mixups.</p>
+<h2 id="path-b-create-a-key-from-a-login-session-no-api-key-exists">Path B: create a key from a login session (no API key exists)<a class="headerlink" href="#path-b-create-a-key-from-a-login-session-no-api-key-exists" title="Link to this section">¶</a></h2>
+<p>Undocumented — found by observing platform behavior, not from CarSky's own docs. Use only with explicit user agreement; prefer a human creating a key via the UI when Admin/Editor access is available.</p>
+<p>Requires the user's email + password, taken interactively. Never read them from a file, log, or echo them.</p>
+<p>Platform facts (M1; re-confirm in preflight):</p>
+<ul>
+<li>Base URL: <code>https://hackathon-2.carsky.io</code></li>
+<li>Keycloak realm <code>hackathon02</code>, client <code>rework</code> — no direct password grant. <code>admin-cli</code>'s direct grant returns a token, but the CarSky API rejects it as an invalid JWT.</li>
+<li>Browser login is a Keycloak form; the resulting code is exchanged by an Envoy OAuth2 proxy, which sets session cookies.</li>
+</ul>
+<p>Steps (one cookie jar throughout):</p>
+<ol>
+<li><code>GET /</code> → redirects to Keycloak's authorize page; fetch it.</li>
+<li>Read the login form's <code>action</code> URL (<code>/auth/realms/hackathon02/login-actions/authenticate?...</code>; unescape HTML entities).</li>
+<li>POST <code>username</code>, <code>password</code>, <code>credentialId=""</code> to that URL, following redirects, same cookie jar. Sets <code>BearerToken</code>, <code>IdToken</code>, <code>RefreshToken</code>, <code>KEYCLOAK_SESSION</code>.</li>
+<li><code>GET /api/user</code> → <code>200</code> with email + roles confirms the session.</li>
+<li><code>POST /internal/credentials</code> <code>{"name": "&lt;name&gt;"}</code> → <code>201 {clientId, key, name}</code>. <code>key</code> is the API credential, shown once — hand it to the user; don't write it into the repo.</li>
+</ol>
+<p>Why step 5: the cookie authenticates <code>/internal/*</code> and <code>/api/*</code>, not <code>/api/v1/*</code>. The key from step 5 is what <code>/api/v1/*</code> needs.</p>
+<h2 id="cleanup">Cleanup<a class="headerlink" href="#cleanup" title="Link to this section">¶</a></h2>
+<ul>
+<li>List keys: <code>GET /internal/credentials</code>. Delete: <code>DELETE /internal/credentials/{clientId}</code>.</li>
+<li>Delete a temporary key after use unless the user wants it kept.</li>
+<li>Never commit, log, or print the password or key. Keep temp files in the scratchpad; delete when done.</li>
+</ul>
+<h2 id="output">Output<a class="headerlink" href="#output" title="Link to this section">¶</a></h2>
+<p>A working API key (<code>Authorization: Bearer &lt;API_KEY&gt;</code>) plus the confirmed base URL, handed to [[car-sky]]'s deploy procedure.</p>
+<h2 id="how-to-apply">How to apply<a class="headerlink" href="#how-to-apply" title="Link to this section">¶</a></h2>
+<p>Owned by [[car-sky]], after <a href="claude-skills-carsky-deploy-preflight-skill.html">carsky-deploy-preflight</a> confirms environment and credential. No task IDs. Full REST reference: <a href="requirements-car-sky-guide-carsky-rest-api-blueprint.html">carsky-rest-api-blueprint.md</a>.</p>
+      </article>
+    </main>
+  </div>
+  <script src="../js/site-data.js"></script>
+  <script src="../js/theme.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/doc-page.js"></script>
+</body>
+</html>

@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en" data-theme="sketch">
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="kis-build-pages">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Đề xuất Phương án Demo Giao diện IVI HMI (Phase 5) — KIS</title>
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/doc.css">
+  <link rel="stylesheet" href="../css/themes.css">
+</head>
+<body class="DocBody" data-root=".." data-doc-node="plans" data-doc-title="Đề xuất Phương án Demo Giao diện IVI HMI (Phase 5)" data-doc-source="plans/doc/phase5-hmi-demo-proposal.md">
+  <div class="DocLayout">
+    <aside class="DocLayout__aside" id="doc-toc"></aside>
+    <main class="Page DocPage">
+      <header class="PageHeader" id="doc-header"></header>
+      <article class="Markdown" id="doc-body">
+<h1 id="e-xuat-phuong-an-demo-giao-dien-ivi-hmi-phase-5">Đề xuất Phương án Demo Giao diện IVI HMI (Phase 5)<a class="headerlink" href="#e-xuat-phuong-an-demo-giao-dien-ivi-hmi-phase-5" title="Link to this section">¶</a></h1>
+<p><strong>Người gửi:</strong> Vinh (Team IVI)<br />
+<strong>Ngày:</strong> 02/08/2026<br />
+<strong>Chủ đề:</strong> Đơn giản hóa kiến trúc Demo IVI: Chuyển từ Video Feed sang Event-Driven Wake-on-Warning HMI</p>
+<hr />
+<h2 id="1-ly-do-khong-trien-khai-video-feed-tren-ivi">1. Lý do không triển khai Video Feed trên IVI<a class="headerlink" href="#1-ly-do-khong-trien-khai-video-feed-tren-ivi" title="Link to this section">¶</a></h2>
+<p>Qua phân tích tài liệu kiến trúc (<code>m1-cooperative-awareness.md</code> &amp; <code>m1-video-source-and-ivi-dashcam.md</code>), team đề xuất <strong>không đưa Video Feed vào màn hình IVI</strong> trong Phase 5 vì các lý do kỹ thuật sau:</p>
+<ol>
+<li><strong>Ngoài Scope Yêu cầu gốc (Deferred Scope):</strong> 
+   - Yêu cầu chính của IVI theo Milestone 1 là <strong>R16 (Display Area Switcher)</strong> và <strong>R17 (God-View Canvas Renderer)</strong>. Video feed trên IVI đã được ghi nhận là mục mở rộng (deferred), không nằm trong tiêu chí nghiệm thu chính.</li>
+<li><strong>Phức tạp về mặt Kiến trúc &amp; Hạ tầng:</strong>
+   - Cần thêm 1 node nguồn phát video, cấu hình stream HTTP/RTP. 
+   - Phía CarSky <code>video</code> pin hiện chưa có C++ SDK chính thức và gặp rủi ro lớn về băng thông/fan-out.</li>
+<li><strong>Vấn đề Đồng bộ Thời gian (Time-Sync Hazard):</strong>
+   - Video là bản ghi sẵn (pre-recorded), trong khi bản tin V2X <code>R4</code> từ ADA-ECU phát theo thời gian thực (real-time UDP). 
+   - Nếu video và bản tin V2X bị lệch dù chỉ 1–2 giây (ví dụ: hình xe B xuất hiện ở giây 10 nhưng cảnh báo V2X lại nổ ở giây 12), demo sẽ bị giảm tính thuyết phục và thiếu tính chính xác.</li>
+</ol>
+<hr />
+<h2 id="2-giai-phap-e-xuat-event-driven-wake-on-warning-hmi">2. Giải pháp Đề xuất: Event-Driven Wake-on-Warning HMI<a class="headerlink" href="#2-giai-phap-e-xuat-event-driven-wake-on-warning-hmi" title="Link to this section">¶</a></h2>
+<p>Thay vì phát video tĩnh, IVI sẽ vận hành theo đúng <strong>kiến trúc HMI ô tô thực tế (Automotive Standard)</strong> dựa trên trạng thái nhận bản tin V2X:</p>
+<pre><code>[Màn hình Idle: HomeView] ──(Nhận R4 UDP Packet từ ADA)──&gt; [Màn hình Cảnh báo: WarningView]
+         ▲                                                               │
+         └───────────────────(Hết Timeout 10 giây)───────────────────────┘
+</code></pre>
+<h3 id="chi-tiet-cac-trang-thai-giao-dien">Chi tiết các trạng thái Giao diện:<a class="headerlink" href="#chi-tiet-cac-trang-thai-giao-dien" title="Link to this section">¶</a></h3>
+<ol>
+<li>
+<p><strong>Trạng thái Mặc định (Idle / HomeView):</strong>
+   - Màn hình hiển thị <strong>Automotive Dashboard</strong>: Đồng hồ thời gian, vận tốc xe Ego, trạng thái kết nối mạng V2X (<code>V2X LINK: ACTIVE</code>), thông tin hệ thống.
+   - Giúp IVI có giao diện hoàn chỉnh ngay khi vừa mở ứng dụng, thay vì màn hình trống/stub.</p>
+</li>
+<li>
+<p><strong>Trạng thái Kích hoạt Cảnh báo (Event Trigger / WarningView):</strong>
+   - Ngay khi <code>R4ListenerService</code> nhận bản tin <code>R4WarningEvent</code> qua UDP từ ADA-ECU, <code>MainViewModel</code> lập tức ưu tiên chiếm quyền hiển thị (Wake-on-warning) với hiệu ứng chuyển cảnh mượt (<code>AnimatedContent</code> fade 200ms).
+   - Màn hình hiển thị <strong><code>CanvasWarningView</code> (God-View 2D Renderer)</strong>: Vẽ trực tiếp bằng Compose Canvas tọa độ các xe (Ego A, xe che khuất B, xe mù V2X C nhấp nháy đỏ theo mức độ rủi ro Risk State).</p>
+</li>
+<li>
+<p><strong>Trạng thái Tự động Khôi phục (Clear / Restore):</strong>
+   - Nếu sau 10 giây không có bản tin <code>R4</code> mới (Timeout), hệ thống tự động trả giao diện về lại <code>HomeView</code>.</p>
+</li>
+</ol>
+<hr />
+<h2 id="3-loi-ich-cua-phuong-an-e-xuat">3. Lợi ích của Phương án Đề xuất<a class="headerlink" href="#3-loi-ich-cua-phuong-an-e-xuat" title="Link to this section">¶</a></h2>
+<ul>
+<li><strong>Đúng chuẩn Automotive HMI:</strong> Mô phỏng chính xác tính năng cảnh báo an toàn trên các xe thương mại (chỉ hiện popup/screen khẩn cấp khi có nguy cơ va chạm).</li>
+<li><strong>Đáp ứng 100% Tiêu chuẩn Chấm điểm:</strong> Chứng minh hoàn hảo tính năng R16 (chuyển đổi View theo state) và R17 (Canvas rendering + R19 Provenance Guard).</li>
+<li><strong>Hoàn toàn Độc lập &amp; Ổn định (Deterministic):</strong> Không phụ thuộc vào file video, phần cứng ngoài hay chất lượng mạng stream. Chạy mượt mà 60fps trên AAOS Emulator và thiết bị thật.</li>
+<li><strong>Dễ dàng Kiểm thử (Automated Unit/UI Test):</strong> Toàn bộ flow đều có thể test tự động trong CI bằng JUnit &amp; Compose Test framework.</li>
+</ul>
+<hr />
+<h2 id="4-cac-buoc-trien-khai-tiep-theo-priority-1">4. Các bước triển khai tiếp theo (Priority 1)<a class="headerlink" href="#4-cac-buoc-trien-khai-tiep-theo-priority-1" title="Link to this section">¶</a></h2>
+<ol>
+<li><strong>UI-1:</strong> Dựng giao diện <code>HomeView</code> Automotive Dashboard.</li>
+<li><strong>UI-2:</strong> Wire StateFlow giữa <code>WarningViewModel</code> và <code>MainViewModel</code> để tự động đổi mode.</li>
+<li><strong>UI-3:</strong> Mount <code>CanvasWarningView</code> thực sự vào <code>WarningView</code> slot.</li>
+<li><strong>UI-4:</strong> Cập nhật trạng thái <code>V2X LINK</code> động trên thanh Bottom Bar.</li>
+</ol>
+      </article>
+    </main>
+  </div>
+  <script src="../js/site-data.js"></script>
+  <script src="../js/theme.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/doc-page.js"></script>
+</body>
+</html>

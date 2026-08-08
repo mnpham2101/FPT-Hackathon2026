@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en" data-theme="sketch">
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="kis-build-pages">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Design Presentation Structure — KIS</title>
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/doc.css">
+  <link rel="stylesheet" href="../css/themes.css">
+</head>
+<body class="DocBody" data-root=".." data-doc-node="plans" data-doc-title="Design Presentation Structure" data-doc-source=".claude/rules/design-presentation-structure.md">
+  <div class="DocLayout">
+    <aside class="DocLayout__aside" id="doc-toc"></aside>
+    <main class="Page DocPage">
+      <header class="PageHeader" id="doc-header"></header>
+      <article class="Markdown" id="doc-body">
+<h1 id="design-presentation-structure">Design Presentation Structure<a class="headerlink" href="#design-presentation-structure" title="Link to this section">¶</a></h1>
+<p>Governs the deck [[project-architecture]] produces via <a href="claude-skills-design-presentation-skill.html">design-presentation</a>. Deck mechanics — file placement, the asset policy, the build workflow — are in <a href="claude-rules-deck-authoring-conventions.html">deck-authoring-conventions.md</a>; styling is in <a href="../../../presentation/template/template.md">template.md</a>. This document fixes only <strong>what a design deck must contain, and in what order</strong>.</p>
+<p>Worked examples, correct in every respect and consistent with each other: <a href="../../../presentation/phase0/phase0-design-concepts-deck.html">phase0-design-concepts-deck.md</a> and <a href="../../../presentation/phase1/phase1-design-deck.html">phase1-design-deck.md</a>. Follow their shape rather than inventing one.</p>
+<h2 id="section-order-is-mandatory">Section order is mandatory<a class="headerlink" href="#section-order-is-mandatory" title="Link to this section">¶</a></h2>
+<p>Nothing may be used before it is defined. The order below is what enforces that, and a deck that reorders it is wrong even if every slide is individually good.</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Section</th>
+<th>Required</th>
+<th>Must contain</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>Terminology</strong></td>
+<td>always</td>
+<td>Every coined or narrowed term the deck goes on to use</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>The blueprint</strong></td>
+<td>always</td>
+<td>The whole topology, then the part <em>this phase</em> implements</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>The contracts</strong></td>
+<td>when the phase freezes, changes, or first consumes one</td>
+<td>One slide per contract, plus where each lives on disk</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>Protocol stack &amp; libraries</strong></td>
+<td>always</td>
+<td>The stack diagram and the third-party libraries</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>The blueprint nodes</strong></td>
+<td>always</td>
+<td>The images delivered, then each node's architecture and call flow</td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>Testing</strong></td>
+<td>always</td>
+<td>What was verified, and the equipment that verified it</td>
+</tr>
+<tr>
+<td>7</td>
+<td><strong>Handoff</strong></td>
+<td>always</td>
+<td>What the next phase takes from this one</td>
+</tr>
+</tbody>
+</table></div>
+<p>A companion deck (§ Companion decks) may be spun out of 3, 4, 5 or 6 — never out of 1, 2 or 7.</p>
+<p><strong>Every phase deck carries all seven, under these names.</strong> A phase that built no node code still has section 5 — it says so, and names the phase where each node's architecture arrives. Consecutive phases read as one document only if their section numbers mean the same thing, so a deck does not rename a section to suit its content.</p>
+<h2 id="1-terminology-before-anything-uses-it">1 · Terminology — before anything uses it<a class="headerlink" href="#1-terminology-before-anything-uses-it" title="Link to this section">¶</a></h2>
+<p>The first section, always. A reader who stops after it should be able to read every later slide without a glossary.</p>
+<ul>
+<li><strong>Separate the platform's words from ours.</strong> CarSky's vocabulary (blueprint, node, pin, Room, deployment) and the project's coined words (contract, seam, frozen, ego, bench) are different kinds of term and belong on different slides.</li>
+<li><strong>A requirement number is not a name.</strong> <code>R1</code>–<code>R4</code> get a slide naming what each <em>is</em> before any diagram labels an arrow with them.</li>
+<li><strong>Define only what the deck actually uses.</strong> A glossary of unused terms is padding; a term used before its definition is a defect.</li>
+<li><strong>Coined terms are defined; design vocabulary inherited from elsewhere is translated.</strong> If no source defines a term for what is observed, describe the behaviour instead of coining one.</li>
+</ul>
+<h2 id="2-the-blueprint-whole-then-this-phases-slice">2 · The blueprint — whole, then this phase's slice<a class="headerlink" href="#2-the-blueprint-whole-then-this-phases-slice" title="Link to this section">¶</a></h2>
+<ul>
+<li><strong>Show the full topology first</strong> — every node, its type, its address, and the network that joins them — so the phase's work has somewhere to sit.</li>
+<li><strong>Then state plainly which part this phase implements</strong>, and by implication which parts it does not. This is the slide that stops a reader assuming the whole picture shipped.</li>
+<li><strong>Diagrams use segmented connectors</strong>, never diagonals across the canvas; route runs on separate trunks so no two cross.</li>
+</ul>
+<h2 id="3-the-contracts">3 · The contracts<a class="headerlink" href="#3-the-contracts" title="Link to this section">¶</a></h2>
+<p>Required whenever the phase freezes, changes, or first consumes a contract.</p>
+<ul>
+<li><strong>One slide per contract</strong> — what it defines, its direction and transport, its encoding, its artifacts, and every folder holding a copy.</li>
+<li><strong>One further slide for where they live</strong> — the authority, the per-node copies, and what keeps them in sync.</li>
+<li><strong>Do not also walk the contracts in a flow slide.</strong> Pick one owner; a routing overview names ports and direction only.</li>
+</ul>
+<h2 id="4-protocol-stack-libraries">4 · Protocol stack &amp; libraries<a class="headerlink" href="#4-protocol-stack-libraries" title="Link to this section">¶</a></h2>
+<ul>
+<li><strong>A protocol-stack diagram</strong> — the layers from the link upward, and for each message: its encoding, and the library that serves it. Show which layers are shared by every flow and which are not.</li>
+<li><strong>A library slide</strong> — every third-party dependency the phase uses, its licence, what it serves, and its one job. Name what is a library and what is a framework; the project prefers libraries it calls over frameworks that call it.</li>
+</ul>
+<p>Call flows belong to section 5, beside the nodes they run between.</p>
+<h2 id="5-the-blueprint-nodes">5 · The blueprint nodes<a class="headerlink" href="#5-the-blueprint-nodes" title="Link to this section">¶</a></h2>
+<p>The section carrying what the phase built, in a fixed slide order.</p>
+<ol>
+<li><strong>The images delivered</strong> — one row per node: its image tag, its role, the contracts or messages it carries, and what it became this phase. A node running another phase's image or a stand-in says so in its own row, and a node with no image says that instead of being omitted.</li>
+<li><strong>One architecture slide per node the phase developed</strong> — the node's component diagram, sourced from its HLD (§ Diagrams come from the HLD).</li>
+<li><strong>One internal call-flow slide per node</strong> — what happens inside it, drawn at this phase's fidelity.</li>
+<li><strong>The call flow between the nodes</strong> — the one diagram showing the whole exchange, drawn at <em>this phase's</em> fidelity. Phase 0 shows the connectivity payloads it actually sent; a later phase shows its real messages. Never illustrate a phase with a later phase's design.</li>
+</ol>
+<ul>
+<li><strong>A placeholder is labelled a placeholder</strong>, with what retires it — a node standing in is not a node built.</li>
+<li><strong>A phase that built no node code keeps the section</strong> and says where each node's architecture arrives instead.</li>
+</ul>
+<h2 id="6-testing">6 · Testing<a class="headerlink" href="#6-testing" title="Link to this section">¶</a></h2>
+<p>What was verified, at design fidelity — not the execution record, which belongs to the task-execution deck.</p>
+<ul>
+<li><strong>The configurations that exercise each node</strong>, and what each proves that the others cannot. Where a node is exercised by fakes and again by the real dependency, say that the expected output is identical, and what a difference between them would mean.</li>
+<li><strong>The test equipment the design depends on</strong> — named as scaffolding rather than production code, with where it lives.</li>
+<li><strong>A test that outgrows the section becomes a companion deck</strong>, with one slide left behind carrying its conclusions and the link.</li>
+</ul>
+<h2 id="7-handoff-mandatory-always-last-of-the-content">7 · Handoff — mandatory, always last of the content<a class="headerlink" href="#7-handoff-mandatory-always-last-of-the-content" title="Link to this section">¶</a></h2>
+<p>Every design deck ends with what the next phase takes from this one: the contracts it may now assume frozen, the facts established, the tooling it inherits, and what deliberately did not ship.</p>
+<ul>
+<li><strong>Write it as the next phase's input list</strong>, not as this phase's summary.</li>
+<li><strong>Name what does not carry forward</strong>, so nothing is assumed reusable that is not.</li>
+</ul>
+<h2 id="diagrams-come-from-the-hld">Diagrams come from the HLD<a class="headerlink" href="#diagrams-come-from-the-hld" title="Link to this section">¶</a></h2>
+<p>A node's component diagram and its call flow already exist in that node's <code>doc/</code> — the HLD is where the design was decided, so it is where the deck's picture of it comes from.</p>
+<ul>
+<li><strong>Never redraw a simplified version.</strong> A deck-only architecture diagram is a second design document with no authority, and it starts disagreeing with the HLD the moment either is edited.</li>
+<li><strong>The deck carries a derived copy</strong>, in <a href="../../../presentation/assets/">presentation/assets/</a> like every other asset, never a path reaching into a node folder. The copy names its source and states that the HLD copy is authoritative.</li>
+<li><strong>The copy is trimmed to fit, not shrunk to fit.</strong> An HLD diagram is drawn for a page, not a slide: lift out its title and its legend, re-crop the canvas to what remains, and replay the legend on the slide after it. Where the diagram still will not carry its own type size, split it along a subsystem boundary across two slides.</li>
+<li><strong>A PlantUML sequence source is content, not an asset.</strong> Its render is far larger than a slide and in the wrong visual language; read it, then draw the flow at slide fidelity.</li>
+</ul>
+<p>Mechanics — the render box, the scale arithmetic, and the crop procedure — are in <a href="claude-skills-task-planning-presentation-references-drawio-svg-pairs.html">drawio-svg-pairs.md</a>.</p>
+<h2 id="companion-decks">Companion decks<a class="headerlink" href="#companion-decks" title="Link to this section">¶</a></h2>
+<p>A section that outgrows its slides becomes its own deck rather than bloating this one — the pattern Phase 0 used for its smoke test.</p>
+<ul>
+<li><strong>The parent keeps one slide</strong>: what the topic settled, and a link. Nothing from the companion is repeated.</li>
+<li><strong>Companions may only be spun out of sections 3, 4, 5 and 6.</strong> Terminology, the blueprint, and the handoff stay in the parent — they are what makes it readable.</li>
+<li><strong>Both decks link each other</strong> from the cover.</li>
+</ul>
+<h2 id="how-to-apply">How to apply<a class="headerlink" href="#how-to-apply" title="Link to this section">¶</a></h2>
+<p>[[project-architecture]] applies this at the outline step of <a href="claude-skills-design-presentation-skill.html">design-presentation</a>, and again before shipping. A deck missing a mandatory section, or ordering them differently, is not done.</p>
+      </article>
+    </main>
+  </div>
+  <script src="../js/site-data.js"></script>
+  <script src="../js/theme.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/doc-page.js"></script>
+</body>
+</html>

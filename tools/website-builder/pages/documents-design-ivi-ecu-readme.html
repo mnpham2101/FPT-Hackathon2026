@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en" data-theme="sketch">
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="kis-build-pages">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IVI ECU — design — KIS</title>
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/doc.css">
+  <link rel="stylesheet" href="../css/themes.css">
+</head>
+<body class="DocBody" data-root=".." data-doc-node="module-design" data-doc-title="IVI ECU — design" data-doc-source="documents/Design/IVI-ECU/README.md">
+  <div class="DocLayout">
+    <aside class="DocLayout__aside" id="doc-toc"></aside>
+    <main class="Page DocPage">
+      <header class="PageHeader" id="doc-header"></header>
+      <article class="Markdown" id="doc-body">
+<h1 id="ivi-ecu-design">IVI ECU — design<a class="headerlink" href="#ivi-ecu-design" title="Link to this section">¶</a></h1>
+<p>The authoritative design of the IVI ECU: the high-level design, the decisions behind it, the module and test designs, and the diagrams they are drawn from. [[project-architecture]] produces and owns everything in this section.</p>
+<p><strong>Code:</strong> <a href="ivi-ecu-readme.html">IVI_ECU/</a></p>
+<h2 id="design-authority">Design authority<a class="headerlink" href="#design-authority" title="Link to this section">¶</a></h2>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Document</th>
+<th>What it fixes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="documents-design-ivi-ecu-ivi-ecu-hld.html">ivi-ecu-hld.md</a></td>
+<td>The node's components, folder structure, seams, contract and test strategy — the sole design authority for work in <code>IVI_ECU/</code></td>
+</tr>
+<tr>
+<td><a href="documents-design-ivi-ecu-ivi-ecu-design-decisions.html">ivi-ecu-design-decisions.md</a></td>
+<td><code>D1…Dn</code>, each with its rationale and rejected alternative; cited by number from the HLD</td>
+</tr>
+<tr>
+<td><a href="documents-design-ivi-ecu-phase5-mini-blueprint-ada-ivi.html">phase5-mini-blueprint-ada-ivi.md</a></td>
+<td>The reduced ADA→IVI blueprint the node is exercised in</td>
+</tr>
+<tr>
+<td><a href="documents-design-ivi-ecu-phase5-r4-simulator.html">phase5-r4-simulator.md</a></td>
+<td>The R4 simulator's design — the stand-in that feeds the node its input</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="diagram-sources">Diagram sources<a class="headerlink" href="#diagram-sources" title="Link to this section">¶</a></h2>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Source</th>
+<th>Renders</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="../../../documents/Design/IVI-ECU/ivi-ecu-module-architecture.drawio">ivi-ecu-module-architecture.drawio</a></td>
+<td><a href="documents-design-ivi-ecu-ivi-ecu-module-architecture.svg">ivi-ecu-module-architecture.svg</a> — the component map the HLD and the deck both embed</td>
+</tr>
+<tr>
+<td><a href="../../../documents/Design/IVI-ECU/phase5-ivi-ecu-components.puml">phase5-ivi-ecu-components.puml</a> · <a href="../../../documents/Design/IVI-ECU/phase5-ivi-components.puml">phase5-ivi-components.puml</a></td>
+<td>The component diagrams</td>
+</tr>
+<tr>
+<td><a href="../../../documents/Design/IVI-ECU/phase5-ivi-ecu-callflow.puml">phase5-ivi-ecu-callflow.puml</a> · <a href="../../../documents/Design/IVI-ECU/phase5-ivi-callflow.puml">phase5-ivi-callflow.puml</a></td>
+<td>The call-flow sequences</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="contributor-notes">Contributor notes<a class="headerlink" href="#contributor-notes" title="Link to this section">¶</a></h2>
+<p>Learning notes by Vũ Xuân Bách — explanatory, not authoritative.</p>
+<div class="Markdown__scroll"><table>
+<thead>
+<tr>
+<th>Document</th>
+<th>Form</th>
+<th>Topic</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="documents-design-ivi-ecu-ivi-r4-observation-pipeline.html">ivi-r4-observation-pipeline.md</a></td>
+<td>Wiki (long)</td>
+<td>How the IVI app observes R4 from the ADA ECU</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="elsewhere">Elsewhere<a class="headerlink" href="#elsewhere" title="Link to this section">¶</a></h2>
+<ul>
+<li><strong>General knowledge</strong> applied to this node, rather than unique to it: <a href="documents-knowledgebase-readme.html">documents/KnowledgeBase/</a> — including <a href="documents-knowledgebase-android-automotive-os.html">android-automotive-os.md</a>, the platform this node runs on</li>
+<li><strong>Superseded reviews and audits:</strong> <a href="ivi-ecu-doc-deprecated-readme.html">IVI_ECU/doc/deprecated/</a></li>
+<li><strong>How to deploy and collect evidence:</strong> <a href="requirements-car-sky-guide-deploy-ivi-hmi-walkthrough.html">deploy-ivi-hmi-walkthrough.md</a></li>
+<li><strong>Decks:</strong> design <a href="../../../presentation/phase5/phase5-design-ivi-ecu-deck.html">phase5-design-ivi-ecu-deck.md</a> · demo <a href="../../../presentation/phase5/phase5-ivi-deck.html">phase5-ivi-deck.md</a></li>
+</ul>
+      </article>
+    </main>
+  </div>
+  <script src="../js/site-data.js"></script>
+  <script src="../js/theme.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/doc-page.js"></script>
+</body>
+</html>
