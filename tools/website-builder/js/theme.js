@@ -16,11 +16,11 @@ window.KIS.THEMES = {
       iconDir: 'assets/icons',
     },
     animation: {
-      lineDraw: 550,            // connector draw duration, ms
-      lineEasing: 'ease-out',
-      connectorDash: null,      // solid lines, animated as a pen stroke
+      lineDraw: 620,            // connector growth duration, ms
+      lineEasing: 'ease-out',   // a drawn stroke starts fast and settles
+      connectorDash: null,      // solid lines
       nodeEnter: 'pop',         // PageLink enter animation on the canvas
-      nodeStagger: 110,         // ms between sibling entries
+      nodeStagger: 80,          // ms between sibling arrows, and entries
       cardEnter: 'fade',        // PageLink enter animation on pages
       cardStagger: 70,
     },
@@ -32,11 +32,11 @@ window.KIS.THEMES = {
       iconDir: 'assets/icons',
     },
     animation: {
-      lineDraw: 850,
-      lineEasing: 'linear',
-      connectorDash: '6 5',     // dashed technical lines, faded in
+      lineDraw: 820,
+      lineEasing: 'linear',     // a machine extends at a constant rate
+      connectorDash: '6 5',     // dashed technical lines
       nodeEnter: 'rise',
-      nodeStagger: 160,
+      nodeStagger: 110,
       cardEnter: 'fade',
       cardStagger: 90,
     },
