@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="940" height="660" viewBox="0 0 940 660" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <rect x="0" y="0" width="940" height="660" fill="#ffffff"/>
+
+  <!-- ============ Panel A — encapsulation ============ -->
+  <text x="30" y="34" font-size="15" font-weight="600" fill="#1f2933">A · Encapsulation — what the socket API exposes</text>
+
+  <rect x="30" y="52" width="140" height="54" fill="#eceff3" stroke="#8a97a6" stroke-width="1.5"/>
+  <text x="100" y="76" font-size="12.5" fill="#3e4c59" text-anchor="middle">Ethernet header</text>
+  <text x="100" y="94" font-size="11" fill="#7b8794" text-anchor="middle">14 bytes</text>
+
+  <rect x="170" y="52" width="120" height="54" fill="#eceff3" stroke="#8a97a6" stroke-width="1.5"/>
+  <text x="230" y="76" font-size="12.5" fill="#3e4c59" text-anchor="middle">IP header</text>
+  <text x="230" y="94" font-size="11" fill="#7b8794" text-anchor="middle">20 bytes</text>
+
+  <rect x="290" y="52" width="110" height="54" fill="#eceff3" stroke="#8a97a6" stroke-width="1.5"/>
+  <text x="345" y="76" font-size="12.5" fill="#3e4c59" text-anchor="middle">UDP header</text>
+  <text x="345" y="94" font-size="11" fill="#7b8794" text-anchor="middle">8 bytes</text>
+
+  <rect x="400" y="52" width="510" height="54" fill="#e4eef7" stroke="#2f6f9f" stroke-width="2"/>
+  <text x="655" y="75" font-size="13" font-weight="600" fill="#1f4d6d" text-anchor="middle">Payload — one UTF-8 JSON object</text>
+  <text x="655" y="94" font-size="11.5" fill="#3e6a86" text-anchor="middle" font-family="Consolas, monospace">{ "schemaVersion": 1, "type": "warning", … }</text>
+
+  <!-- brackets -->
+  <path d="M30,116 L30,126 L400,126 L400,116" fill="none" stroke="#8a97a6" stroke-width="1.3"/>
+  <text x="215" y="144" font-size="11.5" fill="#7b8794" text-anchor="middle">removed by the NIC and the kernel before delivery</text>
+
+  <path d="M400,116 L400,126 L910,126 L910,116" fill="none" stroke="#2f6f9f" stroke-width="1.3"/>
+  <text x="655" y="144" font-size="11.5" fill="#2f6f9f" text-anchor="middle" font-family="Consolas, monospace">DatagramPacket.getData()[offset, offset + length)</text>
+
+  <text x="30" y="172" font-size="12" fill="#52606d">No length prefix, no envelope, no sequence header: one datagram carries exactly one complete message.</text>
+
+  <!-- ============ Panel B — object structure ============ -->
+  <text x="30" y="216" font-size="15" font-weight="600" fill="#1f2933">B · Payload structure — discriminated union on <tspan font-family="Consolas, monospace">type</tspan></text>
+
+  <!-- common root -->
+  <rect x="30" y="236" width="300" height="104" rx="4" fill="#f6f8fa" stroke="#52606d" stroke-width="1.8"/>
+  <text x="46" y="258" font-size="12.5" font-weight="600" fill="#1f2933">Common fields</text>
+  <text x="46" y="282" font-size="12" fill="#3e4c59" font-family="Consolas, monospace">schemaVersion : Int</text>
+  <text x="46" y="304" font-size="12" fill="#b0521f" font-family="Consolas, monospace">type : String</text>
+  <text x="182" y="304" font-size="11" fill="#b0521f">← discriminator</text>
+  <text x="46" y="326" font-size="11" fill="#7b8794">selects exactly one variant below</text>
+
+  <!-- connectors -->
+  <path d="M180,340 L180,364 L520,364 L520,388" fill="none" stroke="#52606d" stroke-width="1.5"/>
+  <path d="M180,364 L180,388" fill="none" stroke="#52606d" stroke-width="1.5"/>
+  <polygon points="176,388 184,388 180,396" fill="#52606d"/>
+  <polygon points="516,388 524,388 520,396" fill="#52606d"/>
+
+  <!-- variant: warning -->
+  <rect x="30" y="396" width="300" height="150" rx="4" fill="#e4eef7" stroke="#2f6f9f" stroke-width="1.8"/>
+  <text x="46" y="418" font-size="12.5" font-weight="600" fill="#1f4d6d" font-family="Consolas, monospace">type = "warning"</text>
+  <text x="46" y="442" font-size="12" fill="#1f2933" font-family="Consolas, monospace">warningType : String</text>
+  <text x="46" y="464" font-size="12" fill="#1f2933" font-family="Consolas, monospace">riskState : String</text>
+  <text x="46" y="486" font-size="12" fill="#1f2933" font-family="Consolas, monospace">object : TrackedObject</text>
+  <text x="46" y="508" font-size="12" fill="#1f2933" font-family="Consolas, monospace">geometry : Geometry</text>
+  <text x="46" y="530" font-size="11" fill="#3e6a86">edge-triggered; wakes the warning view</text>
+
+  <!-- variant: state -->
+  <rect x="370" y="396" width="300" height="150" rx="4" fill="#e4eef7" stroke="#2f6f9f" stroke-width="1.8"/>
+  <text x="386" y="418" font-size="12.5" font-weight="600" fill="#1f4d6d" font-family="Consolas, monospace">type = "state"</text>
+  <text x="386" y="442" font-size="12" fill="#1f2933" font-family="Consolas, monospace">seq : Int</text>
+  <text x="386" y="464" font-size="12" fill="#1f2933" font-family="Consolas, monospace">vehicles : Array</text>
+  <text x="386" y="486" font-size="11" fill="#3e6a86">periodic; last value wins</text>
+
+  <!-- geometry detail -->
+  <rect x="710" y="236" width="200" height="150" rx="4" fill="#f6f8fa" stroke="#52606d" stroke-width="1.8"/>
+  <text x="726" y="258" font-size="12.5" font-weight="600" fill="#1f2933" font-family="Consolas, monospace">Geometry</text>
+  <text x="726" y="282" font-size="12" fill="#3e4c59" font-family="Consolas, monospace">ego : Point</text>
+  <text x="726" y="304" font-size="12" fill="#3e4c59" font-family="Consolas, monospace">vehicleB : Point</text>
+  <text x="726" y="326" font-size="12" fill="#b0521f" font-family="Consolas, monospace">vehicleC : Point?</text>
+  <text x="726" y="348" font-size="11" fill="#7b8794">ego-relative, metres</text>
+  <text x="726" y="366" font-size="11" fill="#b0521f">null while C is untracked</text>
+
+  <path d="M330,470 L690,470 L690,312 L710,312" fill="none" stroke="#8a97a6" stroke-width="1.3" stroke-dasharray="4 3"/>
+  <polygon points="702,308 710,312 702,316" fill="#8a97a6"/>
+
+  <!-- legend -->
+  <rect x="370" y="580" width="540" height="54" rx="4" fill="#fafbfc" stroke="#cbd2d9" stroke-width="1.2"/>
+  <text x="386" y="600" font-size="11.5" font-weight="600" fill="#52606d">Legend</text>
+  <rect x="386" y="610" width="14" height="12" fill="#e4eef7" stroke="#2f6f9f" stroke-width="1.4"/>
+  <text x="406" y="620" font-size="11.5" fill="#52606d">carried in the payload</text>
+  <rect x="556" y="610" width="14" height="12" fill="#eceff3" stroke="#8a97a6" stroke-width="1.4"/>
+  <text x="576" y="620" font-size="11.5" fill="#52606d">stripped before delivery</text>
+  <text x="742" y="620" font-size="11.5" fill="#b0521f">amber — nullable or discriminating</text>
+</svg>

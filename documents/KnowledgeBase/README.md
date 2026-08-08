@@ -4,8 +4,7 @@ Topic notes that outlive the milestone: the platform, the protocols, the toolcha
 
 | Document | Topic |
 |---|---|
-| [phase5-r4-parse-approach.md](phase5-r4-parse-approach.md) | Approaches to parsing a JSON message contract, and what each costs |
-| [phase5-r4-parsing.md](phase5-r4-parsing.md) | Parsing an evolving contract additively, so an added field breaks no reader |
+| [UDP-msg-parsing.md](UDP-msg-parsing.md) | Deserialising a UDP JSON payload into typed Kotlin: buffer slicing, library selection, and the handling the library does not provide |
 | [phase5-r4-simulation-harness.md](phase5-r4-simulation-harness.md) | Standing a producer up as a harness, to exercise a consumer alone |
 | [video-source-for-r12.md](video-source-for-r12.md) | What the platform serves as camera input, and the constraints that puts on a detector |
 

@@ -1,0 +1,70 @@
+<mxfile host="app.diagrams.net" type="device">
+  <diagram name="R4 message structure" id="r4-message-structure">
+    <mxGraphModel dx="1100" dy="700" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="940" pageHeight="660" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <mxCell id="titleA" value="A · Encapsulation — what the socket API exposes" style="text;html=1;align=left;verticalAlign=middle;fontSize=15;fontStyle=1;fontColor=#1F2933;" vertex="1" parent="1">
+          <mxGeometry x="30" y="18" width="500" height="24" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="ethHdr" value="Ethernet header&#10;14 bytes" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ECEFF3;strokeColor=#8A97A6;strokeWidth=1.5;fontSize=12;fontColor=#3E4C59;" vertex="1" parent="1">
+          <mxGeometry x="30" y="52" width="140" height="54" as="geometry"/>
+        </mxCell>
+        <mxCell id="ipHdr" value="IP header&#10;20 bytes" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ECEFF3;strokeColor=#8A97A6;strokeWidth=1.5;fontSize=12;fontColor=#3E4C59;" vertex="1" parent="1">
+          <mxGeometry x="170" y="52" width="120" height="54" as="geometry"/>
+        </mxCell>
+        <mxCell id="udpHdr" value="UDP header&#10;8 bytes" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ECEFF3;strokeColor=#8A97A6;strokeWidth=1.5;fontSize=12;fontColor=#3E4C59;" vertex="1" parent="1">
+          <mxGeometry x="290" y="52" width="110" height="54" as="geometry"/>
+        </mxCell>
+        <mxCell id="payload" value="Payload — one UTF-8 JSON object&#10;{ &quot;schemaVersion&quot;: 1, &quot;type&quot;: &quot;warning&quot;, … }" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E4EEF7;strokeColor=#2F6F9F;strokeWidth=2;fontSize=12;fontColor=#1F4D6D;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="400" y="52" width="510" height="54" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="strippedNote" value="removed by the NIC and the kernel before delivery" style="text;html=1;align=center;fontSize=11;fontColor=#7B8794;" vertex="1" parent="1">
+          <mxGeometry x="30" y="126" width="370" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="exposedNote" value="DatagramPacket.getData()[offset, offset + length)" style="text;html=1;align=center;fontSize=11;fontColor=#2F6F9F;fontFamily=Consolas;" vertex="1" parent="1">
+          <mxGeometry x="400" y="126" width="510" height="24" as="geometry"/>
+        </mxCell>
+        <mxCell id="framingNote" value="No length prefix, no envelope, no sequence header: one datagram carries exactly one complete message." style="text;html=1;align=left;fontSize=12;fontColor=#52606D;" vertex="1" parent="1">
+          <mxGeometry x="30" y="158" width="700" height="20" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="titleB" value="B · Payload structure — discriminated union on type" style="text;html=1;align=left;verticalAlign=middle;fontSize=15;fontStyle=1;fontColor=#1F2933;" vertex="1" parent="1">
+          <mxGeometry x="30" y="200" width="520" height="24" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="common" value="Common fields&#10;&#10;schemaVersion : Int&#10;type : String   ← discriminator&#10;selects exactly one variant below" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F6F8FA;strokeColor=#52606D;strokeWidth=1.8;align=left;spacingLeft=12;fontSize=12;fontColor=#1F2933;" vertex="1" parent="1">
+          <mxGeometry x="30" y="236" width="300" height="104" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="warning" value="type = &quot;warning&quot;&#10;&#10;warningType : String&#10;riskState : String&#10;object : TrackedObject&#10;geometry : Geometry&#10;&#10;edge-triggered; wakes the warning view" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E4EEF7;strokeColor=#2F6F9F;strokeWidth=1.8;align=left;spacingLeft=12;fontSize=12;fontColor=#1F2933;" vertex="1" parent="1">
+          <mxGeometry x="30" y="396" width="300" height="150" as="geometry"/>
+        </mxCell>
+        <mxCell id="state" value="type = &quot;state&quot;&#10;&#10;seq : Int&#10;vehicles : Array&#10;&#10;periodic; last value wins" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#E4EEF7;strokeColor=#2F6F9F;strokeWidth=1.8;align=left;spacingLeft=12;fontSize=12;fontColor=#1F2933;" vertex="1" parent="1">
+          <mxGeometry x="370" y="396" width="300" height="150" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="geometry" value="Geometry&#10;&#10;ego : Point&#10;vehicleB : Point&#10;vehicleC : Point?&#10;ego-relative, metres&#10;null while C is untracked" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#F6F8FA;strokeColor=#52606D;strokeWidth=1.8;align=left;spacingLeft=12;fontSize=12;fontColor=#1F2933;" vertex="1" parent="1">
+          <mxGeometry x="710" y="236" width="200" height="150" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#52606D;strokeWidth=1.5;endArrow=block;" edge="1" parent="1" source="common" target="warning">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#52606D;strokeWidth=1.5;endArrow=block;" edge="1" parent="1" source="common" target="state">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;strokeColor=#8A97A6;strokeWidth=1.3;dashed=1;endArrow=open;" edge="1" parent="1" source="warning" target="geometry">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="legend" value="Legend:  blue = carried in the payload   ·   grey = stripped before delivery   ·   amber = nullable or discriminating" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FAFBFC;strokeColor=#CBD2D9;fontSize=11;fontColor=#52606D;align=left;spacingLeft=12;" vertex="1" parent="1">
+          <mxGeometry x="370" y="580" width="540" height="54" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
