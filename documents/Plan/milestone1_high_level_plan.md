@@ -101,7 +101,7 @@ Per-phase demo methods follow the deck's "defined output for each phase" table. 
 - [x] The R4 additive-version test is defined (a consumer parsing an unknown `warningType` degrades gracefully).
 - [x] Blueprint topology documented (nodes, `ethernet` pins, edges to the bridge) and validated by the baseline connectivity smoke test.
 
-The baseline blueprint deployed as `trial2_minh_netcheck` with all nodes `Running` and smoke-test criteria C1–C5 met ([run record](../../plans/doc/phase0-smoke-test-run.md)); the non-blocking residuals O3 (MTU headroom) and O4 (AAOS listener) stay open in [phase0_tasks.md](../../plans/phase0_tasks.md).
+The baseline blueprint deployed as `trial2_minh_netcheck` with all nodes `Running` and smoke-test criteria C1–C5 met ([run record](../../plans/doc/deprecated/phase0-smoke-test-run.md)); the non-blocking residuals O3 (MTU headroom) and O4 (AAOS listener) stay open in [phase0_tasks.md](../../plans/phase0_tasks.md).
 
 ### Phase 1 — Comms bring-up: V2X ECU + Scenario Player (R5–R9, R11 — **R10 moved to the future plan**)
 

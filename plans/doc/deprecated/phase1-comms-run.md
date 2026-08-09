@@ -1,10 +1,10 @@
 # Phase 1 Comms Bring-Up — Run Record
 
-Evidence for [phase1_tasks.md § Task Group 1.10](../phase1_tasks.md). Each section closes one subtask; sections stay in the plan's order and are filled as the work happens. Deployment procedure is not restated here — it lives in [deploy-walkthrough-netcheck.md](../../requirements/car-sky-guide/deploy-walkthrough-netcheck.md), which the ECU nodes follow with different images and env.
+Evidence for [phase1_tasks.md § Task Group 1.10](../../phase1_tasks.md). Each section closes one subtask; sections stay in the plan's order and are filled as the work happens. Deployment procedure is not restated here — it lives in [deploy-walkthrough-netcheck.md](../../requirements/car-sky-guide/deploy-walkthrough-netcheck.md), which the ECU nodes follow with different images and env.
 
 ## What is still open
 
-The outstanding subtasks, their executors and what each still needs are [phase1_tasks.md § Remaining work](../phase1_tasks.md#remaining-work) — the authority for the work list, including which subtask ID owns each step. This record holds only the evidence those subtasks produce, section by section below.
+The outstanding subtasks, their executors and what each still needs are [phase1_tasks.md § Remaining work](../../phase1_tasks.md#remaining-work) — the authority for the work list, including which subtask ID owns each step. This record holds only the evidence those subtasks produce, section by section below.
 
 One fact belongs here rather than there: **the `default.yaml` baseline recorded under § `2.1.10.3` was taken against the pre-R22 scenario geometry.** The committed file now carries the R22 demo cycle ([SP D7](../../documents/Design/SCENARIO-PLAYER/scenario-player-design-decisions.md#d7--the-demo-cycle-is-one-clip-length-and-its-geometry-is-solved-backwards-from-the-first-warning)), so the bench image the next Room pulls emits a different approach. A fresh `default.yaml` baseline is captured before `11.1.10.4` compares the swapped stream against it.
 
@@ -42,7 +42,7 @@ Consequence for the next run: the cache **export** failed while the import succe
 
 Deployment `phase1_Minh_test-deploy`, 2026-08-01. All four container/bridge nodes pulled their images and ran; the traffic below is the proof they are wired correctly.
 
-Node config per [phase1_tasks.md § Task Group 1.10](../phase1_tasks.md), with three corrections the guides do not state:
+Node config per [phase1_tasks.md § Task Group 1.10](../../phase1_tasks.md), with three corrections the guides do not state:
 
 - The Inspector's **Command** field is **space-separated**, not the JSON-array form the node guides print: bench takes `python main.py`, V2X and the ADA sink take `./entrypoint.sh` (relative — workdir is `/app` in both images).
 - `FAULT_PLAN` may be omitted on V2X; [config.cpp](../../V2X_ECU/src/config/config.cpp) treats unset-or-empty as `FaultPlan::None`.

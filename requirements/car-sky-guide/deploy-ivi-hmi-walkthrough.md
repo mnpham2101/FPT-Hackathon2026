@@ -556,7 +556,7 @@ Switch the ADA node to `R4_SCENARIO=/app/scenarios/degrade.json`.
 - **Guest log excerpt:** `adb logcat -s IVI_V2X` — the `[RX] … cSource=v2x_relayed` lines are what back the recording in text.
 - **Timestamps on that excerpt:** keep logcat's default `threadtime` format and start the capture before the app is launched, so the excerpt holds the app's own startup `[UI] mode=HomeView` line as well as the first `[UI] mode=WarningView cause=warning`. The interval between those two lines is an acceptance observable (§6, row 5).
 - **Producer log excerpt:** the ADA node's `[TX]` lines, from **View Log** or the logs route.
-- Record every result in the phase's run record, as [phase0-smoke-test-run.md](../../plans/doc/phase0-smoke-test-run.md) does for the smoke test.
+- Record every result in the phase's run record, as [phase0-smoke-test-run.md](../../plans/doc/deprecated/phase0-smoke-test-run.md) does for the smoke test.
 
 ### 4.10 Troubleshooting the deploy and install
 

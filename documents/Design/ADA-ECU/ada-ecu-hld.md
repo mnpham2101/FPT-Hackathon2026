@@ -43,7 +43,7 @@ Non-authoritative scratch; on any conflict the CLAUDE.md authority order wins.
 
 | Note | Adopted here |
 |---|---|
-| [phase0-contract-freeze-hld.md](../../../deprecated/phase0-contract-freeze-hld.md) | D1's access model — byte-synced schema copies, no cross-folder reads; D2's bindings as pure model code; D4's additive-version tolerance. The bindings in `src/contracts/` are the only message models this design uses (D1) |
+| [phase0-contract-freeze-hld.md](../../../plans/doc/deprecated/phase0-contract-freeze-hld.md) | D1's access model — byte-synced schema copies, no cross-folder reads; D2's bindings as pure model code; D4's additive-version tolerance. The bindings in `src/contracts/` are the only message models this design uses (D1) |
 | [v2x-ecu-hld.md](../V2X-ECU/v2x-ecu-hld.md) and its [decisions](../V2X-ECU/v2x-ecu-design-decisions.md) | The sole-socket-holder rule; the `[EVT]` line's `mono_ms`/`epoch_ms` pair and its payload-carrying events, so one offline reader walks both nodes (D8); the clock discipline this node continues (D10); the `entrypoint.sh` plus `capture.sh` tcpdump pattern, reused here for the ADA→IVI hop (D9) |
 | [scenario-player-hld.md](../SCENARIO-PLAYER/scenario-player-hld.md) and its [decisions](../SCENARIO-PLAYER/scenario-player-design-decisions.md) | The bench cadence `cpm_rate_hz` (10 Hz default), which is the relayed-update rate this design sizes `TRACK_TIMEOUT_MS` against; the two committed scenarios — `default.yaml` closing C from 70 m to 20.5 m across a 10.0 s cycle, crossing the gate 8.0 s in, and `c-out-of-range.yaml` held beyond the exit gate — as the R13 and R14 exercise inputs; the bench half of the R22 alignment, `start_delay_s` set to this node's detector warm-up (D11) |
 

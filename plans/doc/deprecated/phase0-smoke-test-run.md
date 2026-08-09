@@ -1,6 +1,6 @@
 # Phase 0 — Baseline Connectivity Smoke Test: Run Record
 
-Evidence log for task group 0.8 ([phase0_tasks.md](../phase0_tasks.md)), executing [baseline-connectivity-smoke-test.md](research_notes/baseline-connectivity-smoke-test.md). Steps are recorded as they complete; pass criteria C1–C5 are the note's.
+Evidence log for task group 0.8 ([phase0_tasks.md](../../phase0_tasks.md)), executing [baseline-connectivity-smoke-test.md](../../../documents/Delivery/baseline-connectivity-smoke-test.md). Steps are recorded as they complete; pass criteria C1–C5 are the note's.
 
 ## Standing requirement — container images must be single-platform arm64
 

@@ -18,7 +18,7 @@ Diagrams: [m1-run-timing-startup-flow.puml](m1-run-timing-startup-flow.puml) (st
 
 The problem statement assumes clock divergence between ECUs. Four findings say the problem is elsewhere.
 
-**(a) The container-node clocks already agree to within 55 ms — measured, not assumed.** The Phase 1 run record ([phase1-comms-run.md](../../plans/doc/phase1-comms-run.md)) contains a usable cross-node measurement that nobody took it for. The V2X ECU stamps `rxTime` from its own `system_clock`; the ADA-side sink prints its own `time.strftime('%H:%M:%S')` ([netcheck.py:13](../../tools/netcheck/netcheck.py)) on receipt. Five consecutive messages:
+**(a) The container-node clocks already agree to within 55 ms — measured, not assumed.** The Phase 1 run record ([phase1-comms-run.md](../../plans/doc/deprecated/phase1-comms-run.md)) contains a usable cross-node measurement that nobody took it for. The V2X ECU stamps `rxTime` from its own `system_clock`; the ADA-side sink prints its own `time.strftime('%H:%M:%S')` ([netcheck.py:13](../../tools/netcheck/netcheck.py)) on receipt. Five consecutive messages:
 
 | Msg | `rxTime` (V2X clock) | as UTC | ADA sink printed |
 |---|---|---|---|
@@ -69,7 +69,7 @@ The **run timeline** every demo event is placed on is `T0`-relative, and `T0` is
 |---|---|---|
 | Bench tick → CPM bytes (persistent `cpm_encode --stream` subprocess, not a fork per message) | unmeasured; pipe round-trip to a resident process | [SP D1](../Design/SCENARIO-PLAYER/scenario-player-design-decisions.md) |
 | Bench → V2X, 58 B UDP over R6 | unmeasured individually | — |
-| V2X decode → validate → dedupe → build → `sendto` | **142–151 µs, measured, stable** | [phase1-comms-run.md](../../plans/doc/phase1-comms-run.md) |
+| V2X decode → validate → dedupe → build → `sendto` | **142–151 µs, measured, stable** | [phase1-comms-run.md](../../plans/doc/deprecated/phase1-comms-run.md) |
 | V2X → ADA, ~339 B UDP | **inside the < 55 ms bound of §2(a)**, together with the clock offset | derived |
 | ADA R2 ingest → store → R14 → R4 build | unmeasured; in-process C++, driven by the `FUSION_TICK_MS` = 100 ms tick | — |
 | ADA → IVI, UDP into the AAOS guest | unmeasured — the only hop crossing into a VM | — |
@@ -504,8 +504,8 @@ Three new numbers, continuing after R19. Ordering is by **urgency** — R20 is t
 
 - [m1-cooperative-awareness.md](m1-cooperative-awareness.md) — R1–R6 contracts, R11–R19; §4 decision record.
 - [milestone1_high_level_plan.md](../Plan/milestone1_high_level_plan.md) — §2 assumptions, §4 track-admission gate, Phases 0–6 acceptance, §6 deferred scope.
-- [phase1-comms-run.md](../../plans/doc/phase1-comms-run.md) — the live R2 excerpt with `rxTime` against the ADA sink's own log clock (§2(a)); the 142–151 µs V2X in→out measurement; the `[CAP]` In/Out/P reading rules.
-- [phase0-smoke-test-run.md](../../plans/doc/phase0-smoke-test-run.md) · [baseline-connectivity-smoke-test.md](../../plans/doc/research_notes/baseline-connectivity-smoke-test.md) · [netcheck.py](../../tools/netcheck/netcheck.py) — the smoke test is a one-way relay chain, not a handshake; `START_DELAY_S` is its only readiness mechanism; hop 3 unconfirmed (O4).
+- [phase1-comms-run.md](../../plans/doc/deprecated/phase1-comms-run.md) — the live R2 excerpt with `rxTime` against the ADA sink's own log clock (§2(a)); the 142–151 µs V2X in→out measurement; the `[CAP]` In/Out/P reading rules.
+- [phase0-smoke-test-run.md](../../plans/doc/deprecated/phase0-smoke-test-run.md) · [baseline-connectivity-smoke-test.md](../Delivery/baseline-connectivity-smoke-test.md) · [netcheck.py](../../tools/netcheck/netcheck.py) — the smoke test is a one-way relay chain, not a handshake; `START_DELAY_S` is its only readiness mechanism; hop 3 unconfirmed (O4).
 - [phase2-4-pr3-review.md](../../plans/doc/phase2-4-pr3-review.md) — the ADA starting state: no service loop, detector is a placeholder, R3 timestamps swapped (M1).
 - [scenario-player-hld.md](../Design/SCENARIO-PLAYER/scenario-player-hld.md) · [generator.py](../../Scenario_Player/player/generator.py) · [config.py](../../Scenario_Player/player/config.py) · [default.yaml](../../Scenario_Player/scenarios/default.yaml) — the tick-counter scenario clock, the fixed-sleep loop, the YAML key set, the persistent `cpm_encode --stream` codec path (D1).
 - [ada-ecu-hld.md](../Design/ADA-ECU/ada-ecu-hld.md) and its [decisions](../Design/ADA-ECU/ada-ecu-design-decisions.md) — `TRACK_TIMEOUT_MS` as silence and `DETECTOR_FRAME_STRIDE` as decimation rather than a rate (the unstated clock source that §6.2 settles); D3's one admission machine for both sources with `CONFIRM_HITS` and the `GATE_ENTER_M`/`GATE_EXIT_M` Schmitt band; D5's risk bands on the composed range `d_AC`, its `RISK_DWELL_MS` debounce, its edge-triggered emission in both directions and its `b_unknown` path; D6's frame-source seam and range estimator; the env table's committed threshold values.

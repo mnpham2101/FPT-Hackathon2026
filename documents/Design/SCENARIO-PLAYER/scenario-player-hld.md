@@ -42,7 +42,7 @@ Non-authoritative scratch; on any conflict the CLAUDE.md authority order wins.
 | Note | Adopted here |
 |---|---|
 | [scenario-player-v2x-callflow-messages.md](scenario-player-v2x-callflow-messages.md) | §2's wire model — the bench is the sole talker and the wire is unidirectional, so no listener and no reply path exists here; §4's M1 CPM profile as the content the generator produces; F3's ranked codec-path candidates, from which D1 picks the helper subprocess |
-| [phase0-contract-freeze-hld.md](../../../deprecated/phase0-contract-freeze-hld.md) | D3's codec seam (`CpmContent` + `ICpmCodec`, wire-native units) as the exact source this bench reuses; D1's access model — byte-synced copies under `sync-manifest.json`, extended to the codec sources by D2 |
+| [phase0-contract-freeze-hld.md](../../../plans/doc/deprecated/phase0-contract-freeze-hld.md) | D3's codec seam (`CpmContent` + `ICpmCodec`, wire-native units) as the exact source this bench reuses; D1's access model — byte-synced copies under `sync-manifest.json`, extended to the codec sources by D2 |
 
 ## 3. The component architecture
 

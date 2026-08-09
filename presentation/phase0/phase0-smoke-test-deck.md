@@ -19,7 +19,7 @@ description: Report deck — connectivity smoke test on the bench and ECU nodes 
 
 connectivity smoke test · blueprint `trial2_minh` · 2026-07-31
 
-Sources: [phase0-smoke-test-run.md](../../plans/doc/phase0-smoke-test-run.md) · [baseline-connectivity-smoke-test.md](../../plans/doc/research_notes/baseline-connectivity-smoke-test.md) · [phase0-trial2-minh-preflight.md](../../plans/doc/phase0-trial2-minh-preflight.md)
+Sources: [phase0-smoke-test-run.md](../../plans/doc/deprecated/phase0-smoke-test-run.md) · [baseline-connectivity-smoke-test.md](../../documents/Delivery/baseline-connectivity-smoke-test.md) · [phase0-trial2-minh-preflight.md](../../plans/doc/deprecated/phase0-trial2-minh-preflight.md)
 
 ---
 

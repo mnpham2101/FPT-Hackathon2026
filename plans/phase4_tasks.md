@@ -468,7 +468,7 @@ Phase 2 `5.2.7.1`'s `entrypoint.sh` starts `capture.sh` when present, so no laun
 
 **Opening the `.pcap` in the Wireshark GUI is optional confirmation, not a pass criterion** — the decoded fields recorded here are the evidence, and they are obtainable without a GUI. [Walkthrough §5.4](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#54-traffic-evidence-and-wireshark-scope) puts producing a `.pcap` out of scope of *that* procedure and makes it no pass criterion of its three checks; this subtask exists because [milestone1_high_level_plan.md § Phase 4](../documents/Plan/milestone1_high_level_plan.md#phase-4--obscured-object-fusion-relayed-c--risk--warning-r13r15--runs--with-phase-3) output-check criterion (b) and R15's own acceptance require one anyway.
 
-**Acceptance:** the `.pcap` archived under `plans/doc/` and the decoded fields recorded in `plans/doc/phase4-ada-isolated-room-run.md`, showing ≥ 1 R4 warning event correlated to the log.
+**Acceptance:** the `.pcap` archived under `plans/doc/` and the decoded fields recorded in `doc/deprecated/phase4-ada-isolated-room-run.md`, showing ≥ 1 R4 warning event correlated to the log.
 
 **Dependencies:** after `6.4.4.1` + `6.4.4.2` + `18.4.11.1`. **Commit:** `[15.4.6.5] docs: record the ADA to IVI pcap evidence`
 
@@ -482,7 +482,7 @@ Phase 2 `5.2.7.1`'s `entrypoint.sh` starts `capture.sh` when present, so no laun
 >
 > **Where the bench lives.** `tools/ada-bench/` at the repository root, one image `m1-ada-bench:latest`, two roles selected by `ROLE` — sanctioned by [CLAUDE.md § Repository layout](../CLAUDE.md), which names it beside `tools/netcheck/` and `tools/comms_check/` and applies the four node folders' build rules to it. **No subtask in this group writes inside `V2X_ECU/`, `IVI_ECU/` or `ADA_ECU/`** — the bench must be able to change without rebuilding the thing it tests.
 >
-> **Run doc:** `plans/doc/phase4-ada-isolated-room-run.md`, created by `5.4.9.1` and appended by every subtask after it. It is the single record for this phase's deployed evidence.
+> **Run doc:** `doc/deprecated/phase4-ada-isolated-room-run.md`, created by `5.4.9.1` and appended by every subtask after it. It is the single record for this phase's deployed evidence.
 
 ### [x] `5.4.9.1` — Author `requirements/car-sky-guide/blueprint-ada-isolated.json` and the run doc *(agent — day one, blocks nothing else in this group)*
 
@@ -494,9 +494,9 @@ Phase 2 `5.2.7.1`'s `entrypoint.sh` starts `capture.sh` when present, so no laun
 - The `description` field carries the not-importable-pins warning in §2.2's text; keep it verbatim rather than paraphrasing.
 - **Transcribe the ADA node's `command: ["./entrypoint.sh"]` and `capabilities: ["NET_RAW"]` exactly, and treat neither as conditional.** `entrypoint.sh` is product code in the shipped image (the `V2X_ECU/entrypoint.sh` pattern, written by Phase 2 `5.2.7.1`): it backgrounds `capture.sh` and `exec`s the binary so the node is PID 1 and takes SIGTERM directly. [node-ada-ecu.md](../requirements/car-sky-guide/node-ada-ecu.md) agrees on both, and on the registry host.
 
-Also create `plans/doc/phase4-ada-isolated-room-run.md` as the empty run doc, with the section headings the later subtasks append under. It is created here because this is the group's day-one, dependency-free subtask, and every subtask from `5.4.9.6` onward records into it.
+Also create `doc/deprecated/phase4-ada-isolated-room-run.md` as the empty run doc, with the section headings the later subtasks append under. It is created here because this is the group's day-one, dependency-free subtask, and every subtask from `5.4.9.6` onward records into it.
 
-**Acceptance:** the file parses as JSON; its four nodes, their `nodeType`s, every `image`, `command`, `capabilities` and env key/value, and the bridge's `bridgeMode`/`subnet` match §2.2 field for field; `pins` and `edges` are empty arrays; every address and port agrees with [§9 Quick reference](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#9-quick-reference); `plans/doc/phase4-ada-isolated-room-run.md` exists.
+**Acceptance:** the file parses as JSON; its four nodes, their `nodeType`s, every `image`, `command`, `capabilities` and env key/value, and the bridge's `bridgeMode`/`subnet` match §2.2 field for field; `pins` and `edges` are empty arrays; every address and port agrees with [§9 Quick reference](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#9-quick-reference); `doc/deprecated/phase4-ada-isolated-room-run.md` exists.
 
 **Dependencies:** none — starts immediately. **Commit:** `[5.4.9.1] docs: add the isolated ADA blueprint definition and run doc`
 
@@ -636,7 +636,7 @@ Also create `plans/doc/phase4-ada-isolated-room-run.md` as the empty run doc, wi
 
 **Scope:** GitHub → Actions → the newest run → the two jobs. §7 assigns this to a human because *an agent session holds no GitHub token*; the same note records that it **flips to AI on a machine with an authenticated `gh` CLI**, in which case §3.3's two `gh` commands replace the browser and this subtask is handed to [[car-sky]] instead. A red push step printing `secret not set` means the credential of [§1.2](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#12-cloud-platform-access) is missing, not that the code is wrong.
 
-**Acceptance:** both job names and their conclusions recorded in `plans/doc/phase4-ada-isolated-room-run.md`, with the run id. Evidence commit by the orchestrating session after the user confirms.
+**Acceptance:** both job names and their conclusions recorded in `doc/deprecated/phase4-ada-isolated-room-run.md`, with the run id. Evidence commit by the orchestrating session after the user confirms.
 
 **Dependencies:** after `5.4.9.5` + `5.4.9.6`, and a commit pushed. **Commit:** `[5.4.10.1] docs: record the image CI run for the isolated ADA Room`
 

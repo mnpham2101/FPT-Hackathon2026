@@ -463,7 +463,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 - `.dockerignore` keeps `doc/`, `tests/`, `tools/`, `schema/`, `build/`, `detector/requirements-dev.txt` and `media/source/` out of the build context — and **must not exclude `media/` itself**.
 - No `ENV` lines shadowing [HLD §6](../documents/Design/ADA-ECU/ada-ecu-hld.md#6-internal-components) defaults — the blueprint injects env.
 
-**Acceptance:** `sh -n` and `bash -n` clean on `entrypoint.sh`, LF line endings, exec bit set; CI `ada-ecu-image` lane (`5.2.8.1`) green — `docker buildx build --platform linux/arm64 --provenance=false --sbom=false -t m1-ada-ecu:latest ADA_ECU/` succeeds. `--platform` and the disabled attestations are a standing requirement: a Container Node rejects a multi-platform manifest index and hangs in Provisioning ([phase0-smoke-test-run.md](doc/phase0-smoke-test-run.md)).
+**Acceptance:** `sh -n` and `bash -n` clean on `entrypoint.sh`, LF line endings, exec bit set; CI `ada-ecu-image` lane (`5.2.8.1`) green — `docker buildx build --platform linux/arm64 --provenance=false --sbom=false -t m1-ada-ecu:latest ADA_ECU/` succeeds. `--platform` and the disabled attestations are a standing requirement: a Container Node rejects a multi-platform manifest index and hangs in Provisioning ([phase0-smoke-test-run.md](doc/deprecated/phase0-smoke-test-run.md)).
 
 **Dependencies:** after `13.2.6.4` + `5.2.8.1` (the lane must exist to verify). **Commit:** `[5.2.7.1] feat: add the ADA ECU Dockerfile and entrypoint`
 
@@ -555,17 +555,17 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 1. Send video-source-for-r12.md §3 *(deprecated)* to FPT-Mentor — the format / frame rate / data rate table with its `assume` markers, and the KPI list beneath it.
 2. Ask for confirmation or correction of the proposed values.
 3. State in the message that the committed clip is 10.0 s and that a longer run comes from looping, so any correction is against what exists.
-4. Record the send in `plans/doc/phase2-ada-scaffold-run.md` — created by this subtask — with the date and any reply.
+4. Record the send in `doc/deprecated/phase2-ada-scaffold-run.md` — created by this subtask — with the date and any reply.
 
 Nothing new is authored; the note is the artifact.
 
 **This requests confirmation of a spec, not footage, and blocks nothing.** The clip is sourced, encoded, licence-cleared and committed ([sidecar](../ADA_ECU/media/ego-b-occluding-c.source.md)), so every Phase 3 subtask proceeds without waiting for a reply.
 
-**Acceptance:** step 4's record exists in `plans/doc/phase2-ada-scaffold-run.md`, carrying the date and any reply. The evidence commit is the orchestrator's, made once the person confirms the send.
+**Acceptance:** step 4's record exists in `doc/deprecated/phase2-ada-scaffold-run.md`, carrying the date and any reply. The evidence commit is the orchestrator's, made once the person confirms the send.
 
 **Dependencies:** none — send it early; it has the longest external latency and no dependant. **Commit:** `[12.2.9.2] docs: record the video-input proposal sent to FPT-Mentor`
 
-**Status:** done — user-confirmed 2026-08-04: proposal sent to FPT-Mentor and the committed clip `ADA_ECU/media/ego-b-occluding-c.mp4` confirmed as the file to use; record in [doc/phase2-ada-scaffold-run.md](doc/phase2-ada-scaffold-run.md); evidence commit by the orchestrator.
+**Status:** done — user-confirmed 2026-08-04: proposal sent to FPT-Mentor and the committed clip `ADA_ECU/media/ego-b-occluding-c.mp4` confirmed as the file to use; record in [doc/phase2-ada-scaffold-run.md](doc/deprecated/phase2-ada-scaffold-run.md); evidence commit by the orchestrator.
 
 ### [ ] `5.2.9.4` — Add the §6 env rows to `node-ada-ecu.md` *(AI — writes in `requirements/car-sky-guide/`)*
 

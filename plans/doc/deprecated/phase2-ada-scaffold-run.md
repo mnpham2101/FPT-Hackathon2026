@@ -1,6 +1,6 @@
 # Phase 2 — ADA scaffold: run & evidence record
 
-> Evidence records for [phase2_tasks.md](../phase2_tasks.md) subtasks whose acceptance names this file. Procedure authority stays with the walkthroughs and the plan; this file records outcomes only.
+> Evidence records for [phase2_tasks.md](../../phase2_tasks.md) subtasks whose acceptance names this file. Procedure authority stays with the walkthroughs and the plan; this file records outcomes only.
 
 ## `12.2.9.2` — video-input proposal sent to FPT-Mentor
 

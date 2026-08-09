@@ -2,7 +2,7 @@
 
 > **Authority & context:**
 > - **Phase content:** [milestone1_high_level_plan.md § Phase 0](../documents/Plan/milestone1_high_level_plan.md#phase-0--freeze-the-contracts-r1r6) — its four acceptance checkboxes are the phase output.
-> - **Design:** [phase0-contract-freeze-hld.md](../deprecated/phase0-contract-freeze-hld.md) (commits `d807c37` + `70796c0`) — every target path below is cited verbatim from its §5 folder map; design decisions D1–D4, seam shape §7, conventions §4.
+> - **Design:** [phase0-contract-freeze-hld.md](doc/deprecated/phase0-contract-freeze-hld.md) (commits `d807c37` + `70796c0`) — every target path below is cited verbatim from its §5 folder map; design decisions D1–D4, seam shape §7, conventions §4.
 > - **Requirements:** [m1-cooperative-awareness.md §2](../documents/Requirements/m1-cooperative-awareness.md) R1–R6 — referenced by number, never restated.
 > - **Smoke-test procedure:** [deploy-walkthrough-netcheck.md](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md) — steps M1–M12, the AI/Human work division [§5](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#5-work-division-between-ai-and-human), and acceptance [§6](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#6-expected-outputs-and-acceptance). Group 0.8 decomposes from it per [CLAUDE.md § Repository layout](../CLAUDE.md); nothing is restated.
 > - **Smoke-test design:** [baseline-connectivity-smoke-test.md](doc/research_notes/baseline-connectivity-smoke-test.md) — the objective, the [pass criteria C1–C5](doc/research_notes/baseline-connectivity-smoke-test.md#2-pass-criteria) every mention below refers to, and open items O1–O4.
@@ -73,7 +73,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 **Scope:**
 
 - Structure and field/unit/encoding table from the callflow note [§4.1–§4.2](../documents/Design/SCENARIO-PLAYER/scenario-player-v2x-callflow-messages.md) (2 containers, 1 perceived object; ASN.1 paths, types, units, ranges).
-- Freeze the eight conventions exactly per [HLD §4](../deprecated/phase0-contract-freeze-hld.md), in the wording of [`contracts/r1-cpm-profile.md` § 5](../contracts/r1-cpm-profile.md): F1, F2, F5, F6, F7, F8, F9, VF. VF covers `PerceivedObject.position` **and** `.velocity` in the sender (B) cartesian frame.
+- Freeze the eight conventions exactly per [HLD §4](doc/deprecated/phase0-contract-freeze-hld.md), in the wording of [`contracts/r1-cpm-profile.md` § 5](../contracts/r1-cpm-profile.md): F1, F2, F5, F6, F7, F8, F9, VF. VF covers `PerceivedObject.position` **and** `.velocity` in the sender (B) cartesian frame.
 - Exchange call flow: callflow note §2 — § B is the sole live flow; unidirectional (R10 deferred).
 - Fix the golden-vector corpus list (HLD D3, 6 cases): `nominal` · `mdt-max` · `mdt-min` · `conf-unavailable` · `gate-boundary` · `coord-large`.
 - Sample values use the F7-derived distance (`hypot(25.0, 1.2) = 25.03`), not the report's `25.4` — report erratum stays flagged to [[project-researcher]] (HLD §11 items 3–4), never absorbed here.
@@ -164,7 +164,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 ### [x] `1.0.2.2` — CpmContent + ICpmCodec seam *(agent)*
 
-**Objective:** create `V2X_ECU/src/codec/cpm_codec.hpp` with `CpmContent`, `DecodeError`, and `ICpmCodec` **exactly** per the frozen shape in [HLD §7](../deprecated/phase0-contract-freeze-hld.md#7-codec-seam-interface-frozen-shape), plus nlohmann `to_json`/`from_json` for `CpmContent`.
+**Objective:** create `V2X_ECU/src/codec/cpm_codec.hpp` with `CpmContent`, `DecodeError`, and `ICpmCodec` **exactly** per the frozen shape in [HLD §7](doc/deprecated/phase0-contract-freeze-hld.md#7-codec-seam-interface-frozen-shape), plus nlohmann `to_json`/`from_json` for `CpmContent`.
 
 **Scope:** `CpmContent` fields mirror `contracts/r1-cpm-content.schema.json` 1:1 (wire-native integer units). Seam rule: pure representation transform — no unit conversion, no derivation (those are R9, above the seam). Land the synced copy `V2X_ECU/contracts/r1-cpm-content.schema.json` (byte-identical to source). Unit test: `CpmContent` ⇄ JSON ⇄ `CpmContent` equality.
 
@@ -382,7 +382,7 @@ Ownership split so no deliverable is decomposed twice. The Phase 5 breakdown is 
 
 ### [x] `1.0.7.1` — sync-manifest + byte-identity gate *(agent)*
 
-**Objective:** create `contracts/sync-manifest.json` (source → node-local copy map, exactly the [HLD §5 sync map](../deprecated/phase0-contract-freeze-hld.md#sync-map-sync-manifestjson-content)) and `contracts/check_sync.py` (Python 3 stdlib), and run it green over the completed tree.
+**Objective:** create `contracts/sync-manifest.json` (source → node-local copy map, exactly the [HLD §5 sync map](doc/deprecated/phase0-contract-freeze-hld.md#sync-map-sync-manifestjson-content)) and `contracts/check_sync.py` (Python 3 stdlib), and run it green over the completed tree.
 
 **Scope:** `check_sync.py` walks the manifest and exits 1 on any byte difference (D1 — copies must never drift), and additionally greps `V2X_ECU/src/` for the banned bare `asn1::Cpm` token (F2), exit 1 on hit. This is the local + CI contract-integrity gate.
 
@@ -396,7 +396,7 @@ Ownership split so no deliverable is decomposed twice. The Phase 5 breakdown is 
 
 **Status:** done 2026-07-31 — commit `4a1dedb`; ran after all ten predecessors.
 
-- **Shipped:** `contracts/sync-manifest.json` at **21 sources → 36 copies** at close, the [HLD §5 sync map](../deprecated/phase0-contract-freeze-hld.md#sync-map-sync-manifestjson-content) expanded to concrete paths; later phases extend the manifest. `contracts/check_sync.py` is Python-3 stdlib-only, reads the path map and the banned token plus its scope from the manifest, compares `read_bytes()` because the `.uper` fixtures are binary, and prints every failure before exiting 1.
+- **Shipped:** `contracts/sync-manifest.json` at **21 sources → 36 copies** at close, the [HLD §5 sync map](doc/deprecated/phase0-contract-freeze-hld.md#sync-map-sync-manifestjson-content) expanded to concrete paths; later phases extend the manifest. `contracts/check_sync.py` is Python-3 stdlib-only, reads the path map and the banned token plus its scope from the manifest, compares `read_bytes()` because the `.uper` fixtures are binary, and prints every failure before exiting 1.
 - **Verifying run:** CI run **30608202261** (`contracts-gate` taking the real branch of its existence guard), proving byte-identity survives a Linux checkout. All three acceptance checks demonstrated: exit 0 from the repo root, `contracts/` and an unrelated directory; a one-byte corruption of `ADA_ECU/contracts/r3-tracked-object.schema.json` exits 1 naming the pair; an F2 probe exits 0 on `vanetza::asn1::r2::Cpm` and 1 on the bare token.
 - **Deviation:** none.
 

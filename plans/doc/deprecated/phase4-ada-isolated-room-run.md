@@ -1,6 +1,6 @@
 # Phase 4 — Isolated ADA Room Run Record
 
-> Single record for the deployed evidence of [phase4_tasks.md](../phase4_tasks.md) groups 4.10–4.11 (plus the pcap subtask of group 4.6), executed per [deploy-ada-ecu-walkthrough.md](../../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md). Each subtask appends under its own section.
+> Single record for the deployed evidence of [phase4_tasks.md](../../phase4_tasks.md) groups 4.10–4.11 (plus the pcap subtask of group 4.6), executed per [deploy-ada-ecu-walkthrough.md](../../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md). Each subtask appends under its own section.
 
 ## CI image runs (5.4.10.1)
 

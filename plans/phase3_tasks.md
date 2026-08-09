@@ -403,7 +403,7 @@ The clip-time value `frame_index / fps * 1000` stays a detector-local `Frame` fi
 5. Check the required property, which is a monotonic, consistently-biased range rather than absolute accuracy: the approach yields a decreasing series crossing `GATE_ENTER_M` (30 m) exactly once per loop.
 6. On disagreement, retune **only** `VEHICLE_WIDTH_M` and `CAMERA_HFOV_DEG`, re-running the lane with the candidate values. Never retune the R13 gate (D3/D6): the gate is a requirement value and the camera constants are estimates. The coach is wider than the 1.8 m car default, so a systematic under-read of range is the expected first finding.
 7. Record the final values as the defaults in `detector/config.py`, which is the node's only detector env reader.
-8. Record the before/after series summary in `plans/doc/phase3-ada-detector-run.md`, naming the workflow run the artifact came from.
+8. Record the before/after series summary in `doc/deprecated/phase3-ada-detector-run.md`, naming the workflow run the artifact came from.
 9. Hand the two final values to [[project-architecture]] for [HLD §6](../documents/Design/ADA-ECU/ada-ecu-hld.md#6-internal-components)'s **Env — detector** table and for [node-ada-ecu.md](../requirements/car-sky-guide/node-ada-ecu.md). **The implementing subagent does not edit either file** — the HLD is this node's sole design authority and the node guide is a platform reference, both owned by [[project-architecture]] ([CLAUDE.md § Roles](../CLAUDE.md), [hld-content-and-commit-format.md § How to apply](../.claude/rules/hld-content-and-commit-format.md)). The hand-off carries the measured series, the chosen values and the run they came from.
 
 **Acceptance:** the estimated-range series for B is monotonic through the approach and crosses the gate once per loop; the two constants' final values are committed in `detector/config.py` and recorded in the run doc, and the hand-off to [[project-architecture]] is recorded there too.
@@ -444,7 +444,7 @@ The clip-time value `frame_index / fps * 1000` stays a detector-local `Frame` fi
 **Scope — steps in order:**
 
 1. Trigger `ada-detector-run` with `DETECTOR_LOOP=true` and a duration of at least 60 s of wall time — six loops of the 10 s clip — so the rate measurement has a window and the loop path is exercised in the same run.
-2. Download the stdout artifact, and commit a representative excerpt plus the summary into `plans/doc/phase3-ada-detector-run.md`; the full log is not committed.
+2. Download the stdout artifact, and commit a representative excerpt plus the summary into `doc/deprecated/phase3-ada-detector-run.md`; the full log is not committed.
 3. Record research note KPI 2 *(deprecated)* — ≥ 99 % of declared frames read with zero decode errors, across loops.
 4. Record KPI 3 — effective inference rate ≥ 5 Hz, i.e. wall-clock ≤ 200 ms per sampled frame — from the lane's unpaced arm, because pacing fixes the emit interval and the paced arm cannot measure CPU throughput (`12.3.3.4`).
 5. Record KPI 4 — ≥ 1 `class = vehicle`, `source = own_sensor` entry with a distance estimate for ≥ 90 % of sampled frames.
@@ -528,7 +528,7 @@ Layer order decides which blobs are re-pushed: `media/` and `models/` sit above 
 5. Record the deployed warm-up interval, which will exceed `12.3.5.2`'s runner figure, and the interval between the last line of one clip pass and the first of the next.
 6. Report the rate whichever way it lands. If it falls short, the remedy is raising `DETECTOR_FRAME_STRIDE` in the ADA node config and re-reading on the next Room — config only, no rebuild. A rate below KPI 3 is also the Phase 4 failure mode where ego's own B track expires between updates and the composed geometry disappears ([deploy-ada-ecu-walkthrough.md §8.1 item 11](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#81-confirm-before-relying-on-these)).
 
-**Acceptance:** the measured deployed rate, warm-up, clip-pass interval and reported clip path recorded in `plans/doc/phase3-ada-detector-run.md`, citing the Room and log the reading came from.
+**Acceptance:** the measured deployed rate, warm-up, clip-pass interval and reported clip path recorded in `doc/deprecated/phase3-ada-detector-run.md`, citing the Room and log the reading came from.
 
 **Dependencies:** after `5.3.6.1` (so the deployed image carries the detector) + Phase 4 `18.4.11.1` (the log to read). **Commit:** `[5.3.6.2] docs: record the deployed ADA inference rate and clip-open evidence`
 
@@ -548,7 +548,7 @@ Layer order decides which blobs are re-pushed: `media/` and `models/` sit above 
 
 **Executor:** *car-sky*, per [deploy-ada-ecu-walkthrough.md §7](../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#7-work-division-between-ai-and-human)'s AI row for reading node logs. It performs no canvas step and no deploy click.
 
-**Acceptance:** `W` in seconds, `T0`'s two stamps, the observed sampled-frame period, the deployed `DETECTOR_REALTIME_PACING` value, and the derived `start_delay_s` with its tolerance band — all recorded in `plans/doc/phase3-ada-detector-run.md`, citing the Room and the log the reading came from.
+**Acceptance:** `W` in seconds, `T0`'s two stamps, the observed sampled-frame period, the deployed `DETECTOR_REALTIME_PACING` value, and the derived `start_delay_s` with its tolerance band — all recorded in `doc/deprecated/phase3-ada-detector-run.md`, citing the Room and the log the reading came from.
 
 **Dependencies:** after `5.3.6.1` + `12.3.2.8` (the run must be paced) + Phase 4 `18.4.11.1` (the log). **Unblocks** Phase 1 `22.1.13.4`. **Commit:** `[22.3.6.3] docs: record the deployed detector warm-up and the derived bench start delay`
 
@@ -591,7 +591,7 @@ Layer order decides which blobs are re-pushed: `media/` and `models/` sit above 
 
 - Confirm `ADA_ECU/.dockerignore` does **not** exclude `media/`, and **does** exclude `media/source/`. Check the pattern list rather than assuming; `5.2.7.1` wrote it.
 - No code change: `VIDEO_CLIP_PATH` defaults to `/app/media/ego-b-occluding-c.mp4` (`12.3.2.1`), and the path and the stride are env, never literals (CLAUDE.md principle 5).
-- **Add the measurement steps to the `ada-ecu-image` lane and record their output** in `plans/doc/phase3-ada-detector-run.md`: `docker image inspect -f '{{.Size}}'` before and after, the media layer's own size from `docker history`, and the layer digest. That job lives in `phase2-ci.yml`, which is in this subtask's write scope for those steps alone — the lane is not duplicated and its build step is not edited. Expect the delta to be ≈ 5.0 MB — H.264 is already compressed, so the layer's gzip gains ~0 %.
+- **Add the measurement steps to the `ada-ecu-image` lane and record their output** in `doc/deprecated/phase3-ada-detector-run.md`: `docker image inspect -f '{{.Size}}'` before and after, the media layer's own size from `docker history`, and the layer digest. That job lives in `phase2-ci.yml`, which is in this subtask's write scope for those steps alone — the lane is not duplicated and its build step is not edited. Expect the delta to be ≈ 5.0 MB — H.264 is already compressed, so the layer's gzip gains ~0 %.
 
 **Acceptance (all required):**
 
@@ -615,7 +615,7 @@ Layer order decides which blobs are re-pushed: `media/` and `models/` sit above 
 2. Read `docker history` from both runs and assert the media layer digest is identical across them, and its size is ≤ 60 MB (KPI 7). A changed digest means the layer ordering is wrong, and `12.3.7.2`'s Dockerfile edit is the fix.
 3. [[car-sky]]: record the first push of `registry.hackathon-2.carsky.io/m1-ada-ecu:latest` — the media blob's transfer time and the measured link rate.
 4. [[car-sky]]: push again and confirm the registry reports that blob already present, 0 bytes transferred (KPI 8) — Zot skips blobs it already holds.
-5. Record both readings in `plans/doc/phase3-ada-detector-run.md`. No code change; doc-only commit.
+5. Record both readings in `doc/deprecated/phase3-ada-detector-run.md`. No code change; doc-only commit.
 
 **Acceptance:** the two digests match and are recorded; the second push reports 0 bytes for the media blob; both numbers written to the run doc.
 
@@ -673,7 +673,7 @@ deployed   5.3.6.2 ∥ 22.3.6.3 (after 5.3.6.1 + 12.3.2.8 + phase-4 18.4.11.1 - 
 |---|---|---|
 | 1 | **Resolved by `12.3.1.1`: `onnxruntime==1.28.0`, `opencv-python-headless==5.0.0.93`, `numpy==2.4.6` install as prebuilt cp311 aarch64 wheels on `python:3.11-slim`** — the pins in `detector/requirements.txt`. Original item: aarch64 wheel availability was unproven ([HLD decision D9](../documents/Design/ADA-ECU/ada-ecu-design-decisions.md#d9--deployment-shape)). Verified first by `12.3.1.1`. A red lane escalates — pin an older wheel, change the base image, or accept a QEMU source build with a raised timeout. Not an implementer's call | `12.3.1.1`, then [[project-architecture]] |
 | 2 | **Planner-designated test/tool paths beyond the HLD's list**: `detector/tests/test_config.py`, `test_inference.py`, `test_main.py`; `ADA_ECU/tools/tests/test_check_zero_c.py`. Required by subtask discipline; HLD-consistent additions, not new design | [[project-architecture]] (ack) |
-| 3 | **Resolved by `12.3.4.3`: retuned to `VEHICLE_WIDTH_M=2.6`, `CAMERA_HFOV_DEG=34.4`** ([run record](doc/phase3-ada-detector-run.md)) — the default constants started B inside the gate (22.3 m), the predicted coach bias. Original item: distance accuracy unvalidated ([HLD decision D6](../documents/Design/ADA-ECU/ada-ecu-design-decisions.md#d6--r12-detector-frame-source-seam-inference-distance-zero-c-evidence)). `12.3.4.3` is the retune, and it may only move `VEHICLE_WIDTH_M` / `CAMERA_HFOV_DEG`, never `GATE_ENTER_M` / `GATE_EXIT_M`. B is a coach, wider than the 1.8 m car default, so expect a systematic bias to correct | `12.3.4.3` |
+| 3 | **Resolved by `12.3.4.3`: retuned to `VEHICLE_WIDTH_M=2.6`, `CAMERA_HFOV_DEG=34.4`** ([run record](doc/deprecated/phase3-ada-detector-run.md)) — the default constants started B inside the gate (22.3 m), the predicted coach bias. Original item: distance accuracy unvalidated ([HLD decision D6](../documents/Design/ADA-ECU/ada-ecu-design-decisions.md#d6--r12-detector-frame-source-seam-inference-distance-zero-c-evidence)). `12.3.4.3` is the retune, and it may only move `VEHICLE_WIDTH_M` / `CAMERA_HFOV_DEG`, never `GATE_ENTER_M` / `GATE_EXIT_M`. B is a coach, wider than the 1.8 m car default, so expect a systematic bias to correct | `12.3.4.3` |
 | 4 | **Detector warm-up `W` (ONNX load + `VideoCapture` open) is unmeasured** — estimated 2–5 s, and it is the one measurement R22 cannot ship without: it sets the bench's `start_delay_s`, held to **−0.5 / +1.1 s** ([§6.6(g)](../documents/Requirements/m1-run-timing-and-event-triggering.md)). `12.3.5.2` produces the CI-runner figure; **`22.3.6.3` produces the deployed one, which is the value that ships**, and Phase 1 `22.1.13.4` writes it into `scenarios/default.yaml` | `12.3.5.2`, then `22.3.6.3` |
 | 5 | **The clip is 10 s, and every long-run behaviour therefore depends on looping.** Accepted, with reasoning in [the provenance record](../ADA_ECU/media/ego-b-occluding-c.source.md). Two consequences no subtask may absorb silently: `FileFrameSource` must keep `frame_index` monotonic across loops (`12.3.2.2`), and the gap between the last emitted line of one clip pass and the first of the next must not exceed `TRACK_TIMEOUT_MS`, or ego's own B track expires between cycles. `12.3.5.2` measures that gap; if it is too long, the finding goes to [[project-architecture]] — it is not fixed by widening the timeout | `12.3.5.2` |
 | 6 | **The detector's pacer is built because [HLD §4/§6/§12](../documents/Design/ADA-ECU/ada-ecu-hld.md#6-internal-components) and [D10](../documents/Design/ADA-ECU/ada-ecu-design-decisions.md#d10--clock-domains-and-stimulus-paced-against-clock_monotonic) designate it (`12.3.2.8`); the requirement number it serves is unratified.** [m1-run-timing-and-event-triggering.md §7](../documents/Requirements/m1-run-timing-and-event-triggering.md) defines R20 and §8(1) schedules R20/R21 behind this phase's acceptance. D10 states that pacing serves R20 on its own footing rather than the deferred IVI dashcam view, so building it pulls no deferred surface in; the dashcam view stays deferred ([milestone1_high_level_plan.md §6](../documents/Plan/milestone1_high_level_plan.md#6-deferred-to-later-milestones)) and no Phase 3 subtask may add clip-serving or an `exposedPorts` entry. **Trigger:** the user accepts or rejects R20, which fixes whether `12.3.2.8` and its K4 bound are traceable to a ratified requirement | **user** (accept/reject R20) |
@@ -686,4 +686,4 @@ deployed   5.3.6.2 ∥ 22.3.6.3 (after 5.3.6.1 + 12.3.2.8 + phase-4 18.4.11.1 - 
 
 ---
 
-*Phase 3 = 7 task groups, 24 subtasks, every one `AI`; `5.3.6.2`, `5.3.7.3` and `22.3.6.3` go to [[car-sky]] and the rest to an implementation subagent. 21 are done (branch `feat/phase3-object-detection`); the three car-sky readings wait on Phase 4 `18.4.11.1`'s saved Room log and the registry push. Run evidence: [doc/phase3-ada-detector-run.md](doc/phase3-ada-detector-run.md).*
+*Phase 3 = 7 task groups, 24 subtasks, every one `AI`; `5.3.6.2`, `5.3.7.3` and `22.3.6.3` go to [[car-sky]] and the rest to an implementation subagent. 21 are done (branch `feat/phase3-object-detection`); the three car-sky readings wait on Phase 4 `18.4.11.1`'s saved Room log and the registry push. Run evidence: [doc/phase3-ada-detector-run.md](doc/deprecated/phase3-ada-detector-run.md).*

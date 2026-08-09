@@ -326,7 +326,7 @@ The following deployment scheme supports IVI-ECU isolated tests and system tests
 | Path | Topology | Port | Guide |
 |---|---|---|---|
 | Local / emulator | mock-sender → `127.0.0.1` | 5004 | [mock-sender/README.md](../../../IVI_ECU/mock-sender/README.md) |
-| Mock 2-node Room | `m1-mock-r4-sender` + Skycraft IVI + bridge | 5004 (align both) | [task51-2node-blueprint-answer.md](../../../plans/doc/task51-2node-blueprint-answer.md), [blueprint-2node-task51-test-guide.md](../../../requirements/blueprint-2node-task51-test-guide.md) |
+| Mock 2-node Room | `m1-mock-r4-sender` + Skycraft IVI + bridge | 5004 (align both) | [task51-2node-blueprint-answer.md](../../../plans/doc/deprecated/task51-2node-blueprint-answer.md), [blueprint-2node-task51-test-guide.md](../../../requirements/blueprint-2node-task51-test-guide.md) |
 | Mini ADA+IVI (optional) | ADA + IVI + bridge | **47300** | [phase5-mini-blueprint-ada-ivi.md](phase5-mini-blueprint-ada-ivi.md) — see §10 gap |
 | Full M1 | 4 nodes + bridge | 47300 | [node-ivi-ecu.md](../../../requirements/car-sky-guide/node-ivi-ecu.md) |
 

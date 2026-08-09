@@ -1,6 +1,6 @@
 # Deploying a Blueprint on CarSky — End-to-End Walkthrough
 
-Worked example: the **netcheck** connectivity test ([tools/netcheck/](../../tools/netcheck/)), from source file to running Room. Every step **M1–M12** of [baseline-connectivity-smoke-test.md](../../plans/doc/research_notes/baseline-connectivity-smoke-test.md) is covered here in order — several are performed by an agent rather than by hand, and [§5](#5-work-division-between-ai-and-human) states which; that note owns the test's *design* (why each check exists, and the [pass criteria C1–C5](../../plans/doc/research_notes/baseline-connectivity-smoke-test.md#2-pass-criteria) every later mention refers to), this guide owns the *doing*.
+Worked example: the **netcheck** connectivity test ([tools/netcheck/](../../tools/netcheck/)), from source file to running Room. Every step **M1–M12** of [baseline-connectivity-smoke-test.md](../../documents/Delivery/baseline-connectivity-smoke-test.md) is covered here in order — several are performed by an agent rather than by hand, and [§5](#5-work-division-between-ai-and-human) states which; that note owns the test's *design* (why each check exists, and the [pass criteria C1–C5](../../documents/Delivery/baseline-connectivity-smoke-test.md#2-pass-criteria) every later mention refers to), this guide owns the *doing*.
 
 Use it as the template for deploying any container node — the ECU images follow the identical path with different images and env.
 
@@ -64,9 +64,9 @@ Each job starts on a clean machine, so it checks the code out first (`actions/ch
 
 **Credentials.** Sign in to the Zot web UI through **A8 Keycloak** (single sign-on), then create an **API key** (`zak_…`, shown once). That key is the *password* for `docker login`; the username is the registry account. Full procedure: [zot-registry-api-key.md](zot-registry-api-key.md).
 
-**Host caveat:** `registry.hackathon-2.carsky.io` is the verified **push** host from outside (CI, dev machine); `registry.carsky.io` answers 502 externally. **Resolved:** nodes pull from this same host — the earlier pull failures were a single-platform-image requirement, not a host mismatch. See [phase0-smoke-test-run.md § Standing requirement](../../plans/doc/phase0-smoke-test-run.md).
+**Host caveat:** `registry.hackathon-2.carsky.io` is the verified **push** host from outside (CI, dev machine); `registry.carsky.io` answers 502 externally. **Resolved:** nodes pull from this same host — the earlier pull failures were a single-platform-image requirement, not a host mismatch. See [phase0-smoke-test-run.md § Standing requirement](../../plans/doc/deprecated/phase0-smoke-test-run.md).
 
-**How the push works from GitHub Actions** — run by the `netcheck-image` job. Images must be single-platform `linux/arm64` ([phase0-smoke-test-run.md § Standing requirement](../../plans/doc/phase0-smoke-test-run.md)); attestations stay disabled so the result is one manifest, not an index:
+**How the push works from GitHub Actions** — run by the `netcheck-image` job. Images must be single-platform `linux/arm64` ([phase0-smoke-test-run.md § Standing requirement](../../plans/doc/deprecated/phase0-smoke-test-run.md)); attestations stay disabled so the result is one manifest, not an index:
 
 ```
 docker login <registry-host> -u <account> --password-stdin   # key supplied from the secret
@@ -184,7 +184,7 @@ Confirm each of the four role nodes has one `ethernet` pin wired to the Ethernet
 
 | Field | Value | Explanation |
 |---|---|---|
-| Image | `registry.hackathon-2.carsky.io/m1-netcheck:latest` | Same host CI pushes to. Must be single-platform `linux/arm64` ([phase0-smoke-test-run.md § Standing requirement](../../plans/doc/phase0-smoke-test-run.md)) — a multi-platform manifest index fails to pull. |
+| Image | `registry.hackathon-2.carsky.io/m1-netcheck:latest` | Same host CI pushes to. Must be single-platform `linux/arm64` ([phase0-smoke-test-run.md § Standing requirement](../../plans/doc/deprecated/phase0-smoke-test-run.md)) — a multi-platform manifest index fails to pull. |
 | Command | `./entrypoint.sh` | Overrides the container entrypoint. Relative to the image's workdir `/app` — `/entrypoint.sh` (absolute) does not exist and the container dies at start. May be left empty: the Dockerfile already defaults to it. |
 | Args | *(empty)* | Not used. |
 | Capabilities | `NET_RAW` | Linux privilege for opening raw sockets, required by `tcpdump` in `capture.sh`. Without it capture degrades to packet counters and criterion C4 weakens. |
@@ -246,7 +246,7 @@ Zero `[ERR]` lines is **C2**; a live, readable log per node is **C3**.
 
 ### Checking IVI RX traffic (hop 3)
 
-Until the IVI listener is installed on the Android node, it produces no `[RX]`/`[TX]` logs like the other three nodes. Two ways to check it received ADA's relay, strongest first — per [baseline-connectivity-smoke-test.md §7](../../plans/doc/research_notes/baseline-connectivity-smoke-test.md#7-the-ivi-hop) — and record which was used.
+Until the IVI listener is installed on the Android node, it produces no `[RX]`/`[TX]` logs like the other three nodes. Two ways to check it received ADA's relay, strongest first — per [baseline-connectivity-smoke-test.md §7](../../documents/Delivery/baseline-connectivity-smoke-test.md#7-the-ivi-hop) — and record which was used.
 
 **Note:** a REST-driven listener (`POST` a `toybox nc -u -l -p 47300` to the VM shell route, `GET` the result) is not doable — the VM shell route returns 502 on this deployment, same as `screenshot`/`accessibility`/`container-exec` ([carsky-rest-api-blueprint.md](carsky-rest-api-blueprint.md)). Toybox's availability can't even be checked until that's fixed.
 
@@ -306,7 +306,7 @@ Five notes on the rows above:
 
 ## 6. Expected outputs and acceptance
 
-One output: the node logs read at M10. They carry all five pass criteria **C1–C5**, defined in [baseline-connectivity-smoke-test.md § 2](../../plans/doc/research_notes/baseline-connectivity-smoke-test.md#2-pass-criteria) — restated below only as what to accept.
+One output: the node logs read at M10. They carry all five pass criteria **C1–C5**, defined in [baseline-connectivity-smoke-test.md § 2](../../documents/Delivery/baseline-connectivity-smoke-test.md#2-pass-criteria) — restated below only as what to accept.
 
 | Output | Retrieved at | Accepted when |
 |---|---|---|
@@ -323,7 +323,7 @@ Every row below cost real time on the first run (2026-07-31). They are ordered b
 | # | Mistake | Symptom | Fix |
 |---|---|---|---|
 | 1 | **Deployed before doing M7.** The clone carried the baseline's ECU images (`registry.carsky.io/m1-v2x-ecu:latest` …), which do not exist yet. | All three container nodes stuck in `Provisioning`; the bridge and IVI reach `Running`. Log API reports `waiting to start: trying and failing to pull image`. | Apply M7 to all three nodes, delete the failed deployment, redeploy. |
-| 2 | **Wrong registry host in CI** — `registry.carsky.io` instead of `registry.hackathon-2.carsky.io` for the *push*. | The push itself fails (502) or lands nowhere the catalog shows. | Push to the `hackathon-2` host — nodes pull from the same host (M7); the image also needs to be single-platform `linux/arm64` (see [§ Standing requirement](../../plans/doc/phase0-smoke-test-run.md)). |
+| 2 | **Wrong registry host in CI** — `registry.carsky.io` instead of `registry.hackathon-2.carsky.io` for the *push*. | The push itself fails (502) or lands nowhere the catalog shows. | Push to the `hackathon-2` host — nodes pull from the same host (M7); the image also needs to be single-platform `linux/arm64` (see [§ Standing requirement](../../plans/doc/deprecated/phase0-smoke-test-run.md)). |
 | 3 | **Typo in an address** — `NEXT_HOP_HOST = 10.99.0.2` instead of `10.99.0.12`. | Node runs and logs, but `[ERR] no route to 10.99.0.2:47200`; the chain stops at that hop, so C5 never appears downstream. | Re-read each address digit by digit; they differ by one character. |
 | 4 | **`ROLE` in uppercase** (`V2X` instead of `v2x`). | Runs, but log lines and the datagram stamp read `\|V2X`, so the expected `seq=0\|bench\|v2x` never matches and C5 cannot be confirmed by eye. | Lowercase: `bench`, `v2x`, `ada`. |
 | 5 | **Absolute command path** — `/entrypoint.sh` instead of `./entrypoint.sh`. | Container exits immediately; restart count climbs. The script lives in the image workdir `/app`, not at the filesystem root. | Use `./entrypoint.sh`, or clear the field and let the image's own default run. |
@@ -342,6 +342,6 @@ Every row below cost real time on the first run (2026-07-31). They are ordered b
 | GitHub secret | `CARSKY_ZOT_API_KEY` (`zak_…`) |
 | Node addresses | bench `.10` · V2X `.11` · ADA `.12` · IVI `.13` on `10.99.0.0/24` |
 | Ports | bench→V2X `47100` · V2X→ADA `47200` · ADA→IVI `47300` |
-| Pass criteria ([defined here](../../plans/doc/research_notes/baseline-connectivity-smoke-test.md#2-pass-criteria)) | C1 Running · C2 no `[ERR]` · C3 live log · C4 `[CAP]` capture · C5 accumulated stamps |
+| Pass criteria ([defined here](../../documents/Delivery/baseline-connectivity-smoke-test.md#2-pass-criteria)) | C1 Running · C2 no `[ERR]` · C3 live log · C4 `[CAP]` capture · C5 accumulated stamps |
 
 *Screenshots referenced above live in `requirements/car-sky-guide/images/`; capture them from Nydus when exporting this guide to slides.*

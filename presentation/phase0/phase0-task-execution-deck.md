@@ -22,7 +22,7 @@ contract freeze · 8 task groups · 27 subtasks · closed 2026-07-31
 
 The architecture this phase defines is presented in Deck A: [phase0-design-concepts-deck.html](phase0-design-concepts-deck.html).
 
-Sources: [phase0_tasks.md](../../plans/phase0_tasks.md) · [phase0-contract-freeze-hld.md](../../deprecated/phase0-contract-freeze-hld.md) · [phase1_tasks.md](../../plans/phase1_tasks.md)
+Sources: [phase0_tasks.md](../../plans/phase0_tasks.md) · [phase0-contract-freeze-hld.md](../../plans/doc/deprecated/phase0-contract-freeze-hld.md) · [phase1_tasks.md](../../plans/phase1_tasks.md)
 
 ---
 

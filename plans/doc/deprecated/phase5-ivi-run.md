@@ -1,6 +1,6 @@
 # Phase 5 IVI run record
 
-Evidence record for the Phase 5 in-Room IVI subtasks of [phase5_minh_tasks.md](../phase5_minh_tasks.md) group 5.9. Each section carries one subtask's recorded outputs; the procedure the outputs came from is [deploy-ivi-hmi-walkthrough.md](../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md), cited by section.
+Evidence record for the Phase 5 in-Room IVI subtasks of [phase5_minh_tasks.md](../../phase5_minh_tasks.md) group 5.9. Each section carries one subtask's recorded outputs; the procedure the outputs came from is [deploy-ivi-hmi-walkthrough.md](../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md), cited by section.
 
 **Deviation covering every section below:** the run was performed against the team's full **m1-system-test Room** (deployment `m1_system_test-deploy`, Rework device `KIS`), which was already `Running`, rather than the mini-blueprint of `5.5.9.1`–`5.5.9.5`. The ADB route, the guest properties and the install are node facts independent of which Room hosts the node; the mini-blueprint subtasks stay open.
 

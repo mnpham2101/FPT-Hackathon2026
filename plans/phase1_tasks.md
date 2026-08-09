@@ -67,7 +67,7 @@ Three CI runs verify the closed work: **`30697863324` on `16b8674`** (8 lanes gr
 | `9.1.10.7` | AI | Run `tools/comms_check/check_v2x_log.py` in stream mode over a saved V2X View Log export. |
 | `8.1.10.8` | AI | Capture the `[EVT] stub_transition` bring-up sequence, which prints once at node start. |
 | `11.1.10.9` | Human | Swap the bench `SCENARIO_CONFIG` to `c-out-of-range.yaml` and redeploy. |
-| `11.1.10.4` | AI | Compare the two log sets against the `default.yaml` baseline in [phase1-comms-run.md](doc/phase1-comms-run.md). |
+| `11.1.10.4` | AI | Compare the two log sets against the `default.yaml` baseline in [phase1-comms-run.md](doc/deprecated/phase1-comms-run.md). |
 | `6.1.10.5` | AI + Human | Save a View Log containing a `[PCAP-BEGIN]` block (the Room must have run at least one `CAPTURE_ROTATE_S` period), run `V2X_ECU/tools/extract_pcap.sh`, open the `.pcap` in Wireshark. |
 | `11.1.6.9` – `11.1.6.12` | agent | The SP D5 scenario clock: the two scenario keys, the epoch stamp, deadline pacing, and `mono_ms`. |
 
@@ -703,7 +703,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 ## Task Group 1.10 — Deploy & live verification (serves R5, R2, R11, R6 + the Demo box)
 
-> The subject walkthrough is [deploy-walkthrough-netcheck.md](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md), whose M1–M12 are the clone, configure, deploy, read-logs and teardown sequence this group performs with different images and env. Every subtask below cites the section governing its step, takes its executor from [§5](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#5-work-division-between-ai-and-human), and takes its acceptance from [§6](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#6-expected-outputs-and-acceptance); the commands stay in the walkthrough. Registry push runs in the image CI lanes; the remaining Nydus UI work is Human, because no REST route updates an existing node's config ([§5](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#5-work-division-between-ai-and-human), row M7). Evidence accumulates in `plans/doc/phase1-comms-run.md` (created by 5.1.10.1). Standing requirement: images single-platform `linux/arm64` ([phase0-smoke-test-run.md](doc/phase0-smoke-test-run.md)).
+> The subject walkthrough is [deploy-walkthrough-netcheck.md](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md), whose M1–M12 are the clone, configure, deploy, read-logs and teardown sequence this group performs with different images and env. Every subtask below cites the section governing its step, takes its executor from [§5](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#5-work-division-between-ai-and-human), and takes its acceptance from [§6](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#6-expected-outputs-and-acceptance); the commands stay in the walkthrough. Registry push runs in the image CI lanes; the remaining Nydus UI work is Human, because no REST route updates an existing node's config ([§5](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#5-work-division-between-ai-and-human), row M7). Evidence accumulates in `doc/deprecated/phase1-comms-run.md` (created by 5.1.10.1). Standing requirement: images single-platform `linux/arm64` ([phase0-smoke-test-run.md](doc/deprecated/phase0-smoke-test-run.md)).
 
 > **Acceptance for an ECU Room.** [§6](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#6-expected-outputs-and-acceptance)'s C1–C4 apply unchanged: every node `Running` with restart 0, no `[ERR]` line, a live readable log per node, and a `[CAP]` line on the capturing node. C5's accumulated `|bench|v2x` stamp is netcheck's payload; the equivalent per-node observables for these images are [V2X HLD §12](../documents/Design/V2X-ECU/v2x-ecu-hld.md#12-test-strategy) and [SP HLD §12](../documents/Design/SCENARIO-PLAYER/scenario-player-hld.md#12-test-strategy), which each subtask names.
 
@@ -718,13 +718,13 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 1. Push a commit so the image lanes run — [M3 + M4](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#m3--m4--build-and-push-automatic). *(AI)*
 2. Confirm the run passed in the Actions web UI — [M4](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#m3--m4--build-and-push-automatic). *(Human — an agent session holds no GitHub token)*
 3. Confirm each tag reached the registry over the catalog and tag-list routes — [M4](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#m3--m4--build-and-push-automatic). Registry host per [zot-registry-api-key.md § Registry host caveat](../requirements/car-sky-guide/zot-registry-api-key.md#registry-host-caveat-open-item-o1). *(AI)*
-4. Create `plans/doc/phase1-comms-run.md` recording the pushed tags and the lane that pushed each. *(AI)*
+4. Create `doc/deprecated/phase1-comms-run.md` recording the pushed tags and the lane that pushed each. *(AI)*
 
-**Acceptance:** all three tags present in the registry catalog; the run record created. No digests are recorded — the tags are mutable, and [phase1-comms-run.md](doc/phase1-comms-run.md) states why.
+**Acceptance:** all three tags present in the registry catalog; the run record created. No digests are recorded — the tags are mutable, and [phase1-comms-run.md](doc/deprecated/phase1-comms-run.md) states why.
 
 **Dependencies:** after 5.1.5.4 + 5.1.7.3 + 2.1.9.1. **Commit:** `[5.1.10.1] docs: record phase1 image pushes to the CarSky registry`
 
-**Status:** closed 2026-08-01, executed by the image CI lanes. `CARSKY_ZOT_API_KEY` is a repo secret, so the gated push step in each lane ran: run `30698630956` logged `Notice: pushed registry.hackathon-2.carsky.io/m1-v2x-ecu:latest (linux/arm64)` and the same for `m1-scenario-player:latest`, each a single manifest rather than an index; record in [phase1-comms-run.md](doc/phase1-comms-run.md). Presence in the registry is further confirmed by deployment — every node on the Room `phase1_Minh_test-deploy` pulled and ran, and the sink's full 339-character `[RX]` bodies show `m1-netcheck:latest` carries `2.1.9.1`'s `BODY_PREVIEW` rather than the hardcoded-96 build. **Mutable tags:** `main` pushes the same tags from pre-`2.1.9.1` code, so a `main` commit landing before the branch merges replaces the registry copy — re-check the `[RX]` body length after `main` activity, and identify a deployed image at deploy time rather than from a run log.
+**Status:** closed 2026-08-01, executed by the image CI lanes. `CARSKY_ZOT_API_KEY` is a repo secret, so the gated push step in each lane ran: run `30698630956` logged `Notice: pushed registry.hackathon-2.carsky.io/m1-v2x-ecu:latest (linux/arm64)` and the same for `m1-scenario-player:latest`, each a single manifest rather than an index; record in [phase1-comms-run.md](doc/deprecated/phase1-comms-run.md). Presence in the registry is further confirmed by deployment — every node on the Room `phase1_Minh_test-deploy` pulled and ran, and the sink's full 339-character `[RX]` bodies show `m1-netcheck:latest` carries `2.1.9.1`'s `BODY_PREVIEW` rather than the hardcoded-96 build. **Mutable tags:** `main` pushes the same tags from pre-`2.1.9.1` code, so a `main` commit landing before the branch merges replaces the registry copy — re-check the `[RX]` body length after `main` activity, and identify a deployed image at deploy time rather than from a run log.
 
 ### [ ] `5.1.10.2` — Human: blueprint node config, deploy and teardown
 
@@ -747,7 +747,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 4. Optional, for `8.1.10.8`'s supplementary evidence: set `FAULT_PLAN=init_fail` on the V2X node, redeploy, then restore `none` — [M7](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#m7--configure-the-three-container-nodes) + [M9](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#m9--deploy--criterion-c1).
 5. Delete the Deployment once every subtask of this group holds its evidence — [M12](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#m12--tear-down).
 
-**Acceptance:** the Room exists and the clone's stored config matches the list above, as read back by `5.1.10.6`. Evidence recorded in `plans/doc/phase1-comms-run.md`; the evidence commit is made by the orchestrating session after the user confirms.
+**Acceptance:** the Room exists and the clone's stored config matches the list above, as read back by `5.1.10.6`. Evidence recorded in `doc/deprecated/phase1-comms-run.md`; the evidence commit is made by the orchestrating session after the user confirms.
 
 **Dependencies:** after 5.1.10.1. **Commit:** `[5.1.10.2] docs: record phase1 blueprint config and deployment`
 
@@ -762,7 +762,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 3. Confirm the IVI node carries its VM image artifact — [M8](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#m8--leave-the-ivi-node-alone).
 4. Poll node phases until every node reads `Running`, recording each `nodeKey` — [M9](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#m9--deploy--criterion-c1). Read the per-node badges, not the summary header, which read `Pending — 0/0 nodes ready` on the Room `phase1_Minh_test-deploy` while traffic flowed normally.
 
-**Acceptance:** criterion C1 of [§6](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#6-expected-outputs-and-acceptance) — every node `Running`, restart count 0 — with the read-back and the phase list recorded in `plans/doc/phase1-comms-run.md`. The APK clause of the R5 box is not closed here; § Open items item 2.
+**Acceptance:** criterion C1 of [§6](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#6-expected-outputs-and-acceptance) — every node `Running`, restart count 0 — with the read-back and the phase list recorded in `doc/deprecated/phase1-comms-run.md`. The APK clause of the R5 box is not closed here; § Open items item 2.
 
 **Dependencies:** after 5.1.10.2. **Commit:** `[5.1.10.6] docs: record phase1 blueprint read-back and node Running evidence`
 
@@ -776,7 +776,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 2. Extract the `[RX]` bodies at the 512-character preview `2.1.9.1` enables.
 3. Confirm `object.distance` changes across successive messages, as `default.yaml`'s approach kinematics require — the observable [V2X HLD §12](../documents/Design/V2X-ECU/v2x-ecu-hld.md#12-test-strategy) names for this box.
 
-**Acceptance:** criteria C2 and C3 of [§6](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#6-expected-outputs-and-acceptance) on the ADA node — no `[ERR]` line, a live readable log — plus the `[RX]` excerpts showing a changing `object.distance`, recorded in `plans/doc/phase1-comms-run.md`.
+**Acceptance:** criteria C2 and C3 of [§6](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#6-expected-outputs-and-acceptance) on the ADA node — no `[ERR]` line, a live readable log — plus the `[RX]` excerpts showing a changing `object.distance`, recorded in `doc/deprecated/phase1-comms-run.md`.
 
 **Dependencies:** after 5.1.10.6. **Commit:** `[2.1.10.3] docs: record R2-at-ADA live evidence`
 
@@ -792,7 +792,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 Exit 0 asserts `rx_datagram` → `decode_ok` (CpmContent JSON) → `r2_forwarded` (R2 JSON) per received message, which is the chain [V2X HLD §12](../documents/Design/V2X-ECU/v2x-ecu-hld.md#12-test-strategy) lists as this node's deployed observable. The same checker in expected-vector mode already closed the CI half in `9.1.12.3`.
 
-**Acceptance:** `check_v2x_log.py` exits 0 on the saved export, with its output recorded in `plans/doc/phase1-comms-run.md`; criteria C2 and C3 of [§6](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#6-expected-outputs-and-acceptance) hold on the V2X node.
+**Acceptance:** `check_v2x_log.py` exits 0 on the saved export, with its output recorded in `doc/deprecated/phase1-comms-run.md`; criteria C2 and C3 of [§6](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#6-expected-outputs-and-acceptance) hold on the V2X node.
 
 **Dependencies:** after 5.1.10.6 + 9.1.12.2. **Commit:** `[9.1.10.7] docs: record on-platform EVT-chain check evidence`
 
@@ -808,7 +808,7 @@ Exit 0 asserts `rx_datagram` → `decode_ok` (CpmContent JSON) → `r2_forwarded
 
 Step 3 is optional: R8's box is closed at unit and loopback level by `8.1.3.2`/`8.1.3.3`, and this subtask does not gate it.
 
-**Acceptance:** the three `stub_transition` lines in the D2 order recorded in `plans/doc/phase1-comms-run.md`.
+**Acceptance:** the three `stub_transition` lines in the D2 order recorded in `doc/deprecated/phase1-comms-run.md`.
 
 **Dependencies:** after 5.1.10.6. **Commit:** `[8.1.10.8] docs: record R8 live bring-up evidence`
 
@@ -837,7 +837,7 @@ Step 3 is optional: R8's box is closed at unit and loopback level by `8.1.3.2`/`
 
 This is R11's acceptance at Room level, which [SP HLD §12](../documents/Design/SCENARIO-PLAYER/scenario-player-hld.md#12-test-strategy) places on the consumer's log.
 
-**Acceptance:** paired before/after log excerpts recorded in `plans/doc/phase1-comms-run.md`, differing in the object's distance sequence and in nothing else.
+**Acceptance:** paired before/after log excerpts recorded in `doc/deprecated/phase1-comms-run.md`, differing in the object's distance sequence and in nothing else.
 
 **Dependencies:** after 11.1.10.9. **Commit:** `[11.1.10.4] docs: record scenario-swap stream difference evidence`
 
@@ -853,11 +853,11 @@ Retrieval procedure: [traffic-capture-wireshark.md § Retrieving a .pcap (user s
 2. Run `V2X_ECU/tools/extract_pcap.sh <saved.log>`. *(AI)*
 3. Open the produced `.pcap` in Wireshark and filter `udp.port == 47100 || udp.port == 47200`. *(Human — visual judgement, and the walkthrough's §5 preamble puts a browser and an operator's eyes outside what an agent reaches)*
 4. Verify both flows at the single capture point: bench→V2X UDP/47100 payloads matching the golden-vector and `[EVT]` sizes and timestamps, and V2X→ADA UDP/47200 R2 JSON. *(Human)*
-5. Archive the `.pcap` and record the finding in `plans/doc/phase1-comms-run.md`. *(AI)*
+5. Archive the `.pcap` and record the finding in `doc/deprecated/phase1-comms-run.md`. *(AI)*
 
 Dissection caveat (D5): raw UPER without GN/BTP shows as UDP data, so the evidence is payload-byte correlation rather than an ITS protocol tree.
 
-**Acceptance:** criterion C4 of [§6](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#6-expected-outputs-and-acceptance) — a `[CAP]` line on the capturing node — plus the archived `.pcap` and the two-flow finding recorded in `plans/doc/phase1-comms-run.md`.
+**Acceptance:** criterion C4 of [§6](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#6-expected-outputs-and-acceptance) — a `[CAP]` line on the capturing node — plus the archived `.pcap` and the two-flow finding recorded in `doc/deprecated/phase1-comms-run.md`.
 
 **Dependencies:** after 5.1.10.6, parallel with 2.1.10.3 / 9.1.10.7 / 8.1.10.8. **Commit:** `[6.1.10.5] docs: record capture retrieval and Wireshark evidence`
 
@@ -869,7 +869,7 @@ Dissection caveat (D5): raw UPER without GN/BTP shows as UDP data, so the eviden
 
 **Objective:** `plans/milestone1.md` § Phase 0 agrees with [phase0_tasks.md § Phase 0 overview](phase0_tasks.md#phase-0-overview) — all four acceptance boxes closed, smoke test C1–C5 green.
 
-**Scope:** flip box 4 to `[x]`; replace the blocker paragraph with a one-line closed statement citing [phase0-smoke-test-run.md](doc/phase0-smoke-test-run.md). No other milestone1.md change.
+**Scope:** flip box 4 to `[x]`; replace the blocker paragraph with a one-line closed statement citing [phase0-smoke-test-run.md](doc/deprecated/phase0-smoke-test-run.md). No other milestone1.md change.
 
 **Acceptance:** milestone1.md § Phase 0 shows 4/4 closed, consistent with phase0_tasks.md; [markdown style](../.claude/skills/markdown-writing-style/SKILL.md) held.
 
@@ -958,7 +958,7 @@ Dissection caveat (D5): raw UPER without GN/BTP shows as UDP data, so the eviden
 
 **Scope — one key in one data file. No code, no other scenario:**
 
-- `Scenario_Player/scenarios/default.yaml` gains `start_delay_s: <W>`, where `<W>` is the **deployed** detector warm-up in seconds that Phase 3 `22.3.6.3` recorded in `plans/doc/phase3-ada-detector-run.md`. `DETECTOR_START_DELAY_S` stays `0.0`, so `start_delay_s = W` with no further term.
+- `Scenario_Player/scenarios/default.yaml` gains `start_delay_s: <W>`, where `<W>` is the **deployed** detector warm-up in seconds that Phase 3 `22.3.6.3` recorded in `doc/deprecated/phase3-ada-detector-run.md`. `DETECTOR_START_DELAY_S` stays `0.0`, so `start_delay_s = W` with no further term.
 - The header comment's line stating the key "arrives with R20 and is not read by `player/config.py`" is replaced by the value's source: the run doc it came from and the −0.5 / +1.1 s band it must hold within.
 - **`c-out-of-range.yaml` is not touched.** It admits no track, so no choreography instant exists in it to align.
 - **Do not invent the number.** If `22.3.6.3` has not produced it, this subtask is blocked, not estimated — a wrong `start_delay_s` is wrong for every cycle of the run, and matched bench/clip periods make the offset constant rather than self-correcting.
