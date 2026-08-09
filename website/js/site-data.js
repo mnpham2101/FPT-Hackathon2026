@@ -63,7 +63,8 @@ window.KIS.SITE = {
       href: 'pages/acceptance-evidence.html', pos: [89, 50],
       summary: 'The evidence that closes each requirement: logs, recordings and CI runs, traced to the acceptance checks.' },
     { id: 'guide-to-get-evidence', parent: 'delivery', label: 'Test Guide', icon: 'guide',
-      href: 'pages/guide-to-get-evidence.html', pos: [84, 72],
+      href: 'pages/documents-delivery-test-guides-readme.html', pos: [84, 72],
+      source: 'documents/Delivery/Test-Guides/README.md',
       summary: 'The step-by-step walkthroughs a human follows to reproduce the acceptance evidence.' },
   ],
 };

@@ -50,6 +50,7 @@ ENTRIES = [
     ("plans", "documents/Plan/milestone1_high_level_plan.md"),
     ("proposal-presentation", "documents/Proposals/README.md"),
     ("module-design", "documents/Design/README.md"),
+    ("guide-to-get-evidence", "documents/Delivery/Test-Guides/README.md"),
 ]
 
 # The site is the project's written record, and that record is documents/.
