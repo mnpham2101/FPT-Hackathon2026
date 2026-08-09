@@ -114,7 +114,9 @@ Expected, in order: `connected to localhost:5555`; a `localhost:5555   device` r
 
 If `adb devices` shows `offline` or nothing at all, the tunnel in Terminal 1 is not serving. Do not retry the install blind — check that terminal is still alive and its blueprint still `Running`, restart it, then reconnect.
 
-## Step 4 — Launch and test
+## Step 4 — Test
+
+**The app launches itself.** Once the blueprint is correctly deployed and the APK is installed, it comes up on the guest with no `am start` and no tap — [AndroidManifest.xml](../app/src/main/AndroidManifest.xml) declares `MainActivity` as the only `MAIN`/`LAUNCHER` activity on the node. An app that has to be started by hand is a finding: either the install did not take, or the guest is not the node you think it is.
 
 ### The two test paths
 
@@ -193,7 +195,7 @@ Two surfaces, both required — one for the producer, one for the app.
 adb logcat -s IVI_V2X R4ListenerService R4Deserializer MainViewModel WarningViewModel
 ```
 
-Start the capture **before** launching the app and keep logcat's default `threadtime` format, so the excerpt holds both the startup `[UI] mode=HomeView` line and the first `[UI] mode=WarningView cause=warning` — the interval between them is itself an acceptance observable.
+The app is already running by the time you attach, so **dump the buffer rather than waiting for the lines live** — add `-d` to the command above. The ring buffer still holds the startup `[UI] mode=HomeView` line and the first `[UI] mode=WarningView cause=warning`, and the interval between them is itself an acceptance observable. Keep logcat's default `threadtime` format, which is what carries the timestamps that interval is read from.
 
 The line that matters most is `[RX] type=warning … cSource=v2x_relayed cPos=(…)`. Its fields are read off the **parsed** message, so it is the proof that the JSON decoded into the typed model — and `cSource=v2x_relayed` on every rendered warning is the definition of done in text.
 
@@ -231,7 +233,7 @@ Reading it: **R1 CPMs on 47100 will not dissect as ITS.** The wire format is raw
 | Blueprint green | Every node in `Running` before the tunnel is started | all |
 | ADB connected | `adb devices` shows `localhost:5555   device` | all |
 | Install | `adb install -r …` prints `Success`, package `com.hackathon.v2x.ivi` listed | all |
-| Launch | App opens on the AAOS guest; no `FATAL EXCEPTION` in logcat | all |
+| Launch | App is up on the AAOS guest without being started by hand; no `FATAL EXCEPTION` in logcat | all |
 | Layout | Display Area + side buttons + status bar visible (R16) | all |
 | Socket bound | Status bar reads `BOUND :47300`; `R4ListenerService: UDP socket open on port 47300` | all |
 | Warning parsed | `[RX] type=warning … cSource=v2x_relayed` in logcat | all |
