@@ -391,7 +391,11 @@ http_get "/deployments/$ROOM_ID/nodes"
 NODE_OBJECTS="$(printf '%s' "$HTTP_BODY" | json_objects)"
 [ -n "$NODE_OBJECTS" ] || fail "The Room reports no nodes at all." "Re-check the deployment in the Deployment Viewer."
 
-# One record per node, tab-separated: name<TAB>displayName<TAB>nodeType<TAB>phase.
+# One record per node, separated by  (unit separator). Not a tab: tab is IFS
+# whitespace, so bash collapses runs of it and a node with an empty displayName
+# would shift nodeType into its place.  cannot occur in a display name.
+FS=$''
+# name<FS>displayName<FS>nodeType<FS>phase, one node per line.
 NODE_TABLE=""
 NODE_COUNT=0
 RUNNING_COUNT=0
@@ -404,7 +408,7 @@ while IFS= read -r obj; do
     n_phase="$(printf '%s' "$obj" | json_str phase)"
     [ -n "$n_name" ] || continue
     NODE_COUNT=$((NODE_COUNT + 1))
-    NODE_TABLE="${NODE_TABLE}${n_name}	${n_disp}	${n_type}	${n_phase}
+    NODE_TABLE="${NODE_TABLE}${n_name}${FS}${n_disp}${FS}${n_type}${FS}${n_phase}
 "
     ok=0
     if [ "$n_phase" = "Running" ]; then ok=1; RUNNING_COUNT=$((RUNNING_COUNT + 1)); else ALL_RUNNING=0; fi
@@ -421,7 +425,7 @@ EOF
 # attempted and its evidence rows read [-] rather than [ ]: absent, not failed.
 HAS_SKYCRAFT=0
 SKYCRAFT_DISP=""
-while IFS='	' read -r n_name n_disp n_type n_phase; do
+while IFS="$FS" read -r n_name n_disp n_type n_phase; do
     [ -n "$n_name" ] || continue
     if [ "$n_type" = "skycraft" ] && [ "$HAS_SKYCRAFT" -eq 0 ]; then
         HAS_SKYCRAFT=1; SKYCRAFT_DISP="$n_disp"
@@ -457,11 +461,48 @@ write_step "Collecting node logs over REST"
 add_summary ""
 add_summary "NODE LOGS"
 
-NODE_FILES=""
-while IFS='	' read -r n_name n_disp n_type n_phase; do
+# Every exported file is named for the node it came from, so a run folder can be
+# read without the node list beside it.
+#
+# The name is built from displayName, not from the REST node name: the latter is an
+# opaque key that CarSky mints fresh on every redeploy (l3vaqyshgmtdqzooqernq-n2), so
+# naming files after it would make two runs of the same test incomparable. displayName
+# is what Nydus shows and what a reader recognises, and it survives a redeploy.
+#
+# Its one weakness is that nothing stops two nodes sharing a displayName. Where that
+# happens -- or where a node has no displayName at all -- the key's trailing segment
+# is appended, which is the part that distinguishes nodes within one Room. Names are
+# resolved for the whole Room up front, because a collision is only visible from the
+# set, never from the node in hand.
+BASE_SLUGS=""
+while IFS="$FS" read -r n_name n_disp n_type n_phase; do
     [ -n "$n_name" ] || continue
     s="$(slug "$n_disp")"
     if [ -z "$s" ]; then s="$(slug "$n_name")"; fi
+    BASE_SLUGS="${BASE_SLUGS}${s}
+"
+done <<EOF
+$NODE_TABLE
+EOF
+
+# node_slug <nodeName> <displayName> -- the collision-resolved slug for one node.
+node_slug() {
+    local nm="$1" disp="$2" s count suffix
+    s="$(slug "$disp")"
+    if [ -z "$s" ]; then s="$(slug "$nm")"; fi
+    count="$(printf '%s' "$BASE_SLUGS" | grep -c -x -- "$s" || true)"
+    if [ "$count" -gt 1 ]; then
+        suffix="$(slug "${nm##*-}")"
+        if [ -z "$suffix" ]; then suffix="$(slug "$nm")"; fi
+        s="$s-$suffix"
+    fi
+    printf '%s' "$s"
+}
+
+NODE_FILES=""
+while IFS="$FS" read -r n_name n_disp n_type n_phase; do
+    [ -n "$n_name" ] || continue
+    s="$(node_slug "$n_name" "$n_disp")"
 
     is_vm=0
     if [ "$n_type" = "skycraft" ]; then is_vm=1; fi

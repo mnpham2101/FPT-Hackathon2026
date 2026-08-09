@@ -345,13 +345,46 @@ function Get-Slug ($name) {
     return $s.Trim('-')
 }
 
+# Every exported file is named for the node it came from, so a run folder can be
+# read without the node list beside it.
+#
+# The name is built from displayName, not from the REST node name: the latter is an
+# opaque key that CarSky mints fresh on every redeploy (l3vaqyshgmtdqzooqernq-n2), so
+# naming files after it would make two runs of the same test incomparable. displayName
+# is what Nydus shows and what a reader recognises, and it survives a redeploy.
+#
+# Its one weakness is that nothing stops two nodes sharing a displayName. Where that
+# happens -- or where a node has no displayName at all -- the key's trailing segment
+# is appended, which is the part that distinguishes nodes within one Room. Names are
+# resolved for the whole Room up front, because a collision is only visible from the
+# set, never from the node in hand.
+function Get-NodeKeySuffix ($nodeName) {
+    $parts = "$nodeName".Split('-')
+    $tail  = $parts[$parts.Count - 1]
+    if (-not $tail) { $tail = "$nodeName" }
+    return Get-Slug $tail
+}
+
+$SlugOf   = @{}
+$baseSlug = @{}
+foreach ($n in $nodes) {
+    $s = Get-Slug $n.displayName
+    if (-not $s) { $s = Get-Slug $n.name }
+    $baseSlug[$n.name] = $s
+}
+$dupes = @($baseSlug.Values | Group-Object | Where-Object { $_.Count -gt 1 } | ForEach-Object { $_.Name })
+foreach ($n in $nodes) {
+    $s = $baseSlug[$n.name]
+    if ($dupes -contains $s) { $s = "$s-$(Get-NodeKeySuffix $n.name)" }
+    $SlugOf[$n.name] = $s
+}
+
 Add-Summary ""
 Add-Summary "NODE LOGS"
 
 $NodeFiles = New-Object System.Collections.ArrayList
 foreach ($n in $nodes) {
-    $slug    = Get-Slug $n.displayName
-    if (-not $slug) { $slug = Get-Slug $n.name }
+    $slug    = $SlugOf[$n.name]
     $isVm    = ("$($n.nodeType)" -eq 'skycraft')
 
     # A Skycraft node's log is the VM host's own WebRTC/GPU output, never the app's.
