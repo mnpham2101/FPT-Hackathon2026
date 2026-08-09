@@ -305,6 +305,12 @@ foreach ($n in $nodes) {
     Add-SummaryCheck $ok "$($n.displayName)" $detail
 }
 
+# app-crash.txt, app-logcat.txt and the two guest probes come off a Skycraft VM
+# over ADB. A Room without one has no guest to ask, so the whole ADB half is not
+# attempted and its evidence rows read [-] rather than [ ]: absent, not failed.
+$SkycraftNodes = @($nodes | Where-Object { "$($_.nodeType)" -eq 'skycraft' })
+$HasSkycraft   = ($SkycraftNodes.Count -gt 0)
+
 if ($AllRunning) {
     Write-Ok "All $($nodes.Count) nodes Running - the blueprint is healthy"
 } else {
@@ -400,6 +406,14 @@ foreach ($n in $nodes) {
 
 # ---------------------------------------------------------------------- adb
 
+if (-not $HasSkycraft) {
+    Write-Step "Guest evidence"
+    Write-Skip 'Skycraft node' "none in this Room - no guest to collect from"
+    Write-Info "app-logcat.txt, app-crash.txt and the guest probes need an AAOS VM node."
+    Add-Summary ""
+    Add-Summary "GUEST               n/a - no Skycraft node in this Room"
+} else {
+
 Write-Step "Looking for the ADB tunnel on localhost:$Port"
 
 function Test-Port ($p) {
@@ -467,9 +481,11 @@ if (-not $Adb) {
     } else {
         $GuestReady = $true
         Write-Ok "$serial  device"
-        Write-Info "Every adb call below is pinned with -s $serial, so a local emulator cannot be hit."
+        Write-Info "Guest node: $($SkycraftNodes[0].displayName). Every adb call below is pinned with -s $serial."
     }
 }
+
+}  # end: this Room has a Skycraft node
 
 # ------------------------------------------------------------- guest health
 
@@ -557,27 +573,29 @@ foreach ($f in $NodeFiles) {
 }
 
 $GuestCollected = ($LogcatText -ne '' -or $GuestReady)
+$NoGuestReason  = 'not collected - no ADB tunnel'
+if (-not $HasSkycraft) { $NoGuestReason = 'no Skycraft node in this Room' }
 
 $txDetail = 'no [TX] in any node log'
 if ($TxSeen) { $txDetail = "in $TxFile" }
-$rxDetail = 'not collected - no ADB tunnel'
+$rxDetail = $NoGuestReason
 if ($GuestCollected) {
     $rxDetail = 'no [RX] in app-logcat.txt'
     if ($LogcatText -match '\[RX\]') { $rxDetail = "$(([regex]::Matches($LogcatText, '\[RX\]')).Count) lines" }
 }
-$srcDetail = 'not collected - no ADB tunnel'
+$srcDetail = $NoGuestReason
 if ($GuestCollected) {
     $srcDetail = 'absent from app-logcat.txt'
     if ($LogcatText -match 'source=v2x_relayed') { $srcDetail = 'every warning carries it' }
 }
-$riskDetail = 'not collected - no ADB tunnel'
+$riskDetail = $NoGuestReason
 if ($GuestCollected) {
     $riskDetail = 'scenario never reached high'
     if ($LogcatText -match 'riskState=high') { $riskDetail = 'reached' }
 }
 # Scoped to the package on purpose: a bare FATAL search matches the stock AAOS
 # Bluetooth stack aborting at boot, which is guest noise and not our defect.
-$crashDetail = 'not collected - no ADB tunnel'
+$crashDetail = $NoGuestReason
 $crashOk     = $false
 if ($GuestCollected) {
     $crashOk = -not ($CrashText -match [regex]::Escape($Package))
@@ -585,14 +603,17 @@ if ($GuestCollected) {
     if ($crashOk) { $crashDetail = "nothing naming $Package" }
 }
 
+# Applies=false is the [-] state. The four guest rows are R4/app questions that a
+# Room with no Skycraft node cannot be asked, so they are excluded from the score
+# instead of counting against it -- a phase 0 or V2X-only Room can now pass whole.
 $Evidence = @(
-    [pscustomobject]@{ Name = 'deployment RUNNING';   Pass = $DepRunning;  Detail = $DepStatus },
-    [pscustomobject]@{ Name = 'all nodes Running';    Pass = $AllRunning;  Detail = "$(@($nodes | Where-Object { "$($_.phase)" -eq 'Running' }).Count)/$($nodes.Count)" },
-    [pscustomobject]@{ Name = '[TX] in a node log';   Pass = $TxSeen;      Detail = $txDetail },
-    [pscustomobject]@{ Name = '[RX] in app-logcat';   Pass = ($GuestCollected -and $LogcatText -match '\[RX\]');           Detail = $rxDetail },
-    [pscustomobject]@{ Name = 'source=v2x_relayed';   Pass = ($GuestCollected -and $LogcatText -match 'source=v2x_relayed'); Detail = $srcDetail },
-    [pscustomobject]@{ Name = 'riskState=high';       Pass = ($GuestCollected -and $LogcatText -match 'riskState=high');     Detail = $riskDetail },
-    [pscustomobject]@{ Name = "no crash naming app";  Pass = $crashOk;     Detail = $crashDetail }
+    [pscustomobject]@{ Name = 'deployment RUNNING';   Applies = $true;         Pass = $DepRunning;  Detail = $DepStatus },
+    [pscustomobject]@{ Name = 'all nodes Running';    Applies = $true;         Pass = $AllRunning;  Detail = "$(@($nodes | Where-Object { "$($_.phase)" -eq 'Running' }).Count)/$($nodes.Count)" },
+    [pscustomobject]@{ Name = '[TX] in a node log';   Applies = $true;         Pass = $TxSeen;      Detail = $txDetail },
+    [pscustomobject]@{ Name = '[RX] in app-logcat';   Applies = $HasSkycraft;  Pass = ($GuestCollected -and $LogcatText -match '\[RX\]');           Detail = $rxDetail },
+    [pscustomobject]@{ Name = 'source=v2x_relayed';   Applies = $HasSkycraft;  Pass = ($GuestCollected -and $LogcatText -match 'source=v2x_relayed'); Detail = $srcDetail },
+    [pscustomobject]@{ Name = 'riskState=high';       Applies = $HasSkycraft;  Pass = ($GuestCollected -and $LogcatText -match 'riskState=high');     Detail = $riskDetail },
+    [pscustomobject]@{ Name = "no crash naming app";  Applies = $HasSkycraft;  Pass = $crashOk;     Detail = $crashDetail }
 )
 
 Write-Host ""
@@ -602,17 +623,29 @@ Write-Host "  ------------------------------------------------------" -Foregroun
 Add-Summary ""
 Add-Summary "EVIDENCE"
 foreach ($e in $Evidence) {
+    if (-not $e.Applies) {
+        Write-Host ("  [-] " + $e.Name.PadRight(24) + " $($e.Detail)") -ForegroundColor DarkGray
+        Add-Summary ("[-] " + $e.Name.PadRight(24) + " $($e.Detail)")
+        continue
+    }
     $box = if ($e.Pass) { '[x]' } else { '[ ]' }
     $col = if ($e.Pass) { 'Green' } else { 'Yellow' }
     Write-Host ("  $box " + $e.Name.PadRight(24) + " $($e.Detail)") -ForegroundColor $col
     Add-Summary ("$box " + $e.Name.PadRight(24) + " $($e.Detail)")
 }
 
-$Passed = @($Evidence | Where-Object { $_.Pass }).Count
+$Applicable = @($Evidence | Where-Object { $_.Applies })
+$Passed     = @($Applicable | Where-Object { $_.Pass }).Count
 
 Write-Host ""
-if ($Passed -eq $Evidence.Count) {
+if ($Passed -eq $Applicable.Count -and $HasSkycraft) {
     Write-Host "  Complete. The app is receiving R4 and warning from relayed data." -ForegroundColor Green
+} elseif ($Passed -eq $Applicable.Count) {
+    Write-Host "  Complete for a Room with no guest. Every node-side check passed;" -ForegroundColor Green
+    Write-Host "  the app rows are absent because this blueprint has no Skycraft node." -ForegroundColor Green
+} elseif (-not $HasSkycraft) {
+    Write-Host "  Node-side only, and that is all this Room has. Read the node logs above" -ForegroundColor Yellow
+    Write-Host "  for what the [ ] rows mean." -ForegroundColor Yellow
 } elseif (-not $GuestCollected) {
     Write-Host "  Node-side only. Without the ADB tunnel the app half cannot be evidenced -" -ForegroundColor Yellow
     Write-Host "  [RX], provenance and risk are unknown rather than failed." -ForegroundColor Yellow

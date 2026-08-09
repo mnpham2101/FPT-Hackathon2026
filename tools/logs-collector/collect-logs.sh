@@ -416,6 +416,20 @@ EOF
 
 [ "$NODE_COUNT" -gt 0 ] || fail "The Room reports no nodes at all." "Re-check the deployment in the Deployment Viewer."
 
+# app-crash.txt, app-logcat.txt and the two guest probes come off a Skycraft VM
+# over ADB. A Room without one has no guest to ask, so the whole ADB half is not
+# attempted and its evidence rows read [-] rather than [ ]: absent, not failed.
+HAS_SKYCRAFT=0
+SKYCRAFT_DISP=""
+while IFS='	' read -r n_name n_disp n_type n_phase; do
+    [ -n "$n_name" ] || continue
+    if [ "$n_type" = "skycraft" ] && [ "$HAS_SKYCRAFT" -eq 0 ]; then
+        HAS_SKYCRAFT=1; SKYCRAFT_DISP="$n_disp"
+    fi
+done <<EOF
+$NODE_TABLE
+EOF
+
 if [ "$ALL_RUNNING" -eq 1 ]; then
     write_ok "All $NODE_COUNT nodes Running - the blueprint is healthy"
 else
@@ -504,6 +518,14 @@ EOF
 
 # -------------------------------------------------------------------------- adb
 
+if [ "$HAS_SKYCRAFT" -eq 0 ]; then
+    write_step "Guest evidence"
+    write_skip "Skycraft node" "none in this Room - no guest to collect from"
+    write_info "app-logcat.txt, app-crash.txt and the guest probes need an AAOS VM node."
+    add_summary ""
+    add_summary "GUEST               n/a - no Skycraft node in this Room"
+else
+
 write_step "Looking for the ADB tunnel on localhost:$PORT"
 
 # No nc here, and none assumed: bash's own /dev/tcp opens the socket, and a failure to
@@ -573,9 +595,11 @@ else
     else
         GUEST_READY=1
         write_ok "$SERIAL  device"
-        write_info "Every adb call below is pinned with -s $SERIAL, so a local emulator cannot be hit."
+        write_info "Guest node: $SKYCRAFT_DISP. Every adb call below is pinned with -s $SERIAL."
     fi
 fi
+
+fi  # end: this Room has a Skycraft node
 
 # ---------------------------------------------------------------- guest health
 
@@ -658,6 +682,9 @@ CRASH="$OUT_DIR/app-crash.txt"
 GUEST_COLLECTED=0
 if [ "$GUEST_READY" -eq 1 ] || [ -s "$LOGCAT" ]; then GUEST_COLLECTED=1; fi
 
+NO_GUEST_REASON="not collected - no ADB tunnel"
+if [ "$HAS_SKYCRAFT" -eq 0 ]; then NO_GUEST_REASON="no Skycraft node in this Room"; fi
+
 RX_OK=0;   has_in_file "$LOGCAT" '[RX]'              && RX_OK=1
 SRC_OK=0;  has_in_file "$LOGCAT" 'source=v2x_relayed' && SRC_OK=1
 RISK_OK=0; has_in_file "$LOGCAT" 'riskState=high'     && RISK_OK=1
@@ -675,10 +702,10 @@ if [ "$GUEST_COLLECTED" -eq 1 ]; then
     d_risk="scenario never reached high"; if [ "$RISK_OK" -eq 1 ]; then d_risk="reached"; fi
     d_crash="crash buffer names $PACKAGE"; if [ "$CRASH_OK" -eq 1 ]; then d_crash="nothing naming $PACKAGE"; fi
 else
-    d_rx="not collected - no ADB tunnel"
-    d_src="not collected - no ADB tunnel"
-    d_risk="not collected - no ADB tunnel"
-    d_crash="not collected - no ADB tunnel"
+    d_rx="$NO_GUEST_REASON"
+    d_src="$NO_GUEST_REASON"
+    d_risk="$NO_GUEST_REASON"
+    d_crash="$NO_GUEST_REASON"
     RX_OK=0; SRC_OK=0; RISK_OK=0; CRASH_OK=0
 fi
 
@@ -702,17 +729,36 @@ evidence_row() {
     fi
 }
 
+# The [-] row: a question this Room cannot be asked. It is not scored, so a Room
+# with no guest can still pass whole -- a phase 0 or V2X-only run is not a failure
+# for lacking an app.
+evidence_skip() {
+    printf '  %s[-] %-24s %s%s\n' "$C_GRAY" "$1" "$2" "$C_OFF"
+    add_summary "$(printf '[-] %-24s %s' "$1" "$2")"
+}
+
+# guest_row <ok> <name> <detail> -- scored when this Room has a guest, [-] when not.
+guest_row() {
+    if [ "$HAS_SKYCRAFT" -eq 1 ]; then evidence_row "$1" "$2" "$3"; else evidence_skip "$2" "$3"; fi
+}
+
 evidence_row "$DEP_RUNNING" "deployment RUNNING" "$DEP_STATUS"
 evidence_row "$ALL_RUNNING" "all nodes Running"  "$RUNNING_COUNT/$NODE_COUNT"
 evidence_row "$TX_SEEN"     "[TX] in a node log" "$d_tx"
-evidence_row "$RX_OK"       "[RX] in app-logcat" "$d_rx"
-evidence_row "$SRC_OK"      "source=v2x_relayed" "$d_src"
-evidence_row "$RISK_OK"     "riskState=high"     "$d_risk"
-evidence_row "$CRASH_OK"    "no crash naming app" "$d_crash"
+guest_row    "$RX_OK"       "[RX] in app-logcat" "$d_rx"
+guest_row    "$SRC_OK"      "source=v2x_relayed" "$d_src"
+guest_row    "$RISK_OK"     "riskState=high"     "$d_risk"
+guest_row    "$CRASH_OK"    "no crash naming app" "$d_crash"
 
 printf '\n'
-if [ "$PASSED" -eq "$TOTAL" ]; then
+if [ "$PASSED" -eq "$TOTAL" ] && [ "$HAS_SKYCRAFT" -eq 1 ]; then
     printf '  %sComplete. The app is receiving R4 and warning from relayed data.%s\n' "$C_GREEN" "$C_OFF"
+elif [ "$PASSED" -eq "$TOTAL" ]; then
+    printf '  %sComplete for a Room with no guest. Every node-side check passed;%s\n' "$C_GREEN" "$C_OFF"
+    printf '  %sthe app rows are absent because this blueprint has no Skycraft node.%s\n' "$C_GREEN" "$C_OFF"
+elif [ "$HAS_SKYCRAFT" -eq 0 ]; then
+    printf '  %sNode-side only, and that is all this Room has. Read the node logs above%s\n' "$C_YELLOW" "$C_OFF"
+    printf '  %sfor what the [ ] rows mean.%s\n' "$C_YELLOW" "$C_OFF"
 elif [ "$GUEST_COLLECTED" -ne 1 ]; then
     printf '  %sNode-side only. Without the ADB tunnel the app half cannot be evidenced -%s\n' "$C_YELLOW" "$C_OFF"
     printf '  %s[RX], provenance and risk are unknown rather than failed.%s\n' "$C_YELLOW" "$C_OFF"
