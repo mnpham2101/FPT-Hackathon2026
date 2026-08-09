@@ -224,6 +224,28 @@ There is **no platform pcap facility** — capture runs inside the container. A 
 
 Reading it: **R1 CPMs on 47100 will not dissect as ITS.** The wire format is raw UPER with no GeoNetworking/BTP envelope, and Wireshark's ITS dissector keys on that framing — so the payload shows as opaque UDP data. That is expected. Correlate those datagrams with the node's `[EVT]` log by timestamp and byte length, and match the bytes against the golden vectors in `contracts/golden-vectors/*.uper`. R2 on 47200 and R4 on 47300 are plain JSON and read directly in the packet-bytes pane.
 
+## Troubleshooting
+
+### No R4 message reaches the IVI application
+
+**Issue.** The app is installed and running, logcat carries `R4ListenerService: UDP socket open on port 47300`, the producer logs `[TX] … -> 10.99.0.13:47300` at its cadence — and no `[RX]` ever appears. `/proc/net/udp6` shows the socket bound on `B8C4` with `rx_queue` and `drops` both frozen at zero, so nothing is arriving rather than arriving and being mishandled.
+
+**Explanation.** The guest brings its bridge NIC up as `buried_eth0`. AAOS `EthernetTracker` matches interfaces on the `eth<n>` name, so netd never adopts this one, never creates its network, and it never takes the node's `ethernet` pin address. `ip -4 addr` in the guest shows only cuttlefish NAT addresses (`10.0.2.x`) and no `10.99.0.13`, so datagrams addressed to the pin are dropped before the guest sees them. The app is not at fault and no app change fixes it.
+
+**Fix.** Rename the NIC, then give it the pin address — as root over the ADB tunnel:
+
+```powershell
+adb shell "su 0 sh -c 'ip link set buried_eth0 down; ip link set buried_eth0 name eth0; ip link set eth0 up'"
+adb shell "su 0 ifconfig eth0 10.99.0.13/24 up"
+```
+
+- **Chain the three link commands in one shell.** Run separately, an interrupted call leaves the NIC down and the guest unreachable on the bridge.
+- **netd does the rest.** It adopts `eth0` on the rename and creates the routing table and policy rules itself, so `ip route add … table eth0` answers `File exists` — the healthy result, not an error. No default route is needed while the producer is on-subnet.
+- **Confirm:** `ip -4 addr show eth0` reads `10.99.0.13/24`, then `[RX]` lines appear within one producer cycle.
+- **Renaming does not drop ADB** on this guest, because adbd is on vsock rather than TCP over that NIC. On an unfamiliar guest, check first: `cat /proc/net/tcp` must show no listener on `15B3` (5555).
+
+**Scope.** A live mutation of the running guest. It does **not** survive a guest reboot or a redeploy — re-apply after either. [INSTALL-IVI-APK.cmd](../../tools/apk-uploader/INSTALL-IVI-APK.cmd) applies it automatically and idempotently on every run.
+
 ## Verification checklist
 
 | Check | Pass criteria | Path |
