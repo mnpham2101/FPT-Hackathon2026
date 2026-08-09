@@ -179,6 +179,26 @@ Select all → copy → paste into a text file under `tools\apk-uploader\test-re
 - A Log widget bound to a part that no longer exists in the Room shows nothing — re-point it at this deployment's part.
 - On the isolated path the producer is the ADA node; on the system path repeat for the bench, V2X and ADA nodes.
 
+**The app's log — the `Logs: IVI ECU` tab, stream `logcat`.**
+
+![The CarSky workbench with the IVI Screen widget above and a Logs: IVI ECU tab open below it, its stream selector set to logcat, showing three highlighted R4 message received lines carrying R4WarningEvent with warningType=nlos_obstruction and riskState going low, then medium, then high](phase5-success-test-ivi-log.png)
+
+This is the only place `[RX]` appears in a browser. The selector left of the filter box must read **`logcat`** — it is the tab's stream picker, and the other streams carry the VM host's output rather than the app's. The three highlighted lines are the pass: `R4 message received: R4WarningEvent(schemaVersion=1, warningType=nlos_obstruction, riskState=…)` with `riskState` stepping `low` → `medium` → `high` as the scenario approaches. `objectSnapshot=R3Snapshot(id=trk-c-001, …)` on each line is ghost C's track, and it is the same `trk-c-001` the producer sent.
+
+Note the screenshot has **two** `Logs: IVI ECU` tabs open — a second one adds nothing, since both read the same node. Close the spare rather than wondering why they agree.
+
+**The producer's log — the `Logs: MOCKED ADA ECU` tab, stream `user`.**
+
+![The CarSky workbench Devices pane with the KIS device connected to phase5_smoked_test-deploy and its widget list, and a Logs: MOCKED ADA ECU tab below the IVI Screen, its stream selector set to user, showing TX lines addressed to 10.99.0.13:47300 with risk stepping low, medium and high](phase5-mockedADA-msg.png)
+
+Reached from **Devices** → **KIS** → the deployment's widget list, or from the tab strip under the Stage. The stream selector reads **`user`**, not `logcat` — this node is a container, not a VM. Each line is one datagram leaving the simulator:
+
+```
+[TX] cycle=10 step=3 bytes=442 -> 10.99.0.13:47300 type=warning risk=high warningType=nlos_obstruction
+```
+
+Read three things off it: the **destination** `10.99.0.13:47300` must be the IVI node's pin address and port, the **risk** must reach `high` somewhere in the cycle, and the **cycle** number must keep climbing — a frozen cycle means the simulator stalled rather than the link failing. This log is what separates "the producer never sent" from "the app never received", which is the first split § Troubleshooting asks you to make.
+
 #### Path 2 — run commands from PowerShell to collect nodes logs
 
 **First, put `adb` on `PATH`.** `adb version` answering `'adb' is not recognized` means it is missing. Add it once, in the User scope, then **open a new PowerShell window** — an already-open one keeps the old `PATH`:
