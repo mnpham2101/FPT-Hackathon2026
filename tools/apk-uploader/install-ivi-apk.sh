@@ -212,6 +212,83 @@ stop_tunnel_on_port() {
     return 0
 }
 
+# ------------------------------------------------------------------- token mgmt
+
+# a8k_ + base64(nodeKey), ~36 chars. The CarSky REST API key is a different, much
+# longer credential -- pasting that one here is the common mistake. Echoes the
+# complaint and returns 1 when the shape is wrong.
+check_token_shape() {
+    local tok="$1"
+    if [ -z "$tok" ]; then echo "The token is empty."; return 1; fi
+    case "$tok" in a8k_*) ;; *) echo "The token does not start with 'a8k_'."; return 1 ;; esac
+    if [ "${#tok}" -gt 60 ]; then
+        echo "This looks like the CarSky REST API key (${#tok} chars), not the ADB tunnel token (~36)."
+        return 1
+    fi
+    return 0
+}
+
+token_node() {
+    local b64="${1#a8k_}" out=''
+    while [ $(( ${#b64} % 4 )) -ne 0 ]; do b64="${b64}="; done
+    if command -v base64 >/dev/null 2>&1; then
+        out="$(printf '%s' "$b64" | base64 -d 2>/dev/null || printf '%s' "$b64" | base64 -D 2>/dev/null || true)"
+    fi
+    if [ -n "$out" ]; then printf '%s' "$out"; else printf '%s' '(could not decode)'; fi
+}
+
+# A stale token does not fail the upgrade loudly: the gateway answers the WebSocket
+# handshake 404 and reach-backend keeps retrying, so the port listens while no ADB
+# transport ever forms. The log is the only place that says so.
+tunnel_rejected() {
+    local f
+    for f in "$TUNNEL_LOG" "${TUNNEL_LOG}.err"; do
+        [ -n "$f" ] && [ -f "$f" ] || continue
+        grep -q 'Unexpected server response: 404' "$f" 2>/dev/null && return 0
+    done
+    return 1
+}
+
+# The platform mints a new token on every deploy, and the old one then 404s rather than
+# failing visibly. Prompt for the new one and persist it, rather than making the operator
+# find the file. Echoes the token; empty when the run cannot prompt or the operator declines.
+request_new_token() {
+    if [ ! -t 0 ]; then
+        info "Input is not a terminal, so this run cannot prompt. Update $TOKEN_FILE and re-run." >&2
+        return 0
+    fi
+    printf '\n' >&2
+    say '  A deploy mints a new ADB token; the one on disk no longer resolves.' "$C_YELLOW" >&2
+    say '  Copy it: Devices -> KIS -> Connect -> IVI ADB -> Local ADB' "$C_YELLOW" >&2
+    say '  Paste the a8k_ value, or the whole reach-backend command line.' "$C_YELLOW" >&2
+    say '  Press Enter on an empty line to give up.' "$C_GRAY" >&2
+    local i=0 entered complaint
+    while [ $i -lt 3 ]; do
+        i=$((i + 1))
+        printf '  token: ' >&2
+        IFS= read -r entered || return 0
+        entered="$(trim "$entered")"
+        [ -z "$entered" ] && return 0
+        # Tolerate a pasted command line -- lifting --key out of it is what an operator
+        # copying from the dialog actually has on the clipboard.
+        case "$entered" in *--key*) entered="$(printf '%s' "$entered" | sed -n 's/.*--key[[:space:]]\{1,\}\([^[:space:]]\{1,\}\).*/\1/p')" ;; esac
+        entered="$(printf '%s' "$entered" | tr -d '"'"'"'')"
+        if ! complaint="$(check_token_shape "$entered")"; then
+            warn "$complaint" >&2
+            continue
+        fi
+        if printf '%s' "$entered" > "$TOKEN_FILE" 2>/dev/null; then
+            ok "Saved to $TOKEN_FILE" >&2
+        else
+            warn "Could not write $TOKEN_FILE - using the token for this run only." >&2
+        fi
+        ok "Now targets node '$(token_node "$entered")'" >&2
+        printf '%s' "$entered"
+        return 0
+    done
+    return 0
+}
+
 on_exit() {
     # --keep-tunnel is honoured on a normal finish only; see on_signal.
     if [ "$KEEP_TUNNEL" -eq 0 ]; then stop_tunnel; fi
@@ -388,17 +465,20 @@ info 're-copy it from Devices -> KIS -> Connect -> IVI ADB -> Local ADB.'
 
 # ----------------------------------------------------------------- open tunnel
 
-step "Opening the tunnel on 127.0.0.1:$PORT"
-
-if test_port "$PORT"; then
-    TUNNEL_REUSED=1
-    warn "Port $PORT is already serving - reusing it (another tunnel is probably open)."
-else
+open_tunnel() {
+    local tok="$1"
+    if test_port "$PORT"; then
+        TUNNEL_REUSED=1
+        warn "Port $PORT is already serving - reusing it (another tunnel is probably open)."
+        return 0
+    fi
+    TUNNEL_REUSED=0
+    TUNNEL_STOPPED=0
     mkdir -p "$LOG_DIR"
     TUNNEL_LOG="$LOG_DIR/tunnel-last.log"
 
     # The token is passed as an argument and never echoed.
-    "$REACH_BIN" adb --gateway "$GATEWAY" --key "$TOKEN" --port "$PORT" \
+    "$REACH_BIN" adb --gateway "$GATEWAY" --key "$tok" --port "$PORT" \
         >"$TUNNEL_LOG" 2>"$TUNNEL_LOG.err" </dev/null &
     TUNNEL_PID=$!
 
@@ -427,7 +507,11 @@ else
         fail "The tunnel did not start listening within 25s." "Check $TUNNEL_LOG."
     fi
     ok "Tunnel serving (pid $TUNNEL_PID), log: $TUNNEL_LOG"
-fi
+}
+
+step "Opening the tunnel on 127.0.0.1:$PORT"
+
+open_tunnel "$TOKEN"
 
 # ------------------------------------------------------------------ adb connect
 
@@ -436,23 +520,52 @@ step 'Connecting adb to the guest'
 SERIAL="localhost:$PORT"
 "$ADB" connect "$SERIAL" >/dev/null 2>&1
 
-CONNECTED=1
-i=0
-while [ $i -lt 30 ]; do               # 30 x 1s = 30s
-    if "$ADB" devices 2>&1 | tr -d '\r' \
-        | grep -E "^localhost:$PORT[[:space:]]+device([[:space:]]|$)" >/dev/null 2>&1; then
-        CONNECTED=0
-        break
-    fi
-    sleep 1
+connect_guest() {
     "$ADB" connect "$SERIAL" >/dev/null 2>&1
-    i=$((i + 1))
-done
+    local i=0
+    while [ $i -lt 30 ]; do               # 30 x 1s = 30s
+        if "$ADB" devices 2>&1 | tr -d '\r' \
+            | grep -E "^localhost:$PORT[[:space:]]+device([[:space:]]|$)" >/dev/null 2>&1; then
+            return 0
+        fi
+        sleep 1
+        "$ADB" connect "$SERIAL" >/dev/null 2>&1
+        i=$((i + 1))
+    done
+    return 1
+}
+
+CONNECTED=1
+if connect_guest; then CONNECTED=0; fi
+
+# A 404 means the gateway has no such ADB session -- the node key in the token belongs to
+# a deployment that no longer exists. Waiting for the node to boot cannot fix that, so
+# offer the one thing that can: a fresh token.
+if [ "$CONNECTED" -ne 0 ] && tunnel_rejected; then
+    printf '\n'
+    warn 'The gateway answered 404 on every upgrade - this token no longer resolves.'
+    info "It decodes to node '$(token_node "$TOKEN")', which is not a node of any live deployment."
+    NEW_TOKEN="$(request_new_token)"
+    if [ -n "$NEW_TOKEN" ]; then
+        TOKEN="$NEW_TOKEN"
+        stop_tunnel
+        stop_tunnel_on_port "$PORT"
+        sleep 1
+        info 'Reopening the tunnel with the new token.'
+        open_tunnel "$TOKEN"
+        if connect_guest; then CONNECTED=0; fi
+    fi
+fi
+
 if [ "$CONNECTED" -ne 0 ]; then
     printf '\n'
     say "$("$ADB" devices 2>&1 | tr -d '\r')" "$C_GRAY"
+    if tunnel_rejected; then
+        fail "The gateway rejected the tunnel token (404 on every upgrade)." \
+             "Re-copy the a8k_ value from Devices -> KIS -> Connect -> IVI ADB -> Local ADB into $TOKEN_FILE. A deploy mints a new one, so the node key in the old token no longer exists."
+    fi
     fail "The guest never reached state 'device' (offline, or not listed)." \
-         "The tunnel is serving but the Skycraft node may still be booting. Wait for it to go green in the Deployment Viewer, then re-run."
+         "The tunnel is serving and the token resolves, so the Skycraft node may still be booting. Wait for it to go green in the Deployment Viewer, then re-run. If it is already green, its adbd may be wedged - Restart Node in the Inspector."
 fi
 ok "$SERIAL  device"
 info "All adb calls below are pinned with -s $SERIAL, so a local emulator cannot be hit by mistake."

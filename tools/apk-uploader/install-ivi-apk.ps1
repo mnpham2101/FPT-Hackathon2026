@@ -121,6 +121,61 @@ function Stop-TunnelOnPort ($p) {
     return $stopped
 }
 
+# ------------------------------------------------------------------- token mgmt
+
+# The token is a8k_ + base64(nodeKey), ~36 chars. The CarSky REST API key is a different,
+# much longer credential -- pasting that one here is the common mistake.
+function Test-TokenShape ($tok) {
+    if ([string]::IsNullOrWhiteSpace($tok)) { return "The token is empty." }
+    if (-not $tok.StartsWith('a8k_'))       { return "The token does not start with 'a8k_'." }
+    if ($tok.Length -gt 60)                 { return "This looks like the CarSky REST API key ($($tok.Length) chars), not the ADB tunnel token (~36)." }
+    return $null
+}
+
+function Get-TokenNode ($tok) {
+    try {
+        $b64 = $tok.Substring(4)
+        while ($b64.Length % 4 -ne 0) { $b64 += '=' }
+        return [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($b64))
+    } catch { return '(could not decode)' }
+}
+
+# The platform mints a new token on every deploy, and the old one then 404s on the
+# WebSocket upgrade rather than failing visibly -- the tunnel still listens, so the run
+# dies later at 'adb offline' with no hint that the credential is the problem. Prompt for
+# the new one and persist it, rather than making the operator find the file.
+# Returns $null when the run cannot prompt or the operator declines.
+function Request-NewToken {
+    if ([Console]::IsInputRedirected) {
+        Write-Info "Input is redirected, so this run cannot prompt. Update $TokenFile and re-run."
+        return $null
+    }
+    Write-Host ""
+    Write-Host "  A deploy mints a new ADB token; the one on disk no longer resolves." -ForegroundColor Yellow
+    Write-Host "  Copy it: Devices -> KIS -> Connect -> IVI ADB -> Local ADB" -ForegroundColor Yellow
+    Write-Host "  Paste the a8k_ value, or the whole reach-backend command line." -ForegroundColor Yellow
+    Write-Host "  Press Enter on an empty line to give up." -ForegroundColor DarkGray
+    for ($i = 1; $i -le 3; $i++) {
+        $entered = (Read-Host "  token").Trim()
+        if (-not $entered) { return $null }
+        # Tolerate a pasted command line -- lifting --key out of it is what an operator
+        # copying from the dialog actually has on the clipboard.
+        if ($entered -match '--key\s+(\S+)') { $entered = $Matches[1] }
+        $entered = $entered.Trim('"', "'")
+        $bad = Test-TokenShape $entered
+        if ($bad) { Write-Warn $bad; continue }
+        try {
+            Set-Content -Path $TokenFile -Value $entered -Encoding ASCII -NoNewline -ErrorAction Stop
+            Write-Ok "Saved to $TokenFile"
+        } catch {
+            Write-Warn "Could not write $TokenFile - using the token for this run only."
+        }
+        Write-Ok "Now targets node '$(Get-TokenNode $entered)'"
+        return $entered
+    }
+    return $null
+}
+
 function Test-Port ($p) {
     $c = New-Object System.Net.Sockets.TcpClient
     try   { $c.Connect('127.0.0.1', $p); return $true }
@@ -201,40 +256,29 @@ if (-not $Token) {
     $Token = (Get-Content $TokenFile -Raw).Trim()
 }
 
-if ([string]::IsNullOrWhiteSpace($Token)) { Fail "The token is empty." "Paste the a8k_ value from the Local ADB dialog." }
-if (-not $Token.StartsWith('a8k_'))       { Fail "The token does not start with 'a8k_'." "Copy only the --key value from the dialog, not the whole command." }
-
-# The ADB tunnel token is a8k_ + base64(nodeKey), ~36 chars. The CarSky REST API key is a
-# different, much longer credential -- pasting that one here is the common mistake.
-if ($Token.Length -gt 60) {
-    Fail "This looks like the CarSky REST API key ($($Token.Length) chars), not the ADB tunnel token (~36)." `
-         "The tunnel token is the short a8k_ value in the Local ADB dialog. They are different credentials."
+$shapeError = Test-TokenShape $Token
+if ($shapeError) {
+    Fail $shapeError "The tunnel token is the short a8k_ value in the Local ADB dialog - a different credential from the CarSky REST API key."
 }
 
-$targetNode = '(could not decode)'
-try {
-    $b64 = $Token.Substring(4)
-    while ($b64.Length % 4 -ne 0) { $b64 += '=' }
-    $targetNode = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($b64))
-} catch { }
-Write-Ok "Token accepted - targets node '$targetNode'"
+Write-Ok "Token accepted - targets node '$(Get-TokenNode $Token)'"
 Write-Info "If that is not the IVI node of the Room you just deployed, the token is stale:"
 Write-Info "re-copy it from Devices -> KIS -> Connect -> IVI ADB -> Local ADB."
 
 # ----------------------------------------------------------------- open tunnel
 
-Write-Step "Opening the tunnel on 127.0.0.1:$Port"
-
-$script:TunnelReused = $false
-if (Test-Port $Port) {
-    $script:TunnelReused = $true
-    Write-Warn "Port $Port is already serving - reusing it (another tunnel is probably open)."
-} else {
+function Open-Tunnel ($tok) {
+    if (Test-Port $Port) {
+        $script:TunnelReused = $true
+        Write-Warn "Port $Port is already serving - reusing it (another tunnel is probably open)."
+        return
+    }
+    $script:TunnelReused = $false
     if (-not (Test-Path $LogDir)) { New-Item -ItemType Directory -Path $LogDir -Force | Out-Null }
     $script:TunnelLog = Join-Path $LogDir 'tunnel-last.log'
 
     $script:TunnelProc = Start-Process -FilePath $ReachExe `
-        -ArgumentList @('adb', '--gateway', $Gateway, '--key', $Token, '--port', "$Port") `
+        -ArgumentList @('adb', '--gateway', $Gateway, '--key', $tok, '--port', "$Port") `
         -PassThru -WindowStyle Hidden `
         -RedirectStandardOutput $script:TunnelLog `
         -RedirectStandardError  "$script:TunnelLog.err"
@@ -259,26 +303,72 @@ if (Test-Port $Port) {
     Write-Ok "Tunnel serving (pid $($script:TunnelProc.Id)), log: $script:TunnelLog"
 }
 
+# A stale token does not fail the upgrade loudly: the gateway answers the WebSocket
+# handshake 404 and reach-backend keeps retrying, so the port listens while no ADB
+# transport ever forms. The log is the only place that says so.
+function Test-TunnelRejected {
+    if (-not $script:TunnelLog) { return $false }
+    foreach ($f in @($script:TunnelLog, "$script:TunnelLog.err")) {
+        if (Test-Path $f) {
+            if ((Get-Content $f -Raw -ErrorAction SilentlyContinue) -match 'Unexpected server response: 404') { return $true }
+        }
+    }
+    return $false
+}
+
+function Connect-Guest ($serial) {
+    & $Adb connect $serial | Out-Null
+    $deadline = (Get-Date).AddSeconds(30)
+    while ((Get-Date) -lt $deadline) {
+        $devices = & $Adb devices 2>&1 | Out-String
+        if ($devices -match [regex]::Escape($serial) + '\s+device\b') { return $true }
+        Start-Sleep -Seconds 1
+        & $Adb connect $serial | Out-Null
+    }
+    return $false
+}
+
+Write-Step "Opening the tunnel on 127.0.0.1:$Port"
+
+$script:TunnelReused = $false
+Open-Tunnel $Token
+
 # ------------------------------------------------------------------ adb connect
 
 Write-Step "Connecting adb to the guest"
 
 $serial = "localhost:$Port"
-& $Adb connect $serial | Out-Null
+$connected = Connect-Guest $serial
 
-$connected = $false
-$deadline = (Get-Date).AddSeconds(30)
-while ((Get-Date) -lt $deadline) {
-    $devices = & $Adb devices 2>&1 | Out-String
-    if ($devices -match [regex]::Escape($serial) + '\s+device\b') { $connected = $true; break }
-    Start-Sleep -Seconds 1
-    & $Adb connect $serial | Out-Null
+# A 404 means the gateway has no such ADB session -- the node key in the token belongs to
+# a deployment that no longer exists. Waiting for the node to boot cannot fix that, so
+# offer the one thing that can: a fresh token.
+if (-not $connected -and (Test-TunnelRejected)) {
+    Write-Host ""
+    Write-Warn "The gateway answered 404 on every upgrade - this token no longer resolves."
+    Write-Info "It decodes to node '$(Get-TokenNode $Token)', which is not a node of any live deployment."
+
+    $newToken = Request-NewToken
+    if ($newToken) {
+        $Token = $newToken
+        Stop-Tunnel
+        Stop-TunnelOnPort $Port | Out-Null
+        Start-Sleep -Seconds 1
+        Write-Info "Reopening the tunnel with the new token."
+        Open-Tunnel $Token
+        $connected = Connect-Guest $serial
+    }
 }
+
 if (-not $connected) {
     Write-Host ""
     Write-Host (& $Adb devices | Out-String) -ForegroundColor DarkGray
+    if (Test-TunnelRejected) {
+        Fail "The gateway rejected the tunnel token (404 on every upgrade)." `
+             "Re-copy the a8k_ value from Devices -> KIS -> Connect -> IVI ADB -> Local ADB into $TokenFile. A deploy mints a new one, so the node key in the old token no longer exists."
+    }
     Fail "The guest never reached state 'device' (offline, or not listed)." `
-         "The tunnel is serving but the Skycraft node may still be booting. Wait for it to go green in the Deployment Viewer, then re-run."
+         "The tunnel is serving and the token resolves, so the Skycraft node may still be booting. Wait for it to go green in the Deployment Viewer, then re-run. If it is already green, its adbd may be wedged - Restart Node in the Inspector."
 }
 Write-Ok "$serial  device"
 Write-Info "All adb calls below are pinned with -s $serial, so a local emulator cannot be hit by mistake."

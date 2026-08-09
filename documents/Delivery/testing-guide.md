@@ -307,13 +307,51 @@ Reading it: **R1 CPMs on 47100 will not dissect as ITS.** Wireshark's ITS dissec
 
 ## Troubleshooting
 
-Failures seen during evidence collection, each identified by the row that fails rather than by what it looks like on screen. Install-side failures — the APK not present, the app not running, the tunnel not up — are [apk-deploy.md § Troubleshooting](apk-deploy.md#troubleshooting); clear those first, because every row below assumes the app is up.
+Failures seen while deploying and collecting, each identified by the row or line that fails rather than by what it looks like on screen. Every entry is **Symptom**, **Root cause**, **Solution**, in that order.
+
+Work top-down: the first entry blocks every other one, because nothing below can be evidenced while `adb` cannot reach the guest.
+
+### The installer stops at `adb offline` and never installs the APK
+
+**Symptom.** Steps 1–3 all pass — the token is accepted and named a node, the tunnel reports *"Tunnel serving"* — and step 4 then fails with the guest listed `offline`:
+
+![INSTALL-IVI-APK.cmd: token accepted targeting node fddf735e6ndm8iy-paebn-n2, tunnel serving on pid 26096, then localhost:5555 listed offline and FAILED - the guest never reached state 'device'](phase5-error-cannotInstallApk.png)
+
+The deployment is **Running, 3/3 nodes ready** in the Deployment Viewer at the same moment, so the script's own advice — *"the Skycraft node may still be booting, wait for it to go green"* — is misleading. The browser's own **ADB SHELL** panel shows the matching failure: a prompt, then `Connection closed (code 1006)`.
+
+**Root cause.** The ADB tunnel token no longer resolves. The gateway answers the WebSocket upgrade `404` and `reach-backend` retries forever, so the port keeps listening while no ADB transport ever forms. The proof is in the tunnel's own log, `tools/apk-uploader/logs/tunnel-last.log`:
+
+```
+[conn] WebSocket error (127.0.0.1:62789): Unexpected server response: 404
+[conn] WebSocket closed (127.0.0.1:62789): code=1006 reason=none
+```
+
+**A deploy mints a new token, and new node keys with it.** The token is `a8k_` + base64 of the node key, so an old token names a node of a deployment that no longer exists — and a 404 is the gateway saying exactly that. Step 2 prints the node key it decodes to; compare it with the current deployment's `-n2` node key and a mismatch settles it without reading any log.
+
+**Solution.** The installer detects the 404 and **prompts for a new token**, then saves it and reopens the tunnel — paste it and the run continues:
+
+```
+The gateway answered 404 on every upgrade - this token no longer resolves.
+A deploy mints a new ADB token; the one on disk no longer resolves.
+Copy it: Devices -> KIS -> Connect -> IVI ADB -> Local ADB
+  token: _
+```
+
+Paste either the bare `a8k_` value or the whole `reach-backend adb --gateway … --key a8k_…` command line — the prompt lifts `--key` out of it. The value is written to `secrets/reach-adb-token-ivi.txt`, so the next run starts clean.
+
+To update it without being prompted, put the `a8k_` value in that file by hand, or pass it for one run:
+
+```powershell
+.\tools\apk-uploader\INSTALL-IVI-APK.cmd -Token a8k_...
+```
+
+If a **freshly copied** token still 404s, the ADB session itself is wedged rather than stale: use **Restart Node** in the Inspector panel for the IVI ECU node. That cold-boots AAOS — the APK is wiped and the token changes again, so follow it with a full install run.
 
 ### No `[RX]` in `app-logcat.txt` while the producer's `[TX]` passes
 
-![Collected evidence for ivi-isolated-test: deployment RUNNING and 3 of 3 nodes Running, a TX line present in node-mocked-ada-ecu.txt, but no RX line in app-logcat.txt, source=v2x_relayed absent, and riskState never reaching high](no-R4-msg.png)
+**Symptom.** The collected checklist shows every node-side row passing and every app-receive row failing, together:
 
-**Read the checklist, not the screen.** This shape is the signature — the Room is healthy and the producer is transmitting, so every node-side row passes, and every row that depends on the app *receiving* fails together:
+![Collected evidence for ivi-isolated-test: deployment RUNNING and 3 of 3 nodes Running, a TX line present in node-mocked-ada-ecu.txt, but no RX line in app-logcat.txt, source=v2x_relayed absent, and riskState never reaching high](no-R4-msg.png)
 
 | Row | Result | What it rules out |
 |---|---|---|
@@ -324,36 +362,67 @@ Failures seen during evidence collection, each identified by the row that fails 
 | `source=v2x_relayed` | fail | Follows from the row above; not a separate fault |
 | `riskState=high` | fail | Follows from the row above; not a separate fault |
 
-Those last three fail *together and only together*. One failing alone is a different problem — see the two entries below.
+Those last three fail *together and only together*. One failing alone is a different problem — the next two entries.
 
-**Cause.** The guest brings its bridge NIC up as `buried_eth0`. AAOS matches interfaces on the `eth<n>` name, so the NIC is never adopted and never takes the node's `10.99.0.13` pin address; datagrams are dropped before the app sees them. Not an app defect, and no app change fixes it. Full explanation: [apk-deploy.md § No R4 message reaches the IVI application](apk-deploy.md#no-r4-message-reaches-the-ivi-application).
+**Root cause.** The guest never takes the node's `10.99.0.13` pin address, so datagrams are dropped before the app sees them. The bridge NIC is present and carrying, but AAOS has not adopted it: `netd` creates no routing table and no policy rule for it, and it holds no IPv4 address. It has been seen as `buried_eth0` — the name AAOS `EthernetTracker` refuses because it does not match `eth<n>` — and as `eth1` alongside the cuttlefish NAT interface on `eth0`. Not an app defect, and no app change fixes it. Full explanation: [apk-deploy.md § No R4 message reaches the IVI application](apk-deploy.md#no-r4-message-reaches-the-ivi-application).
 
-**Fix — re-run the APK installer.** It re-applies the `eth0` rename and the pin address on every run, idempotently, so it repairs the Room's IVI network config as a side effect of deploying:
+**Identify the NIC with `ip link`, never `ip -4 addr`.** An interface with no IPv4 address does not appear in `ip -4 addr` output at all, which is exactly the state this NIC is in — so the check that looks for it there always comes back empty:
+
+```powershell
+adb -s localhost:5555 shell "ip link show"
+```
+
+The bridge NIC is the one that is `UP,LOWER_UP`, has no IPv4, and is **not** the `10.0.2.x` cuttlefish NAT interface.
+
+**Solution.** Re-run the installer, which applies the rename and the pin address idempotently:
 
 ```powershell
 .\tools\apk-uploader\INSTALL-IVI-APK.cmd                 # reinstall and re-apply
 .\tools\apk-uploader\INSTALL-IVI-APK.cmd -SkipInstall    # re-apply the network fix only
 ```
 
-Do not pass `-SkipNetworkFix` here — that is the flag that turns the repair off.
+Do not pass `-SkipNetworkFix` — that is the flag that turns the repair off. Where the NIC is not named `buried_eth0`, the installer cannot recognise it and the address must be set by hand against whatever `ip link` showed; substitute that name for `eth1` below:
 
-**Then confirm before re-collecting.** `guest-ifaces.txt` must show `eth0` carrying `10.99.0.13/24`. The mutation is live and **does not survive a guest reboot or a redeploy**, so re-run the installer after either, then collect again.
+```powershell
+adb -s localhost:5555 shell "su 0 ifconfig eth1 10.99.0.13/24 up"
+adb -s localhost:5555 shell "su 0 ip route add 10.99.0.0/24 dev eth1 table 1015 proto static scope link"
+adb -s localhost:5555 shell "su 0 ip rule add from all oif eth1 lookup 1015 priority 17050"
+adb -s localhost:5555 shell "su 0 ip rule add from 10.99.0.13 lookup 1015 priority 17050"
+```
+
+Confirm before re-collecting: `guest-ifaces.txt` must show the NIC carrying `10.99.0.13/24`, and `[RX]` should appear within one producer cycle. The mutation is live and **does not survive a guest reboot or a redeploy**, so re-apply after either.
 
 ### `[RX]` arrives but `riskState=high` never does
 
-The transport is fine and the app is parsing. The scenario simply never escalated: `riskState` reaching `high` is a property of what the producer sent, not of the receive path. Let the scenario run its full cycle before collecting, and check the producer's node log for the escalation it was configured to emit. On the isolated path, `m1-r4-sim` drives this from its scenario file.
+**Symptom.** `[RX]` lines are present and parsed, and only the `riskState=high` row fails.
+
+**Root cause.** The transport is fine. `riskState` reaching `high` is a property of what the producer sent, not of the receive path — the scenario never escalated within the collected window.
+
+**Solution.** Let the scenario run a full cycle before collecting, and read the producer's node log to confirm it emitted the escalation at all. On the isolated path `m1-r4-sim` drives this from its scenario file, and `node-mocked-ada-ecu.txt` shows the risk level on every `[TX]` line.
 
 ### `source=v2x_relayed` missing while `[RX]` arrives
 
-The app received and parsed, but the warnings carry another provenance. This is a finding about the **producer**, not the IVI node — the field is copied from what arrived. On the system path it means the relay chain degraded to a direct detection; on the isolated path it means the simulator's scenario is emitting the wrong `source`. Either way, read the producer's node log rather than the app's.
+**Symptom.** The app receives and parses, but warnings carry another provenance.
+
+**Root cause.** A finding about the **producer**, not the IVI node — the field is copied from what arrived. On the system path it means the relay chain degraded to a direct detection; on the isolated path the simulator's scenario is emitting the wrong `source`.
+
+**Solution.** Read the producer's node log rather than the app's, and fix the scenario or the relay that produced it. Nothing in the IVI node can correct a provenance it was handed.
 
 ### The collector stops with "the deployment is not running"
 
-Exit 1, by design: logs of a Room that is not running are evidence of nothing. Redeploy the blueprint, wait for every node to report `Running`, and collect again. Remember that the deployment takes the blueprint's name with a `-deploy` suffix — collecting `phase5_smoked_test` looks for the Room `phase5_smoked_test-deploy`.
+**Symptom.** `COLLECT-LOGS.cmd` exits 1 without writing a run folder.
+
+**Root cause.** By design — logs of a Room that is not running are evidence of nothing.
+
+**Solution.** Redeploy the blueprint, wait for every node to report `Running`, then collect again. Remember the deployment takes the blueprint's name with a `-deploy` suffix, so collecting `phase5_smoked_test` looks for the Room `phase5_smoked_test-deploy`.
 
 ### The guest half is missing from the run folder
 
-`app-logcat.txt`, `app-crash.txt`, `guest-udp6.txt` and `guest-ifaces.txt` are absent and the run still exited 0. The ADB tunnel was not up — the collector reports that and skips the guest half rather than failing, because a node-side collection is useful on its own. Open the tunnel, then collect again:
+**Symptom.** `app-logcat.txt`, `app-crash.txt`, `guest-udp6.txt` and `guest-ifaces.txt` are absent, and the run still exited 0.
+
+**Root cause.** The ADB tunnel was not up. The collector reports that and skips the guest half rather than failing, because a node-side collection is useful on its own — which is why a tunnel-less run looks complete while proving nothing about the app.
+
+**Solution.** Open the tunnel, then collect again:
 
 ```powershell
 .\tools\apk-uploader\INSTALL-IVI-APK.cmd -SkipInstall -KeepTunnel
@@ -361,15 +430,27 @@ Exit 1, by design: logs of a Room that is not running are evidence of nothing. R
 
 ### The IVI node's own log contains nothing the app wrote
 
-Expected. `skycraft-<slug>-vmhost.txt` is the Skycraft **VM host's** output — WebRTC and GPU — and carries no application line. The app's log exists only over ADB, in `app-logcat.txt`. A run with an empty-looking IVI node log and a healthy `app-logcat.txt` is a correct run.
+**Symptom.** `skycraft-<slug>-vmhost.txt` is large but carries no application line.
+
+**Root cause.** Expected. That file is the Skycraft **VM host's** output — WebRTC and GPU — not the guest's. The app's log exists only over ADB.
+
+**Solution.** Read `app-logcat.txt` instead. A run with an empty-looking IVI node log and a healthy `app-logcat.txt` is a correct run.
 
 ### `EXTRACT-PCAP.cmd` exits 1 — no block found
 
-Only `m1-v2x-ecu` and `m1-ada-ecu` capture. On any other node log there is no block to extract and exit 1 is the correct answer, not a fault — this includes the isolated path's `m1-r4-sim`, which runs no capture at all. On a node that *should* capture, exit 1 usually means the container is missing `NET_RAW`.
+**Symptom.** The extractor reports no `[PCAP-BEGIN]` block in the log it was given.
+
+**Root cause.** Only `m1-v2x-ecu` and `m1-ada-ecu` capture. On any other node log there is nothing to extract — including the isolated path's `m1-r4-sim`, which runs no capture at all.
+
+**Solution.** Point it at a capturing node's log. Where the node *should* capture, exit 1 usually means the container is missing `NET_RAW`; check the blueprint node's `capabilities`.
 
 ### A script will not run on Windows
 
-`.\Collect-Logs.ps1` fails with *"running scripts is disabled on this system"* (`UnauthorizedAccess`). Run the `.cmd` wrapper beside it instead — `COLLECT-LOGS.cmd`, `EXTRACT-PCAP.cmd`, `INSTALL-IVI-APK.cmd` — as § The automation tool describes.
+**Symptom.** `.\Collect-Logs.ps1` fails with *"running scripts is disabled on this system"* (`UnauthorizedAccess`).
+
+**Root cause.** A fresh Windows blocks `.ps1` files from running.
+
+**Solution.** Run the `.cmd` wrapper beside it — `COLLECT-LOGS.cmd`, `EXTRACT-PCAP.cmd`, `INSTALL-IVI-APK.cmd` — as § The automation tool describes. Each carries `-ExecutionPolicy Bypass` for its own invocation only.
 
 ## Verification checklist
 
