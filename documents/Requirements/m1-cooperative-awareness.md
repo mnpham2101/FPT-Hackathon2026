@@ -4,7 +4,7 @@
 >
 > Requirement numbers R1–R19 are project-global and frozen — they are the `X` segment of task IDs `X.Y.Z.W` ([task-planning-conventions.md](../../.claude/rules/task-planning-conventions.md)).
 >
-> **Extension requirements live in their own reports and continue the same numbering.** [m1-run-timing-and-event-triggering.md](m1-run-timing-and-event-triggering.md) §7 defines **R20** (real-time paced stimulus sources), **R21** (run alignment and cross-source temporal correlation) and **R22** (demo run choreography — warning onset after the eighth second), together with the run-timing solution analysis they rest on.
+> **Extension requirements live in their own reports and continue the same numbering.** [m1-run-timing-and-event-triggering.md](../../requirements/deprecated/m1-run-timing-and-event-triggering.md) §7 defines **R20** (real-time paced stimulus sources), **R21** (run alignment and cross-source temporal correlation) and **R22** (demo run choreography — warning onset after the eighth second), together with the run-timing solution analysis they rest on.
 
 ## 1. Project description
 
@@ -493,7 +493,7 @@ Session context only. **Not ratified.** R6 (§2 Contracts) stays frozen: one Eth
 
 - Blueprint: [propose-blueprint-4EthBridges-4SubDomains-KUKSADatabroker-3ECU-1Bench.json](propose-blueprint-4EthBridges-4SubDomains-KUKSADatabroker-3ECU-1Bench.json) — platform export of `trial1_minh`, 2026-07-30.
 - Shape: 4 `eth-bridge` + 4 `script-node` gateways + 1 `kuksa-databroker`. 13 nodes, 12 edges.
-- For more details on KUKSA, see [kuksa-node-communication.md](kuksa-node-communication.md) — what the broker is, node roles, the gateway pattern, and the KIS reference topology.
+- For more details on KUKSA, see [kuksa-node-communication.md](../../requirements/deprecated/kuksa-node-communication.md) — what the broker is, node roles, the gateway pattern, and the KIS reference topology.
 
 ### Node, bridge, gateway
 
@@ -527,8 +527,8 @@ Session context only. **Not ratified.** R6 (§2 Contracts) stays frozen: one Eth
 
 ### Open items
 
-- Four gateways need `scriptContent` (Luau). An ETHERNET pin is a bare NIC (`e-<pinname>`), so each relay terminates UDP itself via `nydus.net.udp()` — [§4.3–4.4](kuksa-node-communication.md).
-- Databroker needs the custom VSS artifact for the three signal paths — [§3](kuksa-node-communication.md).
+- Four gateways need `scriptContent` (Luau). An ETHERNET pin is a bare NIC (`e-<pinname>`), so each relay terminates UDP itself via `nydus.net.udp()` — [§4.3–4.4](../../requirements/deprecated/kuksa-node-communication.md).
+- Databroker needs the custom VSS artifact for the three signal paths — [§3](../../requirements/deprecated/kuksa-node-communication.md).
 - Each bridge needs `{"ethBridge": {"bridgeMode": "linux", "subnet": "10.99.N.0/24", "port": 29400}}`. The Skycraft guest is DHCP-bound to its declared pin address, so a default `10.99.0.0/24` scope cannot serve IVI's `10.99.3.10`.
 - IVI Skycraft node carries no `image` artifact reference.
 

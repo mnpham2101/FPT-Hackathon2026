@@ -54,7 +54,7 @@ The scenario values pair with the R13 gate constants that [milestone1_high_level
 
 ## D5 — The scenario clock is deadline-scheduled, and every offset is configuration
 
-Scenario time advances at 1.0× wall time, scheduled against `CLOCK_MONOTONIC` deadlines. This is the bench half of R20 ([m1-run-timing-and-event-triggering.md §6.1](../../Requirements/m1-run-timing-and-event-triggering.md)).
+Scenario time advances at 1.0× wall time, scheduled against `CLOCK_MONOTONIC` deadlines. This is the bench half of R20 ([m1-run-timing-and-event-triggering.md §6.1](../../../requirements/deprecated/m1-run-timing-and-event-triggering.md)).
 
 - **The deadline is computed, not accumulated.** Tick *n* is due at `t0 + n × period` on `time.monotonic()`; the loop sleeps until that instant. A fixed `sleep(period)` per tick accumulates the per-tick work cost into scenario time, which drifts unbounded over a run.
 - **`[TX]` carries `mono_ms`**, so `scenario_time_s` can be regressed against elapsed time — R20's K5 check, ±1 % over ≥ 60 s.
@@ -73,7 +73,7 @@ Scenario time advances at 1.0× wall time, scheduled against `CLOCK_MONOTONIC` d
 
 ## D7 — The demo cycle is one clip length, and its geometry is solved backwards from the first warning
 
-Realizes R22 ([m1-run-timing-and-event-triggering.md §6.6](../../Requirements/m1-run-timing-and-event-triggering.md)) on the bench side. Every lever is scenario data in `scenarios/default.yaml`, so the choreography is a file, never a code branch (D3).
+Realizes R22 ([m1-run-timing-and-event-triggering.md §6.6](../../../requirements/deprecated/m1-run-timing-and-event-triggering.md)) on the bench side. Every lever is scenario data in `scenarios/default.yaml`, so the choreography is a file, never a code branch (D3).
 
 | Key | What it is bound to |
 |---|---|

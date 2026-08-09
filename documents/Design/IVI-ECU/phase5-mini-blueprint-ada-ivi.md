@@ -1,6 +1,6 @@
 # Phase 5 — Mini-blueprint: ADA ECU + IVI ECU + Ethernet Bridge
 
-Approach to stand up a reduced CarSky Room that exercises ADA→IVI (R4) without Bench or V2X. Complements the existing mock-only 2-node path in [blueprint-2node-task51-test-guide.md](../../../requirements/blueprint-2node-task51-test-guide.md).
+Approach to stand up a reduced CarSky Room that exercises ADA→IVI (R4) without Bench or V2X. Complements the existing mock-only 2-node path in [blueprint-2node-task51-test-guide.md](../../../requirements/deprecated/blueprint-2node-task51-test-guide.md).
 
 ## Feasibility
 
@@ -61,4 +61,4 @@ Use mock 2-node for Phase 5 display-track parallel work; use this mini-blueprint
 ## Related
 
 - Full 4-node: [carsky-4-node-blueprint.md](../../../requirements/car-sky-guide/carsky-4-node-blueprint.md)
-- Mock path: [blueprint-2node-task51-test.json](../../../requirements/blueprint-2node-task51-test.json)
+- Mock path: [blueprint-2node-task51-test.json](../../../requirements/deprecated/blueprint-2node-task51-test.json)

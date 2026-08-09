@@ -112,7 +112,7 @@ Frozen R4 fixes `riskState ∈ {low, medium, high}`. For `nlos_obstruction`, wit
 ## D6 — R12 detector: frame-source seam, inference, distance, zero-C evidence
 
 - **The frame source is a seam.** `detector/frame_source.py` defines `FrameSource.iter_frames() -> Iterator[Frame]` with `Frame(index, timestamp_ms, image, width, height)`. `FileFrameSource` decodes `VIDEO_CLIP_PATH` with OpenCV `VideoCapture`, honouring `DETECTOR_FRAME_STRIDE` and `DETECTOR_LOOP`; `SyntheticFrameSource` needs no clip and serves CI. A live source arrives later as one more implementation, with no change to inference, distance, tracking or emission.
-- **The clip reaches the container as an image layer and by no other route.** A Container Node has no volume, no bind mount and no declarative file injection, so `COPY media/ /app/media/` is the transfer and `docker push` is the upload ([m1-video-source-and-ivi-dashcam.md §5](../../Requirements/m1-video-source-and-ivi-dashcam.md)). Rejected alternatives: a `video` pin, which has no C++ client, an undocumented frame header and 590 Mbit/s of raw RGBA at 720p20; a fetch at container start, which trades a build-time cost for a demo-time network dependency.
+- **The clip reaches the container as an image layer and by no other route.** A Container Node has no volume, no bind mount and no declarative file injection, so `COPY media/ /app/media/` is the transfer and `docker push` is the upload ([m1-video-source-and-ivi-dashcam.md §5](../../../requirements/deprecated/m1-video-source-and-ivi-dashcam.md)). Rejected alternatives: a `video` pin, which has no C++ client, an undocumented frame header and 590 Mbit/s of raw RGBA at 720p20; a fetch at container start, which trades a build-time cost for a demo-time network dependency.
 - **The IVI dashcam view is deferred and no part of it is built here** ([milestone1_high_level_plan.md §6](../../Plan/milestone1_high_level_plan.md#6-deferred-to-later-milestones)). That means no HTTP clip server in `entrypoint.sh`, no `CLIP_HTTP_ENABLED` or `CLIP_HTTP_PORT`, no `exposedPorts` entry and its gateway route, and no `video` pin. A worked design for it exists; reading it is not permission to build it.
 - **Inference** (`detector/inference.py`): an ONNX Runtime CPU session on `MODEL_PATH`, letterboxing to 640×640, NMS at `IOU_THRESHOLD` and a score floor of `CONF_THRESHOLD`. The COCO classes `car`, `truck`, `bus` and `motorcycle` collapse to the R3 `class: "vehicle"`. `Detector` is a protocol, so the model swaps without touching the pipeline.
 - **Distance is a pinhole known-width estimate.** `f_px = (frame_w / 2) / tan(CAMERA_HFOV_DEG / 2)`; `d = VEHICLE_WIDTH_M × f_px / bbox_w_px`; lateral `y = (bbox_u_center − frame_w / 2) × d / f_px`. Chosen because a user-supplied clip carries no intrinsics and no ground-plane calibration, and a monocular-depth network is a second model on a CPU-only node. The ground-plane bbox-bottom alternative needs camera height *and* pitch — more unknowns, not fewer. What the gate needs is a monotonic, consistently biased range over B at roughly 10–40 m, which this delivers.
@@ -153,7 +153,7 @@ Frozen R4 fixes `riskState ∈ {low, medium, high}`. For `nlos_obstruction`, wit
 
 ## D10 — Clock domains, and stimulus paced against `CLOCK_MONOTONIC`
 
-Realizes [m1-run-timing-and-event-triggering.md §6.1–§6.2](../../Requirements/m1-run-timing-and-event-triggering.md) for this node. No clock is synchronised across nodes, and no component performs arithmetic mixing two nodes' timestamps.
+Realizes [m1-run-timing-and-event-triggering.md §6.1–§6.2](../../../requirements/deprecated/m1-run-timing-and-event-triggering.md) for this node. No clock is synchronised across nodes, and no component performs arithmetic mixing two nodes' timestamps.
 
 | Purpose | Clock |
 |---|---|
@@ -171,7 +171,7 @@ Which clock fills which R3 field, per source, is [§10.2](ada-ecu-hld.md#102-r3-
 
 ## D11 — R22 run choreography: the run origin, the paced clip, and the risk band pair
 
-Realizes [m1-run-timing-and-event-triggering.md §6.6](../../Requirements/m1-run-timing-and-event-triggering.md) for this node. R22 places the first R4 of a cycle in the open interval (`T0` + 8.0 s, `T0` + 10.0 s). Below is what this node owes that placement. Every lever is node configuration or bench scenario data, and no frozen contract carries any of it.
+Realizes [m1-run-timing-and-event-triggering.md §6.6](../../../requirements/deprecated/m1-run-timing-and-event-triggering.md) for this node. R22 places the first R4 of a cycle in the open interval (`T0` + 8.0 s, `T0` + 10.0 s). Below is what this node owes that placement. Every lever is node configuration or bench scenario data, and no frozen contract carries any of it.
 
 - **`T0` is this node's own first emitted `own_sensor` R3 line**, visible in the `[EVT]` stream. The run origin is therefore read from one clock, which is what keeps K6 inside D10's single-domain rule.
 - **`DETECTOR_REALTIME_PACING = true` is load-bearing, not a preference.** With pacing off, clip time is not run time: the clip is consumed at whatever rate the CPU allows, and no instant in the choreography is expressible. A demo run with it off has no defined warning onset.

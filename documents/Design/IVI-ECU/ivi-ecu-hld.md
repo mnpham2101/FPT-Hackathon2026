@@ -33,8 +33,8 @@
 | [m1-cooperative-awareness.md](../../Requirements/m1-cooperative-awareness.md) — **the authority** | R4, R16, R17 whole — definition, dependency, acceptance, tech stack. R5/R6: node type, bridge, port. R18/R19: what the run must evidence. §3(e)/(f): the stack. §4: the standing decisions, restated in D11 |
 | Its figures — [ivi-ecu.svg](../../Requirements/ivi-ecu.svg) · [ivi-god-view-scene.svg](../../Requirements/ivi-god-view-scene.svg) · [ivi-god-view-warning-screen.svg](../../Requirements/ivi-god-view-warning-screen.svg) | The R16 layout; R17's visual language; and the annotated variant, which is explanatory and never rendered |
 | [r4-ada-ivi.schema.json](../../../contracts/r4-ada-ivi.schema.json) · [r3-tracked-object.schema.json](../../../contracts/r3-tracked-object.schema.json) | The frozen input contract, field for field (§10) |
-| [m1-run-timing-and-event-triggering.md](../../Requirements/m1-run-timing-and-event-triggering.md) | R20/R21 oblige this node with nothing: R4 carries no timestamp, so the warning timeout is a local countdown, and pacing belongs to the bench and the detector. R22 obliges it with two things: the app is listening on its R4 port before the first warning can arrive at `T0` + 8.0 s, and the Display Area holds Home until an active-risk warning raises it (D13). K7 is this node's observable (§12) |
-| [m1-video-source-and-ivi-dashcam.md](../../Requirements/m1-video-source-and-ivi-dashcam.md) | A dashcam view is deferred (D11). If accepted, the clip arrives over HTTP from the ADA node or as a local copy — never through a `video` pin |
+| [m1-run-timing-and-event-triggering.md](../../../requirements/deprecated/m1-run-timing-and-event-triggering.md) | R20/R21 oblige this node with nothing: R4 carries no timestamp, so the warning timeout is a local countdown, and pacing belongs to the bench and the detector. R22 obliges it with two things: the app is listening on its R4 port before the first warning can arrive at `T0` + 8.0 s, and the Display Area holds Home until an active-risk warning raises it (D13). K7 is this node's observable (§12) |
+| [m1-video-source-and-ivi-dashcam.md](../../../requirements/deprecated/m1-video-source-and-ivi-dashcam.md) | A dashcam view is deferred (D11). If accepted, the clip arrives over HTTP from the ADA node or as a local copy — never through a `video` pin |
 | [node-ivi-ecu.md](../../../requirements/car-sky-guide/node-ivi-ecu.md) | VM artifact, pin, address |
 
 ### Research notes
@@ -326,7 +326,7 @@ The following deployment scheme supports IVI-ECU isolated tests and system tests
 | Path | Topology | Port | Guide |
 |---|---|---|---|
 | Local / emulator | mock-sender → `127.0.0.1` | 5004 | [mock-sender/README.md](../../../IVI_ECU/mock-sender/README.md) |
-| Mock 2-node Room | `m1-mock-r4-sender` + Skycraft IVI + bridge | 5004 (align both) | [task51-2node-blueprint-answer.md](../../../plans/doc/deprecated/task51-2node-blueprint-answer.md), [blueprint-2node-task51-test-guide.md](../../../requirements/blueprint-2node-task51-test-guide.md) |
+| Mock 2-node Room | `m1-mock-r4-sender` + Skycraft IVI + bridge | 5004 (align both) | [task51-2node-blueprint-answer.md](../../../plans/doc/deprecated/task51-2node-blueprint-answer.md), [blueprint-2node-task51-test-guide.md](../../../requirements/deprecated/blueprint-2node-task51-test-guide.md) |
 | Mini ADA+IVI (optional) | ADA + IVI + bridge | **47300** | [phase5-mini-blueprint-ada-ivi.md](phase5-mini-blueprint-ada-ivi.md) — see §10 gap |
 | Full M1 | 4 nodes + bridge | 47300 | [node-ivi-ecu.md](../../../requirements/car-sky-guide/node-ivi-ecu.md) |
 
