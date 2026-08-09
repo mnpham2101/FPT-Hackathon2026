@@ -307,45 +307,9 @@ Reading it: **R1 CPMs on 47100 will not dissect as ITS.** Wireshark's ITS dissec
 
 ## Troubleshooting
 
-Failures seen while deploying and collecting, each identified by the row or line that fails rather than by what it looks like on screen. Every entry is **Symptom**, **Root cause**, **Solution**, in that order.
+Failures seen while collecting evidence, each identified by the row or line that fails rather than by what it looks like on screen. Every entry is **Symptom**, **Root cause**, **Solution**, in that order.
 
-Work top-down: the first entry blocks every other one, because nothing below can be evidenced while `adb` cannot reach the guest.
-
-### The installer stops at `adb offline` and never installs the APK
-
-**Symptom.** Steps 1–3 all pass — the token is accepted and named a node, the tunnel reports *"Tunnel serving"* — and step 4 then fails with the guest listed `offline`:
-
-![INSTALL-IVI-APK.cmd: token accepted targeting node fddf735e6ndm8iy-paebn-n2, tunnel serving on pid 26096, then localhost:5555 listed offline and FAILED - the guest never reached state 'device'](phase5-error-cannotInstallApk.png)
-
-The deployment is **Running, 3/3 nodes ready** in the Deployment Viewer at the same moment, so the script's own advice — *"the Skycraft node may still be booting, wait for it to go green"* — is misleading. The browser's own **ADB SHELL** panel shows the matching failure: a prompt, then `Connection closed (code 1006)`.
-
-**Root cause.** The ADB tunnel token no longer resolves. The gateway answers the WebSocket upgrade `404` and `reach-backend` retries forever, so the port keeps listening while no ADB transport ever forms. The proof is in the tunnel's own log, `tools/apk-uploader/logs/tunnel-last.log`:
-
-```
-[conn] WebSocket error (127.0.0.1:62789): Unexpected server response: 404
-[conn] WebSocket closed (127.0.0.1:62789): code=1006 reason=none
-```
-
-**A deploy mints a new token, and new node keys with it.** The token is `a8k_` + base64 of the node key, so an old token names a node of a deployment that no longer exists — and a 404 is the gateway saying exactly that. Step 2 prints the node key it decodes to; compare it with the current deployment's `-n2` node key and a mismatch settles it without reading any log.
-
-**Solution.** The installer detects the 404 and **prompts for a new token**, then saves it and reopens the tunnel — paste it and the run continues:
-
-```
-The gateway answered 404 on every upgrade - this token no longer resolves.
-A deploy mints a new ADB token; the one on disk no longer resolves.
-Copy it: Devices -> KIS -> Connect -> IVI ADB -> Local ADB
-  token: _
-```
-
-Paste either the bare `a8k_` value or the whole `reach-backend adb --gateway … --key a8k_…` command line — the prompt lifts `--key` out of it. The value is written to `secrets/reach-adb-token-ivi.txt`, so the next run starts clean.
-
-To update it without being prompted, put the `a8k_` value in that file by hand, or pass it for one run:
-
-```powershell
-.\tools\apk-uploader\INSTALL-IVI-APK.cmd -Token a8k_...
-```
-
-If a **freshly copied** token still 404s, the ADB session itself is wedged rather than stale: use **Restart Node** in the Inspector panel for the IVI ECU node. That cold-boots AAOS — the APK is wiped and the token changes again, so follow it with a full install run.
+**Install-side failures come first and are not here.** A tunnel that will not connect, a token the gateway rejects, an APK that never installs, a guest that never takes its Room address — all of those are [apk-deploy.md § Troubleshooting](apk-deploy.md#troubleshooting). Clear them before reading on, because every entry below assumes the app is installed, running, and reachable over `adb`.
 
 ### No `[RX]` in `app-logcat.txt` while the producer's `[TX]` passes
 

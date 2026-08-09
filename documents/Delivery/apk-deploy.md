@@ -186,15 +186,77 @@ Capturing what is on the screen — recording, screenshots, and the full list of
 
 ## Troubleshooting
 
+Failures on the install path. Every entry is **Symptom**, **Root cause**, **Solution**, in that order. Failures that appear only once you are driving R4 warnings and collecting evidence are [testing-guide.md § Troubleshooting](testing-guide.md#troubleshooting).
+
+### The installer stops at `adb offline` and never installs the APK
+
+**Symptom.** Steps 1–3 all pass — the token is accepted and named a node, the tunnel reports *"Tunnel serving"* — and step 4 then fails with the guest listed `offline`:
+
+![INSTALL-IVI-APK.cmd: token accepted targeting node fddf735e6ndm8iy-paebn-n2, tunnel serving on pid 26096, then localhost:5555 listed offline and FAILED - the guest never reached state 'device'](phase5-error-cannotInstallApk.png)
+
+The deployment is **Running, 3/3 nodes ready** in the Deployment Viewer at the same moment, so the script's own advice — *"the Skycraft node may still be booting, wait for it to go green"* — is misleading. The browser's own **ADB SHELL** panel shows the matching failure: a prompt, then `Connection closed (code 1006)`.
+
+**Root cause.** The ADB tunnel token no longer resolves. The gateway answers the WebSocket upgrade `404` and `reach-backend` retries forever, so the port keeps listening while no ADB transport ever forms. The proof is in the tunnel's own log, `tools/apk-uploader/logs/tunnel-last.log`:
+
+```
+[conn] WebSocket error (127.0.0.1:62789): Unexpected server response: 404
+[conn] WebSocket closed (127.0.0.1:62789): code=1006 reason=none
+```
+
+**A deploy mints a new token, and new node keys with it.** The token is `a8k_` + base64 of the node key, so an old token names a node of a deployment that no longer exists — and a 404 is the gateway saying exactly that. Step 2 prints the node key it decodes to; compare it with the current deployment's `-n2` node key and a mismatch settles it without reading any log.
+
+**Solution.** The installer detects the 404 and **prompts for a new token**, then saves it and reopens the tunnel — paste it and the run continues:
+
+```
+The gateway answered 404 on every upgrade - this token no longer resolves.
+A deploy mints a new ADB token; the one on disk no longer resolves.
+Copy it: Devices -> KIS -> Connect -> IVI ADB -> Local ADB
+  token: _
+```
+
+Paste either the bare `a8k_` value or the whole `reach-backend adb --gateway … --key a8k_…` command line — the prompt lifts `--key` out of it. The value is written to `secrets/reach-adb-token-ivi.txt`, so the next run starts clean.
+
+To update it without being prompted, put the `a8k_` value in that file by hand, or pass it for one run:
+
+```powershell
+.\tools\apk-uploader\INSTALL-IVI-APK.cmd -Token a8k_...
+```
+
+If a **freshly copied** token still 404s, the ADB session itself is wedged rather than stale: use **Restart Node** in the Inspector panel for the IVI ECU node. That cold-boots AAOS — the APK is wiped and the token changes again, so follow it with a full install run.
+
+### A stale tunnel survives and every re-run inherits it
+
+**Symptom.** Step 3 reports *"Port 5555 is already serving - reusing it"* and step 4 fails `offline` on every attempt, however many times you re-run. `adb connect localhost:5555` fails outright even though something is listening on the port.
+
+**Root cause.** A `reach-backend` from an earlier run still holds the port while its session is long dead. The installer closes only the tunnel it started itself, so a tunnel inherited from a previous run is left alone — and reused, run after run.
+
+**Solution.** Close it, clear adb's stale transports, then re-run:
+
+```powershell
+Get-Process reach-backend -ErrorAction SilentlyContinue | Stop-Process -Force
+adb kill-server
+.\tools\apk-uploader\INSTALL-IVI-APK.cmd
+```
+
+Step 3 should now say it *opened* the tunnel rather than reused it. The reuse branch prints the owning pid, and `-CloseTunnel` makes the script close a foreign tunnel itself.
+
 ### No R4 message reaches the IVI application
 
-**Issue.** The app is installed and running, logcat carries `R4ListenerService: UDP socket open on port 47300`, the producer logs `[TX] … -> 10.99.0.13:47300` at its cadence — and no `[RX]` ever appears. `/proc/net/udp6` shows the socket bound on `B8C4` with `rx_queue` and `drops` both frozen at zero, so nothing is arriving rather than arriving and being mishandled.
+**Symptom.** The app is installed and running, logcat carries `R4ListenerService: UDP socket open on port 47300`, the producer logs `[TX] … -> 10.99.0.13:47300` at its cadence — and no `[RX]` ever appears. `/proc/net/udp6` shows the socket bound on `B8C4` with `rx_queue` and `drops` both frozen at zero, so nothing is arriving rather than arriving and being mishandled.
 
-A collected run shows it as every node-side row passing and every app-receive row failing together — the screenshot and the row-by-row reading are in [testing-guide.md § Troubleshooting](testing-guide.md#no-rx-in-app-logcattxt-while-the-producers-tx-passes).
+A collected run shows it as every node-side row passing and every app-receive row failing together — the row-by-row reading is in [testing-guide.md § Troubleshooting](testing-guide.md#no-rx-in-app-logcattxt-while-the-producers-tx-passes).
 
-**Explanation.** The guest brings its bridge NIC up as `buried_eth0`. AAOS `EthernetTracker` matches interfaces on the `eth<n>` name, so netd never adopts this one, never creates its network, and it never takes the node's `ethernet` pin address. `ip -4 addr` in the guest shows only cuttlefish NAT addresses (`10.0.2.x`) and no `10.99.0.13`, so datagrams addressed to the pin are dropped before the guest sees them. The app is not at fault and no app change fixes it.
+**Root cause.** The guest never takes the node's `ethernet` pin address, so datagrams are dropped before the guest sees them. The bridge NIC is present and carrying, but AAOS has not adopted it: netd creates no network, no routing table and no policy rule for it, and it holds no IPv4 address. AAOS `EthernetTracker` matches interfaces on the `eth<n>` name, which is why the NIC is skipped when the guest names it `buried_eth0`. It has also appeared as `eth1` beside the cuttlefish NAT interface on `eth0`, unadopted for the same reason. The app is not at fault and no app change fixes it.
 
-**Fix — re-run the installer.** [INSTALL-IVI-APK.cmd](../../tools/apk-uploader/INSTALL-IVI-APK.cmd) applies the rename and the pin address itself, idempotently, as part of every run. Re-running it is the whole fix and needs no tunnel of your own:
+**Identify the NIC with `ip link`, never `ip -4 addr`.** An interface with no IPv4 address does not appear in `ip -4 addr` output at all, which is exactly the state this NIC is in:
+
+```powershell
+adb -s localhost:5555 shell "ip link show"
+```
+
+The bridge NIC is the one that is `UP,LOWER_UP`, has no IPv4, and is **not** the `10.0.2.x` cuttlefish NAT interface.
+
+**Solution — re-run the installer.** [INSTALL-IVI-APK.cmd](../../tools/apk-uploader/INSTALL-IVI-APK.cmd) applies the rename and the pin address itself, idempotently, as part of every run:
 
 ```powershell
 .\tools\apk-uploader\INSTALL-IVI-APK.cmd
@@ -202,7 +264,7 @@ A collected run shows it as every node-side row passing and every app-receive ro
 
 Add `-SkipInstall` to re-apply the network fix without reinstalling the APK. `-SkipNetworkFix` is the flag that turns this off — do not pass it here.
 
-**Fix by hand.** Only when the installer cannot run. Rename the NIC, then give it the pin address — as root over the ADB tunnel:
+**Solution by hand — when the NIC is named `buried_eth0`.** Rename it, then give it the pin address, as root over the ADB tunnel:
 
 ```powershell
 adb shell "su 0 sh -c 'ip link set buried_eth0 down; ip link set buried_eth0 name eth0; ip link set eth0 up'"
@@ -211,12 +273,25 @@ adb shell "su 0 ifconfig eth0 10.99.0.13/24 up"
 
 - **Chain the three link commands in one shell.** Run separately, an interrupted call leaves the NIC down and the guest unreachable on the bridge.
 - **netd does the rest.** It adopts `eth0` on the rename and creates the routing table and policy rules itself, so `ip route add … table eth0` answers `File exists` — the healthy result, not an error. No default route is needed while the producer is on-subnet.
-- **Confirm:** `ip -4 addr show eth0` reads `10.99.0.13/24`, then `[RX]` lines appear within one producer cycle.
 - **Renaming does not drop ADB** on this guest, because adbd is on vsock rather than TCP over that NIC. On an unfamiliar guest, check first: `cat /proc/net/tcp` must show no listener on `15B3` (5555).
 
-**Scope.** A live mutation of the running guest. It does **not** survive a guest reboot or a redeploy — re-apply after either. [INSTALL-IVI-APK.cmd](../../tools/apk-uploader/INSTALL-IVI-APK.cmd) applies it automatically and idempotently on every run.
+**Solution by hand — when it is named anything else.** Renaming to `eth0` is not available when `eth0` is already the live NAT interface, so configure the NIC in place and give it the routing netd would have created. Substitute the name `ip link` showed for `eth1`:
+
+```powershell
+adb -s localhost:5555 shell "su 0 ifconfig eth1 10.99.0.13/24 up"
+adb -s localhost:5555 shell "su 0 ip route add 10.99.0.0/24 dev eth1 table 1015 proto static scope link"
+adb -s localhost:5555 shell "su 0 ip rule add from all oif eth1 lookup 1015 priority 17050"
+adb -s localhost:5555 shell "su 0 ip rule add from 10.99.0.13 lookup 1015 priority 17050"
+```
+
+Table `1015` is the one the kernel already made for that interface, so this adds to it rather than inventing a name Android's `rt_tables` may not carry.
+
+**Confirm either way:** `ip -4 addr show <nic>` reads `10.99.0.13/24`, then `[RX]` lines appear within one producer cycle.
+
+**Scope.** A live mutation of the running guest. It does **not** survive a guest reboot or a redeploy — re-apply after either.
 
 ## Verification checklist
+
 
 Every row here holds on both test paths, because nothing in Steps 1–4 differs between them. What the app then does with a warning stream is checked in [testing-guide.md § Verification checklist](testing-guide.md#verification-checklist); a failure below invalidates all of it, so clear this table first.
 
