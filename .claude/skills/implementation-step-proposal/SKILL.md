@@ -23,13 +23,13 @@ Plus the active plan [milestone1_high_level_plan.md](../../../documents/Plan/mil
 1. **Locate the requirement.** Find Rx in the report §2 and the phase that delivers it in [milestone1_high_level_plan.md](../../../documents/Plan/milestone1_high_level_plan.md) §5 — the phase number is the `[Phase]` segment of the output file name.
 2. **Extract the implementation constraints.** From the reference documentation: what the requirement must satisfy (definition + acceptance), the selected tech stack, dependent contracts (R1–R6), and platform facts that shape the implementation (node type, pins, deploy flow).
 3. **Enumerate the implementation steps.** A numbered list in dependency order. Each step: concise, one action, self-contained enough for an implementing agent to act without re-reading the wider codebase — name the component/interface touched, what to build or change, and the check that proves the step done.
-4. **Save one file per requirement** in [plans/](../../../plans/) (same folder as milestone1.md), named `Rx_[Phase].md` — e.g. `plans/R7_1.md` for R7 delivered in Phase 1.
+4. **Save one file per requirement** in [plans/](../../../plans/), beside the phase task breakdowns, named `Rx_[Phase].md` — e.g. `plans/R7_1.md` for R7 delivered in Phase 1.
 5. **Hand off to [[project-planner]]**, which decomposes the steps into `X.Y.Z.W` tasks/subtasks per [task-planning-conventions.md](../../rules/task-planning-conventions.md) and orchestrates implementation. The steps are planner input — this skill produces no task IDs and spawns no implementation.
 
 ## File format (`plans/Rx_[Phase].md`)
 
 - **Title:** `# Rx — <requirement name> (Phase <n>)`.
-- **References:** links to Rx in the report and to its phase in milestone1.md; any other authority documents the steps rely on.
+- **References:** links to Rx in the report and to its phase in [milestone1_high_level_plan.md](../../../documents/Plan/milestone1_high_level_plan.md); any other authority documents the steps rely on.
 - **Implementation steps:** the enumerated list from step 3 — the core of the file.
 - **Acceptance mapping:** which steps satisfy which of Rx's acceptance items — a step list that leaves an acceptance item uncovered is incomplete.
 

@@ -63,7 +63,7 @@ A header blockquote precedes §1: what the document is, the frozen contract, the
 
 - **Written as source, not as pre-rendered images** — `.puml` for sequence, component and activity diagrams, so they stay diffable and reviewable in the same commit as the design text. A hand-authored component map may be `.drawio` with an exported `.svg` beside it, which is what the deck and the HLD both embed.
 - **Mandatory:** a call-flow sequence diagram (§9) and a component diagram (§3). Any further component or activity diagram is included only when it clarifies something the tables cannot.
-- Diagram sources live in the node's `doc/`, or its `doc/research_notes/` for drawn assets, and are listed in the header blockquote.
+- Diagram sources live in the node's design folder beside the HLD (§ One HLD per node), and are listed in the header blockquote.
 
 ## Writing rules
 

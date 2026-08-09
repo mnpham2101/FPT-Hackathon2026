@@ -1,6 +1,6 @@
 # Authoring draw.io / SVG Pairs by Hand
 
-Reference for step 5 of [task-planning-presentation](../SKILL.md). Applies to any diagram authored for a deck in [presentation/](../../../../presentation/).
+Reference for the diagram work in [task-planning-presentation](../SKILL.md) and [design-presentation](../../design-presentation/SKILL.md). Applies to any diagram authored for a deck in [presentation/](../../../../presentation/).
 
 ## Why by hand
 

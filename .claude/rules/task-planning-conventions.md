@@ -14,7 +14,7 @@ Every task and subtask is identified as `X.Y.Z.W`:
 | Segment | Meaning |
 |---|---|
 | `X` | Requirement — the enumerated requirement (from [[project-researcher]]'s output) this work serves |
-| `Y` | Phase — the phase number in the active plan (e.g. 1–6 in milestone1.md) |
+| `Y` | Phase — the phase number in the active plan (§5 of [milestone1_high_level_plan.md](../../documents/Plan/milestone1_high_level_plan.md)) |
 | `Z` | Task — a group of related subtasks delivering one feature or technical solution within the phase |
 | `W` | Subtask — the atomic unit of work |
 
