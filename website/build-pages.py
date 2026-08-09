@@ -52,6 +52,7 @@ ENTRIES = [
     ("system-design", "documents/Design/SYSTEM-DESIGN/system-design.md"),
     ("module-design", "documents/Design/MODULE-DESIGN/README.md"),
     ("guide-to-get-evidence", "documents/Delivery/Test-Guides/README.md"),
+    ("acceptance-evidence", "documents/Delivery/Acceptance/system-delivery.md"),
 ]
 
 # The site is the project's written record, and that record is documents/.
