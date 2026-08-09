@@ -11,6 +11,36 @@ How to build the team APK, install it on the CarSky Skycraft (AAOS) node, and ve
 
 Working directory for the Gradle commands in Step 1 Route B: **`IVI_ECU/`**. Every PowerShell block in Steps 2–5 runs from the **repo root**.
 
+## The tool does Steps 3, 4 and most of 5
+
+[INSTALL-IVI-APK.cmd](../../tools/apk-uploader/INSTALL-IVI-APK.cmd) runs the whole install-and-verify chain in one window — tunnel, Room-network fix, install, app-state checks, evidence logcat, pass/fail table. Double-click it, or from the repo root:
+
+```powershell
+.\tools\apk-uploader\INSTALL-IVI-APK.cmd                 # install and verify
+.\tools\apk-uploader\INSTALL-IVI-APK.cmd -SkipInstall    # re-sample evidence only
+.\tools\apk-uploader\INSTALL-IVI-APK.cmd -KeepTunnel     # leave adb usable afterwards
+```
+
+Windows PowerShell 5.1 on any architecture: `adb` is discovered across the standard SDK locations, and the organizers' x64 tunnel CLI runs under emulation on ARM64. Options and failure modes: [tools/apk-uploader/README.md](../../tools/apk-uploader/README.md).
+
+| Step | What happens | Who |
+|---|---|---|
+| 1 · Get the APK | CI download, or `assembleDebug` | **Manual** |
+| 2 · Deploy the blueprint | Nodes to `Running` in the workbench | **Manual** |
+| 2 · Copy the `a8k_` token | Local ADB dialog → `secrets\reach-adb-token-ivi.txt` | **Manual** |
+| 3 · Open the tunnel | `reach-backend adb`, port waited on | Automated |
+| 3 · Connect ADB | `adb connect`, retried while the guest boots | Automated |
+| 3 · Guest preflight | API level ≥ 29, `automotive` feature | Automated |
+| 3 · Room-network fix | Rename `buried_eth0` → `eth0`, set the pin address (§ Troubleshooting) | Automated |
+| 3 · Install the APK | `adb install -r`, package presence confirmed | Automated |
+| 4 · App state | Package, process, MainActivity resumed, focus, screen awake | Automated |
+| 5 · Evidence logcat | Saved to `tools/apk-uploader/logs/`, checked for `[RX]`, provenance, `risk=high`, crashes | Automated |
+| 5 · Warning screen | Ghost C dashed, risk badge, `[? UNKNOWN SOURCE]` absent | **Manual** |
+| 5 · Recording / screenshots | Recorder Part set **before** the run | **Manual** |
+| 5 · Wireshark | Pcap extracted from the capturing node's log | **Manual** |
+
+The manual rows are manual by nature, not by omission: minting the token needs the browser dialog, and this build logs nothing from its UI layer, so the switch to the Warning View is confirmable only on screen. The steps below remain authoritative — read them when the tool fails, and to run any row by hand.
+
 ## Step 1 — Get `app-debug.apk` into `tools/apk-uploader/`
 
 Two routes produce the same artifact. Pick either; the chain ends at the same place — the APK sitting beside the uploader tool, which is where Step 3 reads it from.
