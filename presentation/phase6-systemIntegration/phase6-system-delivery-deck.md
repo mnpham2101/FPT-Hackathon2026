@@ -27,7 +27,7 @@ Lead: Pham Ngoc Minh · 2026-08-10 · Full report: [system-delivery.md](../../do
 1. **Introduction** — the mission, the team, and how the evidence folder reads
 2. **Design** — the deployed blueprint, the nodes, and the data flow
 3. **Resources** — platform baseline and third-party libraries
-4. **System test evidence** — evidence types, tools, and the four evidence items
+4. **System test evidence** — evidence types, tools, the four evidence items, and the delivery timeline
 
 ---
 
@@ -228,6 +228,43 @@ A complete five-node blueprint — three ECUs, the Scenario Player bench, and th
 
 - `[TX]` lines: `seq` climbs monotonically, `scenario_time_s` advances through the 10 s scenario.
 - The **bench resends the scenario cyclically**, so the demo stream runs continuously — the only mocked wire source.
+
+---
+
+# The delivery timeline — one warning cycle
+
+![h:430 One 10.13 s warning cycle: bench CPM stream, V2X decode, ADA tracks for B and C, risk ribbon, IVI warnings, per-message latency inset](../assets/m1-delivery-timeline.svg)
+
+- The bench replays its 10 s scenario and the ADA-ECU loops its 10 s video → the cycle **repeats every 10.13 s**. Full event table: [system-delivery.md](../../documents/Delivery/Acceptance/system-delivery.md).
+
+---
+
+# Timeline events and measured latencies
+
+| Event | Δ cycle | | Path | Measured |
+| --- | --- | --- | --- | --- |
+| **E0** replay starts — C 70 m ahead | 0.00 s | | CPM decode + forward (E1→E3) | < 1 ms |
+| **E6** C crosses the 30 m gate → tentative | 8.38 s | | V2X → ADA ingest (E3→E4) | 42 ms |
+| **E7** C confirmed tracked (`v2x_relayed`) | 8.58 s | | CPM arrival → warning sent (E1→E8) | 67 ms |
+| **E8** risk low→medium · warning → `:47300` | 8.92 s | | CPM arrival → IVI `[RX]` (E1→E9) | **101 ms** |
+| **E9** warning on the IVI — ghost C drawn | 8.95 s | | replay start → first warning (E0→E9) | 8.95 s |
+| **E10** risk high · **E12** reset, ghost cleared | 9.62 · 10.82 s | | cycle period | 10.13 s |
+
+- **Vehicle B** is tracked continuously from the own-sensor path on the looped video (`d_AB ≈ 4.2 m`) — it never needs a gate event.
+
+---
+
+# Log time and the demo video
+
+| Surface | Timestamp | Domain |
+| --- | --- | --- |
+| `[EVT]` lines (V2X, ADA) | `epoch_ms` · `mono_ms` | Unix ms UTC · monotonic |
+| `[CAP]` lines (V2X, ADA) | `18:43:50.407` | UTC wall clock (tcpdump) |
+| IVI logcat `[RX]` | `08-09 18:43:50.508` | guest clock, UTC, within ~35 ms |
+| Bench `[TX]` | `seq` + `scenario_time_s` only | replay position — wall clock taken at the V2X-ECU |
+
+- The demo video (`video-evidence/system-test.mp4`, 3 min 23 s) is a different run of the **same deployment and scenario** — clocks differ, the cycle does not: ≈ 20 repetitions of E0–E12.
+- Watch per cycle: banner **MEDIUM** ~8.9 s after replay start → **HIGH** +0.7 s → cleared +1.2 s at the wrap; ghost C carries `source: v2x_relayed` throughout.
 
 ---
 

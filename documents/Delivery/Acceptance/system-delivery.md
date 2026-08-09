@@ -158,3 +158,67 @@ Automation used to deploy the APK, collect logs, check them against expected res
 - `[TX]` lines carry a monotonically climbing `seq` and the `scenario_time_s` position, 58 bytes per CPM datagram.
 - `scenario_time_s` advances through the 10 s scenario; the **bench resends the scenario cyclically**, so the message stream — and the demo — runs continuously.
 - The bench is the only mocked wire source: these are the CPM messages no real vehicle exists to send.
+
+## Delivery timeline — the logs and the video
+
+How the delivery unfolds in time: what each log timestamp means, the event sequence of one warning cycle, and how that cycle maps onto the demo video.
+
+### The run is cyclic
+
+- The bench replays its 10 s scenario end to end: 100 CPM datagrams at 10 Hz, `seq` climbing monotonically across replays. Vehicle C starts 70 m ahead of the sender and closes at 5 m/s to 20.5 m; the replay then wraps and C jumps back to 70 m.
+- The ADA-ECU loops its 10 s saved video, so vehicle B stays detected for the whole run — and because the video is identical every loop, B's own-sensor detections repeat at the same loop positions each cycle.
+- The result is one warning cycle — risk low → medium → high → reset — repeating every **10.13 s** for as long as the deployment runs. Every cycle is the same delivery, so any one cycle is representative; the timeline below is one cycle read from the collected logs.
+
+### Log time
+
+Each evidence surface stamps time differently:
+
+| Surface | Timestamp | Domain |
+|---|---|---|
+| V2X-ECU / ADA-ECU `[EVT]` lines | `epoch_ms` · `mono_ms` | Unix milliseconds, UTC · monotonic milliseconds since node start |
+| V2X-ECU / ADA-ECU `[CAP]` lines | `2026-08-09 18:43:50.407` | UTC wall clock, from tcpdump |
+| IVI app logcat `[RX]` lines | `08-09 18:43:50.508` | AAOS guest clock, UTC — agrees with the container clocks to within ~35 ms |
+| Bench `[TX]` lines | none — `seq` and `scenario_time_s` only | position within the replay; a datagram's wall-clock time is its `rx_datagram` stamp at the V2X-ECU |
+
+The log set behind the timeline is one `COLLECT-LOGS` pass over the running Room ([testing-guide.md](../Test-Guides/testing-guide.md)), written to `tools/logs-collector/test-report/system-test/` — generated output, reproduced on demand rather than committed.
+
+### One warning cycle
+
+![Timeline of one 10.13 s warning cycle: bench CPM stream, V2X decode pipeline, ADA tracks for B and C, the risk-state ribbon, the IVI warnings, and a per-message latency inset](m1-delivery-timeline.svg)
+
+Each marked event, the log line that records it, and the message content that proves it:
+
+| Event | UTC 18:43:xx · Δ cycle | Log marker (node) | Message on the wire | Content |
+|---|---|---|---|---|
+| **E0** — replay starts | 41.559 · 0.00 s | `[TX] scenario_time_s: 0.0` (bench) · `rx_datagram` (V2X) | CPM, 58 B UDP → `:47100` | ASN.1 UPER CPM: C 70 m ahead of the sender, closing 5 m/s |
+| **E1** — CPM received | every 100 ms | `[EVT] rx_datagram` (V2X) | same datagram | `bytes: 58`; `rx_datagram` counter +1 |
+| **E2** — CPM decoded | +0 ms after E1 | `[EVT] decode_ok` (V2X) | — internal | `stationId: 1201`, `objectId: 7` (vehicle C), position and velocity in sender coordinates; `decode_reject: 0` |
+| **E3** — decoded object forwarded | +1 ms | `[EVT] r2_forwarded` (V2X) | object message, 339 B JSON → `:47200` | `type: v2x_object`, position `(27.0, 1.2)`, `speed: 5.0`, `confidence: 0.95` |
+| **E4** — object ingested | +42 ms | `[EVT] r2_ingest` (ADA) | same JSON | `rx_epoch_ms` stamps arrival; `r2_ingest` counter +1 |
+| **E5** — vehicle B tracked | continuous | `[EVT] track_transition … "id":"own:…","source":"own_sensor","to":"tracked"` (ADA) | — internal, from the looped video | B held at `d_AB ≈ 4.2 m`; the warning geometry's `vehicleB` comes from this track |
+| **E6** — C crosses the 30 m gate | 49.943 · 8.38 s | `[EVT] track_transition … "id":"v2x:1201:7","reason":"gate_enter","to":"tentative"` (ADA) | — internal | `distance: 29.52` — first CPM position under the 30 m admission gate |
+| **E7** — C confirmed tracked | 50.143 · 8.58 s | `[EVT] track_transition … "reason":"confirmed","to":"tracked"` (ADA) | — internal | `distance: 28.53`, `source: v2x_relayed` — C is now a tracked object A itself never detected |
+| **E8** — risk low → medium, warning sent | 50.474 · 8.92 s | `[EVT] risk_transition` + `r4_tx` (ADA) | warning, 515 B JSON → `10.99.0.13:47300` | `riskState: medium`, `d_ac: 31.27` (= d_AB 4.24 + C's relayed offset 27.03), `ttc: 6.26 s`, geometry ego/B/C |
+| **E9** — warning received on IVI | 50.508 · 8.95 s | `[RX] R4WarningEvent(…)` (IVI logcat) | same JSON | `riskState=medium`, `source=v2x_relayed` — banner up, ghost C drawn |
+| **E10** — risk medium → high | 51.177 · 9.62 s | `risk_transition` + `r4_tx` (ADA) · `[RX]` (IVI) | warning → `:47300` | `d_ac: 27.78`, `ttc: 5.56 s`; `riskState=high` shown |
+| **E11** — replay wraps, C leaves the gate | 51.878 · 10.32 s | `[EVT] track_transition … "reason":"gate_exit","to":"not_tracked"` (ADA) | — internal | `distance: 70.01` — C jumped back to 70 m, past the 35 m exit threshold |
+| **E12** — risk reset, ghost cleared | 52.376 · 10.82 s | `risk_transition` (`no_tracked_c`) + `r4_tx` (ADA) · `[RX]` (IVI) | warning → `:47300` | `riskState: low`, `vehicleC=null` — the God View drops the ghost until the next cycle |
+
+### Measured latencies
+
+Read directly off the event timestamps above:
+
+| Path | Events | Measured |
+|---|---|---|
+| CPM decode + forward inside the V2X-ECU | E1 → E3 | < 1 ms |
+| V2X-ECU → ADA-ECU ingest | E3 → E4 | 42 ms |
+| CPM arrival → warning emitted | E1 → E8 | 67 ms |
+| CPM arrival → warning rendered input on the IVI | E1 → E9 | **101 ms** |
+| Replay start → first warning on the IVI | E0 → E9 | 8.95 s |
+| Warning cycle period | E0 → next E0 | 10.13 s |
+
+### The video
+
+- The recorded demo run is `video-evidence/system-test.mp4` — 3 min 23 s, captured 2026-08-06 against this blueprint. It ships in the submission packet and through the organizers' demo channel; at 143 MB it is not in the git history.
+- Its wall clock differs from the log set above — different run, same deployment, same 10 s scenario and looped video — so timestamps do not line up one-to-one, but **every warning cycle in the video is the E0–E12 sequence above**. Over 3 min 23 s the video spans ≈ 20 cycles.
+- What to watch, per cycle: the banner appears at **MEDIUM** about 8.9 s after each replay start (E9), steps to **HIGH** ~0.7 s later (E10), and clears ~1.2 s after that when the replay wraps (E12). While the banner is up, C is the dashed ghost with `source: v2x_relayed` — the on-screen restatement that A never saw C itself.

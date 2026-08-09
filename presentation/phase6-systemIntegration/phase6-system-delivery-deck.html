@@ -200,7 +200,7 @@
       <div class="item"><div class="n">01</div><div><h3>Introduction</h3><p>the mission, the team, and how the evidence folder reads</p></div></div>
       <div class="item"><div class="n">02</div><div><h3>Design</h3><p>the deployed blueprint, the nodes, and the data flow</p></div></div>
       <div class="item"><div class="n">03</div><div><h3>Resources</h3><p>platform baseline and third-party libraries</p></div></div>
-      <div class="item"><div class="n">04</div><div><h3>System test evidence</h3><p>evidence types, tools, and the four evidence items</p></div></div>
+      <div class="item"><div class="n">04</div><div><h3>System test evidence</h3><p>evidence types, tools, the four evidence items, and the delivery timeline</p></div></div>
     </div>
     <div class="footer"><span>M1 System Delivery · Team KIS · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
@@ -410,6 +410,49 @@
     <ul class="points">
       <li><code>[TX]</code> lines: <code>seq</code> climbs monotonically, <code>scenario_time_s</code> advances through the 10 s scenario.</li>
       <li>The <strong>bench resends the scenario cyclically</strong>, so the demo stream runs continuously — the only mocked wire source.</li>
+    </ul>
+    <div class="footer"><span>M1 System Delivery · Team KIS · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">04</div><h2>The delivery timeline — one warning cycle</h2></div>
+    <div class="imgbox"><img src="../assets/m1-delivery-timeline.svg" style="height:430px" alt="One 10.13 s warning cycle: bench CPM stream, V2X decode, ADA tracks for B and C, risk ribbon, IVI warnings, per-message latency inset"><div class="cap">One 10.13 s warning cycle: bench CPM stream, V2X decode, ADA tracks for B and C, risk ribbon, IVI warnings, per-message latency inset</div></div>
+    <ul class="points">
+      <li>The bench replays its 10 s scenario and the ADA-ECU loops its 10 s video → the cycle <strong>repeats every 10.13 s</strong>. Full event table: <a href="../../documents/Delivery/Acceptance/system-delivery.md">system-delivery.md</a>.</li>
+    </ul>
+    <div class="footer"><span>M1 System Delivery · Team KIS · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">04</div><h2>Timeline events and measured latencies</h2></div>
+    <table class="fpt">
+      <thead><tr><th>Event</th><th>Δ cycle</th><th></th><th>Path</th><th>Measured</th></tr></thead>
+      <tbody>
+        <tr><td><strong>E0</strong> replay starts — C 70 m ahead</td><td>0.00 s</td><td></td><td>CPM decode + forward (E1→E3)</td><td>&lt; 1 ms</td></tr>
+        <tr><td><strong>E6</strong> C crosses the 30 m gate → tentative</td><td>8.38 s</td><td></td><td>V2X → ADA ingest (E3→E4)</td><td>42 ms</td></tr>
+        <tr><td><strong>E7</strong> C confirmed tracked (<code>v2x_relayed</code>)</td><td>8.58 s</td><td></td><td>CPM arrival → warning sent (E1→E8)</td><td>67 ms</td></tr>
+        <tr><td><strong>E8</strong> risk low→medium · warning → <code>:47300</code></td><td>8.92 s</td><td></td><td>CPM arrival → IVI <code>[RX]</code> (E1→E9)</td><td><strong>101 ms</strong></td></tr>
+        <tr><td><strong>E9</strong> warning on the IVI — ghost C drawn</td><td>8.95 s</td><td></td><td>replay start → first warning (E0→E9)</td><td>8.95 s</td></tr>
+        <tr><td><strong>E10</strong> risk high · <strong>E12</strong> reset, ghost cleared</td><td>9.62 · 10.82 s</td><td></td><td>cycle period</td><td>10.13 s</td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>Vehicle B</strong> is tracked continuously from the own-sensor path on the looped video (<code>d_AB ≈ 4.2 m</code>) — it never needs a gate event.</li>
+    </ul>
+    <div class="footer"><span>M1 System Delivery · Team KIS · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">04</div><h2>Log time and the demo video</h2></div>
+    <table class="fpt">
+      <thead><tr><th>Surface</th><th>Timestamp</th><th>Domain</th></tr></thead>
+      <tbody>
+        <tr><td><code>[EVT]</code> lines (V2X, ADA)</td><td><code>epoch_ms</code> · <code>mono_ms</code></td><td>Unix ms UTC · monotonic</td></tr>
+        <tr><td><code>[CAP]</code> lines (V2X, ADA)</td><td><code>18:43:50.407</code></td><td>UTC wall clock (tcpdump)</td></tr>
+        <tr><td>IVI logcat <code>[RX]</code></td><td><code>08-09 18:43:50.508</code></td><td>guest clock, UTC, within ~35 ms</td></tr>
+        <tr><td>Bench <code>[TX]</code></td><td><code>seq</code> + <code>scenario_time_s</code> only</td><td>replay position — wall clock taken at the V2X-ECU</td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li>The demo video (<code>video-evidence/system-test.mp4</code>, 3 min 23 s) is a different run of the <strong>same deployment and scenario</strong> — clocks differ, the cycle does not: ≈ 20 repetitions of E0–E12.</li>
+      <li>Watch per cycle: banner <strong>MEDIUM</strong> ~8.9 s after replay start → <strong>HIGH</strong> +0.7 s → cleared +1.2 s at the wrap; ghost C carries <code>source: v2x_relayed</code> throughout.</li>
     </ul>
     <div class="footer"><span>M1 System Delivery · Team KIS · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
