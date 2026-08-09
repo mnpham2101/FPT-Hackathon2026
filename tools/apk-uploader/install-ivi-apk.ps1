@@ -267,11 +267,31 @@ Write-Info "re-copy it from Devices -> KIS -> Connect -> IVI ADB -> Local ADB."
 
 # ----------------------------------------------------------------- open tunnel
 
+# A listening port proves nothing. A tunnel whose session has expired keeps accepting TCP
+# while the gateway 404s every upgrade, so no ADB transport ever forms -- and reusing it
+# strands the run at 'adb offline' however many times it is re-run. Probe before adopting.
+function Test-TunnelAlive {
+    $serial = "localhost:$Port"
+    & $Adb connect $serial 2>&1 | Out-Null
+    $deadline = (Get-Date).AddSeconds(8)
+    while ((Get-Date) -lt $deadline) {
+        if ((& $Adb devices 2>&1 | Out-String) -match [regex]::Escape($serial) + '\s+device\b') { return $true }
+        Start-Sleep -Milliseconds 500
+    }
+    return $false
+}
+
 function Open-Tunnel ($tok) {
     if (Test-Port $Port) {
-        $script:TunnelReused = $true
-        Write-Warn "Port $Port is already serving - reusing it (another tunnel is probably open)."
-        return
+        if (Test-TunnelAlive) {
+            $script:TunnelReused = $true
+            Write-Ok "Port $Port already serves a live tunnel - reusing it."
+            return
+        }
+        Write-Warn "Port $Port is listening but no device answers - that tunnel is dead, replacing it."
+        & $Adb disconnect "localhost:$Port" 2>&1 | Out-Null
+        Stop-TunnelOnPort $Port | Out-Null
+        Start-Sleep -Seconds 1
     }
     $script:TunnelReused = $false
     if (-not (Test-Path $LogDir)) { New-Item -ItemType Directory -Path $LogDir -Force | Out-Null }

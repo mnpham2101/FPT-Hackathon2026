@@ -465,12 +465,35 @@ info 're-copy it from Devices -> KIS -> Connect -> IVI ADB -> Local ADB.'
 
 # ----------------------------------------------------------------- open tunnel
 
+# A listening port proves nothing. A tunnel whose session has expired keeps accepting TCP
+# while the gateway 404s every upgrade, so no ADB transport ever forms -- and reusing it
+# strands the run at 'adb offline' however many times it is re-run. Probe before adopting.
+tunnel_alive() {
+    "$ADB" connect "localhost:$PORT" >/dev/null 2>&1
+    local i=0
+    while [ $i -lt 16 ]; do          # 16 x 0.5s = 8s
+        if "$ADB" devices 2>&1 | tr -d '\r' \
+            | grep -E "^localhost:$PORT[[:space:]]+device([[:space:]]|$)" >/dev/null 2>&1; then
+            return 0
+        fi
+        sleep 0.5
+        i=$((i + 1))
+    done
+    return 1
+}
+
 open_tunnel() {
     local tok="$1"
     if test_port "$PORT"; then
-        TUNNEL_REUSED=1
-        warn "Port $PORT is already serving - reusing it (another tunnel is probably open)."
-        return 0
+        if tunnel_alive; then
+            TUNNEL_REUSED=1
+            ok "Port $PORT already serves a live tunnel - reusing it."
+            return 0
+        fi
+        warn "Port $PORT is listening but no device answers - that tunnel is dead, replacing it."
+        "$ADB" disconnect "localhost:$PORT" >/dev/null 2>&1 || true
+        stop_tunnel_on_port "$PORT"
+        sleep 1
     fi
     TUNNEL_REUSED=0
     TUNNEL_STOPPED=0

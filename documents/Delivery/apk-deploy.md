@@ -184,6 +184,29 @@ The status bar reading `BOUND :47300` is the app's own claim, not proof a datagr
 
 Capturing what is on the screen — recording, screenshots, and the full list of elements a warning frame must show — is [testing-guide.md § 1 · Warning screen](testing-guide.md#1--warning-screen). Set **Recorder Part** on this widget *before* the run you intend to keep, or there is nothing to save afterwards.
 
+### What a successful run looks like
+
+**The console.** Steps 5–8 of a clean run, ending in an all-green evidence block:
+
+![INSTALL-IVI-APK.cmd steps 5 to 8: buried_eth0 renamed to eth0 and given 10.99.0.13/24, the APK installed, all five app-state checks passing, and an EVIDENCE block with UDP socket bound on 47300, R4 messages received, provenance source=v2x_relayed, risk reached high and no fatal exception all ticked](phase5-success-apk-install.png)
+
+Step 5 is the row worth reading: `Renamed buried_eth0 -> eth0` followed by `eth0 is 10.99.0.13/24` is the guest taking its Room address, and nothing below it can pass without it. `Started by hand, which is expected on a first install` is a note, not a defect — the app self-starts only once the package is already present from a previous run.
+
+The five evidence rows are the installer's own reading of the logcat it just sampled. All five ticked means the receive chain works end to end: bound socket, datagrams arriving, provenance intact, and the scenario reaching `high`.
+
+**The screen.** The same run on the IVI Screen widget, with the Warning View up:
+
+![The IVI Screen widget showing the NLOS God View: an orange banner reading NLOS OBSTRUCTION - Vehicle C ahead relayed via V2X, the ego vehicle A at the bottom, occluder B ahead of it, ghost C beyond B with a coloured glow and a V2X badge reading 45.0 m RISK LOW, a legend naming C's source as v2x_relayed and never seen by A's sensors, and a status bar reading MODE WARNING and V2X LINK BOUND 47300](phase5-success-test.png)
+
+This is the frame the milestone is defined by. Four things must be true of it at once, and the screenshot shows all four:
+
+- **Three vehicles**, ego `A` at the bottom, occluder `B` ahead of it, ghost `C` beyond `B`.
+- **`C` is drawn from relayed data only** — the legend reads `source: v2x_relayed`, `never seen by A's sensors`, and the panel states it is drawn from R4 warning messages with no ego detection of `C` at any point.
+- **The blind zone is shown**, `A`'s line of sight blocked by `B`, which is what makes `C` non-line-of-sight rather than merely distant.
+- **The status bar reads `MODE: WARNING` and `V2X LINK: BOUND :47300`** — the app switched itself to the Warning View, which no log line can evidence.
+
+The risk badge tracks the scenario rather than the deployment: `RISK: LOW` here is a frame from early in the approach, and the same run reaches `HIGH` later, which is what the console's `Risk reached high` row records.
+
 ## Troubleshooting
 
 Failures on the install path. Every entry is **Symptom**, **Root cause**, **Solution**, in that order. Failures that appear only once you are driving R4 warnings and collecting evidence are [testing-guide.md § Troubleshooting](testing-guide.md#troubleshooting).
@@ -223,22 +246,6 @@ To update it without being prompted, put the `a8k_` value in that file by hand, 
 ```
 
 If a **freshly copied** token still 404s, the ADB session itself is wedged rather than stale: use **Restart Node** in the Inspector panel for the IVI ECU node. That cold-boots AAOS — the APK is wiped and the token changes again, so follow it with a full install run.
-
-### A stale tunnel survives and every re-run inherits it
-
-**Symptom.** Step 3 reports *"Port 5555 is already serving - reusing it"* and step 4 fails `offline` on every attempt, however many times you re-run. `adb connect localhost:5555` fails outright even though something is listening on the port.
-
-**Root cause.** A `reach-backend` from an earlier run still holds the port while its session is long dead. The installer closes only the tunnel it started itself, so a tunnel inherited from a previous run is left alone — and reused, run after run.
-
-**Solution.** Close it, clear adb's stale transports, then re-run:
-
-```powershell
-Get-Process reach-backend -ErrorAction SilentlyContinue | Stop-Process -Force
-adb kill-server
-.\tools\apk-uploader\INSTALL-IVI-APK.cmd
-```
-
-Step 3 should now say it *opened* the tunnel rather than reused it. The reuse branch prints the owning pid, and `-CloseTunnel` makes the script close a foreign tunnel itself.
 
 ### No R4 message reaches the IVI application
 
