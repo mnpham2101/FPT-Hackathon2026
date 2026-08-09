@@ -55,6 +55,10 @@ The `ivi-assemble` lane builds the APK on every push and publishes it as a run a
 4. Confirm its last step, **Upload the debug APK**, succeeded — its log ends with `Artifact app-debug-apk has been successfully uploaded!` and an artifact download URL.
 5. Download the artifact **`app-debug-apk`** from the run summary page (it downloads as `app-debug-apk.zip`) and unzip it. Inside is a single file, `app-debug.apk`.
 
+![The ivi-assemble job of a green phase5-ci run, its Upload the debug APK step expanded, with the artifact download URL at the end of the step log](download-apk-githubAction.png)
+
+The box marks the last line of **Upload the debug APK** — the confirmation sub-step 4 asks for. The two lines above it are the ones that matter: `Artifact app-debug-apk.zip successfully finalized` and `Artifact app-debug-apk has been successfully uploaded!`. Take the download from the **Summary** page in the left-hand list rather than by pasting that URL; the URL is an API endpoint, not the browser download.
+
 The artifact name `app-debug-apk` is stable and must not be renamed — this document and the walkthrough both tell a human to fetch exactly that name.
 
 ### Route B — build locally in Android Studio / Gradle
@@ -96,7 +100,7 @@ Everything here happens in the CarSky workbench. Nothing is run on your machine 
 
    > **Which blueprint?** The isolated IVI-ECU bring-up and the full system test are **different blueprints**. Deploy whichever one this run is for. This document names neither on purpose, so it does not go stale when a blueprint is renamed or replaced.
 
-3. **Devices** → find **the device the deployed blueprint is running on** → **Connect**. The button reads **Switch** instead if another device session is already open. After connecting, the dot beside the device name must be green.
+3. **Devices** → find **the device the deployed blueprint is running on** → **Connect**. The button reads **Switch** instead if another device session is already open. After connecting, the dot beside the device name is lit, the button turns into **Disconnect**, and the deployment's name appears under it.
 4. **Choose the IVI ADB widget** in the panel below the Stage. The ADB SHELL panel opens with a green `connected` badge.
 5. Top-right of that panel → **Local ADB**. A dialog opens showing two copyable commands. **Copy both** — they are the input to Step 3:
 
@@ -107,9 +111,11 @@ Everything here happens in the CarSky workbench. Nothing is run on your machine 
 
    The first carries the gateway URL and the **per-device `a8k_` token**; the second is the port the tunnel will serve on.
 
-![The IVI ADB widget selected in the Devices panel, its ADB SHELL tab open below the Stage, and the Local ADB button top-right of that panel](images/ivi-adb-local-adb.png)
+![The CarSky workbench with the Devices rail selected, a connected device expanded, the IVI ADB tab open in the panel below the Stage, and the Local ADB button at that panel's top right](get-apk-upload-command.png)
 
-The three boxes mark the three things this step depends on, in the order the sub-steps above reach them: the **IVI ADB** widget in the device's Widgets list (step 4), the **IVI ADB** tab that opens in the panel below the Stage, and **Local ADB** at that panel's top right (step 5). **Reconnect** beside it re-dials the shell after a redeploy; it does not re-mint the token — the Local ADB dialog is the only place the current one is shown.
+The three boxes mark the three things this step depends on, in the order the sub-steps above reach them: the **Devices** rail on the far left (step 3), the **IVI ADB** tab that opens in the panel below the Stage once its widget is chosen (step 4), and **Local ADB** at that panel's top right (step 5). **Disconnect** beside the device name and the lit dot are what a connected session looks like; the ADB SHELL badge reads `connected` and the shell has reached a `trout_arm64:/ $` prompt, which is the state to capture before going further. **Disconnect** at the panel's top right re-dials the shell after a redeploy; it does not re-mint the token — the Local ADB dialog is the only place the current one is shown.
+
+The device's **Widgets** list on the left names the widget chosen in step 4 (`IVI ADB`, type `adb`) alongside the Screen and Log widgets Step 5 collects evidence from. The Stage above already shows the app's Warning View, because this capture was taken on a Room whose chain was running — on a fresh install the Stage shows the home screen instead.
 
 The `a8k_` token is **derived per device, not a CarSky API key**, and a redeploy mints a new one — so re-open this dialog after every redeploy instead of reusing an old value. Keep it out of the repository: paste it into `secrets/reach-adb-token-ivi.txt` (one line, no quotes; the folder is git-ignored) rather than into a command line, a log, or a document.
 
