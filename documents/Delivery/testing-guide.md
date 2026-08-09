@@ -270,10 +270,12 @@ adb -s localhost:5555 logcat -d -v threadtime | Out-File tools\apk-uploader\test
 | `app-logcat.txt` | `R4ListenerService: UDP socket open on port 47300`, then `[RX] R4 message received: R4WarningEvent(…)` with `source=v2x_relayed` on every warning, and `riskState` reaching `high` |
 | `app-crash.txt` | No `FATAL EXCEPTION` naming `com.hackathon.v2x.ivi` |
 | `guest-udp6.txt` | A listener on `B8C4` (47300 in hex) owned by the app's uid |
-| `guest-ifaces.txt` | `eth0` carrying `10.99.0.13/24` — if it is missing, see [apk-deploy.md § Troubleshooting](apk-deploy.md#troubleshooting) |
+| `guest-ifaces.txt` | `eth0` carrying `10.99.0.13/24` — missing, or present as `buried_eth0`, is the cause of a run with no `[RX]`: § Troubleshooting |
 | `node-ada.txt` | `[TX] … -> 10.99.0.13:47300` at the configured cadence |
 
 `[RX]` is the line that matters: its fields are read off the **parsed** message, so it proves the JSON decoded into the typed model, and `source=v2x_relayed` on every warning is the definition of done in text.
+
+**No `[RX]` at all, while `[TX]` passes?** That is the known guest-NIC fault, not an app defect — see § Troubleshooting.
 
 Three things that look like defects and are not: an empty `IVI_V2X` filter before the first datagram is normal; the bind is logged on `R4ListenerService` rather than as the designed `[LINK] state=bound` line on `IVI_V2X`; and the socket appears in `/proc/net/udp6`, not `/proc/net/udp`, because it is bound dual-stack.
 
@@ -301,9 +303,75 @@ This is **system-test evidence**. The isolated path's `m1-r4-sim` stand-in does 
 
 Reading it: **R1 CPMs on 47100 will not dissect as ITS.** Wireshark's ITS dissector covers ETSI's **Intelligent Transport Systems** message family — CAM, DENM and the CPM this project sends — and identifies a message by the GeoNetworking/BTP framing that normally wraps it. Our wire format is raw UPER with no such envelope, so the dissector has nothing to key on and the payload shows as opaque UDP data. That is expected. Correlate those datagrams with the node's `[EVT]` log by timestamp and byte length, and match the bytes against the golden vectors in `contracts/golden-vectors/*.uper`. R2 on 47200 and R4 on 47300 are plain JSON and read directly in the packet-bytes pane.
 
+## Troubleshooting
+
+Failures seen during evidence collection, each identified by the row that fails rather than by what it looks like on screen. Install-side failures — the APK not present, the app not running, the tunnel not up — are [apk-deploy.md § Troubleshooting](apk-deploy.md#troubleshooting); clear those first, because every row below assumes the app is up.
+
+### No `[RX]` in `app-logcat.txt` while the producer's `[TX]` passes
+
+![Collected evidence for ivi-isolated-test: deployment RUNNING and 3 of 3 nodes Running, a TX line present in node-mocked-ada-ecu.txt, but no RX line in app-logcat.txt, source=v2x_relayed absent, and riskState never reaching high](no-R4-msg.png)
+
+**Read the checklist, not the screen.** This shape is the signature — the Room is healthy and the producer is transmitting, so every node-side row passes, and every row that depends on the app *receiving* fails together:
+
+| Row | Result | What it rules out |
+|---|---|---|
+| `deployment RUNNING`, `all nodes Running` | pass | A Room that never came up |
+| `[TX] in a node log` | pass | A producer that never sent |
+| `no crash naming app` | pass | An app that died before binding |
+| `[RX] in app-logcat` | **fail** | — |
+| `source=v2x_relayed` | fail | Follows from the row above; not a separate fault |
+| `riskState=high` | fail | Follows from the row above; not a separate fault |
+
+Those last three fail *together and only together*. One failing alone is a different problem — see the two entries below.
+
+**Cause.** The guest brings its bridge NIC up as `buried_eth0`. AAOS matches interfaces on the `eth<n>` name, so the NIC is never adopted and never takes the node's `10.99.0.13` pin address; datagrams are dropped before the app sees them. Not an app defect, and no app change fixes it. Full explanation: [apk-deploy.md § No R4 message reaches the IVI application](apk-deploy.md#no-r4-message-reaches-the-ivi-application).
+
+**Fix — re-run the APK installer.** It re-applies the `eth0` rename and the pin address on every run, idempotently, so it repairs the Room's IVI network config as a side effect of deploying:
+
+```powershell
+.\tools\apk-uploader\INSTALL-IVI-APK.cmd                 # reinstall and re-apply
+.\tools\apk-uploader\INSTALL-IVI-APK.cmd -SkipInstall    # re-apply the network fix only
+```
+
+Do not pass `-SkipNetworkFix` here — that is the flag that turns the repair off.
+
+**Then confirm before re-collecting.** `guest-ifaces.txt` must show `eth0` carrying `10.99.0.13/24`. The mutation is live and **does not survive a guest reboot or a redeploy**, so re-run the installer after either, then collect again.
+
+### `[RX]` arrives but `riskState=high` never does
+
+The transport is fine and the app is parsing. The scenario simply never escalated: `riskState` reaching `high` is a property of what the producer sent, not of the receive path. Let the scenario run its full cycle before collecting, and check the producer's node log for the escalation it was configured to emit. On the isolated path, `m1-r4-sim` drives this from its scenario file.
+
+### `source=v2x_relayed` missing while `[RX]` arrives
+
+The app received and parsed, but the warnings carry another provenance. This is a finding about the **producer**, not the IVI node — the field is copied from what arrived. On the system path it means the relay chain degraded to a direct detection; on the isolated path it means the simulator's scenario is emitting the wrong `source`. Either way, read the producer's node log rather than the app's.
+
+### The collector stops with "the deployment is not running"
+
+Exit 1, by design: logs of a Room that is not running are evidence of nothing. Redeploy the blueprint, wait for every node to report `Running`, and collect again. Remember that the deployment takes the blueprint's name with a `-deploy` suffix — collecting `phase5_smoked_test` looks for the Room `phase5_smoked_test-deploy`.
+
+### The guest half is missing from the run folder
+
+`app-logcat.txt`, `app-crash.txt`, `guest-udp6.txt` and `guest-ifaces.txt` are absent and the run still exited 0. The ADB tunnel was not up — the collector reports that and skips the guest half rather than failing, because a node-side collection is useful on its own. Open the tunnel, then collect again:
+
+```powershell
+.\tools\apk-uploader\INSTALL-IVI-APK.cmd -SkipInstall -KeepTunnel
+```
+
+### The IVI node's own log contains nothing the app wrote
+
+Expected. `skycraft-<slug>-vmhost.txt` is the Skycraft **VM host's** output — WebRTC and GPU — and carries no application line. The app's log exists only over ADB, in `app-logcat.txt`. A run with an empty-looking IVI node log and a healthy `app-logcat.txt` is a correct run.
+
+### `EXTRACT-PCAP.cmd` exits 1 — no block found
+
+Only `m1-v2x-ecu` and `m1-ada-ecu` capture. On any other node log there is no block to extract and exit 1 is the correct answer, not a fault — this includes the isolated path's `m1-r4-sim`, which runs no capture at all. On a node that *should* capture, exit 1 usually means the container is missing `NET_RAW`.
+
+### A script will not run on Windows
+
+`.\Collect-Logs.ps1` fails with *"running scripts is disabled on this system"* (`UnauthorizedAccess`). Run the `.cmd` wrapper beside it instead — `COLLECT-LOGS.cmd`, `EXTRACT-PCAP.cmd`, `INSTALL-IVI-APK.cmd` — as § The automation tool describes.
+
 ## Verification checklist
 
-The install-side rows are in [apk-deploy.md § Verification checklist](apk-deploy.md#verification-checklist); a failure there invalidates everything below, so run that one first.
+The install-side rows are in [apk-deploy.md § Verification checklist](apk-deploy.md#verification-checklist); a failure there invalidates everything below, so run that one first. A row that fails here has an entry in § Troubleshooting.
 
 | Check | Pass criteria | Path |
 |---|---|---|

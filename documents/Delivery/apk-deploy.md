@@ -190,9 +190,19 @@ Capturing what is on the screen — recording, screenshots, and the full list of
 
 **Issue.** The app is installed and running, logcat carries `R4ListenerService: UDP socket open on port 47300`, the producer logs `[TX] … -> 10.99.0.13:47300` at its cadence — and no `[RX]` ever appears. `/proc/net/udp6` shows the socket bound on `B8C4` with `rx_queue` and `drops` both frozen at zero, so nothing is arriving rather than arriving and being mishandled.
 
+A collected run shows it as every node-side row passing and every app-receive row failing together — the screenshot and the row-by-row reading are in [testing-guide.md § Troubleshooting](testing-guide.md#no-rx-in-app-logcattxt-while-the-producers-tx-passes).
+
 **Explanation.** The guest brings its bridge NIC up as `buried_eth0`. AAOS `EthernetTracker` matches interfaces on the `eth<n>` name, so netd never adopts this one, never creates its network, and it never takes the node's `ethernet` pin address. `ip -4 addr` in the guest shows only cuttlefish NAT addresses (`10.0.2.x`) and no `10.99.0.13`, so datagrams addressed to the pin are dropped before the guest sees them. The app is not at fault and no app change fixes it.
 
-**Fix.** Rename the NIC, then give it the pin address — as root over the ADB tunnel:
+**Fix — re-run the installer.** [INSTALL-IVI-APK.cmd](../../tools/apk-uploader/INSTALL-IVI-APK.cmd) applies the rename and the pin address itself, idempotently, as part of every run. Re-running it is the whole fix and needs no tunnel of your own:
+
+```powershell
+.\tools\apk-uploader\INSTALL-IVI-APK.cmd
+```
+
+Add `-SkipInstall` to re-apply the network fix without reinstalling the APK. `-SkipNetworkFix` is the flag that turns this off — do not pass it here.
+
+**Fix by hand.** Only when the installer cannot run. Rename the NIC, then give it the pin address — as root over the ADB tunnel:
 
 ```powershell
 adb shell "su 0 sh -c 'ip link set buried_eth0 down; ip link set buried_eth0 name eth0; ip link set eth0 up'"
