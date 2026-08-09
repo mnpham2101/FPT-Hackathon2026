@@ -4,6 +4,22 @@ How to install (sideload) the team APK into the **IVI-ECU Skycraft node** of a d
 
 **Authority:** [deploy-ivi-hmi-walkthrough.md §4.4–§4.8](../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#44-get-an-adb-endpoint) is the authoritative procedure. This guide pins the machine-specific values that document deliberately leaves as placeholders: the local tool paths, the secrets location, and the exact PowerShell forms. On any conflict, the walkthrough wins.
 
+## Fast path — run the script
+
+[INSTALL-IVI-APK.cmd](INSTALL-IVI-APK.cmd) does steps 2–5 below in one window: opens the tunnel, connects `adb`, installs the APK, dumps the evidence logcat, and prints a pass/fail table. Double-click it, or from a terminal:
+
+```powershell
+.\tools\apk-uploader\INSTALL-IVI-APK.cmd            # install and collect evidence
+.\tools\apk-uploader\INSTALL-IVI-APK.cmd -KeepTunnel   # ...and leave adb usable afterwards
+.\tools\apk-uploader\INSTALL-IVI-APK.cmd -SkipInstall  # re-sample the logs, no reinstall
+```
+
+It also puts the guest on the Room subnet, without which no R4 datagram can arrive: the AAOS guest boots its bridge NIC as `buried_eth0`, a name EthernetTracker does not recognise, so netd never adopts the interface and it never takes the pin address. The script renames it to `eth0` and sets `10.99.0.13/24`; netd then builds the routing table and policy rules itself. **This is a live mutation of the guest and does not survive a reboot or redeploy** — re-run the script after either. `-SkipNetworkFix` opts out, `-IviAddr` changes the address.
+
+**Step 1 stays human** — the script cannot mint the `a8k_` token; it reads `secrets\reach-adb-token-ivi.txt` and refuses a value shaped like the CarSky API key. So does the visual check on the Screen widget, which the script prints as a reminder rather than performing — **this build logs nothing from its UI layer**, so the switch to the Warning View is confirmable only on screen.
+
+The script automates the procedure; it does not replace it. [deploy-ivi-hmi-walkthrough.md §4.4–§4.8](../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#44-get-an-adb-endpoint) and [phase5-ivi-deploy.md](../../IVI_ECU/deployment/phase5-ivi-deploy.md) remain authoritative — read them when it fails, and follow the manual steps below.
+
 ## What "upload" means here
 
 The IVI node takes **no image push**. Its VM image is the platform's stock AAOS artifact; the team deliverable is an APK installed over ADB into the **running** guest, after the Skycraft node reaches `Running` ([§4.1](../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#41-how-the-apk-reaches-the-ivi-ecu-node)).
