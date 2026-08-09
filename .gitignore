@@ -25,8 +25,8 @@ secrets/
 tools/apk-uploader/reach_be/
 tools/apk-uploader/*.apk
 tools/apk-uploader/logs/
-# the unfiltered logcat dump is tens of MB; the filtered evidence beside it is kept
-tools/apk-uploader/test-report/**/app-logcat-full.txt
+# collected run evidence - logs, dumps and pcaps; kept with the delivery report, not in git
+tools/apk-uploader/test-report/
 
 # AG-Kit temporary & runtime files
 .temp_ag_kit/

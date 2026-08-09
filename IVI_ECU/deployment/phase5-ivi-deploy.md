@@ -253,6 +253,8 @@ $p = [Environment]::GetEnvironmentVariable("PATH","User")
 mkdir tools\apk-uploader\test-report\isolated
 ```
 
+`test-report/` is git-ignored in full: a run's logs, dumps and pcaps are evidence kept with the delivery report, not committed to the repository.
+
 In each command below, the **last part sets the output file** — `| Out-File <path> -Encoding utf8`. Change that path to name the file whatever you like; the rest of the command decides what goes into it. Each is one line, safe to paste on its own.
 
 **To get the IVI-ECU app's log** — the main evidence, and the only place `[RX]` appears:
@@ -314,7 +316,7 @@ cd ..\..\..\..
 
 Scope the crash count **to the package**: a bare `FATAL` search matches the stock AAOS Bluetooth stack aborting at boot (`droid.bluetooth`, `Fatal signal 6`), which is guest noise.
 
-Two smaller points. `Out-File … -Encoding utf8` rather than `>`, because bare redirection in Windows PowerShell 5.1 writes UTF-16. And when a filtered line needs surrounding context, the unfiltered buffer is the same command without `-s …` — tens of megabytes, so it is git-ignored:
+Two smaller points. `Out-File … -Encoding utf8` rather than `>`, because bare redirection in Windows PowerShell 5.1 writes UTF-16. And when a filtered line needs surrounding context, the unfiltered buffer is the same command without `-s …` — tens of megabytes, so collect it only when something needs explaining:
 
 ```powershell
 adb -s localhost:5555 logcat -d -v threadtime | Out-File tools\apk-uploader\test-report\isolated\app-logcat-full.txt -Encoding utf8
