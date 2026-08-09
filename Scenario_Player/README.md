@@ -5,5 +5,5 @@ Bench V2X message generator: emits R1-profile CPMs informing the V2X ECU about v
 - **Design authority:** [doc/scenario-player-hld.md](../documents/Design/SCENARIO-PLAYER/scenario-player-hld.md) — every component, path, seam, configuration key and evidence line, with its [decision record](../documents/Design/SCENARIO-PLAYER/scenario-player-design-decisions.md).
 - **Requirement:** R11 — [m1-cooperative-awareness.md](../documents/Requirements/m1-cooperative-awareness.md) §2.
 - **Node/deploy guide:** [node-scenario-player.md](../requirements/car-sky-guide/node-scenario-player.md) — image tag, blueprint config, env vars, pins, verification.
-- **Layout & build rules:** [node-code-layout.md](../.claude/rules/node-code-layout.md) — Python, `main.py` entrypoint at image workdir `/app`, scenario configs under `scenarios/`, `docker build -t m1-scenario-player:latest Scenario_Player/`.
+- **Layout & build rules:** [CLAUDE.md § Repository layout](../CLAUDE.md) — Python, `main.py` entrypoint at image workdir `/app`, scenario configs under `scenarios/`, `docker build -t m1-scenario-player:latest Scenario_Player/`.
 - **Plan:** Phase 1 of [milestone1_high_level_plan.md](../documents/Plan/milestone1_high_level_plan.md) (contracts R1/R6 frozen in Phase 0 first).

@@ -255,7 +255,7 @@ One log line per datagram:
 
 ### 2.4 Where the bench sources live, and why
 
-**Decision: both bench roles build from `tools/ada-bench/` at the repository root, and the image is `m1-ada-bench:latest`.** They are not placed in any node folder. The reasoning, against [node-code-layout.md](../../.claude/rules/node-code-layout.md):
+**Decision: both bench roles build from `tools/ada-bench/` at the repository root, and the image is `m1-ada-bench:latest`.** They are not placed in any node folder. The reasoning, against [CLAUDE.md § Repository layout](../../CLAUDE.md):
 
 | Candidate location | Rejected because |
 |---|---|

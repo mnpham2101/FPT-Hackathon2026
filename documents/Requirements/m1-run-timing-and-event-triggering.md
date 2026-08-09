@@ -186,7 +186,7 @@ Facts that decide it:
 
 **Pick: T-1 + T-5.** Drivers **C1** (nothing in its path is unverified) and **C2** (two config keys and a paced loop, against six days). C3 is preserved: T-2 slots in behind the same config keys without changing them.
 
-**The tool that should exist is a checker, not a trigger.** `ADA_ECU/tools/check_run_alignment.py` — post-run verification of §6.4's KPIs from the R18 JSONL. Placement follows the `ADA_ECU/tools/check_zero_c.py` precedent in [node-code-layout.md](../../.claude/rules/node-code-layout.md): a check script lives in the node folder whose log it reads. It is **sanctioned bench test equipment, not production code** (governing principle 2) and is never on the ego data path.
+**The tool that should exist is a checker, not a trigger.** `ADA_ECU/tools/check_run_alignment.py` — post-run verification of §6.4's KPIs from the R18 JSONL. Placement follows the `ADA_ECU/tools/check_zero_c.py` precedent in [CLAUDE.md § Repository layout](../../CLAUDE.md): a check script lives in the node folder whose log it reads. It is **sanctioned bench test equipment, not production code** (governing principle 2) and is never on the ego data path.
 
 **Offsets live in config, never in code** (CLAUDE.md principle 5) — §6.1.
 

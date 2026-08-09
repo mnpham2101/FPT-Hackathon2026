@@ -35,7 +35,7 @@ The one case that forces a name change is a job **split** across two files, wher
 
 1. Move the job block verbatim, with its comments, its `env:` and any `actions/cache` entry it owns.
 2. Leave the job name unchanged (§ Job names are stable).
-3. Update every document that names the lane **together with its file** — the node HLD §11 CI table, the plan briefs whose write scope or acceptance names it, and the walkthrough sections that cite it. A document naming the lane alone needs no edit.
+3. Update every document that names the lane **together with its file** — the node HLD §11 CI table, the plan briefs whose write scope or acceptance names it, and any guide that cites it. A document naming the lane alone needs no edit.
 4. Leave historical `**Status:**` and `Closed: CI run …` lines untouched — they record what happened, not where the lane lives.
 5. One commit per lane moved, `[<taskID>] chore: …`. Re-filing several lanes at once, as one application of this rule, is a single commit.
 
@@ -43,6 +43,6 @@ A lane sharing an `actions/cache` key with a lane in another file is a coupling 
 
 ## How to apply
 
-- [[project-architecture]] writes the §11 CI table of a node HLD from the designated layout above, and files any lane it configures under [node-code-layout.md § Build rules](node-code-layout.md#build-rules-all-container-nodes) into that node's phase file.
+- [[project-architecture]] writes the §11 CI table of a node HLD from the designated layout above, and files any lane it configures under [CLAUDE.md § Repository layout](../../CLAUDE.md) node build rules into that node's phase file.
 - [[project-planner]] names the target file in every subtask brief that adds or edits a lane, taking it from this document rather than from the phase the subtask sits in. A brief that would put a lane in a file this rule assigns elsewhere is flagged back, not written.
 - Implementation subagents write the lane into the file their brief names, and never create a second workflow file for a lane that already has a designated home.

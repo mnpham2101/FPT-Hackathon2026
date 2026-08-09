@@ -17,7 +17,7 @@
 
 **This is the only design document governing this node.** It fixes the component set and each component's responsibility, the module graph, every deliverable's path, the seams, the configuration keys, and the evidence log lines.
 
-- **Task planning decomposes from this document plus the requirements report, and nothing else.** Requirement numbers and acceptance come from [m1-cooperative-awareness.md](../../Requirements/m1-cooperative-awareness.md); everything structural comes from here — which component a subtask creates, its path, the interface it satisfies, the log line or scene that closes it. Deploy and verify subtasks come from the walkthrough, per [walkthrough-driven-delivery.md](../../../.claude/rules/walkthrough-driven-delivery.md).
+- **Task planning decomposes from this document plus the requirements report, and nothing else.** Requirement numbers and acceptance come from [m1-cooperative-awareness.md](../../Requirements/m1-cooperative-awareness.md); everything structural comes from here — which component a subtask creates, its path, the interface it satisfies, the log line or scene that closes it. Deploy and verify subtasks come from the walkthrough, per [CLAUDE.md § Repository layout](../../../CLAUDE.md).
 - **Plans cite; they do not restate.** A brief links the section governing its step, so a change lands in one place.
 - **Implementation does not extend this silently.** A component, path or configuration key not designated here is not created ad hoc — the design changes first.
 - **What overrides it:** the requirements report, the frozen R4/R3 contracts, and the walkthrough for procedure. On conflict, the CLAUDE.md authority order decides.

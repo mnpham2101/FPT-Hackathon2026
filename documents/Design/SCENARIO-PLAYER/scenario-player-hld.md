@@ -253,7 +253,7 @@ docker buildx build --platform linux/arm64 --provenance=false --sbom=false -t m1
 | `sp-codec-helper` | [phase1-ci.yml](../../../.github/workflows/phase1-ci.yml) | builds `cpm_encode` natively and runs `test_encoder_golden.py` against the real binary |
 | `scenario-player-image` | [phase1-ci.yml](../../../.github/workflows/phase1-ci.yml) | the `linux/arm64` image build, pushed to Zot when `CARSKY_ZOT_API_KEY` is set |
 
-A green image lane is not evidence that a tag reached the registry — the push step is gated on the secret ([node-code-layout.md § Build rules](../../../.claude/rules/node-code-layout.md#build-rules-all-container-nodes)).
+A green image lane is not evidence that a tag reached the registry — the push step is gated on the secret ([CLAUDE.md § Repository layout](../../../CLAUDE.md)).
 
 ## 12. Test strategy
 

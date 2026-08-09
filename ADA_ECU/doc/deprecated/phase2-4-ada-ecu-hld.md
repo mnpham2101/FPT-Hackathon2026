@@ -30,7 +30,7 @@ Notes are non-authoritative scratch; on any conflict the CLAUDE.md document-auth
 
 ### D1 — Consolidation: `ada-ecu/` is deleted; nothing is moved wholesale
 
-`ADA_ECU/` is the canonical node folder ([node-code-layout.md](../../../.claude/rules/node-code-layout.md)). The branch's lowercase `ada-ecu/` is a parallel implementation built outside the frozen contracts, and it cannot be merged file-by-file: every source file there depends on `ada-ecu/include/ada/types.hpp`, a **second** `TrackedObject`/`Source`/`TrackState` model that duplicates and contradicts the frozen binding in `src/contracts/tracked_object.hpp`. Copying any `.cpp` drags the duplicate model in.
+`ADA_ECU/` is the canonical node folder ([CLAUDE.md § Repository layout](../../../CLAUDE.md)). The branch's lowercase `ada-ecu/` is a parallel implementation built outside the frozen contracts, and it cannot be merged file-by-file: every source file there depends on `ada-ecu/include/ada/types.hpp`, a **second** `TrackedObject`/`Source`/`TrackState` model that duplicates and contradicts the frozen binding in `src/contracts/tracked_object.hpp`. Copying any `.cpp` drags the duplicate model in.
 
 **Verdict: `ada-ecu/` is removed in one commit. Salvage is by rewrite against the frozen types — the algorithm and file shape are reused, the code is not.** Two folders would also mean two Dockerfiles and two build contexts for one CarSky node.
 
@@ -194,7 +194,7 @@ Frozen R4 fixes `riskState ∈ {low, medium, high}`. For `nlos_obstruction`, wit
 
 ## 4. Folder structure map — file-location designations
 
-Every deliverable and its target path; no implementer picks a path ad hoc. `P0` = exists (Phase 0), listed for context; `P2`/`P3`/`P4` = the phase that lands it. Everything is inside the node folder, so every designation is a sanctioned location ([node-code-layout.md](../../../.claude/rules/node-code-layout.md#per-folder-doc)) — no approval pause applies.
+Every deliverable and its target path; no implementer picks a path ad hoc. `P0` = exists (Phase 0), listed for context; `P2`/`P3`/`P4` = the phase that lands it. Everything is inside the node folder, so every designation is a sanctioned location ([CLAUDE.md § Repository layout](../../../CLAUDE.md)) — no approval pause applies.
 
 ```
 ADA_ECU/

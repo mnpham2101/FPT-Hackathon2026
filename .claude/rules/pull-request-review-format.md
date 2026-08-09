@@ -14,7 +14,7 @@ A review is written to the **reviewed node's own `doc/`**, at:
 
 | Element | Value |
 |---|---|
-| `<Node_Folder>/doc/` | the `doc/` of the node the PR principally develops, per [node-code-layout.md § Where a node's documents live](node-code-layout.md#where-a-nodes-documents-live) |
+| `<Node_Folder>/doc/` | the `doc/` of the node the PR principally develops, per [CLAUDE.md § Repository layout](../../CLAUDE.md) |
 | `<node-slug>` | the same slug the node's HLD uses — `ivi-ecu`, `ada-ecu`, `v2x-ecu`, `scenario-player` |
 | `<N>` | the pull-request number |
 | `<K>` | the review version, from `1` |

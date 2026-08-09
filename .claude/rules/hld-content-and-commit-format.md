@@ -20,7 +20,7 @@ Every node of the R5 blueprint carries exactly one HLD, in that node's design fo
 | [ADA_ECU/](../../ADA_ECU/) | [documents/Design/ADA-ECU/](../../documents/Design/ADA-ECU/) | `ada-ecu-hld.md` |
 | [IVI_ECU/](../../IVI_ECU/) | [documents/Design/IVI-ECU/](../../documents/Design/IVI-ECU/) | `ivi-ecu-hld.md` |
 
-- **The design lives apart from the code it governs.** An HLD is read by a planner writing briefs and by a reviewer judging a branch, neither of whom is inside the node folder; collecting all four in one section is what lets a reader compare them. The node folder keeps its code and its `doc/deprecated/` ([node-code-layout.md § Where a node's documents live](node-code-layout.md#where-a-nodes-documents-live)).
+- **The design lives apart from the code it governs.** An HLD is read by a planner writing briefs and by a reviewer judging a branch, neither of whom is inside the node folder; collecting all four in one section is what lets a reader compare them. The node folder keeps its code, its pull-request reviews and its `doc/deprecated/` ([CLAUDE.md § Repository layout](../../CLAUDE.md)).
 - **The decision record and the diagram sources sit beside the HLD**, in the same design folder: `<node-slug>-design-decisions.md`, the `.puml` sequence and component sources, and the `.drawio`/`.svg` component map.
 - **The bench is a node and gets the full document.** Being test equipment changes what its sections say, not whether it has them.
 - **A later phase extends the node's HLD; it does not add a second one.** Two design documents for one node means two answers to "where does this file go", and the implementer picks the wrong one.
@@ -74,7 +74,7 @@ An HLD is read under context pressure, by a planner writing briefs and by an imp
 - **Say a fact once, in the section that owns it, and cite `§n` elsewhere.** Two statements of one fact become two answers the moment either is edited. A mapping table restating what a tree and a component table already show is deleted, not maintained.
 - **No filler openers.** Cut "It is worth noting", "Note that", "In other words", and any sentence that restates the one before it.
 - **Current state only — no history.** No committed-versus-missing tables, no decision dates, no "now", "already", "until X exists", "must change". Describe the design, not its progress. Design rationale is not history: "rejected alternative X because Y" belongs in §13; "we used to do X" belongs nowhere.
-- **Reference, never repeat.** Requirement definitions stay in the report, procedures stay in the walkthrough, platform facts stay in the node reference — cited by section.
+- **Reference, never repeat.** Requirement definitions stay in the report, deploy and test procedures stay in [documents/Delivery/](../../documents/Delivery/), platform facts stay in the node reference — cited by section.
 - **No slang, no hedging.** "an interface rather than a concrete producer", not "an interface, not a box".
 - Everything else follows [markdown-writing-style](../skills/markdown-writing-style/SKILL.md).
 
@@ -90,5 +90,5 @@ using `type = design` and the **requirement-only `X`** form of the taskID — HL
 
 ## How to apply
 
-- [[project-architecture]] applies the section list at the outline step of [high-level-design-procedure](../skills/high-level-design-procedure/SKILL.md), and again before committing. Do not commit an HLD without its `[X] design: ...` tagged message. A deliverable placed outside the sanctioned work-folder locations of [node-code-layout.md § Where a node's documents live](node-code-layout.md#where-a-nodes-documents-live) is called out with its rationale and goes through that procedure's approval pause.
+- [[project-architecture]] applies the section list at the outline step of [high-level-design-procedure](../skills/high-level-design-procedure/SKILL.md), and again before committing. Do not commit an HLD without its `[X] design: ...` tagged message. A deliverable placed outside the sanctioned locations of [CLAUDE.md § Repository layout](../../CLAUDE.md) is called out with its rationale and goes through that procedure's approval pause.
 - [[project-planner]] reads the node's HLD as the structural input to task planning and cites its sections in every brief; a missing section is flagged back to architecture rather than filled in by the plan.
