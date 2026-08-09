@@ -1,0 +1,13 @@
+{
+  "name": "approach",
+  "defaultRateHz": 1.0,
+  "loop": true,
+  "steps": [
+    { "sample": "r4-warning", "overrides": { "riskState": "low", "geometry.vehicleC": null } },
+    { "sample": "r4-warning", "overrides": { "riskState": "low" } },
+    { "sample": "r4-warning", "overrides": { "riskState": "medium", "object.position.x": 40.0, "object.distance": 40.0, "geometry.vehicleC": { "x": 40.0, "y": 1.7 } } },
+    { "sample": "r4-warning", "overrides": { "riskState": "high", "object.position.x": 28.0, "object.distance": 28.0, "geometry.vehicleC": { "x": 28.0, "y": 1.7 } } },
+    { "sample": "r4-warning", "overrides": { "riskState": "high", "object.position.x": 22.0, "object.distance": 22.0, "geometry.vehicleC": { "x": 22.0, "y": 1.7 } } },
+    { "sample": "r4-warning", "overrides": { "riskState": "low", "object.position.x": 45.0, "object.distance": 45.0, "geometry.vehicleC": { "x": 45.0, "y": 1.7 } }, "delayS": 15.0 }
+  ]
+}

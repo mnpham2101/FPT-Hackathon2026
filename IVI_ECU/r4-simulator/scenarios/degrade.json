@@ -1,0 +1,10 @@
+{
+  "name": "degrade",
+  "defaultRateHz": 1.0,
+  "loop": false,
+  "steps": [
+    { "sample": "r4-unknown-warning", "overrides": { "simAdditiveJunk": "present-on-the-wire" } },
+    { "sample": "r4-warning", "overrides": { "object.source": "own_sensor" } },
+    { "kind": "raw", "text": "not-json {truncated" }
+  ]
+}
