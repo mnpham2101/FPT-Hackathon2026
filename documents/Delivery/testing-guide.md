@@ -31,7 +31,7 @@ The **Images** column is what each tool has anything to say about — a tool abs
 
 Four consequences worth reading off that table before planning a run.
 
-- **The ADB tunnel gates the guest half, and `[RX]` lives only there.** Node logs come over REST and need no tunnel; `app-logcat.txt`, `app-crash.txt`, `guest-udp6.txt` and `guest-ifaces.txt` come over ADB and are skipped without one — reported, not failed, so a run with no tunnel still exits 0 and looks complete. Since `[RX]` exists nowhere but `app-logcat.txt`, **collect with the tunnel up or the run proves nothing about the app.** Keep it with `INSTALL-IVI-APK.cmd -KeepTunnel`, reopen it with `-SkipInstall -KeepTunnel`, and close it with `-CloseTunnel` once you are done collecting.
+- **The ADB tunnel gates everything read out of the guest, and `[RX]` lives only there.** Node logs come over REST and need no tunnel; `app-logcat.txt`, `app-crash.txt`, `guest-udp6.txt` and `guest-ifaces.txt` come over ADB and are skipped without one — reported, not failed, so a run with no tunnel still exits 0 and looks complete. Since `[RX]` exists nowhere but `app-logcat.txt`, **collect with the tunnel up or the run proves nothing about the app.** `INSTALL-IVI-APK.cmd` holds the tunnel open until you close its window, so collect from a second terminal while it is up; `-KeepTunnel` leaves it up afterwards and `-CloseTunnel` shuts it immediately.
 
 - **Only `m1-v2x-ecu` and `m1-ada-ecu` carry a pcap.** The other images print `[CAP]` lines or nothing at all, so a path built from them has no block to extract and Wireshark evidence is simply unavailable on it.
 - **`m1-r4-sim` has no CI lane.** Unlike the five images above it, nothing in `.github/workflows/` builds or pushes it, so it has to be built and pushed by hand before an isolated IVI run can pull it.
@@ -380,17 +380,19 @@ Confirm before re-collecting: `guest-ifaces.txt` must show the NIC carrying `10.
 
 **Solution.** Redeploy the blueprint, wait for every node to report `Running`, then collect again. Remember the deployment takes the blueprint's name with a `-deploy` suffix, so collecting `phase5_smoked_test` looks for the Room `phase5_smoked_test-deploy`.
 
-### The guest half is missing from the run folder
+### Only the node logs are collected — nothing from inside the AAOS guest
 
-**Symptom.** `app-logcat.txt`, `app-crash.txt`, `guest-udp6.txt` and `guest-ifaces.txt` are absent, and the run still exited 0.
+**Symptom.** The run folder holds the `node-*.txt` files but not `app-logcat.txt`, `app-crash.txt`, `guest-udp6.txt` or `guest-ifaces.txt`, and the run still exited 0. The checklist reads `not collected - no ADB tunnel` against every app row.
 
-**Root cause.** The ADB tunnel was not up. The collector reports that and skips the guest half rather than failing, because a node-side collection is useful on its own — which is why a tunnel-less run looks complete while proving nothing about the app.
+**Root cause.** The ADB tunnel was not up. Node logs come over REST and always land; the four files above are read out of the guest over ADB and need the tunnel. The collector reports them skipped rather than failed, because a node-side collection is useful on its own — which is why a tunnel-less run exits 0 and looks complete while proving nothing about the app.
 
-**Solution.** Open the tunnel, then collect again:
+**Solution.** Open the tunnel and leave it up, then collect again while it is open:
 
 ```powershell
-.\tools\apk-uploader\INSTALL-IVI-APK.cmd -SkipInstall -KeepTunnel
+.\tools\apk-uploader\INSTALL-IVI-APK.cmd -SkipInstall
 ```
+
+That run holds the tunnel open until you press a key to close its window, so run the collector from a second terminal before closing it. `-KeepTunnel` instead leaves the tunnel up after that window is gone.
 
 ### The IVI node's own log contains nothing the app wrote
 

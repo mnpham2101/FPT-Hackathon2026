@@ -176,6 +176,21 @@ function Request-NewToken {
     return $null
 }
 
+# The .cmd wrapper closes the tunnel after the keypress, and only this script knows which
+# port is in play once -Port is passed. Hand it over in a file rather than making the
+# wrapper parse the argument list. Its presence is also the wrapper's instruction to close
+# at all: -KeepTunnel and -CloseTunnel both clear it.
+function Set-TunnelHandover ($p) {
+    try {
+        if (-not (Test-Path $LogDir)) { New-Item -ItemType Directory -Path $LogDir -Force | Out-Null }
+        Set-Content -Path (Join-Path $LogDir 'tunnel-open-port.txt') -Value "$p" -Encoding ASCII -NoNewline -ErrorAction Stop
+    } catch { }
+}
+
+function Clear-TunnelHandover {
+    try { Remove-Item (Join-Path $LogDir 'tunnel-open-port.txt') -Force -ErrorAction SilentlyContinue } catch { }
+}
+
 function Test-Port ($p) {
     $c = New-Object System.Net.Sockets.TcpClient
     try   { $c.Connect('127.0.0.1', $p); return $true }
@@ -597,34 +612,26 @@ Write-Host "  (test guide Step 3-1)" -ForegroundColor DarkGray
 
 Write-Host ""
 if ($CloseTunnel) {
-    # Explicit: close the port whoever opened it. This is the only branch that can
-    # reach a tunnel inherited from an earlier run.
+    # Explicit: close the port now, whoever opened it, without waiting for the window.
     Stop-Tunnel
     Stop-TunnelOnPort $Port | Out-Null
+    Clear-TunnelHandover
     Write-Host "  Tunnel on port $Port closed." -ForegroundColor Cyan
-    Write-Host "  Collecting logs needs it again - the collector's guest half is skipped without it." -ForegroundColor DarkGray
-} elseif ($script:TunnelReused) {
-    # Started by an earlier run, so the default leaves it alone - but print the pid,
-    # because a tunnel nobody can address is what strands the next run.
-    $owners = @()
-    try {
-        $owners = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction Stop |
-                  Select-Object -ExpandProperty OwningProcess -Unique
-    } catch { }
-    Write-Host "  Tunnel on port $Port was already open and has been left alone." -ForegroundColor Cyan
+    Write-Host "  Reopen it before collecting:  INSTALL-IVI-APK.cmd -SkipInstall" -ForegroundColor DarkGray
+} elseif ($KeepTunnel) {
+    # Survives the window. Nothing closes it but the operator, so print how.
+    Clear-TunnelHandover
+    Write-Host "  Tunnel left running on port $Port - it stays up after this window closes." -ForegroundColor Cyan
     Write-Host "  Live logs:  adb -s $serial logcat -s IVI_V2X" -ForegroundColor Cyan
-    if ($owners) {
-        Write-Host "  Stop it:    Stop-Process -Id $($owners -join ',') -Force" -ForegroundColor Cyan
-        Write-Host "              or re-run with -CloseTunnel" -ForegroundColor Cyan
-    }
-} elseif ($KeepTunnel -and $script:TunnelProc) {
-    Write-Host "  Tunnel left running on port $Port (pid $($script:TunnelProc.Id))." -ForegroundColor Cyan
-    Write-Host "  Live logs:  adb -s $serial logcat -s IVI_V2X" -ForegroundColor Cyan
-    Write-Host "  Stop it:    Stop-Process -Id $($script:TunnelProc.Id)" -ForegroundColor Cyan
+    Write-Host "  Close it:   INSTALL-IVI-APK.cmd -SkipInstall -CloseTunnel" -ForegroundColor Cyan
 } else {
-    Stop-Tunnel
-    Write-Host "  Tunnel closed. Collecting logs needs it - the guest half is skipped without one." -ForegroundColor DarkGray
-    Write-Host "  Reopen it:  .\tools\apk-uploader\INSTALL-IVI-APK.cmd -SkipInstall -KeepTunnel" -ForegroundColor Cyan
-    Write-Host "  Or pass -KeepTunnel on the install run itself." -ForegroundColor DarkGray
+    # Default: hold the tunnel open while this window is up, so the collector can run
+    # against it in another terminal, and hand the port to the .cmd wrapper to close on
+    # the keypress. Collecting is what happens next and it needs this tunnel.
+    Set-TunnelHandover $Port
+    Write-Host "  Tunnel is OPEN on port $Port - collect the guest evidence now, from another terminal:" -ForegroundColor Cyan
+    Write-Host "    .\tools\logs-collector\COLLECT-LOGS.cmd" -ForegroundColor Cyan
+    Write-Host "  Live logs:  adb -s $serial logcat -s IVI_V2X" -ForegroundColor DarkGray
+    Write-Host "  It closes when you press a key to close this window." -ForegroundColor DarkGray
 }
 Write-Host ""

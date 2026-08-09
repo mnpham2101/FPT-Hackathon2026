@@ -27,9 +27,10 @@
   the app wrote, so it is collected for completeness under a name the pcap extractor
   does not glob and the [TX] scan does not read. The app's log comes only from adb.
 
-  The ADB tunnel is optional. Without it the CarSky half still lands and the guest
-  half is skipped, reported rather than failed -- a node-side collection is useful on
-  its own. Open the tunnel with tools\apk-uploader\INSTALL-IVI-APK.cmd -SkipInstall -KeepTunnel.
+  The ADB tunnel is optional. Without it the node logs still land and the files from
+  inside the AAOS guest are skipped, reported rather than failed -- a node-side
+  collection is useful on its own. Open the tunnel with
+  tools\apk-uploader\INSTALL-IVI-APK.cmd -SkipInstall.
 
 .PARAMETER Test
   A shortcut for one of the blueprints below, by number or by name:
@@ -50,7 +51,7 @@
 
   The Room is read from its node list, so nothing about the blueprint needs to be
   known in advance: every node it contains is collected, whatever the node is, and
-  the guest half runs only if one of them is a Skycraft VM. The run folder takes the
+  the files from inside the AAOS guest are collected only if one of them is a Skycraft VM. The run folder takes the
   blueprint's name.
 
 .PARAMETER BaseUrl
@@ -517,7 +518,7 @@ $GuestReady = $false
 
 if (-not $Adb) {
     Write-Warn "adb.exe not found on PATH or in any standard Android SDK location."
-    Write-Info "Skipping the guest half. Install Android SDK platform-tools, or set ANDROID_HOME."
+    Write-Info "Skipping the files from inside the guest. Install Android SDK platform-tools, or set ANDROID_HOME."
     Add-Summary ""
     Add-Summary "GUEST               skipped - adb not found"
 } elseif (-not (Test-Port $Port)) {
@@ -542,7 +543,7 @@ if (-not $Adb) {
 
     if (-not $connected) {
         Write-Warn "The tunnel is serving but $serial never reached state 'device'."
-        Write-Info "Skipping the guest half. The Skycraft node may still be booting."
+        Write-Info "Skipping the files from inside the guest. The Skycraft node may still be booting."
         Add-Summary ""
         Add-Summary "GUEST               skipped - $serial not in state 'device'"
     } else {

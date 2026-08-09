@@ -852,30 +852,29 @@ say '  (test guide Step 3-1)' "$C_GRAY"
 
 printf '\n'
 if [ "$CLOSE_TUNNEL" -eq 1 ]; then
-    # Explicit: close the port whoever opened it. This is the only branch that can
-    # reach a tunnel inherited from an earlier run.
+    # Explicit: close the port now, whoever opened it, without waiting.
     stop_tunnel
     stop_tunnel_on_port "$PORT"
     say "  Tunnel on port $PORT closed." "$C_CYAN"
-    say "  Collecting logs needs it again - the collector's guest half is skipped without it." "$C_GRAY"
-elif [ "$TUNNEL_REUSED" -eq 1 ]; then
-    # Started by an earlier run, so the default leaves it alone - but print the pid,
-    # because a tunnel nobody can address is what strands the next run.
-    say "  Tunnel on port $PORT was already open and has been left alone." "$C_CYAN"
+    say '  Reopen it before collecting:  ./tools/apk-uploader/install-ivi-apk.sh --skip-install' "$C_GRAY"
+elif [ "$KEEP_TUNNEL" -eq 1 ]; then
+    # Survives this shell. Nothing closes it but the operator, so print how.
+    say "  Tunnel left running on port $PORT - it stays up after this shell exits." "$C_CYAN"
     say "  Live logs:  adb -s $SERIAL logcat -s IVI_V2X" "$C_CYAN"
-    REUSED_PIDS="$(port_pids "$PORT" | tr '\n' ' ')"
-    if [ -n "${REUSED_PIDS// /}" ]; then
-        say "  Stop it:    kill $REUSED_PIDS" "$C_CYAN"
-        say "              or re-run with --close-tunnel" "$C_CYAN"
-    fi
-elif [ "$KEEP_TUNNEL" -eq 1 ] && [ -n "$TUNNEL_PID" ]; then
-    say "  Tunnel left running on port $PORT (pid $TUNNEL_PID)." "$C_CYAN"
-    say "  Live logs:  adb -s $SERIAL logcat -s IVI_V2X" "$C_CYAN"
-    say "  Stop it:    kill $TUNNEL_PID" "$C_CYAN"
+    say '  Close it:   ./tools/apk-uploader/install-ivi-apk.sh --skip-install --close-tunnel' "$C_CYAN"
 else
+    # Default: hold the tunnel open so the collector can run against it from another
+    # terminal, then close it on acknowledgement -- the .cmd wrapper does the same after
+    # its keypress. With no terminal to prompt on, close immediately rather than leak it.
+    say "  Tunnel is OPEN on port $PORT - collect the app evidence now, from another terminal:" "$C_CYAN"
+    say '    ./tools/logs-collector/collect-logs.sh' "$C_CYAN"
+    say "  Live logs:  adb -s $SERIAL logcat -s IVI_V2X" "$C_GRAY"
+    if [ -t 0 ]; then
+        printf '  Press Enter to close the tunnel... '
+        IFS= read -r _ || true
+    fi
     stop_tunnel
-    say '  Tunnel closed. Collecting logs needs it - the guest half is skipped without one.' "$C_GRAY"
-    say '  Reopen it:  ./tools/apk-uploader/install-ivi-apk.sh --skip-install --keep-tunnel' "$C_CYAN"
-    say '  Or pass --keep-tunnel on the install run itself.' "$C_GRAY"
+    stop_tunnel_on_port "$PORT"
+    say '  ADB tunnel is closed.' "$C_CYAN"
 fi
 printf '\n'

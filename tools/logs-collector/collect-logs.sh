@@ -26,8 +26,8 @@
 # the app wrote, so it is collected for completeness under a name the pcap extractor
 # does not glob and the [TX] scan does not read. The app's log comes only from adb.
 #
-# The ADB tunnel is optional. Without it the CarSky half still lands and the guest half
-# is skipped, reported rather than failed.
+# The ADB tunnel is optional. Without it the node logs still land and the files from
+# inside the AAOS guest are skipped, reported rather than failed.
 #
 # Dependencies: bash, curl, awk, sed. No jq -- the JSON is parsed by the awk helpers
 # below, so the script runs on a bare Linux box and in Git Bash alike.
@@ -66,7 +66,7 @@ usage() {
                           5  netcheck-test       (blueprint phase0_smoked_test)
     --blueprint <name>  collect ANY deployed blueprint by name, listed or not. The
                         Room is read from its node list, so every node it contains
-                        is collected whatever the node is, and the guest half runs
+                        is collected whatever the node is, and the guest files are
                         only if one of them is a Skycraft VM.
     --base-url <url>    CarSky gateway            (default $BASE_URL)
     --api-key-file <f>  file holding the REST key (default <repo>/secrets/carsky-api-key.txt)
@@ -637,7 +637,7 @@ GUEST_READY=0
 
 if [ -z "$ADB" ]; then
     write_warn "adb not found on PATH or in any standard Android SDK location."
-    write_info "Skipping the guest half. Install Android SDK platform-tools, or set ANDROID_HOME."
+    write_info "Skipping the files from inside the guest. Install Android SDK platform-tools, or set ANDROID_HOME."
     add_summary ""
     add_summary "GUEST               skipped - adb not found"
 elif ! test_port "$PORT"; then
@@ -664,7 +664,7 @@ else
 
     if [ "$connected" -ne 1 ]; then
         write_warn "The tunnel is serving but $SERIAL never reached state 'device'."
-        write_info "Skipping the guest half. The Skycraft node may still be booting."
+        write_info "Skipping the files from inside the guest. The Skycraft node may still be booting."
         add_summary ""
         add_summary "GUEST               skipped - $SERIAL not in state 'device'"
     else

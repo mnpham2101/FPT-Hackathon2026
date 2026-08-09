@@ -55,7 +55,7 @@ The shortcuts are conveniences, not a whitelist — the node list of whatever bl
 
 ## 2 · The ADB half is optional
 
-Without a tunnel the CarSky half still lands and the guest half is skipped — reported, not failed, because a node-side collection is useful on its own. Open the tunnel first when you want the app's logcat:
+Without a tunnel the node logs still land and the files from inside the AAOS guest are skipped — reported, not failed, because a node-side collection is useful on its own. Open the tunnel first when you want the app's logcat:
 
 ```powershell
 .\tools\apk-uploader\INSTALL-IVI-APK.cmd -SkipInstall -KeepTunnel
