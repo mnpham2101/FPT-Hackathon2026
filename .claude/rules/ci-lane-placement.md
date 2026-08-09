@@ -21,9 +21,13 @@ Phase 0 scaffolded all four nodes, so filing by creation date collects every nod
 | `phase2-ci.yml` | `ada-core-build` · `ada-loopback-check` | The ADA scaffold |
 | `phase3-ci.yml` | `ada-detector-wheels` · `ada-detector-tests` · `ada-detector-run` · `ada-zero-c` | The ADA detector |
 | `phase4-ci.yml` | `ada-e2e-loopback` · `ada-ecu-image` · `ada-bench-image` · `ada-bench-selfcheck` | ADA fusion, the node image and its bench |
-| `phase5-ci.yml` | `ivi-unit-tests` · `ivi-assemble` · `r4-sim-image` | The IVI ECU and its ADA simulator |
+| `phase5-ci.yml` | `ivi-unit-tests` · `ivi-assemble` · `r4-sim-tests` · `r4-sim-image` | The IVI ECU and its ADA simulator |
 
 The ADA node spans three files because it is developed across three phases; each lane sits with the phase whose work it verifies. A node image lane sits with the phase that **completes** the node, since the image carries every phase's contribution — which is why `ada-ecu-image` is Phase 4's rather than Phase 2's, where the lane was written.
+
+Test equipment takes its lanes from the node it exercises, not from a file of its own. The R4 simulator stands in for the ADA node so the IVI node can be exercised alone, so both its lanes sit with the IVI ECU. They stay **separate from the two `ivi-*` lanes** rather than folded into them: [IVI_ECU/r4-simulator/](../../IVI_ECU/r4-simulator/) is its own Gradle build that the IVI project never includes, so its tests cannot join the app's test command — and the application's gate must not go red for a reason that has nothing to do with the application.
+
+An image lane is not a test lane. `r4-sim-image` builds through `installDist`, which compiles without running a test, so `r4-sim-tests` is what makes the simulator's behaviour a CI fact; a green image lane on its own says only that the thing compiled.
 
 ## Job names are stable
 
