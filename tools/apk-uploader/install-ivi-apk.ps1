@@ -24,6 +24,12 @@
 .PARAMETER KeepTunnel
   Leave the tunnel running after the script finishes, so you can run adb yourself.
 
+.PARAMETER CloseTunnel
+  Close the tunnel on -Port when the run finishes, even one this run did not start.
+  The default only closes a tunnel this run opened; a tunnel inherited from an earlier
+  run is left alone, which is how a dead one survives to strand the next run.
+  Collecting logs needs the tunnel -- see the note under .DESCRIPTION.
+
 .PARAMETER SkipInstall
   Only open the tunnel and collect evidence. Use when the APK is already installed.
 
@@ -44,6 +50,7 @@ param(
     [int]    $Port = 5555,
     [string] $Apk,
     [switch] $KeepTunnel,
+    [switch] $CloseTunnel,
     [switch] $SkipInstall,
     [switch] $SkipNetworkFix,
     [string] $IviAddr = '10.99.0.13',
@@ -83,6 +90,35 @@ function Stop-Tunnel {
         try { Stop-Process -Id $script:TunnelProc.Id -Force -ErrorAction Stop } catch { }
         Write-Info "Tunnel stopped (pid $($script:TunnelProc.Id))."
     }
+}
+
+# Closes whatever holds the port, including a tunnel this run did not start.
+# Stop-Tunnel above can only reach a process we launched; a tunnel left behind by
+# an earlier run is a foreign pid, and it is the one that strands the next run --
+# the port still listens, so this script reuses it, while the session behind it is
+# long dead. Returns the pids it stopped.
+function Stop-TunnelOnPort ($p) {
+    $stopped = @()
+    try {
+        $owners = Get-NetTCPConnection -LocalPort $p -State Listen -ErrorAction Stop |
+                  Select-Object -ExpandProperty OwningProcess -Unique
+    } catch {
+        Write-Warn "Cannot enumerate listeners on port $p - close the tunnel by hand."
+        return $stopped
+    }
+    foreach ($owner in $owners) {
+        $proc = Get-Process -Id $owner -ErrorAction SilentlyContinue
+        if (-not $proc) { continue }
+        try {
+            Stop-Process -Id $owner -Force -ErrorAction Stop
+            $stopped += $owner
+            Write-Info "Closed $($proc.ProcessName) (pid $owner) on port $p."
+        } catch {
+            Write-Warn "Could not stop pid $owner ($($proc.ProcessName)) - stop it by hand."
+        }
+    }
+    if (-not $stopped) { Write-Info "Nothing was listening on port $p." }
+    return $stopped
 }
 
 function Test-Port ($p) {
@@ -450,10 +486,27 @@ Write-Host "  (test guide Step 3-1)" -ForegroundColor DarkGray
 # ---------------------------------------------------------------------- cleanup
 
 Write-Host ""
-if ($script:TunnelReused) {
-    # Someone else started this tunnel, so it is not ours to close.
+if ($CloseTunnel) {
+    # Explicit: close the port whoever opened it. This is the only branch that can
+    # reach a tunnel inherited from an earlier run.
+    Stop-Tunnel
+    Stop-TunnelOnPort $Port | Out-Null
+    Write-Host "  Tunnel on port $Port closed." -ForegroundColor Cyan
+    Write-Host "  Collecting logs needs it again - the collector's guest half is skipped without it." -ForegroundColor DarkGray
+} elseif ($script:TunnelReused) {
+    # Started by an earlier run, so the default leaves it alone - but print the pid,
+    # because a tunnel nobody can address is what strands the next run.
+    $owners = @()
+    try {
+        $owners = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction Stop |
+                  Select-Object -ExpandProperty OwningProcess -Unique
+    } catch { }
     Write-Host "  Tunnel on port $Port was already open and has been left alone." -ForegroundColor Cyan
     Write-Host "  Live logs:  adb -s $serial logcat -s IVI_V2X" -ForegroundColor Cyan
+    if ($owners) {
+        Write-Host "  Stop it:    Stop-Process -Id $($owners -join ',') -Force" -ForegroundColor Cyan
+        Write-Host "              or re-run with -CloseTunnel" -ForegroundColor Cyan
+    }
 } elseif ($KeepTunnel -and $script:TunnelProc) {
     Write-Host "  Tunnel left running on port $Port (pid $($script:TunnelProc.Id))." -ForegroundColor Cyan
     Write-Host "  Live logs:  adb -s $serial logcat -s IVI_V2X" -ForegroundColor Cyan

@@ -33,6 +33,7 @@ Put the APK at `tools/apk-uploader/app-debug.apk` and the `a8k_` tunnel token at
 | Flag | Effect |
 |---|---|
 | `-KeepTunnel` / `--keep-tunnel` | Leave the tunnel up afterwards, so `adb` stays usable |
+| `-CloseTunnel` / `--close-tunnel` | Close the tunnel on exit **even if this run did not open it** — the only way the script clears one inherited from an earlier run |
 | `-SkipInstall` / `--skip-install` | Verify only — no reinstall |
 | `-SkipNetworkFix` / `--skip-network-fix` | Do not put the guest on the Room subnet |
 | `-Token` / `--token` | Use this `a8k_` token instead of the file |

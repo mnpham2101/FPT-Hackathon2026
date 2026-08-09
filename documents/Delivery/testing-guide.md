@@ -22,14 +22,16 @@ The **Images** column is what each tool has anything to say about — a tool abs
 
 | Tool name | Purpose | Export log location | Images |
 |---|---|---|---|
-| [INSTALL-IVI-APK.cmd](../../tools/apk-uploader/INSTALL-IVI-APK.cmd) (`install-ivi-apk.ps1` / `.sh`) | Installs the APK, then dumps the app's tagged logcat as the tail of its own run | `tools/apk-uploader/logs/` | `app-debug.apk` |
+| [INSTALL-IVI-APK.cmd](../../tools/apk-uploader/INSTALL-IVI-APK.cmd) (`install-ivi-apk.ps1` / `.sh`) | Installs the APK, then dumps the app's tagged logcat as the tail of its own run. Also owns the ADB tunnel every guest-side tool needs | `tools/apk-uploader/logs/` | `app-debug.apk` |
 | [COLLECT-LOGS.cmd](../../tools/logs-collector/COLLECT-LOGS.cmd) (`Collect-Logs.ps1` / `collect-logs.sh`) | One pass over a whole Room: every node's log over REST whatever the node is, and — where the Room has a Skycraft VM — the guest's logcat, crash buffer, sockets and interfaces over ADB | `test-report/<run>/`, one file per node | any deployed blueprint: `app-debug.apk`, `m1-r4-sim`, `m1-ada-ecu`, `m1-v2x-ecu`, `m1-scenario-player`, `m1-ada-bench`, `m1-netcheck` |
 | `capture.sh` — inside the image, not run by hand | Runs tcpdump in the container: `[CAP]` lines for the live "traffic is flowing" check, and a rotating pcap emitted to stdout as base64 between `[PCAP-BEGIN]` / `[PCAP-END]` | The node's own **View Log**, `user` stream — the log is a container's only egress | pcap **and** `[CAP]`: `m1-v2x-ecu`, `m1-ada-ecu` · `[CAP]` only: `m1-ada-bench`, `m1-netcheck` |
 | [EXTRACT-PCAP.cmd](../../tools/pcap-extract/EXTRACT-PCAP.cmd) (`Extract-Pcap.ps1` / `extract_pcap.sh`) | Turns the base64 blocks inside a saved node log into `.pcap` files Wireshark can open | Beside the input log, or `-OutDir` | `m1-v2x-ecu`, `m1-ada-ecu` |
 | `adb logcat` — by hand, over the tunnel | The only place the IVI app's `[RX]` lines exist; the IVI node's REST log is the Skycraft VM host, not the app | Wherever you redirect it (§ Step 3) | `app-debug.apk` |
 | [check_v2x_log.py](../../tools/comms_check/check_v2x_log.py) | Asserts the receive chain on a saved `[EVT]` stream — `rx_datagram` → `decode_ok` → `r2_forwarded` — and exits non-zero naming the first missing link | Reads a log, writes none; the exit status is the result | `m1-v2x-ecu` |
 
-Three consequences worth reading off that table before planning a run.
+Four consequences worth reading off that table before planning a run.
+
+- **The ADB tunnel gates the guest half, and `[RX]` lives only there.** Node logs come over REST and need no tunnel; `app-logcat.txt`, `app-crash.txt`, `guest-udp6.txt` and `guest-ifaces.txt` come over ADB and are skipped without one — reported, not failed, so a run with no tunnel still exits 0 and looks complete. Since `[RX]` exists nowhere but `app-logcat.txt`, **collect with the tunnel up or the run proves nothing about the app.** Keep it with `INSTALL-IVI-APK.cmd -KeepTunnel`, reopen it with `-SkipInstall -KeepTunnel`, and close it with `-CloseTunnel` once you are done collecting.
 
 - **Only `m1-v2x-ecu` and `m1-ada-ecu` carry a pcap.** The other images print `[CAP]` lines or nothing at all, so a path built from them has no block to extract and Wireshark evidence is simply unavailable on it.
 - **`m1-r4-sim` has no CI lane.** Unlike the five images above it, nothing in `.github/workflows/` builds or pushes it, so it has to be built and pushed by hand before an isolated IVI run can pull it.

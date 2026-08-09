@@ -32,6 +32,7 @@ TOKEN=''
 PORT=5555
 APK=''
 KEEP_TUNNEL=0
+CLOSE_TUNNEL=0
 SKIP_INSTALL=0
 SKIP_NETWORK_FIX=0
 IVI_ADDR='10.99.0.13'
@@ -53,6 +54,11 @@ usage() {
                          script.
     --keep-tunnel        Leave the tunnel running after the script finishes, so
                          you can run adb yourself.
+    --close-tunnel       Close the tunnel on --port when the run finishes, even one
+                         this run did not start. The default only closes a tunnel
+                         this run opened; a tunnel inherited from an earlier run is
+                         left alone, which is how a dead one survives to strand the
+                         next run. Collecting logs needs the tunnel.
     --skip-install       Only open the tunnel and collect evidence. Use when the
                          APK is already installed.
     --skip-network-fix   Do not put the guest on the Room subnet. Without the fix
@@ -94,6 +100,7 @@ while [ $# -gt 0 ]; do
         --room-gateway)   shift; need_value '--room-gateway' "${1:-}"; ROOM_GATEWAY="$1" ;;
         --room-gateway=*) ROOM_GATEWAY="${1#*=}" ;;
         --keep-tunnel)     KEEP_TUNNEL=1 ;;
+        --close-tunnel)    CLOSE_TUNNEL=1 ;;
         --skip-install)    SKIP_INSTALL=1 ;;
         --skip-network-fix) SKIP_NETWORK_FIX=1 ;;
         -h|--help)        usage; exit 0 ;;
@@ -166,6 +173,43 @@ stop_tunnel() {
         TUNNEL_STOPPED=1
         info "Tunnel stopped (pid $TUNNEL_PID)."
     fi
+}
+
+# Closes whatever holds the port, including a tunnel this run did not start.
+# stop_tunnel above can only reach a process we launched; a tunnel left behind by an
+# earlier run is a foreign pid, and it is the one that strands the next run -- the port
+# still listens, so this script reuses it, while the session behind it is long dead.
+# Echoes the pids it stopped. lsof, then ss, then fuser: none is present everywhere.
+port_pids() {
+    if command -v lsof >/dev/null 2>&1; then
+        lsof -nP -iTCP:"$1" -sTCP:LISTEN -t 2>/dev/null | sort -u
+    elif command -v ss >/dev/null 2>&1; then
+        ss -lptnH "sport = :$1" 2>/dev/null | grep -o 'pid=[0-9]*' | cut -d= -f2 | sort -u
+    elif command -v fuser >/dev/null 2>&1; then
+        fuser -n tcp "$1" 2>/dev/null | tr -s ' ' '\n' | grep -E '^[0-9]+$' | sort -u
+    fi
+}
+
+stop_tunnel_on_port() {
+    local port="$1" pids pid found=0
+    pids="$(port_pids "$port")"
+    if [ -z "$pids" ]; then
+        info "Nothing was listening on port $port."
+        return 0
+    fi
+    for pid in $pids; do
+        if kill "$pid" 2>/dev/null; then
+            local i=0
+            while [ $i -lt 20 ] && kill -0 "$pid" 2>/dev/null; do sleep 0.1; i=$((i + 1)); done
+            kill -9 "$pid" 2>/dev/null
+            found=1
+            info "Closed pid $pid on port $port."
+        else
+            warn "Could not stop pid $pid - stop it by hand."
+        fi
+    done
+    [ "$found" -eq 1 ] && TUNNEL_STOPPED=1
+    return 0
 }
 
 on_exit() {
@@ -671,10 +715,23 @@ say '  (test guide Step 3-1)' "$C_GRAY"
 # ---------------------------------------------------------------------- cleanup
 
 printf '\n'
-if [ "$TUNNEL_REUSED" -eq 1 ]; then
-    # Someone else started this tunnel, so it is not ours to close.
+if [ "$CLOSE_TUNNEL" -eq 1 ]; then
+    # Explicit: close the port whoever opened it. This is the only branch that can
+    # reach a tunnel inherited from an earlier run.
+    stop_tunnel
+    stop_tunnel_on_port "$PORT"
+    say "  Tunnel on port $PORT closed." "$C_CYAN"
+    say "  Collecting logs needs it again - the collector's guest half is skipped without it." "$C_GRAY"
+elif [ "$TUNNEL_REUSED" -eq 1 ]; then
+    # Started by an earlier run, so the default leaves it alone - but print the pid,
+    # because a tunnel nobody can address is what strands the next run.
     say "  Tunnel on port $PORT was already open and has been left alone." "$C_CYAN"
     say "  Live logs:  adb -s $SERIAL logcat -s IVI_V2X" "$C_CYAN"
+    REUSED_PIDS="$(port_pids "$PORT" | tr '\n' ' ')"
+    if [ -n "${REUSED_PIDS// /}" ]; then
+        say "  Stop it:    kill $REUSED_PIDS" "$C_CYAN"
+        say "              or re-run with --close-tunnel" "$C_CYAN"
+    fi
 elif [ "$KEEP_TUNNEL" -eq 1 ] && [ -n "$TUNNEL_PID" ]; then
     say "  Tunnel left running on port $PORT (pid $TUNNEL_PID)." "$C_CYAN"
     say "  Live logs:  adb -s $SERIAL logcat -s IVI_V2X" "$C_CYAN"
