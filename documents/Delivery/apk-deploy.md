@@ -11,9 +11,18 @@ How to build the team APK, install it on the CarSky Skycraft (AAOS) node, and co
 
 Working directory for the Gradle commands in Step 1 Route B: **`IVI_ECU/`**. Every PowerShell block in Steps 2–4 runs from the **repo root**.
 
-## The tool does most of Steps 3 and 4
+## The automation tool
 
-[INSTALL-IVI-APK.cmd](../../tools/apk-uploader/INSTALL-IVI-APK.cmd) runs the whole install-and-verify chain in one window — tunnel, Room-network fix, install, app-state checks, evidence logcat, pass/fail table. Double-click it, or from the repo root:
+**The tool does most of Steps 3 and 4**
+
+[INSTALL-IVI-APK.cmd](../../tools/apk-uploader/INSTALL-IVI-APK.cmd) runs 
+* the whole install-and-verify chain in one window — tunnel, 
+* Room-network fix, 
+* install apk, 
+* app-state checks, 
+* evidence logcat, pass/fail table. 
+
+To run on Windows: double-click it, or from the repo root:
 
 ```powershell
 .\tools\apk-uploader\INSTALL-IVI-APK.cmd                 # install and verify

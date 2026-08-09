@@ -10,7 +10,68 @@ How to drive R4 warnings at the installed app and collect the evidence that clos
 
 Every PowerShell block below runs from the **repo root**.
 
-Two tools cover most of Step 3. [INSTALL-IVI-APK.cmd](../../tools/apk-uploader/INSTALL-IVI-APK.cmd) samples the evidence logcat as the tail of its install run, and `-SkipInstall` re-samples it without touching the Room. [Collect-Logs.ps1](../../tools/logs-collector/Collect-Logs.ps1) collects the whole set in one pass — every container node's log over REST, the guest-side logs over ADB, and a plain-text `summary.txt` of the checks below — resolving the node keys itself instead of asking you to paste them. Which rows stay manual, and why: [apk-deploy.md § The tool](apk-deploy.md#the-tool-does-most-of-steps-3-and-4). The steps below stay authoritative — read them when a tool fails, and to run any row by hand.
+## The automation tool
+
+Two tools cover most of Step 3. [INSTALL-IVI-APK.cmd](../../tools/apk-uploader/INSTALL-IVI-APK.cmd) samples the evidence logcat as the tail of its install run, and `-SkipInstall` re-samples it without touching the Room. [Collect-Logs.ps1](../../tools/logs-collector/Collect-Logs.ps1) collects the whole set in one pass — every container node's log over REST, the guest-side logs over ADB, and a plain-text `summary.txt` of the checks below — resolving the node keys itself instead of asking you to paste them. Which rows stay manual, and why: [apk-deploy.md § The automation tool](apk-deploy.md#the-automation-tool). The steps below stay authoritative — read them when a tool fails, and to run any row by hand.
+
+### Every tool that pulls a log or a pcap
+
+The **Images** column is what each tool has anything to say about — a tool absent from an image's row cannot produce evidence for it. Names are image names only; every one resolves to `registry.hackathon-2.carsky.io/<name>:latest`, except `app-debug.apk`, which is an APK installed into the AAOS guest and never enters the registry.
+
+| Tool name | Purpose | Export log location | Images |
+|---|---|---|---|
+| [INSTALL-IVI-APK.cmd](../../tools/apk-uploader/INSTALL-IVI-APK.cmd) (`install-ivi-apk.ps1` / `.sh`) | Installs the APK, then dumps the app's tagged logcat as the tail of its own run | `tools/apk-uploader/logs/` | `app-debug.apk` |
+| [Collect-Logs.ps1](../../tools/logs-collector/Collect-Logs.ps1) (`collect-logs.sh`) | One pass over a whole Room: every node's log over REST whatever the node is, and — where the Room has a Skycraft VM — the guest's logcat, crash buffer, sockets and interfaces over ADB | `test-report/<run>/`, one file per node | any deployed blueprint: `app-debug.apk`, `m1-r4-sim`, `m1-ada-ecu`, `m1-v2x-ecu`, `m1-scenario-player`, `m1-ada-bench`, `m1-netcheck` |
+| `capture.sh` — inside the image, not run by hand | Runs tcpdump in the container: `[CAP]` lines for the live "traffic is flowing" check, and a rotating pcap emitted to stdout as base64 between `[PCAP-BEGIN]` / `[PCAP-END]` | The node's own **View Log**, `user` stream — the log is a container's only egress | pcap **and** `[CAP]`: `m1-v2x-ecu`, `m1-ada-ecu` · `[CAP]` only: `m1-ada-bench`, `m1-netcheck` |
+| [Extract-Pcap.ps1](../../tools/pcap-extract/Extract-Pcap.ps1) (`extract_pcap.sh`) | Turns the base64 blocks inside a saved node log into `.pcap` files Wireshark can open | Beside the input log, or `-OutDir` | `m1-v2x-ecu`, `m1-ada-ecu` |
+| `adb logcat` — by hand, over the tunnel | The only place the IVI app's `[RX]` lines exist; the IVI node's REST log is the Skycraft VM host, not the app | Wherever you redirect it (§ Step 3) | `app-debug.apk` |
+| [check_v2x_log.py](../../tools/comms_check/check_v2x_log.py) | Asserts the receive chain on a saved `[EVT]` stream — `rx_datagram` → `decode_ok` → `r2_forwarded` — and exits non-zero naming the first missing link | Reads a log, writes none; the exit status is the result | `m1-v2x-ecu` |
+
+Three consequences worth reading off that table before planning a run.
+
+- **Only `m1-v2x-ecu` and `m1-ada-ecu` carry a pcap.** The other images print `[CAP]` lines or nothing at all, so a path built from them has no block to extract and Wireshark evidence is simply unavailable on it.
+- **`m1-r4-sim` has no CI lane.** Unlike the five images above it, nothing in `.github/workflows/` builds or pushes it, so it has to be built and pushed by hand before an isolated IVI run can pull it.
+- **`Collect-Logs.ps1` reads the Room, not a script constant.** `-Test 1`–`5` are shortcuts for the blueprints below; `-Blueprint <name>` collects any other. Either way the node list decides what is collected, so a blueprint the script has never heard of works as long as it is deployed.
+
+### What an isolated test looks like
+
+![Isolated IVI test — a mocked ADA node running m1-r4-sim, the IVI node under test running app-debug.apk, both on the Ethernet bridge, with the three evidence surfaces numbered](phase5-ivi-test-isolated.svg)
+
+The rectangles are the Room's nodes and the bold line inside each is the image it runs — `m1-r4-sim` on the stand-in, `app-debug.apk` on the node under test. Dashed orange is mocked, solid navy is the thing being tested, and that convention holds across every isolated-test diagram in this folder. The numbered badges tie a node to the evidence surface it produces, which is the panel below; note that badge 2 comes off ADB rather than off the node's own log, because the IVI node's REST log belongs to the VM host.
+
+Non-IVI nodes are tested the same way — the node alone, its neighbours replaced by mocks on the same bridge:
+
+![Isolated ADA test — a v2x_mock and an ivi_mock, both running m1-ada-bench, around the ADA node under test running m1-ada-ecu](phase2-4-ada-test-isolated.svg)
+
+Two differences are worth the comparison. The ADA path mocks **both** neighbours, from a single image whose role is picked by env, where the IVI path needs only an upstream producer. And its node under test carries `NET_RAW` and `capture.sh`, so it has the pcap the IVI path does not.
+
+## Available blueprints
+
+One blueprint per node under test, plus the full chain. Each isolated blueprint follows the shape of the two diagrams above — the node under test, its neighbours replaced by mocks, everything on one Ethernet bridge — so picking a blueprint is picking which node is real.
+
+**Blueprint names are underscore-separated**, and the deployment CarSky builds from one takes the blueprint's name with a `-deploy` suffix. Deploying `phase5_smoked_test` gives you the Room `phase5_smoked_test-deploy`; that derived name is what the REST API and the log collector look for, so neither is ever typed by hand.
+
+The last column is a shortcut number, not a limit. **Any deployed blueprint can be collected by name**, including one not listed here:
+
+```powershell
+.\tools\logs-collector\Collect-Logs.ps1 -Blueprint phase2_smoked_test
+```
+
+The collector reads the Room's node list and collects every node in it, so what it can reach is decided by what is deployed rather than by anything written into the script. Where the Room has no Skycraft VM — every row below except phases 5 and the system test — the guest-side files are not attempted and their evidence rows read `[-]`, absent rather than failed.
+
+| Blueprint | What it tests | Node under test | Supporting images | `Collect-Logs -Test` |
+|---|---|---|---|---|
+| `phase0_smoked_test` | "test traffic, UDP dump through 3 nodes" — the platform baseline, before any of our code | none | `m1-netcheck` ×3 | `5` · netcheck-test |
+| `phase1_smoked_test` | "test V2X_ECU and Scenario Player" | V2X ECU (`m1-v2x-ecu`) | `m1-scenario-player` | `4` · v2x-isolated-test |
+| `phase4_smoked_test` | "test isolated ADA-ECU" | ADA ECU (`m1-ada-ecu`) | `m1-ada-bench`, once per mocked side | `3` · ada-isolated-test |
+| `phase5_smoked_test` | The isolated IVI test of Step 2 Path 1 | IVI ECU (`app-debug.apk`) | `m1-r4-sim` | `2` · ivi-isolated-test |
+| `m1_system_test` | "use all developed images" — the whole chain, the milestone's definition of done | none; the chain itself is the subject | `m1-scenario-player`, `m1-v2x-ecu`, `m1-ada-ecu`, `app-debug.apk` | `1` · system-test |
+
+![The Nydus blueprint list showing phase0_smoked_test, phase4_smoked_test, phase1_smoked_test and m1_system_test, with the phase5_smoked_test-deploy deployment running below it and a five-node blueprint open on the canvas](4-blueprints.png)
+
+The left pane is the blueprint list and the pane under it is **Deployments** — a blueprint is a definition, a deployment is a Room built from one, and only the second has logs. `phase5_smoked_test-deploy`, `from phase5_smoked_test`, is that suffix rule in the UI; its `Running (3/3)` badge is three of three nodes up, the green the prerequisites ask for. The canvas on the right is one blueprint opened for editing: five nodes, each with an `eth` pin wired to **Ethernet Bridge 1**, which is the topology every row above shares. The blueprint list is scrolled — `phase5_smoked_test` sits outside the visible window and is named by its deployment card.
+
+> The tabs along the top of the canvas are open editors and still carry older labels. The **list pane on the left is the authority** on what a blueprint is called.
 
 ## Step 1 — Choose a test path
 
@@ -18,7 +79,7 @@ The two paths differ only in **what produces the R4 warning stream**. The app, t
 
 | Path | What produces the R4 stream | What it proves that the other cannot |
 |---|---|---|
-| **Isolated test** | The `m1-r4-sim` simulator on the ADA node, driven by a scenario file | The app parses R4 and wakes the Warning View, with degraded cases a live run cannot reproduce on demand |
+| **Isolated test** | the images to be tested and other images serving as mocked ECU | The node under tests performs expected behavior or note |
 | **System test** | The full chain — bench → V2X ECU → ADA ECU | That ghost C on the screen came from a relayed detection, which is the milestone's definition of done |
 
 > **Addresses are the same in both**, because every path is derived from the same subnet: bridge `10.99.0.1/24`, bench `10.99.0.10`, V2X `10.99.0.11`, ADA (or whatever stands in for it) `10.99.0.12`, IVI `10.99.0.13`. The IVI node's own config never changes between paths — same address, same pin, same `image` block.
@@ -27,9 +88,11 @@ The two paths differ only in **what produces the R4 warning stream**. The app, t
 
 Follow one of the two sections below, not both. Each gives the Room's nodes with the config every node needs, then the order to bring them up in. Step 3 is the same either way.
 
-### Path 1 — Isolated IVI test
+### Path 1 — Isolated test
 
-Three nodes. The bench and V2X nodes contribute nothing to display work, and every node removed is one fewer image that can fail to pull while the Skycraft guest — always the slowest to reach `Running` — is still booting.
+**Isolated IVI test guide** serves as guide for all other isolated test.
+
+**Topology**: Three nodes. The bench and V2X nodes contribute nothing to display work, and every node removed is one fewer image that can fail to pull while the Skycraft guest — always the slowest to reach `Running` — is still booting.
 
 | Node name | Image to deploy | Its config |
 |---|---|---|
@@ -38,6 +101,11 @@ Three nodes. The bench and V2X nodes contribute nothing to display work, and eve
 | **IVI ECU** | The AAOS VM artifact — **Artifacts → AAOS**, version `0.0.1`, `arch aarch64`; no registry pull | `prefix: ivi`, `displayWidth: 1920`, `displayHeight: 1080`, `gpuBackend: virglrenderer` · pin `10.99.0.13` |
 
 `START_DELAY_S=20` exists so the simulator is not already mid-stream when the guest finishes booting.
+
+The following diagram illustrates blueprint for Isolated IVI-ECU test:
+
+
+The following diagram illustrates blueprint for Isolated ADA-ECU test:
 
 **Steps to deploy:**
 
