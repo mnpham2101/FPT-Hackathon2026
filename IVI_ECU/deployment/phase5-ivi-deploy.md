@@ -9,7 +9,7 @@ How to build the team APK, install it on the CarSky Skycraft (AAOS) node, and ve
 - A CarSky workbench login
 - **For Route B of Step 1 only** — JDK 17+ (the Android Studio JBR is fine) and the Gradle wrapper already in this tree (`IVI_ECU/gradlew` / `gradlew.bat`); no global Gradle install. Route A needs neither.
 
-Working directory for the Gradle commands in Step 1 Route B: **`IVI_ECU/`**. Every PowerShell block in Steps 2–4 runs from the **repo root**.
+Working directory for the Gradle commands in Step 1 Route B: **`IVI_ECU/`**. Every PowerShell block in Steps 2–5 runs from the **repo root**.
 
 ## Step 1 — Get `app-debug.apk` into `tools/apk-uploader/`
 
@@ -116,14 +116,6 @@ If `adb devices` shows `offline` or nothing at all, the tunnel in Terminal 1 is 
 
 ## Step 4 — Launch and test
 
-First, on every path: launch the app and confirm it came up.
-
-```powershell
-adb shell am start -n com.hackathon.v2x.ivi/.MainActivity
-```
-
-Confirm the R16 layout in the Screen widget — central Display Area, side buttons (Home / Apps / Settings), bottom status bar — and that the status bar reads `V2X LINK: BOUND :47300` rather than a fixed `STANDBY` literal. `47300` is `BuildConfig.R4_UDP_PORT`; override it with `r4.udp.port` in `IVI_ECU/local.properties` at build time, or `--ei r4_port <n>` on the `am start` above.
-
 ### The two test paths
 
 They differ only in **what produces the R4 warning stream**. The app, the install and the evidence are identical across both, so they are listed in the order you would run them — the second adds real components upstream of the app.
@@ -164,7 +156,7 @@ The full five-node blueprint — the chain the milestone is judged on.
 | **Bench — Scenario Player** | `registry.hackathon-2.carsky.io/m1-scenario-player:latest` | `command: ["python", "main.py"]` · `SCENARIO_CONFIG=/app/scenarios/default.yaml`, `V2X_ECU_HOST=10.99.0.11`, `V2X_ECU_PORT=47100` · pin `10.99.0.10` |
 | **V2X ECU** | `registry.hackathon-2.carsky.io/m1-v2x-ecu:latest` | `command: ["./v2x_ecu"]` · `LISTEN_PORT=47100`, `ADA_ECU_HOST=10.99.0.12`, `ADA_ECU_PORT=47200` · `capabilities: ["NET_RAW"]` for capture · pin `10.99.0.11` |
 | **ADA ECU** | `registry.hackathon-2.carsky.io/m1-ada-ecu:latest` | `command: ["./ada_ecu"]` · `V2X_LISTEN_PORT=47200`, `IVI_ECU_HOST=10.99.0.13`, `IVI_ECU_PORT=47300`, `GATE_ENTER_M=30`, `GATE_EXIT_M=35` · pin `10.99.0.12` |
-| **IVI ECU** | — (no image pull; stock AAOS VM artifact) | `image`: `artifactId x9oqgIwzTp1m26SWIQqJt`, `versionId xSU_Q7YJZUxxUgDr4Ugcp`, `version 0.0.1`, `arch aarch64` · `prefix: ivi`, `1920×1080`, `gpuBackend: virglrenderer` · pin `10.99.0.13` |
+| **IVI ECU** | The AAOS VM artifact — **Artifacts → AAOS**, version `0.0.1`, `arch aarch64`; no registry pull | `prefix: ivi`, `displayWidth: 1920`, `displayHeight: 1080`, `gpuBackend: virglrenderer` · pin `10.99.0.13` |
 
 The IVI row is byte-identical to Path 1's. That is deliberate: converging from the isolated Room to this one is an image swap on the ADA node, never an IVI config edit.
 
@@ -178,17 +170,17 @@ The IVI row is byte-identical to Path 1's. That is deliberate: converging from t
 
 Pass is the whole chain: the bench emits CPMs, the V2X ECU decodes and relays, the ADA ECU gates and emits a warning, and the app draws ghost C — with **zero direct detections of C on the ego vehicle**, every rendered frame sourced from `v2x_relayed`.
 
-### Evidence collection
+## Step 5 — Evidence collection
 
 Both paths converge here — the evidence is the same regardless of what produced the stream, and no single surface is sufficient on its own. The screen does not prove where the data came from, the log does not prove anything rendered, and neither proves what actually crossed the wire.
 
-#### 1 · Warning screen
+### 1 · Warning screen
 
 - **Screen recording** — set **Recorder Part** on the Screen widget *before* the run starts; the clip lands under **Videos** and downloads as `.mp4`. Recording is at native resolution, so files are large.
 - **Screenshots** — from the same Screen widget.
 - What must be visible: `EGO` and `B` drawn solid, **C dashed** with a pulsing risk glow and the badge `[V2X] C · <d> m · RISK: HIGH`, and the connector labels `d_AB` and `d_AC`. A yellow `[? UNKNOWN SOURCE]` marker where ghost C belongs means the provenance guard tripped — on the approach scenario that is a blocking defect, not a display quirk.
 
-#### 2 · Logs
+### 2 · Logs
 
 Two surfaces, both required — one for the producer, one for the app.
 
@@ -215,7 +207,7 @@ Two things that look like defects and are not: an empty `-s IVI_V2X` stream befo
 
 **There is no in-app injector.** No `DEV_INJECT` broadcast receiver exists in the app source or its manifest, so the UI cannot be driven without a real datagram — every path above has to put one on the wire. The only R4 messages the repository builds without a network are JVM fixtures under `IVI_ECU/app/src/test/resources/contracts/samples/`, which exercise the parser in unit tests and never reach a running guest.
 
-#### 3 · Wireshark
+### 3 · Wireshark
 
 There is **no platform pcap facility** — capture runs inside the container. A node needs `"capabilities": ["NET_RAW"]` flat in its `config`; without it the capture degrades to `/proc/net/dev` packet counters. The node image runs two tcpdump processes: one printing `[CAP]`-prefixed lines to stdout for the live "traffic is flowing" check, and one writing a rotated pcap that is emitted to stdout as base64 between `[PCAP-BEGIN <name>]` and `[PCAP-END]` markers — the log is the node's only egress, and base64 keeps the export byte-perfect.
 
@@ -250,7 +242,3 @@ Reading it: **R1 CPMs on 47100 will not dissect as ITS.** The wire format is raw
 | Zero direct C | Ghost C rendered with no direct detection of C on the ego vehicle | system |
 | Evidence captured | Screen recording + logcat excerpt + extracted `.pcap` all retained | all |
 
-## Related
-
-- [node-ivi-ecu.md](../../requirements/car-sky-guide/node-ivi-ecu.md) — Skycraft artifact IDs, ethernet pin, post-deploy ADB overview
-- [phase5_tasks.md](../../plans/phase5_tasks.md) — subtask `16.5.2.5` and Phase 5 acceptance
