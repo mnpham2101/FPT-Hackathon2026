@@ -297,6 +297,57 @@ Table `1015` is the one the kernel already made for that interface, so this adds
 
 **Scope.** A live mutation of the running guest. It does **not** survive a guest reboot or a redeploy — re-apply after either.
 
+### The installer renames the NIC, and the address still does not take
+
+**Symptom.** Step 5 reports the rename succeeded and warns in the same breath that the interface is not on the Room subnet:
+
+![INSTALL-IVI-APK.cmd step 5, Putting the guest on the Room network 10.99.0.13: an OK line reading Renamed buried_eth0 to eth0, EthernetTracker now adopts it, immediately followed by a WARN line reading eth0 did not take 10.99.0.13, R4 will not arrive, check the pin address](script-changes_eth0_but_still_error.png)
+
+The run then continues to the end: the APK installs, the app binds `47300`, and no `[RX]` ever appears. The pin address the warning points at is not the fault — `10.99.0.13` is the IVI address in every blueprint ([carsky-4-node-blueprint.md](../../../requirements/car-sky-guide/carsky-4-node-blueprint.md)).
+
+**Root cause.** The renamed NIC is the wrong one. The guest carries two ethernet devices, and which kernel name each gets is not stable across deployments:
+
+| Device | What it is | How it presents on the guest |
+|---|---|---|
+| Cuttlefish NAT NIC | The guest's own outbound network, DHCP-served from `10.0.2.2` | Holds a `10.0.2.x/24` address, ARPs for `10.0.2.2`, and carries `wlan0` as a child interface |
+| Room bridge NIC | The R6 Ethernet bridge, the only path an R4 datagram can take | `UP,LOWER_UP` with **no IPv4 address**, and an RX counter climbing steadily |
+
+The installer picks its target by name — `buried_eth0` — not by which device sits on the bridge. On the boot behind the screenshot, `buried_eth0` was the **NAT** NIC, so the rename put the name `eth0` on the NAT device. AAOS `EthernetTracker` adopted it, `IpClient` ran DHCP on the NAT subnet, and the fresh lease replaced the `10.99.0.13` the installer had written a moment earlier. The check three seconds later reads that lease, which is the warning. The Room NIC is never touched and keeps its own name with no address.
+
+`/proc/net/dev` and `ip -4 addr` on the guest settle it in one read — the counters below are from the failed run in the screenshot:
+
+```text
+eth0:   181679    1167 …     inet 10.0.2.96/24    — the NAT device, re-leased by DHCP
+eth1:  7086148   30013 …     no inet              — the Room bridge NIC
+```
+
+Thirty thousand frames arrived on `eth1` and not one reached a socket: an interface with no address has its packets dropped before the app's bound port is ever consulted.
+
+**A plain re-run does not repair it, and makes it worse.** `buried_eth0` no longer exists after the first run, so the second takes the *"No `buried_eth0` present — assuming `eth0` already exists"* branch and writes `10.99.0.13` onto the NAT device again — cutting the guest's own outbound network until AAOS re-leases it.
+
+**Solution.** Configure the device that is actually on the bridge, and stop the installer renaming anything after that.
+
+1. **Name the Room NIC.** `ip link show` — never `ip -4 addr`, which omits an address-less interface entirely:
+
+   ```powershell
+   adb -s localhost:5555 shell "ip link show"
+   adb -s localhost:5555 shell "cat /proc/net/dev"
+   ```
+
+   It is the `UP,LOWER_UP` device that is **not** the `10.0.2.x` one and is not `wlan0`. `/proc/net/dev` confirms the pick: the Room NIC is the interface whose RX bytes climb between two reads while it holds no address.
+
+2. **Configure it in place**, with the four commands of § [No R4 message reaches the IVI application](#no-r4-message-reaches-the-ivi-application) → *Solution by hand — when it is named anything else*, substituting the name from step 1. Do not rename it to `eth0`: that name is taken by the NAT device, and taking it back is what caused this.
+
+3. **Re-run for evidence only**, so the installer leaves the NICs alone:
+
+   ```powershell
+   .\tools\apk-uploader\INSTALL-IVI-APK.cmd -SkipNetworkFix
+   ```
+
+**Confirm:** `ip -4 addr show <nic>` reads `10.99.0.13/24`, the NAT device still holds its `10.0.2.x` address, and `[RX]` lines appear within one producer cycle.
+
+**Scope.** Same as the section above — a live mutation, lost on any guest reboot or redeploy.
+
 ## Verification checklist
 
 
@@ -311,5 +362,5 @@ Every row here holds on both test paths, because nothing in Steps 1–4 differs 
 | Install | `adb install -r …` prints `Success`, package `com.hackathon.v2x.ivi` listed |
 | Launch | App is up on the AAOS guest without being started by hand; no `FATAL EXCEPTION` in logcat |
 | Layout | On the IVI Screen widget: Display Area + side buttons + status bar visible (R16) |
-| Guest address | `ip -4 addr show eth0` reads `10.99.0.13/24` — otherwise § Troubleshooting |
+| Guest address | `ip -4 addr show <room-nic>` reads `10.99.0.13/24`, on the NIC that is not the `10.0.2.x` NAT device — otherwise § Troubleshooting |
 
