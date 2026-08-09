@@ -874,6 +874,8 @@ elif [ "$KEEP_TUNNEL" -eq 1 ] && [ -n "$TUNNEL_PID" ]; then
     say "  Stop it:    kill $TUNNEL_PID" "$C_CYAN"
 else
     stop_tunnel
-    say '  Done. Re-run with --keep-tunnel to keep adb usable afterwards.' "$C_GRAY"
+    say '  Tunnel closed. Collecting logs needs it - the guest half is skipped without one.' "$C_GRAY"
+    say '  Reopen it:  ./tools/apk-uploader/install-ivi-apk.sh --skip-install --keep-tunnel' "$C_CYAN"
+    say '  Or pass --keep-tunnel on the install run itself.' "$C_GRAY"
 fi
 printf '\n'

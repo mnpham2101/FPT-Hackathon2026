@@ -623,6 +623,8 @@ if ($CloseTunnel) {
     Write-Host "  Stop it:    Stop-Process -Id $($script:TunnelProc.Id)" -ForegroundColor Cyan
 } else {
     Stop-Tunnel
-    Write-Host "  Done. Re-run with -KeepTunnel to keep adb usable afterwards." -ForegroundColor DarkGray
+    Write-Host "  Tunnel closed. Collecting logs needs it - the guest half is skipped without one." -ForegroundColor DarkGray
+    Write-Host "  Reopen it:  .\tools\apk-uploader\INSTALL-IVI-APK.cmd -SkipInstall -KeepTunnel" -ForegroundColor Cyan
+    Write-Host "  Or pass -KeepTunnel on the install run itself." -ForegroundColor DarkGray
 }
 Write-Host ""

@@ -29,7 +29,7 @@
 
   The ADB tunnel is optional. Without it the CarSky half still lands and the guest
   half is skipped, reported rather than failed -- a node-side collection is useful on
-  its own. Open the tunnel with tools\apk-uploader\install-ivi-apk.ps1 -SkipInstall.
+  its own. Open the tunnel with tools\apk-uploader\INSTALL-IVI-APK.cmd -SkipInstall -KeepTunnel.
 
 .PARAMETER Test
   A shortcut for one of the blueprints below, by number or by name:
@@ -523,7 +523,7 @@ if (-not $Adb) {
 } elseif (-not (Test-Port $Port)) {
     Write-Warn "Nothing is listening on 127.0.0.1:$Port - the ADB tunnel is down."
     Write-Info "The node logs above are collected; the guest-side files are skipped, not failed."
-    Write-Info "Open the tunnel:  .\tools\apk-uploader\install-ivi-apk.ps1 -SkipInstall -KeepTunnel"
+    Write-Info "Open the tunnel:  .\tools\apk-uploader\INSTALL-IVI-APK.cmd -SkipInstall -KeepTunnel"
     Add-Summary ""
     Add-Summary "GUEST               skipped - no ADB tunnel on localhost:$Port"
 } else {
@@ -716,6 +716,8 @@ if ($Passed -eq $Applicable.Count -and $HasSkycraft) {
 } elseif (-not $GuestCollected) {
     Write-Host "  Node-side only. Without the ADB tunnel the app half cannot be evidenced -" -ForegroundColor Yellow
     Write-Host "  [RX], provenance and risk are unknown rather than failed." -ForegroundColor Yellow
+    Write-Host "  Open the tunnel, then collect again:" -ForegroundColor Yellow
+    Write-Host "    .\tools\apk-uploader\INSTALL-IVI-APK.cmd -SkipInstall -KeepTunnel" -ForegroundColor Cyan
 } elseif ($LogcatText -match '\[RX\]') {
     Write-Host "  Partly evidenced. The app is alive and parsing, but not every line appeared." -ForegroundColor Yellow
     Write-Host "  A missing line can just mean the scenario had not reached that step yet." -ForegroundColor Yellow

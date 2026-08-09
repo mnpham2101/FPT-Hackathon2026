@@ -643,7 +643,7 @@ if [ -z "$ADB" ]; then
 elif ! test_port "$PORT"; then
     write_warn "Nothing is listening on 127.0.0.1:$PORT - the ADB tunnel is down."
     write_info "The node logs above are collected; the guest-side files are skipped, not failed."
-    write_info "Open the tunnel:  ./tools/apk-uploader/install-ivi-apk.ps1 -SkipInstall -KeepTunnel"
+    write_info "Open the tunnel:  ./tools/apk-uploader/install-ivi-apk.sh --skip-install --keep-tunnel"
     add_summary ""
     add_summary "GUEST               skipped - no ADB tunnel on localhost:$PORT"
 else
