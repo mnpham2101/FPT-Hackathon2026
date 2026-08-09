@@ -1046,7 +1046,7 @@ Watching the node badges is not part of this subtask — `5.5.9.5` records the p
 
 **Dependencies:** none — needs no Phase 5 code, no image and no Room. **Commit:** `[16.5.9.19] docs: record the provenance of the ADB tunnel inputs`
 
-**Status:** done — all three inputs in hand, provenance recorded in [doc/phase5-ivi-run.md](doc/phase5-ivi-run.md): the binary under `tools/apk uploader/` (git-ignored), the gateway is the workbench base URL itself, and the token is a per-device derived value from the Rework Local ADB dialog — not the CarSky API key — held under `secrets/`. §6.1 items 2–4 answered; the token value is not in the repository.
+**Status:** done — all three inputs in hand, provenance recorded in [doc/phase5-ivi-run.md](doc/phase5-ivi-run.md): the binary under `tools/apk-uploader/` (git-ignored), the gateway is the workbench base URL itself, and the token is a per-device derived value from the Rework Local ADB dialog — not the CarSky API key — held under `secrets/`. §6.1 items 2–4 answered; the token value is not in the repository.
 
 ### [x] `16.5.9.7` — Prove the ADB route and read the guest's properties *(car-sky)*
 

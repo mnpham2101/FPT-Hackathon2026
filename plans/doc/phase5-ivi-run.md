@@ -10,11 +10,11 @@ Answers [§6.1](../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#6
 
 | Input | Provenance |
 |---|---|
-| `reach-backend` binary | Organizer-supplied zip, unpacked to `tools/apk uploader/reach_be/reach/` — `reach-backend.exe` (Windows, used here) beside a POSIX `reach-backend`. Git-ignored; only the folder's guide is committed |
+| `reach-backend` binary | Organizer-supplied zip, unpacked to `tools/apk-uploader/reach_be/reach/` — `reach-backend.exe` (Windows, used here) beside a POSIX `reach-backend`. Git-ignored; only the folder's guide is committed |
 | Gateway URL | `https://hackathon-2.carsky.io` — **the workbench base URL itself**, no separate gateway host. Read from the Rework **Local ADB** dialog: Devices → device `KIS` → the ADB widget's tab (part `ivi-adb`) → ADB SHELL panel → **Local ADB** button → *Connect from Terminal* |
 | `a8k_…` token | Shown in the same *Connect from Terminal* dialog. It is **not** the CarSky API key: a distinct per-device derived value in single-segment `a8k_<value>` form, against the API key's `a8k_<prefix>_<secret>` form. Stored at `secrets/reach-adb-token-ivi.txt` (git-ignored); the value is not written into the repository. A redeploy may mint a new token — re-open the dialog after redeploying |
 
-The click path to the dialog, step by step, is in [tools/apk uploader/README.md](../../tools/apk%20uploader/README.md) step 1.
+The click path to the dialog, step by step, is in [tools/apk-uploader/README.md](../../tools/apk-uploader/README.md) step 1.
 
 ## `16.5.9.6` — ADB tunnel start
 
@@ -42,7 +42,7 @@ Per [§4.5](../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#45-co
 
 Per [§4.6](../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#46-install-the-apk) and the launch half of [§4.7](../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#47-open-the-screen-and-launch-the-app), on 2026-08-05T19:37Z:
 
-- `adb install -r "tools/apk uploader/app-debug.apk"` → `Success` (streamed install).
+- `adb install -r "tools/apk-uploader/app-debug.apk"` → `Success` (streamed install).
 - `pm path com.hackathon.v2x.ivi` → `/data/app/~~a8i7wEwPnSJ3wSecEXpztQ==/com.hackathon.v2x.ivi-yjJOmC0GhKaioG-9Q4Bq6w==/base.apk`.
 - `am start -n com.hackathon.v2x.ivi/.MainActivity` → `Displayed … +1s173ms`; `R4ListenerService` started as a foreground service.
 - Listener bound: `R4ListenerService: UDP socket open on port 47300` at 19:37:31.564, corroborated by `/proc/net/udp` showing `*:47300` UNCONN.

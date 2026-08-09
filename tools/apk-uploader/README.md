@@ -12,8 +12,8 @@ The IVI node takes **no image push**. Its VM image is the platform's stock AAOS 
 
 | Item | Where it is | Notes |
 |---|---|---|
-| Tunnel CLI | `tools\apk uploader\reach_be\reach\reach-backend.exe` | Windows build; `reach-backend` (no `.exe`) beside it is the macOS/Linux build |
-| APK | `tools\apk uploader\app-debug.apk` | Package `com.hackathon.v2x.ivi` |
+| Tunnel CLI | `tools\apk-uploader\reach_be\reach\reach-backend.exe` | Windows build; `reach-backend` (no `.exe`) beside it is the macOS/Linux build |
+| APK | `tools\apk-uploader\app-debug.apk` | Package `com.hackathon.v2x.ivi` |
 | `adb` | `%LOCALAPPDATA%\Android\Sdk\platform-tools\adb.exe` | From the Android SDK already on this machine |
 | Gateway URL | `https://hackathon-2.carsky.io` | The workbench base URL doubles as the A8 gateway — confirmed by the **Local ADB** dialog (step 1); re-read it there if the organizers rotate hosts |
 | `a8k_` tunnel token | `secrets\reach-adb-token-ivi.txt` | A **per-device derived token**, shown in the Local ADB dialog (step 1) — it is *not* the CarSky API key. The folder is git-ignored; never print, log, or commit its contents |
@@ -42,7 +42,7 @@ From the repo root. The key is loaded from the file into a variable so it never 
 ```powershell
 $gateway = "https://hackathon-2.carsky.io"
 $key = (Get-Content "secrets\reach-adb-token-ivi.txt" -Raw).Trim()
-& ".\tools\apk uploader\reach_be\reach\reach-backend.exe" adb --gateway $gateway --key $key --port 5555
+& ".\tools\apk-uploader\reach_be\reach\reach-backend.exe" adb --gateway $gateway --key $key --port 5555
 ```
 
 This opens a local TCP server on `localhost:5555`. **Leave this terminal open** — closing it drops the tunnel. If the tunnel exits immediately: the token is stale (redeploy mints a new one — re-open the Local ADB dialog, step 1.6), the gateway URL is wrong, or port 5555 is taken (pass a different `--port` and connect to that port in step 3).
@@ -67,7 +67,7 @@ Two guest properties decide whether the install can succeed at all:
 ## Step 4 — Install
 
 ```powershell
-& $adb install -r ".\tools\apk uploader\app-debug.apk"
+& $adb install -r ".\tools\apk-uploader\app-debug.apk"
 & $adb shell pm list packages | Select-String hackathon
 ```
 

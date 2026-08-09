@@ -56,7 +56,7 @@ Three platforms appear anywhere near this guide. **Only two of them are on the p
 
 Where the two CarSky credentials come from, and how to verify one: [carsky-deploy-preflight](../../.claude/skills/carsky-deploy-preflight/SKILL.md).
 
-**The ADB tunnel needs a third thing: the organizers' `reach-backend` CLI**, plus a gateway URL and a per-device token to pass it. The CLI sits unpacked in the working tree at `tools/apk uploader/reach_be/reach/` — the folder is git-ignored, and its operator guide is [tools/apk uploader/README.md](../../tools/apk%20uploader/README.md). The gateway URL and the token are read from the platform as §4.4 states.
+**The ADB tunnel needs a third thing: the organizers' `reach-backend` CLI**, plus a gateway URL and a per-device token to pass it. The CLI sits unpacked in the working tree at `tools/apk-uploader/reach_be/reach/` — the folder is git-ignored, and its operator guide is [tools/apk-uploader/README.md](../../tools/apk-uploader/README.md). The gateway URL and the token are read from the platform as §4.4 states.
 
 **Zot is not in the path for an APK.** The registry holds **container images**, which is what a *Container* node pulls at deploy time. The IVI node is a **Skycraft** node: it takes its VM image from the CarSky **artifact store** ([node-ivi-ecu.md § Prepare the VM artifact](node-ivi-ecu.md#prepare-the-vm-artifact-once-per-team-not-per-deploy)), and it pulls nothing else. Nothing in §1–§6 runs `docker login`, `docker push`, or tags an image.
 
@@ -379,11 +379,11 @@ Each entry carries `{displayName, name, nodeType, phase, message}`. `name` is th
 
 The Skycraft pod exposes ADB behind the CarSky gateway, and `reach-backend` — the CLI the organizers provide — forwards a local port to it. Three values must be in hand first, and each has a known source:
 
-- **The `reach-backend` binary** — organizer-supplied as a zip, kept unpacked at `tools/apk uploader/reach_be/reach/`: `reach-backend.exe` for a Windows host, a POSIX `reach-backend` build beside it. The folder is git-ignored; only its operator guide, [tools/apk uploader/README.md](../../tools/apk%20uploader/README.md), is committed. This project neither builds nor ships the CLI.
+- **The `reach-backend` binary** — organizer-supplied as a zip, kept unpacked at `tools/apk-uploader/reach_be/reach/`: `reach-backend.exe` for a Windows host, a POSIX `reach-backend` build beside it. The folder is git-ignored; only its operator guide, [tools/apk-uploader/README.md](../../tools/apk-uploader/README.md), is committed. This project neither builds nor ships the CLI.
 - **`YOUR_GATEWAY_URL`** — **the workbench base URL itself**, `https://hackathon-2.carsky.io`. There is no separate sslip.io gateway host on this deployment.
 - **`a8k_YOUR_DERIVED_TOKEN`** — a **per-device derived token, not the CarSky API key of §1.2**: the token is single-segment `a8k_<value>`, where the API key is `a8k_<prefix>_<secret>`. A redeploy may mint a new one, so re-open the dialog below after every redeploy. Keep the value in a git-ignored file — never write it into the repository.
 
-The gateway URL and the token are read from the Rework **Connect from Terminal** dialog: **Devices** → the deployment's device → the ADB widget's tab in the panel below the Stage → **ADB SHELL** panel → the **Local ADB** button at its top-right. The dialog shows the full tunnel command **ready-made** — the command below with both placeholders filled in — and the `adb connect localhost:5555` line of §4.5. The step-by-step click path with screenshots is [tools/apk uploader/README.md](../../tools/apk%20uploader/README.md) step 1.
+The gateway URL and the token are read from the Rework **Connect from Terminal** dialog: **Devices** → the deployment's device → the ADB widget's tab in the panel below the Stage → **ADB SHELL** panel → the **Local ADB** button at its top-right. The dialog shows the full tunnel command **ready-made** — the command below with both placeholders filled in — and the `adb connect localhost:5555` line of §4.5. The step-by-step click path with screenshots is [tools/apk-uploader/README.md](../../tools/apk-uploader/README.md) step 1.
 
 Start the tunnel:
 
@@ -563,7 +563,7 @@ Switch the ADA node to `R4_SCENARIO=/app/scenarios/degrade.json`.
 | Symptom | Meaning | Action |
 |---|---|---|
 | Deploy rejected: `skycraft requires 'image' config with VM image artifact details` | The IVI node has no `image` block | [node-ivi-ecu.md § Blueprint node config](node-ivi-ecu.md#blueprint-node-config); §4.2 |
-| `reach-backend: command not found` | The CLI is not on `PATH` and was not invoked from its folder | Run it from `tools/apk uploader/reach_be/reach/` — §4.4 |
+| `reach-backend: command not found` | The CLI is not on `PATH` and was not invoked from its folder | Run it from `tools/apk-uploader/reach_be/reach/` — §4.4 |
 | The tunnel exits instead of serving, or `adb connect` answers `failed to connect` | Wrong gateway URL or key, port 5555 already taken, or the tunnel's terminal was closed | Re-check the three values of §4.4 — a stale token after a redeploy is re-read from the **Local ADB** dialog — and restart the tunnel; free port 5555, or pass a different `--port` and connect to that port |
 | `INSTALL_FAILED_OLDER_SDK` | Guest below API 29 (§4.5) | Blocking finding — escalate; the in-Room plan changes |
 | `INSTALL_FAILED_MISSING_SHARED_LIBRARY`, or a feature error naming `automotive` | Not an automotive system image | Same — escalate |

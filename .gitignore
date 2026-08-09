@@ -21,9 +21,9 @@ skills-lock.json
 # local credentials - never commit
 secrets/
 
-# apk uploader - external tunnel binaries and the built APK stay local; only the guide is committed
-tools/apk uploader/reach_be/
-tools/apk uploader/*.apk
+# apk-uploader - external tunnel binaries and the built APK stay local; only the guide is committed
+tools/apk-uploader/reach_be/
+tools/apk-uploader/*.apk
 
 # AG-Kit temporary & runtime files
 .temp_ag_kit/
