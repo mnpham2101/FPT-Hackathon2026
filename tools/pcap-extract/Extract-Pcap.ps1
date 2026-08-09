@@ -148,6 +148,10 @@ function Invoke-ExtractOne {
         }
 
         $name = Resolve-BlockName $rawName $state.Found
+        if ($rawName -match '[\\/]' -or [string]::IsNullOrWhiteSpace($rawName) -or $rawName -eq '.' -or $rawName -eq '..') {
+            Write-Warning "$($File.Name) block $($state.Found): name '$rawName' reduced to '$name'"
+        }
+
         $path = Get-FreePath $Destination $name
         if (-not $path) {
             Write-Warning "$($File.Name) block $($state.Found) ($name): 99 files of that name exist - not written"
@@ -155,8 +159,19 @@ function Invoke-ExtractOne {
             return
         }
 
+        # An empty body decodes to zero bytes without throwing. Writing that file
+        # would let a 0-byte capture masquerade as a complete one -- the same
+        # failure the truncated-block rule exists to prevent, and what the shell
+        # tool beside this one does.
+        $b64 = ($buffer -join '')
+        if (-not $b64) {
+            Write-Warning "$($File.Name) block $($state.Found) ($name): empty body, nothing to decode"
+            $state.Failed++
+            return
+        }
+
         try {
-            $bytes = [Convert]::FromBase64String(($buffer -join ''))
+            $bytes = [Convert]::FromBase64String($b64)
         } catch {
             Write-Warning "$($File.Name) block $($state.Found) ($name): base64 decode failed - $($_.Exception.Message)"
             $state.Failed++
@@ -232,5 +247,8 @@ if ($found -eq 0) {
 
 Write-Host ""
 Write-Host "$written of $found block(s) extracted to $OutDir"
-if ($failed) { exit 3 }
+if ($failed) {
+    Write-Warning "$failed block(s) failed - see the messages above"
+    exit 3
+}
 exit 0
