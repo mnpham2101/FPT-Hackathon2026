@@ -66,7 +66,7 @@ usage() {
                          deliberately testing the unpatched state.
     --ivi-addr <addr>    The Room address of the IVI node, from the blueprint
                          pin. Default 10.99.0.13.
-    --room-gateway <ip>  Add a default route via this address inside the eth0
+    --room-gateway <ip>  Add a default route via this address inside the Room
                          table. Only needed if the R4 producer is off-subnet;
                          leave empty for the standard single-subnet Room.
     -h, --help           Print this help and exit.
@@ -608,17 +608,114 @@ ok "Guest API $SDK; automotive feature: $AUTO_STATE"
 
 # ------------------------------------------------------------- room networking
 
-# The AAOS guest boots with its bridge NIC named 'buried_eth0'. AAOS
-# EthernetTracker does not recognise that name, so netd never adopts the
-# interface, it never takes the Room address, and every R4 datagram sent to the
-# node's pin address is dropped before the guest sees it -- the app binds its
-# socket and waits forever. Renaming the NIC to 'eth0' makes EthernetTracker
-# adopt it; netd then creates the 'eth0' network, its routing table and its
-# policy rules by itself, so only the address still has to be set by hand.
+# The Room bridge NIC is identified by evidence, never by name. The AAOS guest
+# carries two ethernet devices, and which kernel name each gets is not stable
+# across deployments: on one boot the bridge NIC is 'buried_eth0' beside the
+# cuttlefish NAT device on 'eth0', on the next the NAT device is the one called
+# 'buried_eth0' and the bridge NIC is 'eth1'. Renaming whatever answers to
+# 'buried_eth0' therefore has an even chance of renaming the NAT device, which
+# AAOS adopts and re-leases from its own DHCP server within seconds -- the Room
+# address is flushed and the real bridge NIC is never touched at all.
 #
-# Organiser-supplied procedure. It is a live mutation of the running guest and
-# does NOT survive a guest reboot or a redeploy -- re-run this script after
-# either.
+# Selection, in order:
+#   1. a NIC already holding the Room address wins outright;
+#   2. a NIC that is the parent of another interface is the cuttlefish NAT
+#      device -- it carries wlan0 -- and is excluded;
+#   3. a NIC holding any other IPv4 is under AAOS control, and is excluded;
+#   4. of what is left, the NIC receiving the most traffic is the bridge: the
+#      Room's frames arrive there and are dropped for want of an address.
+#
+# The winner is configured under whatever name it already has, and is given the
+# routing table and policy rules netd would have created had it adopted the
+# interface. Nothing is renamed, so no name has to be true for the fix to work.
+#
+# A live mutation of the running guest. It does NOT survive a guest reboot or a
+# redeploy -- re-run this script after either.
+
+ROOM_TABLE=1015
+ROOM_RULE_PRIO=17050
+
+# 10.99.0.13 -> 10.99.0.0/24. Derived, so --ivi-addr moves the subnet with it.
+room_subnet() {
+    printf '%s.0/24' "$(printf '%s' "$1" | cut -d. -f1-3)"
+}
+
+# Ethernet NICs that could carry Room traffic, one per line, plus a "PARENT <n>"
+# line for every interface that is stacked on another. Pseudo-devices are
+# rejected by their flags -- NOARP, not UP, no link/ether -- rather than by a
+# list of names, so an unfamiliar guest is surveyed the same way as a known one.
+link_survey() {
+    printf '%s\n' "$1" | awk '
+        /^[0-9]+:[ \t]/ {
+            name = $2; sub(/:$/, "", name)
+            parent = ""
+            if (name ~ /@/) { parent = name; sub(/^[^@]*@/, "", parent); sub(/@.*$/, "", name) }
+            if (parent != "" && parent != "NONE") print "PARENT\t" parent
+            pend = ""
+            if (parent == "" || parent == "NONE")
+                if ($3 ~ /[<,]UP[,>]/ && $3 ~ /BROADCAST/ && $3 !~ /NOARP/) pend = name
+            next
+        }
+        /link\/ether/ { if (pend != "") { print "CAND\t" pend; pend = "" } }
+    '
+}
+
+# The IPv4 CIDR carried by one NIC in an "ip -4 addr" dump, or nothing.
+nic_ipv4() {
+    printf '%s\n' "$1" | awk -v want="$2" '
+        /^[0-9]+:[ \t]/ { n = $2; sub(/:$/, "", n); sub(/@.*$/, "", n); next }
+        $1 == "inet" { if (n == want) { print $2; exit } }
+    '
+}
+
+# The NIC holding one address in an "ip -4 addr" dump, or nothing.
+addr_holder() {
+    printf '%s\n' "$1" | awk -v want="$2" '
+        /^[0-9]+:[ \t]/ { n = $2; sub(/:$/, "", n); sub(/@.*$/, "", n); next }
+        $1 == "inet" { split($2, a, "/"); if (a[1] == want) { print n; exit } }
+    '
+}
+
+# Received bytes for one NIC from a /proc/net/dev dump; 0 when absent.
+nic_rx() {
+    RX="$(printf '%s\n' "$1" | awk -F: -v want="$2" '
+        NF >= 2 { gsub(/^[ \t]+|[ \t]+$/, "", $1); if ($1 == want) { split($2, f, " "); print f[1]; exit } }
+    ')"
+    printf '%s' "${RX:-0}"
+}
+
+# Put the address on the NIC. 'ip addr add' answers "File exists" on a re-run,
+# which is the healthy result; ifconfig is the fallback for a guest whose ip
+# applet does not carry the addr subcommand.
+apply_room_addr() {
+    adb_out shell "su 0 sh -c 'ip link set $1 up; ip addr add $IVI_ADDR/24 dev $1 || ifconfig $1 $IVI_ADDR/24 up'" >/dev/null 2>&1
+}
+
+# The routing netd builds for an interface it has adopted. Written by hand
+# because the Room NIC is deliberately left unadopted -- adoption is what pulls
+# AAOS DHCP onto the interface and flushes the address again.
+#
+# Inbound R4 needs none of this: 'ip addr add' makes the kernel put the subnet
+# route in the main table by itself, and that is what carries the datagram to
+# the app's socket. What follows gives the NIC the outbound path an adopted
+# interface would have had, so a reply or a diagnostic ping leaves by the Room
+# NIC rather than the NAT device. It is best-effort -- a failure here does not
+# stop R4 arriving.
+configure_room_routing() {
+    NIC="$1"
+    SUBNET="$(room_subnet "$IVI_ADDR")"
+
+    # Cleared and rebuilt every run, so a re-run cannot stack duplicates and a
+    # NIC that changed name since the last run leaves no rule pointing at it.
+    adb_out shell "su 0 sh -c 'ip rule del priority $ROOM_RULE_PRIO; ip rule del priority $ROOM_RULE_PRIO; ip rule del priority $ROOM_RULE_PRIO'" >/dev/null 2>&1
+    adb_out shell "su 0 sh -c 'ip route add $SUBNET dev $NIC table $ROOM_TABLE proto static scope link'" >/dev/null 2>&1
+    adb_out shell "su 0 sh -c 'ip rule add from all iif $NIC lookup $ROOM_TABLE priority $ROOM_RULE_PRIO; ip rule add from all oif $NIC lookup $ROOM_TABLE priority $ROOM_RULE_PRIO; ip rule add from $IVI_ADDR lookup $ROOM_TABLE priority $ROOM_RULE_PRIO'" >/dev/null 2>&1
+
+    if [ -n "$ROOM_GATEWAY" ]; then
+        adb_out shell "su 0 ip route add default via $ROOM_GATEWAY dev $NIC table $ROOM_TABLE proto static" >/dev/null 2>&1
+        info "Default route via $ROOM_GATEWAY added to the Room table."
+    fi
+}
 
 if [ "$SKIP_NETWORK_FIX" -eq 1 ]; then
     step 'Skipping the Room-network fix (--skip-network-fix)'
@@ -626,40 +723,84 @@ if [ "$SKIP_NETWORK_FIX" -eq 1 ]; then
 else
     step "Putting the guest on the Room network ($IVI_ADDR)"
 
-    ADDRS="$(adb_out shell ip -4 addr show)"
+    ADDRS="$(adb_out shell 'ip -4 addr show')"
+    HOLDER="$(addr_holder "$ADDRS" "$IVI_ADDR")"
 
-    if printf '%s' "$ADDRS" | grep -F "$IVI_ADDR/" >/dev/null 2>&1; then
-        ok 'Already on the Room subnet - nothing to change'
+    if [ -n "$HOLDER" ]; then
+        ok "Already on the Room subnet - $HOLDER holds $IVI_ADDR"
     elif ! adb_out shell su 0 id | grep -F 'uid=0' >/dev/null 2>&1; then
-        warn 'No root on this guest, so the NIC cannot be renamed. R4 will not arrive.'
+        warn 'No root on this guest, so the NIC cannot be configured. R4 will not arrive.'
         warn 'This is a finding to report, not something the script can work around.'
     else
-        if printf '%s' "$ADDRS" | grep -F 'buried_eth0' >/dev/null 2>&1; then
-            # Chained in one shell so the NIC can never be left down by an
-            # interrupted call.
-            adb_out shell "su 0 sh -c 'ip link set buried_eth0 down; ip link set buried_eth0 name eth0; ip link set eth0 up'" >/dev/null 2>&1
-            ok 'Renamed buried_eth0 -> eth0 (EthernetTracker now adopts it)'
-            sleep 4
+        LINKS="$(adb_out shell 'ip link show')"
+        DEV1="$(adb_out shell 'cat /proc/net/dev')"
+        sleep 2
+        DEV2="$(adb_out shell 'cat /proc/net/dev')"
+
+        SURVEY="$(link_survey "$LINKS")"
+        PARENTS=" $(printf '%s\n' "$SURVEY" | awk -F'\t' '$1 == "PARENT" { print $2 }' | tr '\n' ' ') "
+        CANDS="$(printf '%s\n' "$SURVEY" | awk -F'\t' '$1 == "CAND" { print $2 }')"
+
+        ROOM_NIC=''
+        BEST_DELTA=-1
+        BEST_TOTAL=-1
+        for NIC in $CANDS; do
+            IP4="$(nic_ipv4 "$ADDRS" "$NIC")"
+            RX1="$(nic_rx "$DEV1" "$NIC")"
+            RX2="$(nic_rx "$DEV2" "$NIC")"
+            DELTA=$((RX2 - RX1))
+            WHY=''
+            case "$PARENTS" in
+                *" $NIC "*) WHY='carries a stacked interface - the NAT device' ;;
+            esac
+            if [ -z "$WHY" ] && [ -n "$IP4" ]; then WHY="holds $IP4 - AAOS-managed"; fi
+            if [ -n "$WHY" ]; then
+                say "    $NIC  excluded: $WHY" "$C_GRAY"
+            else
+                say "    $NIC  no IPv4, RX $RX2 bytes (+$DELTA in 2s)" "$C_GRAY"
+                if [ "$DELTA" -gt "$BEST_DELTA" ] || { [ "$DELTA" -eq "$BEST_DELTA" ] && [ "$RX2" -gt "$BEST_TOTAL" ]; }; then
+                    ROOM_NIC="$NIC"
+                    BEST_DELTA="$DELTA"
+                    BEST_TOTAL="$RX2"
+                fi
+            fi
+        done
+
+        if [ -z "$ROOM_NIC" ]; then
+            warn 'No unconfigured ethernet NIC on the guest, so the Room NIC cannot be identified.'
+            warn 'R4 will not arrive. Report the survey above with the deployment.'
         else
-            info 'No buried_eth0 present - assuming eth0 already exists.'
-        fi
+            if [ "$BEST_TOTAL" -le 0 ]; then
+                info "$ROOM_NIC has received nothing yet, so the pick rests on it being the only unconfigured NIC."
+            fi
+            ok "Room NIC: $ROOM_NIC (configured in place - no interface is renamed)"
 
-        adb_out shell "su 0 ifconfig eth0 $IVI_ADDR/24 up" >/dev/null 2>&1
+            apply_room_addr "$ROOM_NIC"
+            configure_room_routing "$ROOM_NIC"
 
-        # netd normally creates these already; 'File exists' is the expected,
-        # healthy answer.
-        adb_out shell "su 0 ip route add 10.99.0.0/24 dev eth0 table eth0 proto static scope link" >/dev/null 2>&1
-        if [ -n "$ROOM_GATEWAY" ]; then
-            adb_out shell "su 0 ip route add default via $ROOM_GATEWAY dev eth0 table eth0 proto static" >/dev/null 2>&1
-            info "Default route via $ROOM_GATEWAY added to the eth0 table."
-        fi
+            sleep 3
+            HELD="$(nic_ipv4 "$(adb_out shell "ip -4 addr show $ROOM_NIC")" "$ROOM_NIC")"
+            if [ "${HELD%%/*}" != "$IVI_ADDR" ]; then
+                warn "$ROOM_NIC did not take $IVI_ADDR on the first attempt - re-applying."
+                apply_room_addr "$ROOM_NIC"
+                sleep 3
+                HELD="$(nic_ipv4 "$(adb_out shell "ip -4 addr show $ROOM_NIC")" "$ROOM_NIC")"
+            fi
 
-        sleep 3
-        ADDRS="$(adb_out shell ip -4 addr show eth0)"
-        if printf '%s' "$ADDRS" | grep -F "$IVI_ADDR/" >/dev/null 2>&1; then
-            ok "eth0 is $IVI_ADDR/24 - the Room can now reach the app"
-        else
-            warn "eth0 did not take $IVI_ADDR. R4 will not arrive; check the pin address."
+            if [ "${HELD%%/*}" != "$IVI_ADDR" ]; then
+                warn "$ROOM_NIC would not hold $IVI_ADDR. R4 will not arrive."
+                warn "Either AAOS is re-provisioning this NIC, or $IVI_ADDR is not this node's pin address."
+            else
+                # A NIC AAOS has adopted takes the address and loses it again on
+                # the next DHCP round, which reads as success on a single check.
+                sleep 3
+                HELD="$(nic_ipv4 "$(adb_out shell "ip -4 addr show $ROOM_NIC")" "$ROOM_NIC")"
+                if [ "${HELD%%/*}" != "$IVI_ADDR" ]; then
+                    warn "$ROOM_NIC took $IVI_ADDR and lost it again within 3s - AAOS is re-leasing this NIC."
+                else
+                    ok "$ROOM_NIC is $IVI_ADDR/24 and held it - the Room can now reach the app"
+                fi
+            fi
         fi
     fi
 fi

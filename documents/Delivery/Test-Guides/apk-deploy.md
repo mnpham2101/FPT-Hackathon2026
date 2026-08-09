@@ -42,7 +42,7 @@ Windows PowerShell 5.1 on any architecture: `adb` is discovered across the stand
 | 3 · Open the tunnel | `reach-backend adb`, port waited on | Automated |
 | 3 · Connect ADB | `adb connect`, retried while the guest boots | Automated |
 | 3 · Guest preflight | API level ≥ 29, `automotive` feature | Automated |
-| 3 · Room-network fix | Rename `buried_eth0` → `eth0`, set the pin address (§ Troubleshooting) | Automated |
+| 3 · Room-network fix | Identify the Room NIC by evidence, give it the pin address (§ Troubleshooting) | Automated |
 | 3 · Install the APK | `adb install -r`, package presence confirmed | Automated |
 | 4 · App state | Package, process, MainActivity resumed, focus, screen awake | Automated |
 | 4 · Warning screen | Seen on the IVI Screen widget, in the browser | **Manual** |
@@ -190,7 +190,7 @@ Capturing what is on the screen — recording, screenshots, and the full list of
 
 ![INSTALL-IVI-APK.cmd steps 5 to 8: buried_eth0 renamed to eth0 and given 10.99.0.13/24, the APK installed, all five app-state checks passing, and an EVIDENCE block with UDP socket bound on 47300, R4 messages received, provenance source=v2x_relayed, risk reached high and no fatal exception all ticked](phase5-success-apk-install.png)
 
-Step 5 is the row worth reading: `Renamed buried_eth0 -> eth0` followed by `eth0 is 10.99.0.13/24` is the guest taking its Room address, and nothing below it can pass without it. `Started by hand, which is expected on a first install` is a note, not a defect — the app self-starts only once the package is already present from a previous run.
+Step 5 is the row worth reading: a NIC named and reported as holding `10.99.0.13/24` is the guest taking its Room address, and nothing below it can pass without it. Which NIC that is varies by deployment, and the installer prints the survey it chose from — § The Room NIC is not the one its name suggests. `Started by hand, which is expected on a first install` is a note, not a defect — the app self-starts only once the package is already present from a previous run.
 
 The five evidence rows are the installer's own reading of the logcat it just sampled. All five ticked means the receive chain works end to end: bound socket, datagrams arriving, provenance intact, and the scenario reaching `high`.
 
@@ -228,16 +228,23 @@ The deployment is **Running, 3/3 nodes ready** in the Deployment Viewer at the s
 
 **A deploy mints a new token, and new node keys with it.** The token is `a8k_` + base64 of the node key, so an old token names a node of a deployment that no longer exists — and a 404 is the gateway saying exactly that. Step 2 prints the node key it decodes to; compare it with the current deployment's `-n2` node key and a mismatch settles it without reading any log.
 
-**Solution.** The installer detects the 404 and **prompts for a new token**, then saves it and reopens the tunnel — paste it and the run continues:
+**Solution.** The installer detects the 404 and **prompts for a new token**, then saves it and reopens the tunnel — paste a freshly copied one and the run continues from where it stopped:
 
-```
-The gateway answered 404 on every upgrade - this token no longer resolves.
-A deploy mints a new ADB token; the one on disk no longer resolves.
-Copy it: Devices -> KIS -> Connect -> IVI ADB -> Local ADB
-  token: _
-```
+![INSTALL-IVI-APK.cmd step 4, Connecting adb to the guest: a WARN that the gateway answered 404 on every upgrade and the token decodes to node n-7yarnwjdxovv2vayjktgq-n2 which is not a node of any live deployment, the copy-it instruction naming Devices to KIS to Connect to IVI ADB to Local ADB, a token prompt with a pasted a8k_ value, then OK lines reading Saved to secrets\reach-adb-token-ivi.txt, Now targets node n-8smpwyhj27qymazmymn9h-n4, Tunnel serving, localhost:5555 device, and Guest API 34 automotive feature present](provide-new-apk-in-prompt.png)
+
+The two node keys are the diagnosis. The token on disk decoded to `…-n2`; the pasted one targets `…-n4`. The run then reaches `localhost:5555   device`. `Cannot enumerate listeners on port 5555` is a note, not a failure — the installer reopens the tunnel on the next line.
 
 Paste either the bare `a8k_` value or the whole `reach-backend adb --gateway … --key a8k_…` command line — the prompt lifts `--key` out of it. The value is written to `secrets/reach-adb-token-ivi.txt`, so the next run starts clean.
+
+**Where the new token comes from.** The [Step 2](#step-2--deploy-the-blueprint-and-copy-the-tunnel-command-browser-human) Local ADB dialog, re-opened against the *current* deployment:
+
+![The CarSky workbench: the Devices rail with device KIS connected to deployment m1_system_test-deploy, its Widgets list with the IVI ADB widget of type adb boxed, the IVI ADB tab boxed in the panel below the Stage, Local ADB boxed at that panel's top right, and the Connect from Terminal dialog open showing the reach-backend adb command with its a8k_ key boxed across two lines above adb connect localhost:5555](provide-new-apk-in-prompt-whereToGet.png)
+
+The four boxes are the click path in order: the **IVI ADB** widget, the **IVI ADB** tab it opens below the Stage, **Local ADB** at that panel's top right, and the `a8k_` value inside the dialog's `--key`. `Connection closed (code 1006)` in the ADB SHELL pane is the browser hitting the same dead session. **Reconnect** clears it.
+
+Copy the value from the dialog every time. Never from an older screenshot or terminal — the one captured above was already dead when the run above it finished.
+
+**Why this failure is so common, and why the captures above may show a token in full.** The platform mints the token and refreshes it on every deploy, so a redeploy, a **Restart Node** or a re-created blueprint invalidates the value on disk with nothing changed on our side. A token dies with its deployment and grants nothing after it, which is why these captures show one whole — the rule in [Step 2](#step-2--deploy-the-blueprint-and-copy-the-tunnel-command-browser-human), out of the repository and out of command lines and logs, still binds for a **current** token.
 
 To update it without being prompted, put the `a8k_` value in that file by hand, or pass it for one run:
 
@@ -253,17 +260,18 @@ If a **freshly copied** token still 404s, the ADB session itself is wedged rathe
 
 A collected run shows it as every node-side row passing and every app-receive row failing together — the row-by-row reading is in [testing-guide.md § Troubleshooting](testing-guide.md#no-rx-in-app-logcattxt-while-the-producers-tx-passes).
 
-**Root cause.** The guest never takes the node's `ethernet` pin address, so datagrams are dropped before the guest sees them. The bridge NIC is present and carrying, but AAOS has not adopted it: netd creates no network, no routing table and no policy rule for it, and it holds no IPv4 address. AAOS `EthernetTracker` matches interfaces on the `eth<n>` name, which is why the NIC is skipped when the guest names it `buried_eth0`. It has also appeared as `eth1` beside the cuttlefish NAT interface on `eth0`, unadopted for the same reason. The app is not at fault and no app change fixes it.
+**Root cause.** The guest never takes the node's `ethernet` pin address, so datagrams are dropped before they reach a socket. The bridge NIC is present and carrying frames, but AAOS has not adopted it: netd creates no network, no routing table and no policy rule for it, and it holds no IPv4 address. The app is not at fault and no app change fixes it.
 
 **Identify the NIC with `ip link`, never `ip -4 addr`.** An interface with no IPv4 address does not appear in `ip -4 addr` output at all, which is exactly the state this NIC is in:
 
 ```powershell
 adb -s localhost:5555 shell "ip link show"
+adb -s localhost:5555 shell "cat /proc/net/dev"
 ```
 
-The bridge NIC is the one that is `UP,LOWER_UP`, has no IPv4, and is **not** the `10.0.2.x` cuttlefish NAT interface.
+The bridge NIC is the `UP,LOWER_UP` device with no IPv4 that is **not** the `10.0.2.x` cuttlefish NAT interface and is not stacked on another interface. `/proc/net/dev` confirms the pick: it is the one whose RX counter climbs between two reads while it holds no address.
 
-**Solution — re-run the installer.** [INSTALL-IVI-APK.cmd](../../../tools/apk-uploader/INSTALL-IVI-APK.cmd) applies the rename and the pin address itself, idempotently, as part of every run:
+**Solution — re-run the installer.** [INSTALL-IVI-APK.cmd](../../../tools/apk-uploader/INSTALL-IVI-APK.cmd) identifies the Room NIC and gives it the pin address itself, idempotently, as part of every run:
 
 ```powershell
 .\tools\apk-uploader\INSTALL-IVI-APK.cmd
@@ -271,50 +279,41 @@ The bridge NIC is the one that is `UP,LOWER_UP`, has no IPv4, and is **not** the
 
 Add `-SkipInstall` to re-apply the network fix without reinstalling the APK. `-SkipNetworkFix` is the flag that turns this off — do not pass it here.
 
-**Solution by hand — when the NIC is named `buried_eth0`.** Rename it, then give it the pin address, as root over the ADB tunnel:
+**Solution by hand.** Configure the NIC in place under whatever name it already has, and give it the routing netd would have created. Substitute the name `ip link` showed for `eth1`:
 
 ```powershell
-adb shell "su 0 sh -c 'ip link set buried_eth0 down; ip link set buried_eth0 name eth0; ip link set eth0 up'"
-adb shell "su 0 ifconfig eth0 10.99.0.13/24 up"
-```
-
-- **Chain the three link commands in one shell.** Run separately, an interrupted call leaves the NIC down and the guest unreachable on the bridge.
-- **netd does the rest.** It adopts `eth0` on the rename and creates the routing table and policy rules itself, so `ip route add … table eth0` answers `File exists` — the healthy result, not an error. No default route is needed while the producer is on-subnet.
-- **Renaming does not drop ADB** on this guest, because adbd is on vsock rather than TCP over that NIC. On an unfamiliar guest, check first: `cat /proc/net/tcp` must show no listener on `15B3` (5555).
-
-**Solution by hand — when it is named anything else.** Renaming to `eth0` is not available when `eth0` is already the live NAT interface, so configure the NIC in place and give it the routing netd would have created. Substitute the name `ip link` showed for `eth1`:
-
-```powershell
-adb -s localhost:5555 shell "su 0 ifconfig eth1 10.99.0.13/24 up"
+adb -s localhost:5555 shell "su 0 sh -c 'ip link set eth1 up; ip addr add 10.99.0.13/24 dev eth1'"
 adb -s localhost:5555 shell "su 0 ip route add 10.99.0.0/24 dev eth1 table 1015 proto static scope link"
+adb -s localhost:5555 shell "su 0 ip rule add from all iif eth1 lookup 1015 priority 17050"
 adb -s localhost:5555 shell "su 0 ip rule add from all oif eth1 lookup 1015 priority 17050"
-adb -s localhost:5555 shell "su 0 ip rule add from 10.99.0.13 lookup 1015 priority 17050"
 ```
 
-Table `1015` is the one the kernel already made for that interface, so this adds to it rather than inventing a name Android's `rt_tables` may not carry.
+- **The first command is the one that matters.** `ip addr add` makes the kernel put the subnet route into the main table by itself, and that route is what carries an inbound datagram to the app's socket. The table and the rules give the NIC the outbound path an adopted interface would have had; R4 arrives without them.
+- **Do not rename the NIC to `eth0`** — § The Room NIC is not the one its name suggests.
+- Table `1015` is a numeric table of its own, rather than a name Android's `rt_tables` may not carry.
 
-**Confirm either way:** `ip -4 addr show <nic>` reads `10.99.0.13/24`, then `[RX]` lines appear within one producer cycle.
+**Confirm:** `ip -4 addr show <nic>` reads `10.99.0.13/24`, then `[RX]` lines appear within one producer cycle.
 
 **Scope.** A live mutation of the running guest. It does **not** survive a guest reboot or a redeploy — re-apply after either.
 
-### The installer renames the NIC, and the address still does not take
+### The Room NIC is not the one its name suggests
 
-**Symptom.** Step 5 reports the rename succeeded and warns in the same breath that the interface is not on the Room subnet:
+**Symptom.** Step 5 reports it put the guest on the Room network and warns in the same breath that the address is not there. A fix that works by renaming `buried_eth0` to `eth0` reports both at once:
 
 ![INSTALL-IVI-APK.cmd step 5, Putting the guest on the Room network 10.99.0.13: an OK line reading Renamed buried_eth0 to eth0, EthernetTracker now adopts it, immediately followed by a WARN line reading eth0 did not take 10.99.0.13, R4 will not arrive, check the pin address](script-changes_eth0_but_still_error.png)
 
 The run then continues to the end: the APK installs, the app binds `47300`, and no `[RX]` ever appears. The pin address the warning points at is not the fault — `10.99.0.13` is the IVI address in every blueprint ([carsky-4-node-blueprint.md](../../../requirements/car-sky-guide/carsky-4-node-blueprint.md)).
 
-**Root cause.** The renamed NIC is the wrong one. The guest carries two ethernet devices, and which kernel name each gets is not stable across deployments:
+**Root cause.** The NIC that was configured is the wrong one. The guest carries two ethernet devices, and which kernel name each gets is **not stable across deployments** — on one boot the bridge NIC answers to `buried_eth0`, on the next that name belongs to the NAT device and the bridge NIC is `eth1`:
 
 | Device | What it is | How it presents on the guest |
 |---|---|---|
-| Cuttlefish NAT NIC | The guest's own outbound network, DHCP-served from `10.0.2.2` | Holds a `10.0.2.x/24` address, ARPs for `10.0.2.2`, and carries `wlan0` as a child interface |
+| Cuttlefish NAT NIC | The guest's own outbound network, DHCP-served from `10.0.2.2` | Holds a `10.0.2.x/24` address, ARPs for `10.0.2.2`, and carries `wlan0` stacked on it |
 | Room bridge NIC | The R6 Ethernet bridge, the only path an R4 datagram can take | `UP,LOWER_UP` with **no IPv4 address**, and an RX counter climbing steadily |
 
-The installer picks its target by name — `buried_eth0` — not by which device sits on the bridge. On the boot behind the screenshot, `buried_eth0` was the **NAT** NIC, so the rename put the name `eth0` on the NAT device. AAOS `EthernetTracker` adopted it, `IpClient` ran DHCP on the NAT subnet, and the fresh lease replaced the `10.99.0.13` the installer had written a moment earlier. The check three seconds later reads that lease, which is the warning. The Room NIC is never touched and keeps its own name with no address.
+Configure by name and the NAT device is what gets configured. AAOS `EthernetTracker` then adopts it, `IpClient` runs DHCP on the NAT subnet, and the fresh lease replaces the `10.99.0.13` written a moment earlier — which is the warning. The Room NIC is never touched, and R4 keeps arriving at a device with no address.
 
-`/proc/net/dev` and `ip -4 addr` on the guest settle it in one read — the counters below are from the failed run in the screenshot:
+`/proc/net/dev` and `ip -4 addr` settle it in one read. The counters below are from the failed run in the screenshot:
 
 ```text
 eth0:   181679    1167 …     inet 10.0.2.96/24    — the NAT device, re-leased by DHCP
@@ -323,28 +322,26 @@ eth1:  7086148   30013 …     no inet              — the Room bridge NIC
 
 Thirty thousand frames arrived on `eth1` and not one reached a socket: an interface with no address has its packets dropped before the app's bound port is ever consulted.
 
-**A plain re-run does not repair it, and makes it worse.** `buried_eth0` no longer exists after the first run, so the second takes the *"No `buried_eth0` present — assuming `eth0` already exists"* branch and writes `10.99.0.13` onto the NAT device again — cutting the guest's own outbound network until AAOS re-leases it.
+**How the installer picks.** It surveys the guest and chooses on evidence, never on a name, printing what it saw and what it excluded:
 
-**Solution.** Configure the device that is actually on the bridge, and stop the installer renaming anything after that.
+| # | Rule | Why |
+|---|---|---|
+| 1 | A NIC already holding the pin address wins outright | Nothing to change |
+| 2 | A NIC another interface is stacked on is excluded | That is the NAT device — `wlan0` sits on it |
+| 3 | A NIC holding any other IPv4 is excluded | AAOS is managing it, and will re-lease over anything written |
+| 4 | Of what is left, the NIC receiving the most traffic wins | The Room's frames arrive there and are dropped for want of an address |
 
-1. **Name the Room NIC.** `ip link show` — never `ip -4 addr`, which omits an address-less interface entirely:
+The winner is configured **under its existing name**, with the routing table and policy rules netd would have made had it adopted the interface. Nothing is renamed, so no name has to be true for the fix to work, and the NAT device is left alone. The address is then re-read twice three seconds apart, because a NIC AAOS has adopted takes an address and loses it again on the next DHCP round — which a single check reads as success.
 
-   ```powershell
-   adb -s localhost:5555 shell "ip link show"
-   adb -s localhost:5555 shell "cat /proc/net/dev"
-   ```
+**Solution.** Re-run the installer; `-SkipInstall` re-applies the network fix without reinstalling the APK:
 
-   It is the `UP,LOWER_UP` device that is **not** the `10.0.2.x` one and is not `wlan0`. `/proc/net/dev` confirms the pick: the Room NIC is the interface whose RX bytes climb between two reads while it holds no address.
+```powershell
+.\tools\apk-uploader\INSTALL-IVI-APK.cmd -SkipInstall
+```
 
-2. **Configure it in place**, with the four commands of § [No R4 message reaches the IVI application](#no-r4-message-reaches-the-ivi-application) → *Solution by hand — when it is named anything else*, substituting the name from step 1. Do not rename it to `eth0`: that name is taken by the NAT device, and taking it back is what caused this.
+If it reports no unconfigured NIC, it prints the survey it worked from — configure the NIC by hand from § No R4 message reaches the IVI application, and report the survey with the deployment.
 
-3. **Re-run for evidence only**, so the installer leaves the NICs alone:
-
-   ```powershell
-   .\tools\apk-uploader\INSTALL-IVI-APK.cmd -SkipNetworkFix
-   ```
-
-**Confirm:** `ip -4 addr show <nic>` reads `10.99.0.13/24`, the NAT device still holds its `10.0.2.x` address, and `[RX]` lines appear within one producer cycle.
+**Confirm:** the chosen NIC reads `10.99.0.13/24`, the NAT device still holds its `10.0.2.x` address, and `[RX]` lines appear within one producer cycle.
 
 **Scope.** Same as the section above — a live mutation, lost on any guest reboot or redeploy.
 
