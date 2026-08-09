@@ -32,14 +32,26 @@
   its own. Open the tunnel with tools\apk-uploader\install-ivi-apk.ps1 -SkipInstall.
 
 .PARAMETER Test
-  Which test to collect, by number or by name:
+  A shortcut for one of the blueprints below, by number or by name:
 
       1  system-test          the full four-node blueprint   (m1_system_test)
       2  ivi-isolated-test    IVI + mocked ADA               (phase5_smoked_test)
       3  ada-isolated-test    ADA + its bench                (phase4_smoked_test)
       4  v2x-isolated-test    V2X + the scenario player      (phase1_smoked_test)
+      5  netcheck-test        the phase 0 baseline           (phase0_smoked_test)
 
-  Omitted, the script asks.
+  These are conveniences, not a whitelist -- any blueprint can be collected with
+  -Blueprint. Omitted, and with no -Blueprint, the script asks.
+
+.PARAMETER Blueprint
+  Collect any deployed blueprint by name, whether or not it is listed above:
+
+      .\tools\logs-collector\Collect-Logs.ps1 -Blueprint phase0_smoked_test
+
+  The Room is read from its node list, so nothing about the blueprint needs to be
+  known in advance: every node it contains is collected, whatever the node is, and
+  the guest half runs only if one of them is a Skycraft VM. The run folder takes the
+  blueprint's name.
 
 .PARAMETER BaseUrl
   CarSky gateway. Default https://hackathon-2.carsky.io.
@@ -74,6 +86,7 @@
 [CmdletBinding()]
 param(
     [string] $Test,
+    [string] $Blueprint,
     [string] $BaseUrl    = 'https://hackathon-2.carsky.io',
     [string] $ApiKeyFile,
     [int]    $Port       = 5555,
@@ -128,8 +141,18 @@ function Exit-Usage ($m) {
 
 # ------------------------------------------------------------------- the tests
 
-# One row per selectable test: the folder the evidence lands in, and the CarSky
-# blueprint it is deployed from. Adding a test is adding a row.
+# displayName -> file slug. "MOCKED ADA ECU" -> mocked-ada-ecu. The node-<slug>.txt
+# prefix is the contract tools\pcap-extract\Extract-Pcap.ps1 globs on.
+function Get-Slug ($name) {
+    $s = "$name".ToLowerInvariant()
+    $s = [regex]::Replace($s, '[^a-z0-9]+', '-')
+    return $s.Trim('-')
+}
+
+# One row per shortcut: the folder the evidence lands in, and the CarSky blueprint
+# it is deployed from. These are conveniences only -- -Blueprint collects anything
+# deployed, so a Room absent from this table is still collectable and adding a row
+# is about saving typing, not about granting access.
 #
 # Blueprint names are the platform's own, underscore-separated. The deployment
 # CarSky builds from one is named <blueprint>-deploy, and that is the name
@@ -139,7 +162,8 @@ $Tests = @(
     [pscustomobject]@{ Option = 1; Name = 'system-test';       Blueprint = 'm1_system_test';      What = 'full blueprint - bench, V2X, ADA, IVI' },
     [pscustomobject]@{ Option = 2; Name = 'ivi-isolated-test';  Blueprint = 'phase5_smoked_test';  What = 'IVI ECU with the mocked ADA producer' },
     [pscustomobject]@{ Option = 3; Name = 'ada-isolated-test';  Blueprint = 'phase4_smoked_test';  What = 'ADA ECU with its bench' },
-    [pscustomobject]@{ Option = 4; Name = 'v2x-isolated-test';  Blueprint = 'phase1_smoked_test';  What = 'V2X ECU with the scenario player' }
+    [pscustomobject]@{ Option = 4; Name = 'v2x-isolated-test';  Blueprint = 'phase1_smoked_test';  What = 'V2X ECU with the scenario player' },
+    [pscustomobject]@{ Option = 5; Name = 'netcheck-test';      Blueprint = 'phase0_smoked_test';  What = 'the phase 0 platform baseline, three netcheck nodes' }
 )
 
 # CarSky names a deployment after its blueprint with a -deploy suffix.
@@ -167,13 +191,29 @@ try {
     [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
 } catch { }
 
-Write-Step "Choosing the test"
+Write-Step "Choosing the blueprint"
+
+if ($Test -and $Blueprint) { Exit-Usage "-Test and -Blueprint both given. Pass one." }
 
 $Selected = $null
-if ($Test) {
+if ($Blueprint) {
+    # Any blueprint, named or not. A shortcut row is reused when one matches, purely
+    # so the run folder and the description read the same as the shortcut would.
+    $known = @($Tests | Where-Object { $_.Blueprint -eq $Blueprint })
+    if ($known.Count -gt 0) {
+        $Selected = $known[0]
+    } else {
+        $Selected = [pscustomobject]@{
+            Option    = 0
+            Name      = (Get-Slug $Blueprint)
+            Blueprint = $Blueprint
+            What      = 'collected by name'
+        }
+    }
+} elseif ($Test) {
     $Selected = Resolve-Test $Test
     if (-not $Selected) {
-        Exit-Usage "unknown test '$Test'. Use 1-4, or one of: $(($Tests | ForEach-Object { $_.Name }) -join ', ')."
+        Exit-Usage "unknown shortcut '$Test'. Use 1-$($Tests.Count), one of: $(($Tests | ForEach-Object { $_.Name }) -join ', '), or -Blueprint <name> for any other."
     }
 } else {
     Write-Host ""
@@ -181,9 +221,11 @@ if ($Test) {
         Write-Host ("    $($t.Option)) " + $t.Name.PadRight(20) + " $($t.What)") -ForegroundColor Gray
     }
     Write-Host ""
-    $answer   = Read-Host "    Which test? [1-4]"
+    Write-Host "    Any other blueprint: re-run with -Blueprint <name>" -ForegroundColor DarkGray
+    Write-Host ""
+    $answer   = Read-Host "    Which test? [1-$($Tests.Count)]"
     $Selected = Resolve-Test $answer
-    if (-not $Selected) { Exit-Usage "'$answer' is not one of 1-4." }
+    if (-not $Selected) { Exit-Usage "'$answer' is not one of 1-$($Tests.Count). For any other blueprint use -Blueprint <name>." }
 }
 
 Write-Ok "$($Selected.Name)  -  $($Selected.What)"
@@ -238,7 +280,7 @@ try {
 $hits = @($found | Where-Object { $_ })
 if ($hits.Count -eq 0) {
     Fail "'$WantedDeployment' is not running in CarSky - nothing matches that name." `
-         "Deploy the $($Selected.Name) blueprint, wait for its nodes to go green, then re-run."
+         "Deploy $($Selected.Blueprint), wait for its nodes to go green, then re-run."
 }
 
 $Dep = $hits[0]
@@ -336,14 +378,6 @@ Add-Summary "OUTPUT              $OutDirFull"
 # ---------------------------------------------------------------- node logs
 
 Write-Step "Collecting node logs over REST"
-
-# displayName -> file slug. "MOCKED ADA ECU" -> mocked-ada-ecu. The node-<slug>.txt
-# prefix is the contract tools\pcap-extract\Extract-Pcap.ps1 globs on.
-function Get-Slug ($name) {
-    $s = "$name".ToLowerInvariant()
-    $s = [regex]::Replace($s, '[^a-z0-9]+', '-')
-    return $s.Trim('-')
-}
 
 # Every exported file is named for the node it came from, so a run folder can be
 # read without the node list beside it.

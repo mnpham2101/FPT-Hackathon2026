@@ -45,6 +45,7 @@ TAIL=5000
 OUT_ROOT="./test-report"
 API_KEY_FILE=""
 TEST_ARG=""
+BLUEPRINT_ARG=""
 PACKAGE="com.hackathon.v2x.ivi"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -55,13 +56,18 @@ usage() {
 
   collect-logs.sh -- CarSky node logs + AAOS guest evidence for one test run
 
-  Usage: collect-logs.sh [--test <1-4|name>] [options]
+  Usage: collect-logs.sh [--test <1-5|name> | --blueprint <name>] [options]
 
-    --test <1-4|name>   which test to collect; asks if omitted
+    --test <1-5|name>   shortcut for one of the blueprints below; asks if omitted
                           1  system-test         (blueprint m1_system_test)
                           2  ivi-isolated-test   (blueprint phase5_smoked_test)
                           3  ada-isolated-test   (blueprint phase4_smoked_test)
                           4  v2x-isolated-test   (blueprint phase1_smoked_test)
+                          5  netcheck-test       (blueprint phase0_smoked_test)
+    --blueprint <name>  collect ANY deployed blueprint by name, listed or not. The
+                        Room is read from its node list, so every node it contains
+                        is collected whatever the node is, and the guest half runs
+                        only if one of them is a Skycraft VM.
     --base-url <url>    CarSky gateway            (default $BASE_URL)
     --api-key-file <f>  file holding the REST key (default <repo>/secrets/carsky-api-key.txt)
     --port <n>          local ADB tunnel port     (default $PORT)
@@ -82,6 +88,7 @@ exit_usage() {
 while [ $# -gt 0 ]; do
     case "$1" in
         --test)          [ $# -ge 2 ] || exit_usage "--test needs a value";          TEST_ARG="$2"; shift 2 ;;
+        --blueprint)     [ $# -ge 2 ] || exit_usage "--blueprint needs a value";     BLUEPRINT_ARG="$2"; shift 2 ;;
         --base-url)      [ $# -ge 2 ] || exit_usage "--base-url needs a value";      BASE_URL="$2"; shift 2 ;;
         --api-key-file)  [ $# -ge 2 ] || exit_usage "--api-key-file needs a value";  API_KEY_FILE="$2"; shift 2 ;;
         --port)          [ $# -ge 2 ] || exit_usage "--port needs a value";          PORT="$2"; shift 2 ;;
@@ -235,8 +242,10 @@ count_lines() { if [ -f "$1" ]; then awk 'END { print NR + 0 }' "$1"; else print
 
 # ------------------------------------------------------------------- the tests
 
-# One row per selectable test: option, folder the evidence lands in, the CarSky
-# blueprint it is deployed from, and the one-line description.
+# One row per shortcut: option, folder the evidence lands in, the CarSky blueprint
+# it is deployed from, and the one-line description. These are conveniences only --
+# --blueprint collects anything deployed, so a Room absent from this table is still
+# collectable and adding a row is about saving typing, not about granting access.
 #
 # Blueprint names are the platform's own, underscore-separated. The deployment
 # CarSky builds from one is named <blueprint>-deploy, and that is the name
@@ -245,7 +254,8 @@ count_lines() { if [ -f "$1" ]; then awk 'END { print NR + 0 }' "$1"; else print
 TESTS="1|system-test|m1_system_test|full blueprint - bench, V2X, ADA, IVI
 2|ivi-isolated-test|phase5_smoked_test|IVI ECU with the mocked ADA producer
 3|ada-isolated-test|phase4_smoked_test|ADA ECU with its bench
-4|v2x-isolated-test|phase1_smoked_test|V2X ECU with the scenario player"
+4|v2x-isolated-test|phase1_smoked_test|V2X ECU with the scenario player
+5|netcheck-test|phase0_smoked_test|the phase 0 platform baseline, three netcheck nodes"
 
 TEST_NAME=""
 TEST_BLUEPRINT=""
@@ -271,10 +281,32 @@ printf '  %sAuthority: documents/Delivery/testing-guide.md Step 3%s\n' "$C_GRAY"
 command -v curl >/dev/null 2>&1 || fail "curl is not installed." "It is how this script talks to CarSky."
 command -v awk  >/dev/null 2>&1 || fail "awk is not installed."  "It is how this script reads the API's JSON."
 
-write_step "Choosing the test"
+write_step "Choosing the blueprint"
 
-if [ -n "$TEST_ARG" ]; then
-    resolve_test "$TEST_ARG" || exit_usage "unknown test '$TEST_ARG'. Use 1-4, or one of: system-test, ivi-isolated-test, ada-isolated-test, v2x-isolated-test."
+if [ -n "$TEST_ARG" ] && [ -n "$BLUEPRINT_ARG" ]; then
+    exit_usage "--test and --blueprint both given. Pass one."
+fi
+
+if [ -n "$BLUEPRINT_ARG" ]; then
+    # Any blueprint, named or not. A shortcut row is reused when one matches, purely
+    # so the run folder and the description read the same as the shortcut would.
+    TEST_NAME=""; TEST_BLUEPRINT=""; TEST_WHAT=""
+    while IFS='|' read -r opt name bp what; do
+        [ -n "$opt" ] || continue
+        if [ "$bp" = "$BLUEPRINT_ARG" ]; then
+            TEST_NAME="$name"; TEST_BLUEPRINT="$bp"; TEST_WHAT="$what"
+            break
+        fi
+    done <<EOF
+$TESTS
+EOF
+    if [ -z "$TEST_BLUEPRINT" ]; then
+        TEST_BLUEPRINT="$BLUEPRINT_ARG"
+        TEST_NAME="$(slug "$BLUEPRINT_ARG")"
+        TEST_WHAT="collected by name"
+    fi
+elif [ -n "$TEST_ARG" ]; then
+    resolve_test "$TEST_ARG" || exit_usage "unknown shortcut '$TEST_ARG'. Use 1-5, one of: system-test, ivi-isolated-test, ada-isolated-test, v2x-isolated-test, netcheck-test, or --blueprint <name> for any other."
 else
     printf '\n'
     while IFS='|' read -r opt name bp what; do
@@ -284,9 +316,11 @@ else
 $TESTS
 EOF
     printf '\n'
-    printf '    Which test? [1-4]: '
+    printf '    %sAny other blueprint: re-run with --blueprint <name>%s\n' "$C_GRAY" "$C_OFF"
+    printf '\n'
+    printf '    Which test? [1-5]: '
     read -r answer || answer=""
-    resolve_test "$answer" || exit_usage "'$answer' is not one of 1-4."
+    resolve_test "$answer" || exit_usage "'$answer' is not one of 1-5. For any other blueprint use --blueprint <name>."
 fi
 
 write_ok "$TEST_NAME  -  $TEST_WHAT"
@@ -329,7 +363,7 @@ DEP_OBJECTS="$(printf '%s' "$HTTP_BODY" | json_objects)"
 DEP_COUNT="$(printf '%s' "$DEP_OBJECTS" | grep -c 'roomId' || true)"
 if [ -z "$DEP_OBJECTS" ] || [ "$DEP_COUNT" = "0" ]; then
     fail "'$WANTED_DEPLOYMENT' is not running in CarSky - nothing matches that name." \
-         "Deploy the $TEST_NAME blueprint, wait for its nodes to go green, then re-run."
+         "Deploy $TEST_BLUEPRINT, wait for its nodes to go green, then re-run."
 fi
 
 DEP_OBJ="$(printf '%s' "$DEP_OBJECTS" | sed -n '1p')"
