@@ -4,7 +4,7 @@
 > **Pull request:** #2 — branch `feat/phase5-ivi-hmi-dev` → `main` (title not read; `gh` was unauthenticated, so the PR body was not consulted and this review judges the branch content alone)
 > **Reviewed commit:** `f7f2f55` — *fix(ivi): prevent Log.w RuntimeException in unit tests and use R4Json for deserialization*
 > **Base:** `main` at `f5e8a31`; merge base `e4991a9`; diff range `main...pr-2` — 21 files, +1261 / −22. Phase 3 and Phase 4 landed on `main` after this branch forked and touched no file under `IVI_ECU/`, so the range is unaffected by them.
-> **Judged against:** [ivi-ecu-hld.md](../../../documents/Design/IVI-ECU/ivi-ecu-hld.md) and [ivi-ecu-design-decisions.md](../../../documents/Design/IVI-ECU/ivi-ecu-design-decisions.md) · [m1-cooperative-awareness.md §2](../../../requirements/m1-cooperative-awareness.md) · [phase5_minh_tasks.md](../../../plans/phase5_minh_tasks.md), the authoritative Phase 5 plan · the frozen schemas [r4-ada-ivi.schema.json](../../contracts/r4-ada-ivi.schema.json) and [r3-tracked-object.schema.json](../../contracts/r3-tracked-object.schema.json)
+> **Judged against:** [ivi-ecu-hld.md](../../../documents/Design/IVI-ECU/ivi-ecu-hld.md) and [ivi-ecu-design-decisions.md](../../../documents/Design/IVI-ECU/ivi-ecu-design-decisions.md) · [m1-cooperative-awareness.md §2](../../../documents/Requirements/m1-cooperative-awareness.md) · [phase5_minh_tasks.md](../../../plans/phase5_minh_tasks.md), the authoritative Phase 5 plan · the frozen schemas [r4-ada-ivi.schema.json](../../contracts/r4-ada-ivi.schema.json) and [r3-tracked-object.schema.json](../../contracts/r3-tracked-object.schema.json)
 > **Verified:** unit tests 15/15 pass (`R4DeserializerTest` 5, `WarningViewModelTest` 4, `R4RoundTripTest` 3, `R4AdditiveVersionTest` 3) and `app-debug.apk` builds, both read from the build output in the review worktree. **Not verified:** any behaviour in a deployed Room — no `phase5-ci.yml` lane exists on the branch and no run evidence is recorded.
 
 Two facts frame everything below, and neither is a criticism of the code itself.
@@ -114,7 +114,7 @@ Task IDs are the project's traceability anchor ([task-planning-conventions.md](.
 
 ### Completion against requirements
 
-Percentages are against each requirement's **acceptance** clause in [m1-cooperative-awareness.md §2](../../../requirements/m1-cooperative-awareness.md), not its headline. Only requirements this branch touches are listed.
+Percentages are against each requirement's **acceptance** clause in [m1-cooperative-awareness.md §2](../../../documents/Requirements/m1-cooperative-awareness.md), not its headline. Only requirements this branch touches are listed.
 
 | Requirement | % complete | What is missing or deviated |
 |---|---|---|

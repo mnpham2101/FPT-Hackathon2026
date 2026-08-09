@@ -23,7 +23,7 @@ Approach to stand up a reduced CarSky Room that exercises ADA→IVI (R4) without
 | Ethernet Bridge | Bridge | `10.99.0.1` / `10.99.0.0/24` | R6 L2 fabric only (no app UDP port) |
 | IVI ECU | Skycraft | `10.99.0.13` | Bind R4 listener; render R16/R17 HMI |
 
-Authoritative production ports: [m1-cooperative-awareness.md](../../../requirements/m1-cooperative-awareness.md) baseline table; ADA env in [node-ada-ecu.md](../../../requirements/car-sky-guide/node-ada-ecu.md); IVI artifact/pin in [node-ivi-ecu.md](../../../requirements/car-sky-guide/node-ivi-ecu.md).
+Authoritative production ports: [m1-cooperative-awareness.md](../../Requirements/m1-cooperative-awareness.md) baseline table; ADA env in [node-ada-ecu.md](../../../requirements/car-sky-guide/node-ada-ecu.md); IVI artifact/pin in [node-ivi-ecu.md](../../../requirements/car-sky-guide/node-ivi-ecu.md).
 
 ## Why not reuse the 2-node mock blueprint as-is
 

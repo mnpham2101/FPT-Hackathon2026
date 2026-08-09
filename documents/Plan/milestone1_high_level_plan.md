@@ -1,6 +1,6 @@
 # Milestone 1 — Cooperative Vehicle Awareness (A ← B ← C)
 
-> Requirements, scope, and tech stacks live in the authoritative report [m1-cooperative-awareness.md](../../requirements/m1-cooperative-awareness.md) (R1–R19), extended by [m1-run-timing-and-event-triggering.md](../../requirements/m1-run-timing-and-event-triggering.md) (R20–R22, run timing and demo choreography); this plan references R-numbers instead of restating them, and on any conflict the report wins. Phase structure follows the [proposal-deck timeline](../../presentation/assets/m1-phase-timeline.svg) (second authority).
+> Requirements, scope, and tech stacks live in the authoritative report [m1-cooperative-awareness.md](../Requirements/m1-cooperative-awareness.md) (R1–R19), extended by [m1-run-timing-and-event-triggering.md](../Requirements/m1-run-timing-and-event-triggering.md) (R20–R22, run timing and demo choreography); this plan references R-numbers instead of restating them, and on any conflict the report wins. Phase structure follows the [proposal-deck timeline](../../presentation/assets/m1-phase-timeline.svg) (second authority).
 
 ## 1. Introduction
 
@@ -8,7 +8,7 @@ Milestone 1 demonstrates **cooperative (non-line-of-sight) awareness** over V2X:
 
 Three vehicles drive in a collinear convoy — **A** follows **B** follows **C**. Vehicle A's view of C is **blocked by B**, so A's own camera can never detect C. Vehicle B sees C and **broadcasts that perception to A over V2X**, and A displays C and its relative position without ever seeing it. **M1 builds only A's vehicle (ego)** — B and C exist as bench-generated V2X messages (R11) and as content of the provided video; the bench Scenario Player is sanctioned test equipment, not a mock to eliminate.
 
-![Convoy geometry: A cannot see C; B sees C and relays it to A over V2X](../../requirements/m1_convoy_nlos_relay_geometry.png)
+![Convoy geometry: A cannot see C; B sees C and relays it to A over V2X](../Requirements/m1_convoy_nlos_relay_geometry.png)
 
 *Objective — B's perception of C reaches A over a V2X relay. A reconstructs C's position by composing its own measurement of B with B's reported measurement of C:* `d_AC ≈ d_AB + d_BC` *(valid for the near-collinear convoy; absolute/GPS composition is a later milestone).*
 
@@ -76,7 +76,7 @@ Gate constants are **externalized configuration, never literals**. R13 fixes the
 
 **`miss_limit` change of form, awaiting the user's re-ratification.** The [Phase 2–4 ADA HLD, decision D3](../../documents/Design/ADA-ECU/ada-ecu-design-decisions.md#d3--r13-admission-one-state-machine-both-sources) implements M as a wall-clock `TRACK_TIMEOUT_MS` (default 1000 ms = 5 periods at the slower of the two sources), not as a count. Reason: "its messages stop" is a time condition that a counter cannot express — nothing arrives to increment it — and the two sources run at independently configured cadences, so one count M would mean two different real timeouts. Intent is unchanged; the form is. Flagged here rather than silently overridden ([phase2_tasks.md § Open items item 1](../../plans/phase2_tasks.md#open-items--flags-no-phase-2-subtask-may-silently-close-them)).
 
-![Track admission state machine with proximity gate and hysteresis](../../requirements/vehicleC_track_admission_state_machine.png)
+![Track admission state machine with proximity gate and hysteresis](../Requirements/vehicleC_track_admission_state_machine.png)
 
 *Own-sensor objects traverse `not_tracked → tentative → tracked`; relayed C is admitted on R2 distance within the gate, dropped on leaving it or when messages stop, and carries `source = v2x_relayed` only. ~~Ego's own Tx (R10) snapshots `own_sensor` tracks~~ — **R10 moved to the future plan**; the B-side relay trigger is simulated by the bench scenarios (R11), so nothing in M1 consumes an ego Tx snapshot.*
 
@@ -128,7 +128,7 @@ The baseline blueprint deployed as `trial2_minh_netcheck` with all nodes `Runnin
 
 **Objective.** Stand up the ADA skeleton, the R3 track store, and the R13 admission state machine on **mock input**, so the pipeline works before any ML.
 
-**Tasks.** Decomposed in [phase2_tasks.md](../../plans/phase2_tasks.md); design of record is [ada-ecu-hld.md](../../documents/Design/ADA-ECU/ada-ecu-hld.md), which realizes [ada-ecu.svg](../../requirements/ada-ecu.svg).
+**Tasks.** Decomposed in [phase2_tasks.md](../../plans/phase2_tasks.md); design of record is [ada-ecu-hld.md](../../documents/Design/ADA-ECU/ada-ecu-hld.md), which realizes [ada-ecu.svg](../Requirements/ada-ecu.svg).
 
 - ADA C++17 module skeleton inside [ADA_ECU/](../../ADA_ECU/); CRA interface + registry + database schema defined (consumed by R14 in Phase 4).
 - R3-shaped store; R13 state machine driven by mock R2 messages and mock own-sensor entries — the mocks are external stimulus (a JSONL fixture through the real detector-reader, real datagrams from `tools/mock_v2x_sender.py`), never a branch inside `src/`.
@@ -150,7 +150,7 @@ The baseline blueprint deployed as `trial2_minh_netcheck` with all nodes `Runnin
 
 - YOLO11n exported to ONNX on ONNX Runtime CPU; OpenCV video decode behind the frame-source seam.
 - Per-frame detection + distance estimation; stream R3 JSONL over stdout into the store (subprocess contract — no FFI, no RPC).
-- **The clip is landed** at `ADA_ECU/media/ego-b-occluding-c.mp4` with its provenance sidecar (task group 3.7, `12.3.7.1`): openly-licensed dashcam footage under the Pexels License, cut and re-encoded with ffmpeg to the the video-input study's §3 spec — 1280×720, 20 fps CFR, 200 frames / 10.0 s, ~5 MB. It is baked into the image as one early `COPY media/ /app/media/` layer, the only way a file reaches a Container Node ([m1-video-source-and-ivi-dashcam.md §5](../../requirements/m1-video-source-and-ivi-dashcam.md)). B occludes the ego lane in every sampled frame, closing from ~60 m to ~10 m; **C is synthetic** — it exists only as a position the bench asserts over V2X, so "C never visible" holds by construction and what the footage had to avoid was a decoy vehicle held in the ego lane beyond B. The clip is 10 s, and a longer run comes from **looping** it (`DETECTOR_LOOP=true`); reasoning in [the sidecar](../../ADA_ECU/media/ego-b-occluding-c.source.md). The synthetic generator stays a CI fixture and cannot produce R12 evidence.
+- **The clip is landed** at `ADA_ECU/media/ego-b-occluding-c.mp4` with its provenance sidecar (task group 3.7, `12.3.7.1`): openly-licensed dashcam footage under the Pexels License, cut and re-encoded with ffmpeg to the the video-input study's §3 spec — 1280×720, 20 fps CFR, 200 frames / 10.0 s, ~5 MB. It is baked into the image as one early `COPY media/ /app/media/` layer, the only way a file reaches a Container Node ([m1-video-source-and-ivi-dashcam.md §5](../Requirements/m1-video-source-and-ivi-dashcam.md)). B occludes the ego lane in every sampled frame, closing from ~60 m to ~10 m; **C is synthetic** — it exists only as a position the bench asserts over V2X, so "C never visible" holds by construction and what the footage had to avoid was a decoy vehicle held in the ego lane beyond B. The clip is 10 s, and a longer run comes from **looping** it (`DETECTOR_LOOP=true`); reasoning in [the sidecar](../../ADA_ECU/media/ego-b-occluding-c.source.md). The synthetic generator stays a CI fixture and cannot produce R12 evidence.
 
 **Acceptance Criteria.**
 - [x] Detection log over the provided clip with per-frame objects and distance estimates (R12).
@@ -220,9 +220,9 @@ The baseline blueprint deployed as `trial2_minh_netcheck` with all nodes `Runnin
 
 ## 6. Deferred to Later Milestones
 
-The single source is the report's § Future developments, mirrored in the [future-features register](../../requirements/future/m1-future-features-register.md). Standing M1 exclusions live in the report's §4 decision record (**R10 ego Tx deferred — the V2X ECU is receive-only**, Cortex-M omitted, telux port declined, 3D and multi-process optional, ego video clip deferred, no GPU, no map/GNSS on the IVI).
+The single source is the report's § Future developments, mirrored in the [future-features register](../Requirements/future/m1-future-features-register.md). Standing M1 exclusions live in the report's §4 decision record (**R10 ego Tx deferred — the V2X ECU is receive-only**, Cortex-M omitted, telux port declined, 3D and multi-process optional, ego video clip deferred, no GPU, no map/GNSS on the IVI).
 
-**Ego video clip display on the IVI — re-confirmed deferred, 2026-08-02.** [m1-video-source-and-ivi-dashcam.md §4/§6](../../requirements/m1-video-source-and-ivi-dashcam.md) contains a worked design for it (option B4: ADA serves its own clip over HTTP, the IVI plays it with Media3), and §8 flags that adopting it needs the user's word. **The user's word was no.** The design stays on the shelf, and **no Phase 3, 4, 5 or 6 subtask may implement any part of it** — HTTP clip serving from the ADA node (a `http.server` line in the entrypoint, `CLIP_HTTP_ENABLED` / `CLIP_HTTP_PORT`), an `exposedPorts` entry and its gateway route, Media3/ExoPlayer and a `DASHCAM_MEDIA_URI`, a dashcam `DisplayMode`, a raw-resource clip copy in the APK and its size cost (fallback B5), or any `video` pin (an R5/R6 re-freeze). §6 is where each has its concrete shape; reading it is not permission to build it.
+**Ego video clip display on the IVI — re-confirmed deferred, 2026-08-02.** [m1-video-source-and-ivi-dashcam.md §4/§6](../Requirements/m1-video-source-and-ivi-dashcam.md) contains a worked design for it (option B4: ADA serves its own clip over HTTP, the IVI plays it with Media3), and §8 flags that adopting it needs the user's word. **The user's word was no.** The design stays on the shelf, and **no Phase 3, 4, 5 or 6 subtask may implement any part of it** — HTTP clip serving from the ADA node (a `http.server` line in the entrypoint, `CLIP_HTTP_ENABLED` / `CLIP_HTTP_PORT`), an `exposedPorts` entry and its gateway route, Media3/ExoPlayer and a `DASHCAM_MEDIA_URI`, a dashcam `DisplayMode`, a raw-resource clip copy in the APK and its size cost (fallback B5), or any `video` pin (an R5/R6 re-freeze). §6 is where each has its concrete shape; reading it is not permission to build it.
 
 **Real-time detector pacing is not on that list.** R20 makes it a requirement on its own footing — [ada-ecu-design-decisions.md D10](../../documents/Design/ADA-ECU/ada-ecu-design-decisions.md#d10--clock-domains-and-stimulus-paced-against-clock_monotonic) — and R22 cannot place any demo instant without it, so [phase3_tasks.md `12.3.2.8`](../../plans/phase3_tasks.md) builds the pacer. What the deferral forbids is the dashcam surface itself, listed above.
 

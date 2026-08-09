@@ -1,8 +1,8 @@
 # Requirement Analysis & Technical Solution Report — M1: Cooperative Vehicle Awareness
 
-> Sources of authority: [m1-proposal-deck.md](../presentation/m1-proposal-deck.md) — the authoritative proposal; [Car-Sky-Platform.html](development-platform-doc/Car-Sky-Platform.html) — authoritative on the CarSky development & deployment platform (blueprint/node/pin model).
+> Sources of authority: [m1-proposal-deck.md](../../presentation/m1-proposal-deck.md) — the authoritative proposal; [Car-Sky-Platform.html](../../requirements/development-platform-doc/Car-Sky-Platform.html) — authoritative on the CarSky development & deployment platform (blueprint/node/pin model).
 >
-> Requirement numbers R1–R19 are project-global and frozen — they are the `X` segment of task IDs `X.Y.Z.W` ([task-planning-conventions.md](../.claude/rules/task-planning-conventions.md)).
+> Requirement numbers R1–R19 are project-global and frozen — they are the `X` segment of task IDs `X.Y.Z.W` ([task-planning-conventions.md](../../.claude/rules/task-planning-conventions.md)).
 >
 > **Extension requirements live in their own reports and continue the same numbering.** [m1-run-timing-and-event-triggering.md](m1-run-timing-and-event-triggering.md) §7 defines **R20** (real-time paced stimulus sources), **R21** (run alignment and cross-source temporal correlation) and **R22** (demo run choreography — warning onset after the eighth second), together with the run-timing solution analysis they rest on.
 
@@ -79,7 +79,7 @@ The committed network layout for the nodes above. It realizes R5 and R6 as froze
 
 ### Cloud development constraints
 
-Development runs entirely on the CarSky cloud platform, under its blueprint/node/pin model ([Car-Sky-Platform.html](development-platform-doc/Car-Sky-Platform.html)):
+Development runs entirely on the CarSky cloud platform, under its blueprint/node/pin model ([Car-Sky-Platform.html](../../requirements/development-platform-doc/Car-Sky-Platform.html)):
 
 - **Blueprint:** a JSON topology of nodes, pins, and edges plus artifact references — 1 blueprint = 1 car; this project builds **one blueprint** containing the three ego ECU nodes, the bench node, and the network bridge node.
 - **Node:** 1 node = 1 ECU. V2X ECU, ADA ECU, and the bench Scenario Player run as Container Nodes (team-built OCI images); the IVI runs as the provided Skycraft AAOS node. The bench node is conceptually test equipment outside the car, deployed in the same blueprint so it shares the Room network (R5).
@@ -410,7 +410,7 @@ Awareness state (optional — R15):
 
 ## 3. Technical solution analysis
 
-Hard-constraint screening precedes every comparison (open-source only, Linux-targeted per [solution-selection-criteria.md](../.claude/rules/solution-selection-criteria.md)); C1–C4 below are that rule's ranked criteria. The provided AAOS node and CarSky itself are sanctioned competition infrastructure, not team dependency choices.
+Hard-constraint screening precedes every comparison (open-source only, Linux-targeted per [solution-selection-criteria.md](../../.claude/rules/solution-selection-criteria.md)); C1–C4 below are that rule's ranked criteria. The provided AAOS node and CarSky itself are sanctioned competition infrastructure, not team dependency choices.
 
 ### (a) V2X message family + encoding — serves R1, R9–R11
 
@@ -535,8 +535,8 @@ Session context only. **Not ratified.** R6 (§2 Contracts) stays frozen: one Eth
 ### Benefits
 
 - **Domain isolation.** Each ECU sits on its own L2 segment. Broadcast traffic and a misbehaving node stay inside one bridge.
-- **Realistic E/E shape.** Domain controllers behind their own switches, joined by a central signal broker — the same architecture as the platform's reference blueprint [blueprint-KIS.json](development-platform-doc/blueprint-KIS.json).
-- **Signal-level observability.** KUKSA pins unlock `POST /api/v1/signals/{roomId}/{nodeKey}/values`, which `ethernet`-only nodes cannot use ([carsky-rest-api-blueprint.md](car-sky-guide/carsky-rest-api-blueprint.md)). Relayed values become readable from the API instead of only from a packet capture — useful for R18 evidence.
+- **Realistic E/E shape.** Domain controllers behind their own switches, joined by a central signal broker — the same architecture as the platform's reference blueprint [blueprint-KIS.json](../../requirements/development-platform-doc/blueprint-KIS.json).
+- **Signal-level observability.** KUKSA pins unlock `POST /api/v1/signals/{roomId}/{nodeKey}/values`, which `ethernet`-only nodes cannot use ([carsky-rest-api-blueprint.md](../../requirements/car-sky-guide/carsky-rest-api-blueprint.md)). Relayed values become readable from the API instead of only from a packet capture — useful for R18 evidence.
 - **Transport seam.** The ECUs keep speaking plain UDP; the gateway absorbs the transport. Changing transport later is a Lua edit, not an ECU code change.
 - **Extensibility.** A new consumer (cluster, telematics, logger) attaches as another gateway on the broker — no change to the existing ECUs or to R1–R4.
 

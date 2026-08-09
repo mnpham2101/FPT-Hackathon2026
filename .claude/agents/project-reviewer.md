@@ -39,7 +39,7 @@ The other four agents produce work. This one is the only agent that **judges** i
 - The pull request or branch under review, and its merge base against the base branch.
 - The node HLD and design-decision record for each folder touched, from the base branch.
 - The authoritative phase plan under [plans/](../../plans/), and the branch's own plan where it carries one.
-- [m1-cooperative-awareness.md](../../requirements/m1-cooperative-awareness.md) §2 requirement entries and §4 decision record.
+- [m1-cooperative-awareness.md](../../documents/Requirements/m1-cooperative-awareness.md) §2 requirement entries and §4 decision record.
 - The frozen contract schemas under each node's `contracts/`, and the blueprint values in [requirements/car-sky-guide/](../../requirements/car-sky-guide/).
 - Build and unit-test results, and the CI lanes designated by [ci-lane-placement.md](../rules/ci-lane-placement.md).
 

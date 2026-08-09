@@ -1,6 +1,6 @@
 @startuml phase2-4-ada-ecu-admission
 ' R13 track admission state machine - PlantUML form of
-' requirements/vehicleC_track_admission_state_machine.png, made unambiguous for implementation.
+' documents/Requirements/vehicleC_track_admission_state_machine.png, made unambiguous for implementation.
 ' One machine, both sources (own_sensor and v2x_relayed); see ada-ecu-design-decisions.md D3,
 ' cited from ada-ecu-hld.md section 6.
 

@@ -1,4 +1,4 @@
-# default.yaml - the R22 demo choreography (requirements/m1-run-timing-and-event-triggering.md 6.6):
+# default.yaml - the R22 demo choreography (documents/Requirements/m1-run-timing-and-event-triggering.md 6.6):
 # C starts at 70.0 m and closes at 5.0 m/s, so it crosses the R13 gate_enter (30 m) 8.0 s into the
 # cycle and reaches `tracked` at 8.3 s - putting the first R4 warning after the 8th second of the
 # run and before the cycle ends.

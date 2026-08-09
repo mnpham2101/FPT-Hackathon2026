@@ -1,6 +1,6 @@
 @startuml phase2-4-ada-ecu-components
 ' ADA ECU component map - source for ada-ecu-hld.md section 3 (The component architecture).
-' Block names follow requirements/ada-ecu.svg: DataObserver -> Data Parser -> Current Input
+' Block names follow documents/Requirements/ada-ecu.svg: DataObserver -> Data Parser -> Current Input
 ' -> Collision Risk Assessment -> Current TrackedObject/Risk.
 
 title ADA ECU module map (Phases 2-4) - R3, R12-R15, R18

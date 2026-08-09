@@ -9,7 +9,7 @@ Trigger: [[project-architecture]] is asked to design for a **phase or requiremen
 
 ## Procedure
 
-1. **Resolve phase/requirement → node(s).** Cross-reference the requested phase in [milestone1_high_level_plan.md](../../../documents/Plan/milestone1_high_level_plan.md) §5 and the requirement's home node in the report ([m1-cooperative-awareness.md](../../../requirements/m1-cooperative-awareness.md) §2) against the folder → node → requirement map in [node-code-layout.md](../../rules/node-code-layout.md), which also fixes each node's language and build artifact.
+1. **Resolve phase/requirement → node(s).** Cross-reference the requested phase in [milestone1_high_level_plan.md](../../../documents/Plan/milestone1_high_level_plan.md) §5 and the requirement's home node in the report ([m1-cooperative-awareness.md](../../../documents/Requirements/m1-cooperative-awareness.md) §2) against the folder → node → requirement map in [node-code-layout.md](../../rules/node-code-layout.md), which also fixes each node's language and build artifact.
 
    Two traps that table exists to prevent: the bench Scenario Player is its own node and its own folder, so R11 work never lands in `V2X_ECU/`; and multi-node phases (Phase 0 contracts, Phase 1 comms bring-up, Phase 6 convergence) implicate more than one folder — list every folder touched, not just the first match.
 

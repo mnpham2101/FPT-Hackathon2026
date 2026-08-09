@@ -89,7 +89,7 @@ Use when the commits carry no task IDs, or when their IDs are off from the autho
 
 | Column | Content |
 |---|---|
-| **Requirement** | `R1`, `R2`, … from [m1-cooperative-awareness.md §2](../../requirements/m1-cooperative-awareness.md) |
+| **Requirement** | `R1`, `R2`, … from [m1-cooperative-awareness.md §2](../../documents/Requirements/m1-cooperative-awareness.md) |
 | **% completion** | Against that requirement's **acceptance** clause, not its headline |
 | **What is missing or deviated** | Named plainly, with the file or contract field it concerns |
 

@@ -2,7 +2,7 @@
 
 The AAOS head unit: renders the R16 HMI layout and the R17 warning view — the God view of ego (A), occluder (B), and ghost C — from R4 messages alone. Ghost C is drawn from `v2x_relayed` data only, which is what the R19 definition of done turns on.
 
-- **Requirements:** R4, R16–R17 — [m1-cooperative-awareness.md](../requirements/m1-cooperative-awareness.md) §2; HMI layout reference [ivi-ecu.svg](../requirements/ivi-ecu.svg).
+- **Requirements:** R4, R16–R17 — [m1-cooperative-awareness.md](../documents/Requirements/m1-cooperative-awareness.md) §2; HMI layout reference [ivi-ecu.svg](../documents/Requirements/ivi-ecu.svg).
 - **Node/deploy guide:** [node-ivi-ecu.md](../requirements/car-sky-guide/node-ivi-ecu.md) — VM artifact prep, blueprint config, pins, post-deploy `adb install`, verification.
 - **Build & bring-up (authoritative):** [deploy-ivi-hmi-walkthrough.md](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md) — the local and CI builds, the `app-debug-apk` CI artifact, blueprint deploy, `adb install`, launch, and the verification ladder.
 - **Layout & build rules:** [node-code-layout.md](../.claude/rules/node-code-layout.md) — Kotlin / Jetpack Compose, APK via `./gradlew assembleDebug` from this folder.

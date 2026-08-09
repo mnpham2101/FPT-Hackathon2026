@@ -15,7 +15,7 @@
 
 **This is the only design document governing this node.** It fixes the component set and each component's responsibility, every deliverable's path, the seams, the configuration keys, and the evidence log lines.
 
-- **Task planning decomposes from this document plus the requirements report, and nothing else.** Requirement numbers and acceptance come from [m1-cooperative-awareness.md](../../../requirements/m1-cooperative-awareness.md); everything structural comes from here — which component a subtask creates, its path, the interface it satisfies, the log line that closes it.
+- **Task planning decomposes from this document plus the requirements report, and nothing else.** Requirement numbers and acceptance come from [m1-cooperative-awareness.md](../../Requirements/m1-cooperative-awareness.md); everything structural comes from here — which component a subtask creates, its path, the interface it satisfies, the log line that closes it.
 - **Plans cite; they do not restate.** A brief links the section governing its step, so a change lands in one place.
 - **Implementation does not extend this silently.** A component, path or configuration key not designated here is not created ad hoc — the design changes first.
 - **The bench is sanctioned test equipment, not a mock to eliminate** (CLAUDE.md governing principle 2). It is a node of the R5 blueprint with its own address, its own image and its own requirement number.
@@ -29,9 +29,9 @@
 
 | Document | What it fixes for this node |
 |---|---|
-| [m1-cooperative-awareness.md](../../../requirements/m1-cooperative-awareness.md) — **the authority** | R11 whole — definition, dependency, acceptance, tech stack. R1: the message family and the codec source this node shares. R5/R6: node type, bridge, address, port. §1: the bench emulates the modem connection point and simulates B. §3(c): the self-written Python generator. §4: the standing decisions, restated in D6 |
+| [m1-cooperative-awareness.md](../../Requirements/m1-cooperative-awareness.md) — **the authority** | R11 whole — definition, dependency, acceptance, tech stack. R1: the message family and the codec source this node shares. R5/R6: node type, bridge, address, port. §1: the bench emulates the modem connection point and simulates B. §3(c): the self-written Python generator. §4: the standing decisions, restated in D6 |
 | [r1-cpm-profile.md](../../../contracts/r1-cpm-profile.md) · [r1-cpm-content.schema.json](../../../contracts/r1-cpm-content.schema.json) | The frozen output contract, field for field, with conventions F1, F2, F5, F8, F9 and VF (§10) |
-| [m1-run-timing-and-event-triggering.md](../../../requirements/m1-run-timing-and-event-triggering.md) | R20 obliges this node with the bench half of paced stimulus: scenario time advances on `CLOCK_MONOTONIC` deadlines, `start_delay_s` and `reference_time_epoch` are configuration, and `[TX]` carries `mono_ms` (D5). R21's run start is the operator restarting this node — no orchestrator, no trigger message, no clock exchange. R22 fixes the demo cycle this node emits: §6.6's geometry, the cycle period matched to the ego clip, and `start_delay_s` set to the ADA detector's warm-up (D7) |
+| [m1-run-timing-and-event-triggering.md](../../Requirements/m1-run-timing-and-event-triggering.md) | R20 obliges this node with the bench half of paced stimulus: scenario time advances on `CLOCK_MONOTONIC` deadlines, `start_delay_s` and `reference_time_epoch` are configuration, and `[TX]` carries `mono_ms` (D5). R21's run start is the operator restarting this node — no orchestrator, no trigger message, no clock exchange. R22 fixes the demo cycle this node emits: §6.6's geometry, the cycle period matched to the ego clip, and `start_delay_s` set to the ADA detector's warm-up (D7) |
 | [milestone1_high_level_plan.md](../../Plan/milestone1_high_level_plan.md) | §4's R13 gate values, which the committed scenarios are authored against (D3); Phase 1's bench acceptance |
 | [node-scenario-player.md](../../../requirements/car-sky-guide/node-scenario-player.md) | Image tag, blueprint `command`, env set, pin and address |
 
@@ -229,7 +229,7 @@ One message carries exactly two containers and exactly one perceived object. `Cp
 
 ## 11. Tech stack, build and CI
 
-No dependency outside this table enters the node without a design change. Traces are to [m1-cooperative-awareness.md](../../../requirements/m1-cooperative-awareness.md) and to the [decision record](scenario-player-design-decisions.md).
+No dependency outside this table enters the node without a design change. Traces are to [m1-cooperative-awareness.md](../../Requirements/m1-cooperative-awareness.md) and to the [decision record](scenario-player-design-decisions.md).
 
 | Area | Stack | Trace |
 |---|---|---|

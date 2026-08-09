@@ -17,7 +17,7 @@
 
 **This is the only design document governing this node.** It fixes the component set and each component's responsibility, the module graph, every deliverable's path, the seams, the configuration keys, and the evidence log lines.
 
-- **Task planning decomposes from this document plus the requirements report, and nothing else.** Requirement numbers and acceptance come from [m1-cooperative-awareness.md](../../../requirements/m1-cooperative-awareness.md); everything structural comes from here — which component a subtask creates, its path, the interface it satisfies, the log line or scene that closes it. Deploy and verify subtasks come from the walkthrough, per [walkthrough-driven-delivery.md](../../../.claude/rules/walkthrough-driven-delivery.md).
+- **Task planning decomposes from this document plus the requirements report, and nothing else.** Requirement numbers and acceptance come from [m1-cooperative-awareness.md](../../Requirements/m1-cooperative-awareness.md); everything structural comes from here — which component a subtask creates, its path, the interface it satisfies, the log line or scene that closes it. Deploy and verify subtasks come from the walkthrough, per [walkthrough-driven-delivery.md](../../../.claude/rules/walkthrough-driven-delivery.md).
 - **Plans cite; they do not restate.** A brief links the section governing its step, so a change lands in one place.
 - **Implementation does not extend this silently.** A component, path or configuration key not designated here is not created ad hoc — the design changes first.
 - **What overrides it:** the requirements report, the frozen R4/R3 contracts, and the walkthrough for procedure. On conflict, the CLAUDE.md authority order decides.
@@ -30,11 +30,11 @@
 
 | Document | What it fixes for this node |
 |---|---|
-| [m1-cooperative-awareness.md](../../../requirements/m1-cooperative-awareness.md) — **the authority** | R4, R16, R17 whole — definition, dependency, acceptance, tech stack. R5/R6: node type, bridge, port. R18/R19: what the run must evidence. §3(e)/(f): the stack. §4: the standing decisions, restated in D11 |
-| Its figures — [ivi-ecu.svg](../../../requirements/ivi-ecu.svg) · [ivi-god-view-scene.svg](../../../requirements/ivi-god-view-scene.svg) · [ivi-god-view-warning-screen.svg](../../../requirements/ivi-god-view-warning-screen.svg) | The R16 layout; R17's visual language; and the annotated variant, which is explanatory and never rendered |
+| [m1-cooperative-awareness.md](../../Requirements/m1-cooperative-awareness.md) — **the authority** | R4, R16, R17 whole — definition, dependency, acceptance, tech stack. R5/R6: node type, bridge, port. R18/R19: what the run must evidence. §3(e)/(f): the stack. §4: the standing decisions, restated in D11 |
+| Its figures — [ivi-ecu.svg](../../Requirements/ivi-ecu.svg) · [ivi-god-view-scene.svg](../../Requirements/ivi-god-view-scene.svg) · [ivi-god-view-warning-screen.svg](../../Requirements/ivi-god-view-warning-screen.svg) | The R16 layout; R17's visual language; and the annotated variant, which is explanatory and never rendered |
 | [r4-ada-ivi.schema.json](../../../contracts/r4-ada-ivi.schema.json) · [r3-tracked-object.schema.json](../../../contracts/r3-tracked-object.schema.json) | The frozen input contract, field for field (§10) |
-| [m1-run-timing-and-event-triggering.md](../../../requirements/m1-run-timing-and-event-triggering.md) | R20/R21 oblige this node with nothing: R4 carries no timestamp, so the warning timeout is a local countdown, and pacing belongs to the bench and the detector. R22 obliges it with two things: the app is listening on its R4 port before the first warning can arrive at `T0` + 8.0 s, and the Display Area holds Home until an active-risk warning raises it (D13). K7 is this node's observable (§12) |
-| [m1-video-source-and-ivi-dashcam.md](../../../requirements/m1-video-source-and-ivi-dashcam.md) | A dashcam view is deferred (D11). If accepted, the clip arrives over HTTP from the ADA node or as a local copy — never through a `video` pin |
+| [m1-run-timing-and-event-triggering.md](../../Requirements/m1-run-timing-and-event-triggering.md) | R20/R21 oblige this node with nothing: R4 carries no timestamp, so the warning timeout is a local countdown, and pacing belongs to the bench and the detector. R22 obliges it with two things: the app is listening on its R4 port before the first warning can arrive at `T0` + 8.0 s, and the Display Area holds Home until an active-risk warning raises it (D13). K7 is this node's observable (§12) |
+| [m1-video-source-and-ivi-dashcam.md](../../Requirements/m1-video-source-and-ivi-dashcam.md) | A dashcam view is deferred (D11). If accepted, the clip arrives over HTTP from the ADA node or as a local copy — never through a `video` pin |
 | [node-ivi-ecu.md](../../../requirements/car-sky-guide/node-ivi-ecu.md) | VM artifact, pin, address |
 
 ### Research notes
@@ -171,7 +171,7 @@ Graceful degradation is split across the last two on purpose: the parser preserv
 
 | Component | Role | Input | Output |
 |---|---|---|---|
-| `ui/screen/MainScreen` | the R16 layout as [ivi-ecu.svg](../../../requirements/ivi-ecu.svg) fixes it: central Display Area, Home / Apps / Settings areas, mode labels, bottom status bar; hosts the Warning View slot | `DisplayMode`, `WarningUiState`, `R4LinkState` | the composed screen |
+| `ui/screen/MainScreen` | the R16 layout as [ivi-ecu.svg](../../Requirements/ivi-ecu.svg) fixes it: central Display Area, Home / Apps / Settings areas, mode labels, bottom status bar; hosts the Warning View slot | `DisplayMode`, `WarningUiState`, `R4LinkState` | the composed screen |
 | `ui/view/IviWarningViewSeam` | the R17 render seam, `Render(scene, riskState)` — what lets an optional 3D renderer swap in with no consumer change | — | the interface both renderers realize |
 | `ui/view/CanvasWarningView` | the God View as R17 fixes it: dark canvas, a lane-marked road converging toward the top, three car silhouettes in one lane with ego nearest. Ego and B solid; ghost C dashed and translucent on a pulsing ground glow coloured by risk; a `null` `vehicleC` drawn without C. **The scene alone is the warning** — no legend, no distance labels, no text overlay, no banner. The `[V2X]` badge and distance callouts belong to R17's annotated figure, not here | `SceneGeometry`, `riskState` | Compose Canvas draw calls |
 | `ui/view/SceneCoordinateMapper` | scene metres → canvas coordinates. R17's camera is inclined, not overhead, so this is an oblique projection: depth compresses toward the top and each vehicle shows a shallow rear face. Pure math, no Android types | `SceneGeometry`, the base scale | screen-space geometry |
@@ -265,7 +265,7 @@ For details how IVI-ECU observes R4 Messages (ADA-ECU -> IVI-ECU), visit [How th
 
 ## 11. Tech stack, build and CI
 
-No dependency outside this table enters the node without a design change. Traces are to [m1-cooperative-awareness.md](../../../requirements/m1-cooperative-awareness.md) and to the [decision record](ivi-ecu-design-decisions.md).
+No dependency outside this table enters the node without a design change. Traces are to [m1-cooperative-awareness.md](../../Requirements/m1-cooperative-awareness.md) and to the [decision record](ivi-ecu-design-decisions.md).
 
 | Area | Stack | Trace |
 |---|---|---|

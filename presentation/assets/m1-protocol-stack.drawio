@@ -53,7 +53,7 @@
         <mxCell id="t47" value="R3 never travels alone: it is the schema every ego-side track obeys, reaching the wire only as the object snapshot embedded in an R4 message." style="text;html=1;align=left;verticalAlign=middle;fontSize=12.5;fontColor=#3d3d46;fontStyle=0;" vertex="1" parent="1"><mxGeometry x="62" y="571" width="1200" height="20" as="geometry" /></mxCell>
         <mxCell id="b48" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#33B2C1;strokeColor=#33B2C1;strokeWidth=1;fontColor=#19226D;fontSize=16;fontStyle=1;" vertex="1" parent="1"><mxGeometry x="40" y="598" width="10" height="10" as="geometry" /></mxCell>
         <mxCell id="t49" value="Two languages decode R4 — C++ writes it, Kotlin reads it — which is why the schema, not either implementation, is the authority." style="text;html=1;align=left;verticalAlign=middle;fontSize=12.5;fontColor=#3d3d46;fontStyle=0;" vertex="1" parent="1"><mxGeometry x="62" y="597" width="1200" height="20" as="geometry" /></mxCell>
-        <mxCell id="t50" value="Source: requirements/m1-cooperative-awareness.md §3 per-ECU tech stack · contracts/" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontColor=#8a8d99;fontStyle=0;" vertex="1" parent="1"><mxGeometry x="40" y="634" width="700" height="20" as="geometry" /></mxCell>
+        <mxCell id="t50" value="Source: documents/Requirements/m1-cooperative-awareness.md §3 per-ECU tech stack · contracts/" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontColor=#8a8d99;fontStyle=0;" vertex="1" parent="1"><mxGeometry x="40" y="634" width="700" height="20" as="geometry" /></mxCell>
       </root>
     </mxGraphModel>
   </diagram>

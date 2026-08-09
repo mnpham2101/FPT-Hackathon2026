@@ -1,6 +1,6 @@
 # Research Note — Per-Node Toolset Support Verification (M1)
 
-> Researcher artifact, **not** an HLD. Verifies that the §3 stack picks in [m1-cooperative-awareness.md](m1-cooperative-awareness.md) support every per-node responsibility in its § ECU and Scenario Player responsibility and every focus goal in its § Cloud development constraints table. Requirement numbers refer to that report (R1–R25); **no new numbers are defined here and none are renumbered**. Environment facts from [BTC letter 09/07/2026](../tmp/BTC_phan_hoi_V2X_team.pdf) (authoritative on CarSky) and [m1-phase1-working-environment.md](m1-phase1-working-environment.md). *Amended 2026-07-12: § Multi-process wake-on-warning added on user follow-up (end-state now mandatory).*
+> Researcher artifact, **not** an HLD. Verifies that the §3 stack picks in [m1-cooperative-awareness.md](../../../documents/Requirements/m1-cooperative-awareness.md) support every per-node responsibility in its § ECU and Scenario Player responsibility and every focus goal in its § Cloud development constraints table. Requirement numbers refer to that report (R1–R25); **no new numbers are defined here and none are renumbered**. Environment facts from [BTC letter 09/07/2026](../tmp/BTC_phan_hoi_V2X_team.pdf) (authoritative on CarSky) and [m1-phase1-working-environment.md](m1-phase1-working-environment.md). *Amended 2026-07-12: § Multi-process wake-on-warning added on user follow-up (end-state now mandatory).*
 
 ## Verdict summary
 
@@ -140,7 +140,7 @@ No gap forces a pick change. **Recommendation: keep all four picks.** Items for 
 ## Sources
 
 - [BTC letter 09/07/2026](../tmp/BTC_phan_hoi_V2X_team.pdf) — CarSky node model, seam/socket semantics, provided AAOS IVI node, bench-node role.
-- [m1-cooperative-awareness.md](m1-cooperative-awareness.md) §1–§4 — responsibilities, cloud table, picks, KPIs, flags.
+- [m1-cooperative-awareness.md](../../../documents/Requirements/m1-cooperative-awareness.md) §1–§4 — responsibilities, cloud table, picks, KPIs, flags.
 - [Notifications on Android Automotive OS — developer.android.com](https://developer.android.com/training/cars/platforms/automotive-os/notifications) (checked 2026-07-12; cached: [aaos-notifications-hun-foreground-service.md](../.claude/references/aaos-notifications-hun-foreground-service.md)).
 - [Restrictions on starting activities from the background — developer.android.com](https://developer.android.com/guide/components/activities/background-starts) (checked 2026-07-12; cached with cost figures: [android-background-activity-launch-wake-patterns.md](../.claude/references/android-background-activity-launch-wake-patterns.md)).
 - Cached evidence: [vanetza-its2-release2-cpm-ts103324.md](../.claude/references/vanetza-its2-release2-cpm-ts103324.md), [sceneview-filament-android-3d.md](../.claude/references/sceneview-filament-android-3d.md), [yolo11-cpu-inference-benchmarks.md](../.claude/references/yolo11-cpu-inference-benchmarks.md).

@@ -1,6 +1,6 @@
 # Phase 0 HLD — Contract Freeze (R1–R6)
 
-> High-level design for [milestone1_high_level_plan.md § Phase 0](../documents/Plan/milestone1_high_level_plan.md#phase-0--freeze-the-contracts-r1r6), per [hld-content-and-commit-format.md](../.claude/rules/hld-content-and-commit-format.md). Requirement definitions, field tables, and tech stacks live in [m1-cooperative-awareness.md](../requirements/m1-cooperative-awareness.md) §2 Contracts and §3 — referenced, never restated. Call-flow source: [phase0-contract-freeze-call-flow.puml](phase0-contract-freeze-call-flow.puml).
+> High-level design for [milestone1_high_level_plan.md § Phase 0](../documents/Plan/milestone1_high_level_plan.md#phase-0--freeze-the-contracts-r1r6), per [hld-content-and-commit-format.md](../.claude/rules/hld-content-and-commit-format.md). Requirement definitions, field tables, and tech stacks live in [m1-cooperative-awareness.md](../documents/Requirements/m1-cooperative-awareness.md) §2 Contracts and §3 — referenced, never restated. Call-flow source: [phase0-contract-freeze-call-flow.puml](phase0-contract-freeze-call-flow.puml).
 >
 > **Location note:** this HLD is cross-cutting (all four nodes), so it lives in `plans/doc/` per [node-code-layout.md § Per-folder doc/](../.claude/rules/node-code-layout.md#per-folder-doc); later node-scoped HLDs (R11 bench, Phase 2 ADA) land in their own node's `doc/`.
 >
@@ -100,7 +100,7 @@ V2X_ECU/                                        # C++17
     ├── contracts/test_r2_roundtrip.cpp
     └── fixtures/                               # synced copies: golden/ (vectors) · samples/r2-object.json
 
-ADA_ECU/                                        # C++17 core + Python detector; the Phase 2 HLD (per requirements/ada-ecu.svg) extends this tree — Phase 0 lands only the contract layer
+ADA_ECU/                                        # C++17 core + Python detector; the Phase 2 HLD (per documents/Requirements/ada-ecu.svg) extends this tree — Phase 0 lands only the contract layer
 ├── CMakeLists.txt                              # core toolchain: C++17, nlohmann/json + GoogleTest via pinned FetchContent, CTest
 ├── contracts/                                  # synced copies: r2 · r3 · r4 schemas
 ├── src/contracts/r2_message.{hpp,cpp}          # R2 nlohmann binding (consumer side)

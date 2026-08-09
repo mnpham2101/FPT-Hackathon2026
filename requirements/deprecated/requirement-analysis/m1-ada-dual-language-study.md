@@ -1,10 +1,10 @@
 # Research Note — ADA ECU per the ada-ecu.svg Architecture: C++ Everywhere Except Object Detection?
 
-> Researcher artifact — a user-directed study re-opening the §3(d) ADA language pick in [m1-cooperative-awareness.md](m1-cooperative-awareness.md) (currently mono-Python 3.11+), run per [requirement-analysis-and-solutioning](../.claude/skills/requirement-analysis-and-solutioning/SKILL.md) against [solution-selection-criteria.md](../.claude/rules/solution-selection-criteria.md). **No requirement numbers are minted or renumbered**; all R#/F# refer to the report. Module inventory read from [ada-ecu.svg](ada-ecu.svg) (drawio export; labels quoted as drawn, including the `Collision Risk Assessment` «interface» stereotype).
+> Researcher artifact — a user-directed study re-opening the §3(d) ADA language pick in [m1-cooperative-awareness.md](../../../documents/Requirements/m1-cooperative-awareness.md) (currently mono-Python 3.11+), run per [requirement-analysis-and-solutioning](../.claude/skills/requirement-analysis-and-solutioning/SKILL.md) against [solution-selection-criteria.md](../.claude/rules/solution-selection-criteria.md). **No requirement numbers are minted or renumbered**; all R#/F# refer to the report. Module inventory read from [ada-ecu.svg](../../../documents/Requirements/ada-ecu.svg) (drawio export; labels quoted as drawn, including the `Collision Risk Assessment` «interface» stereotype).
 
 ## The question, answered directly
 
-**Per the [ada-ecu.svg](ada-ecu.svg) architecture: can C++ own every ADA module except object detection, with Python only inside `Cam Object Detector` as a subprocess-invoked callable binary? — Yes, capability-wise: every non-detection module is C++-feasible in M1** (per-module verdicts below; none is problematic, two carry caveats that are placement/design issues, not language issues). The Python-detector boundary is sound as specified (no FFI, no RPC — a subprocess emitting R3 TrackedObject JSON). **The cost is schedule, not capability:** the hybrid spends ≈ 1–2 weeks of the project's ≈ 1.5–2.5-week slack and needs a second C++ owner — see § Schedule consequence and § Recommendation.
+**Per the [ada-ecu.svg](../../../documents/Requirements/ada-ecu.svg) architecture: can C++ own every ADA module except object detection, with Python only inside `Cam Object Detector` as a subprocess-invoked callable binary? — Yes, capability-wise: every non-detection module is C++-feasible in M1** (per-module verdicts below; none is problematic, two carry caveats that are placement/design issues, not language issues). The Python-detector boundary is sound as specified (no FFI, no RPC — a subprocess emitting R3 TrackedObject JSON). **The cost is schedule, not capability:** the hybrid spends ≈ 1–2 weeks of the project's ≈ 1.5–2.5-week slack and needs a second C++ owner — see § Schedule consequence and § Recommendation.
 
 ## Module → language mapping (the diagram's inventory, module by module)
 
@@ -58,7 +58,7 @@ Verdict = can **C++ own this module in M1**: feasible / feasible-with-caveat / p
 
 - **Capability answer to the user's question: yes** — C++ can own every ada-ecu.svg module except `Cam Object Detector`, which works as a Python callable binary behind an R3-JSONL subprocess boundary exactly as proposed.
 - **Advisability under the ranked criteria: keep mono-Python for M1** (drivers: **C1 + C2**, C4 supporting; C3 does not counterweigh — futures are inference-bound and the criteria warn against over-engineering below C1/C2). The hybrid buys no M1 KPI and prices its cost in the project's entire slack.
-- **Adopted regardless of language** (no ratification needed — changes no pick, scope, or KPI): the [ada-ecu.svg](ada-ecu.svg) module decomposition goes to [[project-architecture]] as HLD input for R15–R17 (it matches R16's intent well; `V2X Msg Parser` placement resolved there); detector-as-separate-process stays an open architecture option inside the current pick.
+- **Adopted regardless of language** (no ratification needed — changes no pick, scope, or KPI): the [ada-ecu.svg](../../../documents/Requirements/ada-ecu.svg) module decomposition goes to [[project-architecture]] as HLD input for R15–R17 (it matches R16's intent well; `V2X Msg Parser` placement resolved there); detector-as-separate-process stays an open architecture option inside the current pick.
 - If the user weighs the capability answer above the schedule cost, the hybrid is a legitimate, buildable choice — elect it via the package below.
 
 ## If the user elects the hybrid — ready-to-ratify package
@@ -77,7 +77,7 @@ Provided so an override is one decision, not a rework; **this note edits nothing
 
 ## Sources
 
-- [ada-ecu.svg](ada-ecu.svg) — the user's ADA architecture diagram (module names quoted as drawn, incl. the «interface» stereotype).
-- [m1-cooperative-awareness.md](m1-cooperative-awareness.md) §1 (ADA responsibilities, cloud table, § Future developments), §2 (R3/R4/R15–R17/R21/R23), §3(d)/(g), §4 (F6, F7, F11, F12).
+- [ada-ecu.svg](../../../documents/Requirements/ada-ecu.svg) — the user's ADA architecture diagram (module names quoted as drawn, incl. the «interface» stereotype).
+- [m1-cooperative-awareness.md](../../../documents/Requirements/m1-cooperative-awareness.md) §1 (ADA responsibilities, cloud table, § Future developments), §2 (R3/R4/R15–R17/R21/R23), §3(d)/(g), §4 (F6, F7, F11, F12).
 - [m1-node-toolset-support-verification.md](m1-node-toolset-support-verification.md) — prior confirmation that Python meets every ADA KPI.
 - Cached evidence: [onnxruntime-cpp-yolo-inference.md](../.claude/references/onnxruntime-cpp-yolo-inference.md), [pyinstaller-onefile-packaging-ml.md](../.claude/references/pyinstaller-onefile-packaging-ml.md), [yolo11-cpu-inference-benchmarks.md](../.claude/references/yolo11-cpu-inference-benchmarks.md).

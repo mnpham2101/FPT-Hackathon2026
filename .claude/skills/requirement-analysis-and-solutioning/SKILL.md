@@ -35,7 +35,7 @@ Trigger: the run is executed as an adversarial debate between researcher persona
 
 - All debate artifacts for round `N` live under `.claude/prompts/scratchpad-requirement-analysis-round<N>/` — position papers, rebuttals, and the round's record file.
 - Close every round by writing **`adversarial-review-record.md` in that same directory**: the round's contested points, each with the positions taken and how it resolved, plus the round's key external sources. Contested-point numbering continues across rounds (round 2 continues where round 1 stopped) so cross-references stay stable.
-- The report under `requirements/` carries only a **pointer appendix** — a section titled `Appendix — adversarial requirement analysis & solution proposal record` (currently [m1-cooperative-awareness.md §6](../../../requirements/m1-cooperative-awareness.md)) with one bullet per round linking to that round's record file. Never inline the full record in the report; never let the record drift from the report's converged text.
+- The report under `requirements/` carries only a **pointer appendix** — a section titled `Appendix — adversarial requirement analysis & solution proposal record` (currently [m1-cooperative-awareness.md §6](../../../documents/Requirements/m1-cooperative-awareness.md)) with one bullet per round linking to that round's record file. Never inline the full record in the report; never let the record drift from the report's converged text.
 - Converged outcomes (requirement changes, picks, flags) still land in the report body per [research-report-format.md](../../rules/research-report-format.md) — the record is the *why* behind them, not a second home for them.
 
 ## Output

@@ -17,7 +17,7 @@ description: Proposal deck — cooperative NLOS hazard awareness over V2X, virtu
 
 **Milestone 1 proposal — FPT Hackathon 2026**
 
-Source: [m1-cooperative-awareness.md §1](../requirements/m1-cooperative-awareness.md) · [milestone1_high_level_plan.md](../documents/Plan/milestone1_high_level_plan.md)
+Source: [m1-cooperative-awareness.md §1](../documents/Requirements/m1-cooperative-awareness.md) · [milestone1_high_level_plan.md](../documents/Plan/milestone1_high_level_plan.md)
 
 ---
 
@@ -114,7 +114,7 @@ section > p { text-align: center; font-size: 0.55em; color: #3d3d46; margin-top:
 - **Safer travel.** Awareness is no longer limited by one vehicle's line of sight — every connected vehicle extends every other's perception.
 - **Effortless user experience.** The hazard appears on the in-vehicle display as an intuitive bird's-eye scene of the road ahead — glance, understand, react. No cryptic alarms, no interpretation.
 
-![h:260 Convoy geometry — A cannot see C; B sees C and relays it over V2X](../requirements/m1_convoy_nlos_relay_geometry.png)
+![h:260 Convoy geometry — A cannot see C; B sees C and relays it over V2X](../documents/Requirements/m1_convoy_nlos_relay_geometry.png)
 
 **Milestone 1 proves it end-to-end:** convoy A → B → C. Vehicle A can never see C (blocked by B). B detects C and relays its perception over V2X — **C appears on A's display anyway.**
 
@@ -135,7 +135,7 @@ section > p { text-align: center; font-size: 0.55em; color: #3d3d46; margin-top:
 
 The complete E/E architecture runs as **virtual ECUs on a cloud platform** — no hardware, yet a full-system demonstration.
 
-![h:330 4-ECU system design](../requirements/system-design.svg)
+![h:330 4-ECU system design](../documents/Requirements/system-design.svg)
 
 - **Blueprint/node model:** 1 blueprint = 1 car; 1 node = 1 ECU, packaged as a container — deploying the blueprint brings up the whole virtual vehicle.
 - **Four cooperating nodes:** V2X ECU (communication), ADA ECU (perception + risk), IVI ECU (display), plus a team-built **Scenario Player** bench node emulating the modem and the world.
@@ -171,7 +171,7 @@ Development runs entirely on the cloud virtual platform under its blueprint/node
 
 Track admission is an explicit, testable state machine — no hidden heuristics:
 
-![h:220 Vehicle C track admission state machine](../requirements/vehicleC_track_admission_state_machine.png)
+![h:220 Vehicle C track admission state machine](../documents/Requirements/vehicleC_track_admission_state_machine.png)
 
 ---
 
@@ -181,7 +181,7 @@ Track admission is an explicit, testable state machine — no hidden heuristics:
 - **Modem firmware & proprietary layers:** simulated by the Scenario Player container.
 - **Tech stack:** C++17 · Vanetza ITS2 codec (ETSI CPM, staged JSON → UPER behind one codec seam) · thin UDP adapter mirroring the production telux API.
 
-![h:330 V2X software stack](../requirements/v2x-ecu.svg)
+![h:330 V2X software stack](../documents/Requirements/v2x-ecu.svg)
 
 ---
 
@@ -193,7 +193,7 @@ Track admission is an explicit, testable state machine — no hidden heuristics:
 - **Modular library design:** C++ and Python consume the same inputs and produce the same database type, used to construct msg to IVI ECU.
 - **Tech stack:** hybrid C++17 core (store · CRA · warning emission) + Python 3.11 detector subprocess — YOLO11n on ONNX, CPU-only (YOLOX-s fallback) · joined by TrackedObject JSONL over stdout, no FFI · UDP + versioned JSON contracts.
 
-![h:330 ADA High Level Design](../requirements/ada-ecu.svg) 
+![h:330 ADA High Level Design](../documents/Requirements/ada-ecu.svg) 
 
 ---
 
@@ -203,7 +203,7 @@ Track admission is an explicit, testable state machine — no hidden heuristics:
 - **Wake-on-warning:** on an obstruction event, a sleeping app wakes and draws the 3-vehicle scene — 2D/3D.
 - **Tech stack:** Kotlin · Jetpack Compose shell · SceneView/Filament 3D + Compose Canvas 2D behind one view seam · UDP foreground service from ADA.
 
-![h:330 HMI Layout Design on IVI ECU](../requirements/ivi-ecu.svg)
+![h:330 HMI Layout Design on IVI ECU](../documents/Requirements/ivi-ecu.svg)
 
 ---
 
@@ -217,7 +217,7 @@ Every ECU boundary is a **deliberate extension seam** — Milestone 1 ships the 
 - **ADA ECU — pluggable warning scenarios.** M1's "occluded vehicle" logic is one realization of the shared Collision Risk Assessment abstraction; intersection hazards, curve blind spots, speed-scaled risk plug in as new modules. The warning message is versioned and typed so **new hazard types and criticality filtering extend it, not rework it**.
 - **IVI ECU — swappable views.** The central view sits behind a binding view-interface seam: 2D today, 3D / live camera feed / multi-app wake-on-warning tomorrow — shell untouched.
 
-Future features are not wishful thinking — they are **registered, analysed, and traced** to the seams above ([§ Future developments](../requirements/m1-cooperative-awareness.md)): live detection at 120 km/h, multiple hidden obstructions, single-message aggregation, user-opt filtering, themes.
+Future features are not wishful thinking — they are **registered, analysed, and traced** to the seams above ([§ Future developments](../documents/Requirements/m1-cooperative-awareness.md)): live detection at 120 km/h, multiple hidden obstructions, single-message aggregation, user-opt filtering, themes.
 
 ---
 
@@ -249,7 +249,7 @@ We simulate the ASPICE traceability chain end-to-end: **requirement ↔ architec
 table { font-size: 0.55em; width: 100%; }
 </style>
 
-Each phase ends demo-ready — demonstration methods follow the jury-preference scores in [§ System demo requirements](../requirements/m1-cooperative-awareness.md).
+Each phase ends demo-ready — demonstration methods follow the jury-preference scores in [§ System demo requirements](../documents/Requirements/m1-cooperative-awareness.md).
 
 | Phase     | Work                                                                         | Method to demonstrate                                                                             |
 | --------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |

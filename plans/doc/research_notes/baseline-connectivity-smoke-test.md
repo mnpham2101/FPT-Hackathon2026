@@ -1,6 +1,6 @@
 # Baseline Blueprint — Node Connectivity Smoke Test
 
-> **Status:** research note (scratch). Not authoritative — authority is [m1-cooperative-awareness.md](../../../requirements/m1-cooperative-awareness.md) R5/R6 and its [baseline topology](../../../requirements/m1-cooperative-awareness.md#baseline-propose-topology); platform mechanics are [carsky-4-node-blueprint.md](../../../requirements/car-sky-guide/carsky-4-node-blueprint.md).
+> **Status:** research note (scratch). Not authoritative — authority is [m1-cooperative-awareness.md](../../../documents/Requirements/m1-cooperative-awareness.md) R5/R6 and its [baseline topology](../../../documents/Requirements/m1-cooperative-awareness.md#baseline-propose-topology); platform mechanics are [carsky-4-node-blueprint.md](../../../requirements/car-sky-guide/carsky-4-node-blueprint.md).
 
 ## 1. Objective
 

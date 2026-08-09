@@ -1,8 +1,8 @@
 # Phase 2–4 HLD — ADA ECU: store, admission, risk assessment, warning output (R3, R12–R15, R18 ADA side)
 
-> High-level design for the ADA ECU's share of [milestone1_high_level_plan.md](../../../documents/Plan/milestone1_high_level_plan.md) §5 Phases 2, 3 and 4, per [hld-content-and-commit-format.md](../../../.claude/rules/hld-content-and-commit-format.md). Requirement definitions, field tables and tech stacks live in [m1-cooperative-awareness.md](../../../requirements/m1-cooperative-awareness.md) §2 R3/R12–R15/R18 and §3(d)/(g) — referenced, never restated.
+> High-level design for the ADA ECU's share of [milestone1_high_level_plan.md](../../../documents/Plan/milestone1_high_level_plan.md) §5 Phases 2, 3 and 4, per [hld-content-and-commit-format.md](../../../.claude/rules/hld-content-and-commit-format.md). Requirement definitions, field tables and tech stacks live in [m1-cooperative-awareness.md](../../../documents/Requirements/m1-cooperative-awareness.md) §2 R3/R12–R15/R18 and §3(d)/(g) — referenced, never restated.
 >
-> Authoritative design inputs this document realizes rather than reinterprets: [ada-ecu.svg](../../../requirements/ada-ecu.svg) (module shape, R14) and [vehicleC_track_admission_state_machine.png](../../../requirements/vehicleC_track_admission_state_machine.png) (R13 lifecycle).
+> Authoritative design inputs this document realizes rather than reinterprets: [ada-ecu.svg](../../../documents/Requirements/ada-ecu.svg) (module shape, R14) and [vehicleC_track_admission_state_machine.png](../../../documents/Requirements/vehicleC_track_admission_state_machine.png) (R13 lifecycle).
 >
 > Diagram sources: [components](../../../documents/Design/ADA-ECU/phase2-4-ada-ecu-components.puml) · [call flow](../../../documents/Design/ADA-ECU/phase2-4-ada-ecu-callflow.puml) · [admission state machine](../../../documents/Design/ADA-ECU/phase2-4-ada-ecu-admission.puml).
 >
@@ -72,7 +72,7 @@ R12 and R14 were never implemented in `ada-ecu/`, and R13 was implemented incomp
 
 ### D3 — R13 admission: one state machine, both sources
 
-Realizes [vehicleC_track_admission_state_machine.png](../../../requirements/vehicleC_track_admission_state_machine.png) exactly, as [phase2-4-ada-ecu-admission.puml](../../../documents/Design/ADA-ECU/phase2-4-ada-ecu-admission.puml). The diagram is source-agnostic, so there is **one** implementation in `store/admission.{hpp,cpp}`, parameterized only by what counts as an update.
+Realizes [vehicleC_track_admission_state_machine.png](../../../documents/Requirements/vehicleC_track_admission_state_machine.png) exactly, as [phase2-4-ada-ecu-admission.puml](../../../documents/Design/ADA-ECU/phase2-4-ada-ecu-admission.puml). The diagram is source-agnostic, so there is **one** implementation in `store/admission.{hpp,cpp}`, parameterized only by what counts as an update.
 
 | Term | Definition fixed here |
 |---|---|
@@ -98,7 +98,7 @@ Further rules:
 
 ### D4 — R14: the Collision Risk Assessment interface, registry and database
 
-Realizes the «interface» block of [ada-ecu.svg](../../../requirements/ada-ecu.svg). Naming reconciliation, stated once: the SVG's realization **`Chained Collision`** is the report's "M1 NLOS plugin" and registers under the frozen R4 registry key **`nlos_obstruction`** — one concept, three existing names, no new term coined.
+Realizes the «interface» block of [ada-ecu.svg](../../../documents/Requirements/ada-ecu.svg). Naming reconciliation, stated once: the SVG's realization **`Chained Collision`** is the report's "M1 NLOS plugin" and registers under the frozen R4 registry key **`nlos_obstruction`** — one concept, three existing names, no new term coined.
 
 ```cpp
 // src/cra/i_collision_risk_assessment.hpp
@@ -328,7 +328,7 @@ Every value is env-injected by the blueprint or falls through to `src/config/con
 ## 7. Diagrams
 
 - **Call flow** — [phase2-4-ada-ecu-callflow.puml](../../../documents/Design/ADA-ECU/phase2-4-ada-ecu-callflow.puml): bring-up, B detected in the clip → R3 JSONL → store, relayed C → store, then the fusion tick expiry → R13 admission → R14 assessment → R15 R4 warning → IVI, with the parse-reject, `b_unknown` and detector-EOF branches.
-- **Component map** — [phase2-4-ada-ecu-components.puml](../../../documents/Design/ADA-ECU/phase2-4-ada-ecu-components.puml): the [ada-ecu.svg](../../../requirements/ada-ecu.svg) blocks as modules and their dependencies.
+- **Component map** — [phase2-4-ada-ecu-components.puml](../../../documents/Design/ADA-ECU/phase2-4-ada-ecu-components.puml): the [ada-ecu.svg](../../../documents/Requirements/ada-ecu.svg) blocks as modules and their dependencies.
 - **Admission state machine** — [phase2-4-ada-ecu-admission.puml](../../../documents/Design/ADA-ECU/phase2-4-ada-ecu-admission.puml): D3 made unambiguous, one machine for both sources.
 
 ## 8. MVC mapping

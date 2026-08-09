@@ -1,6 +1,6 @@
 # ADA_ECU — ADA ECU node (R3, R12–R15)
 
-CarSky **Container Node**: ego's perception and fusion node — requirements R3 and R12–R15 of [m1-cooperative-awareness.md](../requirements/m1-cooperative-awareness.md) §2.
+CarSky **Container Node**: ego's perception and fusion node — requirements R3 and R12–R15 of [m1-cooperative-awareness.md](../documents/Requirements/m1-cooperative-awareness.md) §2.
 
 Two processes, one image: the C++17 `ada_ecu` core and the Python detector subprocess, joined by argv, exit codes and R3 JSONL over stdout — [design decision D2](../documents/Design/ADA-ECU/ada-ecu-design-decisions.md#d2--process-thread-and-mock-model).
 

@@ -1,6 +1,6 @@
 # Research Note — V2X Simulator & Modem-Emulation Tools (M1, cloud-only)
 
-> Researcher artifact, **not** an HLD. Surveys 3rd-party tools that could emulate a C-V2X modem/GNSS device or generate/replay V2X message streams for the bench-node scenario player, under the cloud-only decision of 2026-07-08 (no hardware in any part of the project). Requirement numbers refer to [m1-cooperative-awareness.md](m1-cooperative-awareness.md); no new numbers are defined here. Environment model: [m1-phase1-working-environment.md](m1-phase1-working-environment.md); hardware variant (deferred): [m1-product-fit-quectel-modem.md](m1-product-fit-quectel-modem.md).
+> Researcher artifact, **not** an HLD. Surveys 3rd-party tools that could emulate a C-V2X modem/GNSS device or generate/replay V2X message streams for the bench-node scenario player, under the cloud-only decision of 2026-07-08 (no hardware in any part of the project). Requirement numbers refer to [m1-cooperative-awareness.md](../../../documents/Requirements/m1-cooperative-awareness.md); no new numbers are defined here. Environment model: [m1-phase1-working-environment.md](m1-phase1-working-environment.md); hardware variant (deferred): [m1-product-fit-quectel-modem.md](m1-product-fit-quectel-modem.md).
 
 ## Research question
 

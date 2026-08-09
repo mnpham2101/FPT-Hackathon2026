@@ -1,11 +1,11 @@
 # Scenario Player ↔ V2X ECU — Call Flow & Message Structure
 
-> **Status:** research note. Not authoritative. The authority is [m1-cooperative-awareness.md](../../../requirements/m1-cooperative-awareness.md) — R1, R2, R7–R11 and §3. Findings F1–F9 (§6) need ratification before implementation.
+> **Status:** research note. Not authoritative. The authority is [m1-cooperative-awareness.md](../../Requirements/m1-cooperative-awareness.md) — R1, R2, R7–R11 and §3. Findings F1–F9 (§6) need ratification before implementation.
 > **Verified against:** ETSI TS 103 324 v2.1.1 ASN.1, ETSI TS 102 894-2 (CDD) v2.1.1, Vanetza `master` — sources in §7.
 
 ## 1. Scope
 
-The two nodes and the one wire between them ([baseline topology](../../../requirements/m1-cooperative-awareness.md#baseline-propose-topology)):
+The two nodes and the one wire between them ([baseline topology](../../Requirements/m1-cooperative-awareness.md#baseline-propose-topology)):
 
 | | Node | Address | Role on this wire |
 |---|---|---|---|
@@ -32,11 +32,11 @@ Sections § A – § E, four of them live. Only **§ B** is on the M1 critical p
 | Layer | M1 answer |
 |---|---|
 | Session / handshake | None. UDP fire-and-forget — real V2X broadcast has no peer session to authenticate against. |
-| ITS message security (IEEE 1609.2 / ETSI TS 103 097 signing, enrolment, PKI) | Out of scope for the whole project — the V2X protocol stack ships in the modem ([§1 Input constraints](../../../requirements/m1-cooperative-awareness.md#input-constraints)). |
+| ITS message security (IEEE 1609.2 / ETSI TS 103 097 signing, enrolment, PKI) | Out of scope for the whole project — the V2X protocol stack ships in the modem ([§1 Input constraints](../../Requirements/m1-cooperative-awareness.md#input-constraints)). |
 | Modem attach / 3GPP registration | Modelled by the R8 stub FSM only (§ A), never on the wire. |
 | Network access control | The Room's bridge subnet is the boundary; no in-band credentials. |
 
-Adding a bench↔V2X handshake would **lower** fidelity — production Rx is already "read from socket" ([§3(b)](../../../requirements/m1-cooperative-awareness.md#b-radio-transport-under-the-adapter-seam--serves-r7-r8)). Recommendation: none on the wire.
+Adding a bench↔V2X handshake would **lower** fidelity — production Rx is already "read from socket" ([§3(b)](../../Requirements/m1-cooperative-awareness.md#b-radio-transport-under-the-adapter-seam--serves-r7-r8)). Recommendation: none on the wire.
 
 ### 2.3 § B — The committed path
 
@@ -64,9 +64,9 @@ Both are ETSI ITS facility-layer messages carried in the same `ItsPduHeader`, di
 | Trigger | periodic, rate-adaptive (1–10 Hz) | event-driven; repeated until validity expires; supports update / cancellation / negation |
 | **M1 status** | **The only type implemented** (R1) — bench sends it, V2X ECU decodes it | **Not implemented.** Named family for future hazard types (slippery road, rocks, holes, police…) |
 
-**Why CPM alone satisfies M1:** A must compose `d_AC ≈ d_AB + d_BC`. That needs C's *range and velocity as measured by B* — a DENM cause code cannot carry it, and CAM describes only the sender. One message type, one codec, one profile ([§3(a)](../../../requirements/m1-cooperative-awareness.md#a-v2x-message-family--encoding--serves-r1-r9r11), [decision record](../../../requirements/m1-cooperative-awareness.md#4-decision-record)).
+**Why CPM alone satisfies M1:** A must compose `d_AC ≈ d_AB + d_BC`. That needs C's *range and velocity as measured by B* — a DENM cause code cannot carry it, and CAM describes only the sender. One message type, one codec, one profile ([§3(a)](../../Requirements/m1-cooperative-awareness.md#a-v2x-message-family--encoding--serves-r1-r9r11), [decision record](../../Requirements/m1-cooperative-awareness.md#4-decision-record)).
 
-**Cost of adding DENM later:** one codec module + one dispatch entry in the R9 Rx pipeline — deferred, not foreclosed ([Future developments: extensible message-type dispatch](../../../requirements/m1-cooperative-awareness.md#future-developments)).
+**Cost of adding DENM later:** one codec module + one dispatch entry in the R9 Rx pipeline — deferred, not foreclosed ([Future developments: extensible message-type dispatch](../../Requirements/m1-cooperative-awareness.md#future-developments)).
 
 ## 4. CPM message structure
 
@@ -90,7 +90,7 @@ Containers `2` (RSU), `3` (SensorInformation) and `4` (PerceptionRegion) are unu
 
 ### 4.2 R1 profile → ASN.1 field mapping
 
-Sample column uses the R2 example values from [R2](../../../requirements/m1-cooperative-awareness.md#contracts).
+Sample column uses the R2 example values from [R2](../../Requirements/m1-cooperative-awareness.md#contracts).
 
 | R1 profile information | ASN.1 path | Type | Unit / range | Encoded sample |
 |---|---|---|---|---|
@@ -114,7 +114,7 @@ Sample column uses the R2 example values from [R2](../../../requirements/m1-coop
 
 ## 5. Tech stack
 
-Copied verbatim from [m1-cooperative-awareness.md](../../../requirements/m1-cooperative-awareness.md) — no re-research.
+Copied verbatim from [m1-cooperative-awareness.md](../../Requirements/m1-cooperative-awareness.md) — no re-research.
 
 **Per requirement (§2):**
 

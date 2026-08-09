@@ -1,6 +1,6 @@
 # Run Timing, Startup Flow, and Demo Event Triggering Across the Four M1 Nodes
 
-Requirement analysis & technical solution report per [research-report-format.md](../.claude/rules/research-report-format.md). Answers the three questions in [2026-08-02-time-sync-and-demo-event-triggering.md](../.claude/prompts/2026-08-02-time-sync-and-demo-event-triggering.md) — is a startup call flow / time-sync module needed, is a demo trigger application needed, and how — and the run-choreography requirement that fixes when the IVI's warning screen appears (§6.6).
+Requirement analysis & technical solution report per [research-report-format.md](../../.claude/rules/research-report-format.md). Answers the three questions in [2026-08-02-time-sync-and-demo-event-triggering.md](../../.claude/prompts/2026-08-02-time-sync-and-demo-event-triggering.md) — is a startup call flow / time-sync module needed, is a demo trigger application needed, and how — and the run-choreography requirement that fixes when the IVI's warning screen appears (§6.6).
 
 It defines **three new requirement numbers, R20, R21 and R22** (§7), continuing the project-global numbering after R19. R1–R19 in [m1-cooperative-awareness.md](m1-cooperative-awareness.md) are untouched, and **no frozen contract changes** (§6.5).
 
@@ -18,7 +18,7 @@ Diagrams: [m1-run-timing-startup-flow.puml](m1-run-timing-startup-flow.puml) (st
 
 The problem statement assumes clock divergence between ECUs. Four findings say the problem is elsewhere.
 
-**(a) The container-node clocks already agree to within 55 ms — measured, not assumed.** The Phase 1 run record ([phase1-comms-run.md](../plans/doc/phase1-comms-run.md)) contains a usable cross-node measurement that nobody took it for. The V2X ECU stamps `rxTime` from its own `system_clock`; the ADA-side sink prints its own `time.strftime('%H:%M:%S')` ([netcheck.py:13](../tools/netcheck/netcheck.py)) on receipt. Five consecutive messages:
+**(a) The container-node clocks already agree to within 55 ms — measured, not assumed.** The Phase 1 run record ([phase1-comms-run.md](../../plans/doc/phase1-comms-run.md)) contains a usable cross-node measurement that nobody took it for. The V2X ECU stamps `rxTime` from its own `system_clock`; the ADA-side sink prints its own `time.strftime('%H:%M:%S')` ([netcheck.py:13](../../tools/netcheck/netcheck.py)) on receipt. Five consecutive messages:
 
 | Msg | `rxTime` (V2X clock) | as UTC | ADA sink printed |
 |---|---|---|---|
@@ -30,7 +30,7 @@ The problem statement assumes clock divergence between ECUs. Four findings say t
 
 Let δ = (ADA print instant, ADA clock) − (`rxTime` instant, V2X clock) = transit + handling + clock offset. #5902 printing in second 36 requires `0.946 + δ < 1.000` → **δ < 54 ms**. #5903 printing in second 37 requires `0.046 + δ ≥ 0` → **δ > −46 ms**. Transit and handling are non-negative, so the clock offset is under 54 ms in one direction and, with per-datagram handling under 10 ms, under about 56 ms in the other. **|offset| < ~55 ms, and the whole V2X→ADA hop including transit is inside the same bound.**
 
-Caveat, stated rather than glossed: this bounds two *container* nodes in one deployment. CarSky documents no co-scheduling — a Room is "a Kubernetes namespace where the Nydus Operator builds pods/services for every node", the Device only fixes "namespace, resource pool", and there is no `nodeSelector`/affinity statement anywhere ([Car-Sky-Platform.html](development-platform-doc/Car-Sky-Platform.html)). BTC's advisory even contemplates the ADA ECU as an external node on a separate server. So this is a per-deployment property to re-check, not a guarantee — which is exactly why the recommended design does not depend on it.
+Caveat, stated rather than glossed: this bounds two *container* nodes in one deployment. CarSky documents no co-scheduling — a Room is "a Kubernetes namespace where the Nydus Operator builds pods/services for every node", the Device only fixes "namespace, resource pool", and there is no `nodeSelector`/affinity statement anywhere ([Car-Sky-Platform.html](../../requirements/development-platform-doc/Car-Sky-Platform.html)). BTC's advisory even contemplates the ADA ECU as an external node on a separate server. So this is a per-deployment property to re-check, not a guarantee — which is exactly why the recommended design does not depend on it.
 
 **(b) Nothing in M1 compares one node's clock against another's.** Every consumer of a foreign timestamp uses it as an opaque record value, not as an operand:
 
@@ -47,12 +47,12 @@ Caveat, stated rather than glossed: this bounds two *container* nodes in one dep
 
 **(d) The real defect is pacing, not clocks.** Two independent stimulus sources drive the demo, and one of them has no time base at all:
 
-- **Bench** — sleeps a fixed `period` per tick with no drift correction, and derives scenario time as `t = cycle_tick * period` ([generator.py](../Scenario_Player/player/generator.py)), a tick counter rather than a clock. Scenario time therefore drifts from wall time by the per-tick work cost, unbounded over a run.
-- **ADA detector** — designed and unbuilt, with **no pacing of any kind**: `DETECTOR_FRAME_STRIDE=4` is a decimation stride, and "5 Hz effective" is an assumed CPU throughput, not an enforced rate. A 60 s clip is consumed in whatever wall time the CPU takes, then looped. This is the dominant error term by two orders of magnitude, and it is a `time.sleep` away from being fixed — the pacer this finding produced is [ada-ecu-design-decisions.md D10](../documents/Design/ADA-ECU/ada-ecu-design-decisions.md#d10--clock-domains-and-stimulus-paced-against-clock_monotonic).
+- **Bench** — sleeps a fixed `period` per tick with no drift correction, and derives scenario time as `t = cycle_tick * period` ([generator.py](../../Scenario_Player/player/generator.py)), a tick counter rather than a clock. Scenario time therefore drifts from wall time by the per-tick work cost, unbounded over a run.
+- **ADA detector** — designed and unbuilt, with **no pacing of any kind**: `DETECTOR_FRAME_STRIDE=4` is a decimation stride, and "5 Hz effective" is an assumed CPU throughput, not an enforced rate. A 60 s clip is consumed in whatever wall time the CPU takes, then looped. This is the dominant error term by two orders of magnitude, and it is a `time.sleep` away from being fixed — the pacer this finding produced is [ada-ecu-design-decisions.md D10](../Design/ADA-ECU/ada-ecu-design-decisions.md#d10--clock-domains-and-stimulus-paced-against-clock_monotonic).
 
 ## 3. The timing model
 
-Three distinct quantities. Two already have repo names; the third is described rather than coined ([markdown-writing-style](../.claude/skills/markdown-writing-style/SKILL.md) rule 5).
+Three distinct quantities. Two already have repo names; the third is described rather than coined ([markdown-writing-style](../../.claude/skills/markdown-writing-style/SKILL.md) rule 5).
 
 | Quantity | Existing name | Where it lives |
 |---|---|---|
@@ -67,9 +67,9 @@ The **run timeline** every demo event is placed on is `T0`-relative, and `T0` is
 
 | Segment | Value | Source |
 |---|---|---|
-| Bench tick → CPM bytes (persistent `cpm_encode --stream` subprocess, not a fork per message) | unmeasured; pipe round-trip to a resident process | [SP D1](../documents/Design/SCENARIO-PLAYER/scenario-player-design-decisions.md) |
+| Bench tick → CPM bytes (persistent `cpm_encode --stream` subprocess, not a fork per message) | unmeasured; pipe round-trip to a resident process | [SP D1](../Design/SCENARIO-PLAYER/scenario-player-design-decisions.md) |
 | Bench → V2X, 58 B UDP over R6 | unmeasured individually | — |
-| V2X decode → validate → dedupe → build → `sendto` | **142–151 µs, measured, stable** | [phase1-comms-run.md](../plans/doc/phase1-comms-run.md) |
+| V2X decode → validate → dedupe → build → `sendto` | **142–151 µs, measured, stable** | [phase1-comms-run.md](../../plans/doc/phase1-comms-run.md) |
 | V2X → ADA, ~339 B UDP | **inside the < 55 ms bound of §2(a)**, together with the clock offset | derived |
 | ADA R2 ingest → store → R14 → R4 build | unmeasured; in-process C++, driven by the `FUSION_TICK_MS` = 100 ms tick | — |
 | ADA → IVI, UDP into the AAOS guest | unmeasured — the only hop crossing into a VM | — |
@@ -96,7 +96,7 @@ Not "the CPM must arrive before the frame" but **an ordering constraint on track
 t(B reaches tracked)  <  t(C crosses gate_enter)
 ```
 
-Budget over one cycle, on the `T0` run timeline of §6.6. Inputs: [default.yaml](../Scenario_Player/scenarios/default.yaml) (`cpm_rate_hz` 10, `duration_s` 10.0, `loop` true; C at 70 m closing 5.0 m/s), the committed clip `ADA_ECU/media/ego-b-occluding-c.mp4` (10.0 s, B's range closing ~60 m → ~10 m), R13 (`gate_enter` 30 m, `CONFIRM_HITS` 3) and R14 (`RISK_DWELL_MS` 300 ms).
+Budget over one cycle, on the `T0` run timeline of §6.6. Inputs: [default.yaml](../../Scenario_Player/scenarios/default.yaml) (`cpm_rate_hz` 10, `duration_s` 10.0, `loop` true; C at 70 m closing 5.0 m/s), the committed clip `ADA_ECU/media/ego-b-occluding-c.mp4` (10.0 s, B's range closing ~60 m → ~10 m), R13 (`gate_enter` 30 m, `CONFIRM_HITS` 3) and R14 (`RISK_DWELL_MS` 300 ms).
 
 | Event | Time from `T0` |
 |---|---|
@@ -136,7 +136,7 @@ Readiness and clock sync are separable and are treated separately, as asked.
 
 ### 4.1 Clock synchronisation — candidate comparison
 
-Hard constraints ([solution-selection-criteria.md](../.claude/rules/solution-selection-criteria.md)) pass for all five (chrony, ntpd, linuxptp are open-source and Linux). Ranked criteria: **C1** accomplishability · **C2** fastest for M1 · **C3** future features · **C4** smaller dependency.
+Hard constraints ([solution-selection-criteria.md](../../.claude/rules/solution-selection-criteria.md)) pass for all five (chrony, ntpd, linuxptp are open-source and Linux). Ranked criteria: **C1** accomplishability · **C2** fastest for M1 · **C3** future features · **C4** smaller dependency.
 
 | # | Candidate | Cost by 2026-08-08 | Buys for R19 | Risk | Verdict |
 |---|---|---|---|---|---|
@@ -186,7 +186,7 @@ Facts that decide it:
 
 **Pick: T-1 + T-5.** Drivers **C1** (nothing in its path is unverified) and **C2** (two config keys and a paced loop, against six days). C3 is preserved: T-2 slots in behind the same config keys without changing them.
 
-**The tool that should exist is a checker, not a trigger.** `ADA_ECU/tools/check_run_alignment.py` — post-run verification of §6.4's KPIs from the R18 JSONL. Placement follows the `ADA_ECU/tools/check_zero_c.py` precedent in [node-code-layout.md](../.claude/rules/node-code-layout.md): a check script lives in the node folder whose log it reads. It is **sanctioned bench test equipment, not production code** (governing principle 2) and is never on the ego data path.
+**The tool that should exist is a checker, not a trigger.** `ADA_ECU/tools/check_run_alignment.py` — post-run verification of §6.4's KPIs from the R18 JSONL. Placement follows the `ADA_ECU/tools/check_zero_c.py` precedent in [node-code-layout.md](../../.claude/rules/node-code-layout.md): a check script lives in the node folder whose log it reads. It is **sanctioned bench test equipment, not production code** (governing principle 2) and is never on the ego data path.
 
 **Offsets live in config, never in code** (CLAUDE.md principle 5) — §6.1.
 
@@ -194,7 +194,7 @@ Facts that decide it:
 
 ### 6.1 Config keys
 
-Bench — [Scenario_Player/scenarios/*.yaml](../Scenario_Player/scenarios/), validated by `player/config.py`:
+Bench — [Scenario_Player/scenarios/*.yaml](../../Scenario_Player/scenarios/), validated by `player/config.py`:
 
 | Key | Status | Value | Meaning |
 |---|---|---|---|
@@ -230,7 +230,7 @@ The ADA HLD leaves this open: its admission diagram compares `now - lastUpdated 
 | Intervals — pacing deadlines, dedupe window, **track expiry** | `CLOCK_MONOTONIC` (`steady_clock` / `time.monotonic()`) |
 | Arithmetic mixing two nodes' timestamps | **forbidden** |
 
-R3 field semantics, which also fixes the swapped-timestamps defect recorded as M1 in [phase2-4-pr3-review.md](../plans/doc/phase2-4-pr3-review.md):
+R3 field semantics, which also fixes the swapped-timestamps defect recorded as M1 in [phase2-4-pr3-review.md](../../plans/doc/phase2-4-pr3-review.md):
 
 | Field | `v2x_relayed` | `own_sensor` |
 |---|---|---|
@@ -287,7 +287,7 @@ The technical-change study behind R22 (§7). Every number below is scenario data
 
 | Input | Value | Source |
 |---|---|---|
-| Clip length, frame rate | 10.0 s, 20 fps CFR, 200 frames | [ego-b-occluding-c.source.md](../ADA_ECU/media/ego-b-occluding-c.source.md) |
+| Clip length, frame rate | 10.0 s, 20 fps CFR, 200 frames | [ego-b-occluding-c.source.md](../../ADA_ECU/media/ego-b-occluding-c.source.md) |
 | B's estimated range across the clip | ~60 m → ~10 m, taken as `d_AB(t) ≈ 60 − 5.0 t` | same, § Content verdict — an assumption until the retune measures it |
 | Detector sample rate | 5 Hz (`DETECTOR_FRAME_STRIDE` 4 of 20 fps) | R12 |
 | R13 gate | `GATE_ENTER_M` 30, `GATE_EXIT_M` 35, `CONFIRM_HITS` 3 | R13, ADA HLD §6 |
@@ -368,7 +368,7 @@ D5's band table is total and ordered, the first matching row winning: `high` = C
 
 #### (f) Candidate comparison — how the choreography is placed
 
-All four candidates are configuration-only, so the hard constraints ([solution-selection-criteria.md](../.claude/rules/solution-selection-criteria.md)) are met by all: no library, no platform lock, no licence.
+All four candidates are configuration-only, so the hard constraints ([solution-selection-criteria.md](../../.claude/rules/solution-selection-criteria.md)) are met by all: no library, no platform lock, no licence.
 
 | # | Candidate | What it changes | Verdict |
 |---|---|---|---|
@@ -469,7 +469,7 @@ Three new numbers, continuing after R19. Ordering is by **urgency** — R20 is t
   - *"only after the 8th second does it display the warning screen"* → the first R4 lands in **(`T0` + 8.0 s, `T0` + 10.0 s)**, at `T0` + 8.5–8.9 s by design.
 - **Measurable output:** **K6** — the first `r4_tx` occurs 8.0–10.0 s after `T0` — and **K7** — the IVI's first `[UI] mode=WarningView cause=warning` line follows its startup `[UI] mode=HomeView` line by ≥ 8.0 s — both per §6.4, on the recorded R19 run. K2's ≥ 1.0 s ordering margin holds on the same run.
 - **Dependency:** R20 (without real-time pacing, clip time is not run time and no choreography is expressible), R21, R11, R12, R13, R14, R15, R16, R17, R18.
-- **Feasibility: at-risk.** The mechanism is four values in [default.yaml](../Scenario_Player/scenarios/default.yaml) and two on the ADA node — under an hour of edits. Three inputs it rests on are unmeasured: the detector warm-up `W` that sets `start_delay_s` (§9 item 4), B's estimated range series across the clip that sets B's admission instant (§9 item 8), and the clip's frame content beyond the 2 fps inspection (§9 item 8). It also carries the risk-band rescale of §8 flag 5, and it cannot be observed until Phase 3 and Phase 4 both land.
+- **Feasibility: at-risk.** The mechanism is four values in [default.yaml](../../Scenario_Player/scenarios/default.yaml) and two on the ADA node — under an hour of edits. Three inputs it rests on are unmeasured: the detector warm-up `W` that sets `start_delay_s` (§9 item 4), B's estimated range series across the clip that sets B's admission instant (§9 item 8), and the clip's frame content beyond the 2 fps inspection (§9 item 8). It also carries the risk-band rescale of §8 flag 5, and it cannot be observed until Phase 3 and Phase 4 both land.
 - **Tech stack:** — (scenario YAML and node configuration; no new library, no new tool beyond `check_run_alignment.py`).
 
 **Whole-input feasibility verdict: achievable, and smaller than the questions imply.** The clock-synchronisation half of the input is **not needed** and is therefore free. The pacing, alignment and choreography half is **at-risk** — roughly one day of work in total, sitting on top of Phase 3 and Phase 4, six days from the deadline, with three measurements still outstanding.
@@ -478,7 +478,7 @@ Three new numbers, continuing after R19. Ordering is by **urgency** — R20 is t
 
 1. **R20 and R21 are demo-quality work; R22 is an acceptance requirement in its own right.** R19's four acceptance items — the recorded run, the two pcaps, zero C on the detection log, ghost C sourced from `v2x_relayed` — **fail on none of them when the timing is misaligned**. What misalignment costs there is credibility: a god view where B's range sweeps a whole clip in ten seconds while C closes over twelve reads as broken to a jury. R22 is different: it states the observable directly, so a run that warns at 5 s fails R22 while still passing R19. **Scheduling R22 means scheduling R20 with it** — the pacing is what makes the choreography meaningful.
 2. **The cheap half should be done regardless.** The bench deadline-scheduling fix and the `mono_ms` field in `[TX]` are ~1 hour on code that already runs live, and they close K5 immediately. The detector pacing is ~2 hours *inside* Phase 3 rather than extra to it.
-3. **Nothing here pulls a deferred item into M1.** No item from the report's § Future developments or [milestone1_high_level_plan.md §6](../documents/Plan/milestone1_high_level_plan.md) is touched. Note the interaction the other way: if the deferred **IVI dashcam view** is ever accepted ([m1-video-source-and-ivi-dashcam.md §8](m1-video-source-and-ivi-dashcam.md)), R20's detector pacing stops being polish and becomes mandatory — that note already flagged it, and R20 is where it now lives.
+3. **Nothing here pulls a deferred item into M1.** No item from the report's § Future developments or [milestone1_high_level_plan.md §6](../Plan/milestone1_high_level_plan.md) is touched. Note the interaction the other way: if the deferred **IVI dashcam view** is ever accepted ([m1-video-source-and-ivi-dashcam.md §8](m1-video-source-and-ivi-dashcam.md)), R20's detector pacing stops being polish and becomes mandatory — that note already flagged it, and R20 is where it now lives.
 4. **The `referenceTime` epoch defect (§6.5(b)) is a conformance fix awaiting the user's word** on whether to spend an hour on a field that changes no M1 behaviour.
 5. **R22 rescales the ADA risk bands to `RISK_NEAR_M` 60 and `RISK_CRITICAL_M` 30.** That is what puts the first R4 on a plain range comparison instead of on a closing rate derived from the estimated `d_AB` (§6.6(e)). The gate clause of the ordering rule `RISK_CRITICAL_M < RISK_NEAR_M < GATE_ENTER_M` is withdrawn: no assertion relates a risk threshold to a gate threshold, because they are thresholds on different quantities. `RISK_CRITICAL_M < RISK_NEAR_M` and `RISK_TTC_CRITICAL_S < RISK_TTC_WARN_S` stand. The clause is carried by the phase-2 subtask's validation list and by ADA decision D5's prose, so it is those two documents that drop it.
 6. **R22 compresses the risk progression to two states.** The warning window is the ~1.3 s between the first R4 and the cycle end, so at most one further transition fits inside it. A run showing `low → medium → high` needs either a longer cycle — which breaks K1 (§6.6(f), G-C) — or bands tuned to fire twice inside 1.2 s, which is a flicker rather than a progression. The recommended pair shows a clean `low → medium`; the 60/50 pair shows `high` from the first R4. The choice is aesthetic and belongs to the user.
@@ -503,16 +503,16 @@ Three new numbers, continuing after R19. Ordering is by **urgency** — R20 is t
 ## Sources
 
 - [m1-cooperative-awareness.md](m1-cooperative-awareness.md) — R1–R6 contracts, R11–R19; §4 decision record.
-- [milestone1_high_level_plan.md](../documents/Plan/milestone1_high_level_plan.md) — §2 assumptions, §4 track-admission gate, Phases 0–6 acceptance, §6 deferred scope.
-- [phase1-comms-run.md](../plans/doc/phase1-comms-run.md) — the live R2 excerpt with `rxTime` against the ADA sink's own log clock (§2(a)); the 142–151 µs V2X in→out measurement; the `[CAP]` In/Out/P reading rules.
-- [phase0-smoke-test-run.md](../plans/doc/phase0-smoke-test-run.md) · [baseline-connectivity-smoke-test.md](../plans/doc/research_notes/baseline-connectivity-smoke-test.md) · [netcheck.py](../tools/netcheck/netcheck.py) — the smoke test is a one-way relay chain, not a handshake; `START_DELAY_S` is its only readiness mechanism; hop 3 unconfirmed (O4).
-- [phase2-4-pr3-review.md](../plans/doc/phase2-4-pr3-review.md) — the ADA starting state: no service loop, detector is a placeholder, R3 timestamps swapped (M1).
-- [scenario-player-hld.md](../documents/Design/SCENARIO-PLAYER/scenario-player-hld.md) · [generator.py](../Scenario_Player/player/generator.py) · [config.py](../Scenario_Player/player/config.py) · [default.yaml](../Scenario_Player/scenarios/default.yaml) — the tick-counter scenario clock, the fixed-sleep loop, the YAML key set, the persistent `cpm_encode --stream` codec path (D1).
-- [ada-ecu-hld.md](../documents/Design/ADA-ECU/ada-ecu-hld.md) and its [decisions](../documents/Design/ADA-ECU/ada-ecu-design-decisions.md) — `TRACK_TIMEOUT_MS` as silence and `DETECTOR_FRAME_STRIDE` as decimation rather than a rate (the unstated clock source that §6.2 settles); D3's one admission machine for both sources with `CONFIRM_HITS` and the `GATE_ENTER_M`/`GATE_EXIT_M` Schmitt band; D5's risk bands on the composed range `d_AC`, its `RISK_DWELL_MS` debounce, its edge-triggered emission in both directions and its `b_unknown` path; D6's frame-source seam and range estimator; the env table's committed threshold values.
-- [ego-b-occluding-c.source.md](../ADA_ECU/media/ego-b-occluding-c.source.md) — the clip's provenance, its 10.0 s / 20 fps / 200-frame encode, the 2 fps content inspection recording B present and frontmost in 20 of 20 sampled frames, B's ~60 m → ~10 m approach, and the raw source's "not yet the lead vehicle" window before `t ≈ 6 s`.
-- [video-source-for-r12.md](../documents/KnowledgeBase/video-source-for-r12.md) — the clip baked into the image with no external arming path; `VIDEO_CLIP_PATH` and `DETECTOR_FRAME_STRIDE`; the 5 Hz sample-rate budget.
-- [ivi-ecu-hld.md](../documents/Design/IVI-ECU/ivi-ecu-hld.md) and its [decisions](../documents/Design/IVI-ECU/ivi-ecu-design-decisions.md) · `R4Message.kt` · `build.gradle.kts` — R4 carries no timestamp; `DisplayMode` Home/Apps/Settings/Warning and the `[UI]` line with its `cause`; `WARNING_TIMEOUT_MS` = 10000 as a local countdown, with active risk raising the warning and only silence lowering it; R3 timestamps parsed and unused.
-- [r1-cpm-profile.md](../contracts/r1-cpm-profile.md) and the R1–R4 schemas under [contracts/](../contracts/) — `TimestampIts` epoch definition, F1/F8/F9, the exact frozen time fields, and the R4 warning event's five required fields with its nullable `geometry.vehicleC`.
-- [Car-Sky-Platform.html](development-platform-doc/Car-Sky-Platform.html) — Room as a K8s namespace; Device fixes namespace and resource pool only; Skycraft as a full guest VM; Ethernet Bridge as an unmanaged software switch on TCP 29400; no time service, no scheduler, no readiness probe, no ordering primitive.
-- [BTC_phan_hoi_V2X_team.pdf](development-platform-doc/BTC_phan_hoi_V2X_team.pdf) — §3, the ADA ECU as an external node on a separate server, with the bench required to follow it.
+- [milestone1_high_level_plan.md](../Plan/milestone1_high_level_plan.md) — §2 assumptions, §4 track-admission gate, Phases 0–6 acceptance, §6 deferred scope.
+- [phase1-comms-run.md](../../plans/doc/phase1-comms-run.md) — the live R2 excerpt with `rxTime` against the ADA sink's own log clock (§2(a)); the 142–151 µs V2X in→out measurement; the `[CAP]` In/Out/P reading rules.
+- [phase0-smoke-test-run.md](../../plans/doc/phase0-smoke-test-run.md) · [baseline-connectivity-smoke-test.md](../../plans/doc/research_notes/baseline-connectivity-smoke-test.md) · [netcheck.py](../../tools/netcheck/netcheck.py) — the smoke test is a one-way relay chain, not a handshake; `START_DELAY_S` is its only readiness mechanism; hop 3 unconfirmed (O4).
+- [phase2-4-pr3-review.md](../../plans/doc/phase2-4-pr3-review.md) — the ADA starting state: no service loop, detector is a placeholder, R3 timestamps swapped (M1).
+- [scenario-player-hld.md](../Design/SCENARIO-PLAYER/scenario-player-hld.md) · [generator.py](../../Scenario_Player/player/generator.py) · [config.py](../../Scenario_Player/player/config.py) · [default.yaml](../../Scenario_Player/scenarios/default.yaml) — the tick-counter scenario clock, the fixed-sleep loop, the YAML key set, the persistent `cpm_encode --stream` codec path (D1).
+- [ada-ecu-hld.md](../Design/ADA-ECU/ada-ecu-hld.md) and its [decisions](../Design/ADA-ECU/ada-ecu-design-decisions.md) — `TRACK_TIMEOUT_MS` as silence and `DETECTOR_FRAME_STRIDE` as decimation rather than a rate (the unstated clock source that §6.2 settles); D3's one admission machine for both sources with `CONFIRM_HITS` and the `GATE_ENTER_M`/`GATE_EXIT_M` Schmitt band; D5's risk bands on the composed range `d_AC`, its `RISK_DWELL_MS` debounce, its edge-triggered emission in both directions and its `b_unknown` path; D6's frame-source seam and range estimator; the env table's committed threshold values.
+- [ego-b-occluding-c.source.md](../../ADA_ECU/media/ego-b-occluding-c.source.md) — the clip's provenance, its 10.0 s / 20 fps / 200-frame encode, the 2 fps content inspection recording B present and frontmost in 20 of 20 sampled frames, B's ~60 m → ~10 m approach, and the raw source's "not yet the lead vehicle" window before `t ≈ 6 s`.
+- [video-source-for-r12.md](../KnowledgeBase/video-source-for-r12.md) — the clip baked into the image with no external arming path; `VIDEO_CLIP_PATH` and `DETECTOR_FRAME_STRIDE`; the 5 Hz sample-rate budget.
+- [ivi-ecu-hld.md](../Design/IVI-ECU/ivi-ecu-hld.md) and its [decisions](../Design/IVI-ECU/ivi-ecu-design-decisions.md) · `R4Message.kt` · `build.gradle.kts` — R4 carries no timestamp; `DisplayMode` Home/Apps/Settings/Warning and the `[UI]` line with its `cause`; `WARNING_TIMEOUT_MS` = 10000 as a local countdown, with active risk raising the warning and only silence lowering it; R3 timestamps parsed and unused.
+- [r1-cpm-profile.md](../../contracts/r1-cpm-profile.md) and the R1–R4 schemas under [contracts/](../../contracts/) — `TimestampIts` epoch definition, F1/F8/F9, the exact frozen time fields, and the R4 warning event's five required fields with its nullable `geometry.vehicleC`.
+- [Car-Sky-Platform.html](../../requirements/development-platform-doc/Car-Sky-Platform.html) — Room as a K8s namespace; Device fixes namespace and resource pool only; Skycraft as a full guest VM; Ethernet Bridge as an unmanaged software switch on TCP 29400; no time service, no scheduler, no readiness probe, no ordering primitive.
+- [BTC_phan_hoi_V2X_team.pdf](../../requirements/development-platform-doc/BTC_phan_hoi_V2X_team.pdf) — §3, the ADA ECU as an external node on a separate server, with the bench required to follow it.
 - [m1-video-source-and-ivi-dashcam.md](m1-video-source-and-ivi-dashcam.md) — the deferred IVI dashcam view, which makes detector real-time pacing mandatory if accepted.

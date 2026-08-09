@@ -92,5 +92,5 @@ Lệnh: `./gradlew test` trong `IVI_ECU/` — toàn bộ unit/integration local 
 ## Tham chiếu
 
 - Plan: [plans/phase5_tasks.md](../../plans/phase5_tasks.md)
-- Requirements: [requirements/m1-cooperative-awareness.md](../../requirements/m1-cooperative-awareness.md) (R4, R16, R17)
+- Requirements: [documents/Requirements/m1-cooperative-awareness.md](../../../documents/Requirements/m1-cooperative-awareness.md) (R4, R16, R17)
 - Deploy smoke: [phase5-ivi-deploy.md](phase5-ivi-deploy.md)

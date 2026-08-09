@@ -1,12 +1,12 @@
 # Video Source for Phase 3, and Whether the Dashcam Feed Can Reach Both ADA and IVI
 
-Researcher artifact — a [dev-environment-research](../.claude/skills/dev-environment-research/SKILL.md) run against the CarSky platform, **not an HLD**. It defines **no new requirement numbers**: R1–R19 are frozen and this serves R12, R5, R6, and R16.
+Researcher artifact — a [dev-environment-research](../../.claude/skills/dev-environment-research/SKILL.md) run against the CarSky platform, **not an HLD**. It defines **no new requirement numbers**: R1–R19 are frozen and this serves R12, R5, R6, and R16.
 
-It answers four user questions of 2026-08-02 and **extends** [video-source-for-r12.md](../documents/KnowledgeBase/video-source-for-r12.md), which already settled the ADA-side source. That note stands unchanged; this one adds the platform detail it did not carry, the ADA↔IVI fan-out question it never asked, and a concrete answer on how the file physically reaches a deployed container. Cross-node because it spans ADA (R12), IVI (R16), and the blueprint (R5/R6).
+It answers four user questions of 2026-08-02 and **extends** [video-source-for-r12.md](../KnowledgeBase/video-source-for-r12.md), which already settled the ADA-side source. That note stands unchanged; this one adds the platform detail it did not carry, the ADA↔IVI fan-out question it never asked, and a concrete answer on how the file physically reaches a deployed container. Cross-node because it spans ADA (R12), IVI (R16), and the blueprint (R5/R6).
 
 Diagrams: [m1-video-source-topology.svg](m1-video-source-topology.svg) — blueprint with the video path drawn on, also as [.drawio](m1-video-source-topology.drawio) and [.puml](m1-video-source-topology.puml) · [m1-video-source-flow.puml](m1-video-source-flow.puml) — clip to R19 evidence. Every diagram carries the legend below.
 
-**Verification pass, 2026-08-02.** Every platform claim below was re-checked against [Car-Sky-Platform.html](development-platform-doc/Car-Sky-Platform.html) after the first draft — all 68 API paths enumerated, the Container Node config table read field by field, and whole-file string counts run for `volume`, `configMap`, `hostPath`, `mtu`, `bandwidth`, `latency`, `fan-out`, `quota`. **The recommendation in §9 is unchanged.** Six statements were corrected or sharpened and are marked **[v]** where they appear: §2 (the `container-file` API; the container-side `usb` pin), §3 (a new candidate (f)), §4 (the worked Container↔Container video edge; the `a8_pin` disclaimer), §5 (multicast attribution).
+**Verification pass, 2026-08-02.** Every platform claim below was re-checked against [Car-Sky-Platform.html](../../requirements/development-platform-doc/Car-Sky-Platform.html) after the first draft — all 68 API paths enumerated, the Container Node config table read field by field, and whole-file string counts run for `volume`, `configMap`, `hostPath`, `mtu`, `bandwidth`, `latency`, `fan-out`, `quota`. **The recommendation in §9 is unchanged.** Six statements were corrected or sharpened and are marked **[v]** where they appear: §2 (the `container-file` API; the container-side `usb` pin), §3 (a new candidate (f)), §4 (the worked Container↔Container video edge; the `a8_pin` disclaimer), §5 (multicast attribution).
 
 ## 0. Reading the R-numbers
 
@@ -28,7 +28,7 @@ So R3 and R13 are the same *kind* of thing — both requirements — and differ 
 
 ## 2. Environment model — every video surface CarSky exposes
 
-All rows traced to [Car-Sky-Platform.html](development-platform-doc/Car-Sky-Platform.html); quotes are the doc's own words.
+All rows traced to [Car-Sky-Platform.html](../../requirements/development-platform-doc/Car-Sky-Platform.html); quotes are the doc's own words.
 
 | Surface | What it actually is | Serves R12? |
 |---|---|---|
@@ -45,8 +45,8 @@ All rows traced to [Car-Sky-Platform.html](development-platform-doc/Car-Sky-Plat
 Three further facts that bound every option below:
 
 - **[v] No volume, no bind mount, no declarative file injection.** The documented Container Node config is exactly eleven fields — `image`, `command`, `args`, `env`, `exposedPorts`, `capabilities`, `gpu`, `cgroupV2`, `kuksaIntercepts`, `socketcanShim`, `devices` — and nothing else. Whole-file counts: `configMap` 0, `persistent` 0, `PVC` 0, `hostPath` 0, `emptyDir` 0, "bind mount" 0; every `mount` hit is the USB disk image, the guest's `/sdcard/Music/usb_1`, or `cgroupV2`'s "Mount `/sys/fs/cgroup` RW". A file reaches a container **declaratively** only inside its image — the sole escape hatch is the imperative `container-file` API above.
-- **The bridge is an L2 broadcast domain of unmeasured capacity.** "It behaves like an unmanaged software switch." **[v] Confirmed by count: `mtu` 0, `bandwidth` 0, `latency` 0, `throughput` 0, `jumbo` 0 occurrences in the entire platform doc** — no figure exists to design against. Our own [deploy walkthrough](car-sky-guide/deploy-walkthrough-netcheck.md) warns "the bridge is a tunnelled fabric, so 1500 bytes is not guaranteed" and gives a `PAD=1400` bisect procedure.
-- **`VIDEO` pins are API-creatable, `ETHERNET` pins are not** — the `addPin` enum is `VHAL|KUKSA|CAN|LIN|VIDEO|GPIO|GENERIC` ([carsky-rest-api-blueprint.md](car-sky-guide/carsky-rest-api-blueprint.md)). The pin nobody wants can be scripted; the pin everyone needs is a manual UI step. Curiously, **VIDEO does not appear in the doc's own Concepts → Pin Types table at all** — it exists only in the node pin lists, the `+ Add Pin` picker, and the wiring rules.
+- **The bridge is an L2 broadcast domain of unmeasured capacity.** "It behaves like an unmanaged software switch." **[v] Confirmed by count: `mtu` 0, `bandwidth` 0, `latency` 0, `throughput` 0, `jumbo` 0 occurrences in the entire platform doc** — no figure exists to design against. Our own [deploy walkthrough](../../requirements/car-sky-guide/deploy-walkthrough-netcheck.md) warns "the bridge is a tunnelled fabric, so 1500 bytes is not guaranteed" and gives a `PAD=1400` bisect procedure.
+- **`VIDEO` pins are API-creatable, `ETHERNET` pins are not** — the `addPin` enum is `VHAL|KUKSA|CAN|LIN|VIDEO|GPIO|GENERIC` ([carsky-rest-api-blueprint.md](../../requirements/car-sky-guide/carsky-rest-api-blueprint.md)). The pin nobody wants can be scripted; the pin everyone needs is a manual UI step. Curiously, **VIDEO does not appear in the doc's own Concepts → Pin Types table at all** — it exists only in the node pin lists, the `+ Add Pin` picker, and the wiring rules.
 
 ## 3. Decision A — where R12's frames come from at runtime
 
@@ -61,7 +61,7 @@ Hard constraints pass for every candidate (open-source, Linux). Ranked criteria:
 | (e) | Synthetic clip from `tools/make_sample_video.py` | CI fixture only, never the demo source |
 | **[v]** (f) | Clip in a FAT32 `.img` USB artifact, attached via a Device Proxy Node to an ADA `usb` INPUT pin | **Rejected** — new to this verification pass |
 
-**Why (b) wins.** C1: zero platform unknowns — `open(path)` inside the container, on the path the report ("detects objects only from provided saved video files"), the [node guide](car-sky-guide/node-ada-ecu.md) and BTC's recommended default all already assume. C2: one `COPY` line and one env var; no new pin, no blueprint change, no contract re-freeze. C4: OpenCV `VideoCapture` is already in R12's tech stack, so nothing new is pulled in. C3 costs nothing because frame acquisition already sits behind the `FrameSource` seam ([ADA decision D6](../documents/Design/ADA-ECU/ada-ecu-design-decisions.md#d6--r12-detector-frame-source-seam-inference-distance-zero-c-evidence)) — a live source arrives later as one new implementation.
+**Why (b) wins.** C1: zero platform unknowns — `open(path)` inside the container, on the path the report ("detects objects only from provided saved video files"), the [node guide](../../requirements/car-sky-guide/node-ada-ecu.md) and BTC's recommended default all already assume. C2: one `COPY` line and one env var; no new pin, no blueprint change, no contract re-freeze. C4: OpenCV `VideoCapture` is already in R12's tech stack, so nothing new is pulled in. C3 costs nothing because frame acquisition already sits behind the `FrameSource` seam ([ADA decision D6](../Design/ADA-ECU/ada-ecu-design-decisions.md#d6--r12-detector-frame-source-seam-inference-distance-zero-c-evidence)) — a live source arrives later as one new implementation.
 
 **Why (c) is rejected.** It trades a build-time cost for a demo-time network dependency: the node must reach an external host during startup, on a platform where a failed pull already manifests as a node stuck in `Provisioning`. It also makes the image non-self-describing — the same tag behaves differently depending on what the remote served. Fails C1 outright, and buys nothing on C2 since the image must be rebuilt and pushed anyway.
 
@@ -133,7 +133,7 @@ A 60 s / 720p / 20 fps clip is comfortably tolerable. The point of leverage is d
 
 ## 6. Blueprint construction
 
-Shapes match [blueprint-m1-cooperative-awareness.json](car-sky-guide/blueprint-m1-cooperative-awareness.json); node config is stored flat, per [carsky-rest-api-blueprint.md](car-sky-guide/carsky-rest-api-blueprint.md).
+Shapes match [blueprint-m1-cooperative-awareness.json](../../requirements/car-sky-guide/blueprint-m1-cooperative-awareness.json); node config is stored flat, per [carsky-rest-api-blueprint.md](../../requirements/car-sky-guide/carsky-rest-api-blueprint.md).
 
 **Recommended — the ADA node, additive env only. No new pin, no new edge, no new node.**
 
@@ -162,7 +162,7 @@ Shapes match [blueprint-m1-cooperative-awareness.json](car-sky-guide/blueprint-m
 }
 ```
 
-The `pins: []` is not an omission — `ethernet` pins cannot be created by import or by the REST `addPin` enum, so the single `ETHERNET`/`OUTPUT` pin at `10.99.0.12` is added by hand in the Nydus canvas afterwards ([node-ada-ecu.md](car-sky-guide/node-ada-ecu.md)). The topology stays the star of [carsky-4-node-blueprint.md](car-sky-guide/carsky-4-node-blueprint.md): bench `10.99.0.10`, V2X `10.99.0.11`, ADA `10.99.0.12`, IVI `10.99.0.13`, all one `ethernet` pin into the bridge at `10.99.0.1`.
+The `pins: []` is not an omission — `ethernet` pins cannot be created by import or by the REST `addPin` enum, so the single `ETHERNET`/`OUTPUT` pin at `10.99.0.12` is added by hand in the Nydus canvas afterwards ([node-ada-ecu.md](../../requirements/car-sky-guide/node-ada-ecu.md)). The topology stays the star of [carsky-4-node-blueprint.md](../../requirements/car-sky-guide/carsky-4-node-blueprint.md): bench `10.99.0.10`, V2X `10.99.0.11`, ADA `10.99.0.12`, IVI `10.99.0.13`, all one `ethernet` pin into the bridge at `10.99.0.1`.
 
 **Optional (B4) — same node, serving the clip.** Two env rows and one `exposedPorts` entry; the `ethernet` pin already carries it inside the Room, and the gateway route is the bonus browser view:
 
@@ -192,7 +192,7 @@ Switching to B5 replaces that one string with a raw-resource URI. No other chang
 
 ## 7. Requirement mapping, feasibility, and measurable outputs
 
-No new requirement numbers. Verdicts per [requirement-quality-criteria.md](../.claude/rules/requirement-quality-criteria.md).
+No new requirement numbers. Verdicts per [requirement-quality-criteria.md](../../.claude/rules/requirement-quality-criteria.md).
 
 | Item | Serves | Verdict | Reasoning |
 |---|---|---|---|
@@ -207,7 +207,7 @@ No new requirement numbers. Verdicts per [requirement-quality-criteria.md](../.c
 | Real-time pacing of the detector's frame source | R12 | **achievable**; becomes **mandatory** if the dashcam view is built | Otherwise the IVI picture and the ADA warnings drift within one clip length |
 | Blueprint/topology change | R5, R6 | **none required** | The recommendation touches no pin and no edge |
 
-**Measurable outputs (KPIs).** Items 1–6 are inherited from [video-source-for-r12.md §3](../documents/KnowledgeBase/video-source-for-r12.md); 7–11 are new to this study.
+**Measurable outputs (KPIs).** Items 1–6 are inherited from [video-source-for-r12.md §3](../KnowledgeBase/video-source-for-r12.md); 7–11 are new to this study.
 
 7. `docker image inspect` shows the media layer ≤ 60 MB, and its digest is unchanged across two consecutive builds that do not touch `media/` — proving the layer cache holds.
 8. The second `docker push` of the ADA image reports the media blob as already present (0 bytes transferred), and the first is timed once and recorded.
@@ -224,18 +224,18 @@ No new requirement numbers. Verdicts per [requirement-quality-criteria.md](../.c
 
 ## 8. Scope flag — the IVI dashcam view is not in M1
 
-**It is deferred scope, and pulling it in is the user's decision, not this note's.** The report lists "**Ego video clip display on the IVI** — the provided ego-POV clip (B occluding the view ahead) plays in the Display area (R16) … **Deferred from M1 for time**; the Display area already hosts video feeds by design, so this is an added surface, not a rework" under § Future developments, mirrored in the [future-features register](future/m1-future-features-register.md) and restated in the report's §4 decision record. R16's acceptance covers the layout and the Display area's mode switching; R17's covers the warning view. Neither mentions a camera view, and [Phase 5's acceptance criteria](../documents/Plan/milestone1_high_level_plan.md) do not either. [node-ivi-ecu.md](car-sky-guide/node-ivi-ecu.md) records the same boundary as the reason the IVI wires no `video` pin.
+**It is deferred scope, and pulling it in is the user's decision, not this note's.** The report lists "**Ego video clip display on the IVI** — the provided ego-POV clip (B occluding the view ahead) plays in the Display area (R16) … **Deferred from M1 for time**; the Display area already hosts video feeds by design, so this is an added surface, not a rework" under § Future developments, mirrored in the [future-features register](future/m1-future-features-register.md) and restated in the report's §4 decision record. R16's acceptance covers the layout and the Display area's mode switching; R17's covers the warning view. Neither mentions a camera view, and [Phase 5's acceptance criteria](../Plan/milestone1_high_level_plan.md) do not either. [node-ivi-ecu.md](../../requirements/car-sky-guide/node-ivi-ecu.md) records the same boundary as the reason the IVI wires no `video` pin.
 
 Two ways to accept it, both requiring the user's word:
 
 - **Additive and timeboxed** — the lighter option, and the recommended one. R16 already states the Display area "also serves video feeds", and `DisplayMode.kt` already exists, so a video mode is an extension of a shipped surface rather than a new requirement. Condition: it gates nothing, it appears in no acceptance criterion, and **it is not started until Phase 3 and Phase 5 acceptance are green**.
-- **A new requirement number** — if the user wants it tracked with its own acceptance criteria and task IDs. That needs a full [requirement-analysis-and-solutioning](../.claude/skills/requirement-analysis-and-solutioning/SKILL.md) run promoting it out of § Future developments; an environment-research note may not mint requirement numbers.
+- **A new requirement number** — if the user wants it tracked with its own acceptance criteria and task IDs. That needs a full [requirement-analysis-and-solutioning](../../.claude/skills/requirement-analysis-and-solutioning/SKILL.md) run promoting it out of § Future developments; an environment-research note may not mint requirement numbers.
 
 Not flagging this would be silently absorbing a deferred item into M1 six days before the deadline, against CLAUDE.md principle 3.
 
 ## 9. Recommendation
 
-**Do Decision A now and change nothing else.** Ship the user-supplied ego-POV clip inside the ADA ECU image via one `COPY media/ /app/media/` layer, read through `VIDEO_CLIP_PATH`, exactly as [video-source-for-r12.md](../documents/KnowledgeBase/video-source-for-r12.md) already specified — the blueprint keeps its four role nodes, one `ethernet` pin each, and no `video` pin anywhere. **Criteria C1 and C2 drove this**: it is the only option with zero platform unknowns, and it costs one Dockerfile line against a Phase 3 that has not started with six days left. The two file-delivery alternatives the verification pass surfaced — the USB/Device-Proxy artifact (f) and the `container-file` API — are both real, and both lose to `COPY` on C1 and C2; keep `container-file` in mind as a rehearsal-time clip-swap trick, not as the deploy path.
+**Do Decision A now and change nothing else.** Ship the user-supplied ego-POV clip inside the ADA ECU image via one `COPY media/ /app/media/` layer, read through `VIDEO_CLIP_PATH`, exactly as [video-source-for-r12.md](../KnowledgeBase/video-source-for-r12.md) already specified — the blueprint keeps its four role nodes, one `ethernet` pin each, and no `video` pin anywhere. **Criteria C1 and C2 drove this**: it is the only option with zero platform unknowns, and it costs one Dockerfile line against a Phase 3 that has not started with six days left. The two file-delivery alternatives the verification pass surfaced — the USB/Device-Proxy artifact (f) and the `container-file` API — are both real, and both lose to `COPY` on C1 and C2; keep `container-file` in mind as a rehearsal-time clip-swap trick, not as the deploy path.
 
 **Treat the IVI dashcam view as a separate, deferred decision.** If the user accepts it as additive and timeboxed, build it as **B4** — the ADA node serves its own clip over HTTP on `exposedPorts`, the IVI plays it with Media3 behind the warning overlay, and the media URI is a config value so the offline local-copy variant (B5) is one string away. **Criterion C1 drove that pick too**: it is the only fan-out mechanism with no undocumented platform behaviour in its path, where the `video` pin has four independent blockers and UDP video means writing RTP against an MTU nobody has measured. Do not start it until Phase 3 and Phase 5 are green, and if it is built, pace the detector to real time so the picture and the warnings do not drift.
 
@@ -244,7 +244,7 @@ Not flagging this would be silently absorbing a deferred item into M1 six days b
 | # | Unverified | Check |
 |---|---|---|
 | 1 | **Zot image/layer size limit and any storage quota** — no value appears in the platform doc; only a ~1.2 GB artifact observed succeeding | `GET /api/v1/config/limits` and `GET /api/v1/account-limits` with the REST key; failing that, push the real ADA image and observe |
-| 2 | **Ethernet Bridge MTU** — never stated; zero MTU/bandwidth/latency figures exist in the whole doc | The `PAD=1400` bisect in [deploy-walkthrough-netcheck.md](car-sky-guide/deploy-walkthrough-netcheck.md); only matters if B2/B3 are ever revisited |
+| 2 | **Ethernet Bridge MTU** — never stated; zero MTU/bandwidth/latency figures exist in the whole doc | The `PAD=1400` bisect in [deploy-walkthrough-netcheck.md](../../requirements/car-sky-guide/deploy-walkthrough-netcheck.md); only matters if B2/B3 are ever revisited |
 | 3 | **Multicast over the bridge** — implied by Zenoh's peer+multicast fallback and vsomeip's `add_multicast_route`, never stated for the bridge itself | Join a group from two containers in a deployed Room and send; only matters for B3 |
 | 4 | **`video` pin fan-out cardinality** — no pin config schema exists; both worked examples are labelled 1-to-1 and the doc is silent on fan-out | Create one VIDEO OUTPUT pin with two edges over `/batch` and call `validate`; not worth doing unless B1 is revived |
 | 5 | **What a Skycraft `video` pin delivers into AAOS** — one undocumented sentence, no counterpart node named | Would need BTC/FPT-Mentor to answer; treat as unavailable until they do |
@@ -252,18 +252,18 @@ Not flagging this would be silently absorbing a deferred item into M1 six days b
 | 7 | **Media3/ExoPlayer H.264 playback on this AAOS image** — the node config sets `gpuBackend: virglrenderer` at 1920×1080, but decode support is untested | Install a throwaway APK playing the clip and read `dumpsys gfxinfo`; a software-decode fallback is the mitigation |
 | 8 | **aarch64 wheels for `onnxruntime` / `opencv-python-headless`** — assumed, not proven | The first ADA image CI build (already ADA HLD open item 6) |
 | 9 | **The clip itself does not exist yet** — it is a user deliverable and gates all Phase 3 evidence | The user supplies `ADA_ECU/media/ego-b-occluding-c.mp4` per the input spec |
-| 10 | **Registry host drift** — [node-ada-ecu.md](car-sky-guide/node-ada-ecu.md) still says `registry.carsky.io` while Phase 0 verified `registry.hackathon-2.carsky.io` | Editorial fix in the node guide; unrelated to video but surfaced while checking push cost |
+| 10 | **Registry host drift** — [node-ada-ecu.md](../../requirements/car-sky-guide/node-ada-ecu.md) still says `registry.carsky.io` while Phase 0 verified `registry.hackathon-2.carsky.io` | Editorial fix in the node guide; unrelated to video but surfaced while checking push cost |
 | 11 | **[v] `container-file` API semantics** — no request schema, no size limit, no example anywhere in the doc | `POST /api/v1/deployments/:roomId/container-file/:nodeKey` against a live Room with a small file, then a 30 MB one; only needed if the clip-swap trick is adopted |
 | 12 | **[v] Whether a Container Node really accepts a `usb` INPUT pin** — the Device Proxy page says Skycraft only; the wiring rules and the Container Node pin list say Container too | Wire one in the canvas and run `validate`; only matters if candidate (f) is ever revived |
 | 13 | **[v] The `exposedPorts` gateway URL shape** — documented two incompatible ways (`/{room}/{node}/{name}/` vs `/conduit/http/<room-ns>/<node-key>/<port>/`) | Deploy with one `exposedPorts` entry and read the route the Deployment Viewer publishes; affects only the jury's browser view |
 
 ## Sources
 
-- [Car-Sky-Platform.html](development-platform-doc/Car-Sky-Platform.html) — Container Node config fields and pins; Container Node Coding (`a8_pin.video`, iceoryx2 RGBA, publisher-before-subscriber, "no equivalent C++ helper yet", the "not an official CarSky SDK" disclaimer); Skycraft Node pins and Typical wiring; Ethernet Bridge; Artifacts categories; Videos module; Device Proxy Node and Build a USB Disk Image; Registry (Zot); SDK overview (Scout/probe/lens); Proxy/Outpost pin kinds; API & MCP catalog (`container-file`, `container-exec`, `config/limits`, `account-limits`); the AEB tutorial (both worked VIDEO edges, `WITH_VIDEO=1`, `exposedPorts` routes); live walkthrough Step 5 (the 731.9 MB / 463.6 MB artifact).
-- [BTC_phan_hoi_V2X_team.pdf](development-platform-doc/BTC_phan_hoi_V2X_team.pdf) — §3 ADA row and GPU guidance, §4 scenario layer and LOS filtering, §5 split-screen god view, §6(3) video source, §7 serving a page from a container node.
+- [Car-Sky-Platform.html](../../requirements/development-platform-doc/Car-Sky-Platform.html) — Container Node config fields and pins; Container Node Coding (`a8_pin.video`, iceoryx2 RGBA, publisher-before-subscriber, "no equivalent C++ helper yet", the "not an official CarSky SDK" disclaimer); Skycraft Node pins and Typical wiring; Ethernet Bridge; Artifacts categories; Videos module; Device Proxy Node and Build a USB Disk Image; Registry (Zot); SDK overview (Scout/probe/lens); Proxy/Outpost pin kinds; API & MCP catalog (`container-file`, `container-exec`, `config/limits`, `account-limits`); the AEB tutorial (both worked VIDEO edges, `WITH_VIDEO=1`, `exposedPorts` routes); live walkthrough Step 5 (the 731.9 MB / 463.6 MB artifact).
+- [BTC_phan_hoi_V2X_team.pdf](../../requirements/development-platform-doc/BTC_phan_hoi_V2X_team.pdf) — §3 ADA row and GPU guidance, §4 scenario layer and LOS filtering, §5 split-screen god view, §6(3) video source, §7 serving a page from a container node.
 - [m1-cooperative-awareness.md](m1-cooperative-awareness.md) — §1 node roles and § Input constraints, § Future developments (ego video clip display, deferred), §4 decision record, R5, R6, R12, R16, R17.
-- [milestone1_high_level_plan.md](../documents/Plan/milestone1_high_level_plan.md) — §2 assumptions, Phase 3 and Phase 5 acceptance, §6 deferred scope.
-- [video-source-for-r12.md](../documents/KnowledgeBase/video-source-for-r12.md) and [ada-ecu-hld.md](../documents/Design/ADA-ECU/ada-ecu-hld.md) — the ADA-side source decision, the `FrameSource` seam (D6), and the deployment shape (D9).
-- [phase2-4-pr3-review.md](../plans/doc/phase2-4-pr3-review.md) — the true starting state of Phase 3: the detector is a placeholder that decodes frames and discards them, and the core reads a static JSONL file once at startup.
-- [carsky-4-node-blueprint.md](car-sky-guide/carsky-4-node-blueprint.md) · [carsky-rest-api-blueprint.md](car-sky-guide/carsky-rest-api-blueprint.md) · [node-ada-ecu.md](car-sky-guide/node-ada-ecu.md) · [node-ivi-ecu.md](car-sky-guide/node-ivi-ecu.md) · [deploy-walkthrough-netcheck.md](car-sky-guide/deploy-walkthrough-netcheck.md) · [zot-registry-api-key.md](car-sky-guide/zot-registry-api-key.md).
+- [milestone1_high_level_plan.md](../Plan/milestone1_high_level_plan.md) — §2 assumptions, Phase 3 and Phase 5 acceptance, §6 deferred scope.
+- [video-source-for-r12.md](../KnowledgeBase/video-source-for-r12.md) and [ada-ecu-hld.md](../Design/ADA-ECU/ada-ecu-hld.md) — the ADA-side source decision, the `FrameSource` seam (D6), and the deployment shape (D9).
+- [phase2-4-pr3-review.md](../../plans/doc/phase2-4-pr3-review.md) — the true starting state of Phase 3: the detector is a placeholder that decodes frames and discards them, and the core reads a static JSONL file once at startup.
+- [carsky-4-node-blueprint.md](../../requirements/car-sky-guide/carsky-4-node-blueprint.md) · [carsky-rest-api-blueprint.md](../../requirements/car-sky-guide/carsky-rest-api-blueprint.md) · [node-ada-ecu.md](../../requirements/car-sky-guide/node-ada-ecu.md) · [node-ivi-ecu.md](../../requirements/car-sky-guide/node-ivi-ecu.md) · [deploy-walkthrough-netcheck.md](../../requirements/car-sky-guide/deploy-walkthrough-netcheck.md) · [zot-registry-api-key.md](../../requirements/car-sky-guide/zot-registry-api-key.md).
 - [iceoryx2 publish-subscribe](https://docs.rs/iceoryx2/latest/iceoryx2/) and [v0.8.0 release notes](https://ekxide.io/blog/iceoryx2-0.8-release/) — one publisher to many subscribers is supported natively, with `max_subscribers` fixed at service creation; CarSky exposes no configuration for it.

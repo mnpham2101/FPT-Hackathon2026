@@ -53,7 +53,7 @@
         <mxCell id="n2" value="All four role nodes declare exactly one ethernet pin; the three flows are different UDP ports on the same NIC, not separate pins." style="text;html=1;align=left;fontSize=12.5;fontColor=#3d3d46;" vertex="1" parent="1"><mxGeometry x="62" y="544" width="1240" height="18" as="geometry" /></mxCell>
         <mxCell id="n3" value="R5 — every ECU is one node of one blueprint; deploying the blueprint creates the Room that is the working environment." style="text;html=1;align=left;fontSize=12.5;fontColor=#3d3d46;" vertex="1" parent="1"><mxGeometry x="62" y="570" width="1240" height="18" as="geometry" /></mxCell>
         <mxCell id="n4" value="The IVI is the only non-container node: the provided AAOS artifact plus the team APK installed over ADB — it runs no OCI image." style="text;html=1;align=left;fontSize=12.5;fontColor=#3d3d46;" vertex="1" parent="1"><mxGeometry x="62" y="596" width="1240" height="18" as="geometry" /></mxCell>
-        <mxCell id="src" value="Source: requirements/car-sky-guide/carsky-4-node-blueprint.md · requirements/m1-cooperative-awareness.md §2 R1–R6" style="text;html=1;align=left;fontSize=11;fontColor=#8a8d99;" vertex="1" parent="1"><mxGeometry x="40" y="632" width="1000" height="18" as="geometry" /></mxCell>
+        <mxCell id="src" value="Source: requirements/car-sky-guide/carsky-4-node-blueprint.md · documents/Requirements/m1-cooperative-awareness.md §2 R1–R6" style="text;html=1;align=left;fontSize=11;fontColor=#8a8d99;" vertex="1" parent="1"><mxGeometry x="40" y="632" width="1000" height="18" as="geometry" /></mxCell>
       </root>
     </mxGraphModel>
   </diagram>

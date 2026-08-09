@@ -16,7 +16,7 @@ The review judges **delivered work against the authorities that governed it**. E
 2. **Establish the authorities on the base branch, not on the PR's.** Read, from `main`:
    - The **node HLD** for each folder the PR touches, `<Node_Folder>/doc/<node-slug>-hld.md` — its §3 component architecture, §4 folder structure, §6 internal components and §8 seams are the architecture section's row list. Its companion `doc/<node-slug>-design-decisions.md` carries the decisions a deviation is measured against.
    - The **authoritative plan** for the phase, under [plans/](../../../plans/) — the source of truth for what a task ID means.
-   - The **requirement entries** the PR serves, in full, from [m1-cooperative-awareness.md §2](../../../requirements/m1-cooperative-awareness.md) — definition *and* acceptance. Completion is scored against the acceptance clause.
+   - The **requirement entries** the PR serves, in full, from [m1-cooperative-awareness.md §2](../../../documents/Requirements/m1-cooperative-awareness.md) — definition *and* acceptance. Completion is scored against the acceptance clause.
    - The **frozen contract files** the PR's code binds against, `<Node_Folder>/contracts/*.schema.json`.
 
    **A branch that does not contain the HLD was still governed by it.** Judge against the design on the base branch and note the absence as a finding; do not lower the bar to what the branch happened to know about.

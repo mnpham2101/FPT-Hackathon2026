@@ -1,5 +1,5 @@
 @startuml
-' Startup and triggered-run flow for M1 (requirements/m1-run-timing-and-event-triggering.md, R20/R21).
+' Startup and triggered-run flow for M1 (documents/Requirements/m1-run-timing-and-event-triggering.md, R20/R21).
 ' Nothing in this flow is a clock-synchronisation exchange: no node serves time to another,
 ' and no node compares its own clock against another node's timestamp.
 

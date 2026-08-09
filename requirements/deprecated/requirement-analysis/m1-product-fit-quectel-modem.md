@@ -3,7 +3,7 @@
 > Researcher artifact, **not** an HLD. Analyses whether the Phase 1 working environment
 > ([m1-phase1-working-environment.md](m1-phase1-working-environment.md)) fits the actual hardware
 > product design in `tmp/v2x_system_with_dedicated_gps_to_mcore.png`. Requirement numbers refer to
-> [m1-cooperative-awareness.md](m1-cooperative-awareness.md) (R1–R18); **no new numbers are
+> [m1-cooperative-awareness.md](../../../documents/Requirements/m1-cooperative-awareness.md) (R1–R18); **no new numbers are
 > defined here.** Companion diagram:
 > [m1-product-fit-quectel-modem.puml](m1-product-fit-quectel-modem.puml).
 
@@ -51,7 +51,7 @@ How Qualcomm-based Quectel C-V2X modules actually expose PC5 payloads:
 
 - **F-HW1 — Vendor SDK is proprietary.** The Telematics SDK / Quectel AG5xx SDK is
   vendor-licensed (obtained via Quectel FAE), not open-source. This was already ruled in
-  [m1-cooperative-awareness.md](m1-cooperative-awareness.md) §3(a): vendor SDK use on real
+  [m1-cooperative-awareness.md](../../../documents/Requirements/m1-cooperative-awareness.md) §3(a): vendor SDK use on real
   hardware is a **user-authorized hardware exception, never a shortlisted solution**. Decision
   owner: user. All open-source code (Vanetza, codecs, our modules) stays above the adapter.
 - **F-HW2 — A telux link-layer adapter must be written** (~the size of socktap's existing

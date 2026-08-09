@@ -11,7 +11,7 @@ Trigger: [[project-researcher]] is asked to study **already-analysed** requireme
 
 Consult **all** documents listed in [CLAUDE.md § Document authority](../../../CLAUDE.md), in authority order:
 
-1. [m1-cooperative-awareness.md](../../../requirements/m1-cooperative-awareness.md) — the requirement's definition, dependencies, acceptance, and tech stack (§2); technical solutions (§3); standing decisions (§4).
+1. [m1-cooperative-awareness.md](../../../documents/Requirements/m1-cooperative-awareness.md) — the requirement's definition, dependencies, acceptance, and tech stack (§2); technical solutions (§3); standing decisions (§4).
 2. [m1-proposal-deck.md](../../../presentation/m1-proposal-deck.md) — second authority; the report wins on conflict.
 3. [Car-Sky-Platform.html](../../../requirements/development-platform-doc/Car-Sky-Platform.html) — platform mechanics (blueprint/node/pin, deploy flow).
 4. [BTC_phan_hoi_V2X_team.pdf](../../../requirements/development-platform-doc/BTC_phan_hoi_V2X_team.pdf) — organizers' advisory.

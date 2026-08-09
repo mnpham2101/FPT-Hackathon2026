@@ -1,6 +1,6 @@
 # Telux Parity Notes & Port Plan (R7)
 
-> The R7 doc deliverable of [v2x-ecu-hld.md](v2x-ecu-hld.md) §4, and the written half of the R7 acceptance §12 tracks — it closes that row together with the CI import gate ([tools/check_transport_imports.py](../../../V2X_ECU/tools/check_transport_imports.py)): why the seam's names and call order mirror the telux radio surface, and exactly what changes when the node runs against real modem hardware. Seam text: [src/adapter/i_radio_adapter.hpp](../../../V2X_ECU/src/adapter/i_radio_adapter.hpp) (frozen, referenced not restated). Requirement authority: [m1-cooperative-awareness.md](../../../requirements/m1-cooperative-awareness.md) §2 R7, §3(b), §4.
+> The R7 doc deliverable of [v2x-ecu-hld.md](v2x-ecu-hld.md) §4, and the written half of the R7 acceptance §12 tracks — it closes that row together with the CI import gate ([tools/check_transport_imports.py](../../../V2X_ECU/tools/check_transport_imports.py)): why the seam's names and call order mirror the telux radio surface, and exactly what changes when the node runs against real modem hardware. Seam text: [src/adapter/i_radio_adapter.hpp](../../../V2X_ECU/src/adapter/i_radio_adapter.hpp) (frozen, referenced not restated). Requirement authority: [m1-cooperative-awareness.md](../../Requirements/m1-cooperative-awareness.md) §2 R7, §3(b), §4.
 
 ## 1. Seam surface as frozen
 

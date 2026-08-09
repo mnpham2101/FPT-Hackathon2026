@@ -21,7 +21,7 @@
 
 ## Outcome
 
-- **Report (uncommitted):** `requirements/m1-run-timing-and-event-triggering.md` + `m1-run-timing-startup-flow.puml`, `m1-run-timing-alignment.puml`.
+- **Report (uncommitted):** `documents/Requirements/m1-run-timing-and-event-triggering.md` + `m1-run-timing-startup-flow.puml`, `m1-run-timing-alignment.puml`.
 - **Answer 1 — no time-sync module and no startup handshake.** Container clocks already agree to within ~55 ms (derived from the Phase 1 comms run log, where the V2X ECU's own `rxTime` inside the datagram body straddles a second boundary against the ADA-side sink's own clock), and nothing in M1 performs arithmetic on another node's timestamp — R4 carries no timestamp field at all, so the AAOS guest, the one node where sync would be genuinely hard, provably needs none. Readiness stays R5's operator Deployment-Viewer check plus a per-node `[EVT] ready` line and a bench `start_delay_s`.
 - **Answer 2 — no trigger application.** Each stimulus source self-schedules from its own config against its own process start; the operator's bench-node restart is the GO. The tool worth writing is a post-run checker, `ADA_ECU/tools/check_run_alignment.py`, not a trigger.
 - **Answer 3 — how:** pace both sources on `CLOCK_MONOTONIC` deadlines, add four config keys (bench `start_delay_s`; ADA `DETECTOR_REALTIME_PACING` / `DETECTOR_CLIP_FPS` / `DETECTOR_START_DELAY_S`), rule which clock stamps which R3 field, verify five KPIs read entirely off ADA's own clock. No frozen-contract or blueprint change; ~1 day.

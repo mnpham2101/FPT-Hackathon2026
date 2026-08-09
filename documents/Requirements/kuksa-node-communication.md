@@ -8,7 +8,7 @@ How CarSky nodes talk over KUKSA, and why M1 does not adopt it. Referenced from 
 - Nodes publish and subscribe to **named signal paths**. They never address each other by IP.
 - A `kuksa-databroker` node is the hub. Every participant wires one `kuksa` pin to it — a star.
 - In the trial variant it replaces the baseline `eth-bridge`. R1/R2/R4 payloads ride unchanged inside custom signal values; the contracts are not re-encoded as vehicle signals.
-- Topology and node configs: [blueprint-m1-cooperative-awareness-kuksa.json](car-sky-guide/blueprint-m1-cooperative-awareness-kuksa.json).
+- Topology and node configs: [blueprint-m1-cooperative-awareness-kuksa.json](../../requirements/car-sky-guide/blueprint-m1-cooperative-awareness-kuksa.json).
 
 ## 2. KUKSA vs. Ethernet Bridge
 
@@ -30,7 +30,7 @@ How CarSky nodes talk over KUKSA, and why M1 does not adopt it. Referenced from 
 
 ## 4. Reference topology
 
-§2 treats KUKSA and the bridge as alternatives. In the platform's own reference blueprint [blueprint-KIS.json](development-platform-doc/blueprint-KIS.json) they are **complementary layers**, joined by `script-node` gateways.
+§2 treats KUKSA and the bridge as alternatives. In the platform's own reference blueprint [blueprint-KIS.json](../../requirements/development-platform-doc/blueprint-KIS.json) they are **complementary layers**, joined by `script-node` gateways.
 
 ### 4.1 Node roles
 

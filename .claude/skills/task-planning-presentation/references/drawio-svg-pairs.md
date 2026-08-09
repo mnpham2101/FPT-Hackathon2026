@@ -6,7 +6,7 @@ Reference for step 5 of [task-planning-presentation](../SKILL.md). Applies to an
 
 **There is no draw.io CLI on the dev host** (verified 2026-08-02: no `drawio` on PATH, no desktop install). Nothing can convert `.drawio` → `.svg` automatically, so both halves are authored and both are verified. Do not plan around a converter that is not there, and do not ship a `.drawio` without its `.svg` — the deck embeds the SVG, so a missing export means a missing diagram.
 
-Worked reference pair, already in the repo and correct in every respect: [system-design.drawio](../../../../requirements/system-design.drawio) and [system-design.svg](../../../../requirements/system-design.svg). Open both before authoring the first diagram.
+Worked reference pair, already in the repo and correct in every respect: [system-design.drawio](../../../../documents/Requirements/system-design.drawio) and [system-design.svg](../../../../documents/Requirements/system-design.svg). Open both before authoring the first diagram.
 
 ## The two files
 

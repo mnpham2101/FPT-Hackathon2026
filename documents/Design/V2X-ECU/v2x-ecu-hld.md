@@ -15,7 +15,7 @@
 
 **This is the only design document governing this node.** It fixes the component set and each component's responsibility, every deliverable's path, the seams, the configuration keys, and the evidence log lines.
 
-- **Task planning decomposes from this document plus the requirements report, and nothing else.** Requirement numbers and acceptance come from [m1-cooperative-awareness.md](../../../requirements/m1-cooperative-awareness.md); everything structural comes from here — which component a subtask creates, its path, the interface it satisfies, the log line that closes it.
+- **Task planning decomposes from this document plus the requirements report, and nothing else.** Requirement numbers and acceptance come from [m1-cooperative-awareness.md](../../Requirements/m1-cooperative-awareness.md); everything structural comes from here — which component a subtask creates, its path, the interface it satisfies, the log line that closes it.
 - **Plans cite; they do not restate.** A brief links the section governing its step, so a change lands in one place.
 - **Implementation does not extend this silently.** A component, path or configuration key not designated here is not created ad hoc — the design changes first.
 - **The node is receive-only on the V2X side.** R10 is deferred, so `IRadioAdapter::send` is declared and never called (D2).
@@ -29,11 +29,11 @@
 
 | Document | What it fixes for this node |
 |---|---|
-| [m1-cooperative-awareness.md](../../../requirements/m1-cooperative-awareness.md) — **the authority** | R7, R8, R9 whole — definition, dependency, acceptance, tech stack. R1: the message family and the codec seam this node decodes through. R2: the message this node produces. R5/R6: node type, bridge, address, ports. R18: the evidence stream. R10: deferred, so the seam declares `send` and nothing calls it. §1: the node's focus goal is hardware portability, and the whole M1 data path is receive-only. §3(a)/(b)/(d)/(f): the stack. §4: CPM as the only message family, the R10 deferral, the declined telux port, and Vanetza's LGPLv3 dynamic-linking posture |
-| [baseline-topology-single-bridge.svg](../../../requirements/baseline-topology-single-bridge.svg) — the report's §1 figure | The four node addresses and the port per hop: this node at `10.99.0.11`, listening on `47100`, forwarding to `10.99.0.12:47200` |
+| [m1-cooperative-awareness.md](../../Requirements/m1-cooperative-awareness.md) — **the authority** | R7, R8, R9 whole — definition, dependency, acceptance, tech stack. R1: the message family and the codec seam this node decodes through. R2: the message this node produces. R5/R6: node type, bridge, address, ports. R18: the evidence stream. R10: deferred, so the seam declares `send` and nothing calls it. §1: the node's focus goal is hardware portability, and the whole M1 data path is receive-only. §3(a)/(b)/(d)/(f): the stack. §4: CPM as the only message family, the R10 deferral, the declined telux port, and Vanetza's LGPLv3 dynamic-linking posture |
+| [baseline-topology-single-bridge.svg](../../Requirements/baseline-topology-single-bridge.svg) — the report's §1 figure | The four node addresses and the port per hop: this node at `10.99.0.11`, listening on `47100`, forwarding to `10.99.0.12:47200` |
 | [r1-cpm-profile.md](../../../contracts/r1-cpm-profile.md) · [r1-cpm-content.schema.json](../../../contracts/r1-cpm-content.schema.json) | The frozen input contract, field for field, with conventions F1, F2, F5, F6, F7, F8, F9 and VF (§10.1) |
 | [r2-v2x-object.schema.json](../../../contracts/r2-v2x-object.schema.json) | The frozen output contract, field for field (§10.2) |
-| [m1-run-timing-and-event-triggering.md](../../../requirements/m1-run-timing-and-event-triggering.md) | R20's pacing obligation falls on the bench and the ADA detector; this node emits on no schedule of its own and has no scenario clock. What binds here is §6.2's clock-domain ruling and R21's naming of `rxTime` as the project's one cross-node timestamp of record — fixed as D8 |
+| [m1-run-timing-and-event-triggering.md](../../Requirements/m1-run-timing-and-event-triggering.md) | R20's pacing obligation falls on the bench and the ADA detector; this node emits on no schedule of its own and has no scenario clock. What binds here is §6.2's clock-domain ruling and R21's naming of `rxTime` as the project's one cross-node timestamp of record — fixed as D8 |
 | [milestone1_high_level_plan.md](../../Plan/milestone1_high_level_plan.md) | §5's Phase 1 acceptance, which this node's evidence closes (§12); §4's R13 gate values, which the derived `object.distance` feeds |
 | [node-v2x-ecu.md](../../../requirements/car-sky-guide/node-v2x-ecu.md) | Image tag, blueprint `command` and `capabilities`, env set, pin and address |
 | [traffic-capture-wireshark.md](../../../requirements/car-sky-guide/traffic-capture-wireshark.md) | The retrieval procedure the D5 export format feeds, and the dissection caveat it states |
@@ -320,7 +320,7 @@ Evolution is additive: unknown extra keys are ignored on parse, and a nullable f
 
 ## 11. Tech stack, build and CI
 
-No dependency outside this table enters the node without a design change. Traces are to [m1-cooperative-awareness.md](../../../requirements/m1-cooperative-awareness.md) and to the [decision record](v2x-ecu-design-decisions.md).
+No dependency outside this table enters the node without a design change. Traces are to [m1-cooperative-awareness.md](../../Requirements/m1-cooperative-awareness.md) and to the [decision record](v2x-ecu-design-decisions.md).
 
 | Area | Stack | Trace |
 |---|---|---|

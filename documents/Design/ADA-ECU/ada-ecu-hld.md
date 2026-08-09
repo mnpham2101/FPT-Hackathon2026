@@ -11,11 +11,11 @@
 `ADA_ECU/` only — ego's perception and fusion node, from the R2 datagram arriving on the wire and the clip frame leaving the decoder, to the R4 warning datagram leaving the node.
 
 - **In scope:** this folder's C++17 core and Python detector, their components and seams, the node's two network endpoints, the model and clip it ships, and the host-side scripts that read its own logs.
-- **Out of scope:** what the V2X ECU does before R2 and what the IVI does after R4, which are those nodes' designs; the deploy and verify procedure, which the walkthrough owns; the task breakdown, which the plan owns; the radar and live-camera inputs drawn in [ada-ecu.svg](../../../requirements/ada-ecu.svg) — M1 has no radar and no live camera bring-up.
+- **Out of scope:** what the V2X ECU does before R2 and what the IVI does after R4, which are those nodes' designs; the deploy and verify procedure, which the walkthrough owns; the task breakdown, which the plan owns; the radar and live-camera inputs drawn in [ada-ecu.svg](../../Requirements/ada-ecu.svg) — M1 has no radar and no live camera bring-up.
 
 **This is the only design document governing this node.** It fixes the component set and each component's responsibility, every deliverable's path, the seams, the configuration keys, and the evidence log lines.
 
-- **Task planning decomposes from this document plus the requirements report, and nothing else.** Requirement numbers and acceptance come from [m1-cooperative-awareness.md](../../../requirements/m1-cooperative-awareness.md); everything structural comes from here — which component a subtask creates, its path, the interface it satisfies, the log line that closes it. Deploy and verify subtasks come from the walkthrough, per [walkthrough-driven-delivery.md](../../../.claude/rules/walkthrough-driven-delivery.md).
+- **Task planning decomposes from this document plus the requirements report, and nothing else.** Requirement numbers and acceptance come from [m1-cooperative-awareness.md](../../Requirements/m1-cooperative-awareness.md); everything structural comes from here — which component a subtask creates, its path, the interface it satisfies, the log line that closes it. Deploy and verify subtasks come from the walkthrough, per [walkthrough-driven-delivery.md](../../../.claude/rules/walkthrough-driven-delivery.md).
 - **Plans cite; they do not restate.** A brief links the section governing its step, so a change lands in one place.
 - **Implementation does not extend this silently.** A component, path or configuration key not designated here is not created ad hoc — the design changes first.
 - **What overrides it:** the requirements report, the frozen R2/R3/R4 contracts, and the walkthrough for procedure. On conflict, the CLAUDE.md authority order decides.
@@ -28,11 +28,11 @@
 
 | Document | What it fixes for this node |
 |---|---|
-| [m1-cooperative-awareness.md](../../../requirements/m1-cooperative-awareness.md) — **the authority** | R3, R12, R13, R14, R15 whole — definition, dependency, acceptance, tech stack. R2 as the input contract and R4 as the output contract. R5/R6: node type, bridge, address, ports. R18: the evidence stream. R19: zero direct C detections for the whole run. §1: this node's responsibility list and the demo table. §3(d)/(f)/(g): the stack. §4: the standing decisions |
-| Its figures — [ada-ecu.svg](../../../requirements/ada-ecu.svg) · [vehicleC_track_admission_state_machine.png](../../../requirements/vehicleC_track_admission_state_machine.png) | The R14 module shape this design realizes — DataObserver, Data Parser, Current Input, Collision Risk Assessment, Current TrackedObject/Risk — and the R13 lifecycle, realized as [phase2-4-ada-ecu-admission.puml](phase2-4-ada-ecu-admission.puml) |
+| [m1-cooperative-awareness.md](../../Requirements/m1-cooperative-awareness.md) — **the authority** | R3, R12, R13, R14, R15 whole — definition, dependency, acceptance, tech stack. R2 as the input contract and R4 as the output contract. R5/R6: node type, bridge, address, ports. R18: the evidence stream. R19: zero direct C detections for the whole run. §1: this node's responsibility list and the demo table. §3(d)/(f)/(g): the stack. §4: the standing decisions |
+| Its figures — [ada-ecu.svg](../../Requirements/ada-ecu.svg) · [vehicleC_track_admission_state_machine.png](../../Requirements/vehicleC_track_admission_state_machine.png) | The R14 module shape this design realizes — DataObserver, Data Parser, Current Input, Collision Risk Assessment, Current TrackedObject/Risk — and the R13 lifecycle, realized as [phase2-4-ada-ecu-admission.puml](phase2-4-ada-ecu-admission.puml) |
 | [r2-v2x-object.schema.json](../../../contracts/r2-v2x-object.schema.json) · [r3-tracked-object.schema.json](../../../contracts/r3-tracked-object.schema.json) · [r4-ada-ivi.schema.json](../../../contracts/r4-ada-ivi.schema.json) | The three frozen contracts, field for field, with their bounds and their nullable fields (§10) |
-| [m1-run-timing-and-event-triggering.md](../../../requirements/m1-run-timing-and-event-triggering.md) | R20/R21/R22 whole. §6.2's clock-domain ruling, which this design makes (D10); §6.1's three detector pacing keys and the two risk-band values; §6.6's run choreography — `T0`, the paced clip, the matched bench-cycle and clip periods, and the band pair on the composed range (D11); §6.4's `tools/check_run_alignment.py` and its K1–K6 checks (§12) |
-| [m1-video-source-and-ivi-dashcam.md](../../../requirements/m1-video-source-and-ivi-dashcam.md) | The clip reaches the container as one image layer and by no other route. The IVI dashcam view is deferred, and no part of it is built here (D6) |
+| [m1-run-timing-and-event-triggering.md](../../Requirements/m1-run-timing-and-event-triggering.md) | R20/R21/R22 whole. §6.2's clock-domain ruling, which this design makes (D10); §6.1's three detector pacing keys and the two risk-band values; §6.6's run choreography — `T0`, the paced clip, the matched bench-cycle and clip periods, and the band pair on the composed range (D11); §6.4's `tools/check_run_alignment.py` and its K1–K6 checks (§12) |
+| [m1-video-source-and-ivi-dashcam.md](../../Requirements/m1-video-source-and-ivi-dashcam.md) | The clip reaches the container as one image layer and by no other route. The IVI dashcam view is deferred, and no part of it is built here (D6) |
 | [milestone1_high_level_plan.md](../../Plan/milestone1_high_level_plan.md) | §4's R13 gate constants; §2's near-collinear composition assumption; Phases 2, 3 and 4 acceptance; §6's deferred scope |
 | [node-ada-ecu.md](../../../requirements/car-sky-guide/node-ada-ecu.md) | Image tag, blueprint `command` and `capabilities`, env set, pin, address |
 | [deploy-ada-ecu-walkthrough.md](../../../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md) | The isolated-Room configuration and the observables its § Expected outputs and acceptance names (§12) |
@@ -53,7 +53,7 @@ Non-authoritative scratch; on any conflict the CLAUDE.md authority order wins.
 
 Source: [research_notes/ada-ecu-module-architecture.svg](ada-ecu-module-architecture.svg), paired with its [`.drawio`](ada-ecu-module-architecture.drawio). The module graph alone is [phase2-4-ada-ecu-components.puml](phase2-4-ada-ecu-components.puml).
 
-A UML component diagram. Fill colour is the component's role; `«use»` dependencies are dashed with an open arrowhead; realization is dashed with a hollow triangle; a seam is a provided interface meeting a required one. The two packages inside the image are the processes of D2: the C++17 `ada_ecu` core and the Python `detector` subprocess. The core's inner packages carry [ada-ecu.svg](../../../requirements/ada-ecu.svg)'s block names — DataObserver, Data Parser, Current Input, Collision Risk Assessment, Current TrackedObject/Risk. Component names below are the short `package/module` form — §4 resolves each to its path.
+A UML component diagram. Fill colour is the component's role; `«use»` dependencies are dashed with an open arrowhead; realization is dashed with a hollow triangle; a seam is a provided interface meeting a required one. The two packages inside the image are the processes of D2: the C++17 `ada_ecu` core and the Python `detector` subprocess. The core's inner packages carry [ada-ecu.svg](../../Requirements/ada-ecu.svg)'s block names — DataObserver, Data Parser, Current Input, Collision Risk Assessment, Current TrackedObject/Risk. Component names below are the short `package/module` form — §4 resolves each to its path.
 
 ### MVC separation
 
@@ -401,7 +401,7 @@ Two message kinds share the port, discriminated by `type`.
 
 ## 11. Tech stack, build and CI
 
-No dependency outside this table enters the node without a design change. Traces are to [m1-cooperative-awareness.md](../../../requirements/m1-cooperative-awareness.md) and to the [decision record](ada-ecu-design-decisions.md).
+No dependency outside this table enters the node without a design change. Traces are to [m1-cooperative-awareness.md](../../Requirements/m1-cooperative-awareness.md) and to the [decision record](ada-ecu-design-decisions.md).
 
 | Area | Stack | Trace |
 |---|---|---|
