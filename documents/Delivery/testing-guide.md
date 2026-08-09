@@ -51,10 +51,11 @@ One blueprint per node under test, plus the full chain. Each isolated blueprint 
 
 **Blueprint names are underscore-separated**, and the deployment CarSky builds from one takes the blueprint's name with a `-deploy` suffix. Deploying `phase5_smoked_test` gives you the Room `phase5_smoked_test-deploy`; that derived name is what the REST API and the log collector look for, so neither is ever typed by hand.
 
-The last column is a shortcut number, not a limit. **Any deployed blueprint can be collected by name**, including one not listed here:
+The last column is a shortcut number, not a limit. **Any deployed blueprint can be collected by name**, whether or not it appears in this table:
 
 ```powershell
-.\tools\logs-collector\Collect-Logs.ps1 -Blueprint phase2_smoked_test
+.\tools\logs-collector\Collect-Logs.ps1 -Blueprint phase4_smoked_test   # same as -Test 3
+.\tools\logs-collector\Collect-Logs.ps1 -Blueprint <any_deployed_name>  # no shortcut needed
 ```
 
 The collector reads the Room's node list and collects every node in it, so what it can reach is decided by what is deployed rather than by anything written into the script. Where the Room has no Skycraft VM — every row below except phases 5 and the system test — the guest-side files are not attempted and their evidence rows read `[-]`, absent rather than failed.
