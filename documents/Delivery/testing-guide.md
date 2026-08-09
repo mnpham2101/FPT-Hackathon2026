@@ -1,18 +1,18 @@
 # Phase 5 — IVI HMI test & evidence
 
-How to drive R4 warnings at the installed app and collect the evidence that closes the requirement. Building the APK, opening the ADB tunnel, installing and confirming the app is up is [phase5-ivi-deploy.md](phase5-ivi-deploy.md) — this note starts where that one ends and continues its numbering: **Steps 1–4 are there, Steps 5–6 are here.**
+How to drive R4 warnings at the installed app and collect the evidence that closes the requirement. It picks up from [apk-deploy.md](apk-deploy.md), which builds the APK, opens the ADB tunnel, installs it and confirms the app is up — do that one first. **Each guide numbers its own steps from 1**, so a step number below always means a step of this document.
 
 ## Prerequisites
 
-- A Room deployed green, with `app-debug.apk` installed and the app confirmed on screen — [phase5-ivi-deploy.md](phase5-ivi-deploy.md) Steps 1–4
-- For anything that runs `adb`: the tunnel still serving on `localhost:5555` — [Step 3 Terminal 1](phase5-ivi-deploy.md#terminal-1--establish-the-tunnel-then-leave-it-alone), or `INSTALL-IVI-APK.cmd -KeepTunnel`
+- A Room deployed green, with `app-debug.apk` installed and the app confirmed on screen — all of [apk-deploy.md](apk-deploy.md)
+- For anything that runs `adb`: the tunnel still serving on `localhost:5555` — [apk-deploy.md Step 3, Terminal 1](apk-deploy.md#terminal-1--establish-the-tunnel-then-leave-it-alone), or `INSTALL-IVI-APK.cmd -KeepTunnel`
 - A CarSky workbench login for the browser-only surfaces — the Screen widget, the Log widget, node logs
 
 Every PowerShell block below runs from the **repo root**.
 
-Two tools cover most of Step 6. [INSTALL-IVI-APK.cmd](../../tools/apk-uploader/INSTALL-IVI-APK.cmd) samples the evidence logcat as the tail of its install run, and `-SkipInstall` re-samples it without touching the Room. [Collect-Logs.ps1](../../tools/logs-collector/Collect-Logs.ps1) collects the whole set in one pass — every container node's log over REST, the guest-side logs over ADB, and a plain-text `summary.txt` of the checks below — resolving the node keys itself instead of asking you to paste them. Which rows stay manual, and why: [phase5-ivi-deploy.md § The tool](phase5-ivi-deploy.md#the-tool-does-most-of-steps-3-4-and-6). The steps below stay authoritative — read them when a tool fails, and to run any row by hand.
+Two tools cover most of Step 3. [INSTALL-IVI-APK.cmd](../../tools/apk-uploader/INSTALL-IVI-APK.cmd) samples the evidence logcat as the tail of its install run, and `-SkipInstall` re-samples it without touching the Room. [Collect-Logs.ps1](../../tools/logs-collector/Collect-Logs.ps1) collects the whole set in one pass — every container node's log over REST, the guest-side logs over ADB, and a plain-text `summary.txt` of the checks below — resolving the node keys itself instead of asking you to paste them. Which rows stay manual, and why: [apk-deploy.md § The tool](apk-deploy.md#the-tool-does-most-of-steps-3-and-4). The steps below stay authoritative — read them when a tool fails, and to run any row by hand.
 
-## Step 5 — Choose a test path
+## Step 1 — Choose a test path
 
 The two paths differ only in **what produces the R4 warning stream**. The app, the install and the evidence are identical across both, so they are listed in the order you would run them — the second adds real components upstream of the app.
 
@@ -22,6 +22,10 @@ The two paths differ only in **what produces the R4 warning stream**. The app, t
 | **System test** | The full chain — bench → V2X ECU → ADA ECU | That ghost C on the screen came from a relayed detection, which is the milestone's definition of done |
 
 > **Addresses are the same in both**, because every path is derived from the same subnet: bridge `10.99.0.1/24`, bench `10.99.0.10`, V2X `10.99.0.11`, ADA (or whatever stands in for it) `10.99.0.12`, IVI `10.99.0.13`. The IVI node's own config never changes between paths — same address, same pin, same `image` block.
+
+## Step 2 — Deploy and run the path you chose
+
+Follow one of the two sections below, not both. Each gives the Room's nodes with the config every node needs, then the order to bring them up in. Step 3 is the same either way.
 
 ### Path 1 — Isolated IVI test
 
@@ -39,7 +43,7 @@ Three nodes. The bench and V2X nodes contribute nothing to display work, and eve
 
 1. Deploy the blueprint **`<blueprint name>`** — it carries the three nodes above with their `ethernet` pins already wired to the bridge.
 2. Confirm the ADA node carries the simulator image and the env of the table above. Nothing about the IVI node changes between this path and Path 2.
-3. Wait for all three nodes green, then run [Steps 2–4](phase5-ivi-deploy.md#step-2--deploy-the-blueprint-and-copy-the-tunnel-command-browser-human) to install the APK and confirm it is up.
+3. Wait for all three nodes green, then run [apk-deploy.md Steps 2–4](apk-deploy.md#step-2--deploy-the-blueprint-and-copy-the-tunnel-command-browser-human) to install the APK and confirm it is up.
 4. Swap `R4_SCENARIO` to `/app/scenarios/degrade.json` and redeploy that node to exercise the degraded cases: an unknown `warningType` with `schemaVersion: 2` must render a generic warning while **preserving the wire value** in the log; an `object.source: "own_sensor"` message must **trip** the provenance guard into a yellow `[? UNKNOWN SOURCE]` marker — on that scenario the trip is the pass; a raw non-JSON step must be dropped with the next valid warning still rendering.
 
 ### Path 2 — System test
@@ -61,18 +65,18 @@ The IVI row is byte-identical to Path 1's. That is deliberate: converging from t
 1. Confirm all four container images are actually in the registry — not merely that their CI lanes were green.
 2. Create the blueprint by cloning one that already has pins. If you import the five nodes from JSON instead, expect to add **all five ethernet pins and their edges to the bridge by hand**, and to fill in the Skycraft `image` block, which import usually drops.
 3. Deploy and wait for every node green. The Skycraft node is last.
-4. Run [Steps 2–4](phase5-ivi-deploy.md#step-2--deploy-the-blueprint-and-copy-the-tunnel-command-browser-human) to install the APK and confirm it is up.
+4. Run [apk-deploy.md Steps 2–4](apk-deploy.md#step-2--deploy-the-blueprint-and-copy-the-tunnel-command-browser-human) to install the APK and confirm it is up.
 5. Restart the Bench node to replay the scenario from its first step.
 
 Pass is the whole chain: the bench emits CPMs, the V2X ECU decodes and relays, the ADA ECU gates and emits a warning, and the app draws ghost C — with **zero direct detections of C on the ego vehicle**, every rendered frame sourced from `v2x_relayed`.
 
-## Step 6 — Evidence collection
+## Step 3 — Evidence collection
 
 Both paths converge here — the evidence is the same regardless of what produced the stream, and no single surface is sufficient on its own. The screen does not prove where the data came from, the log does not prove anything rendered, and neither proves what actually crossed the wire.
 
 ### 1 · Warning screen
 
-[Step 4](phase5-ivi-deploy.md#step-4--confirm-the-app-on-screen-browser-human) already put the Warning View in front of you on the **IVI Screen** widget. This section is about capturing it rather than finding it.
+[apk-deploy.md Step 4](apk-deploy.md#step-4--confirm-the-app-on-screen-browser-human) already put the Warning View in front of you on the **IVI Screen** widget. This section is about capturing it rather than finding it.
 
 - **Screen recording** — set **Recorder Part** on the Screen widget *before* the run starts; the clip lands under **Videos** and downloads as `.mp4`. Recording is at native resolution, so files are large.
 - **Screenshots** — from the same Screen widget.
@@ -113,7 +117,7 @@ $p = [Environment]::GetEnvironmentVariable("PATH","User")
 
 **Keep `-s localhost:5555` on every command.** A local emulator is a second device, and with two attached `adb` acts on the wrong one or refuses outright.
 
-**Make the run's folder.** From the repo root, with the tunnel serving. `isolated` or `system` are the two paths of Step 5 — change that one word in every path below for a system-test run:
+**Make the run's folder.** From the repo root, with the tunnel serving. `isolated` or `system` are the two paths of Step 1 — change that one word in every path below for a system-test run:
 
 ```powershell
 mkdir tools\apk-uploader\test-report\isolated
@@ -195,7 +199,7 @@ adb -s localhost:5555 logcat -d -v threadtime | Out-File tools\apk-uploader\test
 | `app-logcat.txt` | `R4ListenerService: UDP socket open on port 47300`, then `[RX] R4 message received: R4WarningEvent(…)` with `source=v2x_relayed` on every warning, and `riskState` reaching `high` |
 | `app-crash.txt` | No `FATAL EXCEPTION` naming `com.hackathon.v2x.ivi` |
 | `guest-udp6.txt` | A listener on `B8C4` (47300 in hex) owned by the app's uid |
-| `guest-ifaces.txt` | `eth0` carrying `10.99.0.13/24` — if it is missing, see [phase5-ivi-deploy.md § Troubleshooting](phase5-ivi-deploy.md#troubleshooting) |
+| `guest-ifaces.txt` | `eth0` carrying `10.99.0.13/24` — if it is missing, see [apk-deploy.md § Troubleshooting](apk-deploy.md#troubleshooting) |
 | `node-ada.txt` | `[TX] … -> 10.99.0.13:47300` at the configured cadence |
 
 `[RX]` is the line that matters: its fields are read off the **parsed** message, so it proves the JSON decoded into the typed model, and `source=v2x_relayed` on every warning is the definition of done in text.
@@ -228,7 +232,7 @@ Reading it: **R1 CPMs on 47100 will not dissect as ITS.** Wireshark's ITS dissec
 
 ## Verification checklist
 
-The install-side rows are in [phase5-ivi-deploy.md § Verification checklist](phase5-ivi-deploy.md#verification-checklist); a failure there invalidates everything below, so run that one first.
+The install-side rows are in [apk-deploy.md § Verification checklist](apk-deploy.md#verification-checklist); a failure there invalidates everything below, so run that one first.
 
 | Check | Pass criteria | Path |
 |---|---|---|

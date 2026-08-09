@@ -4,7 +4,7 @@
   every guest-side log off the AAOS IVI over ADB, into ./test-report/<test-name>/.
 
 .DESCRIPTION
-  Automates Step 6 "Evidence collection" of IVI_ECU/deployment/phase5-ivi-test.md,
+  Automates Step 3 "Evidence collection" of documents/Delivery/testing-guide.md,
   which stays the authority. The test note's Path 2 is a dozen commands pasted by
   hand with the node keys filled in from a second call; this runs the same commands,
   resolves the keys itself, and ends in the note's own evidence checklist.
@@ -140,7 +140,7 @@ function Resolve-Test ($value) {
 
 Write-Host ""
 Write-Host "  Test log collector - CarSky node logs + AAOS guest evidence" -ForegroundColor White
-Write-Host "  Authority: IVI_ECU/deployment/phase5-ivi-test.md Step 6" -ForegroundColor DarkGray
+Write-Host "  Authority: documents/Delivery/testing-guide.md Step 3" -ForegroundColor DarkGray
 
 if ($PSVersionTable.PSVersion.Major -lt 5) {
     Fail "PowerShell $($PSVersionTable.PSVersion) is too old." "Windows PowerShell 5.1 ships with Windows 10 and 11 on every architecture."
@@ -588,7 +588,7 @@ if ($Passed -eq $Evidence.Count) {
     Write-Host "  A missing line can just mean the scenario had not reached that step yet." -ForegroundColor Yellow
 } else {
     Write-Host "  No R4 reached the app. Check the producer's [TX] target against the IVI pin" -ForegroundColor Yellow
-    Write-Host "  address, and guest-ifaces.txt for eth0 - deploy note Step 5, Troubleshooting." -ForegroundColor Yellow
+    Write-Host "  address, and guest-ifaces.txt for eth0 - apk-deploy.md, Troubleshooting." -ForegroundColor Yellow
 }
 
 # ---------------------------------------------------------------------- summary
@@ -600,7 +600,7 @@ foreach ($f in (Get-ChildItem -LiteralPath $OutDirFull -File | Sort-Object Name)
     Add-Summary ("  " + $f.Name.PadRight(32) + " $([math]::Round($f.Length/1KB,1)) KB")
 }
 Add-Summary ""
-Add-Summary "No screen recording is collected here - deploy note Step 5-1 is still yours."
+Add-Summary "No screen recording is collected here - test guide Step 3-1 is still yours."
 
 $SummaryFile = Join-Path $OutDirFull 'summary.txt'
 ($script:Summary -join "`r`n") | Out-File -FilePath $SummaryFile -Encoding utf8

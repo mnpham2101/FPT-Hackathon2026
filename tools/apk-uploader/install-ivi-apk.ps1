@@ -4,9 +4,9 @@
   and dump the evidence logcat.
 
 .DESCRIPTION
-  Automates Step 3 of IVI_ECU/deployment/phase5-ivi-deploy.md and Step 6-2 of its
-  companion IVI_ECU/deployment/phase5-ivi-test.md, which stay the authority. Everything
-  a human still has to do is printed at the end.
+  Automates Step 3 of documents/Delivery/apk-deploy.md and Step 3-2 of its
+  companion documents/Delivery/testing-guide.md, which stay the authority.
+  Everything a human still has to do is printed at the end.
 
   Before running: the blueprint must be deployed with the IVI Skycraft node Running, and
   secrets\reach-adb-token-ivi.txt must hold the a8k_ token from the Local ADB dialog
@@ -96,7 +96,7 @@ function Test-Port ($p) {
 
 Write-Host ""
 Write-Host "  IVI APK installer - tunnel, install, evidence" -ForegroundColor White
-Write-Host "  Authority: IVI_ECU/deployment/phase5-ivi-deploy.md Step 3" -ForegroundColor DarkGray
+Write-Host "  Authority: documents/Delivery/apk-deploy.md Step 3" -ForegroundColor DarkGray
 
 Write-Step "Locating tools and files"
 
@@ -392,7 +392,7 @@ Write-Info "Waiting 15s for the simulator's 1 Hz stream to produce warnings..."
 Start-Sleep -Seconds 15
 
 # -d dumps the ring buffer rather than streaming: the app was already running before we
-# attached, so the startup lines are only reachable this way (deploy note Step 5-2).
+# attached, so the startup lines are only reachable this way (test guide Step 3-2).
 & $Adb -s $serial logcat -d -v threadtime -s IVI_V2X R4ListenerService R4Deserializer MainViewModel WarningViewModel `
     2>&1 | Out-File -FilePath $logFile -Encoding utf8
 $log = Get-Content $logFile -Raw
@@ -445,7 +445,7 @@ Write-Host "     where ghost C belongs is a blocking defect on the approach scen
 Write-Host "     This build logs nothing from its UI layer, so the mode switch to the" -ForegroundColor Gray
 Write-Host "     Warning View is confirmable ONLY on screen - the logs cannot show it." -ForegroundColor Gray
 Write-Host "  2. Record or screenshot it - set Recorder Part BEFORE the run starts." -ForegroundColor Gray
-Write-Host "  (deploy note Step 5-1)" -ForegroundColor DarkGray
+Write-Host "  (test guide Step 3-1)" -ForegroundColor DarkGray
 
 # ---------------------------------------------------------------------- cleanup
 

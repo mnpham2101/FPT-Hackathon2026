@@ -330,7 +330,7 @@ The following deployment scheme supports IVI-ECU isolated tests and system tests
 | Mini ADA+IVI (optional) | ADA + IVI + bridge | **47300** | [phase5-mini-blueprint-ada-ivi.md](phase5-mini-blueprint-ada-ivi.md) — see §10 gap |
 | Full M1 | 4 nodes + bridge | 47300 | [node-ivi-ecu.md](../../../requirements/car-sky-guide/node-ivi-ecu.md) |
 
-Post-deploy always: build APK → ADB tunnel to Skycraft → `adb install` ([phase5-ivi-deploy.md](../../../IVI_ECU/deployment/phase5-ivi-deploy.md)). Ethernet pins often missing after JSON import — add/wire in Nydus UI.
+Post-deploy always: build APK → ADB tunnel to Skycraft → `adb install` ([apk-deploy.md](../../Delivery/apk-deploy.md)). Ethernet pins often missing after JSON import — add/wire in Nydus UI.
 
 ## Mini-blueprint: ADA ECU + IVI ECU
 

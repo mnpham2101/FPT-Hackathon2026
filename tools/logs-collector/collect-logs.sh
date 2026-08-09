@@ -4,7 +4,7 @@
 # One-shot evidence collector: pick a test, pull every node log off CarSky and every
 # guest-side log off the AAOS IVI over ADB, into ./test-report/<test-name>/.
 #
-# Automates Step 6 "Evidence collection" of IVI_ECU/deployment/phase5-ivi-test.md,
+# Automates Step 3 "Evidence collection" of documents/Delivery/testing-guide.md,
 # which stays the authority. Same behaviour, same output layout and same on-screen
 # structure as the PowerShell version -- change one, change the other.
 #
@@ -255,7 +255,7 @@ EOF
 }
 
 printf '\n  %sTest log collector - CarSky node logs + AAOS guest evidence%s\n' "$C_WHITE" "$C_OFF"
-printf '  %sAuthority: IVI_ECU/deployment/phase5-ivi-test.md Step 6%s\n' "$C_GRAY" "$C_OFF"
+printf '  %sAuthority: documents/Delivery/testing-guide.md Step 3%s\n' "$C_GRAY" "$C_OFF"
 
 command -v curl >/dev/null 2>&1 || fail "curl is not installed." "It is how this script talks to CarSky."
 command -v awk  >/dev/null 2>&1 || fail "awk is not installed."  "It is how this script reads the API's JSON."
@@ -691,7 +691,7 @@ elif [ "$RX_OK" -eq 1 ]; then
     printf '  %sA missing line can just mean the scenario had not reached that step yet.%s\n' "$C_YELLOW" "$C_OFF"
 else
     printf '  %sNo R4 reached the app. Check the producer'"'"'s [TX] target against the IVI pin%s\n' "$C_YELLOW" "$C_OFF"
-    printf '  %saddress, and guest-ifaces.txt for eth0 - deploy note Step 5, Troubleshooting.%s\n' "$C_YELLOW" "$C_OFF"
+    printf '  %saddress, and guest-ifaces.txt for eth0 - apk-deploy.md, Troubleshooting.%s\n' "$C_YELLOW" "$C_OFF"
 fi
 
 # ----------------------------------------------------------------------- summary
@@ -706,7 +706,7 @@ for f in "$OUT_DIR"/*; do
     add_summary "$(printf '  %-32s %s KB' "$b" "$kb")"
 done
 add_summary ""
-add_summary "No screen recording is collected here - deploy note Step 5-1 is still yours."
+add_summary "No screen recording is collected here - test guide Step 3-1 is still yours."
 
 printf '%s' "$SUMMARY" > "$OUT_DIR/summary.txt"
 

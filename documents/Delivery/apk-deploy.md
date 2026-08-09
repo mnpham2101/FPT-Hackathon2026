@@ -1,6 +1,6 @@
 # Phase 5 — IVI HMI AAOS build & deployment
 
-How to build the team APK, install it on the CarSky Skycraft (AAOS) node, and confirm the app is up. Driving R4 warnings at it and collecting the evidence is [phase5-ivi-test.md](phase5-ivi-test.md), which continues this note's numbering at Step 5. Node-level blueprint/VM config lives in [node-ivi-ecu.md](../../requirements/car-sky-guide/node-ivi-ecu.md); this note is the APK path only.
+How to build the team APK, install it on the CarSky Skycraft (AAOS) node, and confirm the app is up. Driving R4 warnings at it and collecting the evidence is [testing-guide.md](testing-guide.md), a separate guide that numbers its own steps from 1. Node-level blueprint/VM config lives in [node-ivi-ecu.md](../../requirements/car-sky-guide/node-ivi-ecu.md); this note is the APK path only.
 
 ## Prerequisites
 
@@ -11,7 +11,7 @@ How to build the team APK, install it on the CarSky Skycraft (AAOS) node, and co
 
 Working directory for the Gradle commands in Step 1 Route B: **`IVI_ECU/`**. Every PowerShell block in Steps 2–4 runs from the **repo root**.
 
-## The tool does most of Steps 3, 4 and 6
+## The tool does most of Steps 3 and 4
 
 [INSTALL-IVI-APK.cmd](../../tools/apk-uploader/INSTALL-IVI-APK.cmd) runs the whole install-and-verify chain in one window — tunnel, Room-network fix, install, app-state checks, evidence logcat, pass/fail table. Double-click it, or from the repo root:
 
@@ -35,11 +35,8 @@ Windows PowerShell 5.1 on any architecture: `adb` is discovered across the stand
 | 3 · Install the APK | `adb install -r`, package presence confirmed | Automated |
 | 4 · App state | Package, process, MainActivity resumed, focus, screen awake | Automated |
 | 4 · Warning screen | Seen on the IVI Screen widget, in the browser | **Manual** |
-| 6 · Evidence logcat | Saved to `tools/apk-uploader/logs/`, checked for `[RX]`, provenance, `risk=high`, crashes | Automated |
-| 6 · Recording / screenshots | Recorder Part set **before** the run | **Manual** |
-| 6 · Wireshark | Pcap extracted from the capturing node's log | **Manual** |
 
-Steps 5 and 6 are in [phase5-ivi-test.md](phase5-ivi-test.md); their rows are listed here because the same one command reaches into them.
+The same run also reaches past this document: it dumps the evidence logcat that [testing-guide.md Step 3](testing-guide.md#step-3--evidence-collection) asks for, into `tools/apk-uploader/logs/`, checked for `[RX]`, provenance, `risk=high` and crashes. The recording, the screenshots and the pcap extraction there stay manual.
 
 The manual rows are manual by nature, not by omission: minting the token needs the browser dialog, and this build logs nothing from its UI layer, so the switch to the Warning View is confirmable only on screen. The steps below remain authoritative — read them when the tool fails, and to run any row by hand.
 
@@ -117,7 +114,7 @@ Everything here happens in the CarSky workbench. Nothing is run on your machine 
 
 The three boxes mark the three things this step depends on, in the order the sub-steps above reach them: the **Devices** rail on the far left (step 3), the **IVI ADB** tab that opens in the panel below the Stage once its widget is chosen (step 4), and **Local ADB** at that panel's top right (step 5). **Disconnect** beside the device name and the lit dot are what a connected session looks like; the ADB SHELL badge reads `connected` and the shell has reached a `trout_arm64:/ $` prompt, which is the state to capture before going further. **Disconnect** at the panel's top right re-dials the shell after a redeploy; it does not re-mint the token — the Local ADB dialog is the only place the current one is shown.
 
-The device's **Widgets** list on the left names the widget chosen in step 4 (`IVI ADB`, type `adb`) alongside the Screen and Log widgets Step 5 collects evidence from. The Stage above already shows the app's Warning View, because this capture was taken on a Room whose chain was running — on a fresh install the Stage shows the home screen instead.
+The device's **Widgets** list on the left names the widget chosen in step 4 (`IVI ADB`, type `adb`) alongside the Screen and Log widgets the testing guide collects evidence from. The Stage above already shows the app's Warning View, because this capture was taken on a Room whose chain was running — on a fresh install the Stage shows the home screen instead.
 
 The `a8k_` token is **derived per device, not a CarSky API key**, and a redeploy mints a new one — so re-open this dialog after every redeploy instead of reusing an old value. Keep it out of the repository: paste it into `secrets/reach-adb-token-ivi.txt` (one line, no quotes; the folder is git-ignored) rather than into a command line, a log, or a document.
 
@@ -154,7 +151,7 @@ If `adb devices` shows `offline` or nothing at all, the tunnel in Terminal 1 is 
 
 ## Step 4 — Confirm the app on screen (browser, human)
 
-**The app launches itself.** Once the blueprint is correctly deployed and the APK is installed, it comes up on the guest with no `am start` and no tap — [AndroidManifest.xml](../app/src/main/AndroidManifest.xml) declares `MainActivity` as the only `MAIN`/`LAUNCHER` activity on the node. An app that has to be started by hand is a finding: either the install did not take, or the guest is not the node you think it is.
+**The app launches itself.** Once the blueprint is correctly deployed and the APK is installed, it comes up on the guest with no `am start` and no tap — [AndroidManifest.xml](../../IVI_ECU/app/src/main/AndroidManifest.xml) declares `MainActivity` as the only `MAIN`/`LAUNCHER` activity on the node. An app that has to be started by hand is a finding: either the install did not take, or the guest is not the node you think it is.
 
 So the deployment is confirmed by looking at it, not by a log line — this build writes nothing from its UI layer, which is why this step is manual and cannot be automated away. Back in the workbench:
 
@@ -170,11 +167,11 @@ What each outcome means:
 | The AAOS home screen or launcher | The install did not take, or this is not the node you installed onto — re-run Step 3 and check `adb shell pm list packages` |
 | A black or frozen frame | The guest has not finished booting, or the Screen widget is bound to a part that no longer exists — re-point it at this deployment's part |
 | The app, but the status bar shows no bound port | The app is up and its listener is not — read `R4ListenerService` in logcat for the bind failure |
-| The app with a bound port, but never a warning | Installed correctly; nothing is producing R4 yet. That is [phase5-ivi-test.md](phase5-ivi-test.md)'s subject, unless the guest never took its pin address — [§ Troubleshooting](#troubleshooting) |
+| The app with a bound port, but never a warning | Installed correctly; nothing is producing R4 yet. That is [testing-guide.md](testing-guide.md)'s subject, unless the guest never took its pin address — [§ Troubleshooting](#troubleshooting) |
 
-The status bar reading `BOUND :47300` is the app's own claim, not proof a datagram ever arrived — that is [Step 6](phase5-ivi-test.md#step-6--evidence-collection)'s job. This step goes no further than *the app is up and drawing*.
+The status bar reading `BOUND :47300` is the app's own claim, not proof a datagram ever arrived — that is [testing-guide.md Step 3](testing-guide.md#step-3--evidence-collection)'s job. This step goes no further than *the app is up and drawing*.
 
-Capturing what is on the screen — recording, screenshots, and the full list of elements a warning frame must show — is [phase5-ivi-test.md § 1 · Warning screen](phase5-ivi-test.md#1--warning-screen). Set **Recorder Part** on this widget *before* the run you intend to keep, or there is nothing to save afterwards.
+Capturing what is on the screen — recording, screenshots, and the full list of elements a warning frame must show — is [testing-guide.md § 1 · Warning screen](testing-guide.md#1--warning-screen). Set **Recorder Part** on this widget *before* the run you intend to keep, or there is nothing to save afterwards.
 
 ## Troubleshooting
 
@@ -200,7 +197,7 @@ adb shell "su 0 ifconfig eth0 10.99.0.13/24 up"
 
 ## Verification checklist
 
-Every row here holds on both test paths, because nothing in Steps 1–4 differs between them. What the app then does with a warning stream is checked in [phase5-ivi-test.md § Verification checklist](phase5-ivi-test.md#verification-checklist); a failure below invalidates all of it, so clear this table first.
+Every row here holds on both test paths, because nothing in Steps 1–4 differs between them. What the app then does with a warning stream is checked in [testing-guide.md § Verification checklist](testing-guide.md#verification-checklist); a failure below invalidates all of it, so clear this table first.
 
 | Check | Pass criteria |
 |---|---|

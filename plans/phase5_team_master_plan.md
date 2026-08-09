@@ -27,7 +27,7 @@
 | Unit tests — Deserializer, Repository, VMs, Mapper | cả hai | ✅ Done |
 | `FullStackIntegrationTest` (Robolectric + Hilt + UDP) | complete | ✅ Done |
 | CI fix — `verify-arm64-image` fallback pull by tag | dev | ✅ Done |
-| APK build guide — `phase5-ivi-deploy.md` | complete | ✅ Done |
+| APK build guide — `apk-deploy.md` | complete | ✅ Done |
 
 ### Còn thiếu ❌ (cần làm ngay — chặn Demo)
 
@@ -139,7 +139,7 @@ Vấn đề: `object.class` field bị thiếu (R4Deserializer yêu cầu `objec
 
 #### Task B-3: Deploy lên CarSky AAOS node + Smoke Test (2–3 giờ)
 
-Theo `IVI_ECU/deployment/phase5-ivi-deploy.md`:
+Theo `documents/Delivery/apk-deploy.md`:
 1. Build APK: `./gradlew assembleDebug`
 2. Connect ADB tunnel tới CarSky Room
 3. Install: `adb install -r app-debug.apk`

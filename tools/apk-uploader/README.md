@@ -18,7 +18,7 @@ It also puts the guest on the Room subnet, without which no R4 datagram can arri
 
 **Step 1 stays human** — the script cannot mint the `a8k_` token; it reads `secrets\reach-adb-token-ivi.txt` and refuses a value shaped like the CarSky API key. So does the visual check on the Screen widget, which the script prints as a reminder rather than performing — **this build logs nothing from its UI layer**, so the switch to the Warning View is confirmable only on screen.
 
-The script automates the procedure; it does not replace it. [deploy-ivi-hmi-walkthrough.md §4.4–§4.8](../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#44-get-an-adb-endpoint) and [phase5-ivi-deploy.md](../../IVI_ECU/deployment/phase5-ivi-deploy.md) remain authoritative — read them when it fails, and follow the manual steps below.
+The script automates the procedure; it does not replace it. [deploy-ivi-hmi-walkthrough.md §4.4–§4.8](../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#44-get-an-adb-endpoint) and [apk-deploy.md](../../documents/Delivery/apk-deploy.md) remain authoritative — read them when it fails, and follow the manual steps below.
 
 ## What "upload" means here
 
@@ -71,7 +71,7 @@ $adb = "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"
 & $adb devices        # expect: localhost:5555   device
 ```
 
-`offline` or an empty list means the tunnel is not serving — see [walkthrough §4.10](../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#410-troubleshooting) rather than retrying blind.
+`offline` or an empty list means the tunnel is not serving — see [walkthrough §4.10](../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#410-troubleshooting-the-deploy-and-install) rather than retrying blind.
 
 Two guest properties decide whether the install can succeed at all:
 
@@ -100,7 +100,7 @@ The pass evidence is `[LINK] state=bound port=47300` on the `IVI_V2X` tag, and t
 
 ## Troubleshooting
 
-The walkthrough's [§4.10 table](../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#410-troubleshooting) covers the failure modes. The two seen most on this route: the tunnel terminal was closed (restart step 2), and the Skycraft node was not yet `Running` when the tunnel dialed (wait, then restart step 2).
+The walkthrough's [§4.10 table](../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#410-troubleshooting-the-deploy-and-install) covers the failure modes. The two seen most on this route: the tunnel terminal was closed (restart step 2), and the Skycraft node was not yet `Running` when the tunnel dialed (wait, then restart step 2).
 
 ## Secrets hygiene
 

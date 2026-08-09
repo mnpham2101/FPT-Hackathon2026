@@ -115,7 +115,7 @@ R3Snapshot deserialization.
 
 ### 🔴 B-3 (Demo Evidence) — Deploy APK lên CarSky AAOS + Smoke Test
 **Thời gian ước tính: 2–3 giờ**  
-**Hướng dẫn chi tiết:** `IVI_ECU/deployment/phase5-ivi-deploy.md`
+**Hướng dẫn chi tiết:** `documents/Delivery/apk-deploy.md`
 
 **Các bước:**
 
