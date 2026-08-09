@@ -5,7 +5,7 @@
 > - **Design:** [phase0-contract-freeze-hld.md](doc/deprecated/phase0-contract-freeze-hld.md) (commits `d807c37` + `70796c0`) — every target path below is cited verbatim from its §5 folder map; design decisions D1–D4, seam shape §7, conventions §4.
 > - **Requirements:** [m1-cooperative-awareness.md §2](../documents/Requirements/m1-cooperative-awareness.md) R1–R6 — referenced by number, never restated.
 > - **Smoke-test procedure:** [deploy-walkthrough-netcheck.md](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md) — steps M1–M12, the AI/Human work division [§5](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#5-work-division-between-ai-and-human), and acceptance [§6](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#6-expected-outputs-and-acceptance). Group 0.8 decomposes from it per [CLAUDE.md § Repository layout](../CLAUDE.md); nothing is restated.
-> - **Smoke-test design:** [baseline-connectivity-smoke-test.md](doc/research_notes/baseline-connectivity-smoke-test.md) — the objective, the [pass criteria C1–C5](doc/research_notes/baseline-connectivity-smoke-test.md#2-pass-criteria) every mention below refers to, and open items O1–O4.
+> - **Smoke-test design:** [baseline-connectivity-smoke-test.md](../documents/Delivery/baseline-connectivity-smoke-test.md) — the objective, the [pass criteria C1–C5](../documents/Delivery/baseline-connectivity-smoke-test.md#2-pass-criteria) every mention below refers to, and open items O1–O4.
 > - **R1 profile skeleton:** [scenario-player-v2x-callflow-messages.md](../documents/Design/SCENARIO-PLAYER/scenario-player-v2x-callflow-messages.md) §4 + findings F1–F9.
 > - **Rules:** [task-planning-conventions.md](../.claude/rules/task-planning-conventions.md) (`X.Y.Z.W`; subtask discipline is every subtask's definition of done, restated once in § Subtask discipline below).
 >
@@ -26,7 +26,7 @@
 - [x] R1 profile document committed; golden-vector CPMs encode/decode through the Vanetza codec seam. — closed 2026-07-31; the 6-case corpus decodes to its `.json` content and re-encodes to the exact `.uper` octets (CI run 30608005574).
 - [x] R2, R3, R4 schemas committed; round-trip tests pass in each consumer language (C++ / Python / Kotlin). — closed 2026-07-31; integrity gate green over 36 copies (CI run 30608202261).
 - [x] The R4 additive-version test is defined (unknown `warningType` degrades gracefully). — closed 2026-07-31 on the shared D4 fixture, in both the ADA and the IVI consumer.
-- [x] Blueprint topology documented (pre-existing guides) + validated: smoke-test C1–C5 green on a `baseline_m1` clone. — closed 2026-07-31; 5/5 nodes `Running`, C1–C5 all met. Evidence: [phase0-smoke-test-run.md](doc/phase0-smoke-test-run.md).
+- [x] Blueprint topology documented (pre-existing guides) + validated: smoke-test C1–C5 green on a `baseline_m1` clone. — closed 2026-07-31; 5/5 nodes `Running`, C1–C5 all met. Evidence: [phase0-smoke-test-run.md](doc/deprecated/phase0-smoke-test-run.md).
 
 Which subtasks close each box: [§ Acceptance traceability](#acceptance-traceability).
 
@@ -425,13 +425,13 @@ Ownership split so no deliverable is decomposed twice. The Phase 5 breakdown is 
 
 > Decomposed from [deploy-walkthrough-netcheck.md](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md) per [CLAUDE.md § Repository layout](../CLAUDE.md) — each subtask below links the section that governs its step and restates none of it. The executor of every subtask comes from that walkthrough's [§ 5 work-division table](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#5-work-division-between-ai-and-human); acceptance comes from its [§ 6](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#6-expected-outputs-and-acceptance). The blueprint is `baseline_m1` ([carsky-4-node-blueprint.md § 8](../requirements/car-sky-guide/carsky-4-node-blueprint.md#8-the-blueprints-on-carsky)), cloned rather than edited in place.
 >
-> **Startup self-run guarantee (HLD §6, user requirement) is acceptance on every run subtask:** node start ⇒ `entrypoint.sh` self-runs `capture.sh` (background) + `netcheck.py` (foreground), roles and ports wired purely by node-config env ⇒ C1–C5 observable in each node's log with no manual invocation. A run needing a manual exec fails. Run evidence accumulates in `plans/doc/phase0-smoke-test-run.md` (created by `5.0.8.2`).
+> **Startup self-run guarantee (HLD §6, user requirement) is acceptance on every run subtask:** node start ⇒ `entrypoint.sh` self-runs `capture.sh` (background) + `netcheck.py` (foreground), roles and ports wired purely by node-config env ⇒ C1–C5 observable in each node's log with no manual invocation. A run needing a manual exec fails. Run evidence accumulates in `doc/deprecated/phase0-smoke-test-run.md` (created by `5.0.8.2`).
 
 ### [x] `6.0.8.1` — Author the netcheck tool *(agent)*
 
 **Objective:** create `tools/netcheck/Dockerfile`, `entrypoint.sh`, `capture.sh`, `netcheck.py` — the four sources [M1](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#m1--write-the-application-code) consumes. The walkthrough's § 5 assigns M1 to neither column: it is a development deliverable the procedure starts from.
 
-**Scope:** the structural half of the self-run guarantee is part of the tool — `CMD ["./entrypoint.sh"]`, capture in the background and netcheck in the foreground, role wiring by environment variable only. The design behind each check is the [smoke-test note § 4](doc/research_notes/baseline-connectivity-smoke-test.md#4-tool-implementation).
+**Scope:** the structural half of the self-run guarantee is part of the tool — `CMD ["./entrypoint.sh"]`, capture in the background and netcheck in the foreground, role wiring by environment variable only. The design behind each check is the [smoke-test note § 4](../documents/Delivery/baseline-connectivity-smoke-test.md#4-tool-implementation).
 
 **Acceptance:**
 
@@ -468,7 +468,7 @@ Ownership split so no deliverable is decomposed twice. The Phase 5 breakdown is 
 1. [[car-sky]] runs its deploy preflight over the target Room and the credentials it was handed.
 2. [[car-sky]] pushes a commit, which runs the `netcheck-image` job; the build and push are automatic and need no local Docker.
 3. [[car-sky]] confirms the image is in the registry over the catalog and tag-list routes.
-4. [[car-sky]] records the confirmed registry host and the pushed tag in `plans/doc/phase0-smoke-test-run.md`, creating that file.
+4. [[car-sky]] records the confirmed registry host and the pushed tag in `doc/deprecated/phase0-smoke-test-run.md`, creating that file.
 
 **Scope:** one image for all three Container nodes — never three. Local tag `m1-netcheck:latest`; registry tag `registry.hackathon-2.carsky.io/m1-netcheck:latest`. Confirming the host **closes O1** (`registry.carsky.io` answers 502; `registry.hackathon-2.carsky.io` answers).
 
@@ -476,7 +476,7 @@ Ownership split so no deliverable is decomposed twice. The Phase 5 breakdown is 
 
 **Dependencies:** after `6.0.8.1` and `5.0.8.5`. **Commit:** `[5.0.8.2] docs: record netcheck image push and confirmed registry host`
 
-**Status:** done 2026-07-31 — pushed as `registry.hackathon-2.carsky.io/m1-netcheck:latest`, single-platform `linux/arm64` (commit `5e75920`; closes O1). Pulls and runs on the three container nodes of the deployed Room `trial2_minh_netcheck` — that is the Room name as deployed, not a blueprint to clone. Container images must be single-platform `linux/arm64` — see [phase0-smoke-test-run.md § Standing requirement](doc/phase0-smoke-test-run.md). **Deviation — nine `[5.0.8.2]` commits, not one**, against [§ Subtask discipline](#subtask-discipline-applies-to-every-subtask-below); they include the CI wiring, which belongs to `1.0.7.2`'s workflow rather than to a deploy subtask, and two image-format fixes.
+**Status:** done 2026-07-31 — pushed as `registry.hackathon-2.carsky.io/m1-netcheck:latest`, single-platform `linux/arm64` (commit `5e75920`; closes O1). Pulls and runs on the three container nodes of the deployed Room `trial2_minh_netcheck` — that is the Room name as deployed, not a blueprint to clone. Container images must be single-platform `linux/arm64` — see [phase0-smoke-test-run.md § Standing requirement](doc/deprecated/phase0-smoke-test-run.md). **Deviation — nine `[5.0.8.2]` commits, not one**, against [§ Subtask discipline](#subtask-discipline-applies-to-every-subtask-below); they include the CI wiring, which belongs to `1.0.7.2`'s workflow rather than to a deploy subtask, and two image-format fixes.
 
 ### [x] `5.0.8.3` — Blueprint clone, node config and deploy *(Human)*
 
@@ -492,11 +492,11 @@ Ownership split so no deliverable is decomposed twice. The Phase 5 breakdown is 
 
 **Scope:** no agent performs these steps; the plan tracks them. **Self-run acceptance:** the deploy alone must start the scripts — a node needing a manual exec to produce logs fails the run.
 
-**Acceptance:** **C1** — every node `Running`, restart count 0 — recorded in `plans/doc/phase0-smoke-test-run.md`. [[project-planner]] makes the evidence-record commit after the user confirms.
+**Acceptance:** **C1** — every node `Running`, restart count 0 — recorded in `doc/deprecated/phase0-smoke-test-run.md`. [[project-planner]] makes the evidence-record commit after the user confirms.
 
 **Dependencies:** after `5.0.8.2`. **Commit:** `[5.0.8.3] docs: record smoke-test deployment and C1 node-Running evidence`
 
-**Status:** done 2026-07-31 — deployed as `trial2_minh_netcheck` on room `27gs83k3oeju2mbywu1j8`; that is the deployed Room name, not a blueprint. 5/5 nodes `Running`, restart count 0, stable across a 10-minute window (C1). Deploy alone started every script — no manual exec used, self-run guarantee met. Evidence: [phase0-smoke-test-run.md § M5–M9](doc/phase0-smoke-test-run.md).
+**Status:** done 2026-07-31 — deployed as `trial2_minh_netcheck` on room `27gs83k3oeju2mbywu1j8`; that is the deployed Room name, not a blueprint. 5/5 nodes `Running`, restart count 0, stable across a 10-minute window (C1). Deploy alone started every script — no manual exec used, self-run guarantee met. Evidence: [phase0-smoke-test-run.md § M5–M9](doc/deprecated/phase0-smoke-test-run.md).
 
 ### [x] `5.0.8.6` — Read the blueprint and deployment state back over REST *(car-sky)*
 
@@ -526,15 +526,15 @@ Ownership split so no deliverable is decomposed twice. The Phase 5 breakdown is 
 1. [[car-sky]] reads every node's log over the logs route, per [M10](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#m10--read-the-logs--criteria-c2c5).
 2. [[car-sky]] records **C2**, **C3**, **C4** and **C5** from those logs, against the expected lines in that section.
 3. [[car-sky]] records the hop-3 evidence and which of the two methods produced it, per [§ Checking IVI RX traffic (hop 3)](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#checking-ivi-rx-traffic-hop-3).
-4. [[car-sky]] appends all of it to `plans/doc/phase0-smoke-test-run.md`.
+4. [[car-sky]] appends all of it to `doc/deprecated/phase0-smoke-test-run.md`.
 
 **Scope:** log reading only. The MTU probe is `6.0.8.7`/`6.0.8.8` and the teardown is `5.0.8.9`. **Self-run acceptance:** all C2–C5 evidence must come from logs of self-started scripts — any manual invocation fails the run.
 
-**Acceptance:** C2–C5 and the hop-3 method recorded in `plans/doc/phase0-smoke-test-run.md`, and O2 answered — this closes the milestone box "blueprint topology documented + validated". O3 and O4 are carried in [§ Open items](#open-items-carried-not-decided-no-phase-0-subtask-may-close-them) and close no part of this subtask.
+**Acceptance:** C2–C5 and the hop-3 method recorded in `doc/deprecated/phase0-smoke-test-run.md`, and O2 answered — this closes the milestone box "blueprint topology documented + validated". O3 and O4 are carried in [§ Open items](#open-items-carried-not-decided-no-phase-0-subtask-may-close-them) and close no part of this subtask.
 
 **Dependencies:** after `5.0.8.3` and `5.0.8.6`. **Commit:** `69c7542`, made under the `[5.0.8.3]` tag — the evidence for both subtasks landed in one commit, and no `[6.0.8.4]`-tagged commit exists.
 
-**Status:** done 2026-07-31 — C2–C5 all met (0 `[ERR]` lines, live logs on all 5 nodes, `[CAP]` capture on the wire, accumulated stamp `seq=…|bench|v2x` at ADA). O2 closed: `NET_RAW` honored, so the capture is real tcpdump output rather than the counter fallback. Hop-3 used the indirect ADA-side check (`[TX]` plus `[CAP]`), the only method available while the VM has no listener. Evidence: [phase0-smoke-test-run.md § M10](doc/phase0-smoke-test-run.md). **Deviations:** the M10 rows were performed by the user in this run, though [§ 5](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#5-work-division-between-ai-and-human) assigns them to AI; and the commit line above replaces a `[6.0.8.4]` tag that was recorded but never existed.
+**Status:** done 2026-07-31 — C2–C5 all met (0 `[ERR]` lines, live logs on all 5 nodes, `[CAP]` capture on the wire, accumulated stamp `seq=…|bench|v2x` at ADA). O2 closed: `NET_RAW` honored, so the capture is real tcpdump output rather than the counter fallback. Hop-3 used the indirect ADA-side check (`[TX]` plus `[CAP]`), the only method available while the VM has no listener. Evidence: [phase0-smoke-test-run.md § M10](doc/deprecated/phase0-smoke-test-run.md). **Deviations:** the M10 rows were performed by the user in this run, though [§ 5](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#5-work-division-between-ai-and-human) assigns them to AI; and the commit line above replaces a `[6.0.8.4]` tag that was recorded but never existed.
 
 ### [ ] `6.0.8.7` — Set `PAD` on the bench node and redeploy *(Human)*
 
@@ -561,7 +561,7 @@ Ownership split so no deliverable is decomposed twice. The Phase 5 breakdown is 
 
 1. [[car-sky]] compares arrivals across `PAD` values on the logs route.
 2. [[car-sky]] bisects `PAD` to the ceiling if large datagrams do not arrive while small ones do.
-3. [[car-sky]] records the ceiling in `plans/doc/phase0-smoke-test-run.md` as the CPM message-size budget input.
+3. [[car-sky]] records the ceiling in `doc/deprecated/phase0-smoke-test-run.md` as the CPM message-size budget input.
 
 **Acceptance:** the run record states the MTU ceiling, closing O3.
 
@@ -634,7 +634,7 @@ Lane F  smoke test:      6.0.8.1 (agent) ──┐
 | Bench Python → R1 codec path (F3) — **closed**: fixed as the `cpm_encode` helper subprocess under `Scenario_Player/codec_helper/` by [CLAUDE.md § Repository layout](../CLAUDE.md) and [scenario-player-design-decisions.md D1](../documents/Design/SCENARIO-PLAYER/scenario-player-design-decisions.md) | [[project-architecture]] | closed |
 | Smoke-test O3, O4 | O3 closes at `6.0.8.8`; O4 stays with [[project-researcher]] | O1 and O2 are closed by `5.0.8.2` and `6.0.8.4`. O3 (MTU headroom) — the M11 probe was not run. O4 (AAOS `nc` availability) — the direct listener check is unavailable on this deployment ([§ Checking IVI RX traffic (hop 3)](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#checking-ivi-rx-traffic-hop-3)), so only the indirect check ran. Neither blocks Phase 0 |
 | Report errata: R2 sample `distance 25.4` vs derived `25.03` (F7); `sender.speed` source wording (F1) — HLD §11 items 3–4 | [[project-researcher]] | contracts use the derived and nullable values meanwhile |
-| The shipped `tools/netcheck/netcheck.py` carries boot-stage and hang-location logging (commit `1fe007a`) that the smoke-test note's [§ 4.3](doc/research_notes/baseline-connectivity-smoke-test.md#4-tool-implementation) listing does not. Two documents describe the same tool | [[project-researcher]] | fold the change into the note, so the walkthrough and the note agree with the tree |
+| The shipped `tools/netcheck/netcheck.py` carries boot-stage and hang-location logging (commit `1fe007a`) that the smoke-test note's [§ 4.3](../documents/Delivery/baseline-connectivity-smoke-test.md#4-tool-implementation) listing does not. Two documents describe the same tool | [[project-researcher]] | fold the change into the note, so the walkthrough and the note agree with the tree |
 | HLD §8 fixes the C++ floor at CMake ≥ 3.22; `V2X_ECU/CMakeLists.txt` requires 3.28 because `FetchContent_Declare(... EXCLUDE_FROM_ALL)` needs it. The HLD and the tree disagree | [[project-architecture]] | correct HLD §8, or record the per-node floor there |
 | The ASN.1 member shapes recorded in `1.0.2.3`'s status, and the binary-fixture caveat in `1.0.2.5`'s, are node design facts sitting in a plan file | [[project-architecture]] | relocate them into `V2X_ECU/doc/`, and cite them from here |
 | `6.0.8.7`, `6.0.8.8` and `5.0.8.9` add the walkthrough's M11 and M12 rows to a phase whose four acceptance boxes are already closed | user | decide whether the optional MTU probe and the teardown are run at all, or dropped from the plan |

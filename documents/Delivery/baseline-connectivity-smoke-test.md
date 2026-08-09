@@ -1,7 +1,5 @@
 # Baseline Blueprint — Node Connectivity Smoke Test
 
-> **Status:** research note (scratch). Not authoritative — authority is [m1-cooperative-awareness.md](../../../documents/Requirements/m1-cooperative-awareness.md) R5/R6 and its [baseline topology](../../../documents/Requirements/m1-cooperative-awareness.md#baseline-propose-topology); platform mechanics are [carsky-4-node-blueprint.md](../../../requirements/car-sky-guide/carsky-4-node-blueprint.md).
-
 ## 1. Objective
 
 Prove a datagram travels **bench `10.99.0.10` → V2X `.11` → ADA `.12` → IVI `.13`** on the real ports (`47100`/`47200`/`47300`), before any ECU code exists.
@@ -29,7 +27,7 @@ C5 is the real objective — it is what distinguishes "the chain works" from "th
 
 Containers get no `NET_RAW` by default (the platform doc calls it out as *"required so the container may open raw sockets"*), so ICMP can fail on a perfectly healthy UDP path. `netcheck.py` instead uses **`connect()` on a UDP socket** — that forces a kernel route lookup and sends no packet, so an unreachable peer fails instantly and loudly, with no ICMP involved.
 
-`NET_RAW` is granted explicitly in the node config (§ 6, step M7) so that `tcpdump` works — verified as a real, honored field: CarSky's own [blueprint-KIS.json](../../../requirements/development-platform-doc/blueprint-KIS.json) has a container node carrying `"capabilities": ["NET_RAW", "NET_ADMIN", …]` flat alongside `image`/`env`. If it turns out not to be granted, `capture.sh` falls back to `/proc/net/dev` packet counters, which need no privilege at all — C4 is then met at counter level instead of packet level.
+`NET_RAW` is granted explicitly in the node config (§ 6, step M7) so that `tcpdump` works — verified as a real, honored field: CarSky's own [blueprint-KIS.json](../../requirements/development-platform-doc/blueprint-KIS.json) has a container node carrying `"capabilities": ["NET_RAW", "NET_ADMIN", …]` flat alongside `image`/`env`. If it turns out not to be granted, `capture.sh` falls back to `/proc/net/dev` packet counters, which need no privilege at all — C4 is then met at counter level instead of packet level.
 
 ## 4. Tool implementation
 
@@ -37,7 +35,7 @@ Containers get no `NET_RAW` by default (the platform doc calls it out as *"requi
 
 Create a new folder **`tools/netcheck/`** at the repo root and write all four files below into it.
 
-It is deliberately **not** one of the four node folders. `Scenario_Player/`, `V2X_ECU/`, `ADA_ECU/`, and `IVI_ECU/` hold node product code only ([CLAUDE.md § Repository layout](../../../CLAUDE.md)); this tool is throwaway test equipment that is deleted, or left unbuilt, once the real ECU images exist.
+It is deliberately **not** one of the four node folders. `Scenario_Player/`, `V2X_ECU/`, `ADA_ECU/`, and `IVI_ECU/` hold node product code only ([CLAUDE.md § Repository layout](../../CLAUDE.md)); this tool is throwaway test equipment that is deleted, or left unbuilt, once the real ECU images exist.
 
 ```
 tools/netcheck/
@@ -150,7 +148,7 @@ RUN chmod +x capture.sh entrypoint.sh
 CMD ["./entrypoint.sh"]
 ```
 
-Docker references: [Dockerfile syntax](https://docs.docker.com/reference/dockerfile/) for the instructions above · [Car-Sky-Platform.html](../../../requirements/development-platform-doc/Car-Sky-Platform.html) § *"Log In to Zot Registry & Get API Key"* for the platform's own `docker login` / `tag` / `push` walkthrough · [node-scenario-player.md](../../../requirements/car-sky-guide/node-scenario-player.md#build--push-the-image) for the same three commands in this project's shape.
+Docker references: [Dockerfile syntax](https://docs.docker.com/reference/dockerfile/) for the instructions above · [Car-Sky-Platform.html](../../requirements/development-platform-doc/Car-Sky-Platform.html) § *"Log In to Zot Registry & Get API Key"* for the platform's own `docker login` / `tag` / `push` walkthrough · [node-scenario-player.md](../../requirements/car-sky-guide/node-scenario-player.md#build--push-the-image) for the same three commands in this project's shape.
 
 ## 5. How the tool reaches the nodes
 
@@ -252,4 +250,4 @@ Hops 1 and 2 are fully proven by the container logs regardless — record which 
 | O3 | Bridge MTU ceiling — the bridge is a tunnelled userspace fabric, so 1500 is not guaranteed | M11 — feeds the R1 CPM size budget |
 | O4 | Does the AAOS guest have `nc`? | § 7 option 1 |
 
-Also owed to the committed guides, found while researching this note: [carsky-4-node-blueprint.md §4 step 10](../../../requirements/car-sky-guide/carsky-4-node-blueprint.md#4-steps) refers to a *"platform packet-capture facility"* that does not exist (there is no pcap endpoint anywhere — capture is in-container, as above), and its step 3 sets `bridgeMode`/`subnet` on the bridge node although every real export has bridge `config: null`.
+Also owed to the committed guides, found while researching this note: [carsky-4-node-blueprint.md §4 step 10](../../requirements/car-sky-guide/carsky-4-node-blueprint.md#4-steps) refers to a *"platform packet-capture facility"* that does not exist (there is no pcap endpoint anywhere — capture is in-container, as above), and its step 3 sets `bridgeMode`/`subnet` on the bridge node although every real export has bridge `config: null`.
