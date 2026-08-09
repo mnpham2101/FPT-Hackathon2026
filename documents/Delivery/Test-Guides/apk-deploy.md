@@ -331,7 +331,7 @@ Thirty thousand frames arrived on `eth1` and not one reached a socket: an interf
 | 3 | A NIC holding any other IPv4 is excluded | AAOS is managing it, and will re-lease over anything written |
 | 4 | Of what is left, the NIC receiving the most traffic wins | The Room's frames arrive there and are dropped for want of an address |
 
-The winner is configured **under its existing name**, with the routing table and policy rules netd would have made had it adopted the interface. Nothing is renamed, so no name has to be true for the fix to work, and the NAT device is left alone. The address is then re-read twice three seconds apart, because a NIC AAOS has adopted takes an address and loses it again on the next DHCP round — which a single check reads as success.
+The winner then goes through the organisers' procedure: renamed to `eth0` so `EthernetTracker` adopts it — but only when that name is free. Once the NAT device holds `eth0`, the rename answers `RTNETLINK answers: File exists` and nothing can take the name back, so the winner is configured **under its existing name** instead, with the routing table and policy rules netd would have made had it adopted the interface. R4 arrives on both paths. The address is then re-read twice three seconds apart, because a NIC AAOS has adopted takes an address and loses it again on the next DHCP round — which a single check reads as success.
 
 **Solution.** Re-run the installer; `-SkipInstall` re-applies the network fix without reinstalling the APK:
 

@@ -431,9 +431,15 @@ Write-Ok "Guest API $sdk; automotive feature: $(if ($auto -match 'android\.hardw
 #   4. of what is left, the NIC receiving the most traffic is the bridge: the Room's frames
 #      arrive there and are dropped for want of an address.
 #
-# The winner is configured under whatever name it already has, and is given the routing table
-# and policy rules netd would have created had it adopted the interface. Nothing is renamed,
-# so no name has to be true for the fix to work.
+# The winner is then put through the organiser-supplied procedure: renamed to 'eth0' so AAOS
+# EthernetTracker adopts it, given the pin address, and given its route and policy rule. The
+# rename is what the procedure turns on and it is kept -- only the choice of which NIC to
+# rename is made on evidence instead of on the name 'buried_eth0'.
+#
+# The rename needs the name 'eth0' to be free, and it is not always: once the NAT device holds
+# it, 'ip link set <nic> name eth0' answers "File exists" and nothing can take it back. The NIC
+# is then configured under its own name instead, with the routing table and policy rules netd
+# would have created had it adopted the interface. R4 arrives either way.
 #
 # A live mutation of the running guest. It does NOT survive a guest reboot or a redeploy --
 # re-run this script after either.
@@ -464,6 +470,33 @@ function Get-LinkSurvey ($linkText) {
         if ($line -match 'link/ether' -and $pending) { $cands += $pending; $pending = '' }
     }
     return @{ Candidates = $cands; Parents = $parents }
+}
+
+# Every interface name in an "ip link" dump, so a name can be tested for being already taken
+# before anything is renamed onto it.
+function Get-LinkNames ($linkText) {
+    $names = @()
+    foreach ($line in ($linkText -split "`r?`n")) {
+        if ($line -match '^\d+:\s+(\S+):') { $names += ($matches[1] -replace '@.*$', '') }
+    }
+    return $names
+}
+
+# The organiser-supplied step (a): rename the NIC to 'eth0' so EthernetTracker adopts it.
+# Returns the name to carry on with -- 'eth0' when the rename took, the original when it did
+# not. The three link commands are chained in one shell so an interrupted call can never leave
+# the NIC down.
+function Rename-ToEth0 ($nic) {
+    & $Adb -s $serial shell "su 0 sh -c 'ip link set $nic down; ip link set $nic name eth0; ip link set eth0 up'" 2>&1 | Out-Null
+    Start-Sleep -Seconds 4
+    $after = Get-LinkNames (& $Adb -s $serial shell ip link show 2>&1 | Out-String)
+    if (($after -contains 'eth0') -and -not ($after -contains $nic)) {
+        Write-Ok "Renamed $nic -> eth0 (EthernetTracker now adopts it)"
+        return 'eth0'
+    }
+    Write-Warn "Rename of $nic to eth0 did not take - configuring it under its own name."
+    & $Adb -s $serial shell "su 0 ip link set $nic up" 2>&1 | Out-Null
+    return $nic
 }
 
 # The IPv4 CIDR carried by one NIC in an "ip -4 addr" dump, or ''.
@@ -500,9 +533,10 @@ function Set-RoomAddr ($nic) {
     & $Adb -s $serial shell "su 0 sh -c 'ip link set $nic up; ip addr add $IviAddr/24 dev $nic || ifconfig $nic $IviAddr/24 up'" 2>&1 | Out-Null
 }
 
-# The routing netd builds for an interface it has adopted. Written by hand because the Room
-# NIC is deliberately left unadopted -- adoption is what pulls AAOS DHCP onto the interface
-# and flushes the address again.
+# Steps (b) and (c) of the organiser procedure. netd builds this itself for an interface it has
+# adopted, so on the renamed path every command below answers "File exists" -- the healthy
+# result. On the path where the NIC kept its own name there is no adoption and no netd routing,
+# and this is the whole of it.
 #
 # Inbound R4 needs none of this: 'ip addr add' makes the kernel put the subnet route in the
 # main table by itself, and that is what carries the datagram to the app's socket. What
@@ -577,7 +611,21 @@ if ($SkipNetworkFix) {
             if ($bestTotal -le 0) {
                 Write-Info "$roomNic has received nothing yet, so the pick rests on it being the only unconfigured NIC."
             }
-            Write-Ok "Room NIC: $roomNic (configured in place - no interface is renamed)"
+            Write-Ok "Room NIC: $roomNic"
+
+            # Step (a) of the organiser procedure, applied to the NIC the survey chose rather
+            # than to whatever answers to 'buried_eth0'.
+            if ($roomNic -eq 'eth0') {
+                Write-Info "Already named eth0 - no rename needed."
+            }
+            elseif ((Get-LinkNames $links) -contains 'eth0') {
+                $eth0Holder = Get-NicIpv4 $addrs 'eth0'
+                if (-not $eth0Holder) { $eth0Holder = 'no IPv4' }
+                Write-Info "eth0 is taken by another interface ($eth0Holder), so $roomNic keeps its name."
+            }
+            else {
+                $roomNic = Rename-ToEth0 $roomNic
+            }
 
             Set-RoomAddr $roomNic
             Set-RoomRouting $roomNic
