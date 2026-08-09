@@ -21,7 +21,10 @@ skills-lock.json
 # local credentials - never commit
 secrets/
 
-# apk-uploader - external tunnel binaries and the built APK stay local; only the guide is committed
+# apk-uploader - the organizers' tunnel CLI stays local. It is 126 MB of vendored
+# binaries that git cannot delta-compress, so committing it charges every clone
+# forever for a file the organizers hand out. Unpack their zip here instead.
+# The built APK stays local too: CI publishes it as the app-debug-apk artifact.
 tools/apk-uploader/reach_be/
 tools/apk-uploader/*.apk
 tools/apk-uploader/logs/
