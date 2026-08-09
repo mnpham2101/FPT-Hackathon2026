@@ -1,6 +1,6 @@
 # Phase 0 — `trial2_minh` Preflight (read-only, 2026-07-31)
 
-Evidence for smoke-test task group 0.8 ([phase0_tasks.md](../../phase0_tasks.md)): REST inspection of the baseline blueprint before the manual M5–M12 steps of [baseline-connectivity-smoke-test.md](../../../documents/Delivery/baseline-connectivity-smoke-test.md). No mutations were made (validate is a non-mutating check).
+Evidence for smoke-test task group 0.8 ([phase0_tasks.md](../../phase0_tasks.md)): REST inspection of the baseline blueprint before the manual M5–M12 steps of [baseline-connectivity-smoke-test.md](../../../documents/Delivery/Test-Guides/baseline-connectivity-smoke-test.md). No mutations were made (validate is a non-mutating check).
 
 ## Identity
 

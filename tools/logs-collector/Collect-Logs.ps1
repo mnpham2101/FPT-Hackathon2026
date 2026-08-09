@@ -4,7 +4,7 @@
   every guest-side log off the AAOS IVI over ADB, into ./test-report/<test-name>/.
 
 .DESCRIPTION
-  Automates Step 3 "Evidence collection" of documents/Delivery/testing-guide.md,
+  Automates Step 3 "Evidence collection" of documents/Delivery/Test-Guides/testing-guide.md,
   which stays the authority. The test note's Path 2 is a dozen commands pasted by
   hand with the node keys filled in from a second call; this runs the same commands,
   resolves the keys itself, and ends in the note's own evidence checklist.
@@ -180,7 +180,7 @@ function Resolve-Test ($value) {
 
 Write-Host ""
 Write-Host "  Test log collector - CarSky node logs + AAOS guest evidence" -ForegroundColor White
-Write-Host "  Authority: documents/Delivery/testing-guide.md Step 3" -ForegroundColor DarkGray
+Write-Host "  Authority: documents/Delivery/Test-Guides/testing-guide.md Step 3" -ForegroundColor DarkGray
 
 if ($PSVersionTable.PSVersion.Major -lt 5) {
     Fail "PowerShell $($PSVersionTable.PSVersion) is too old." "Windows PowerShell 5.1 ships with Windows 10 and 11 on every architecture."

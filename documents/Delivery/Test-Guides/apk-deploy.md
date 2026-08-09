@@ -1,6 +1,6 @@
 # Phase 5 — IVI HMI AAOS build & deployment
 
-How to build the team APK, install it on the CarSky Skycraft (AAOS) node, and confirm the app is up. Driving R4 warnings at it and collecting the evidence is [testing-guide.md](testing-guide.md), a separate guide that numbers its own steps from 1. Node-level blueprint/VM config lives in [node-ivi-ecu.md](../../requirements/car-sky-guide/node-ivi-ecu.md); this note is the APK path only.
+How to build the team APK, install it on the CarSky Skycraft (AAOS) node, and confirm the app is up. Driving R4 warnings at it and collecting the evidence is [testing-guide.md](testing-guide.md), a separate guide that numbers its own steps from 1. Node-level blueprint/VM config lives in [node-ivi-ecu.md](../../../requirements/car-sky-guide/node-ivi-ecu.md); this note is the APK path only.
 
 ## Prerequisites
 
@@ -17,7 +17,7 @@ Working directory for the Gradle commands in Step 1 Route B: **`IVI_ECU/`**. Eve
 
 **The tool does most of Steps 3 and 4**
 
-[INSTALL-IVI-APK.cmd](../../tools/apk-uploader/INSTALL-IVI-APK.cmd) runs 
+[INSTALL-IVI-APK.cmd](../../../tools/apk-uploader/INSTALL-IVI-APK.cmd) runs 
 * the whole install-and-verify chain in one window — tunnel, 
 * Room-network fix, 
 * install apk, 
@@ -32,7 +32,7 @@ To run on Windows: double-click it, or from the repo root:
 .\tools\apk-uploader\INSTALL-IVI-APK.cmd -KeepTunnel     # leave adb usable afterwards
 ```
 
-Windows PowerShell 5.1 on any architecture: `adb` is discovered across the standard SDK locations, and the organizers' x64 tunnel CLI runs under emulation on ARM64. Options and failure modes: [tools/apk-uploader/README.md](../../tools/apk-uploader/README.md).
+Windows PowerShell 5.1 on any architecture: `adb` is discovered across the standard SDK locations, and the organizers' x64 tunnel CLI runs under emulation on ARM64. Options and failure modes: [tools/apk-uploader/README.md](../../../tools/apk-uploader/README.md).
 
 | Step | What happens | Who |
 |---|---|---|
@@ -162,7 +162,7 @@ If `adb devices` shows `offline` or nothing at all, the tunnel in Terminal 1 is 
 
 ## Step 4 — Confirm the app on screen (browser, human)
 
-**The app launches itself.** Once the blueprint is correctly deployed and the APK is installed, it comes up on the guest with no `am start` and no tap — [AndroidManifest.xml](../../IVI_ECU/app/src/main/AndroidManifest.xml) declares `MainActivity` as the only `MAIN`/`LAUNCHER` activity on the node. An app that has to be started by hand is a finding: either the install did not take, or the guest is not the node you think it is.
+**The app launches itself.** Once the blueprint is correctly deployed and the APK is installed, it comes up on the guest with no `am start` and no tap — [AndroidManifest.xml](../../../IVI_ECU/app/src/main/AndroidManifest.xml) declares `MainActivity` as the only `MAIN`/`LAUNCHER` activity on the node. An app that has to be started by hand is a finding: either the install did not take, or the guest is not the node you think it is.
 
 So the deployment is confirmed by looking at it, not by a log line — this build writes nothing from its UI layer, which is why this step is manual and cannot be automated away. Back in the workbench:
 
@@ -263,7 +263,7 @@ adb -s localhost:5555 shell "ip link show"
 
 The bridge NIC is the one that is `UP,LOWER_UP`, has no IPv4, and is **not** the `10.0.2.x` cuttlefish NAT interface.
 
-**Solution — re-run the installer.** [INSTALL-IVI-APK.cmd](../../tools/apk-uploader/INSTALL-IVI-APK.cmd) applies the rename and the pin address itself, idempotently, as part of every run:
+**Solution — re-run the installer.** [INSTALL-IVI-APK.cmd](../../../tools/apk-uploader/INSTALL-IVI-APK.cmd) applies the rename and the pin address itself, idempotently, as part of every run:
 
 ```powershell
 .\tools\apk-uploader\INSTALL-IVI-APK.cmd

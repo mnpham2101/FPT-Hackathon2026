@@ -11,8 +11,8 @@
 #  and the same exit conditions. A change to one is a change to both; anything
 #  that lands in only one of them is a defect, not a platform difference.
 #
-#  Automates Step 3 of documents/Delivery/apk-deploy.md and Step 3-2 of its
-#  companion documents/Delivery/testing-guide.md, which stay the authority.
+#  Automates Step 3 of documents/Delivery/Test-Guides/apk-deploy.md and Step 3-2 of its
+#  companion documents/Delivery/Test-Guides/testing-guide.md, which stay the authority.
 #  Everything a human still has to do is printed at the end.
 #
 #  Before running: the blueprint must be deployed with the IVI Skycraft node
@@ -342,7 +342,7 @@ file_mtime() {
 
 printf '\n'
 say '  IVI APK installer - tunnel, install, evidence' "$C_WHITE"
-say '  Authority: documents/Delivery/apk-deploy.md Step 3' "$C_GRAY"
+say '  Authority: documents/Delivery/Test-Guides/apk-deploy.md Step 3' "$C_GRAY"
 
 step 'Locating tools and files'
 

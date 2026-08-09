@@ -2,7 +2,7 @@
 
 Pulls every node log off a deployed CarSky Room over REST, and — where the Room has a Skycraft VM — the guest's logcat, crash buffer, sockets and interfaces over ADB, into `test-report/<run>/`. Read-only: it collects, it never deploys or installs.
 
-Usage only. The procedure, the checks each file answers, and what to do when a row fails are in [testing-guide.md](../../documents/Delivery/testing-guide.md).
+Usage only. The procedure, the checks each file answers, and what to do when a row fails are in [testing-guide.md](../../documents/Delivery/Test-Guides/testing-guide.md).
 
 ## Tools
 

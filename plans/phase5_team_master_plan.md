@@ -139,7 +139,7 @@ Vấn đề: `object.class` field bị thiếu (R4Deserializer yêu cầu `objec
 
 #### Task B-3: Deploy lên CarSky AAOS node + Smoke Test (2–3 giờ)
 
-Theo `documents/Delivery/apk-deploy.md`:
+Theo `documents/Delivery/Test-Guides/apk-deploy.md`:
 1. Build APK: `./gradlew assembleDebug`
 2. Connect ADB tunnel tới CarSky Room
 3. Install: `adb install -r app-debug.apk`

@@ -4,8 +4,8 @@
   and dump the evidence logcat.
 
 .DESCRIPTION
-  Automates Step 3 of documents/Delivery/apk-deploy.md and Step 3-2 of its
-  companion documents/Delivery/testing-guide.md, which stay the authority.
+  Automates Step 3 of documents/Delivery/Test-Guides/apk-deploy.md and Step 3-2 of its
+  companion documents/Delivery/Test-Guides/testing-guide.md, which stay the authority.
   Everything a human still has to do is printed at the end.
 
   Before running: the blueprint must be deployed with the IVI Skycraft node Running, and
@@ -202,7 +202,7 @@ function Test-Port ($p) {
 
 Write-Host ""
 Write-Host "  IVI APK installer - tunnel, install, evidence" -ForegroundColor White
-Write-Host "  Authority: documents/Delivery/apk-deploy.md Step 3" -ForegroundColor DarkGray
+Write-Host "  Authority: documents/Delivery/Test-Guides/apk-deploy.md Step 3" -ForegroundColor DarkGray
 
 Write-Step "Locating tools and files"
 

@@ -4,7 +4,7 @@
 # One-shot evidence collector: pick a test, pull every node log off CarSky and every
 # guest-side log off the AAOS IVI over ADB, into ./test-report/<test-name>/.
 #
-# Automates Step 3 "Evidence collection" of documents/Delivery/testing-guide.md,
+# Automates Step 3 "Evidence collection" of documents/Delivery/Test-Guides/testing-guide.md,
 # which stays the authority. Same behaviour, same output layout and same on-screen
 # structure as the PowerShell version -- change one, change the other.
 #
@@ -276,7 +276,7 @@ EOF
 }
 
 printf '\n  %sTest log collector - CarSky node logs + AAOS guest evidence%s\n' "$C_WHITE" "$C_OFF"
-printf '  %sAuthority: documents/Delivery/testing-guide.md Step 3%s\n' "$C_GRAY" "$C_OFF"
+printf '  %sAuthority: documents/Delivery/Test-Guides/testing-guide.md Step 3%s\n' "$C_GRAY" "$C_OFF"
 
 command -v curl >/dev/null 2>&1 || fail "curl is not installed." "It is how this script talks to CarSky."
 command -v awk  >/dev/null 2>&1 || fail "awk is not installed."  "It is how this script reads the API's JSON."

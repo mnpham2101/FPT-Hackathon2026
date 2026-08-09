@@ -2,7 +2,7 @@
 
 Turns the base64 blocks inside a saved node log into `.pcap` files Wireshark can open. A capturing node emits its rotated pcap to stdout between `[PCAP-BEGIN <name>]` and `[PCAP-END]` markers, because the log is that node's only egress.
 
-Usage only. Where the logs come from and what the capture proves are in [testing-guide.md](../../documents/Delivery/testing-guide.md).
+Usage only. Where the logs come from and what the capture proves are in [testing-guide.md](../../documents/Delivery/Test-Guides/testing-guide.md).
 
 ## Tools
 

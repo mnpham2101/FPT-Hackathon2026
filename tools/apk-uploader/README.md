@@ -2,7 +2,7 @@
 
 Installs `app-debug.apk` into the IVI-ECU Skycraft (AAOS) node of a deployed Room, over the organizers' `reach-backend` ADB tunnel, and reports whether it took.
 
-Usage only. The procedure, the prerequisites and what to do when a step fails are in [apk-deploy.md](../../documents/Delivery/apk-deploy.md).
+Usage only. The procedure, the prerequisites and what to do when a step fails are in [apk-deploy.md](../../documents/Delivery/Test-Guides/apk-deploy.md).
 
 ## Tools
 

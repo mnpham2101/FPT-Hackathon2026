@@ -14,7 +14,7 @@ Every PowerShell block below runs from the **repo root**.
 
 ## The automation tool
 
-Two tools cover most of Step 3. [INSTALL-IVI-APK.cmd](../../tools/apk-uploader/INSTALL-IVI-APK.cmd) samples the evidence logcat as the tail of its install run, and `-SkipInstall` re-samples it without touching the Room. [COLLECT-LOGS.cmd](../../tools/logs-collector/COLLECT-LOGS.cmd) collects the whole set in one pass — every container node's log over REST, the guest-side logs over ADB, and a plain-text `summary.txt` of the checks below — resolving the node keys itself instead of asking you to paste them. Which rows stay manual, and why: [apk-deploy.md § The automation tool](apk-deploy.md#the-automation-tool). The steps below stay authoritative — read them when a tool fails, and to run any row by hand.
+Two tools cover most of Step 3. [INSTALL-IVI-APK.cmd](../../../tools/apk-uploader/INSTALL-IVI-APK.cmd) samples the evidence logcat as the tail of its install run, and `-SkipInstall` re-samples it without touching the Room. [COLLECT-LOGS.cmd](../../../tools/logs-collector/COLLECT-LOGS.cmd) collects the whole set in one pass — every container node's log over REST, the guest-side logs over ADB, and a plain-text `summary.txt` of the checks below — resolving the node keys itself instead of asking you to paste them. Which rows stay manual, and why: [apk-deploy.md § The automation tool](apk-deploy.md#the-automation-tool). The steps below stay authoritative — read them when a tool fails, and to run any row by hand.
 
 ### Every tool that pulls a log or a pcap
 
@@ -22,12 +22,12 @@ The **Images** column is what each tool has anything to say about — a tool abs
 
 | Tool name | Purpose | Export log location | Images |
 |---|---|---|---|
-| [INSTALL-IVI-APK.cmd](../../tools/apk-uploader/INSTALL-IVI-APK.cmd) (`install-ivi-apk.ps1` / `.sh`) | Installs the APK, then dumps the app's tagged logcat as the tail of its own run. Also owns the ADB tunnel every guest-side tool needs | `tools/apk-uploader/logs/` | `app-debug.apk` |
-| [COLLECT-LOGS.cmd](../../tools/logs-collector/COLLECT-LOGS.cmd) (`Collect-Logs.ps1` / `collect-logs.sh`) | One pass over a whole Room: every node's log over REST whatever the node is, and — where the Room has a Skycraft VM — the guest's logcat, crash buffer, sockets and interfaces over ADB | `test-report/<run>/`, one file per node | any deployed blueprint: `app-debug.apk`, `m1-r4-sim`, `m1-ada-ecu`, `m1-v2x-ecu`, `m1-scenario-player`, `m1-ada-bench`, `m1-netcheck` |
+| [INSTALL-IVI-APK.cmd](../../../tools/apk-uploader/INSTALL-IVI-APK.cmd) (`install-ivi-apk.ps1` / `.sh`) | Installs the APK, then dumps the app's tagged logcat as the tail of its own run. Also owns the ADB tunnel every guest-side tool needs | `tools/apk-uploader/logs/` | `app-debug.apk` |
+| [COLLECT-LOGS.cmd](../../../tools/logs-collector/COLLECT-LOGS.cmd) (`Collect-Logs.ps1` / `collect-logs.sh`) | One pass over a whole Room: every node's log over REST whatever the node is, and — where the Room has a Skycraft VM — the guest's logcat, crash buffer, sockets and interfaces over ADB | `test-report/<run>/`, one file per node | any deployed blueprint: `app-debug.apk`, `m1-r4-sim`, `m1-ada-ecu`, `m1-v2x-ecu`, `m1-scenario-player`, `m1-ada-bench`, `m1-netcheck` |
 | `capture.sh` — inside the image, not run by hand | Runs tcpdump in the container: `[CAP]` lines for the live "traffic is flowing" check, and a rotating pcap emitted to stdout as base64 between `[PCAP-BEGIN]` / `[PCAP-END]` | The node's own **View Log**, `user` stream — the log is a container's only egress | pcap **and** `[CAP]`: `m1-v2x-ecu`, `m1-ada-ecu` · `[CAP]` only: `m1-ada-bench`, `m1-netcheck` |
-| [EXTRACT-PCAP.cmd](../../tools/pcap-extract/EXTRACT-PCAP.cmd) (`Extract-Pcap.ps1` / `extract_pcap.sh`) | Turns the base64 blocks inside a saved node log into `.pcap` files Wireshark can open | Beside the input log, or `-OutDir` | `m1-v2x-ecu`, `m1-ada-ecu` |
+| [EXTRACT-PCAP.cmd](../../../tools/pcap-extract/EXTRACT-PCAP.cmd) (`Extract-Pcap.ps1` / `extract_pcap.sh`) | Turns the base64 blocks inside a saved node log into `.pcap` files Wireshark can open | Beside the input log, or `-OutDir` | `m1-v2x-ecu`, `m1-ada-ecu` |
 | `adb logcat` — by hand, over the tunnel | The only place the IVI app's `[RX]` lines exist; the IVI node's REST log is the Skycraft VM host, not the app | Wherever you redirect it (§ Step 3) | `app-debug.apk` |
-| [check_v2x_log.py](../../tools/comms_check/check_v2x_log.py) | Asserts the receive chain on a saved `[EVT]` stream — `rx_datagram` → `decode_ok` → `r2_forwarded` — and exits non-zero naming the first missing link | Reads a log, writes none; the exit status is the result | `m1-v2x-ecu` |
+| [check_v2x_log.py](../../../tools/comms_check/check_v2x_log.py) | Asserts the receive chain on a saved `[EVT]` stream — `rx_datagram` → `decode_ok` → `r2_forwarded` — and exits non-zero naming the first missing link | Reads a log, writes none; the exit status is the result | `m1-v2x-ecu` |
 
 Four consequences worth reading off that table before planning a run.
 
@@ -317,7 +317,7 @@ This is **system-test evidence**. The isolated path's `m1-r4-sim` stand-in does 
 .\tools\pcap-extract\EXTRACT-PCAP.cmd tools\apk-uploader\test-report\system\node-v2x.txt
 ```
 
-`-OutDir <dir>` writes elsewhere. Exit status: `0` every block extracted, `1` no block in the log at all — which usually means the node is missing `NET_RAW` — `2` a usage error, `3` a block failed and the reason was printed. Truncated blocks are reported rather than written, so a half file never masquerades as a complete capture. [extract_pcap.sh](../../V2X_ECU/tools/extract_pcap.sh) is the same tool for Git Bash.
+`-OutDir <dir>` writes elsewhere. Exit status: `0` every block extracted, `1` no block in the log at all — which usually means the node is missing `NET_RAW` — `2` a usage error, `3` a block failed and the reason was printed. Truncated blocks are reported rather than written, so a half file never masquerades as a complete capture. [extract_pcap.sh](../../../V2X_ECU/tools/extract_pcap.sh) is the same tool for Git Bash.
 
 **Step 2 — open it in Wireshark** and filter `udp.port == 47100 || udp.port == 47200 || udp.port == 47300`.
 

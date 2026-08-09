@@ -11,7 +11,7 @@ model: inherit
 
 Take an already-built ECU artifact (a Container image for the V2X ECU, ADA ECU, or Bench; the APK for the IVI ECU) and get it running on the CarSky platform: push it, wire it into a blueprint node, deploy the Room, and verify. The operational counterpart to [[project-architecture]]'s deployment **guides** — this agent performs the deploy, it does not write runbooks.
 
-**The delivery guides come first.** For test, verification and deployment work this agent reads [documents/Delivery/](../../documents/Delivery/) at spawn — [apk-deploy.md](../../documents/Delivery/apk-deploy.md) for the IVI APK route and its upload scripts, [testing-guide.md](../../documents/Delivery/testing-guide.md) for exercising a deployment and collecting logs — plus the subtask brief. Derive the route from those and the node reference; do not reconstruct it from the raw platform. A step needing a browser, visual judgement or a download is the human's: stop, say exactly what they must do, and wait.
+**The delivery guides come first.** For test, verification and deployment work this agent reads [documents/Delivery/](../../documents/Delivery/) at spawn — [apk-deploy.md](../../documents/Delivery/Test-Guides/apk-deploy.md) for the IVI APK route and its upload scripts, [testing-guide.md](../../documents/Delivery/Test-Guides/testing-guide.md) for exercising a deployment and collecting logs — plus the subtask brief. Derive the route from those and the node reference; do not reconstruct it from the raw platform. A step needing a browser, visual judgement or a download is the human's: stop, say exactly what they must do, and wait.
 
 ## When it is spawned
 
@@ -57,7 +57,7 @@ Concrete, verified context so this agent can authenticate and drive the platform
 
 - The spawning brief: target ECU/artifact + blueprint (confirmed via preflight).
 - `requirements/car-sky-guide/` — the 4-node blueprint guide, per-node files, and the REST-API reference: the ground truth for what this deployment's nodes and endpoints are.
-- [documents/Delivery/](../../documents/Delivery/) — [apk-deploy.md](../../documents/Delivery/apk-deploy.md) and [testing-guide.md](../../documents/Delivery/testing-guide.md), with their scripts: the procedure for getting an artifact onto a node, exercising it, and collecting the logs a diagnosis needs.
+- [documents/Delivery/](../../documents/Delivery/) — [apk-deploy.md](../../documents/Delivery/Test-Guides/apk-deploy.md) and [testing-guide.md](../../documents/Delivery/Test-Guides/testing-guide.md), with their scripts: the procedure for getting an artifact onto a node, exercising it, and collecting the logs a diagnosis needs.
 - [Car-Sky-Platform.html](../../requirements/development-platform-doc/Car-Sky-Platform.html) — the general platform reference: the node/pin model, the full endpoint catalog, the official credential-creation steps, and an MCP server that wraps the same REST API into named tools. Consult it for anything `car-sky-guide/` doesn't cover, but defer to `car-sky-guide/` where the two disagree. The MCP server requires CarSky's own `mcp/` package, which is not part of this repository — this agent uses the REST API directly instead.
 - The user-supplied API key and confirmed base URL (per [carsky-deploy-preflight](../skills/carsky-deploy-preflight/SKILL.md)), or the user's email and password to create a key via [carsky-login](../skills/carsky-login/SKILL.md).
 

@@ -40,7 +40,7 @@ Working order: **project-researcher → project-architecture → project-planner
 
 [requirements/car-sky-guide/](requirements/car-sky-guide/) states what the platform and each node *are* — `node-*.md`, the blueprint and REST references. These files are **unowned**: any agent that establishes a platform or node fact records it there, and no edit waits on another agent.
 
-**Test, verification and deployment start from [documents/Delivery/](documents/Delivery/)** — [apk-deploy.md](documents/Delivery/apk-deploy.md) for getting the IVI APK onto the node, [testing-guide.md](documents/Delivery/testing-guide.md) for exercising a deployment and collecting its logs, each with the scripts that automate it. An agent deriving a deploy, verification or debugging route reads these first and reconstructs nothing from the raw platform.
+**Test, verification and deployment start from [documents/Delivery/](documents/Delivery/)** — [apk-deploy.md](documents/Delivery/Test-Guides/apk-deploy.md) for getting the IVI APK onto the node, [testing-guide.md](documents/Delivery/Test-Guides/testing-guide.md) for exercising a deployment and collecting its logs, each with the scripts that automate it. An agent deriving a deploy, verification or debugging route reads these first and reconstructs nothing from the raw platform.
 
 ## Repository layout
 

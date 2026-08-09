@@ -105,7 +105,7 @@ ifconfig eth0 10.99.0.13/24 up
 - ADB survives the rename because adbd is on vsock, not TCP over that NIC — confirm on an unfamiliar guest with `cat /proc/net/tcp` showing no `15B3` listener.
 - **The change does not survive a guest reboot or a redeploy.** Re-apply after either; [INSTALL-IVI-APK.cmd](../../tools/apk-uploader/INSTALL-IVI-APK.cmd) does it automatically and idempotently.
 
-Verified on the `phase5_smoked_test` Room: after the rename the app logged `[RX] … source=v2x_relayed` at the producer's 1 Hz, risk cycling to `high`. Symptom-first form of this entry, with the checks: [apk-deploy.md § Troubleshooting](../../documents/Delivery/apk-deploy.md#troubleshooting).
+Verified on the `phase5_smoked_test` Room: after the rename the app logged `[RX] … source=v2x_relayed` at the producer's 1 Hz, risk cycling to `high`. Symptom-first form of this entry, with the checks: [apk-deploy.md § Troubleshooting](../../documents/Delivery/Test-Guides/apk-deploy.md#troubleshooting).
 
 ## Verification (feeds R16, R17 acceptance)
 
