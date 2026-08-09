@@ -25,8 +25,10 @@ secrets/
 tools/apk-uploader/reach_be/
 tools/apk-uploader/*.apk
 tools/apk-uploader/logs/
-# collected run evidence - logs, dumps and pcaps; kept with the delivery report, not in git
-tools/apk-uploader/test-report/
+# collected run evidence - logs, dumps and pcaps; kept with the delivery report, not in git.
+# The log collector writes ./test-report/<test-name>/ relative to wherever it is run, so the
+# pattern is unanchored rather than tied to one folder.
+test-report/
 
 # AG-Kit temporary & runtime files
 .temp_ag_kit/
