@@ -34,10 +34,10 @@
 .PARAMETER Test
   Which test to collect, by number or by name:
 
-      1  system-test          the full four-node blueprint   (m1-system-test)
-      2  ivi-isolated-test    IVI + mocked ADA               (phase5_smoked_test-deploy)
-      3  ada-isolated-test    ADA + its bench                (phase4_smoked_test-deploy)
-      4  v2x-isolated-test    V2X + the scenario player      (phase1_smoked_test-deploy)
+      1  system-test          the full four-node blueprint   (m1_system_test)
+      2  ivi-isolated-test    IVI + mocked ADA               (phase5_smoked_test)
+      3  ada-isolated-test    ADA + its bench                (phase4_smoked_test)
+      4  v2x-isolated-test    V2X + the scenario player      (phase1_smoked_test)
 
   Omitted, the script asks.
 
@@ -95,6 +95,12 @@ function Write-Check  ($ok, $name, $detail) {
     $col = if ($ok) { 'Green' } else { 'Yellow' }
     Write-Host ("    $box " + $name.PadRight(24) + " $detail") -ForegroundColor $col
 }
+# [-] is the third state: not a pass and not a failure, but nothing this Room can
+# answer -- a node with no log stream, or guest evidence in a Room with no guest.
+# Reporting those as [ ] would read as a defect in a Room that is behaving.
+function Write-Skip   ($name, $detail) {
+    Write-Host ("    [-] " + $name.PadRight(24) + " $detail") -ForegroundColor DarkGray
+}
 
 # summary.txt is the same checklist without the colour, so a run can be read back
 # after the window is gone. Every line printed as a result is echoed into it.
@@ -104,6 +110,7 @@ function Add-SummaryCheck ($ok, $name, $detail) {
     $box = if ($ok) { '[x]' } else { '[ ]' }
     Add-Summary ("$box " + $name.PadRight(24) + " $detail")
 }
+function Add-SummarySkip ($name, $detail) { Add-Summary ("[-] " + $name.PadRight(24) + " $detail") }
 
 function Fail ($m, $fix) {
     Write-Host ""
@@ -121,14 +128,22 @@ function Exit-Usage ($m) {
 
 # ------------------------------------------------------------------- the tests
 
-# One row per selectable test: the folder the evidence lands in, and the blueprint
-# name substring /deployments/find matches on. Adding a test is adding a row.
+# One row per selectable test: the folder the evidence lands in, and the CarSky
+# blueprint it is deployed from. Adding a test is adding a row.
+#
+# Blueprint names are the platform's own, underscore-separated. The deployment
+# CarSky builds from one is named <blueprint>-deploy, and that is the name
+# /deployments/find matches and the name the summary reports -- so the suffix is
+# derived below, never typed into a row.
 $Tests = @(
-    [pscustomobject]@{ Option = 1; Name = 'system-test';       Blueprint = 'm1-system-test';             What = 'full blueprint - bench, V2X, ADA, IVI' },
-    [pscustomobject]@{ Option = 2; Name = 'ivi-isolated-test';  Blueprint = 'phase5_smoked_test-deploy';  What = 'IVI ECU with the mocked ADA producer' },
-    [pscustomobject]@{ Option = 3; Name = 'ada-isolated-test';  Blueprint = 'phase4_smoked_test-deploy';  What = 'ADA ECU with its bench' },
-    [pscustomobject]@{ Option = 4; Name = 'v2x-isolated-test';  Blueprint = 'phase1_smoked_test-deploy';  What = 'V2X ECU with the scenario player' }
+    [pscustomobject]@{ Option = 1; Name = 'system-test';       Blueprint = 'm1_system_test';      What = 'full blueprint - bench, V2X, ADA, IVI' },
+    [pscustomobject]@{ Option = 2; Name = 'ivi-isolated-test';  Blueprint = 'phase5_smoked_test';  What = 'IVI ECU with the mocked ADA producer' },
+    [pscustomobject]@{ Option = 3; Name = 'ada-isolated-test';  Blueprint = 'phase4_smoked_test';  What = 'ADA ECU with its bench' },
+    [pscustomobject]@{ Option = 4; Name = 'v2x-isolated-test';  Blueprint = 'phase1_smoked_test';  What = 'V2X ECU with the scenario player' }
 )
+
+# CarSky names a deployment after its blueprint with a -deploy suffix.
+function Get-DeploymentName ($blueprint) { "$blueprint-deploy" }
 
 function Resolve-Test ($value) {
     $v = "$value".Trim()
@@ -172,7 +187,8 @@ if ($Test) {
 }
 
 Write-Ok "$($Selected.Name)  -  $($Selected.What)"
-Write-Info "Looking for the deployment of blueprint '$($Selected.Blueprint)'."
+$WantedDeployment = Get-DeploymentName $Selected.Blueprint
+Write-Info "Looking for '$WantedDeployment', the deployment of blueprint '$($Selected.Blueprint)'."
 
 # ------------------------------------------------------------------ credentials
 
@@ -209,7 +225,7 @@ Write-Step "Resolving the deployment on $BaseUrl"
 
 $found = $null
 try {
-    $found = Invoke-Api "/deployments/find?blueprint=$([uri]::EscapeDataString($Selected.Blueprint))"
+    $found = Invoke-Api "/deployments/find?blueprint=$([uri]::EscapeDataString($WantedDeployment))"
 } catch {
     Fail "The find call failed: $($_.Exception.Message)" `
          "Check the gateway is reachable and the API key is current. Nothing was collected."
@@ -221,15 +237,15 @@ try {
 # -match in this script overwrites, so a deployment held there would not survive.
 $hits = @($found | Where-Object { $_ })
 if ($hits.Count -eq 0) {
-    Fail "The deployment for '$($Selected.Blueprint)' is not running in CarSky - nothing matches that blueprint." `
+    Fail "'$WantedDeployment' is not running in CarSky - nothing matches that name." `
          "Deploy the $($Selected.Name) blueprint, wait for its nodes to go green, then re-run."
 }
 
 $Dep = $hits[0]
 if ($hits.Count -gt 1) {
-    $exact = @($hits | Where-Object { $_.name -eq $Selected.Blueprint })
+    $exact = @($hits | Where-Object { $_.name -eq $WantedDeployment })
     if ($exact.Count -gt 0) { $Dep = $exact[0] }
-    Write-Warn "$($hits.Count) deployments match '$($Selected.Blueprint)'; using '$($Dep.name)'."
+    Write-Warn "$($hits.Count) deployments match '$WantedDeployment'; using '$($Dep.name)'."
 }
 
 $RoomId = $Dep.roomId
@@ -250,7 +266,7 @@ if (-not $DepRunning) {
     if (-not $shown) { $shown = '(no status reported)' }
     $msg = ''
     if ($statusObj -and $statusObj.message) { $msg = " - $($statusObj.message)" }
-    Fail "The deployment '$($Selected.Blueprint)' is not running in CarSky: status is $shown$msg." `
+    Fail "The deployment '$WantedDeployment' is not running in CarSky: status is $shown$msg." `
          "Start or redeploy that blueprint and wait for RUNNING, then re-run. Logs of a stopped Room prove nothing."
 }
 Write-Ok "status RUNNING   namespace $($statusObj.namespace)"
@@ -259,7 +275,8 @@ $Stamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
 Add-Summary "Test log collection - $($Selected.Name)"
 Add-Summary "Collected           $Stamp"
 Add-Summary "Gateway             $BaseUrl"
-Add-Summary "Blueprint sought    $($Selected.Blueprint)"
+Add-Summary "Blueprint           $($Selected.Blueprint)"
+Add-Summary "Deployment sought   $WantedDeployment"
 Add-Summary "Deployment          $($Dep.name)"
 Add-Summary "Room                $RoomId"
 Add-Summary "Namespace           $($statusObj.namespace)"
@@ -337,19 +354,35 @@ foreach ($n in $nodes) {
     if ($isVm) { $file = Join-Path $OutDirFull "skycraft-$slug-vmhost.txt" }
     else       { $file = Join-Path $OutDirFull "node-$slug.txt" }
 
-    # container=user selects the application stream over the platform's sidecar. It is
-    # only valid on a container node: the Skycraft VM has no such container, and the
-    # Ethernet Bridge answers 502 when asked for one.
-    $q = "?tail=$Tail"
-    if ("$($n.nodeType)" -eq 'container') { $q = "?container=user&tail=$Tail" }
+    # Every node is asked for a log, whatever its type -- the node list is the only
+    # thing that decides what gets collected, so a Room of node types this script has
+    # never seen still collects. container=user selects the application stream over
+    # the platform's sidecar and is what a container answers to; the Skycraft VM has
+    # no such container and the Ethernet Bridge 502s it. So both forms are tried, in
+    # the order the node type makes likely, and only a node that refuses both is
+    # reported as having no log stream.
+    $variants = @("?tail=$Tail", "?container=user&tail=$Tail")
+    if ("$($n.nodeType)" -eq 'container') { $variants = @("?container=user&tail=$Tail", "?tail=$Tail") }
 
-    $lines = $null
-    try {
-        $resp  = Invoke-Api "/deployments/$RoomId/logs/$($n.name)$q"
-        $lines = $resp.lines
-    } catch {
-        Write-Check $false "$($n.displayName)" "log unreadable - $($_.Exception.Message)"
-        Add-SummaryCheck $false "$($n.displayName)" "log unreadable"
+    $lines   = $null
+    $got     = $false
+    $lastErr = ''
+    foreach ($q in $variants) {
+        try {
+            $resp  = Invoke-Api "/deployments/$RoomId/logs/$($n.name)$q"
+            $lines = $resp.lines
+            $got   = $true
+            break
+        } catch {
+            $lastErr = $_.Exception.Message
+        }
+    }
+
+    # No stream is not a failure. The Ethernet Bridge has no log to give and never
+    # will, and a Room is not less healthy for containing one.
+    if (-not $got) {
+        Write-Skip "$($n.displayName)" "no log stream [$($n.nodeType)] - $lastErr"
+        Add-SummarySkip "$($n.displayName)" "no log stream [$($n.nodeType)]"
         continue
     }
 

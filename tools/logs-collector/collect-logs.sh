@@ -58,10 +58,10 @@ usage() {
   Usage: collect-logs.sh [--test <1-4|name>] [options]
 
     --test <1-4|name>   which test to collect; asks if omitted
-                          1  system-test         (blueprint m1-system-test)
-                          2  ivi-isolated-test   (blueprint phase5_smoked_test-deploy)
-                          3  ada-isolated-test   (blueprint phase4_smoked_test-deploy)
-                          4  v2x-isolated-test   (blueprint phase1_smoked_test-deploy)
+                          1  system-test         (blueprint m1_system_test)
+                          2  ivi-isolated-test   (blueprint phase5_smoked_test)
+                          3  ada-isolated-test   (blueprint phase4_smoked_test)
+                          4  v2x-isolated-test   (blueprint phase1_smoked_test)
     --base-url <url>    CarSky gateway            (default $BASE_URL)
     --api-key-file <f>  file holding the REST key (default <repo>/secrets/carsky-api-key.txt)
     --port <n>          local ADB tunnel port     (default $PORT)
@@ -116,6 +116,11 @@ write_check() {
     else                    printf '    %s[ ] %-24s %s%s\n' "$C_YELLOW" "$2" "$3" "$C_OFF"; fi
 }
 
+# [-] is the third state: not a pass and not a failure, but nothing this Room can
+# answer -- a node with no log stream, or guest evidence in a Room with no guest.
+# Reporting those as [ ] would read as a defect in a Room that is behaving.
+write_skip() { printf '    %s[-] %-24s %s%s\n' "$C_GRAY" "$1" "$2" "$C_OFF"; }
+
 # summary.txt is the same checklist without the colour, so a run can be read back
 # after the terminal is gone. Every line printed as a result is echoed into it.
 SUMMARY=""
@@ -125,6 +130,7 @@ add_summary_check() {
     if [ "$1" -eq 1 ]; then add_summary "$(printf '[x] %-24s %s' "$2" "$3")"
     else                    add_summary "$(printf '[ ] %-24s %s' "$2" "$3")"; fi
 }
+add_summary_skip() { add_summary "$(printf '[-] %-24s %s' "$1" "$2")"; }
 
 fail() {
     printf '\n  %sFAILED: %s%s\n' "$C_RED" "$1" "$C_OFF" >&2
@@ -229,12 +235,17 @@ count_lines() { if [ -f "$1" ]; then awk 'END { print NR + 0 }' "$1"; else print
 
 # ------------------------------------------------------------------- the tests
 
-# One row per selectable test: option, folder the evidence lands in, blueprint name
-# substring /deployments/find matches on, and the one-line description.
-TESTS="1|system-test|m1-system-test|full blueprint - bench, V2X, ADA, IVI
-2|ivi-isolated-test|phase5_smoked_test-deploy|IVI ECU with the mocked ADA producer
-3|ada-isolated-test|phase4_smoked_test-deploy|ADA ECU with its bench
-4|v2x-isolated-test|phase1_smoked_test-deploy|V2X ECU with the scenario player"
+# One row per selectable test: option, folder the evidence lands in, the CarSky
+# blueprint it is deployed from, and the one-line description.
+#
+# Blueprint names are the platform's own, underscore-separated. The deployment
+# CarSky builds from one is named <blueprint>-deploy, and that is the name
+# /deployments/find matches and the name the summary reports -- so the suffix is
+# derived below, never typed into a row.
+TESTS="1|system-test|m1_system_test|full blueprint - bench, V2X, ADA, IVI
+2|ivi-isolated-test|phase5_smoked_test|IVI ECU with the mocked ADA producer
+3|ada-isolated-test|phase4_smoked_test|ADA ECU with its bench
+4|v2x-isolated-test|phase1_smoked_test|V2X ECU with the scenario player"
 
 TEST_NAME=""
 TEST_BLUEPRINT=""
@@ -279,7 +290,9 @@ EOF
 fi
 
 write_ok "$TEST_NAME  -  $TEST_WHAT"
-write_info "Looking for the deployment of blueprint '$TEST_BLUEPRINT'."
+# CarSky names a deployment after its blueprint with a -deploy suffix.
+WANTED_DEPLOYMENT="$TEST_BLUEPRINT-deploy"
+write_info "Looking for '$WANTED_DEPLOYMENT', the deployment of blueprint '$TEST_BLUEPRINT'."
 
 # ------------------------------------------------------------------ credentials
 
@@ -302,7 +315,7 @@ API="$BASE_URL/api/v1"
 
 write_step "Resolving the deployment on $BASE_URL"
 
-http_get "/deployments/find?blueprint=$(urlenc "$TEST_BLUEPRINT")"
+http_get "/deployments/find?blueprint=$(urlenc "$WANTED_DEPLOYMENT")"
 if [ "$HTTP_CODE" = "000" ]; then
     fail "The find call did not reach $BASE_URL." "Check the gateway is reachable. Nothing was collected."
 fi
@@ -315,15 +328,15 @@ fi
 DEP_OBJECTS="$(printf '%s' "$HTTP_BODY" | json_objects)"
 DEP_COUNT="$(printf '%s' "$DEP_OBJECTS" | grep -c 'roomId' || true)"
 if [ -z "$DEP_OBJECTS" ] || [ "$DEP_COUNT" = "0" ]; then
-    fail "The deployment for '$TEST_BLUEPRINT' is not running in CarSky - nothing matches that blueprint." \
+    fail "'$WANTED_DEPLOYMENT' is not running in CarSky - nothing matches that name." \
          "Deploy the $TEST_NAME blueprint, wait for its nodes to go green, then re-run."
 fi
 
 DEP_OBJ="$(printf '%s' "$DEP_OBJECTS" | sed -n '1p')"
 if [ "$DEP_COUNT" -gt 1 ]; then
-    EXACT="$(printf '%s' "$DEP_OBJECTS" | grep -F "\"name\":\"$TEST_BLUEPRINT\"" | sed -n '1p' || true)"
+    EXACT="$(printf '%s' "$DEP_OBJECTS" | grep -F "\"name\":\"$WANTED_DEPLOYMENT\"" | sed -n '1p' || true)"
     if [ -n "$EXACT" ]; then DEP_OBJ="$EXACT"; fi
-    write_warn "$DEP_COUNT deployments match '$TEST_BLUEPRINT'; using the first exact or listed match."
+    write_warn "$DEP_COUNT deployments match '$WANTED_DEPLOYMENT'; using the first exact or listed match."
 fi
 
 DEP_NAME="$(printf '%s' "$DEP_OBJ" | json_str name)"
@@ -349,7 +362,7 @@ if [ "$DEP_STATUS" = "RUNNING" ]; then DEP_RUNNING=1; fi
 if [ "$DEP_RUNNING" -ne 1 ]; then
     SHOWN="$DEP_STATUS"
     if [ -z "$SHOWN" ]; then SHOWN="(no status reported)"; fi
-    fail "The deployment '$TEST_BLUEPRINT' is not running in CarSky: status is $SHOWN." \
+    fail "The deployment '$WANTED_DEPLOYMENT' is not running in CarSky: status is $SHOWN." \
          "Start or redeploy that blueprint and wait for RUNNING, then re-run. Logs of a stopped Room prove nothing."
 fi
 write_ok "status RUNNING   namespace $NAMESPACE"
@@ -357,7 +370,8 @@ write_ok "status RUNNING   namespace $NAMESPACE"
 add_summary "Test log collection - $TEST_NAME"
 add_summary "Collected           $(date '+%Y-%m-%d %H:%M:%S')"
 add_summary "Gateway             $BASE_URL"
-add_summary "Blueprint sought    $TEST_BLUEPRINT"
+add_summary "Blueprint           $TEST_BLUEPRINT"
+add_summary "Deployment sought   $WANTED_DEPLOYMENT"
 add_summary "Deployment          $DEP_NAME"
 add_summary "Room                $ROOM_ID"
 add_summary "Namespace           $NAMESPACE"
@@ -444,15 +458,31 @@ while IFS='	' read -r n_name n_disp n_type n_phase; do
     if [ "$is_vm" -eq 1 ]; then file="$OUT_DIR/skycraft-$s-vmhost.txt"
     else                        file="$OUT_DIR/node-$s.txt"; fi
 
-    # container=user selects the application stream over the platform's sidecar. It is
-    # only valid on a container node: the Skycraft VM has no such container, and the
-    # Ethernet Bridge answers 502 when asked for one.
-    if [ "$n_type" = "container" ]; then q="?container=user&tail=$TAIL"; else q="?tail=$TAIL"; fi
+    # Every node is asked for a log, whatever its type -- the node list is the only
+    # thing that decides what gets collected, so a Room of node types this script has
+    # never seen still collects. container=user selects the application stream over
+    # the platform's sidecar and is what a container answers to; the Skycraft VM has
+    # no such container and the Ethernet Bridge 502s it. So both forms are tried, in
+    # the order the node type makes likely, and only a node that refuses both is
+    # reported as having no log stream.
+    last_code=""
+    if [ "$n_type" = "container" ]; then
+        q1="?container=user&tail=$TAIL"; q2="?tail=$TAIL"
+    else
+        q1="?tail=$TAIL"; q2="?container=user&tail=$TAIL"
+    fi
 
-    http_get "/deployments/$ROOM_ID/logs/$n_name$q"
+    http_get "/deployments/$ROOM_ID/logs/$n_name$q1"
     if [ "$HTTP_CODE" != "200" ]; then
-        write_check 0 "$n_disp" "log unreadable - HTTP $HTTP_CODE"
-        add_summary_check 0 "$n_disp" "log unreadable - HTTP $HTTP_CODE"
+        last_code="$HTTP_CODE"
+        http_get "/deployments/$ROOM_ID/logs/$n_name$q2"
+    fi
+
+    # No stream is not a failure. The Ethernet Bridge has no log to give and never
+    # will, and a Room is not less healthy for containing one.
+    if [ "$HTTP_CODE" != "200" ]; then
+        write_skip "$n_disp" "no log stream [$n_type] - HTTP ${last_code:-$HTTP_CODE}"
+        add_summary_skip "$n_disp" "no log stream [$n_type]"
         continue
     fi
 
