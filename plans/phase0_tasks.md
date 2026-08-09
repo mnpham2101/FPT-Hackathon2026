@@ -6,7 +6,7 @@
 > - **Requirements:** [m1-cooperative-awareness.md §2](../documents/Requirements/m1-cooperative-awareness.md) R1–R6 — referenced by number, never restated.
 > - **Smoke-test procedure:** [deploy-walkthrough-netcheck.md](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md) — steps M1–M12, the AI/Human work division [§5](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#5-work-division-between-ai-and-human), and acceptance [§6](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#6-expected-outputs-and-acceptance). Group 0.8 decomposes from it per [CLAUDE.md § Repository layout](../CLAUDE.md); nothing is restated.
 > - **Smoke-test design:** [baseline-connectivity-smoke-test.md](../documents/Delivery/Test-Guides/baseline-connectivity-smoke-test.md) — the objective, the [pass criteria C1–C5](../documents/Delivery/Test-Guides/baseline-connectivity-smoke-test.md#2-pass-criteria) every mention below refers to, and open items O1–O4.
-> - **R1 profile skeleton:** [scenario-player-v2x-callflow-messages.md](../documents/Design/SCENARIO-PLAYER/scenario-player-v2x-callflow-messages.md) §4 + findings F1–F9.
+> - **R1 profile skeleton:** [scenario-player-v2x-callflow-messages.md](../documents/Design/MODULE-DESIGN/SCENARIO-PLAYER/scenario-player-v2x-callflow-messages.md) §4 + findings F1–F9.
 > - **Rules:** [task-planning-conventions.md](../.claude/rules/task-planning-conventions.md) (`X.Y.Z.W`; subtask discipline is every subtask's definition of done, restated once in § Subtask discipline below).
 >
 > **Task ID legend:** `X.0.Z.W` — X = requirement served · 0 = this phase · Z = task group · W = subtask. IDs are stable; never renumber.
@@ -72,7 +72,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Scope:**
 
-- Structure and field/unit/encoding table from the callflow note [§4.1–§4.2](../documents/Design/SCENARIO-PLAYER/scenario-player-v2x-callflow-messages.md) (2 containers, 1 perceived object; ASN.1 paths, types, units, ranges).
+- Structure and field/unit/encoding table from the callflow note [§4.1–§4.2](../documents/Design/MODULE-DESIGN/SCENARIO-PLAYER/scenario-player-v2x-callflow-messages.md) (2 containers, 1 perceived object; ASN.1 paths, types, units, ranges).
 - Freeze the eight conventions exactly per [HLD §4](doc/deprecated/phase0-contract-freeze-hld.md), in the wording of [`contracts/r1-cpm-profile.md` § 5](../contracts/r1-cpm-profile.md): F1, F2, F5, F6, F7, F8, F9, VF. VF covers `PerceivedObject.position` **and** `.velocity` in the sender (B) cartesian frame.
 - Exchange call flow: callflow note §2 — § B is the sole live flow; unidirectional (R10 deferred).
 - Fix the golden-vector corpus list (HLD D3, 6 cases): `nominal` · `mdt-max` · `mdt-min` · `conf-unavailable` · `gate-boundary` · `coord-large`.
@@ -320,7 +320,7 @@ Per [task-planning-conventions.md § Subtask discipline](../.claude/rules/task-p
 
 **Objective:** create `Scenario_Player/player/contracts/cpm_content.py` (CpmContent Python dataclass, wire-native units — the bench side of the codec seam), `Scenario_Player/tests/test_cpm_content_roundtrip.py`, `Scenario_Player/requirements-dev.txt` (pytest, jsonschema).
 
-**Scope:** land synced copies: `Scenario_Player/contracts/r1-cpm-content.schema.json` + `Scenario_Player/tests/fixtures/golden/*.json` — this subtask lands the `.json` side only. The matching `.uper` copies are landed by the Scenario Player design, [scenario-player-design-decisions.md D2](../documents/Design/SCENARIO-PLAYER/scenario-player-design-decisions.md#d2--one-codec-source-two-build-contexts-joined-by-the-sync-manifest), and are listed in `contracts/sync-manifest.json`. Test: dataclass ⇄ JSON round-trip against every golden `.json`, plus `jsonschema` validation of each golden `.json` against the schema. **Hard constraint:** no UPER encode/decode from Python — the bench→codec path is fixed by [CLAUDE.md § Repository layout](../CLAUDE.md); a Python UPER implementation is out of scope and fails acceptance.
+**Scope:** land synced copies: `Scenario_Player/contracts/r1-cpm-content.schema.json` + `Scenario_Player/tests/fixtures/golden/*.json` — this subtask lands the `.json` side only. The matching `.uper` copies are landed by the Scenario Player design, [scenario-player-design-decisions.md D2](../documents/Design/MODULE-DESIGN/SCENARIO-PLAYER/scenario-player-design-decisions.md#d2--one-codec-source-two-build-contexts-joined-by-the-sync-manifest), and are listed in `contracts/sync-manifest.json`. Test: dataclass ⇄ JSON round-trip against every golden `.json`, plus `jsonschema` validation of each golden `.json` against the schema. **Hard constraint:** no UPER encode/decode from Python — the bench→codec path is fixed by [CLAUDE.md § Repository layout](../CLAUDE.md); a Python UPER implementation is out of scope and fails acceptance.
 
 **Acceptance:** Scenario_Player pytest command green; copies byte-identical; stdlib-only binding.
 
@@ -631,7 +631,7 @@ Lane F  smoke test:      6.0.8.1 (agent) ──┐
 
 | Item | Owner / closes at | Trigger |
 |---|---|---|
-| Bench Python → R1 codec path (F3) — **closed**: fixed as the `cpm_encode` helper subprocess under `Scenario_Player/codec_helper/` by [CLAUDE.md § Repository layout](../CLAUDE.md) and [scenario-player-design-decisions.md D1](../documents/Design/SCENARIO-PLAYER/scenario-player-design-decisions.md) | [[project-architecture]] | closed |
+| Bench Python → R1 codec path (F3) — **closed**: fixed as the `cpm_encode` helper subprocess under `Scenario_Player/codec_helper/` by [CLAUDE.md § Repository layout](../CLAUDE.md) and [scenario-player-design-decisions.md D1](../documents/Design/MODULE-DESIGN/SCENARIO-PLAYER/scenario-player-design-decisions.md) | [[project-architecture]] | closed |
 | Smoke-test O3, O4 | O3 closes at `6.0.8.8`; O4 stays with [[project-researcher]] | O1 and O2 are closed by `5.0.8.2` and `6.0.8.4`. O3 (MTU headroom) — the M11 probe was not run. O4 (AAOS `nc` availability) — the direct listener check is unavailable on this deployment ([§ Checking IVI RX traffic (hop 3)](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md#checking-ivi-rx-traffic-hop-3)), so only the indirect check ran. Neither blocks Phase 0 |
 | Report errata: R2 sample `distance 25.4` vs derived `25.03` (F7); `sender.speed` source wording (F1) — HLD §11 items 3–4 | [[project-researcher]] | contracts use the derived and nullable values meanwhile |
 | The shipped `tools/netcheck/netcheck.py` carries boot-stage and hang-location logging (commit `1fe007a`) that the smoke-test note's [§ 4.3](../documents/Delivery/Test-Guides/baseline-connectivity-smoke-test.md#4-tool-implementation) listing does not. Two documents describe the same tool | [[project-researcher]] | fold the change into the note, so the walkthrough and the note agree with the tree |

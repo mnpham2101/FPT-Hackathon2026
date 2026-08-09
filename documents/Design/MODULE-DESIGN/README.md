@@ -1,4 +1,4 @@
-# Design documents
+# Module design
 
 This page contains links to authoritative design of every node: its HLD, its decision record, its module and test designs, and the diagram sources they are drawn from.
 
@@ -6,7 +6,7 @@ One folder per node. Each folder's own README indexes it in full, including the 
 
 ## IVI-ECU
 
-The head unit: receives the warning stream and renders it. Folder: [IVI-ECU/](IVI-ECU/) · Code: [IVI_ECU/](../../IVI_ECU/)
+The head unit: receives the warning stream and renders it. Folder: [IVI-ECU/](IVI-ECU/) · Code: [IVI_ECU/](../../../IVI_ECU/)
 
 | Document | Topic |
 |---|---|
@@ -20,7 +20,7 @@ Diagram sources: `ivi-ecu-module-architecture.drawio` / `.svg`, and four `.puml`
 
 ## ADA-ECU
 
-Perception and fusion: detects what it can see, admits what is relayed to it, and emits the warning. Folder: [ADA-ECU/](ADA-ECU/) · Code: [ADA_ECU/](../../ADA_ECU/)
+Perception and fusion: detects what it can see, admits what is relayed to it, and emits the warning. Folder: [ADA-ECU/](ADA-ECU/) · Code: [ADA_ECU/](../../../ADA_ECU/)
 
 | Document | Topic |
 |---|---|
@@ -31,7 +31,7 @@ Diagram sources: `ada-ecu-module-architecture.drawio` / `.svg`, and three `.puml
 
 ## V2X-ECU
 
-The relay: encodes and decodes the cooperative message, carrying one vehicle's perception to another. Folder: [V2X-ECU/](V2X-ECU/) · Code: [V2X_ECU/](../../V2X_ECU/)
+The relay: encodes and decodes the cooperative message, carrying one vehicle's perception to another. Folder: [V2X-ECU/](V2X-ECU/) · Code: [V2X_ECU/](../../../V2X_ECU/)
 
 | Document | Topic |
 |---|---|
@@ -43,7 +43,7 @@ Diagram sources: `v2x-ecu-module-architecture.drawio` / `.svg`, and two `.puml` 
 
 ## Scenario Player
 
-The bench: plays a scenario into the V2X ECU as cooperative message traffic. Test equipment, and a node of the blueprint in its own right. Folder: [SCENARIO-PLAYER/](SCENARIO-PLAYER/) · Code: [Scenario_Player/](../../Scenario_Player/)
+The bench: plays a scenario into the V2X ECU as cooperative message traffic. Test equipment, and a node of the blueprint in its own right. Folder: [SCENARIO-PLAYER/](SCENARIO-PLAYER/) · Code: [Scenario_Player/](../../../Scenario_Player/)
 
 | Document | Topic |
 |---|---|

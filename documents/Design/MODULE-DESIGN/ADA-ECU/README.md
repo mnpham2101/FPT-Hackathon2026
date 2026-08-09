@@ -2,7 +2,7 @@
 
 The authoritative design of the ADA ECU: the detector, the fusion of own perception with relayed objects, and the R4 warning it emits. [[project-architecture]] produces and owns everything here.
 
-**Code:** [ADA_ECU/](../../../ADA_ECU/)
+**Code:** [ADA_ECU/](../../../../ADA_ECU/)
 
 ## Design authority
 
@@ -22,6 +22,6 @@ The authoritative design of the ADA ECU: the detector, the fusion of own percept
 
 ## Elsewhere
 
-- **General knowledge** applied to this node: [documents/KnowledgeBase/](../../KnowledgeBase/)
-- **Superseded documents:** [ADA_ECU/doc/deprecated/](../../../ADA_ECU/doc/deprecated/)
-- **How to deploy and collect evidence:** [deploy-ada-ecu-walkthrough.md](../../../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md)
+- **General knowledge** applied to this node: [documents/KnowledgeBase/](../../../KnowledgeBase/)
+- **Superseded documents:** [ADA_ECU/doc/deprecated/](../../../../ADA_ECU/doc/deprecated/)
+- **How to deploy and collect evidence:** [deploy-ada-ecu-walkthrough.md](../../../../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md)

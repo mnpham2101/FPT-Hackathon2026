@@ -6,4 +6,4 @@ Superseded and point-in-time documents, kept for the record. **Nothing here is a
 |---|---|
 | [phase2-4-ada-ecu-hld.md](phase2-4-ada-ecu-hld.md) | The phase-scoped HLD for the ADA ECU's Phase 2–4 work, superseded by the single per-node design |
 
-Read anything here against its own date, not against the current code. The live design is [documents/Design/ADA-ECU/](../../../documents/Design/ADA-ECU/); the node's code is [ADA_ECU/](../../).
+Read anything here against its own date, not against the current code. The live design is [documents/Design/MODULE-DESIGN/ADA-ECU/](../../../documents/Design/MODULE-DESIGN/ADA-ECU/); the node's code is [ADA_ECU/](../../).

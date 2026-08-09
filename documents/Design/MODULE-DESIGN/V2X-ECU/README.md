@@ -2,7 +2,7 @@
 
 The authoritative design of the V2X ECU: the CPM profile, the codec, and the relay that carries B's perception of C to A. [[project-architecture]] produces and owns everything here.
 
-**Code:** [V2X_ECU/](../../../V2X_ECU/)
+**Code:** [V2X_ECU/](../../../../V2X_ECU/)
 
 ## Design authority
 
@@ -22,6 +22,6 @@ The authoritative design of the V2X ECU: the CPM profile, the codec, and the rel
 
 ## Elsewhere
 
-- **General knowledge** applied to this node: [documents/KnowledgeBase/](../../KnowledgeBase/)
+- **General knowledge** applied to this node: [documents/KnowledgeBase/](../../../KnowledgeBase/)
 - **The wire to the bench:** [scenario-player-v2x-callflow-messages.md](../SCENARIO-PLAYER/scenario-player-v2x-callflow-messages.md)
-- **The node reference:** [node-v2x-ecu.md](../../../requirements/car-sky-guide/node-v2x-ecu.md)
+- **The node reference:** [node-v2x-ecu.md](../../../../requirements/car-sky-guide/node-v2x-ecu.md)

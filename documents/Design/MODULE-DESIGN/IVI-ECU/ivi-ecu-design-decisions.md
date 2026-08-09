@@ -60,13 +60,13 @@ The parser puts the wire value into `warningType` and stops. `WarningClassifier`
 
 ## D6 — The frozen samples are **main** resources of `:contract`
 
-One byte-synced location, `contract/src/main/resources/contracts/samples/*.json`, registered in [contracts/sync-manifest.json](../../../contracts/sync-manifest.json), reachable from the three places that must agree: the contract tests, the simulator's payload builder, the dev injector.
+One byte-synced location, `contract/src/main/resources/contracts/samples/*.json`, registered in [contracts/sync-manifest.json](../../../../contracts/sync-manifest.json), reachable from the three places that must agree: the contract tests, the simulator's payload builder, the dev injector.
 
 Accepted cost: ~2 KB of fixtures ship inside the release APK. Rejected alternative: three separate copies — the drift the sync manifest exists to prevent.
 
 ## D7 — Manual composition root; no Hilt
 
-The object graph is seven objects, one Activity and one service. A hand-written `IviGraph` in `IviApplication.onCreate` wires it with no annotation processor; Hilt would add `hilt-navigation-compose` and a KSP round per build. Against [solution-selection-criteria](../../../.claude/rules/solution-selection-criteria.md): C2 and C4. Replacing `IviGraph` changes no consumer, since view-models come from one `ViewModelProvider.Factory` either way.
+The object graph is seven objects, one Activity and one service. A hand-written `IviGraph` in `IviApplication.onCreate` wires it with no annotation processor; Hilt would add `hilt-navigation-compose` and a KSP round per build. Against [solution-selection-criteria](../../../../.claude/rules/solution-selection-criteria.md): C2 and C4. Replacing `IviGraph` changes no consumer, since view-models come from one `ViewModelProvider.Factory` either way.
 
 ## D8 — A Gradle version catalog governs all five modules
 

@@ -19,7 +19,7 @@ A review is written to the **reviewed node's own `doc/`**, at:
 | `<N>` | the pull-request number |
 | `<K>` | the review version, from `1` |
 
-- **The review sits with the node, not with the design.** The design authority lives in [documents/Design/`<NODE>`/](../../documents/Design/) and states what the node *should* be; a review states what one branch *was* on one day. Keeping the two apart is what stops a verdict being read as a specification.
+- **The review sits with the node, not with the design.** The design authority lives in [documents/Design/MODULE-DESIGN/`<NODE>`/](../../documents/Design/MODULE-DESIGN/) and states what the node *should* be; a review states what one branch *was* on one day. Keeping the two apart is what stops a verdict being read as a specification.
 - **A PR spanning several node folders gets one document**, in the `doc/` of the node carrying most of the change; cross-node findings stay in it rather than being split. A PR with no principal node goes to [plans/doc/](../../plans/doc/).
 - **Reviews are committed and pushed to `main`**, not to the branch under review. The branch is rewritten, rebased, squashed or deleted as the work lands; the review is the record of what was found and must outlive it.
 

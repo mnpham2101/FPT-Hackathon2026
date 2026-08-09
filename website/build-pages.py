@@ -9,7 +9,7 @@ components, same CSS tokens.  Two functions, usable separately:
 
 Run either from the repo root:
 
-    python website/build-pages.py documents/Design/README.md
+    python website/build-pages.py documents/Design/MODULE-DESIGN/README.md
     python website/build-pages.py                  # traverse
     python website/build-pages.py --clean          # + drop old
 
@@ -49,7 +49,8 @@ ENTRIES = [
     ("requirements", "documents/Requirements/README.md"),
     ("plans", "documents/Plan/milestone1_high_level_plan.md"),
     ("proposal-presentation", "documents/Proposals/README.md"),
-    ("module-design", "documents/Design/README.md"),
+    ("system-design", "documents/Design/SYSTEM-DESIGN/system-design.md"),
+    ("module-design", "documents/Design/MODULE-DESIGN/README.md"),
     ("guide-to-get-evidence", "documents/Delivery/Test-Guides/README.md"),
 ]
 
@@ -102,7 +103,7 @@ SKIP_SCHEMES = ("http://", "https://", "mailto:", "tel:", "data:", "//")
 def page_name(rel):
     """Repo path -> the flat filename it takes in pages/.
 
-    'documents/Design/README.md' -> 'documents-design-readme.html'
+    'documents/Design/MODULE-DESIGN/README.md' -> 'documents-design-module-design-readme.html'
 
     Named for the whole path, not the basename: pages/ is flat, and this
     repo has five README.md files that would otherwise collide into one.
@@ -188,11 +189,16 @@ def render_markdown(text):
 
 
 def doc_title(body_html, rel):
+    """The document's own <h1>, or its filename when it carries none.
+
+    The fallback is title-cased because it is what a reader sees as the page
+    heading -- a document still being written has no <h1> yet, and 'system
+    design' under a node labelled System Design reads as a defect."""
     m = re.search(r"<h1[^>]*>(.*?)</h1>", body_html, re.S)
     if m:
         text = re.sub(r'<a[^>]*class="headerlink".*?</a>', "", m.group(1), flags=re.S)
         return html.unescape(re.sub(r"<[^>]+>", "", text)).strip()
-    return PurePosixPath(str(rel)).stem.replace("-", " ").replace("_", " ")
+    return PurePosixPath(str(rel)).stem.replace("-", " ").replace("_", " ").title()
 
 
 def build_page(rel, node="", build=None):

@@ -1,21 +1,21 @@
 # ADA ECU — high-level design (R3, R12–R15; R18 ADA side)
 
-> **The ADA node's HLD, and the sole design authority for `ADA_ECU/`.** Every component this node runs, its role, input and output, where it lives, and how the components connect. Decision record: [ada-ecu-design-decisions.md](ada-ecu-design-decisions.md) (D1–D11). Frozen contracts: [r2-v2x-object.schema.json](../../../contracts/r2-v2x-object.schema.json) in, [r3-tracked-object.schema.json](../../../contracts/r3-tracked-object.schema.json) as the store's object model, [r4-ada-ivi.schema.json](../../../contracts/r4-ada-ivi.schema.json) out. Deploy and verify: [deploy-ada-ecu-walkthrough.md](../../../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md). Node facts: [node-ada-ecu.md](../../../requirements/car-sky-guide/node-ada-ecu.md).
+> **The ADA node's HLD, and the sole design authority for `ADA_ECU/`.** Every component this node runs, its role, input and output, where it lives, and how the components connect. Decision record: [ada-ecu-design-decisions.md](ada-ecu-design-decisions.md) (D1–D11). Frozen contracts: [r2-v2x-object.schema.json](../../../../contracts/r2-v2x-object.schema.json) in, [r3-tracked-object.schema.json](../../../../contracts/r3-tracked-object.schema.json) as the store's object model, [r4-ada-ivi.schema.json](../../../../contracts/r4-ada-ivi.schema.json) out. Deploy and verify: [deploy-ada-ecu-walkthrough.md](../../../../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md). Node facts: [node-ada-ecu.md](../../../../requirements/car-sky-guide/node-ada-ecu.md).
 >
 > Diagrams: [ada-ecu-module-architecture.svg](ada-ecu-module-architecture.svg) (components, paired with its `.drawio`) · [phase2-4-ada-ecu-components.puml](phase2-4-ada-ecu-components.puml) (module graph) · [phase2-4-ada-ecu-callflow.puml](phase2-4-ada-ecu-callflow.puml) (sequence) · [phase2-4-ada-ecu-admission.puml](phase2-4-ada-ecu-admission.puml) (the R13 state machine).
 
-**Abridged version.** A reader who does not need the full document can take the design deck instead: [Phases 2-4 — ADA ECU Design](../../../presentation/phase2-4/phase2-4-ada-ecu-design-deck.md) ([HTML](../../../presentation/phase2-4/phase2-4-ada-ecu-design-deck.html)). It presents this HLD; where the two differ, this document governs.
+**Abridged version.** A reader who does not need the full document can take the design deck instead: [Phases 2-4 — ADA ECU Design](../../../../presentation/phase2-4/phase2-4-ada-ecu-design-deck.md) ([HTML](../../../../presentation/phase2-4/phase2-4-ada-ecu-design-deck.html)). It presents this HLD; where the two differ, this document governs.
 
 ## 1. Scope and authority
 
 `ADA_ECU/` only — ego's perception and fusion node, from the R2 datagram arriving on the wire and the clip frame leaving the decoder, to the R4 warning datagram leaving the node.
 
 - **In scope:** this folder's C++17 core and Python detector, their components and seams, the node's two network endpoints, the model and clip it ships, and the host-side scripts that read its own logs.
-- **Out of scope:** what the V2X ECU does before R2 and what the IVI does after R4, which are those nodes' designs; the deploy and verify procedure, which the walkthrough owns; the task breakdown, which the plan owns; the radar and live-camera inputs drawn in [ada-ecu.svg](../../Requirements/ada-ecu.svg) — M1 has no radar and no live camera bring-up.
+- **Out of scope:** what the V2X ECU does before R2 and what the IVI does after R4, which are those nodes' designs; the deploy and verify procedure, which the walkthrough owns; the task breakdown, which the plan owns; the radar and live-camera inputs drawn in [ada-ecu.svg](../../../Requirements/ada-ecu.svg) — M1 has no radar and no live camera bring-up.
 
 **This is the only design document governing this node.** It fixes the component set and each component's responsibility, every deliverable's path, the seams, the configuration keys, and the evidence log lines.
 
-- **Task planning decomposes from this document plus the requirements report, and nothing else.** Requirement numbers and acceptance come from [m1-cooperative-awareness.md](../../Requirements/m1-cooperative-awareness.md); everything structural comes from here — which component a subtask creates, its path, the interface it satisfies, the log line that closes it. Deploy and verify subtasks come from the walkthrough, per [CLAUDE.md § Repository layout](../../../CLAUDE.md).
+- **Task planning decomposes from this document plus the requirements report, and nothing else.** Requirement numbers and acceptance come from [m1-cooperative-awareness.md](../../../Requirements/m1-cooperative-awareness.md); everything structural comes from here — which component a subtask creates, its path, the interface it satisfies, the log line that closes it. Deploy and verify subtasks come from the walkthrough, per [CLAUDE.md § Repository layout](../../../../CLAUDE.md).
 - **Plans cite; they do not restate.** A brief links the section governing its step, so a change lands in one place.
 - **Implementation does not extend this silently.** A component, path or configuration key not designated here is not created ad hoc — the design changes first.
 - **What overrides it:** the requirements report, the frozen R2/R3/R4 contracts, and the walkthrough for procedure. On conflict, the CLAUDE.md authority order decides.
@@ -28,14 +28,14 @@
 
 | Document | What it fixes for this node |
 |---|---|
-| [m1-cooperative-awareness.md](../../Requirements/m1-cooperative-awareness.md) — **the authority** | R3, R12, R13, R14, R15 whole — definition, dependency, acceptance, tech stack. R2 as the input contract and R4 as the output contract. R5/R6: node type, bridge, address, ports. R18: the evidence stream. R19: zero direct C detections for the whole run. §1: this node's responsibility list and the demo table. §3(d)/(f)/(g): the stack. §4: the standing decisions |
-| Its figures — [ada-ecu.svg](../../Requirements/ada-ecu.svg) · [vehicleC_track_admission_state_machine.png](../../Requirements/vehicleC_track_admission_state_machine.png) | The R14 module shape this design realizes — DataObserver, Data Parser, Current Input, Collision Risk Assessment, Current TrackedObject/Risk — and the R13 lifecycle, realized as [phase2-4-ada-ecu-admission.puml](phase2-4-ada-ecu-admission.puml) |
-| [r2-v2x-object.schema.json](../../../contracts/r2-v2x-object.schema.json) · [r3-tracked-object.schema.json](../../../contracts/r3-tracked-object.schema.json) · [r4-ada-ivi.schema.json](../../../contracts/r4-ada-ivi.schema.json) | The three frozen contracts, field for field, with their bounds and their nullable fields (§10) |
-| [m1-run-timing-and-event-triggering.md](../../../requirements/deprecated/m1-run-timing-and-event-triggering.md) | R20/R21/R22 whole. §6.2's clock-domain ruling, which this design makes (D10); §6.1's three detector pacing keys and the two risk-band values; §6.6's run choreography — `T0`, the paced clip, the matched bench-cycle and clip periods, and the band pair on the composed range (D11); §6.4's `tools/check_run_alignment.py` and its K1–K6 checks (§12) |
-| [m1-video-source-and-ivi-dashcam.md](../../../requirements/deprecated/m1-video-source-and-ivi-dashcam.md) | The clip reaches the container as one image layer and by no other route. The IVI dashcam view is deferred, and no part of it is built here (D6) |
-| [milestone1_high_level_plan.md](../../Plan/milestone1_high_level_plan.md) | §4's R13 gate constants; §2's near-collinear composition assumption; Phases 2, 3 and 4 acceptance; §6's deferred scope |
-| [node-ada-ecu.md](../../../requirements/car-sky-guide/node-ada-ecu.md) | Image tag, blueprint `command` and `capabilities`, env set, pin, address |
-| [deploy-ada-ecu-walkthrough.md](../../../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md) | The isolated-Room configuration and the observables its § Expected outputs and acceptance names (§12) |
+| [m1-cooperative-awareness.md](../../../Requirements/m1-cooperative-awareness.md) — **the authority** | R3, R12, R13, R14, R15 whole — definition, dependency, acceptance, tech stack. R2 as the input contract and R4 as the output contract. R5/R6: node type, bridge, address, ports. R18: the evidence stream. R19: zero direct C detections for the whole run. §1: this node's responsibility list and the demo table. §3(d)/(f)/(g): the stack. §4: the standing decisions |
+| Its figures — [ada-ecu.svg](../../../Requirements/ada-ecu.svg) · [vehicleC_track_admission_state_machine.png](../../../Requirements/vehicleC_track_admission_state_machine.png) | The R14 module shape this design realizes — DataObserver, Data Parser, Current Input, Collision Risk Assessment, Current TrackedObject/Risk — and the R13 lifecycle, realized as [phase2-4-ada-ecu-admission.puml](phase2-4-ada-ecu-admission.puml) |
+| [r2-v2x-object.schema.json](../../../../contracts/r2-v2x-object.schema.json) · [r3-tracked-object.schema.json](../../../../contracts/r3-tracked-object.schema.json) · [r4-ada-ivi.schema.json](../../../../contracts/r4-ada-ivi.schema.json) | The three frozen contracts, field for field, with their bounds and their nullable fields (§10) |
+| [m1-run-timing-and-event-triggering.md](../../../../requirements/deprecated/m1-run-timing-and-event-triggering.md) | R20/R21/R22 whole. §6.2's clock-domain ruling, which this design makes (D10); §6.1's three detector pacing keys and the two risk-band values; §6.6's run choreography — `T0`, the paced clip, the matched bench-cycle and clip periods, and the band pair on the composed range (D11); §6.4's `tools/check_run_alignment.py` and its K1–K6 checks (§12) |
+| [m1-video-source-and-ivi-dashcam.md](../../../../requirements/deprecated/m1-video-source-and-ivi-dashcam.md) | The clip reaches the container as one image layer and by no other route. The IVI dashcam view is deferred, and no part of it is built here (D6) |
+| [milestone1_high_level_plan.md](../../../Plan/milestone1_high_level_plan.md) | §4's R13 gate constants; §2's near-collinear composition assumption; Phases 2, 3 and 4 acceptance; §6's deferred scope |
+| [node-ada-ecu.md](../../../../requirements/car-sky-guide/node-ada-ecu.md) | Image tag, blueprint `command` and `capabilities`, env set, pin, address |
+| [deploy-ada-ecu-walkthrough.md](../../../../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md) | The isolated-Room configuration and the observables its § Expected outputs and acceptance names (§12) |
 
 ### Research notes
 
@@ -43,7 +43,7 @@ Non-authoritative scratch; on any conflict the CLAUDE.md authority order wins.
 
 | Note | Adopted here |
 |---|---|
-| [phase0-contract-freeze-hld.md](../../../plans/doc/deprecated/phase0-contract-freeze-hld.md) | D1's access model — byte-synced schema copies, no cross-folder reads; D2's bindings as pure model code; D4's additive-version tolerance. The bindings in `src/contracts/` are the only message models this design uses (D1) |
+| [phase0-contract-freeze-hld.md](../../../../plans/doc/deprecated/phase0-contract-freeze-hld.md) | D1's access model — byte-synced schema copies, no cross-folder reads; D2's bindings as pure model code; D4's additive-version tolerance. The bindings in `src/contracts/` are the only message models this design uses (D1) |
 | [v2x-ecu-hld.md](../V2X-ECU/v2x-ecu-hld.md) and its [decisions](../V2X-ECU/v2x-ecu-design-decisions.md) | The sole-socket-holder rule; the `[EVT]` line's `mono_ms`/`epoch_ms` pair and its payload-carrying events, so one offline reader walks both nodes (D8); the clock discipline this node continues (D10); the `entrypoint.sh` plus `capture.sh` tcpdump pattern, reused here for the ADA→IVI hop (D9) |
 | [scenario-player-hld.md](../SCENARIO-PLAYER/scenario-player-hld.md) and its [decisions](../SCENARIO-PLAYER/scenario-player-design-decisions.md) | The bench cadence `cpm_rate_hz` (10 Hz default), which is the relayed-update rate this design sizes `TRACK_TIMEOUT_MS` against; the two committed scenarios — `default.yaml` closing C from 70 m to 20.5 m across a 10.0 s cycle, crossing the gate 8.0 s in, and `c-out-of-range.yaml` held beyond the exit gate — as the R13 and R14 exercise inputs; the bench half of the R22 alignment, `start_delay_s` set to this node's detector warm-up (D11) |
 
@@ -53,7 +53,7 @@ Non-authoritative scratch; on any conflict the CLAUDE.md authority order wins.
 
 Source: [research_notes/ada-ecu-module-architecture.svg](ada-ecu-module-architecture.svg), paired with its [`.drawio`](ada-ecu-module-architecture.drawio). The module graph alone is [phase2-4-ada-ecu-components.puml](phase2-4-ada-ecu-components.puml).
 
-A UML component diagram. Fill colour is the component's role; `«use»` dependencies are dashed with an open arrowhead; realization is dashed with a hollow triangle; a seam is a provided interface meeting a required one. The two packages inside the image are the processes of D2: the C++17 `ada_ecu` core and the Python `detector` subprocess. The core's inner packages carry [ada-ecu.svg](../../Requirements/ada-ecu.svg)'s block names — DataObserver, Data Parser, Current Input, Collision Risk Assessment, Current TrackedObject/Risk. Component names below are the short `package/module` form — §4 resolves each to its path.
+A UML component diagram. Fill colour is the component's role; `«use»` dependencies are dashed with an open arrowhead; realization is dashed with a hollow triangle; a seam is a provided interface meeting a required one. The two packages inside the image are the processes of D2: the C++17 `ada_ecu` core and the Python `detector` subprocess. The core's inner packages carry [ada-ecu.svg](../../../Requirements/ada-ecu.svg)'s block names — DataObserver, Data Parser, Current Input, Collision Risk Assessment, Current TrackedObject/Risk. Component names below are the short `package/module` form — §4 resolves each to its path.
 
 ### MVC separation
 
@@ -166,7 +166,7 @@ ADA_ECU/
 | **the ego clip** | the R12 frame source: a file inside the image, not a stream and not a pin (D6) | — | H.264 frames to `FileFrameSource` |
 | **View Log** — CarSky | the node's only observation surface | the process stdout | the `[EVT]` and `[CAP]` streams, live in the Deployment Viewer or over the logs route |
 
-The V2X ECU is a Container node at `10.99.0.11`; the IVI is the Skycraft node at `10.99.0.13`. Two things can stand at each address — the real node, or a `tools/ada-bench/` role in the isolated Room (§7). **Nothing on this side changes with either swap**, which is why the node's image and env are identical in both blueprints ([walkthrough §5.6](../../../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#56-the-full-blueprint-route)).
+The V2X ECU is a Container node at `10.99.0.11`; the IVI is the Skycraft node at `10.99.0.13`. Two things can stand at each address — the real node, or a `tools/ada-bench/` role in the isolated Room (§7). **Nothing on this side changes with either swap**, which is why the node's image and env are identical in both blueprints ([walkthrough §5.6](../../../../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#56-the-full-blueprint-route)).
 
 ## 6. Internal components
 
@@ -248,7 +248,7 @@ Every runtime value the deployment wires enters through env. Core values are rea
 | `TRACK_IOU_MIN` | `0.3` | the frame-to-frame association floor (D6) |
 | `VEHICLE_WIDTH_M` · `CAMERA_HFOV_DEG` | `1.8` · `60` | the pinhole distance inputs (D6) |
 
-The addresses, the ports and the two gate constants are fixed by a committed source — [node-ada-ecu.md](../../../requirements/car-sky-guide/node-ada-ecu.md#blueprint-node-config) and [milestone1_high_level_plan.md §4](../../Plan/milestone1_high_level_plan.md#track-admission-gate-r13). Every other default above is this design's proposal. A value the blueprint omits falls through to the app's own default, never to an `ENV` baked into the image.
+The addresses, the ports and the two gate constants are fixed by a committed source — [node-ada-ecu.md](../../../../requirements/car-sky-guide/node-ada-ecu.md#blueprint-node-config) and [milestone1_high_level_plan.md §4](../../../Plan/milestone1_high_level_plan.md#track-admission-gate-r13). Every other default above is this design's proposal. A value the blueprint omits falls through to the app's own default, never to an `ENV` baked into the image.
 
 **Startup validation.** `config/config` asserts the rules below and nothing beyond them. A violation names the offending key and exits non-zero. Each rule orders values of one quantity, or bounds a single value. **No rule relates a risk threshold to a gate threshold**, because the two measure different ranges (D5).
 
@@ -286,7 +286,7 @@ Scaffolding for exercising this node alone. None of it ships in the node image.
 | `tools/make_sample_video.py` | a synthetic clip proving the decoder and the JSONL path in CI; it cannot produce R12 detection evidence (D6) | — | a short `.mp4` |
 | `tools/check_zero_c.py` · `tools/check_run_alignment.py` · `tools/event_report.py` | host-side readers of this node's own output | the `[EVT]` stream, the detector's R3 JSONL, the bench's `[TX]` JSONL | the zero-C verdict, the K1–K6 verdict, the collision-risk event list |
 
-**A mock of another node never lives in this folder.** `tools/ada-bench/` sits at the repo root so it can change without rebuilding the thing it tests, and so bench code cannot ship inside the real image ([CLAUDE.md § Repository layout](../../../CLAUDE.md), [walkthrough §2.4](../../../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#24-where-the-bench-sources-live-and-why)). The scripts in `ADA_ECU/tools/` mock nothing: they read this node's own logs, build no image, and are excluded from the build context.
+**A mock of another node never lives in this folder.** `tools/ada-bench/` sits at the repo root so it can change without rebuilding the thing it tests, and so bench code cannot ship inside the real image ([CLAUDE.md § Repository layout](../../../../CLAUDE.md), [walkthrough §2.4](../../../../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#24-where-the-bench-sources-live-and-why)). The scripts in `ADA_ECU/tools/` mock nothing: they read this node's own logs, build no image, and are excluded from the build context.
 
 ## 8. Interfaces, ports and the layer rule
 
@@ -302,9 +302,9 @@ No layer is collapsed: the admission machine cannot reach a socket, a plugin can
 
 ### Protocol stack
 
-![The protocol stack carrying the two network channels this node terminates](../../../presentation/assets/phase2-4-ada-protocol-stack.svg)
+![The protocol stack carrying the two network channels this node terminates](../../../../presentation/assets/phase2-4-ada-protocol-stack.svg)
 
-Source: [phase2-4-ada-protocol-stack.svg](../../../presentation/assets/phase2-4-ada-protocol-stack.svg).
+Source: [phase2-4-ada-protocol-stack.svg](../../../../presentation/assets/phase2-4-ada-protocol-stack.svg).
 
 Two channels cross the network — R2 inbound and R4 outbound — and they share every layer below the encoding row. Which component owns each layer:
 
@@ -334,7 +334,7 @@ This node sits between two frozen contracts and owns a third. It **consumes R2**
 | Direction | V2X-ECU → ADA-ECU, one way |
 | Transport | UDP to `10.99.0.12:47200`, one message per datagram |
 | Encoding | UTF-8 JSON, one `type: "v2x_object"` message per perceived-object update |
-| Normative schema | [r2-v2x-object.schema.json](../../../contracts/r2-v2x-object.schema.json) |
+| Normative schema | [r2-v2x-object.schema.json](../../../../contracts/r2-v2x-object.schema.json) |
 | Node copy | `ADA_ECU/contracts/r2-v2x-object.schema.json`; `src/contracts/r2_message` binds against it |
 
 The schema's field table is normative and is not restated. What this node owes it, at the `parser/r2_parser` boundary:
@@ -355,7 +355,7 @@ The schema's field table is normative and is not restated. What this node owes i
 |---|---|
 | Role | the one schema every perception source conforms to, so sources are interchangeable behind one interface |
 | Crossing points | the detector's stdout JSONL (own-sensor entries), and the `object` field of an R4 warning (§10.3) |
-| Normative schema | [r3-tracked-object.schema.json](../../../contracts/r3-tracked-object.schema.json) |
+| Normative schema | [r3-tracked-object.schema.json](../../../../contracts/r3-tracked-object.schema.json) |
 | Node copies | `ADA_ECU/contracts/r3-tracked-object.schema.json`, bound by `src/contracts/tracked_object` in the core and `detector/contracts/tracked_object` in the detector |
 
 Two fields need a rule beyond the schema, because the schema cannot say who fills them.
@@ -378,7 +378,7 @@ Track expiry does not read `lastUpdated`; it compares the parallel monotonic sta
 | Direction | ADA-ECU → IVI-ECU, one way |
 | Transport | UDP to `10.99.0.13:47300`, one message per datagram, no framing header |
 | Encoding | UTF-8 JSON |
-| Normative schema | [r4-ada-ivi.schema.json](../../../contracts/r4-ada-ivi.schema.json), embedding the R3 schema |
+| Normative schema | [r4-ada-ivi.schema.json](../../../../contracts/r4-ada-ivi.schema.json), embedding the R3 schema |
 | Node copy | `ADA_ECU/contracts/r4-ada-ivi.schema.json`; `src/contracts/r4_message` binds against it, and `output/warning_builder` is its only producer (D7) |
 
 Two message kinds share the port, discriminated by `type`.
@@ -401,7 +401,7 @@ Two message kinds share the port, discriminated by `type`.
 
 ## 11. Tech stack, build and CI
 
-No dependency outside this table enters the node without a design change. Traces are to [m1-cooperative-awareness.md](../../Requirements/m1-cooperative-awareness.md) and to the [decision record](ada-ecu-design-decisions.md).
+No dependency outside this table enters the node without a design change. Traces are to [m1-cooperative-awareness.md](../../../Requirements/m1-cooperative-awareness.md) and to the [decision record](ada-ecu-design-decisions.md).
 
 | Area | Stack | Trace |
 |---|---|---|
@@ -427,12 +427,12 @@ docker buildx build --platform linux/arm64 --provenance=false --sbom=false -t m1
 
 | CI lane | File | What it does |
 |---|---|---|
-| `ada-core-build` | [phase2-ci.yml](../../../.github/workflows/phase2-ci.yml) | configure, build and `ctest` the C++ core on a plain runner |
+| `ada-core-build` | [phase2-ci.yml](../../../../.github/workflows/phase2-ci.yml) | configure, build and `ctest` the C++ core on a plain runner |
 | `ada-detector-tests` | `phase3-ci.yml` | the detector suite, against `SyntheticFrameSource` |
-| `contracts-gate` | [phase0-ci.yml](../../../.github/workflows/phase0-ci.yml) | byte-identity of this folder's schema and sample copies (D1) |
-| `ada-ecu-image` | [phase4-ci.yml](../../../.github/workflows/phase4-ci.yml) | the `linux/arm64` image build from context `ADA_ECU/`, pushed to Zot when `CARSKY_ZOT_API_KEY` is set |
+| `contracts-gate` | [phase0-ci.yml](../../../../.github/workflows/phase0-ci.yml) | byte-identity of this folder's schema and sample copies (D1) |
+| `ada-ecu-image` | [phase4-ci.yml](../../../../.github/workflows/phase4-ci.yml) | the `linux/arm64` image build from context `ADA_ECU/`, pushed to Zot when `CARSKY_ZOT_API_KEY` is set |
 
-The image lane runs under emulation on an x86_64 runner, so its timeout matches the existing image lanes. A green image lane is not evidence that a tag reached the registry — the push step is gated on the secret ([CLAUDE.md § Repository layout](../../../CLAUDE.md)). The bench image the isolated Room needs is built by its own lane from `tools/ada-bench/` ([walkthrough §3.2](../../../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#32-build-and-push-the-images-on-ci)).
+The image lane runs under emulation on an x86_64 runner, so its timeout matches the existing image lanes. A green image lane is not evidence that a tag reached the registry — the push step is gated on the secret ([CLAUDE.md § Repository layout](../../../../CLAUDE.md)). The bench image the isolated Room needs is built by its own lane from `tools/ada-bench/` ([walkthrough §3.2](../../../../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#32-build-and-push-the-images-on-ci)).
 
 ## 12. Test strategy
 
@@ -445,7 +445,7 @@ Four configurations exercise the same node, differing only in what stands at the
 
 **Expected output is identical in the last two**, because this node's image, `command`, `capabilities` and env are unchanged between them (§5) — a difference between the runs is a neighbour finding, not an ADA one.
 
-Expected observables, per [walkthrough § Expected outputs and acceptance](../../../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#8-expected-outputs-and-acceptance):
+Expected observables, per [walkthrough § Expected outputs and acceptance](../../../../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#8-expected-outputs-and-acceptance):
 
 | Observable | Produced by |
 |---|---|

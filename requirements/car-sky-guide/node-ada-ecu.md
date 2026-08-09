@@ -26,7 +26,7 @@ docker push registry.hackathon-2.carsky.io/m1-ada-ecu:latest
 ```
 
 - **Registry host is `registry.hackathon-2.carsky.io`** — the host that actually serves Zot; `registry.carsky.io` does not ([zot-registry-api-key.md § Registry host caveat](zot-registry-api-key.md#registry-host-caveat-open-item-o1)). The same host must appear in the login, the tag and the `image` field below; a mismatch is the "push succeeded, node cannot pull" failure.
-- **Single-platform `linux/arm64`, attestations off** — a Container Node rejects a multi-platform manifest index and hangs in `Provisioning` ([ADA decision D9](../../documents/Design/ADA-ECU/ada-ecu-design-decisions.md#d9--deployment-shape)).
+- **Single-platform `linux/arm64`, attestations off** — a Container Node rejects a multi-platform manifest index and hangs in `Provisioning` ([ADA decision D9](../../documents/Design/MODULE-DESIGN/ADA-ECU/ada-ecu-design-decisions.md#d9--deployment-shape)).
 - The image is built and pushed by CI, not by hand; that procedure is [deploy-ada-ecu-walkthrough.md §3](deploy-ada-ecu-walkthrough.md#3-build-the-images-on-ci).
 
 The provided video clip(s) ship inside the image (`COPY` at build time) — no live video pin is used in M1 (per report §1, live camera bring-up is out of scope).
@@ -58,9 +58,9 @@ The provided video clip(s) ship inside the image (`COPY` at build time) — no l
 
 `capabilities: ["NET_RAW"]` (flat in `config`, verified shape per [blueprint-KIS.json](../development-platform-doc/blueprint-KIS.json)) is **always part of this node's config, never conditional**: without it `tcpdump` cannot open a capture handle, `capture.sh` degrades to a `/proc/net/dev` packet counter, and the node's traffic evidence weakens to "bytes moved on this interface". Capture procedure and pcap retrieval: [traffic-capture-wireshark.md](traffic-capture-wireshark.md).
 
-**The image must ship both scripts.** `command: ["./entrypoint.sh"]` requires `entrypoint.sh` and `capture.sh` at the image workdir, and a node whose image lacks them dies at start. Their target paths are designated in [ADA HLD §4](../../documents/Design/ADA-ECU/ada-ecu-hld.md#4-folder-structure); the pattern to follow is [V2X_ECU/entrypoint.sh](../../V2X_ECU/entrypoint.sh) and [V2X_ECU/capture.sh](../../V2X_ECU/capture.sh).
+**The image must ship both scripts.** `command: ["./entrypoint.sh"]` requires `entrypoint.sh` and `capture.sh` at the image workdir, and a node whose image lacks them dies at start. Their target paths are designated in [ADA HLD §4](../../documents/Design/MODULE-DESIGN/ADA-ECU/ada-ecu-hld.md#4-folder-structure); the pattern to follow is [V2X_ECU/entrypoint.sh](../../V2X_ECU/entrypoint.sh) and [V2X_ECU/capture.sh](../../V2X_ECU/capture.sh).
 
-`V2X_LISTEN_PORT` receives R2 JSON from the V2X ECU; `IVI_ECU_HOST`/`IVI_ECU_PORT` target the IVI ECU's static address for R4 emission. `GATE_ENTER_M`/`GATE_EXIT_M` are the R13 admission-gate constants — externalized configuration, never literals in code (CLAUDE.md governing principle 5; [milestone1_high_level_plan.md](../../documents/Plan/milestone1_high_level_plan.md) §4). The full env surface — detector, risk, capture and evidence tunables with their defaults — is [ADA HLD §6](../../documents/Design/ADA-ECU/ada-ecu-hld.md#6-internal-components); anything the blueprint omits falls through to the app's own default, never to an `ENV` baked into the image.
+`V2X_LISTEN_PORT` receives R2 JSON from the V2X ECU; `IVI_ECU_HOST`/`IVI_ECU_PORT` target the IVI ECU's static address for R4 emission. `GATE_ENTER_M`/`GATE_EXIT_M` are the R13 admission-gate constants — externalized configuration, never literals in code (CLAUDE.md governing principle 5; [milestone1_high_level_plan.md](../../documents/Plan/milestone1_high_level_plan.md) §4). The full env surface — detector, risk, capture and evidence tunables with their defaults — is [ADA HLD §6](../../documents/Design/MODULE-DESIGN/ADA-ECU/ada-ecu-hld.md#6-internal-components); anything the blueprint omits falls through to the app's own default, never to an `ENV` baked into the image.
 
 ## Pins
 

@@ -1,6 +1,6 @@
 # Simulating the ADA ECU and driving IVI logic
 
-Research note: how Phase 5 produces R4 traffic without an ADA ECU, and how each layer of the IVI app is exercised by it. The display track is mock-driven by definition ([milestone1_high_level_plan.md](../../Plan/milestone1_high_level_plan.md) § Phase 5) — the simulator is sanctioned test equipment, not a mock to be deleted later (CLAUDE.md governing principle 2).
+Research note: how Phase 5 produces R4 traffic without an ADA ECU, and how each layer of the IVI app is exercised by it. The display track is mock-driven by definition ([milestone1_high_level_plan.md](../../../Plan/milestone1_high_level_plan.md) § Phase 5) — the simulator is sanctioned test equipment, not a mock to be deleted later (CLAUDE.md governing principle 2).
 
 ## 1. Four injection points, weakest coupling first
 
@@ -29,10 +29,10 @@ Because it joins downstream of the socket and upstream of everything else, it ex
 
 One program, two run modes, one scenario format.
 
-- **In-Room mode** — a container image on the ADA node of the mini-blueprint ([deploy-ivi-hmi-walkthrough.md § The mini-blueprint route](../../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#411-the-mini-blueprint-route)), reading `IVI_ECU_HOST` / `IVI_ECU_PORT` from the environment, starting itself from the entrypoint so a deploy alone produces evidence (the netcheck rule: no shell session is ever needed).
+- **In-Room mode** — a container image on the ADA node of the mini-blueprint ([deploy-ivi-hmi-walkthrough.md § The mini-blueprint route](../../../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#411-the-mini-blueprint-route)), reading `IVI_ECU_HOST` / `IVI_ECU_PORT` from the environment, starting itself from the entrypoint so a deploy alone produces evidence (the netcheck rule: no shell session is ever needed).
 - **Host mode** — the same program run from a laptop against an emulator or a loopback listener, with the target given as arguments.
 
-**Scenarios are data, not code.** A scenario is a file listing timed messages; the tool walks it and sends. Different scenario files must produce observably different streams — the same rule R11 imposes on the bench Scenario Player ([CLAUDE.md § Repository layout](../../../CLAUDE.md)), and for the same reason: a new case is a new file, never a new code branch.
+**Scenarios are data, not code.** A scenario is a file listing timed messages; the tool walks it and sends. Different scenario files must produce observably different streams — the same rule R11 imposes on the bench Scenario Player ([CLAUDE.md § Repository layout](../../../../CLAUDE.md)), and for the same reason: a new case is a new file, never a new code branch.
 
 ### Scenario cases the tool must be able to emit
 
@@ -50,7 +50,7 @@ Each maps to an acceptance criterion; a scenario file selects a subset.
 
 ### Payloads come from the frozen contract, not from the tool
 
-The first four cases already exist as committed fixtures — [contracts/samples/](../../../contracts/samples/) holds `r4-warning.json`, `r4-state.json`, `r4-unknown-warning.json`, and they are byte-synced into `IVI_ECU/app/src/test/resources/contracts/samples/` by [contracts/check_sync.py](../../../contracts/check_sync.py) against [sync-manifest.json](../../../contracts/sync-manifest.json).
+The first four cases already exist as committed fixtures — [contracts/samples/](../../../../contracts/samples/) holds `r4-warning.json`, `r4-state.json`, `r4-unknown-warning.json`, and they are byte-synced into `IVI_ECU/app/src/test/resources/contracts/samples/` by [contracts/check_sync.py](../../../../contracts/check_sync.py) against [sync-manifest.json](../../../../contracts/sync-manifest.json).
 
 **The simulator must build its messages from those files, not from a hand-written literal.** A simulator with its own copy of the schema is a second, unversioned contract — it would keep passing after the real one changed. Motion (an approaching C) is produced by overwriting the geometry and distance numbers of a loaded sample, leaving every other field as the contract froze it.
 
@@ -75,10 +75,10 @@ In the Room (I4, evidence) none of this applies: the ADA node and the guest shar
 | Renderer | I3 (visual) + I1 (pure math) | Coordinate mapping is unit-tested with no Android types; the drawing is verified by eye against previews |
 | End-to-end | I4 | `adb logcat -s IVI_V2X` shows the received event; the warning view is on screen |
 
-The coordinate mapper and the parse layer stay free of Android imports precisely so I1 covers them in the existing `ivi-unit-tests` CI job ([phase5-ci.yml](../../../.github/workflows/phase5-ci.yml)) with no device in the loop.
+The coordinate mapper and the parse layer stay free of Android imports precisely so I1 covers them in the existing `ivi-unit-tests` CI job ([phase5-ci.yml](../../../../.github/workflows/phase5-ci.yml)) with no device in the loop.
 
 ## 5. Where the simulator lives
 
 - **Language:** Kotlin/JVM, depending on the shared contract submodule — the same models the APK parses with, so a message the simulator can build is by construction a message the app can read. (User decision 2026-08-02; nlohmann/json stays on the C++ producer side, where the real ADA ECU uses it.)
-- **Folder:** inside `IVI_ECU/`, as a Gradle submodule. It is IVI test equipment, and the no-cross-node-source-imports rule ([CLAUDE.md § Repository layout](../../../CLAUDE.md)) forbids it reaching into `ADA_ECU/`.
+- **Folder:** inside `IVI_ECU/`, as a Gradle submodule. It is IVI test equipment, and the no-cross-node-source-imports rule ([CLAUDE.md § Repository layout](../../../../CLAUDE.md)) forbids it reaching into `ADA_ECU/`.
 - **Container image:** built from that submodule's distribution for the in-Room mode, `linux/arm64`, pushed by CI like every other node image.

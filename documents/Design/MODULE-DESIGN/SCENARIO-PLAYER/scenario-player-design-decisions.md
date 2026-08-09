@@ -6,7 +6,7 @@
 
 A small C++ CLI built from the same Vanetza-based codec seam sources as the V2X ECU, invoked by Python as a **persistent** subprocess: one `CpmContent` JSON per stdin line, one base64 UPER payload per stdout line. An encode failure returns an `{"error": …}` line and never kills the stream.
 
-Against [solution-selection-criteria](../../../.claude/rules/solution-selection-criteria.md): **C1** — it reuses the frozen codec, so the bytes are byte-verifiable against the golden vectors, and the subprocess-over-stdio pattern is already sanctioned in this repo (the R12 detector boundary); **C2** — one CMake target and a small CLI, no new toolchain; **C4** — nothing new pulled in.
+Against [solution-selection-criteria](../../../../.claude/rules/solution-selection-criteria.md): **C1** — it reuses the frozen codec, so the bytes are byte-verifiable against the golden vectors, and the subprocess-over-stdio pattern is already sanctioned in this repo (the R12 detector boundary); **C2** — one CMake target and a small CLI, no new toolchain; **C4** — nothing new pulled in.
 
 | Rejected alternative | Why |
 |---|---|
@@ -35,7 +35,7 @@ Drift is caught twice: by byte identity in `check_sync.py`, and by wire truth in
 - **Every scenario tunable lives in the YAML**, validated by `player/config.py`; nothing about the content is an env var or a literal.
 - The two committed variants are chosen to drive the R13 lifecycle from the consumer's side: `default.yaml` closes C from 70 m to 20.5 m across its cycle, crossing the 30 m admission gate 8.0 s in (D7), and `c-out-of-range.yaml` holds C static at 60 m, beyond the 35 m exit gate, so no track is ever admitted.
 
-The scenario values pair with the R13 gate constants that [milestone1_high_level_plan.md §4](../../Plan/milestone1_high_level_plan.md#track-admission-gate-r13) fixes. The pairing is a property of the data, so a gate change is answered by editing the YAML, never by editing the model.
+The scenario values pair with the R13 gate constants that [milestone1_high_level_plan.md §4](../../../Plan/milestone1_high_level_plan.md#track-admission-gate-r13) fixes. The pairing is a property of the data, so a gate change is answered by editing the YAML, never by editing the model.
 
 ## D4 — Runtime composition, and one base image for both build stages
 
@@ -54,7 +54,7 @@ The scenario values pair with the R13 gate constants that [milestone1_high_level
 
 ## D5 — The scenario clock is deadline-scheduled, and every offset is configuration
 
-Scenario time advances at 1.0× wall time, scheduled against `CLOCK_MONOTONIC` deadlines. This is the bench half of R20 ([m1-run-timing-and-event-triggering.md §6.1](../../../requirements/deprecated/m1-run-timing-and-event-triggering.md)).
+Scenario time advances at 1.0× wall time, scheduled against `CLOCK_MONOTONIC` deadlines. This is the bench half of R20 ([m1-run-timing-and-event-triggering.md §6.1](../../../../requirements/deprecated/m1-run-timing-and-event-triggering.md)).
 
 - **The deadline is computed, not accumulated.** Tick *n* is due at `t0 + n × period` on `time.monotonic()`; the loop sleeps until that instant. A fixed `sleep(period)` per tick accumulates the per-tick work cost into scenario time, which drifts unbounded over a run.
 - **`[TX]` carries `mono_ms`**, so `scenario_time_s` can be regressed against elapsed time — R20's K5 check, ±1 % over ≥ 60 s.
@@ -73,7 +73,7 @@ Scenario time advances at 1.0× wall time, scheduled against `CLOCK_MONOTONIC` d
 
 ## D7 — The demo cycle is one clip length, and its geometry is solved backwards from the first warning
 
-Realizes R22 ([m1-run-timing-and-event-triggering.md §6.6](../../../requirements/deprecated/m1-run-timing-and-event-triggering.md)) on the bench side. Every lever is scenario data in `scenarios/default.yaml`, so the choreography is a file, never a code branch (D3).
+Realizes R22 ([m1-run-timing-and-event-triggering.md §6.6](../../../../requirements/deprecated/m1-run-timing-and-event-triggering.md)) on the bench side. Every lever is scenario data in `scenarios/default.yaml`, so the choreography is a file, never a code branch (D3).
 
 | Key | What it is bound to |
 |---|---|

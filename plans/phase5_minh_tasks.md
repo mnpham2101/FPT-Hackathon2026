@@ -3,8 +3,8 @@
 > **Authority & context:**
 >
 > - **Phase content:** [milestone1_high_level_plan.md § Phase 5](../documents/Plan/milestone1_high_level_plan.md#phase-5--ivi-hmi-mock-driven-r16-r17--display-track-parallel-from-the-start) — its five acceptance criteria are the phase output.
-> - **Design:** [ivi-ecu-hld.md](../documents/Design/IVI-ECU/ivi-ecu-hld.md) — the node's sole design authority — with [phase5-ivi-components.puml](../documents/Design/IVI-ECU/phase5-ivi-components.puml) and [phase5-ivi-callflow.puml](../documents/Design/IVI-ECU/phase5-ivi-callflow.puml). Every target path below is cited from its **[§4](../documents/Design/IVI-ECU/ivi-ecu-hld.md#4-folder-structure)** folder map; component responsibilities **[§6](../documents/Design/IVI-ECU/ivi-ecu-hld.md#6-internal-components)**, seams **[§8](../documents/Design/IVI-ECU/ivi-ecu-hld.md#8-interfaces-ports-and-the-layer-rule)**, the R4 input contract **§10**, CI **[§11](../documents/Design/IVI-ECU/ivi-ecu-hld.md#11-tech-stack-build-and-ci)**, test configurations and log shapes **[§12](../documents/Design/IVI-ECU/ivi-ecu-hld.md#12-test-strategy)**, decisions **D1–D13** ([§13](../documents/Design/IVI-ECU/ivi-ecu-hld.md#13-design-decisions)). Deployment steps come from the bring-up procedure below, not from the design.
-> - **Research notes:** [phase5-r4-simulator.md](../documents/Design/IVI-ECU/phase5-r4-simulator.md) · [UDP-msg-parsing.md](../documents/KnowledgeBase/UDP-msg-parsing.md) — non-authoritative; the HLD wins on conflict.
+> - **Design:** [ivi-ecu-hld.md](../documents/Design/MODULE-DESIGN/IVI-ECU/ivi-ecu-hld.md) — the node's sole design authority — with [phase5-ivi-components.puml](../documents/Design/MODULE-DESIGN/IVI-ECU/phase5-ivi-components.puml) and [phase5-ivi-callflow.puml](../documents/Design/MODULE-DESIGN/IVI-ECU/phase5-ivi-callflow.puml). Every target path below is cited from its **[§4](../documents/Design/MODULE-DESIGN/IVI-ECU/ivi-ecu-hld.md#4-folder-structure)** folder map; component responsibilities **[§6](../documents/Design/MODULE-DESIGN/IVI-ECU/ivi-ecu-hld.md#6-internal-components)**, seams **[§8](../documents/Design/MODULE-DESIGN/IVI-ECU/ivi-ecu-hld.md#8-interfaces-ports-and-the-layer-rule)**, the R4 input contract **§10**, CI **[§11](../documents/Design/MODULE-DESIGN/IVI-ECU/ivi-ecu-hld.md#11-tech-stack-build-and-ci)**, test configurations and log shapes **[§12](../documents/Design/MODULE-DESIGN/IVI-ECU/ivi-ecu-hld.md#12-test-strategy)**, decisions **D1–D13** ([§13](../documents/Design/MODULE-DESIGN/IVI-ECU/ivi-ecu-hld.md#13-design-decisions)). Deployment steps come from the bring-up procedure below, not from the design.
+> - **Research notes:** [phase5-r4-simulator.md](../documents/Design/MODULE-DESIGN/IVI-ECU/phase5-r4-simulator.md) · [UDP-msg-parsing.md](../documents/KnowledgeBase/UDP-msg-parsing.md) — non-authoritative; the HLD wins on conflict.
 > - **Requirements:** [m1-cooperative-awareness.md §2](../documents/Requirements/m1-cooperative-awareness.md) R4, R16, R17 (plus R5, R6, R18, R19 where this phase touches them) and [m1-run-timing-and-event-triggering.md §7](../requirements/deprecated/m1-run-timing-and-event-triggering.md) R22, whose K7 this phase's system test reads — referenced by number, never restated.
 > - **Deploy facts:** [node-ivi-ecu.md](../requirements/car-sky-guide/node-ivi-ecu.md) · [carsky-4-node-blueprint.md](../requirements/car-sky-guide/carsky-4-node-blueprint.md) · [deploy-walkthrough-netcheck.md](../requirements/car-sky-guide/deploy-walkthrough-netcheck.md).
 > - **Bring-up procedure:** [deploy-ivi-hmi-walkthrough.md](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md) — **authoritative** for the APK's build, retrieval from CI, blueprint deploy, `adb install`, launch and verification. Every subtask that installs, launches, observes or reads logs from the IVI app cites the section governing that step instead of restating it. Its [§5](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#5-work-division-between-ai-and-human) decides which of those steps an agent can perform and which need a person, and is what the *Human* label below follows.
@@ -21,12 +21,12 @@
 **Input (must exist before start):**
 
 - R4 frozen in Phase 0: [contracts/r4-ada-ivi.schema.json](../contracts/r4-ada-ivi.schema.json), the four R3/R4 samples under [contracts/samples/](../contracts/samples/), and the committed Kotlin binding + `R4RoundTripTest` / `R4AdditiveVersionTest`.
-- The IVI node's HLD, [ivi-ecu-hld.md](../documents/Design/IVI-ECU/ivi-ecu-hld.md), and its two research notes.
+- The IVI node's HLD, [ivi-ecu-hld.md](../documents/Design/MODULE-DESIGN/IVI-ECU/ivi-ecu-hld.md), and its two research notes.
 - `IVI_ECU/` as a single-module Gradle project (`:app`) carrying the contract layer (`model/`) and the drawing layer (`ui/view/`), AGP 8.13 / Kotlin 2.2.20 / Compose BOM 2024.09.03 / `minSdk 29`, `targetSdk 33`, `compileSdk 34`.
 - CarSky access with the baseline blueprint `baseline_phase1` ([carsky-4-node-blueprint.md § The blueprints on CarSky](../requirements/car-sky-guide/carsky-4-node-blueprint.md#8-the-blueprints-on-carsky)), the `AAOS` artifact (`x9oqgIwzTp1m26SWIQqJt` / `xSU_Q7YJZUxxUgDr4Ugcp`, `0.0.1`, `aarch64`), and `registry.hackathon-2.carsky.io/m1-netcheck:latest` already pushed.
 - GitHub secret `CARSKY_ZOT_API_KEY` and the reusable [verify-arm64-image](../.github/actions/verify-arm64-image) action.
 
-**The component set and every target path are [HLD §4](../documents/Design/IVI-ECU/ivi-ecu-hld.md#4-folder-structure) and [§6](../documents/Design/IVI-ECU/ivi-ecu-hld.md#6-internal-components).** **Briefs below cite them; they do not restate them.** A brief names the file it changes and what it must end up doing, and the reader gets the component's responsibility, its inputs and its outputs from the design's tables rather than from a sentence in each subtask.
+**The component set and every target path are [HLD §4](../documents/Design/MODULE-DESIGN/IVI-ECU/ivi-ecu-hld.md#4-folder-structure) and [§6](../documents/Design/MODULE-DESIGN/IVI-ECU/ivi-ecu-hld.md#6-internal-components).** **Briefs below cite them; they do not restate them.** A brief names the file it changes and what it must end up doing, and the reader gets the component's responsibility, its inputs and its outputs from the design's tables rather than from a sentence in each subtask.
 
 **Output (phase acceptance — the five criteria of [milestone1_high_level_plan.md § Phase 5](../documents/Plan/milestone1_high_level_plan.md#phase-5--ivi-hmi-mock-driven-r16-r17--display-track-parallel-from-the-start)):**
 
@@ -55,7 +55,7 @@ Every subtask carries one. The walkthroughs' own AI/Human work-division tables d
 
 ### Components already in the tree
 
-These paths exist under `IVI_ECU/app/`. A file's presence is not evidence that it implements [HLD §6](../documents/Design/IVI-ECU/ivi-ecu-hld.md#6-internal-components); § The three file tiers governs what a subtask may assume about each. Everything else the HLD names is written by the subtask that names it.
+These paths exist under `IVI_ECU/app/`. A file's presence is not evidence that it implements [HLD §6](../documents/Design/MODULE-DESIGN/IVI-ECU/ivi-ecu-hld.md#6-internal-components); § The three file tiers governs what a subtask may assume about each. Everything else the HLD names is written by the subtask that names it.
 
 | Path under `IVI_ECU/` | Touched by |
 |---|---|
@@ -80,7 +80,7 @@ Comments inside several of these files cite task IDs that carry a different mean
 
 ### The three file tiers
 
-The `ui/` files above do not implement [HLD §6](../documents/Design/IVI-ECU/ivi-ecu-hld.md#6-internal-components). Group 5.5 builds the renderer, the mapper, the seam, the banner and the screen to the design rather than editing and testing what is there. A subtask whose objective is "add a test to the committed X" ratifies whatever X currently does.
+The `ui/` files above do not implement [HLD §6](../documents/Design/MODULE-DESIGN/IVI-ECU/ivi-ecu-hld.md#6-internal-components). Group 5.5 builds the renderer, the mapper, the seam, the banner and the screen to the design rather than editing and testing what is there. A subtask whose objective is "add a test to the committed X" ratifies whatever X currently does.
 
 Three tiers, and a subtask must know which one it is in:
 
@@ -139,7 +139,7 @@ The IVI's UDP port is **`47300`** and its address is **`10.99.0.13`**, frozen by
 
 ## Test plan — levels and coverage
 
-[HLD §12](../documents/Design/IVI-ECU/ivi-ecu-hld.md#12-test-strategy) fixes the strategy: a plain-JVM unit layer below, and above it **two Room configurations differing in one component: the one that realizes the `ADA-ECU` interface**. Group 5.9 runs the isolated configuration against the simulator; group 5.10 runs the full one against the real producer. **Expected output is identical in both**, so a difference between the runs is a finding about the other node, never about this one.
+[HLD §12](../documents/Design/MODULE-DESIGN/IVI-ECU/ivi-ecu-hld.md#12-test-strategy) fixes the strategy: a plain-JVM unit layer below, and above it **two Room configurations differing in one component: the one that realizes the `ADA-ECU` interface**. Group 5.9 runs the isolated configuration against the simulator; group 5.10 runs the full one against the real producer. **Expected output is identical in both**, so a difference between the runs is a finding about the other node, never about this one.
 
 ### The four levels
 
@@ -186,7 +186,7 @@ Every row is a test this plan commits to, traced to what makes it necessary. A r
 
 ### The in-Room observables
 
-[HLD §12](../documents/Design/IVI-ECU/ivi-ecu-hld.md#12-test-strategy) names each observable and the component that produces it; [walkthrough §6](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#6-expected-outputs-and-acceptance) names the four proofs they add up to. This is the checklist both Room groups work against.
+[HLD §12](../documents/Design/MODULE-DESIGN/IVI-ECU/ivi-ecu-hld.md#12-test-strategy) names each observable and the component that produces it; [walkthrough §6](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#6-expected-outputs-and-acceptance) names the four proofs they add up to. This is the checklist both Room groups work against.
 
 | Observable | Produced by | Rung | Owned by | Proof |
 |---|---|---|---|---|
@@ -321,7 +321,7 @@ One scenario file per purpose, all data: `approach.json` drives V4 and carries t
 **Scope:**
 
 - `settings.gradle.kts`: `include(":serializer")`. New `IVI_ECU/serializer/build.gradle.kts`: `alias(libs.plugins.kotlin.jvm)`; `api(project(":contract"))`; `testImplementation(libs.junit)`; toolchain 17; no Android, no repositories block.
-- New `IVI_ECU/serializer/src/main/kotlin/com/hackathon/v2x/ivi/serializer/R4Decoder.kt` containing the declarations below, which realize the decode-component row of [HLD §6](../documents/Design/IVI-ECU/ivi-ecu-hld.md#6-internal-components) and its seam entry in [HLD §8](../documents/Design/IVI-ECU/ivi-ecu-hld.md#8-interfaces-ports-and-the-layer-rule):
+- New `IVI_ECU/serializer/src/main/kotlin/com/hackathon/v2x/ivi/serializer/R4Decoder.kt` containing the declarations below, which realize the decode-component row of [HLD §6](../documents/Design/MODULE-DESIGN/IVI-ECU/ivi-ecu-hld.md#6-internal-components) and its seam entry in [HLD §8](../documents/Design/MODULE-DESIGN/IVI-ECU/ivi-ecu-hld.md#8-interfaces-ports-and-the-layer-rule):
 
   ```kotlin
   interface R4Decoder { fun decode(buffer: ByteArray, offset: Int, length: Int): R4DecodeResult }
@@ -388,7 +388,7 @@ One scenario file per purpose, all data: `approach.json` drives V4 and carries t
 
 - `settings.gradle.kts`: `include(":observer")`. New `IVI_ECU/observer/build.gradle.kts`: `alias(libs.plugins.kotlin.jvm)`; `api(project(":serializer"))`; `api(libs.kotlinx.coroutines.core)`; `testImplementation(libs.junit)` + `testImplementation(libs.kotlinx.coroutines.test)`; toolchain 17; no Android.
 - `observer/src/main/kotlin/com/hackathon/v2x/ivi/observer/R4DatagramSource.kt` — the seam: `fun bind()`, `fun receive(): Received`, `fun close()`, and `data class Received(val buffer: ByteArray, val offset: Int, val length: Int)`. Interface only; `4.5.3.2` implements it.
-- `.../R4Event.kt` — the declarations below, which realize the event types of [HLD §6](../documents/Design/IVI-ECU/ivi-ecu-hld.md#6-internal-components): `sealed interface R4Event { data class Message(val message: R4Message, val receivedAtMs: Long, val bytes: Int); data class Dropped(val reason: DecodeFailure, val detail: String, val bytes: Int) }`, plus `sealed interface R4LinkState { Bound(port) | Rebinding | Error(detail) }` (the bottom status bar of `16.5.5.6` binds to this).
+- `.../R4Event.kt` — the declarations below, which realize the event types of [HLD §6](../documents/Design/MODULE-DESIGN/IVI-ECU/ivi-ecu-hld.md#6-internal-components): `sealed interface R4Event { data class Message(val message: R4Message, val receivedAtMs: Long, val bytes: Int); data class Dropped(val reason: DecodeFailure, val detail: String, val bytes: Int) }`, plus `sealed interface R4LinkState { Bound(port) | Rebinding | Error(detail) }` (the bottom status bar of `16.5.5.6` binds to this).
 - `.../R4ObserverConfig.kt` — `data class R4ObserverConfig(val port: Int, val bufferBytes: Int, val flowBufferEvents: Int, val retryInitialMs: Long, val retryMaxMs: Long)`. **No default values and no literals** — every field is supplied by `IviRuntimeConfig` (`4.5.4.1`).
 - `.../R4Logger.kt` — `fun interface R4Logger { fun log(level: R4LogLevel, line: String) }` plus `object NoopR4Logger : R4Logger` and an `enum class R4LogLevel { INFO, WARN, ERROR }`. `:app` supplies the real implementation in `18.5.5.1`.
 
@@ -417,7 +417,7 @@ One scenario file per purpose, all data: `approach.json` drives V4 and carries t
 
 **Objective:** implement the loop of HLD §6 so N datagrams in produce N events out and one bad message never stops the next good one.
 
-**Scope:** `observer/src/main/kotlin/com/hackathon/v2x/ivi/observer/R4SocketObserver.kt` with the signature below, which realizes the receive-loop row of [HLD §6](../documents/Design/IVI-ECU/ivi-ecu-hld.md#6-internal-components) and its seam entry in [HLD §8](../documents/Design/IVI-ECU/ivi-ecu-hld.md#8-interfaces-ports-and-the-layer-rule):
+**Scope:** `observer/src/main/kotlin/com/hackathon/v2x/ivi/observer/R4SocketObserver.kt` with the signature below, which realizes the receive-loop row of [HLD §6](../documents/Design/MODULE-DESIGN/IVI-ECU/ivi-ecu-hld.md#6-internal-components) and its seam entry in [HLD §8](../documents/Design/MODULE-DESIGN/IVI-ECU/ivi-ecu-hld.md#8-interfaces-ports-and-the-layer-rule):
 
 ```kotlin
 class R4SocketObserver(
@@ -482,7 +482,7 @@ class R4SocketObserver(
 
 **Scope:**
 
-- `app/build.gradle.kts` `defaultConfig`: add the `buildConfigField`s of HLD D10 beside the committed `WARNING_TIMEOUT_MS`: `R4_UDP_PORT = 47300`, the value [D10](../documents/Design/IVI-ECU/ivi-ecu-design-decisions.md) fixes and the blueprint's `ethernet` pin uses; `R4_SOCKET_BUFFER_BYTES = 2048`, `R4_FLOW_BUFFER_EVENTS = 8`, `R4_RETRY_INITIAL_MS = 500L`, `R4_RETRY_MAX_MS = 5000L`, `SCENE_SCALE_M_PER_PX = 0.5f`.
+- `app/build.gradle.kts` `defaultConfig`: add the `buildConfigField`s of HLD D10 beside the committed `WARNING_TIMEOUT_MS`: `R4_UDP_PORT = 47300`, the value [D10](../documents/Design/MODULE-DESIGN/IVI-ECU/ivi-ecu-design-decisions.md) fixes and the blueprint's `ethernet` pin uses; `R4_SOCKET_BUFFER_BYTES = 2048`, `R4_FLOW_BUFFER_EVENTS = 8`, `R4_RETRY_INITIAL_MS = 500L`, `R4_RETRY_MAX_MS = 5000L`, `SCENE_SCALE_M_PER_PX = 0.5f`.
 - New `app/src/main/java/com/hackathon/v2x/ivi/config/IviRuntimeConfig.kt`: `data class IviRuntimeConfig(port, socketBufferBytes, flowBufferEvents, retryInitialMs, retryMaxMs, warningTimeoutMs, sceneScaleMetersPerPixel)` plus `fun resolve(intent: Intent?): IviRuntimeConfig` — reads the `BuildConfig` defaults and applies the D10 overrides when present: `--ei r4_port`, `--el warning_timeout_ms`, `--ef scene_scale`. Invalid or out-of-range extras (port outside 1–65535, non-positive timeout/scale) are ignored in favour of the default. Add `fun toObserverConfig(): R4ObserverConfig`. **This is the only class that reads `BuildConfig`** — every other class receives resolved values.
 - Test `app/src/test/java/com/hackathon/v2x/ivi/config/IviRuntimeConfigTest.kt`: a null intent yields the defaults; each override key is applied; an out-of-range value falls back; `toObserverConfig()` carries the resolved port and buffer sizes. (Use a plain fake for the extras lookup if `android.content.Intent` is unavailable in a unit test — extract the extras read into an internal `resolve(overrides: Map<String, Any>)` that the intent overload delegates to, and test that.)
 
@@ -514,7 +514,7 @@ class R4SocketObserver(
 
 - Declare `data class WarningPresentation(val title: String, val known: Boolean, val urgency: Urgency)` (or equivalent) in this same file — HLD §4 designates no separate file for it.
 - `fun classify(warningType: String): WarningPresentation`: `R4Contract`'s `nlos_obstruction` → the M1 NLOS presentation with `known = true`; **any other value → a generic presentation with `known = false`, and the wire value is carried through unchanged for the log** (D4 — the parser preserved it; this is where classification happens, and nothing here writes `"unknown"` back into the message).
-- `fun normaliseRisk(riskState: String): Urgency`: `low`/`medium`/`high` case-insensitively; **an unknown `riskState` maps to the highest urgency**. `17.5.5.4` applies the same fail-safe in the renderer's risk colouring ([HLD §6](../documents/Design/IVI-ECU/ivi-ecu-hld.md#6-internal-components)), so the two cannot drift.
+- `fun normaliseRisk(riskState: String): Urgency`: `low`/`medium`/`high` case-insensitively; **an unknown `riskState` maps to the highest urgency**. `17.5.5.4` applies the same fail-safe in the renderer's risk colouring ([HLD §6](../documents/Design/MODULE-DESIGN/IVI-ECU/ivi-ecu-hld.md#6-internal-components)), so the two cannot drift.
 - Test `app/src/test/java/com/hackathon/v2x/ivi/warning/WarningClassifierTest.kt`: `nlos_obstruction` → `known = true`; `slippery_road` (the frozen additive fixture's value) → `known = false` and the value is still readable; `"HIGH"`, `"high"`, `"" `, `"catastrophic"` all resolve, with the last two at highest urgency.
 
 **Acceptance:** `./gradlew :app:testDebugUnitTest` green; no branch in this file mutates an `R4WarningEvent`.
@@ -523,13 +523,13 @@ class R4SocketObserver(
 
 ### [ ] `17.5.4.4` — `WarningViewModel` + `WarningUiState`, **including the R19 snapshot wiring** *(agent)*
 
-**Objective:** turn warnings into `Idle ↔ Active` UI state with an auto-dismiss timeout, and **compose the scene so the renderer's provenance guard is armed** ([HLD §6](../documents/Design/IVI-ECU/ivi-ecu-hld.md#6-internal-components)).
+**Objective:** turn warnings into `Idle ↔ Active` UI state with an auto-dismiss timeout, and **compose the scene so the renderer's provenance guard is armed** ([HLD §6](../documents/Design/MODULE-DESIGN/IVI-ECU/ivi-ecu-hld.md#6-internal-components)).
 
 **Scope — two files:**
 
 - `app/src/main/java/com/hackathon/v2x/ivi/ui/WarningUiState.kt`: `sealed interface WarningUiState { data object Idle; data class Active(val scene: SceneGeometry, val riskState: String, val presentation: WarningPresentation) }`.
 - `app/src/main/java/com/hackathon/v2x/ivi/ui/WarningViewModel.kt`:
-  - Collects `repository.warnings`. **The lifecycle is [D13](../documents/Design/IVI-ECU/ivi-ecu-design-decisions.md#d13--active-risk-raises-the-warning-only-silence-lowers-it)'s three rules and nothing else moves the mode automatically:**
+  - Collects `repository.warnings`. **The lifecycle is [D13](../documents/Design/MODULE-DESIGN/IVI-ECU/ivi-ecu-design-decisions.md#d13--active-risk-raises-the-warning-only-silence-lowers-it)'s three rules and nothing else moves the mode automatically:**
 
     | Event | Effect |
     |---|---|
@@ -549,7 +549,7 @@ class R4SocketObserver(
 
 **Acceptance:** `./gradlew :app:testDebugUnitTest` green including the named guard-armed test and the three D13 cases; the timeout value is read from the injected config, never a literal.
 
-**`WARNING_TIMEOUT_MS` stays 10000 and is bound to the producer's cycle** (D13, [D10](../documents/Design/IVI-ECU/ivi-ecu-design-decisions.md)): it must exceed the interval from a cycle's clearing `low` to the next cycle's first active-risk message, ≈ 8.5 s under R22's 10.0 s cycle. Lowering it drops the warning for part of every cycle. It is externalized, so a retune is a config edit — but it is not free.
+**`WARNING_TIMEOUT_MS` stays 10000 and is bound to the producer's cycle** (D13, [D10](../documents/Design/MODULE-DESIGN/IVI-ECU/ivi-ecu-design-decisions.md)): it must exceed the interval from a cycle's clearing `low` to the next cycle's first active-risk message, ≈ 8.5 s under R22's 10.0 s cycle. Lowering it drops the warning for part of every cycle. It is externalized, so a retune is a config edit — but it is not free.
 
 **Dependencies:** after `4.5.4.2` and `4.5.4.3`. **Commit:** `[17.5.4.4] feat: add WarningViewModel with timeout and R19 snapshot composition`
 
@@ -572,13 +572,13 @@ class R4SocketObserver(
 
 ## Task Group 5.5 — `:app` UI and shell — the launchable APK (serves R16, R17, R18 — § Open items item 8 carries R18's scope)
 
-> **This group builds its components to the design; it does not extend the scaffolding of the same name** (§ The three file tiers). The group that gives the APK its renderer, its screen, its service and its process entry. [HLD §6](../documents/Design/IVI-ECU/ivi-ecu-hld.md#6-internal-components) fixes each component's one responsibility and [§4](../documents/Design/IVI-ECU/ivi-ecu-hld.md#4-folder-structure) its path. **Nothing here mounts `WarningBannerOverlay`** (D11).
+> **This group builds its components to the design; it does not extend the scaffolding of the same name** (§ The three file tiers). The group that gives the APK its renderer, its screen, its service and its process entry. [HLD §6](../documents/Design/MODULE-DESIGN/IVI-ECU/ivi-ecu-hld.md#6-internal-components) fixes each component's one responsibility and [§4](../documents/Design/MODULE-DESIGN/IVI-ECU/ivi-ecu-hld.md#4-folder-structure) its path. **Nothing here mounts `WarningBannerOverlay`** (D11).
 
 ### [ ] `18.5.5.1` — `AndroidR4Logger` — the `IVI_V2X` evidence bridge *(agent)*
 
 **Objective:** implement the `R4Logger` seam over `android.util.Log` on one tag, so the whole run's text evidence is a single `adb logcat -s IVI_V2X`.
 
-**Scope — `app/src/main/java/…/service/AndroidR4Logger.kt`:** maps `R4LogLevel.{INFO,WARN,ERROR}` to `Log.i/w/e` on the tag `IVI_V2X`, emitting the caller's line verbatim. The `[LINK]`, `[RX]` and `[DROP]` shapes are composed in `:observer`; the `[UI]` line in `MainViewModel`. Add whatever narrow entry point those callers need and nothing more. **This is the only file in the node that bridges to `android.util.Log`** ([HLD §6](../documents/Design/IVI-ECU/ivi-ecu-hld.md#6-internal-components)).
+**Scope — `app/src/main/java/…/service/AndroidR4Logger.kt`:** maps `R4LogLevel.{INFO,WARN,ERROR}` to `Log.i/w/e` on the tag `IVI_V2X`, emitting the caller's line verbatim. The `[LINK]`, `[RX]` and `[DROP]` shapes are composed in `:observer`; the `[UI]` line in `MainViewModel`. Add whatever narrow entry point those callers need and nothing more. **This is the only file in the node that bridges to `android.util.Log`** ([HLD §6](../documents/Design/MODULE-DESIGN/IVI-ECU/ivi-ecu-hld.md#6-internal-components)).
 
 **Acceptance:** `./gradlew assembleDebug` and `:app:testDebugUnitTest` green; a grep of `serializer/` and `observer/` for `android.util` returns nothing.
 
@@ -592,7 +592,7 @@ class R4SocketObserver(
 
 - `app/src/main/java/…/service/R4ListenerService.kt` — creates its notification channel and calls `startForeground()` **immediately** on start; on start calls `observer.start(applicationScope)`, on destroy `observer.stop()`. **The service is a lifecycle host, not the loop** (D5): no socket code and no decode code lives here.
 - `POST_NOTIFICATIONS` is a runtime permission from API 33. **A denial suppresses the notification only and is never a failure to start** (D5) — guard the notification post, not the service start.
-- `app/src/main/AndroidManifest.xml` — the `<service>` declaration, `android:exported="false"`, with its foreground-service type; and the permissions [HLD §6](../documents/Design/IVI-ECU/ivi-ecu-hld.md#6-internal-components) lists for this node. Record in a manifest comment which permission a `targetSdk` bump would additionally require; **do not bump the target**.
+- `app/src/main/AndroidManifest.xml` — the `<service>` declaration, `android:exported="false"`, with its foreground-service type; and the permissions [HLD §6](../documents/Design/MODULE-DESIGN/IVI-ECU/ivi-ecu-hld.md#6-internal-components) lists for this node. Record in a manifest comment which permission a `targetSdk` bump would additionally require; **do not bump the target**.
 - No unit test for the service itself — that is what D5's plain-JVM split buys; the loop is covered by `4.5.3.3`–`4.5.3.5`.
 
 **Acceptance:** `./gradlew assembleDebug` green and `:app:testDebugUnitTest` still green; the manifest declares the service; the class body contains no `DatagramSocket` and no decode call.
@@ -618,8 +618,8 @@ class R4SocketObserver(
 
 **Scope — two files under `app/src/main/java/…/ui/view/`, plus one test:**
 
-- `IviWarningViewSeam.kt` — the render seam `Render(scene, riskState)` ([HLD §8](../documents/Design/IVI-ECU/ivi-ecu-hld.md#8-interfaces-ports-and-the-layer-rule)). An interface only; `MainScreen` sees nothing else.
-- `CanvasWarningView.kt` — realizes the seam over Compose Canvas, drawing exactly what [HLD §6](../documents/Design/IVI-ECU/ivi-ecu-hld.md#6-internal-components) fixes: a dark canvas, a lane-marked road converging toward the top, three car silhouettes in one lane with ego nearest; ego and B solid; **ghost C dashed and translucent on a pulsing ground glow coloured by `riskState`**; a `null` `vehicleC` drawn without C, with no placeholder and no crash. Geometry comes from `SceneCoordinateMapper`; the scale comes from the runtime config, not from a literal (D10).
+- `IviWarningViewSeam.kt` — the render seam `Render(scene, riskState)` ([HLD §8](../documents/Design/MODULE-DESIGN/IVI-ECU/ivi-ecu-hld.md#8-interfaces-ports-and-the-layer-rule)). An interface only; `MainScreen` sees nothing else.
+- `CanvasWarningView.kt` — realizes the seam over Compose Canvas, drawing exactly what [HLD §6](../documents/Design/MODULE-DESIGN/IVI-ECU/ivi-ecu-hld.md#6-internal-components) fixes: a dark canvas, a lane-marked road converging toward the top, three car silhouettes in one lane with ego nearest; ego and B solid; **ghost C dashed and translucent on a pulsing ground glow coloured by `riskState`**; a `null` `vehicleC` drawn without C, with no placeholder and no crash. Geometry comes from `SceneCoordinateMapper`; the scale comes from the runtime config, not from a literal (D10).
   - **The scene alone is the warning.** No legend, no distance labels, no text overlay, no banner, and no `[V2X]` badge — those belong to R17's annotated explanatory figure, which the IVI never renders. See § Open items item 1 for the one document that says otherwise.
   - **The provenance guard.** Ghost C is drawn **only** when its snapshot `source` is `v2x_relayed`. Any other value draws the yellow `[? UNKNOWN SOURCE]` marker instead and logs at ERROR through `AndroidR4Logger`. A `null` snapshot is treated as trusted — the guard fails open, which is exactly why `17.5.4.4` must fill it (D12).
   - Put the guard decision and its ERROR message in **`internal` top-level functions** in this file, called by the composable. A `Canvas`-drawn marker is not in the Compose semantics tree, so a composition test cannot reach a decision that stays inline; extracting it is what makes the R19 guard assertable at all.
@@ -646,8 +646,8 @@ class R4SocketObserver(
 
 **Scope — `app/src/main/java/…/ui/screen/MainScreen.kt`:**
 
-- The layout of [HLD §6](../documents/Design/IVI-ECU/ivi-ecu-hld.md#6-internal-components): a central **Display Area**, the Home / Apps / Settings areas around it, mode labels, and a bottom status bar. Tapping a side area changes `MainViewModel.currentMode` and the Display Area follows — R16's acceptance clause.
-- The Display Area's Warning branch renders through `IviWarningViewSeam` when the warning state is `Active`, and shows neutral idle content when it is `Idle`. **`MainScreen` sees only `WarningUiState` and the seam** — never `CanvasWarningView` concretely ([HLD §3](../documents/Design/IVI-ECU/ivi-ecu-hld.md#3-the-component-architecture) UI-layer rule).
+- The layout of [HLD §6](../documents/Design/MODULE-DESIGN/IVI-ECU/ivi-ecu-hld.md#6-internal-components): a central **Display Area**, the Home / Apps / Settings areas around it, mode labels, and a bottom status bar. Tapping a side area changes `MainViewModel.currentMode` and the Display Area follows — R16's acceptance clause.
+- The Display Area's Warning branch renders through `IviWarningViewSeam` when the warning state is `Active`, and shows neutral idle content when it is `Idle`. **`MainScreen` sees only `WarningUiState` and the seam** — never `CanvasWarningView` concretely ([HLD §3](../documents/Design/MODULE-DESIGN/IVI-ECU/ivi-ecu-hld.md#3-the-component-architecture) UI-layer rule).
 - It collects the warning state and feeds it to `MainViewModel.onWarningState`, so a message raises the view.
 - The status bar renders the live `R4LinkState`: bound with the port, rebinding, or error — the visual half of the `[LINK]` evidence. No hardcoded standby string.
 - `@Preview` functions for the idle and active states, at the committed preview size of `MainScreen.kt` (`widthDp = 1280, heightDp = 720`). `6.5.9.3` reads the guest's real display size off the live node and records it in the run doc; a preview size is an authoring convenience and closes no acceptance criterion.
@@ -679,7 +679,7 @@ class R4SocketObserver(
 
 - `app/src/main/java/…/IviApplication.kt` — `Application` creating `IviGraph` in `onCreate` and holding the application `CoroutineScope`; exposes the graph to the Activity.
 - `app/src/main/java/…/MainActivity.kt` — `ComponentActivity`; in `onCreate` resolve `IviRuntimeConfig.resolve(intent)`, hand it to the graph, start `R4ListenerService` as a foreground service, request `POST_NOTIFICATIONS` on API 33+ **without blocking startup on the answer**, then `setContent { MainScreen(...) }` with view-models from the graph's factory.
-- `app/src/main/AndroidManifest.xml` — `android:name` on `<application>`; the `<activity>` with `MAIN`/`LAUNCHER`; the `automotive` feature declaration [HLD §6](../documents/Design/IVI-ECU/ivi-ecu-hld.md#6-internal-components) lists. Use a **platform theme**; [HLD §4](../documents/Design/IVI-ECU/ivi-ecu-hld.md#4-folder-structure) designates no new resource file, and if a platform theme proves unusable on the guest that is a finding to report, not a licence to add an undesignated file.
+- `app/src/main/AndroidManifest.xml` — `android:name` on `<application>`; the `<activity>` with `MAIN`/`LAUNCHER`; the `automotive` feature declaration [HLD §6](../documents/Design/MODULE-DESIGN/IVI-ECU/ivi-ecu-hld.md#6-internal-components) lists. Use a **platform theme**; [HLD §4](../documents/Design/MODULE-DESIGN/IVI-ECU/ivi-ecu-hld.md#4-folder-structure) designates no new resource file, and if a platform theme proves unusable on the guest that is a finding to report, not a licence to add an undesignated file.
 
 **Acceptance:** `./gradlew assembleDebug` green; `:app:testDebugUnitTest` still green; the built APK declares **exactly one** LAUNCHER activity, checked by the route [walkthrough §2.6](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#26-check-the-apk-is-launchable) fixes.
 
@@ -810,7 +810,7 @@ class R4SocketObserver(
 
 ### [ ] `4.5.6.8` — `downgrade.json` — the D13 medium→low case on demand *(agent)*
 
-**Objective:** a scenario file that steps `medium` then `low` and then holds, so [D13](../documents/Design/IVI-ECU/ivi-ecu-design-decisions.md#d13--active-risk-raises-the-warning-only-silence-lowers-it)'s "a `low` does not dismiss" rule is provable in the Room without waiting for a producer cycle to wrap. [IVI HLD §12](../documents/Design/IVI-ECU/ivi-ecu-hld.md#12-test-strategy) names this the mini-blueprint half of D13's proof; the view-model half is `17.5.4.4`'s.
+**Objective:** a scenario file that steps `medium` then `low` and then holds, so [D13](../documents/Design/MODULE-DESIGN/IVI-ECU/ivi-ecu-design-decisions.md#d13--active-risk-raises-the-warning-only-silence-lowers-it)'s "a `low` does not dismiss" rule is provable in the Room without waiting for a producer cycle to wrap. [IVI HLD §12](../documents/Design/MODULE-DESIGN/IVI-ECU/ivi-ecu-hld.md#12-test-strategy) names this the mini-blueprint half of D13's proof; the view-model half is `17.5.4.4`'s.
 
 **Scope — one data file, no Kotlin:**
 
@@ -903,7 +903,7 @@ Nothing else in that file changes. Add a one-line comment recording that this Ph
 
 ### [ ] `16.5.7.4` — Add the `lint` step to `ivi-assemble` *(agent)*
 
-**Objective:** bring the lane to [HLD §11](../documents/Design/IVI-ECU/ivi-ecu-hld.md#11-tech-stack-build-and-ci), which defines `ivi-assemble` as `assembleDebug` + `lint`, without letting one finding block the only lane that produces the APK.
+**Objective:** bring the lane to [HLD §11](../documents/Design/MODULE-DESIGN/IVI-ECU/ivi-ecu-hld.md#11-tech-stack-build-and-ci), which defines `ivi-assemble` as `assembleDebug` + `lint`, without letting one finding block the only lane that produces the APK.
 
 **Scope — in this order; the order is the whole subtask:**
 
@@ -1185,7 +1185,7 @@ The two observations:
 
 **Scope:** start the recording, watch the Screen widget while `approach.json` plays, and check five things. The first three are [§4.8](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging) V4's **link 4** and the rows beside it; the last two belong to this scenario file.
 
-1. The Display Area **switches to the Warning View by itself**, with nobody tapping anything: ego and B drawn solid, ghost C dashed and translucent on a pulsing risk-coloured ground glow. **The scene alone is the warning** — no legend, no distance labels, no text overlay, no banner and **no `[V2X]` badge**. Judge against [HLD §6](../documents/Design/IVI-ECU/ivi-ecu-hld.md#6-internal-components) and R17, **not** against §4.8's link-4 row, which describes R17's annotated explanatory figure instead; see § Open items item 1.
+1. The Display Area **switches to the Warning View by itself**, with nobody tapping anything: ego and B drawn solid, ghost C dashed and translucent on a pulsing risk-coloured ground glow. **The scene alone is the warning** — no legend, no distance labels, no text overlay, no banner and **no `[V2X]` badge**. Judge against [HLD §6](../documents/Design/MODULE-DESIGN/IVI-ECU/ivi-ecu-hld.md#6-internal-components) and R17, **not** against §4.8's link-4 row, which describes R17's annotated explanatory figure instead; see § Open items item 1.
 2. The scenario's **first step draws no C at all** — it carries `geometry.vehicleC: null` — and the app neither crashes nor shows a placeholder.
 3. When the stream stops, the view **times out back to the previous mode**, not merely to Idle. Restoring the *previous* mode is `16.5.4.5`'s behaviour, which V4's own row does not name.
 4. **Risk climbs low → medium → high** across the approach, and the glow colour follows it.
@@ -1298,7 +1298,7 @@ This subtask runs only where the simulator config has already replaced the probe
 **Scope — two steps on rung V3 of [§4.8](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging), one per executor:**
 
 1. The car-sky agent broadcasts the dev-injector intent `4.5.6.7` registered, naming a frozen sample. §4.8 V3 carries the command. This is an AI row, because it is a shell command against the guest.
-2. The person watches the Screen widget and confirms the Display Area switches to the Warning View **by itself** and draws the God View, judged against [HLD §6](../documents/Design/IVI-ECU/ivi-ecu-hld.md#6-internal-components) exactly as `17.5.9.13` item 1 sets out. §5 keeps this Human because it is a visual judgement no log line replaces.
+2. The person watches the Screen widget and confirms the Display Area switches to the Warning View **by itself** and draws the God View, judged against [HLD §6](../documents/Design/MODULE-DESIGN/IVI-ECU/ivi-ecu-hld.md#6-internal-components) exactly as `17.5.9.13` item 1 sets out. §5 keeps this Human because it is a visual judgement no log line replaces.
 
 `Broadcast completed: result=0` with no UI change means the installed build is a **release** build — the injector exists in the debug build only, by design, and that is a build-selection finding rather than a UI defect.
 
@@ -1444,7 +1444,7 @@ This is the **APK**, not a node image field: the container nodes' images were se
 **Scope — three steps on [§4.8](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging) V4's link 4, captured per [§4.9](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#49-capture-the-evidence). The person performs each step:**
 
 1. The person watches the Screen widget with the recording running.
-2. The person confirms the Display Area switches itself to the Warning View and draws the God View. Only the source of the data differs from the isolated IVI test, so the drawing to expect is the same one, judged against [HLD §6](../documents/Design/IVI-ECU/ivi-ecu-hld.md#6-internal-components) per `17.5.9.13` item 1 and § Open items item 1.
+2. The person confirms the Display Area switches itself to the Warning View and draws the God View. Only the source of the data differs from the isolated IVI test, so the drawing to expect is the same one, judged against [HLD §6](../documents/Design/MODULE-DESIGN/IVI-ECU/ivi-ecu-hld.md#6-internal-components) per `17.5.9.13` item 1 and § Open items item 1.
 3. The person confirms no yellow `[? UNKNOWN SOURCE]` marker appears where ghost C belongs. One that does is a blocking defect.
 
 Teardown is `5.5.10.9`, which runs after this subtask and after `19.5.10.7`.
@@ -1474,18 +1474,18 @@ The blueprint itself stays and can be deployed again.
 
 **Scope — reading two surfaces of one run. No deploy, no new Room, no configuration change.**
 
-- **K6 — the ADA side** ([ADA HLD §12](../documents/Design/ADA-ECU/ada-ecu-hld.md#12-test-strategy)). Save the ADA node's `[EVT]` stream, the detector's R3 JSONL and the bench node's `[TX]` JSONL from the same run, then run Phase 4's checker:
+- **K6 — the ADA side** ([ADA HLD §12](../documents/Design/MODULE-DESIGN/ADA-ECU/ada-ecu-hld.md#12-test-strategy)). Save the ADA node's `[EVT]` stream, the detector's R3 JSONL and the bench node's `[TX]` JSONL from the same run, then run Phase 4's checker:
 
   ```
   python ADA_ECU/tools/check_run_alignment.py --evt ada.log --detector r3.jsonl --bench tx.jsonl
   ```
 
   **Accepted when K6 passes: the interval from `T0` — the run's first `own_sensor` R3 line — to the first `r4_tx` is 8.0 s ≤ Δ < 10.0 s.** Report K1–K5's verdicts from the same invocation; a K1–K5 failure is a finding against R20/R21, not against R22.
-- **K7 — the IVI side** ([IVI HLD §12](../documents/Design/IVI-ECU/ivi-ecu-hld.md#12-test-strategy)). From `adb logcat -s IVI_V2X` over the tunnel `16.5.10.5` established — the AI row of [deploy-ivi-hmi-walkthrough.md §5](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#5-work-division-between-ai-and-human), procedure [§4.8](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging), evidence capture [§4.9](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#49-capture-the-evidence). **Accepted when both hold:** the run's first `[UI] mode=WarningView cause=warning` line is the **first** Warning-mode line of the run, and it follows the app's own startup `[UI] mode=HomeView` line by **≥ 8.0 s**. Record both timestamps and the delta.
+- **K7 — the IVI side** ([IVI HLD §12](../documents/Design/MODULE-DESIGN/IVI-ECU/ivi-ecu-hld.md#12-test-strategy)). From `adb logcat -s IVI_V2X` over the tunnel `16.5.10.5` established — the AI row of [deploy-ivi-hmi-walkthrough.md §5](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#5-work-division-between-ai-and-human), procedure [§4.8](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging), evidence capture [§4.9](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#49-capture-the-evidence). **Accepted when both hold:** the run's first `[UI] mode=WarningView cause=warning` line is the **first** Warning-mode line of the run, and it follows the app's own startup `[UI] mode=HomeView` line by **≥ 8.0 s**. Record both timestamps and the delta.
 - **The screen recording is the visual half and it is armed by `16.5.10.6` and confirmed by `19.5.10.8`.** This subtask cites it, does not re-record it, and stops at any Human row rather than improvising around it.
-- **The two clocks never meet.** K6 reads the ADA node's own stamps, K7 the guest's own logcat stamps; no check subtracts one from the other ([ADA D10](../documents/Design/ADA-ECU/ada-ecu-design-decisions.md#d10--clock-domains-and-stimulus-paced-against-clock_monotonic)).
+- **The two clocks never meet.** K6 reads the ADA node's own stamps, K7 the guest's own logcat stamps; no check subtracts one from the other ([ADA D10](../documents/Design/MODULE-DESIGN/ADA-ECU/ada-ecu-design-decisions.md#d10--clock-domains-and-stimulus-paced-against-clock_monotonic)).
 - **Record the configuration the run used** — the bench's `start_delay_s`, `duration_s`, `initial_distance_m`, `closing_speed_mps`, `cpm_rate_hz`; the ADA node's `DETECTOR_REALTIME_PACING`, `DETECTOR_CLIP_FPS`, `DETECTOR_FRAME_STRIDE`, `GATE_ENTER_M`, `RISK_NEAR_M`, `RISK_CRITICAL_M`, `RISK_DWELL_MS`. A pass at unknown values proves nothing.
-- **A K6 miss is a `start_delay_s` finding first.** The remedy is the bench key, re-derived from this run's measured `T0`; it is never the R13 gate and never the risk bands ([SP D7](../documents/Design/SCENARIO-PLAYER/scenario-player-design-decisions.md#d7--the-demo-cycle-is-one-clip-length-and-its-geometry-is-solved-backwards-from-the-first-warning)). Report the number and hand back to Phase 1 `22.1.13.4` rather than retuning here.
+- **A K6 miss is a `start_delay_s` finding first.** The remedy is the bench key, re-derived from this run's measured `T0`; it is never the R13 gate and never the risk bands ([SP D7](../documents/Design/MODULE-DESIGN/SCENARIO-PLAYER/scenario-player-design-decisions.md#d7--the-demo-cycle-is-one-clip-length-and-its-geometry-is-solved-backwards-from-the-first-warning)). Report the number and hand back to Phase 1 `22.1.13.4` rather than retuning here.
 
 **Acceptance:** the checker's six verdicts with K6's measured Δ, K7's two log lines with their delta, and the run's configuration values — all recorded in `doc/deprecated/phase5-ivi-run.md`, cited by the run this group produced.
 
@@ -1562,7 +1562,7 @@ Every Phase 5 acceptance criterion in [milestone1_high_level_plan.md](../documen
 | **(Dev)** A mock R4 warning brings the warning view up with ego, B and ghost C at the composed positions | `4.5.2.2` · `4.5.3.3` · `4.5.4.2` · `17.5.4.4` · `16.5.4.5` · `16.5.5.6` · simulator `4.5.6.3`/`4.5.6.4` (`approach.json`) · fed to the node by `4.5.9.9` · dev path `4.5.6.7`, exercised in the Room by `17.5.9.18` (I3) · read by `18.5.9.12` and seen by `17.5.9.13` (I4), with the network hop under it closed by `4.5.9.17` |
 | Ghost C renders from `v2x_relayed` data only; the 2D drawing is delivered | **`17.5.4.4`** (the D12 snapshot wiring that arms the guard — without it the guard silently disables) · **`17.5.5.4`** (the renderer and the guard itself, under test) · `16.5.5.6` · `17.5.5.3` · `4.5.3.3` (`cSource=` on every `[RX]`) · `degrade.json` guard-trip step in `4.5.6.4` · `cSource=v2x_relayed` on every warning evidenced in text by `18.5.9.12` and on screen by `17.5.9.13`, the guard trip gated by `17.5.9.16`, and the whole shown again from live relayed data by `19.5.10.7`/`19.5.10.8` |
 | A newer message with an unknown `warningType` degrades gracefully | `4.5.1.4` (the committed `R4AdditiveVersionTest` relocated and still green) · `4.5.2.2` (decode preserves the value, D4) · `4.5.4.3` (`WarningClassifier` generic presentation) · `4.5.6.4` (`degrade.json`) · read by `4.5.9.15` and observed by `17.5.9.16` |
-| Optional paths, only if built | **Not built in M1** — declared, not attempted. 3D stays reachable through the **`IviWarningViewSeam`** render seam ([HLD §8](../documents/Design/IVI-ECU/ivi-ecu-hld.md#8-interfaces-ports-and-the-layer-rule)), which is what a second renderer would realize; multi-process wake-on-warning stays reachable because `4.5.5.2` chose the foreground service (D5). Recorded as "not built" in `doc/deprecated/phase5-ivi-run.md` by `17.5.9.16`, per [§6](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#6-expected-outputs-and-acceptance)'s instruction to record rather than leave the criteria ambiguous. |
+| Optional paths, only if built | **Not built in M1** — declared, not attempted. 3D stays reachable through the **`IviWarningViewSeam`** render seam ([HLD §8](../documents/Design/MODULE-DESIGN/IVI-ECU/ivi-ecu-hld.md#8-interfaces-ports-and-the-layer-rule)), which is what a second renderer would realize; multi-process wake-on-warning stays reachable because `4.5.5.2` chose the foreground service (D5). Recorded as "not built" in `doc/deprecated/phase5-ivi-run.md` by `17.5.9.16`, per [§6](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#6-expected-outputs-and-acceptance)'s instruction to record rather than leave the criteria ambiguous. |
 | *(no Phase 5 criterion)* **R22** — the first R4 lands in (`T0` + 8.0 s, `T0` + 10.0 s) and the HMI holds Home until then | `22.5.10.10` (K6 and K7 on the system-test run) · `17.5.4.4` (D13's lifecycle, which is what keeps Home showing through the `low`s) · `4.5.6.8` (the D13 case on demand) · producer side: Phase 1 group 1.13, Phase 3 `12.3.2.8`/`22.3.6.3`, Phase 4 `21.4.3.4` |
 
 **What group 5.10 adds.** The system test (`5.5.10.1`–`22.5.10.10`) closes no Phase 5 acceptance criterion on its own — all five are met against the R4 simulator feed. It proves the same IVI behaviour inside the full topology with every node on its real image, it is the only configuration that can produce R22's K6 and K7, and its record is what Phase 6's convergence run starts from.
@@ -1573,7 +1573,7 @@ Carried, not decided. No Phase 5 subtask may close one of these by assuming an a
 
 | # | Item | Owner / closes at |
 |---|---|---|
-| 1 | **The walkthrough and the HLD disagree about what the God View draws.** [§4.8](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging) rung V4 link 4 and [§6](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#6-expected-outputs-and-acceptance) proof 4 expect a `[V2X]` badge and `d_AB`/`d_AC` distance labels; [HLD §6](../documents/Design/IVI-ECU/ivi-ecu-hld.md#6-internal-components), D11 and **R17 itself** forbid them — R17 names that annotated figure explanatory and *not* what the IVI renders. **User decision: follow R17 and the HLD — no badge, no distance labels.** `17.5.9.13` and `19.5.10.8` judge against the HLD | Report to [[project-researcher]] to correct §4.8 and §6 — [CLAUDE.md § Repository layout](../CLAUDE.md) forbids any other agent editing a walkthrough. **Raise before `17.5.9.13` judges a screen** |
+| 1 | **The walkthrough and the HLD disagree about what the God View draws.** [§4.8](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging) rung V4 link 4 and [§6](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#6-expected-outputs-and-acceptance) proof 4 expect a `[V2X]` badge and `d_AB`/`d_AC` distance labels; [HLD §6](../documents/Design/MODULE-DESIGN/IVI-ECU/ivi-ecu-hld.md#6-internal-components), D11 and **R17 itself** forbid them — R17 names that annotated figure explanatory and *not* what the IVI renders. **User decision: follow R17 and the HLD — no badge, no distance labels.** `17.5.9.13` and `19.5.10.8` judge against the HLD | Report to [[project-researcher]] to correct §4.8 and §6 — [CLAUDE.md § Repository layout](../CLAUDE.md) forbids any other agent editing a walkthrough. **Raise before `17.5.9.13` judges a screen** |
 | 2 | **ADB reach to the Skycraft guest** — one route exists, the organizers' `reach-backend` tunnel, unexercised by this team ([§6.1](../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#61-confirm-before-relying-on-these) item 1). Its CLI, gateway URL and token are supplied, not derived (items 2–4) | `16.5.9.19` obtains the three inputs, `16.5.9.6` starts the tunnel, `16.5.9.7` proves it; none needs Phase 5 code and all three are scheduled first. Negative ⇒ every later subtask in group 5.9 degrades to AAOS-emulator evidence |
 | 3 | **AAOS guest Android version** vs `minSdk 29`, and the `automotive` feature | `16.5.9.7`, same connection |
 | 4 | Coroutines version skew between `:observer` and what AndroidX resolves in `:app` | Mitigated by the catalog (`4.5.1.1`); a skew shows as a runtime `NoSuchMethodError`, not a build failure — watch for it at `16.5.9.10` |

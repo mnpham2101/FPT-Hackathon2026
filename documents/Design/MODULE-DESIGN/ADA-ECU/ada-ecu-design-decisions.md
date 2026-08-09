@@ -4,7 +4,7 @@
 
 ## D1 — One folder, one image, one object model
 
-`ADA_ECU/` is this node's only build context, its only image and its only design authority. Everything the node ships is built from this folder, and the folder reads nothing outside it ([CLAUDE.md § Repository layout](../../../CLAUDE.md)).
+`ADA_ECU/` is this node's only build context, its only image and its only design authority. Everything the node ships is built from this folder, and the folder reads nothing outside it ([CLAUDE.md § Repository layout](../../../../CLAUDE.md)).
 
 - **`src/contracts/` is the node's only object model.** `TrackedObject`, `Source`, `TrackState`, `R2Message` and `R4WarningEvent` are declared once, in the bindings written against the frozen schemas. A second declaration of any of them — a node-local `types.hpp`, a detector-side redefinition, a tool's private field list — is a defect. Two models for one message means two answers to what a field is called, and the wire settles the argument at run time.
 - **`contracts/` holds byte-synced copies of the frozen schemas and nothing else.** A node-local fork — tightening `additionalProperties`, promoting a field to required, adding an array the producer never emits — is a second, unversioned contract that keeps passing after the real one changes.
@@ -21,7 +21,7 @@
 
 ## D3 — R13 admission: one state machine, both sources
 
-Realizes [vehicleC_track_admission_state_machine.png](../../Requirements/vehicleC_track_admission_state_machine.png) as [phase2-4-ada-ecu-admission.puml](phase2-4-ada-ecu-admission.puml). The diagram is source-agnostic, so `store/admission` holds **one** implementation, parameterized only by what counts as an update.
+Realizes [vehicleC_track_admission_state_machine.png](../../../Requirements/vehicleC_track_admission_state_machine.png) as [phase2-4-ada-ecu-admission.puml](phase2-4-ada-ecu-admission.puml). The diagram is source-agnostic, so `store/admission` holds **one** implementation, parameterized only by what counts as an update.
 
 | Term | Definition fixed here |
 |---|---|
@@ -36,7 +36,7 @@ Realizes [vehicleC_track_admission_state_machine.png](../../Requirements/vehicle
 - "Its messages stop" — R13's own wording — is a time condition. A count cannot express silence, because nothing arrives to increment it.
 - The two sources run at independently configured cadences: relayed updates at the bench's `cpm_rate_hz`, own-sensor updates at the detector's paced rate. One count M would mean two different real timeouts, and retuning *another node's* config would silently change this node's behaviour.
 
-`TRACK_TIMEOUT_MS = 1000` is the time form of [milestone1_high_level_plan.md §4](../../Plan/milestone1_high_level_plan.md#track-admission-gate-r13)'s M = 5, taken at the slower of the two sources — 5 × 200 ms — so neither source expires early.
+`TRACK_TIMEOUT_MS = 1000` is the time form of [milestone1_high_level_plan.md §4](../../../Plan/milestone1_high_level_plan.md#track-admission-gate-r13)'s M = 5, taken at the slower of the two sources — 5 × 200 ms — so neither source expires early.
 
 Further rules:
 
@@ -47,7 +47,7 @@ Further rules:
 
 ## D4 — R14: the Collision Risk Assessment interface, registry and database
 
-Realizes the «interface» block of [ada-ecu.svg](../../Requirements/ada-ecu.svg). Naming reconciliation, stated once: the figure's realization **Chained Collision** is the report's "M1 NLOS plugin" and registers under the frozen R4 registry key **`nlos_obstruction`** — one concept, three existing names, no new term coined.
+Realizes the «interface» block of [ada-ecu.svg](../../../Requirements/ada-ecu.svg). Naming reconciliation, stated once: the figure's realization **Chained Collision** is the report's "M1 NLOS plugin" and registers under the frozen R4 registry key **`nlos_obstruction`** — one concept, three existing names, no new term coined.
 
 ```cpp
 // src/cra/i_collision_risk_assessment.hpp
@@ -107,16 +107,16 @@ Frozen R4 fixes `riskState ∈ {low, medium, high}`. For `nlos_obstruction`, wit
 - **Every change of `riskState` for a `(warningType, trackId)` emits exactly one R4 warning event, in both directions.** Steady state emits nothing. Downgrades and the return to `low` are emitted too: R4 carries no separate clear message and the periodic state stream is optional, so the transition back is the only way the IVI learns to stop warning.
 - A transition commits only after it holds for `RISK_DWELL_MS` — one debounce across all three thresholds, independent of the R13 gate hysteresis that protects track identity.
 - **No B, no chain.** `d_AC = d_AB + d_BC` needs `d_AB`, so with no own-sensor B track the composed range does not exist. The plugin returns `low` with rationale `b_unknown` and logs `assess_skipped_b_unknown`. It follows that no `medium` or `high` was ever entered without a known B, so a clearing event can always fill the required `geometry.vehicleB` from `lastKnownB`. `geometry.vehicleC` is null exactly when C's track has been erased, which is why the frozen schema allows null there.
-- Composition, in `fusion/scene_composer`: `vehicleB = (d_AB, y_B)` from the nearest `own_sensor` track, and `vehicleC = (d_AB + d_BC, y_B + y_BC)` — longitudinal sum, lateral component-wise, valid for the near-collinear convoy ([milestone1_high_level_plan.md §2](../../Plan/milestone1_high_level_plan.md#2-scope--assumptions)).
+- Composition, in `fusion/scene_composer`: `vehicleB = (d_AB, y_B)` from the nearest `own_sensor` track, and `vehicleC = (d_AB + d_BC, y_B + y_BC)` — longitudinal sum, lateral component-wise, valid for the near-collinear convoy ([milestone1_high_level_plan.md §2](../../../Plan/milestone1_high_level_plan.md#2-scope--assumptions)).
 
 ## D6 — R12 detector: frame-source seam, inference, distance, zero-C evidence
 
 - **The frame source is a seam.** `detector/frame_source.py` defines `FrameSource.iter_frames() -> Iterator[Frame]` with `Frame(index, timestamp_ms, image, width, height)`. `FileFrameSource` decodes `VIDEO_CLIP_PATH` with OpenCV `VideoCapture`, honouring `DETECTOR_FRAME_STRIDE` and `DETECTOR_LOOP`; `SyntheticFrameSource` needs no clip and serves CI. A live source arrives later as one more implementation, with no change to inference, distance, tracking or emission.
-- **The clip reaches the container as an image layer and by no other route.** A Container Node has no volume, no bind mount and no declarative file injection, so `COPY media/ /app/media/` is the transfer and `docker push` is the upload ([m1-video-source-and-ivi-dashcam.md §5](../../../requirements/deprecated/m1-video-source-and-ivi-dashcam.md)). Rejected alternatives: a `video` pin, which has no C++ client, an undocumented frame header and 590 Mbit/s of raw RGBA at 720p20; a fetch at container start, which trades a build-time cost for a demo-time network dependency.
-- **The IVI dashcam view is deferred and no part of it is built here** ([milestone1_high_level_plan.md §6](../../Plan/milestone1_high_level_plan.md#6-deferred-to-later-milestones)). That means no HTTP clip server in `entrypoint.sh`, no `CLIP_HTTP_ENABLED` or `CLIP_HTTP_PORT`, no `exposedPorts` entry and its gateway route, and no `video` pin. A worked design for it exists; reading it is not permission to build it.
+- **The clip reaches the container as an image layer and by no other route.** A Container Node has no volume, no bind mount and no declarative file injection, so `COPY media/ /app/media/` is the transfer and `docker push` is the upload ([m1-video-source-and-ivi-dashcam.md §5](../../../../requirements/deprecated/m1-video-source-and-ivi-dashcam.md)). Rejected alternatives: a `video` pin, which has no C++ client, an undocumented frame header and 590 Mbit/s of raw RGBA at 720p20; a fetch at container start, which trades a build-time cost for a demo-time network dependency.
+- **The IVI dashcam view is deferred and no part of it is built here** ([milestone1_high_level_plan.md §6](../../../Plan/milestone1_high_level_plan.md#6-deferred-to-later-milestones)). That means no HTTP clip server in `entrypoint.sh`, no `CLIP_HTTP_ENABLED` or `CLIP_HTTP_PORT`, no `exposedPorts` entry and its gateway route, and no `video` pin. A worked design for it exists; reading it is not permission to build it.
 - **Inference** (`detector/inference.py`): an ONNX Runtime CPU session on `MODEL_PATH`, letterboxing to 640×640, NMS at `IOU_THRESHOLD` and a score floor of `CONF_THRESHOLD`. The COCO classes `car`, `truck`, `bus` and `motorcycle` collapse to the R3 `class: "vehicle"`. `Detector` is a protocol, so the model swaps without touching the pipeline.
 - **Distance is a pinhole known-width estimate.** `f_px = (frame_w / 2) / tan(CAMERA_HFOV_DEG / 2)`; `d = VEHICLE_WIDTH_M × f_px / bbox_w_px`; lateral `y = (bbox_u_center − frame_w / 2) × d / f_px`. Chosen because a user-supplied clip carries no intrinsics and no ground-plane calibration, and a monocular-depth network is a second model on a CPU-only node. The ground-plane bbox-bottom alternative needs camera height *and* pitch — more unknowns, not fewer. What the gate needs is a monotonic, consistently biased range over B at roughly 10–40 m, which this delivers.
-- **The risk this carries, and the only sanctioned response.** Absolute accuracy rests on two constants that a user-supplied clip cannot calibrate. If B's estimated range disagrees with the scenario, `VEHICLE_WIDTH_M` and `CAMERA_HFOV_DEG` are retuned. **The R13 gate is never moved to compensate** — the gate decides track identity and the risk thresholds decide alarm level, and moving one to fix the other destroys both ([walkthrough §5.5](../../../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#55-retune-when-no-warning-is-emitted)).
+- **The risk this carries, and the only sanctioned response.** Absolute accuracy rests on two constants that a user-supplied clip cannot calibrate. If B's estimated range disagrees with the scenario, `VEHICLE_WIDTH_M` and `CAMERA_HFOV_DEG` are retuned. **The R13 gate is never moved to compensate** — the gate decides track identity and the risk thresholds decide alarm level, and moving one to fix the other destroys both ([walkthrough §5.5](../../../../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#55-retune-when-no-warning-is-emitted)).
 - **Association** (`detector/tracker.py`): greedy IoU matching against the previous sampled frame, holding an id while IoU ≥ `TRACK_IOU_MIN`. Enough for one dominant occluder, and no tracking library is pulled in.
 - **Emission** (`detector/emit.py`): one R3 JSONL line per detection per sampled frame, through the frozen `detector/contracts/tracked_object.py` binding — `source: own_sensor`, `id: own:<n>`, `state: not_tracked` (D3), `confidence` from the detection score. **`speed` is the magnitude of the range rate**, `|Δdistance| / Δt`, and 0 on a track's first sampled frame: frozen R3 bounds `speed` at ≥ 0, so a signed closing rate is not representable there. The sign lives in the `distance` series the store keeps.
 - **Zero detections labelled C is structural, not a filter.** The detector's only input is ego's clip, in which C is never visible; it has no access to relayed data and cannot mint a `v2x:` id or a `v2x_relayed` source. `tools/check_zero_c.py` makes the claim falsifiable: it fails the run if any own-sensor entry claims a relayed source or id namespace, or if any own-sensor track sits within its radius argument of the relayed C position at the same timestamp. A pass is the expected trivial result, which is what R19 asks for.
@@ -147,13 +147,13 @@ Frozen R4 fixes `riskState ∈ {low, medium, high}`. For `nlos_obstruction`, wit
 
   `--platform` and the disabled attestations are a standing requirement: a Container Node rejects a manifest index and hangs in `Provisioning`.
 - **Layout inside the image:** `/app/ada_ecu` (the core binary), `/app/detector/` (the Python package with its `requirements.txt` installed at build), `/app/models/yolo11n.onnx`, `/app/media/ego-b-occluding-c.mp4`, and `entrypoint.sh` with `capture.sh` at the workdir root.
-- **The node captures its own egress.** R15 and R19 need a record of ADA→IVI traffic, which the V2X ECU's capture point cannot see. `entrypoint.sh` starts `capture.sh` in the background and then `exec`s the binary, which is why the blueprint `command` is `["./entrypoint.sh"]` and `capabilities` is `["NET_RAW"]` ([node-ada-ecu.md](../../../requirements/car-sky-guide/node-ada-ecu.md#blueprint-node-config)). The `exec` is load-bearing: the app becomes PID 1 and receives SIGTERM directly.
-- **The scripts are duplicated per folder rather than shared.** Build contexts are self-contained and no folder imports another's sources; the host-side extraction procedure is the shared [traffic-capture-wireshark.md](../../../requirements/car-sky-guide/traffic-capture-wireshark.md).
+- **The node captures its own egress.** R15 and R19 need a record of ADA→IVI traffic, which the V2X ECU's capture point cannot see. `entrypoint.sh` starts `capture.sh` in the background and then `exec`s the binary, which is why the blueprint `command` is `["./entrypoint.sh"]` and `capabilities` is `["NET_RAW"]` ([node-ada-ecu.md](../../../../requirements/car-sky-guide/node-ada-ecu.md#blueprint-node-config)). The `exec` is load-bearing: the app becomes PID 1 and receives SIGTERM directly.
+- **The scripts are duplicated per folder rather than shared.** Build contexts are self-contained and no folder imports another's sources; the host-side extraction procedure is the shared [traffic-capture-wireshark.md](../../../../requirements/car-sky-guide/traffic-capture-wireshark.md).
 - **The image lane proves the detector's wheels resolve on `aarch64`, rather than assuming it.** `onnxruntime` and `opencv-python-headless` are installed at image build under emulation, and a missing wheel means a source build inside QEMU that can exhaust the job's timeout. The lane therefore ends by starting `detector/main.py --synthetic` inside the pulled `linux/arm64` image and observing R3 JSONL on stdout: a build that links and a detector that imports are two different claims, and only the second one closes R12's runtime path.
 
 ## D10 — Clock domains, and stimulus paced against `CLOCK_MONOTONIC`
 
-Realizes [m1-run-timing-and-event-triggering.md §6.1–§6.2](../../../requirements/deprecated/m1-run-timing-and-event-triggering.md) for this node. No clock is synchronised across nodes, and no component performs arithmetic mixing two nodes' timestamps.
+Realizes [m1-run-timing-and-event-triggering.md §6.1–§6.2](../../../../requirements/deprecated/m1-run-timing-and-event-triggering.md) for this node. No clock is synchronised across nodes, and no component performs arithmetic mixing two nodes' timestamps.
 
 | Purpose | Clock |
 |---|---|
@@ -171,7 +171,7 @@ Which clock fills which R3 field, per source, is [§10.2](ada-ecu-hld.md#102-r3-
 
 ## D11 — R22 run choreography: the run origin, the paced clip, and the risk band pair
 
-Realizes [m1-run-timing-and-event-triggering.md §6.6](../../../requirements/deprecated/m1-run-timing-and-event-triggering.md) for this node. R22 places the first R4 of a cycle in the open interval (`T0` + 8.0 s, `T0` + 10.0 s). Below is what this node owes that placement. Every lever is node configuration or bench scenario data, and no frozen contract carries any of it.
+Realizes [m1-run-timing-and-event-triggering.md §6.6](../../../../requirements/deprecated/m1-run-timing-and-event-triggering.md) for this node. R22 places the first R4 of a cycle in the open interval (`T0` + 8.0 s, `T0` + 10.0 s). Below is what this node owes that placement. Every lever is node configuration or bench scenario data, and no frozen contract carries any of it.
 
 - **`T0` is this node's own first emitted `own_sensor` R3 line**, visible in the `[EVT]` stream. The run origin is therefore read from one clock, which is what keeps K6 inside D10's single-domain rule.
 - **`DETECTOR_REALTIME_PACING = true` is load-bearing, not a preference.** With pacing off, clip time is not run time: the clip is consumed at whatever rate the CPU allows, and no instant in the choreography is expressible. A demo run with it off has no defined warning onset.

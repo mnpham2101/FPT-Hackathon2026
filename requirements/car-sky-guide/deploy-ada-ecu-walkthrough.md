@@ -210,7 +210,7 @@ Four nodes. Every address and port is the value the full blueprint uses, so the 
 
 Two notes on the ADA node's block:
 
-- The env set above is the subset this Room needs. The node's full configuration surface, with defaults and meanings, is in [the node's design document](../../documents/Design/ADA-ECU/ada-ecu-hld.md); the node's own config block is owned by [node-ada-ecu.md § Blueprint node config](node-ada-ecu.md#blueprint-node-config).
+- The env set above is the subset this Room needs. The node's full configuration surface, with defaults and meanings, is in [the node's design document](../../documents/Design/MODULE-DESIGN/ADA-ECU/ada-ecu-hld.md); the node's own config block is owned by [node-ada-ecu.md § Blueprint node config](node-ada-ecu.md#blueprint-node-config).
 - **`command: ["./entrypoint.sh"]` and `capabilities: ["NET_RAW"]` are unconditional** — they are part of the ADA ECU node config in every blueprint, isolated or full, and [node-ada-ecu.md § Blueprint node config](node-ada-ecu.md#blueprint-node-config) is the authority for both. There is no variant that omits them: the image must ship `entrypoint.sh` and `capture.sh` ([§1.3](#13-deliverable-prerequisites)), and a node whose image lacks them dies at start rather than falling back.
 
 ### 2.3 The bench image — one image, two roles

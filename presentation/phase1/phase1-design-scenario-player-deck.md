@@ -20,7 +20,7 @@ deck: Phase 1 — Scenario Player Design · FPT Hackathon 2026
 
 Companion to [phase1-design-deck.html](phase1-design-deck.html), which defines the terminology — including *bench* — the blueprint and the two messages. Nothing from it is repeated here.
 
-Source: [scenario-player-hld.md](../../documents/Design/SCENARIO-PLAYER/scenario-player-hld.md)
+Source: [scenario-player-hld.md](../../documents/Design/MODULE-DESIGN/SCENARIO-PLAYER/scenario-player-hld.md)
 
 ---
 

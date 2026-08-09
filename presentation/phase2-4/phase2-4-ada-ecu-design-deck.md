@@ -20,7 +20,7 @@ deck: Phases 2-4 — ADA ECU Design · FPT Hackathon 2026
 
 Deck A of two — the design. How that design was planned and executed is Deck B: [phase2-4-ada-ecu-task-execution-deck.html](phase2-4-ada-ecu-task-execution-deck.html).
 
-Sources: [ada-ecu-hld.md](../../documents/Design/ADA-ECU/ada-ecu-hld.md) · [ada-ecu-design-decisions.md](../../documents/Design/ADA-ECU/ada-ecu-design-decisions.md) · [contracts/](../../contracts/) · [m1-cooperative-awareness.md](../../documents/Requirements/m1-cooperative-awareness.md)
+Sources: [ada-ecu-hld.md](../../documents/Design/MODULE-DESIGN/ADA-ECU/ada-ecu-hld.md) · [ada-ecu-design-decisions.md](../../documents/Design/MODULE-DESIGN/ADA-ECU/ada-ecu-design-decisions.md) · [contracts/](../../contracts/) · [m1-cooperative-awareness.md](../../documents/Requirements/m1-cooperative-awareness.md)
 
 ---
 

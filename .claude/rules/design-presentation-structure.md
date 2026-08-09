@@ -81,7 +81,7 @@ Every design deck ends with what the next phase takes from this one: the contrac
 
 ## Diagrams come from the HLD
 
-A node's component diagram and its call flow already exist in that node's design folder under [documents/Design/](../../documents/Design/) — the HLD is where the design was decided, so it is where the deck's picture of it comes from.
+A node's component diagram and its call flow already exist in that node's design folder under [documents/Design/MODULE-DESIGN/](../../documents/Design/MODULE-DESIGN/) — the HLD is where the design was decided, so it is where the deck's picture of it comes from.
 
 - **Never redraw a simplified version.** A deck-only architecture diagram is a second design document with no authority, and it starts disagreeing with the HLD the moment either is edited.
 - **The deck carries a derived copy**, in [presentation/assets/](../../presentation/assets/) like every other asset, never a path reaching into a node folder. The copy names its source and states that the HLD copy is authoritative.

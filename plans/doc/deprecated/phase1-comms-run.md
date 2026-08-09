@@ -6,7 +6,7 @@ Evidence for [phase1_tasks.md § Task Group 1.10](../../phase1_tasks.md). Each s
 
 The outstanding subtasks, their executors and what each still needs are [phase1_tasks.md § Remaining work](../../phase1_tasks.md#remaining-work) — the authority for the work list, including which subtask ID owns each step. This record holds only the evidence those subtasks produce, section by section below.
 
-One fact belongs here rather than there: **the `default.yaml` baseline recorded under § `2.1.10.3` was taken against the pre-R22 scenario geometry.** The committed file now carries the R22 demo cycle ([SP D7](../../documents/Design/SCENARIO-PLAYER/scenario-player-design-decisions.md#d7--the-demo-cycle-is-one-clip-length-and-its-geometry-is-solved-backwards-from-the-first-warning)), so the bench image the next Room pulls emits a different approach. A fresh `default.yaml` baseline is captured before `11.1.10.4` compares the swapped stream against it.
+One fact belongs here rather than there: **the `default.yaml` baseline recorded under § `2.1.10.3` was taken against the pre-R22 scenario geometry.** The committed file now carries the R22 demo cycle ([SP D7](../../../documents/Design/MODULE-DESIGN/SCENARIO-PLAYER/scenario-player-design-decisions.md#d7--the-demo-cycle-is-one-clip-length-and-its-geometry-is-solved-backwards-from-the-first-warning)), so the bench image the next Room pulls emits a different approach. A fresh `default.yaml` baseline is captured before `11.1.10.4` compares the swapped stream against it.
 
 ## `5.1.10.1` — Images in the registry
 
@@ -71,7 +71,7 @@ Four independent checks pass on this excerpt:
 - **The F7 derivation is arithmetically correct.** *F7 is a numbered freeze note in [contracts/r1-cpm-profile.md](../../contracts/r1-cpm-profile.md): `R2 object.distance = hypot(object.position.x, object.position.y)` in metres — a value the CPM never carries, computed at the V2X ECU because the wire format only gives x/y offsets.* Check: `hypot(50.25, 1.2) = 50.26432631…`, matching the logged `distance` to every printed digit. So the field is genuinely derived from the decoded position, not copied through.
 - **Every scenario field survives the round trip**: `objectId 7`, `y 1.2` (`lateral_offset_m`), `confidence 0.95` (from wire 95), `classification "vehicle"` (from wire code 5), `stationId 1201`, sender pose `21.028511 / 105.804817 / heading 90.0`.
 
-V2X ECU counters over the same run — the D7 chain with nothing lost or rejected. *D7 is the bench↔V2X comms check in the [V2X decision record](../../documents/Design/V2X-ECU/v2x-ecu-design-decisions.md): the rule that every received datagram must show `rx_datagram` → `decode_ok` (carrying decoded CpmContent) → `r2_forwarded` (carrying the R2 body), asserted by `check_v2x_log.py` rather than by eye.*
+V2X ECU counters over the same run — the D7 chain with nothing lost or rejected. *D7 is the bench↔V2X comms check in the [V2X decision record](../../../documents/Design/MODULE-DESIGN/V2X-ECU/v2x-ecu-design-decisions.md): the rule that every received datagram must show `rx_datagram` → `decode_ok` (carrying decoded CpmContent) → `r2_forwarded` (carrying the R2 body), asserted by `check_v2x_log.py` rather than by eye.*
 
 ```
 [EVT] {"counters":{"decode_ok":885,"decode_reject":0,"dedupe_drop":0,"r2_forwarded":885,"rx_datagram":885,…
@@ -87,7 +87,7 @@ V2X ECU counters over the same run — the D7 chain with nothing lost or rejecte
 
 ## `6.1.10.5` — Capture retrieval → Wireshark
 
-**Capture is running, and the V2X node sees both flows** — the single-capture-point premise of D5, confirmed live. *D5 is the [V2X decision record](../../documents/Design/V2X-ECU/v2x-ecu-design-decisions.md) decision on how R6's traffic capture works: tcpdump inside the V2X image emits live `[CAP]` lines to the View Log and rotates saved `.pcap` files out through base64 markers, because the platform offers no file-download path.*
+**Capture is running, and the V2X node sees both flows** — the single-capture-point premise of D5, confirmed live. *D5 is the [V2X decision record](../../../documents/Design/MODULE-DESIGN/V2X-ECU/v2x-ecu-design-decisions.md) decision on how R6's traffic capture works: tcpdump inside the V2X image emits live `[CAP]` lines to the View Log and rotates saved `.pcap` files out through base64 markers, because the platform offers no file-download path.*
 
 V2X ECU log — one inbound CPM and its outbound R2, 150 µs apart:
 

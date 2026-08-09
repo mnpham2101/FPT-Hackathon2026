@@ -2,7 +2,7 @@
 
 The authoritative design of the IVI ECU: the high-level design, the decisions behind it, the module and test designs, and the diagrams they are drawn from. [[project-architecture]] produces and owns everything in this section.
 
-**Code:** [IVI_ECU/](../../../IVI_ECU/)
+**Code:** [IVI_ECU/](../../../../IVI_ECU/)
 
 ## Design authority
 
@@ -31,7 +31,7 @@ Learning notes by Vũ Xuân Bách — explanatory, not authoritative.
 
 ## Elsewhere
 
-- **General knowledge** applied to this node, rather than unique to it: [documents/KnowledgeBase/](../../KnowledgeBase/) — including [android-automotive-os.md](../../KnowledgeBase/android-automotive-os.md), the platform this node runs on
-- **Superseded reviews and audits:** [IVI_ECU/doc/deprecated/](../../../IVI_ECU/doc/deprecated/)
-- **How to deploy and collect evidence:** [deploy-ivi-hmi-walkthrough.md](../../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md)
-- **Decks:** design [phase5-design-ivi-ecu-deck.md](../../../presentation/phase5/phase5-design-ivi-ecu-deck.md) · demo [phase5-ivi-deck.md](../../../presentation/phase5/phase5-ivi-deck.md)
+- **General knowledge** applied to this node, rather than unique to it: [documents/KnowledgeBase/](../../../KnowledgeBase/) — including [android-automotive-os.md](../../../KnowledgeBase/android-automotive-os.md), the platform this node runs on
+- **Superseded reviews and audits:** [IVI_ECU/doc/deprecated/](../../../../IVI_ECU/doc/deprecated/)
+- **How to deploy and collect evidence:** [deploy-ivi-hmi-walkthrough.md](../../../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md)
+- **Decks:** design [phase5-design-ivi-ecu-deck.md](../../../../presentation/phase5/phase5-design-ivi-ecu-deck.md) · demo [phase5-ivi-deck.md](../../../../presentation/phase5/phase5-ivi-deck.md)

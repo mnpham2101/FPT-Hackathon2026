@@ -1,10 +1,10 @@
 # V2X ECU — high-level design (R7–R9, R18; R1 consumer, R2 producer)
 
-> **The V2X node's HLD, and the sole design authority for `V2X_ECU/`.** Every component this node runs, its role, input and output, where it lives, and how the components connect. Decision record: [v2x-ecu-design-decisions.md](v2x-ecu-design-decisions.md) (D1–D8). Frozen contracts: [r1-cpm-profile.md](../../../contracts/r1-cpm-profile.md) inbound, [r2-v2x-object.schema.json](../../../contracts/r2-v2x-object.schema.json) outbound. Capture retrieval: [traffic-capture-wireshark.md](../../../requirements/car-sky-guide/traffic-capture-wireshark.md). Node facts: [node-v2x-ecu.md](../../../requirements/car-sky-guide/node-v2x-ecu.md). Hardware port: [telux-parity-and-port-plan.md](telux-parity-and-port-plan.md).
+> **The V2X node's HLD, and the sole design authority for `V2X_ECU/`.** Every component this node runs, its role, input and output, where it lives, and how the components connect. Decision record: [v2x-ecu-design-decisions.md](v2x-ecu-design-decisions.md) (D1–D8). Frozen contracts: [r1-cpm-profile.md](../../../../contracts/r1-cpm-profile.md) inbound, [r2-v2x-object.schema.json](../../../../contracts/r2-v2x-object.schema.json) outbound. Capture retrieval: [traffic-capture-wireshark.md](../../../../requirements/car-sky-guide/traffic-capture-wireshark.md). Node facts: [node-v2x-ecu.md](../../../../requirements/car-sky-guide/node-v2x-ecu.md). Hardware port: [telux-parity-and-port-plan.md](telux-parity-and-port-plan.md).
 >
-> Diagrams: [v2x-ecu-module-architecture.svg](v2x-ecu-module-architecture.svg) (components, paired with its `.drawio`) · [v2x-ecu-components.puml](v2x-ecu-components.puml) (module graph) · [phase1-v2x-ecu-callflow.puml](phase1-v2x-ecu-callflow.puml) (sequence) · [phase1-des-protocol-stack.svg](../../../presentation/assets/phase1-des-protocol-stack.svg) (the stack, §8).
+> Diagrams: [v2x-ecu-module-architecture.svg](v2x-ecu-module-architecture.svg) (components, paired with its `.drawio`) · [v2x-ecu-components.puml](v2x-ecu-components.puml) (module graph) · [phase1-v2x-ecu-callflow.puml](phase1-v2x-ecu-callflow.puml) (sequence) · [phase1-des-protocol-stack.svg](../../../../presentation/assets/phase1-des-protocol-stack.svg) (the stack, §8).
 
-**Abridged version.** A reader who does not need the full document can take the design deck instead: [Phase 1 — V2X ECU Design](../../../presentation/phase1/phase1-design-v2x-ecu-deck.md) ([HTML](../../../presentation/phase1/phase1-design-v2x-ecu-deck.html)). It presents this HLD; where the two differ, this document governs.
+**Abridged version.** A reader who does not need the full document can take the design deck instead: [Phase 1 — V2X ECU Design](../../../../presentation/phase1/phase1-design-v2x-ecu-deck.md) ([HTML](../../../../presentation/phase1/phase1-design-v2x-ecu-deck.html)). It presents this HLD; where the two differ, this document governs.
 
 ## 1. Scope and authority
 
@@ -15,7 +15,7 @@
 
 **This is the only design document governing this node.** It fixes the component set and each component's responsibility, every deliverable's path, the seams, the configuration keys, and the evidence log lines.
 
-- **Task planning decomposes from this document plus the requirements report, and nothing else.** Requirement numbers and acceptance come from [m1-cooperative-awareness.md](../../Requirements/m1-cooperative-awareness.md); everything structural comes from here — which component a subtask creates, its path, the interface it satisfies, the log line that closes it.
+- **Task planning decomposes from this document plus the requirements report, and nothing else.** Requirement numbers and acceptance come from [m1-cooperative-awareness.md](../../../Requirements/m1-cooperative-awareness.md); everything structural comes from here — which component a subtask creates, its path, the interface it satisfies, the log line that closes it.
 - **Plans cite; they do not restate.** A brief links the section governing its step, so a change lands in one place.
 - **Implementation does not extend this silently.** A component, path or configuration key not designated here is not created ad hoc — the design changes first.
 - **The node is receive-only on the V2X side.** R10 is deferred, so `IRadioAdapter::send` is declared and never called (D2).
@@ -29,14 +29,14 @@
 
 | Document | What it fixes for this node |
 |---|---|
-| [m1-cooperative-awareness.md](../../Requirements/m1-cooperative-awareness.md) — **the authority** | R7, R8, R9 whole — definition, dependency, acceptance, tech stack. R1: the message family and the codec seam this node decodes through. R2: the message this node produces. R5/R6: node type, bridge, address, ports. R18: the evidence stream. R10: deferred, so the seam declares `send` and nothing calls it. §1: the node's focus goal is hardware portability, and the whole M1 data path is receive-only. §3(a)/(b)/(d)/(f): the stack. §4: CPM as the only message family, the R10 deferral, the declined telux port, and Vanetza's LGPLv3 dynamic-linking posture |
-| [baseline-topology-single-bridge.svg](../../Requirements/baseline-topology-single-bridge.svg) — the report's §1 figure | The four node addresses and the port per hop: this node at `10.99.0.11`, listening on `47100`, forwarding to `10.99.0.12:47200` |
-| [r1-cpm-profile.md](../../../contracts/r1-cpm-profile.md) · [r1-cpm-content.schema.json](../../../contracts/r1-cpm-content.schema.json) | The frozen input contract, field for field, with conventions F1, F2, F5, F6, F7, F8, F9 and VF (§10.1) |
-| [r2-v2x-object.schema.json](../../../contracts/r2-v2x-object.schema.json) | The frozen output contract, field for field (§10.2) |
-| [m1-run-timing-and-event-triggering.md](../../../requirements/deprecated/m1-run-timing-and-event-triggering.md) | R20's pacing obligation falls on the bench and the ADA detector; this node emits on no schedule of its own and has no scenario clock. What binds here is §6.2's clock-domain ruling and R21's naming of `rxTime` as the project's one cross-node timestamp of record — fixed as D8 |
-| [milestone1_high_level_plan.md](../../Plan/milestone1_high_level_plan.md) | §5's Phase 1 acceptance, which this node's evidence closes (§12); §4's R13 gate values, which the derived `object.distance` feeds |
-| [node-v2x-ecu.md](../../../requirements/car-sky-guide/node-v2x-ecu.md) | Image tag, blueprint `command` and `capabilities`, env set, pin and address |
-| [traffic-capture-wireshark.md](../../../requirements/car-sky-guide/traffic-capture-wireshark.md) | The retrieval procedure the D5 export format feeds, and the dissection caveat it states |
+| [m1-cooperative-awareness.md](../../../Requirements/m1-cooperative-awareness.md) — **the authority** | R7, R8, R9 whole — definition, dependency, acceptance, tech stack. R1: the message family and the codec seam this node decodes through. R2: the message this node produces. R5/R6: node type, bridge, address, ports. R18: the evidence stream. R10: deferred, so the seam declares `send` and nothing calls it. §1: the node's focus goal is hardware portability, and the whole M1 data path is receive-only. §3(a)/(b)/(d)/(f): the stack. §4: CPM as the only message family, the R10 deferral, the declined telux port, and Vanetza's LGPLv3 dynamic-linking posture |
+| [baseline-topology-single-bridge.svg](../../../Requirements/baseline-topology-single-bridge.svg) — the report's §1 figure | The four node addresses and the port per hop: this node at `10.99.0.11`, listening on `47100`, forwarding to `10.99.0.12:47200` |
+| [r1-cpm-profile.md](../../../../contracts/r1-cpm-profile.md) · [r1-cpm-content.schema.json](../../../../contracts/r1-cpm-content.schema.json) | The frozen input contract, field for field, with conventions F1, F2, F5, F6, F7, F8, F9 and VF (§10.1) |
+| [r2-v2x-object.schema.json](../../../../contracts/r2-v2x-object.schema.json) | The frozen output contract, field for field (§10.2) |
+| [m1-run-timing-and-event-triggering.md](../../../../requirements/deprecated/m1-run-timing-and-event-triggering.md) | R20's pacing obligation falls on the bench and the ADA detector; this node emits on no schedule of its own and has no scenario clock. What binds here is §6.2's clock-domain ruling and R21's naming of `rxTime` as the project's one cross-node timestamp of record — fixed as D8 |
+| [milestone1_high_level_plan.md](../../../Plan/milestone1_high_level_plan.md) | §5's Phase 1 acceptance, which this node's evidence closes (§12); §4's R13 gate values, which the derived `object.distance` feeds |
+| [node-v2x-ecu.md](../../../../requirements/car-sky-guide/node-v2x-ecu.md) | Image tag, blueprint `command` and `capabilities`, env set, pin and address |
+| [traffic-capture-wireshark.md](../../../../requirements/car-sky-guide/traffic-capture-wireshark.md) | The retrieval procedure the D5 export format feeds, and the dissection caveat it states |
 
 ### Research notes
 
@@ -45,8 +45,8 @@ Non-authoritative scratch; on any conflict the CLAUDE.md authority order wins.
 | Note | Adopted here |
 |---|---|
 | [scenario-player-v2x-callflow-messages.md](../SCENARIO-PLAYER/scenario-player-v2x-callflow-messages.md) | §2's wire model — the bench is the sole talker, so this node binds a port and never sends on the R1 wire, and the bring-up FSM produces no packets; §4.2's ASN.1 field mapping, which the codec seam realizes; findings F1, F6 and F7 placed above the seam in `r2_builder`, F9 in `validator` |
-| [baseline-connectivity-smoke-test.md](../../Delivery/Test-Guides/baseline-connectivity-smoke-test.md) | The capture technique D5 adopts — in-container tcpdump, `NET_RAW` flat in `capabilities`, the `/proc/net/dev` counter fallback — and the View-Log-as-retrieval model that both D5's pcap export and D7's on-platform check rest on; `tools/netcheck/` as the R2 observation sink (D6) |
-| [phase0-contract-freeze-hld.md](../../../plans/doc/deprecated/phase0-contract-freeze-hld.md) | D3's codec seam (`CpmContent` + `ICpmCodec`, wire-native units) and its rule that every conversion and derivation happens above it; D1's access model — byte-synced copies gated by `sync-manifest.json` |
+| [baseline-connectivity-smoke-test.md](../../../Delivery/Test-Guides/baseline-connectivity-smoke-test.md) | The capture technique D5 adopts — in-container tcpdump, `NET_RAW` flat in `capabilities`, the `/proc/net/dev` counter fallback — and the View-Log-as-retrieval model that both D5's pcap export and D7's on-platform check rest on; `tools/netcheck/` as the R2 observation sink (D6) |
+| [phase0-contract-freeze-hld.md](../../../../plans/doc/deprecated/phase0-contract-freeze-hld.md) | D3's codec seam (`CpmContent` + `ICpmCodec`, wire-native units) and its rule that every conversion and derivation happens above it; D1's access model — byte-synced copies gated by `sync-manifest.json` |
 
 ## 3. The component architecture
 
@@ -243,9 +243,9 @@ No layer is collapsed, and the rule is mechanical rather than cultural: **no fil
 
 ### Protocol stack
 
-![The protocol stack carrying the two messages this node translates](../../../presentation/assets/phase1-des-protocol-stack.svg)
+![The protocol stack carrying the two messages this node translates](../../../../presentation/assets/phase1-des-protocol-stack.svg)
 
-Source: [phase1-des-protocol-stack.svg](../../../presentation/assets/phase1-des-protocol-stack.svg).
+Source: [phase1-des-protocol-stack.svg](../../../../presentation/assets/phase1-des-protocol-stack.svg).
 
 Both flows share every layer below the encoding row, and this node is where the left column becomes the right one. Which component owns each layer:
 
@@ -276,7 +276,7 @@ This node sits between two frozen contracts and translates one into the other. B
 | Direction | Bench → V2X-ECU, one way |
 | Transport | UDP, bound on `0.0.0.0:47100`, no GeoNetworking/BTP envelope (F5) |
 | Encoding | ASN.1 UPER `CollectivePerceptionMessage`, ETSI TS 103 324 v2.1.1, release 2 |
-| Normative contract | [r1-cpm-profile.md](../../../contracts/r1-cpm-profile.md) with [r1-cpm-content.schema.json](../../../contracts/r1-cpm-content.schema.json) |
+| Normative contract | [r1-cpm-profile.md](../../../../contracts/r1-cpm-profile.md) with [r1-cpm-content.schema.json](../../../../contracts/r1-cpm-content.schema.json) |
 | Node copy | `V2X_ECU/contracts/r1-cpm-content.schema.json`, byte-synced; `src/codec/cpm_codec.hpp` binds against it |
 | Status | Frozen at profile version 1 — a field change is a re-freeze across every consumer |
 
@@ -299,7 +299,7 @@ The rate convention F8 binds the producer, not this node: nothing here assumes a
 | Direction | V2X-ECU → ADA-ECU, one way |
 | Transport | UDP to `10.99.0.12:47200`, one message per datagram, no framing header |
 | Encoding | compact UTF-8 JSON, `schemaVersion: 1`, `type: "v2x_object"` |
-| Normative schema | [r2-v2x-object.schema.json](../../../contracts/r2-v2x-object.schema.json) |
+| Normative schema | [r2-v2x-object.schema.json](../../../../contracts/r2-v2x-object.schema.json) |
 | Node copy | `V2X_ECU/contracts/r2-v2x-object.schema.json`, byte-synced; `src/contracts/r2_message.hpp` binds against it |
 | Status | Frozen — a field change is a re-freeze across every consumer |
 
@@ -320,7 +320,7 @@ Evolution is additive: unknown extra keys are ignored on parse, and a nullable f
 
 ## 11. Tech stack, build and CI
 
-No dependency outside this table enters the node without a design change. Traces are to [m1-cooperative-awareness.md](../../Requirements/m1-cooperative-awareness.md) and to the [decision record](v2x-ecu-design-decisions.md).
+No dependency outside this table enters the node without a design change. Traces are to [m1-cooperative-awareness.md](../../../Requirements/m1-cooperative-awareness.md) and to the [decision record](v2x-ecu-design-decisions.md).
 
 | Area | Stack | Trace |
 |---|---|---|
@@ -346,12 +346,12 @@ docker buildx build --platform linux/arm64 --provenance=false --sbom=false -t m1
 
 | CI lane | File | What it does |
 |---|---|---|
-| `contracts-gate` | [phase0-ci.yml](../../../.github/workflows/phase0-ci.yml) | `contracts/check_sync.py` and the R7 transport-import gate |
-| `v2x-core-build` | [phase1-ci.yml](../../../.github/workflows/phase1-ci.yml) | full build, the whole CTest suite, and `gv_tool` run twice for byte-identical determinism |
-| `v2x-comms-check` | [phase1-ci.yml](../../../.github/workflows/phase1-ci.yml) | the D7 loopback acceptance (§12) |
-| `v2x-ecu-image` | [phase1-ci.yml](../../../.github/workflows/phase1-ci.yml) | the emulated `linux/arm64` image build, pushed to Zot when `CARSKY_ZOT_API_KEY` is set |
+| `contracts-gate` | [phase0-ci.yml](../../../../.github/workflows/phase0-ci.yml) | `contracts/check_sync.py` and the R7 transport-import gate |
+| `v2x-core-build` | [phase1-ci.yml](../../../../.github/workflows/phase1-ci.yml) | full build, the whole CTest suite, and `gv_tool` run twice for byte-identical determinism |
+| `v2x-comms-check` | [phase1-ci.yml](../../../../.github/workflows/phase1-ci.yml) | the D7 loopback acceptance (§12) |
+| `v2x-ecu-image` | [phase1-ci.yml](../../../../.github/workflows/phase1-ci.yml) | the emulated `linux/arm64` image build, pushed to Zot when `CARSKY_ZOT_API_KEY` is set |
 
-A green image lane is not evidence that a tag reached the registry — the push step is gated on the secret ([CLAUDE.md § Repository layout](../../../CLAUDE.md)).
+A green image lane is not evidence that a tag reached the registry — the push step is gated on the secret ([CLAUDE.md § Repository layout](../../../../CLAUDE.md)).
 
 ## 12. Test strategy
 

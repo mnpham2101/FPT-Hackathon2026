@@ -4,7 +4,7 @@ The authoritative design of the bench: the node that plays a scenario into the V
 
 Being test equipment changes what the design says, not whether it has one — the Scenario Player is a node of the R5 blueprint with its own address and pin.
 
-**Code:** [Scenario_Player/](../../../Scenario_Player/)
+**Code:** [Scenario_Player/](../../../../Scenario_Player/)
 
 ## Design authority
 
@@ -26,6 +26,6 @@ Being test equipment changes what the design says, not whether it has one — th
 
 ## Elsewhere
 
-- **General knowledge** applied to this node: [documents/KnowledgeBase/](../../KnowledgeBase/)
-- **The contract it produces:** [r1-cpm-profile.md](../../../contracts/r1-cpm-profile.md)
-- **The node reference:** [node-scenario-player.md](../../../requirements/car-sky-guide/node-scenario-player.md)
+- **General knowledge** applied to this node: [documents/KnowledgeBase/](../../../KnowledgeBase/)
+- **The contract it produces:** [r1-cpm-profile.md](../../../../contracts/r1-cpm-profile.md)
+- **The node reference:** [node-scenario-player.md](../../../../requirements/car-sky-guide/node-scenario-player.md)

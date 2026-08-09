@@ -1,11 +1,11 @@
 # Scenario Player ↔ V2X ECU — Call Flow & Message Structure
 
-> **Status:** research note. Not authoritative. The authority is [m1-cooperative-awareness.md](../../Requirements/m1-cooperative-awareness.md) — R1, R2, R7–R11 and §3. Findings F1–F9 (§6) need ratification before implementation.
+> **Status:** research note. Not authoritative. The authority is [m1-cooperative-awareness.md](../../../Requirements/m1-cooperative-awareness.md) — R1, R2, R7–R11 and §3. Findings F1–F9 (§6) need ratification before implementation.
 > **Verified against:** ETSI TS 103 324 v2.1.1 ASN.1, ETSI TS 102 894-2 (CDD) v2.1.1, Vanetza `master` — sources in §7.
 
 ## 1. Scope
 
-The two nodes and the one wire between them ([baseline topology](../../Requirements/m1-cooperative-awareness.md#baseline-propose-topology)):
+The two nodes and the one wire between them ([baseline topology](../../../Requirements/m1-cooperative-awareness.md#baseline-propose-topology)):
 
 | | Node | Address | Role on this wire |
 |---|---|---|---|
@@ -32,11 +32,11 @@ Sections § A – § E, four of them live. Only **§ B** is on the M1 critical p
 | Layer | M1 answer |
 |---|---|
 | Session / handshake | None. UDP fire-and-forget — real V2X broadcast has no peer session to authenticate against. |
-| ITS message security (IEEE 1609.2 / ETSI TS 103 097 signing, enrolment, PKI) | Out of scope for the whole project — the V2X protocol stack ships in the modem ([§1 Input constraints](../../Requirements/m1-cooperative-awareness.md#input-constraints)). |
+| ITS message security (IEEE 1609.2 / ETSI TS 103 097 signing, enrolment, PKI) | Out of scope for the whole project — the V2X protocol stack ships in the modem ([§1 Input constraints](../../../Requirements/m1-cooperative-awareness.md#input-constraints)). |
 | Modem attach / 3GPP registration | Modelled by the R8 stub FSM only (§ A), never on the wire. |
 | Network access control | The Room's bridge subnet is the boundary; no in-band credentials. |
 
-Adding a bench↔V2X handshake would **lower** fidelity — production Rx is already "read from socket" ([§3(b)](../../Requirements/m1-cooperative-awareness.md#b-radio-transport-under-the-adapter-seam--serves-r7-r8)). Recommendation: none on the wire.
+Adding a bench↔V2X handshake would **lower** fidelity — production Rx is already "read from socket" ([§3(b)](../../../Requirements/m1-cooperative-awareness.md#b-radio-transport-under-the-adapter-seam--serves-r7-r8)). Recommendation: none on the wire.
 
 ### 2.3 § B — The committed path
 
@@ -64,9 +64,9 @@ Both are ETSI ITS facility-layer messages carried in the same `ItsPduHeader`, di
 | Trigger | periodic, rate-adaptive (1–10 Hz) | event-driven; repeated until validity expires; supports update / cancellation / negation |
 | **M1 status** | **The only type implemented** (R1) — bench sends it, V2X ECU decodes it | **Not implemented.** Named family for future hazard types (slippery road, rocks, holes, police…) |
 
-**Why CPM alone satisfies M1:** A must compose `d_AC ≈ d_AB + d_BC`. That needs C's *range and velocity as measured by B* — a DENM cause code cannot carry it, and CAM describes only the sender. One message type, one codec, one profile ([§3(a)](../../Requirements/m1-cooperative-awareness.md#a-v2x-message-family--encoding--serves-r1-r9r11), [decision record](../../Requirements/m1-cooperative-awareness.md#4-decision-record)).
+**Why CPM alone satisfies M1:** A must compose `d_AC ≈ d_AB + d_BC`. That needs C's *range and velocity as measured by B* — a DENM cause code cannot carry it, and CAM describes only the sender. One message type, one codec, one profile ([§3(a)](../../../Requirements/m1-cooperative-awareness.md#a-v2x-message-family--encoding--serves-r1-r9r11), [decision record](../../../Requirements/m1-cooperative-awareness.md#4-decision-record)).
 
-**Cost of adding DENM later:** one codec module + one dispatch entry in the R9 Rx pipeline — deferred, not foreclosed ([Future developments: extensible message-type dispatch](../../Requirements/m1-cooperative-awareness.md#future-developments)).
+**Cost of adding DENM later:** one codec module + one dispatch entry in the R9 Rx pipeline — deferred, not foreclosed ([Future developments: extensible message-type dispatch](../../../Requirements/m1-cooperative-awareness.md#future-developments)).
 
 ## 4. CPM message structure
 
@@ -90,7 +90,7 @@ Containers `2` (RSU), `3` (SensorInformation) and `4` (PerceptionRegion) are unu
 
 ### 4.2 R1 profile → ASN.1 field mapping
 
-Sample column uses the R2 example values from [R2](../../Requirements/m1-cooperative-awareness.md#contracts).
+Sample column uses the R2 example values from [R2](../../../Requirements/m1-cooperative-awareness.md#contracts).
 
 | R1 profile information | ASN.1 path | Type | Unit / range | Encoded sample |
 |---|---|---|---|---|
@@ -114,7 +114,7 @@ Sample column uses the R2 example values from [R2](../../Requirements/m1-coopera
 
 ## 5. Tech stack
 
-Copied verbatim from [m1-cooperative-awareness.md](../../Requirements/m1-cooperative-awareness.md) — no re-research.
+Copied verbatim from [m1-cooperative-awareness.md](../../../Requirements/m1-cooperative-awareness.md) — no re-research.
 
 **Per requirement (§2):**
 
@@ -151,7 +151,7 @@ Ranked by impact on the R1/R11 freeze.
 |---|---|---|
 | **F1** | **CPM release 2 cannot carry sender speed.** `OriginatingVehicleContainer` is `{orientationAngle, pitchAngle?, rollAngle?, trailerDataSet?}` — heading/speed were dropped from the release-1 (TR 103 562) container. R1's profile table and R2's `sender.speed` both require it. | Keep CPM r2 frozen. Map `sender.heading ← orientationAngle`; make `sender.speed` **derived** at the V2X ECU from consecutive `referenceTime`/`referencePosition` deltas, and **optional** in R2 until two messages have arrived. No committed M1 acceptance criterion consumes B's speed. Fallback if it must be native: `r1::Cpm` (TR 103 562) carries `heading` + `speed` and ships in the same Vanetza build — but that re-freezes R1's family pick. |
 | **F2** | **Vanetza's unqualified `asn1::Cpm` aliases `r1::Cpm`** (TR 103 562), not the release-2 type. `#include <vanetza/asn1/cpm.hpp>` and using `asn1::Cpm` silently compiles the wrong wire format. | Use `vanetza::asn1::r2::Cpm` explicitly everywhere; add a CI grep banning bare `asn1::Cpm`. Pin the variant in the golden vectors. |
-| **F3** | **Python bench → C++ Vanetza encoder path is unresolved** — standing open item in [CLAUDE.md § Repository layout](../../../CLAUDE.md). | Ranked for [[project-architecture]] to decide in the R11 HLD: (1) a small C++ `cpm_encode` helper built from the same Vanetza target, invoked by Python over stdin/stdout JSON — reuses the exact R1 codec, mirrors the R12 subprocess pattern already sanctioned; (2) pybind11 binding — more toolchain; (3) pre-encoded vectors + byte patching — drifts, fails R11's "different configs → different streams". |
+| **F3** | **Python bench → C++ Vanetza encoder path is unresolved** — standing open item in [CLAUDE.md § Repository layout](../../../../CLAUDE.md). | Ranked for [[project-architecture]] to decide in the R11 HLD: (1) a small C++ `cpm_encode` helper built from the same Vanetza target, invoked by Python over stdin/stdout JSON — reuses the exact R1 codec, mirrors the R12 subprocess pattern already sanctioned; (2) pybind11 binding — more toolchain; (3) pre-encoded vectors + byte patching — drifts, fails R11's "different configs → different streams". |
 | ~~**F4**~~ | ~~**R10 has no Tx destination.**~~ **Closed by the 2026-07-30 R10 deferral** — the wire is unidirectional, so no Tx host/port is needed. Recorded here because it is the concrete reason R10 could not have been demonstrated as specified. | No action. Re-open with R10: the V2X ECU would need `V2X_TX_HOST`/`V2X_TX_PORT` and the bench a listen port. |
 | **F5** | **Datagram encapsulation is undecided** — raw UPER CPM vs a BTP-B/GeoNetworking envelope. R1's acceptance demands the encoding be written into the profile document. | **Raw UPER `CollectivePerceptionMessage`, one PDU per datagram, no GN/BTP.** The GN/BTP stack ships in the modem and is out of scope for the whole project; adding an envelope adds a codec the ECU must strip for no acceptance gain. Write it into the R1 profile doc. |
 | **F6** | **Confidence scales do not match.** R2 uses floats 0–1; CPM uses `ConfidenceLevel` 1..101 and `CoordinateConfidence` 1..4096 (0,01 m). | Fix the conversion in the R1 profile: `r2.confidence = ConfidenceLevel / 100` (clamped, `101` → `null`); position confidence converts to metres, not to a 0–1 score — it is an accuracy, not a probability. |

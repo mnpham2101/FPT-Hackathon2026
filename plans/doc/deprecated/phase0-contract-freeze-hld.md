@@ -16,7 +16,7 @@
 | Note | Adopted |
 |---|---|
 | [baseline-connectivity-smoke-test.md](../../../plans/doc/research_notes/baseline-connectivity-smoke-test.md) | **Wholesale, as the Phase 0 smoke-test procedure**: objective, pass criteria C1–C5, `tools/netcheck/` implementation (4 files, contents included), manual steps M1–M12 + node config, troubleshooting, open items O1–O4. Its `tools/netcheck/` repo-root designation is user-endorsed (2026-07-30) — recorded here as an approved location. Nothing re-derived in this HLD. |
-| [scenario-player-v2x-callflow-messages.md](../../../documents/Design/SCENARIO-PLAYER/scenario-player-v2x-callflow-messages.md) | §4 CPM structure + R1→ASN.1 field mapping as the skeleton of the R1 profile document; findings F1–F2 and F5–F9 + the velocity-frame ambiguity resolved as profile conventions (§4 below). F3 (bench Python→codec path) stays open for the R11 HLD. |
+| [scenario-player-v2x-callflow-messages.md](../../../documents/Design/MODULE-DESIGN/SCENARIO-PLAYER/scenario-player-v2x-callflow-messages.md) | §4 CPM structure + R1→ASN.1 field mapping as the skeleton of the R1 profile document; findings F1–F2 and F5–F9 + the velocity-frame ambiguity resolved as profile conventions (§4 below). F3 (bench Python→codec path) stays open for the R11 HLD. |
 
 Notes are non-authoritative scratch; on any conflict the CLAUDE.md document-authority order wins.
 
@@ -53,7 +53,7 @@ Notes are non-authoritative scratch; on any conflict the CLAUDE.md document-auth
 
 ## 4. R1 profile conventions (adopted from the callflow note's findings)
 
-The R1 profile document `contracts/r1-cpm-profile.md` fixes these conventions — one line each here; full reasoning in the [note §6](../../../documents/Design/SCENARIO-PLAYER/scenario-player-v2x-callflow-messages.md):
+The R1 profile document `contracts/r1-cpm-profile.md` fixes these conventions — one line each here; full reasoning in the [note §6](../../../documents/Design/MODULE-DESIGN/SCENARIO-PLAYER/scenario-player-v2x-callflow-messages.md):
 
 | Finding | Convention frozen in the profile doc |
 |---|---|
@@ -174,7 +174,7 @@ public:
 // Sole implementation: VanetzaCpmCodec (vanetza::asn1::r2::Cpm only — F2). Consumers: gv_tool (Phase 0), R9 decode (Phase 1), R11 encode (path open, §11), R10 encode (deferred).
 ```
 
-`CpmContent` fields follow the [callflow note §4.2 mapping](../../../documents/Design/SCENARIO-PLAYER/scenario-player-v2x-callflow-messages.md) exactly — the profile doc is their normative home.
+`CpmContent` fields follow the [callflow note §4.2 mapping](../../../documents/Design/MODULE-DESIGN/SCENARIO-PLAYER/scenario-player-v2x-callflow-messages.md) exactly — the profile doc is their normative home.
 
 ## 8. Tech stack
 

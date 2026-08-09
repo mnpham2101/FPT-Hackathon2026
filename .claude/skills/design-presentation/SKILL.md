@@ -41,7 +41,7 @@ Ship test: could someone who has never opened the requirements report say what t
 
 ## Procedure
 
-1. **Scope the phase.** Resolve which node folders the phase touches via [ecu-implementation-scoping](../ecu-implementation-scoping/SKILL.md) if it is not already folder-scoped. Read each node's design folder under [documents/Design/](../../../documents/Design/) — the HLDs and design notes are the substance of the deck.
+1. **Scope the phase.** Resolve which node folders the phase touches via [ecu-implementation-scoping](../ecu-implementation-scoping/SKILL.md) if it is not already folder-scoped. Read each node's design folder under [documents/Design/MODULE-DESIGN/](../../../documents/Design/MODULE-DESIGN/) — the HLDs and design notes are the substance of the deck.
 2. **Source, do not recall.** Read the phase plan, the contracts under `contracts/`, and the requirements report sections the phase serves. Every number, port, path and licence on a slide is read at authoring time, not remembered.
 3. **Outline against the structure rule.** Fix the sections and their order first, and decide then — not later — which sections warrant a companion deck.
 4. **Draft the terminology section before any other slide.** It is the constraint every later slide is written against: a term that turns out to be undefined means the terminology section was wrong, not the slide that used it.

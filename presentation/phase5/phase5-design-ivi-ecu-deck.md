@@ -20,7 +20,7 @@ deck: Phase 5 — IVI ECU Design · FPT Hackathon 2026
 
 Companion to the demo deck [phase5-ivi-deck.html](phase5-ivi-deck.html) (problem, God View, evidence). This deck is the **design** report — same altitude as [phase1-design-v2x-ecu-deck.html](../phase1/phase1-design-v2x-ecu-deck.html).
 
-Source: [ivi-ecu-hld.md](../../documents/Design/IVI-ECU/ivi-ecu-hld.md) · [ivi-ecu-design-decisions.md](../../documents/Design/IVI-ECU/ivi-ecu-design-decisions.md)
+Source: [ivi-ecu-hld.md](../../documents/Design/MODULE-DESIGN/IVI-ECU/ivi-ecu-hld.md) · [ivi-ecu-design-decisions.md](../../documents/Design/MODULE-DESIGN/IVI-ECU/ivi-ecu-design-decisions.md)
 
 Learning notes for Lead’s `documents/` folder: [documents/](../../documents/)
 
@@ -75,7 +75,7 @@ Learning notes for Lead’s `documents/` folder: [documents/](../../documents/)
 - **Provenance guard** — ghost C renders only when snapshot `source` is `v2x_relayed` (R19).
 - **No tunable literals in Kotlin** — port, timeout, scale from `BuildConfig` / runtime config (D10).
 
-Decisions D1–D13: [ivi-ecu-design-decisions.md](../../documents/Design/IVI-ECU/ivi-ecu-design-decisions.md).
+Decisions D1–D13: [ivi-ecu-design-decisions.md](../../documents/Design/MODULE-DESIGN/IVI-ECU/ivi-ecu-design-decisions.md).
 
 ---
 
@@ -176,7 +176,7 @@ Learning walkthrough: [documents/KnowledgeBase/android-screen-lifecycle.md](../.
 3. `R4Deserializer` — warning or state, or skip malformed.
 4. Emit on `r4EventFlow` → repository routes warnings.
 
-Learning walkthrough: [documents/ivi-r4-observation-pipeline.md](../../documents/Design/IVI-ECU/ivi-r4-observation-pipeline.md).
+Learning walkthrough: [documents/ivi-r4-observation-pipeline.md](../../documents/Design/MODULE-DESIGN/IVI-ECU/ivi-r4-observation-pipeline.md).
 
 ---
 
@@ -247,4 +247,4 @@ None of the above gates the R19 claim when the continuous eth path + `v2x_relaye
 
 **Phase 5 — IVI ECU Design** · Milestone 1 · FPT Hackathon 2026
 
-Sources: [ivi-ecu-hld.md](../../documents/Design/IVI-ECU/ivi-ecu-hld.md) · [documents/](../../documents/)
+Sources: [ivi-ecu-hld.md](../../documents/Design/MODULE-DESIGN/IVI-ECU/ivi-ecu-hld.md) · [documents/](../../documents/)

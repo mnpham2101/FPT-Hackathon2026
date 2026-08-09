@@ -8,4 +8,4 @@ Superseded and point-in-time documents, kept for the record. **Nothing here is a
 | [ivi-ecu-pr2-review-v2.md](ivi-ecu-pr2-review-v2.md) | Review of PR 2, second pass |
 | [phase5-minh-implementation-audit.md](phase5-minh-implementation-audit.md) | Audit of the Phase 5 IVI implementation as it stood when written |
 
-Read anything here against its own date, not against the current code. The live design is [documents/Design/IVI-ECU/](../../../documents/Design/IVI-ECU/); the node's code is [IVI_ECU/](../../).
+Read anything here against its own date, not against the current code. The live design is [documents/Design/MODULE-DESIGN/IVI-ECU/](../../../documents/Design/MODULE-DESIGN/IVI-ECU/); the node's code is [IVI_ECU/](../../).

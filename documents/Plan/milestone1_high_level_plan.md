@@ -74,7 +74,7 @@ Gate constants are **externalized configuration, never literals**. R13 fixes the
 | `confirm_hits` (N) | proposed 3 | consecutive in-range updates before admission |
 | `miss_limit` (M) | proposed 5 | consecutive missed updates before expiry — **realized as wall-clock, see below** |
 
-**`miss_limit` change of form, awaiting the user's re-ratification.** The [Phase 2–4 ADA HLD, decision D3](../../documents/Design/ADA-ECU/ada-ecu-design-decisions.md#d3--r13-admission-one-state-machine-both-sources) implements M as a wall-clock `TRACK_TIMEOUT_MS` (default 1000 ms = 5 periods at the slower of the two sources), not as a count. Reason: "its messages stop" is a time condition that a counter cannot express — nothing arrives to increment it — and the two sources run at independently configured cadences, so one count M would mean two different real timeouts. Intent is unchanged; the form is. Flagged here rather than silently overridden ([phase2_tasks.md § Open items item 1](../../plans/phase2_tasks.md#open-items--flags-no-phase-2-subtask-may-silently-close-them)).
+**`miss_limit` change of form, awaiting the user's re-ratification.** The [Phase 2–4 ADA HLD, decision D3](../../documents/Design/MODULE-DESIGN/ADA-ECU/ada-ecu-design-decisions.md#d3--r13-admission-one-state-machine-both-sources) implements M as a wall-clock `TRACK_TIMEOUT_MS` (default 1000 ms = 5 periods at the slower of the two sources), not as a count. Reason: "its messages stop" is a time condition that a counter cannot express — nothing arrives to increment it — and the two sources run at independently configured cadences, so one count M would mean two different real timeouts. Intent is unchanged; the form is. Flagged here rather than silently overridden ([phase2_tasks.md § Open items item 1](../../plans/phase2_tasks.md#open-items--flags-no-phase-2-subtask-may-silently-close-them)).
 
 ![Track admission state machine with proximity gate and hysteresis](../Requirements/vehicleC_track_admission_state_machine.png)
 
@@ -128,7 +128,7 @@ The baseline blueprint deployed as `trial2_minh_netcheck` with all nodes `Runnin
 
 **Objective.** Stand up the ADA skeleton, the R3 track store, and the R13 admission state machine on **mock input**, so the pipeline works before any ML.
 
-**Tasks.** Decomposed in [phase2_tasks.md](../../plans/phase2_tasks.md); design of record is [ada-ecu-hld.md](../../documents/Design/ADA-ECU/ada-ecu-hld.md), which realizes [ada-ecu.svg](../Requirements/ada-ecu.svg).
+**Tasks.** Decomposed in [phase2_tasks.md](../../plans/phase2_tasks.md); design of record is [ada-ecu-hld.md](../../documents/Design/MODULE-DESIGN/ADA-ECU/ada-ecu-hld.md), which realizes [ada-ecu.svg](../Requirements/ada-ecu.svg).
 
 - ADA C++17 module skeleton inside [ADA_ECU/](../../ADA_ECU/); CRA interface + registry + database schema defined (consumed by R14 in Phase 4).
 - R3-shaped store; R13 state machine driven by mock R2 messages and mock own-sensor entries — the mocks are external stimulus (a JSONL fixture through the real detector-reader, real datagrams from `tools/mock_v2x_sender.py`), never a branch inside `src/`.
@@ -224,7 +224,7 @@ The single source is the report's § Future developments, mirrored in the [futur
 
 **Ego video clip display on the IVI — re-confirmed deferred, 2026-08-02.** [m1-video-source-and-ivi-dashcam.md §4/§6](../../requirements/deprecated/m1-video-source-and-ivi-dashcam.md) contains a worked design for it (option B4: ADA serves its own clip over HTTP, the IVI plays it with Media3), and §8 flags that adopting it needs the user's word. **The user's word was no.** The design stays on the shelf, and **no Phase 3, 4, 5 or 6 subtask may implement any part of it** — HTTP clip serving from the ADA node (a `http.server` line in the entrypoint, `CLIP_HTTP_ENABLED` / `CLIP_HTTP_PORT`), an `exposedPorts` entry and its gateway route, Media3/ExoPlayer and a `DASHCAM_MEDIA_URI`, a dashcam `DisplayMode`, a raw-resource clip copy in the APK and its size cost (fallback B5), or any `video` pin (an R5/R6 re-freeze). §6 is where each has its concrete shape; reading it is not permission to build it.
 
-**Real-time detector pacing is not on that list.** R20 makes it a requirement on its own footing — [ada-ecu-design-decisions.md D10](../../documents/Design/ADA-ECU/ada-ecu-design-decisions.md#d10--clock-domains-and-stimulus-paced-against-clock_monotonic) — and R22 cannot place any demo instant without it, so [phase3_tasks.md `12.3.2.8`](../../plans/phase3_tasks.md) builds the pacer. What the deferral forbids is the dashcam surface itself, listed above.
+**Real-time detector pacing is not on that list.** R20 makes it a requirement on its own footing — [ada-ecu-design-decisions.md D10](../../documents/Design/MODULE-DESIGN/ADA-ECU/ada-ecu-design-decisions.md#d10--clock-domains-and-stimulus-paced-against-clock_monotonic) — and R22 cannot place any demo instant without it, so [phase3_tasks.md `12.3.2.8`](../../plans/phase3_tasks.md) builds the pacer. What the deferral forbids is the dashcam surface itself, listed above.
 
 ## 7. Definition of Done
 

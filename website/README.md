@@ -40,7 +40,7 @@ The document pages in `pages/` are generated. Rebuild them after any change to t
 pip install -r website/requirements.txt   # once
 python website/build-pages.py             # from the repo root
 python website/build-pages.py --clean     # drop stale pages first
-python website/build-pages.py documents/Design/README.md   # just one
+python website/build-pages.py documents/Design/MODULE-DESIGN/README.md   # just one
 ```
 
 ## Interaction model
@@ -93,17 +93,19 @@ A leaf node with a folder of its own opens that folder's document:
 | Requirements | `documents/Requirements/README.md` | `pages/documents-requirements-readme.html` |
 | Plans | `documents/Plan/milestone1_high_level_plan.md` | `pages/documents-plan-milestone1-high-level-plan.html` |
 | Proposals | `documents/Proposals/README.md` | `pages/documents-proposals-readme.html` |
-| Module Design | `documents/Design/README.md` | `pages/documents-design-readme.html` |
+| System Design | `documents/Design/SYSTEM-DESIGN/system-design.md` | `pages/documents-design-system-design-system-design.html` |
+| Module Design | `documents/Design/MODULE-DESIGN/README.md` | `pages/documents-design-module-design-readme.html` |
+| Test Guide | `documents/Delivery/Test-Guides/README.md` | `pages/documents-delivery-test-guides-readme.html` |
 
 The same pairs are `ENTRIES` in `build-pages.py` and the `href`/`source` pair on the node in `js/site-data.js`; change one and you must change the other. The `href` filename is `page_name(source)` — derived, never chosen by hand.
 
-A node with no folder of its own — System Design, Acceptance Evidence, Test Guide — still gets a page: a mount point `js/page.js` fills from the site graph at load time. Those are generated from `js/site-data.js` too, which is what makes `pages/` derived in full and safe to gitignore. Adding a node to the graph is enough; no file is written by hand.
+A node with no folder of its own — Acceptance Evidence — still gets a page: a mount point `js/page.js` fills from the site graph at load time. Those are generated from `js/site-data.js` too, which is what makes `pages/` derived in full and safe to gitignore. Adding a node to the graph is enough; no file is written by hand.
 
 `--clean` deletes every page carrying this tool's `<meta name="generator">` mark, which is now all of them, so a page whose source document was deleted goes with it.
 
 ### Everything lands flat in `pages/`
 
-A flat folder makes every link between two generated pages a plain same-level `href`, with no relative depth to compute and nothing to break when a document moves inside the repo. Flat also needs unique names, so **a page is named for its whole repo path**, not its basename: `documents/Design/README.md` → `documents-design-readme.html`. There are five `README.md` files in this repo and they cannot all be `README.html`. The name is a pure function of the path, so a rebuild never renumbers anything.
+A flat folder makes every link between two generated pages a plain same-level `href`, with no relative depth to compute and nothing to break when a document moves inside the repo. Flat also needs unique names, so **a page is named for its whole repo path**, not its basename: `documents/Design/MODULE-DESIGN/README.md` → `documents-design-module-design-readme.html`. There are five `README.md` files in this repo and they cannot all be `README.html`. The name is a pure function of the path, so a rebuild never renumbers anything.
 
 ### The traversal, and where it stops
 
