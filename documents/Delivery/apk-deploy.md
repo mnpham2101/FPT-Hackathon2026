@@ -11,6 +11,8 @@ How to build the team APK, install it on the CarSky Skycraft (AAOS) node, and co
 
 Working directory for the Gradle commands in Step 1 Route B: **`IVI_ECU/`**. Every PowerShell block in Steps 2–4 runs from the **repo root**.
 
+**On Windows, run the `.cmd` wrapper, not the `.ps1` beside it.** A fresh Windows blocks `.ps1` files from running, so `.\install-ivi-apk.ps1` fails with *"running scripts is disabled on this system"*. `INSTALL-IVI-APK.cmd` carries `-ExecutionPolicy Bypass` for its own invocation and changes no machine-wide setting. To run the `.ps1` directly anyway, prefix it: `powershell -ExecutionPolicy Bypass -File .\tools\apk-uploader\install-ivi-apk.ps1`. On Linux, macOS and Git Bash run `install-ivi-apk.sh`. The same holds for the tools in [testing-guide.md](testing-guide.md).
+
 ## The automation tool
 
 **The tool does most of Steps 3 and 4**

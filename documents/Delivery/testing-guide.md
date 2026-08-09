@@ -10,9 +10,11 @@ How to drive R4 warnings at the installed app and collect the evidence that clos
 
 Every PowerShell block below runs from the **repo root**.
 
+**On Windows, run the `.cmd` wrapper, not the `.ps1` beside it.** A fresh Windows blocks `.ps1` files from running, so `.\Collect-Logs.ps1` fails with *"running scripts is disabled on this system"*. Each wrapper — `INSTALL-IVI-APK.cmd`, `COLLECT-LOGS.cmd`, `EXTRACT-PCAP.cmd` — carries `-ExecutionPolicy Bypass` for its own invocation and changes no machine-wide setting. To run a `.ps1` directly anyway, prefix it: `powershell -ExecutionPolicy Bypass -File .\tools\logs-collector\Collect-Logs.ps1`. On Linux, macOS and Git Bash run the `.sh` of the same name.
+
 ## The automation tool
 
-Two tools cover most of Step 3. [INSTALL-IVI-APK.cmd](../../tools/apk-uploader/INSTALL-IVI-APK.cmd) samples the evidence logcat as the tail of its install run, and `-SkipInstall` re-samples it without touching the Room. [Collect-Logs.ps1](../../tools/logs-collector/Collect-Logs.ps1) collects the whole set in one pass — every container node's log over REST, the guest-side logs over ADB, and a plain-text `summary.txt` of the checks below — resolving the node keys itself instead of asking you to paste them. Which rows stay manual, and why: [apk-deploy.md § The automation tool](apk-deploy.md#the-automation-tool). The steps below stay authoritative — read them when a tool fails, and to run any row by hand.
+Two tools cover most of Step 3. [INSTALL-IVI-APK.cmd](../../tools/apk-uploader/INSTALL-IVI-APK.cmd) samples the evidence logcat as the tail of its install run, and `-SkipInstall` re-samples it without touching the Room. [COLLECT-LOGS.cmd](../../tools/logs-collector/COLLECT-LOGS.cmd) collects the whole set in one pass — every container node's log over REST, the guest-side logs over ADB, and a plain-text `summary.txt` of the checks below — resolving the node keys itself instead of asking you to paste them. Which rows stay manual, and why: [apk-deploy.md § The automation tool](apk-deploy.md#the-automation-tool). The steps below stay authoritative — read them when a tool fails, and to run any row by hand.
 
 ### Every tool that pulls a log or a pcap
 
@@ -21,9 +23,9 @@ The **Images** column is what each tool has anything to say about — a tool abs
 | Tool name | Purpose | Export log location | Images |
 |---|---|---|---|
 | [INSTALL-IVI-APK.cmd](../../tools/apk-uploader/INSTALL-IVI-APK.cmd) (`install-ivi-apk.ps1` / `.sh`) | Installs the APK, then dumps the app's tagged logcat as the tail of its own run | `tools/apk-uploader/logs/` | `app-debug.apk` |
-| [Collect-Logs.ps1](../../tools/logs-collector/Collect-Logs.ps1) (`collect-logs.sh`) | One pass over a whole Room: every node's log over REST whatever the node is, and — where the Room has a Skycraft VM — the guest's logcat, crash buffer, sockets and interfaces over ADB | `test-report/<run>/`, one file per node | any deployed blueprint: `app-debug.apk`, `m1-r4-sim`, `m1-ada-ecu`, `m1-v2x-ecu`, `m1-scenario-player`, `m1-ada-bench`, `m1-netcheck` |
+| [COLLECT-LOGS.cmd](../../tools/logs-collector/COLLECT-LOGS.cmd) (`Collect-Logs.ps1` / `collect-logs.sh`) | One pass over a whole Room: every node's log over REST whatever the node is, and — where the Room has a Skycraft VM — the guest's logcat, crash buffer, sockets and interfaces over ADB | `test-report/<run>/`, one file per node | any deployed blueprint: `app-debug.apk`, `m1-r4-sim`, `m1-ada-ecu`, `m1-v2x-ecu`, `m1-scenario-player`, `m1-ada-bench`, `m1-netcheck` |
 | `capture.sh` — inside the image, not run by hand | Runs tcpdump in the container: `[CAP]` lines for the live "traffic is flowing" check, and a rotating pcap emitted to stdout as base64 between `[PCAP-BEGIN]` / `[PCAP-END]` | The node's own **View Log**, `user` stream — the log is a container's only egress | pcap **and** `[CAP]`: `m1-v2x-ecu`, `m1-ada-ecu` · `[CAP]` only: `m1-ada-bench`, `m1-netcheck` |
-| [Extract-Pcap.ps1](../../tools/pcap-extract/Extract-Pcap.ps1) (`extract_pcap.sh`) | Turns the base64 blocks inside a saved node log into `.pcap` files Wireshark can open | Beside the input log, or `-OutDir` | `m1-v2x-ecu`, `m1-ada-ecu` |
+| [EXTRACT-PCAP.cmd](../../tools/pcap-extract/EXTRACT-PCAP.cmd) (`Extract-Pcap.ps1` / `extract_pcap.sh`) | Turns the base64 blocks inside a saved node log into `.pcap` files Wireshark can open | Beside the input log, or `-OutDir` | `m1-v2x-ecu`, `m1-ada-ecu` |
 | `adb logcat` — by hand, over the tunnel | The only place the IVI app's `[RX]` lines exist; the IVI node's REST log is the Skycraft VM host, not the app | Wherever you redirect it (§ Step 3) | `app-debug.apk` |
 | [check_v2x_log.py](../../tools/comms_check/check_v2x_log.py) | Asserts the receive chain on a saved `[EVT]` stream — `rx_datagram` → `decode_ok` → `r2_forwarded` — and exits non-zero naming the first missing link | Reads a log, writes none; the exit status is the result | `m1-v2x-ecu` |
 
@@ -31,7 +33,7 @@ Three consequences worth reading off that table before planning a run.
 
 - **Only `m1-v2x-ecu` and `m1-ada-ecu` carry a pcap.** The other images print `[CAP]` lines or nothing at all, so a path built from them has no block to extract and Wireshark evidence is simply unavailable on it.
 - **`m1-r4-sim` has no CI lane.** Unlike the five images above it, nothing in `.github/workflows/` builds or pushes it, so it has to be built and pushed by hand before an isolated IVI run can pull it.
-- **`Collect-Logs.ps1` reads the Room, not a script constant.** `-Test 1`–`5` are shortcuts for the blueprints below; `-Blueprint <name>` collects any other. Either way the node list decides what is collected, so a blueprint the script has never heard of works as long as it is deployed.
+- **The collector reads the Room, not a script constant.** `-Test 1`–`5` are shortcuts for the blueprints below; `-Blueprint <name>` collects any other. Either way the node list decides what is collected, so a blueprint the script has never heard of works as long as it is deployed.
 
 ### What an isolated test looks like
 
@@ -54,8 +56,8 @@ One blueprint per node under test, plus the full chain. Each isolated blueprint 
 The last column is a shortcut number, not a limit. **Any deployed blueprint can be collected by name**, whether or not it appears in this table:
 
 ```powershell
-.\tools\logs-collector\Collect-Logs.ps1 -Blueprint phase4_smoked_test   # same as -Test 3
-.\tools\logs-collector\Collect-Logs.ps1 -Blueprint <any_deployed_name>  # no shortcut needed
+.\tools\logs-collector\COLLECT-LOGS.cmd -Blueprint phase4_smoked_test   # same as -Test 3
+.\tools\logs-collector\COLLECT-LOGS.cmd -Blueprint <any_deployed_name>  # no shortcut needed
 ```
 
 The collector reads the Room's node list and collects every node in it, so what it can reach is decided by what is deployed rather than by anything written into the script. Where the Room has no Skycraft VM — every row below except phases 5 and the system test — the guest-side files are not attempted and their evidence rows read `[-]`, absent rather than failed.
@@ -290,7 +292,7 @@ This is **system-test evidence**. The isolated path's `m1-r4-sim` stand-in does 
 **Step 1 — extract the captures.** One `.pcap` per block, written beside the input log:
 
 ```powershell
-.\tools\pcap-extract\Extract-Pcap.ps1 tools\apk-uploader\test-report\system\node-v2x.txt
+.\tools\pcap-extract\EXTRACT-PCAP.cmd tools\apk-uploader\test-report\system\node-v2x.txt
 ```
 
 `-OutDir <dir>` writes elsewhere. Exit status: `0` every block extracted, `1` no block in the log at all — which usually means the node is missing `NET_RAW` — `2` a usage error, `3` a block failed and the reason was printed. Truncated blocks are reported rather than written, so a half file never masquerades as a complete capture. [extract_pcap.sh](../../V2X_ECU/tools/extract_pcap.sh) is the same tool for Git Bash.
