@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>M1 System Delivery — Acceptance Evidence</title>
+<meta name="description" content="Delivery deck — the Milestone 1 system blueprint, the resources and libraries it stands on, and the four evidence items proving the cooperative-awareness chain end to end">
+<style>
+  :root {
+    --fpt-orange: #F37021;
+    --fpt-green: #50B848;
+    --fpt-blue: #034EA2;
+    --fpt-teal: #33B2C1;
+    --fpt-navy: #19226D;
+    --navy-deep: #0E1540;
+    --ink: #080808;
+    --ink-soft: #3d3d46;
+    --paper: #f4f4f6;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; background: #14183a; font-family: "Segoe UI", "Segoe UI Variable", "Helvetica Neue", Arial, sans-serif; }
+
+  .deck { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+
+  .slide {
+    width: 1280px; height: 720px;
+    position: absolute;
+    display: none;
+    flex-direction: column;
+    transform-origin: center center;
+    background: var(--paper);
+    color: var(--ink);
+    box-shadow: 0 18px 60px rgba(0,0,0,.45);
+    overflow: hidden;
+  }
+  .slide.active { display: flex; }
+
+  /* ---------- backgrounds ---------- */
+  .bg-light { background: linear-gradient(135deg, #f6f6f8 0%, #ececef 55%, #e0e1e6 100%); }
+  .bg-light::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720"><g fill="none" stroke-width="2"><g transform="skewX(-16)"><rect x="240" y="60" width="380" height="460" rx="70" stroke="rgba(255,255,255,0.85)"/><rect x="1010" y="210" width="400" height="470" rx="75" stroke="rgba(25,34,109,0.05)"/><rect x="520" y="400" width="330" height="380" rx="60" stroke="rgba(25,34,109,0.06)"/></g><line x1="880" y1="-40" x2="640" y2="780" stroke="rgba(255,255,255,0.9)"/><line x1="1180" y1="-40" x2="940" y2="780" stroke="rgba(25,34,109,0.05)"/></g></svg>');
+    background-size: cover;
+  }
+  .bg-navy { background: linear-gradient(135deg, #10173f 0%, #151d55 45%, var(--fpt-navy) 100%); color: #fff; }
+  .bg-navy::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720"><g fill="none" stroke-width="2"><g transform="skewX(-16)"><rect x="240" y="60" width="380" height="460" rx="70" stroke="rgba(120,180,255,0.20)"/><rect x="1010" y="210" width="400" height="470" rx="75" stroke="rgba(255,255,255,0.10)"/><rect x="520" y="400" width="330" height="380" rx="60" stroke="rgba(120,180,255,0.10)"/></g><line x1="880" y1="-40" x2="640" y2="780" stroke="rgba(120,180,255,0.30)"/><line x1="1180" y1="-40" x2="940" y2="780" stroke="rgba(120,180,255,0.16)"/></g></svg>');
+    background-size: cover;
+  }
+
+  /* cover / divider / thanks carry their photo as an inline background-image */
+  .cover-photo { background-size: cover; background-position: center; color: #fff; }
+  .divider { background-size: cover; background-position: center; color: #fff; justify-content: center; padding: 0 110px; }
+  .divider .sec-num { font-size: 120px; font-weight: 700; color: var(--fpt-orange); line-height: 1; opacity: .95; }
+  .divider h1 { font-size: 56px; font-weight: 700; color: #fff; margin-top: 10px; }
+  .divider .rule { width: 110px; height: 6px; background: var(--fpt-orange); border-radius: 3px; margin-top: 26px; }
+  .thanks { background-size: cover; background-position: center 20%; color: #fff; justify-content: center; align-items: center; text-align: center; }
+  .thanks h1 { font-size: 84px; font-weight: 700; }
+  .thanks .rule { width: 130px; height: 6px; background: var(--fpt-orange); border-radius: 3px; margin: 30px auto; }
+  .thanks p { font-size: 22px; color: #cdd6f7; }
+
+  /* ---------- title / closing text ---------- */
+  .cover { justify-content: center; padding: 0 110px; }
+  .cover .eyebrow { font-size: 20px; letter-spacing: .35em; text-transform: uppercase; color: var(--fpt-orange); font-weight: 600; margin-bottom: 26px; }
+  .cover h1 { font-size: 66px; line-height: 1.08; font-weight: 700; color: #fff; max-width: 900px; }
+  .cover .rule { width: 130px; height: 6px; background: var(--fpt-orange); border-radius: 3px; margin: 30px 0; }
+  .cover .tagline { font-size: 30px; font-weight: 300; color: #dfe6ff; margin-bottom: 14px; }
+  .cover .meta { font-size: 18px; color: #b9c2ea; }
+  .cover .meta a { color: #b9c2ea; }
+  .cover .accents, .divider .accents, .thanks .accents { position: absolute; bottom: 0; left: 0; right: 0; height: 8px; display: flex; }
+  .accents span { flex: 1; }
+
+  /* ---------- content slide chrome ---------- */
+  .content { padding: 44px 64px 58px; position: relative; }
+  .content > * { position: relative; }
+  .slide-head { display: flex; align-items: baseline; gap: 18px; border-bottom: 3px solid transparent; padding-bottom: 12px; margin-bottom: 18px;
+    border-image: linear-gradient(90deg, var(--fpt-orange) 0 90px, rgba(25,34,109,.15) 90px 100%) 1; }
+  .slide-head .num { font-size: 40px; font-weight: 700; color: var(--fpt-orange); line-height: 1; }
+  .slide-head h2 { font-size: 31px; font-weight: 700; color: var(--fpt-navy); line-height: 1.15; }
+  .lead { font-size: 19px; color: var(--ink-soft); margin-bottom: 16px; }
+  .lead:last-of-type { margin-bottom: 0; }
+  .lead strong, .lead b { color: var(--ink); }
+  .content a { color: var(--fpt-blue); }
+
+  .footer { position: absolute; left: 64px; right: 64px; bottom: 18px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #8a8d99; }
+  .footer .page { background: var(--fpt-navy); color: #fff; border-radius: 4px; padding: 2px 10px; font-weight: 600; }
+
+  ul.points { list-style: none; display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
+  ul.points:last-child { margin-bottom: 0; }
+  ul.points li { font-size: 18.5px; line-height: 1.42; color: var(--ink-soft); padding-left: 26px; position: relative; }
+  ul.points li::before { content: ""; position: absolute; left: 0; top: 9px; width: 12px; height: 12px; background: var(--fpt-orange); border-radius: 3px; transform: skewX(-12deg); }
+  ul.points li strong { color: var(--fpt-navy); }
+  ul.points li code, .content code { font-family: "Consolas", "Courier New", monospace; font-size: .92em; background: rgba(25,34,109,.07); border-radius: 4px; padding: 1px 6px; }
+
+  .imgbox { display: flex; flex-direction: column; align-items: center; gap: 8px; margin: 6px 0 14px; }
+  .imgbox img { border-radius: 10px; box-shadow: 0 6px 22px rgba(15,20,60,.16); background: #fff; max-width: 100%; }
+  .imgbox .cap { font-size: 13.5px; color: #8a8d99; font-style: italic; }
+  .imgbox img.flat { box-shadow: none; background: transparent; }
+
+  .cols { display: flex; gap: 34px; align-items: center; }
+
+  /* TOC */
+  .toc { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 26px; margin-top: 8px; }
+  .toc .item { display: flex; gap: 18px; align-items: baseline; background: #fff; border-radius: 10px; padding: 18px 22px; box-shadow: 0 5px 18px rgba(15,20,60,.10); border-left: 6px solid var(--fpt-orange); height: 100%; }
+  .toc .item:nth-child(2) { border-left-color: var(--fpt-green); }
+  .toc .item:nth-child(3) { border-left-color: var(--fpt-blue); }
+  .toc .item:nth-child(4) { border-left-color: var(--fpt-teal); }
+  .toc .item:nth-child(5) { border-left-color: var(--fpt-navy); }
+  .toc .item:nth-child(6) { border-left-color: var(--fpt-orange); }
+  .toc .n { font-size: 34px; font-weight: 700; color: var(--fpt-orange); min-width: 52px; }
+  .toc .item:nth-child(2) .n { color: var(--fpt-green); }
+  .toc .item:nth-child(3) .n { color: var(--fpt-blue); }
+  .toc .item:nth-child(4) .n { color: var(--fpt-teal); }
+  .toc .item:nth-child(5) .n { color: var(--fpt-navy); }
+  .toc h3 { font-size: 21px; color: var(--fpt-navy); margin-bottom: 4px; }
+  .toc p { font-size: 15px; color: var(--ink-soft); line-height: 1.35; }
+
+  /* cards */
+  .cards3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin: 6px 0 18px; }
+  .card { background: #fff; border-radius: 10px; padding: 16px 18px 14px; box-shadow: 0 5px 18px rgba(15,20,60,.10); border-top: 5px solid var(--fpt-orange); }
+  .card.g { border-top-color: var(--fpt-green); }
+  .card.b { border-top-color: var(--fpt-blue); }
+  .card h3 { font-size: 19px; color: var(--fpt-navy); margin-bottom: 6px; }
+  .card p { font-size: 15.5px; line-height: 1.4; color: var(--ink-soft); }
+
+  /* tables */
+  table.fpt { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 5px 18px rgba(15,20,60,.10); margin-bottom: 14px; }
+  table.fpt th { background: var(--fpt-navy); color: #fff; text-align: left; font-size: 16px; padding: 9px 16px; }
+  table.fpt td { font-size: 15.5px; line-height: 1.35; padding: 8.5px 16px; border-bottom: 1px solid #e7e8ee; color: var(--ink-soft); vertical-align: top; }
+  table.fpt tr:last-child td { border-bottom: none; }
+  table.fpt td strong { color: var(--fpt-navy); white-space: nowrap; }
+  .tag { display: inline-block; padding: 1px 9px; border-radius: 4px; color: #fff; font-size: 14px; font-weight: 600; }
+  .tag.o { background: var(--fpt-orange); } .tag.b { background: var(--fpt-blue); } .tag.t { background: var(--fpt-teal); } .tag.g { background: var(--fpt-green); } .tag.n { background: var(--fpt-navy); }
+
+  /* seam cards */
+  .seams { display: flex; flex-direction: column; gap: 13px; margin-bottom: 16px; }
+  .seam { background: #fff; border-radius: 8px; border-left: 6px solid var(--fpt-orange); box-shadow: 0 4px 14px rgba(15,20,60,.09); padding: 12px 18px; display: flex; gap: 16px; align-items: baseline; }
+  .seam.b { border-left-color: var(--fpt-blue); } .seam.t { border-left-color: var(--fpt-teal); }
+  .seam .who { font-weight: 700; color: var(--fpt-navy); font-size: 17.5px; white-space: nowrap; min-width: 200px; }
+  .seam p { font-size: 16px; line-height: 1.4; color: var(--ink-soft); }
+  .strip { background: linear-gradient(90deg, var(--fpt-navy), #2a35a0); color: #dfe6ff; border-radius: 8px; padding: 12px 20px; font-size: 15.5px; line-height: 1.45; margin-bottom: 14px; }
+  .strip strong { color: #fff; }
+  .strip:last-child { margin-bottom: 0; }
+
+  /* chain visual */
+  .chain { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 10px 0 22px; flex-wrap: nowrap; }
+  .chain .link { background: var(--fpt-navy); color: #fff; font-size: 16.5px; font-weight: 600; padding: 9px 20px; border-radius: 7px; transform: skewX(-10deg); box-shadow: 0 4px 12px rgba(15,20,60,.18); }
+  .chain .link > span { display: inline-block; transform: skewX(10deg); }
+  .chain .link.hot { background: var(--fpt-orange); }
+  .chain .arr { color: var(--fpt-orange); font-size: 22px; font-weight: 700; }
+  .chain .link small { display: block; font-size: 12px; font-weight: 400; opacity: .8; transform: skewX(10deg); }
+  /* flat modifier: upright rectangles instead of skewed links, for a dense data-path strip */
+  .chain.flat { gap: 7px; margin: 0 0 6px; }
+  .chain.flat .link { transform: none; font-size: 14.5px; padding: 5px 12px; text-align: center; line-height: 1.25; }
+  .chain.flat .link > span, .chain.flat .link small { transform: none; }
+  .chain.flat .link small { font-size: 11px; opacity: .85; }
+  .chain.flat .arr { font-size: 17px; }
+
+  .badges { display: flex; gap: 10px; justify-content: center; margin: 0 0 20px; flex-wrap: wrap; }
+  .badge { border: 2px solid var(--fpt-orange); color: #b34e0e; background: rgba(243,112,33,.07); font-size: 14.5px; font-weight: 600; padding: 5px 14px; border-radius: 999px; }
+  .badge.g { border-color: var(--fpt-green); color: #2c7a25; background: rgba(80,184,72,.09); }
+
+  /* terminal / log evidence */
+  pre.log { background: var(--navy-deep); color: #cfd6f5; font-family: "Consolas", "Courier New", monospace; font-size: 13.5px; line-height: 1.5; border-radius: 8px; padding: 14px 18px; overflow: hidden; margin-bottom: 14px; }
+  pre.log .ok { color: #7ee787; }
+  pre.log .dim { color: #7f88ad; }
+
+  /* ---------- controls ---------- */
+  .hint { position: fixed; left: 18px; bottom: 12px; color: rgba(255,255,255,.45); font-size: 12.5px; z-index: 50; }
+  .hud { position: fixed; right: 18px; bottom: 14px; z-index: 50; display: flex; gap: 8px; align-items: center; font-family: inherit; }
+  .hud button { background: rgba(255,255,255,.12); color: #fff; border: 1px solid rgba(255,255,255,.25); border-radius: 6px; padding: 5px 12px; font-size: 15px; cursor: pointer; }
+  .hud button:hover { background: var(--fpt-orange); border-color: var(--fpt-orange); }
+  .hud .ctr { color: rgba(255,255,255,.75); font-size: 14px; min-width: 60px; text-align: center; }
+  .progress { position: fixed; left: 0; bottom: 0; height: 4px; background: var(--fpt-orange); width: 0; z-index: 60; transition: width .25s ease; }
+
+  @media print {
+    html, body { background: #fff; height: auto; }
+    .deck { position: static; display: block; }
+    .slide { display: flex !important; position: relative; transform: none !important; box-shadow: none; page-break-after: always; margin: 0 auto; }
+    .hud, .progress, .hint { display: none !important; }
+    @page { size: 13.55in 7.65in; margin: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="deck">
+  <section class="slide cover-photo cover active" style="background-image: linear-gradient(90deg, rgba(8,12,38,.92) 0%, rgba(8,12,38,.72) 40%, rgba(8,12,38,.18) 100%), url('../assets/bg-title-city.jpg')">
+    <div class="eyebrow">Milestone 1 · Team KIS — FPT Hackathon 2026</div>
+    <h1>M1 System Delivery</h1>
+    <div class="rule"></div>
+    <div class="tagline">Acceptance evidence for the Cooperative Awareness System</div>
+    <div class="meta">Lead: Pham Ngoc Minh · 2026-08-10 · Full report: <a href="../../documents/Delivery/Acceptance/system-delivery.md">system-delivery.md</a></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">§</div><h2>Table of contents</h2></div>
+    <div class="toc">
+      <div class="item"><div class="n">01</div><div><h3>Introduction</h3><p>the mission, the team, and how the evidence folder reads</p></div></div>
+      <div class="item"><div class="n">02</div><div><h3>Design</h3><p>the deployed blueprint, the nodes, and the data flow</p></div></div>
+      <div class="item"><div class="n">03</div><div><h3>Resources</h3><p>platform baseline and third-party libraries</p></div></div>
+      <div class="item"><div class="n">04</div><div><h3>System test evidence</h3><p>evidence types, tools, and the four evidence items</p></div></div>
+    </div>
+    <div class="footer"><span>M1 System Delivery · Team KIS · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">01</div>
+    <h1>Introduction</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">01</div><h2>Mission and Milestone 1 scope</h2></div>
+    <ul class="points">
+      <li><strong>Vehicle A</strong> cannot see <strong>vehicle C</strong> — its line of sight is blocked by <strong>vehicle B</strong>, directly in front, in the same lane.</li>
+      <li><strong>B's perception of C</strong> reaches A over a <strong>V2X relay</strong>; A renders ghost C from the relayed data alone.</li>
+      <li>Milestone 1 builds <strong>only vehicle A</strong>, entirely on the CarSky cloud platform; B and C are simulated by the bench.</li>
+      <li>Definition of done: one continuous run, <strong>zero direct C detections on A</strong>, ghost C rendered from <code>v2x_relayed</code> only.</li>
+    </ul>
+    <div class="footer"><span>M1 System Delivery · Team KIS · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">01</div><h2>Team and report identity</h2></div>
+    <table class="fpt">
+      <thead><tr><th>Field</th><th>Value</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Team ID</strong></td><td>KIS</td></tr>
+        <tr><td><strong>Lead</strong></td><td>Pham Ngoc Minh — mnpham1986@gmail.com</td></tr>
+        <tr><td><strong>Solution name</strong></td><td>Cooperative Awareness System</td></tr>
+        <tr><td><strong>Reported version</strong></td><td>Milestone 1</td></tr>
+        <tr><td><strong>Evidence folder</strong></td><td><code>documents/Delivery/Acceptance/</code></td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><strong>System evidence is reported in the delivery page</strong> — <a href="../../documents/Delivery/Acceptance/system-delivery.md">system-delivery.md</a>, this deck's full version.</li>
+      <li><strong>Reproduction guides</strong> — <a href="../../documents/Delivery/Test-Guides/README.md">Test-Guides</a>: APK deploy, test runs, log and pcap collection.</li>
+    </ul>
+    <div class="footer"><span>M1 System Delivery · Team KIS · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">02</div>
+    <h1>Design</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">02</div><h2>The deployed blueprint</h2></div>
+    <p class="lead">A complete five-node blueprint — three ECUs, the Scenario Player bench, and the Ethernet bridge. The bench generates V2X messages as if received from another vehicle in the same lane, directly in front.</p>
+    <div class="imgbox"><img src="../assets/m1-system-blueprint.png" style="height:340px" alt="The m1_system_test deployment Running 5/5 on the CarSky canvas"><div class="cap">The m1_system_test deployment Running 5/5 on the CarSky canvas</div></div>
+    <div class="footer"><span>M1 System Delivery · Team KIS · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">02</div><h2>Node responsibilities</h2></div>
+    <table class="fpt">
+      <thead><tr><th>Node</th><th>Responsibility</th><th>Input → Output</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Bench — Scenario Player</strong></td><td>Plays the scenario describing vehicle C</td><td>scenario file → mocked CPM messages (<code>:47100</code>)</td></tr>
+        <tr><td><strong>V2X-ECU</strong></td><td>Decodes, validates, dedupes, forwards</td><td>CPM messages → decoded CPM information (<code>:47200</code>)</td></tr>
+        <tr><td><strong>ADA-ECU</strong></td><td>Fuses relay + own-sensor B, assesses risk</td><td>decoded CPM + looped saved video → warning (<code>:47300</code>)</td></tr>
+        <tr><td><strong>IVI-ECU</strong></td><td>Renders the driver warning</td><td>warning from ADA → warning screen</td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li>Design authorities: <a href="../../documents/Design/SYSTEM-DESIGN/system-design.md">System Design</a> · <a href="../../documents/Design/MODULE-DESIGN/README.md">Module Design</a> per node.</li>
+    </ul>
+    <div class="footer"><span>M1 System Delivery · Team KIS · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">02</div><h2>Data flow and mocked inputs</h2></div>
+    <div class="imgbox"><img src="../assets/m1-system-dataflow.svg" style="height:300px" alt="Data flow: amber mocked CPM and video-loop arrows, navy real message arrows"><div class="cap">Data flow: amber mocked CPM and video-loop arrows, navy real message arrows</div></div>
+    <ul class="points">
+      <li><strong>Amber, dashed — mocked</strong>: no vehicle sends the CPM messages; no live camera exists — the ADA-ECU loops a saved 10 s video stored in its own image.</li>
+      <li><strong>Navy, solid — real messages under test</strong>: V2X-ECU → ADA-ECU and ADA-ECU → IVI-ECU.</li>
+    </ul>
+    <div class="footer"><span>M1 System Delivery · Team KIS · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">03</div>
+    <h1>Resources</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">03</div><h2>Baseline resources</h2></div>
+    <table class="fpt">
+      <thead><tr><th>Resource</th><th>What it is</th></tr></thead>
+      <tbody>
+        <tr><td><strong>KIS device</strong></td><td>The team's entry in the Devices panel; hosts the deployment-bound widgets</td></tr>
+        <tr><td><strong>IVI Screen widget</strong></td><td>Live AAOS framebuffer — the warning-screen evidence surface, with recording</td></tr>
+        <tr><td><strong>IVI ADB widget</strong></td><td>The Local ADB tunnel for APK install and logcat collection</td></tr>
+        <tr><td><strong>AAOS image</strong></td><td>Starter-pack <code>ANDROID_IMAGE</code> artifact, <code>0.0.1</code>, <code>aarch64</code> — the IVI guest</td></tr>
+        <tr><td><strong>Skycraft node</strong></td><td>VM node type running the AAOS guest (IVI-ECU)</td></tr>
+        <tr><td><strong>Container node</strong></td><td>Container node type running the registry images (bench, V2X, ADA)</td></tr>
+        <tr><td><strong>Ethernet bridge</strong></td><td><code>eth-bridge</code>, subnet <code>10.99.0.0/24</code> — every node's pin, one star</td></tr>
+      </tbody>
+    </table>
+    <div class="footer"><span>M1 System Delivery · Team KIS · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">03</div><h2>Libraries — bench and V2X-ECU</h2></div>
+    <table class="fpt">
+      <thead><tr><th>Node</th><th>Library</th><th>License</th><th>Usage</th></tr></thead>
+      <tbody>
+        <tr><td>Scenario Player</td><td>PyYAML 6.0.2</td><td>MIT</td><td>Scenario YAML loading</td></tr>
+        <tr><td>Scenario Player</td><td>Vanetza ITS2 v26.06</td><td>LGPLv3 (dynamic)</td><td>UPER encode of the CPM</td></tr>
+        <tr><td>Scenario Player</td><td>nlohmann/json 3.11.3</td><td>MIT</td><td>Codec-seam JSON</td></tr>
+        <tr><td>Scenario Player</td><td>pytest · jsonschema</td><td>MIT</td><td>Tests, schema validation</td></tr>
+        <tr><td>V2X-ECU</td><td>Vanetza ITS2 v26.06</td><td>LGPLv3 (dynamic)</td><td>UPER decode of inbound CPM</td></tr>
+        <tr><td>V2X-ECU</td><td>nlohmann/json 3.11.3</td><td>MIT</td><td>Outbound JSON, <code>[EVT]</code> lines</td></tr>
+        <tr><td>V2X-ECU</td><td>Boost (via Vanetza)</td><td>BSL-1.0</td><td>Vanetza runtime</td></tr>
+        <tr><td>V2X-ECU</td><td>GoogleTest 1.14.0</td><td>BSD-3-Clause</td><td>Unit tests</td></tr>
+        <tr><td>V2X-ECU</td><td>tcpdump</td><td>BSD</td><td>In-container capture</td></tr>
+      </tbody>
+    </table>
+    <div class="footer"><span>M1 System Delivery · Team KIS · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">03</div><h2>Libraries — ADA-ECU and IVI-ECU</h2></div>
+    <table class="fpt">
+      <thead><tr><th>Node</th><th>Library</th><th>License</th><th>Usage</th></tr></thead>
+      <tbody>
+        <tr><td>ADA-ECU</td><td>nlohmann/json 3.11.3</td><td>MIT</td><td>Contract bindings in/out</td></tr>
+        <tr><td>ADA-ECU</td><td>ONNX Runtime 1.28.0</td><td>MIT</td><td>YOLO11n inference</td></tr>
+        <tr><td>ADA-ECU</td><td>YOLO11n (Ultralytics export)</td><td>AGPL-3.0</td><td>Detection model</td></tr>
+        <tr><td>ADA-ECU</td><td>opencv-python-headless</td><td>Apache-2.0</td><td>Saved-clip frame decode</td></tr>
+        <tr><td>ADA-ECU</td><td>numpy · GoogleTest · pytest · tcpdump</td><td>BSD / MIT</td><td>Math, tests, capture</td></tr>
+        <tr><td>IVI-ECU</td><td>Jetpack Compose + Material3</td><td>Apache-2.0</td><td>HMI layout, God View canvas</td></tr>
+        <tr><td>IVI-ECU</td><td>kotlinx.serialization · coroutines</td><td>Apache-2.0</td><td>Warning parsing, receive loop</td></tr>
+        <tr><td>IVI-ECU</td><td>Dagger Hilt 2.58 · AndroidX Lifecycle</td><td>Apache-2.0</td><td>DI, ViewModel/service glue</td></tr>
+        <tr><td>IVI-ECU</td><td>JUnit4 · Robolectric · MockK · Turbine</td><td>EPL / Apache / MIT</td><td>Unit tests</td></tr>
+      </tbody>
+    </table>
+    <div class="footer"><span>M1 System Delivery · Team KIS · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">04</div>
+    <h1>System test evidence</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">04</div><h2>Types of evidence and tools</h2></div>
+    <table class="fpt">
+      <thead><tr><th>Type</th><th>What it proves</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Warning screen</strong></td><td>The driver-facing rendering happened</td></tr>
+        <tr><td><strong>Internal log</strong></td><td>Each node produced and consumed what it should</td></tr>
+        <tr><td><strong>Wireshark capture</strong></td><td>What crossed the wire, byte-exact — exported from the V2X/ADA logs</td></tr>
+      </tbody>
+    </table>
+    <table class="fpt">
+      <thead><tr><th>Tool</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td><code>INSTALL-IVI-APK.cmd</code></td><td>Install the APK, own the ADB tunnel</td></tr>
+        <tr><td><code>COLLECT-LOGS.cmd</code></td><td>Collect every node log + guest logcat, check against expected results</td></tr>
+        <tr><td><code>EXTRACT-PCAP.cmd</code> · <code>capture.sh</code></td><td>Export and produce the Wireshark captures</td></tr>
+        <tr><td><code>check_v2x_log.py</code> · <code>adb logcat</code></td><td>Assert the V2X chain · read the app's <code>[RX]</code> lines</td></tr>
+      </tbody>
+    </table>
+    <div class="strip">Procedures: <a href="../../documents/Delivery/Test-Guides/README.md">Test-Guides README</a> — it links every guide.</div>
+    <div class="footer"><span>M1 System Delivery · Team KIS · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">04</div><h2>Expected evidence per node</h2></div>
+    <table class="fpt">
+      <thead><tr><th>Node</th><th>Warning screen</th><th>Internal log</th><th>Wireshark capture</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Bench — Scenario Player</strong></td><td>—</td><td><code>[TX]</code> lines only</td><td>—</td></tr>
+        <tr><td><strong>V2X-ECU</strong></td><td>—</td><td><code>[EVT]</code> decode/forward counters</td><td>CPM in <code>:47100</code>, object out <code>:47200</code></td></tr>
+        <tr><td><strong>ADA-ECU</strong></td><td>—</td><td><code>[EVT]</code> fusion/risk counters</td><td>Object in <code>:47200</code>, warning out <code>:47300</code></td></tr>
+        <tr><td><strong>IVI-ECU</strong></td><td>God View with ghost C</td><td><code>[RX]</code> lines in the app logcat</td><td>—</td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li>The two captures <strong>fit the expected call flow</strong> — each hop appears on the wire exactly where the design says it should.</li>
+    </ul>
+    <div class="footer"><span>M1 System Delivery · Team KIS · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">04</div><h2>Evidence 1 — Warning screen and IVI log</h2></div>
+    <div class="imgbox"><img src="../assets/m1-evidence1-warning-screen.png" style="height:330px" alt="The NLOS God View warning with the IVI logcat and riskState transitions highlighted"><div class="cap">The NLOS God View warning with the IVI logcat and riskState transitions highlighted</div></div>
+    <ul class="points">
+      <li>Banner <strong>NLOS OBSTRUCTION — Vehicle C ahead (relayed via V2X)</strong>; C dashed as a ghost, <code>source: v2x_relayed — never seen by A&#x27;s sensors</code>.</li>
+      <li>Logcat: <code>[RX] R4WarningEvent(…)</code> with <strong>riskState low → medium → high</strong>.</li>
+    </ul>
+    <div class="footer"><span>M1 System Delivery · Team KIS · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">04</div><h2>Evidence 2 — ADA-ECU internal log</h2></div>
+    <div class="imgbox"><img src="../assets/m1-evidence2-ada-log.png" style="height:330px" alt="The ADA ECU log with the own_sensor_ingest counter highlighted"><div class="cap">The ADA ECU log with the own_sensor_ingest counter highlighted</div></div>
+    <ul class="points">
+      <li><code>own_sensor_ingest</code> (highlighted) counts <strong>vehicle B detections from the ADA-ECU's own sensor path</strong> — beside <code>r2_ingest</code>, the relayed CPM information.</li>
+      <li>The ADA-ECU <strong>loops its 10 s saved video</strong> to keep B detected for the demo — no live camera.</li>
+    </ul>
+    <div class="footer"><span>M1 System Delivery · Team KIS · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">04</div><h2>Evidence 3 — V2X-ECU log</h2></div>
+    <div class="imgbox"><img src="../assets/m1-evidence3-v2x-log.png" style="height:330px" alt="The V2X ECU log with decode counters climbing and CAP wire lines"><div class="cap">The V2X ECU log with decode counters climbing and CAP wire lines</div></div>
+    <ul class="points">
+      <li>Counters climb in lockstep: <code>rx_datagram</code> → <code>decode_ok</code> → <code>r2_forwarded</code>; every reject counter stays 0.</li>
+      <li><code>[CAP]</code> shows both wire sides: CPM in on <code>:47100</code> (58 B), decoded object out on <code>:47200</code> (339 B).</li>
+    </ul>
+    <div class="footer"><span>M1 System Delivery · Team KIS · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">04</div><h2>Evidence 4 — Bench log</h2></div>
+    <div class="imgbox"><img src="../assets/m1-evidence4-bench.png" style="height:330px" alt="The bench log with climbing TX sequence numbers and scenario time"><div class="cap">The bench log with climbing TX sequence numbers and scenario time</div></div>
+    <ul class="points">
+      <li><code>[TX]</code> lines: <code>seq</code> climbs monotonically, <code>scenario_time_s</code> advances through the 10 s scenario.</li>
+      <li>The <strong>bench resends the scenario cyclically</strong>, so the demo stream runs continuously — the only mocked wire source.</li>
+    </ul>
+    <div class="footer"><span>M1 System Delivery · Team KIS · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide thanks" style="background-image: linear-gradient(rgba(8,12,38,.66), rgba(14,21,64,.86)), url('../assets/bg-fpt-tower.jpg')">
+    <h1>Thank you</h1>
+    <div class="rule"></div>
+    <p>Team KIS · Cooperative Awareness System · full report: system-delivery.md</p>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+</div>
+
+<div class="hint">← → navigate · F fullscreen · print for PDF</div>
+<div class="hud">
+  <button id="prev" aria-label="Previous slide">‹</button>
+  <span class="ctr" id="ctr"></span>
+  <button id="next" aria-label="Next slide">›</button>
+</div>
+<div class="progress" id="prog"></div>
+
+<script>
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  slides.forEach((sl, i) => { const p = sl.querySelector('.page'); if (p) p.textContent = i + 1; });
+  let cur = 0;
+
+  function fit() {
+    const s = Math.min(innerWidth / 1280, innerHeight / 720);
+    slides.forEach(sl => sl.style.transform = `scale(${s})`);
+  }
+  function show(i) {
+    cur = Math.max(0, Math.min(slides.length - 1, i));
+    slides.forEach((sl, k) => sl.classList.toggle('active', k === cur));
+    document.getElementById('ctr').textContent = `${cur + 1} / ${slides.length}`;
+    document.getElementById('prog').style.width = `${(cur + 1) / slides.length * 100}%`;
+    location.hash = cur ? `#${cur + 1}` : '';
+  }
+  addEventListener('resize', fit);
+  addEventListener('keydown', e => {
+    if (['ArrowRight', 'PageDown', ' ', 'Enter'].includes(e.key)) { e.preventDefault(); show(cur + 1); }
+    else if (['ArrowLeft', 'PageUp', 'Backspace'].includes(e.key)) { e.preventDefault(); show(cur - 1); }
+    else if (e.key === 'Home') show(0);
+    else if (e.key === 'End') show(slides.length - 1);
+    else if (e.key.toLowerCase() === 'f') document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+  });
+  document.getElementById('prev').onclick = () => show(cur - 1);
+  document.getElementById('next').onclick = () => show(cur + 1);
+  let tx = null;
+  addEventListener('touchstart', e => tx = e.touches[0].clientX);
+  addEventListener('touchend', e => { if (tx !== null) { const dx = e.changedTouches[0].clientX - tx; if (Math.abs(dx) > 50) show(cur + (dx < 0 ? 1 : -1)); tx = null; } });
+
+  const h = parseInt((location.hash || '').slice(1), 10);
+  fit(); show(isNaN(h) ? 0 : h - 1);
+</script>
+
+</body>
+</html>

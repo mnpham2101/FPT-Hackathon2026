@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 420" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arrNavy" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <path d="M0,0 L10,4 L0,8 z" fill="#19226D"/>
+    </marker>
+    <marker id="arrAmber" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+      <path d="M0,0 L10,4 L0,8 z" fill="#E8A000"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1180" height="420" fill="#f6f7fa"/>
+  <text x="30" y="40" font-size="20" font-weight="700" fill="#19226D">M1 system blueprint — data flow (subnet 10.99.0.0/24, Ethernet Bridge 1)</text>
+
+  <!-- Bench node -->
+  <g>
+    <rect x="30" y="150" width="220" height="90" rx="10" fill="#ffffff" stroke="#19226D" stroke-width="2"/>
+    <text x="140" y="182" font-size="17" font-weight="700" fill="#19226D" text-anchor="middle">Bench — Scenario Player</text>
+    <text x="140" y="204" font-size="14" fill="#3d3d46" text-anchor="middle">10.99.0.10</text>
+    <text x="140" y="224" font-size="13" fill="#7f88ad" text-anchor="middle">m1-scenario-player</text>
+  </g>
+
+  <!-- V2X node -->
+  <g>
+    <rect x="330" y="150" width="200" height="90" rx="10" fill="#ffffff" stroke="#19226D" stroke-width="2"/>
+    <text x="430" y="182" font-size="17" font-weight="700" fill="#19226D" text-anchor="middle">V2X-ECU</text>
+    <text x="430" y="204" font-size="14" fill="#3d3d46" text-anchor="middle">10.99.0.11</text>
+    <text x="430" y="224" font-size="13" fill="#7f88ad" text-anchor="middle">m1-v2x-ecu</text>
+  </g>
+
+  <!-- ADA node -->
+  <g>
+    <rect x="610" y="150" width="200" height="90" rx="10" fill="#ffffff" stroke="#19226D" stroke-width="2"/>
+    <text x="710" y="182" font-size="17" font-weight="700" fill="#19226D" text-anchor="middle">ADA-ECU</text>
+    <text x="710" y="204" font-size="14" fill="#3d3d46" text-anchor="middle">10.99.0.12</text>
+    <text x="710" y="224" font-size="13" fill="#7f88ad" text-anchor="middle">m1-ada-ecu</text>
+  </g>
+
+  <!-- IVI node -->
+  <g>
+    <rect x="890" y="150" width="220" height="90" rx="10" fill="#ffffff" stroke="#19226D" stroke-width="2"/>
+    <text x="1000" y="182" font-size="17" font-weight="700" fill="#19226D" text-anchor="middle">IVI-ECU (AAOS)</text>
+    <text x="1000" y="204" font-size="14" fill="#3d3d46" text-anchor="middle">10.99.0.13</text>
+    <text x="1000" y="224" font-size="13" fill="#7f88ad" text-anchor="middle">app-debug.apk</text>
+  </g>
+
+  <!-- Mocked CPM arrow: bench -> V2X (amber, dashed) -->
+  <line x1="250" y1="195" x2="326" y2="195" stroke="#E8A000" stroke-width="3" stroke-dasharray="9 6" marker-end="url(#arrAmber)"/>
+  <text x="288" y="140" font-size="13.5" font-weight="700" fill="#B37A00" text-anchor="middle">mocked CPM messages</text>
+  <text x="288" y="158" font-size="12.5" fill="#B37A00" text-anchor="middle">UDP :47100 — no real vehicle sends</text>
+
+  <!-- Real arrow: V2X -> ADA -->
+  <line x1="530" y1="195" x2="606" y2="195" stroke="#19226D" stroke-width="3" marker-end="url(#arrNavy)"/>
+  <text x="568" y="140" font-size="13.5" font-weight="700" fill="#19226D" text-anchor="middle">decoded CPM information</text>
+  <text x="568" y="158" font-size="12.5" fill="#3d3d46" text-anchor="middle">JSON / UDP :47200 — real, under test</text>
+
+  <!-- Real arrow: ADA -> IVI -->
+  <line x1="810" y1="195" x2="886" y2="195" stroke="#19226D" stroke-width="3" marker-end="url(#arrNavy)"/>
+  <text x="848" y="140" font-size="13.5" font-weight="700" fill="#19226D" text-anchor="middle">warning from ADA</text>
+  <text x="848" y="158" font-size="12.5" fill="#3d3d46" text-anchor="middle">JSON / UDP :47300 — real, under test</text>
+
+  <!-- Loop arrow on ADA: saved video (amber, dashed) -->
+  <path d="M 670 240 C 640 310, 780 310, 750 240" fill="none" stroke="#E8A000" stroke-width="3" stroke-dasharray="9 6" marker-end="url(#arrAmber)"/>
+  <text x="710" y="322" font-size="13.5" font-weight="700" fill="#B37A00" text-anchor="middle">saved 10 s video, looped</text>
+  <text x="710" y="340" font-size="12.5" fill="#B37A00" text-anchor="middle">ADA-ECU reads its own stored file — no live camera feed</text>
+
+  <!-- Legend -->
+  <g>
+    <line x1="30" y1="385" x2="80" y2="385" stroke="#19226D" stroke-width="3"/>
+    <text x="90" y="390" font-size="13.5" fill="#3d3d46">real message under test</text>
+    <line x1="290" y1="385" x2="340" y2="385" stroke="#E8A000" stroke-width="3" stroke-dasharray="9 6"/>
+    <text x="350" y="390" font-size="13.5" fill="#3d3d46">mocked input (amber) — stands in for a source that does not exist yet</text>
+  </g>
+</svg>
