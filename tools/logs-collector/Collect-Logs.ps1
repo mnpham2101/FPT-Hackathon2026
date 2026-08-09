@@ -4,8 +4,8 @@
   every guest-side log off the AAOS IVI over ADB, into ./test-report/<test-name>/.
 
 .DESCRIPTION
-  Automates Step 5 "Evidence collection" of IVI_ECU/deployment/phase5-ivi-deploy.md,
-  which stays the authority. The deploy note's Path 2 is a dozen commands pasted by
+  Automates Step 6 "Evidence collection" of IVI_ECU/deployment/phase5-ivi-test.md,
+  which stays the authority. The test note's Path 2 is a dozen commands pasted by
   hand with the node keys filled in from a second call; this runs the same commands,
   resolves the keys itself, and ends in the note's own evidence checklist.
 
@@ -140,7 +140,7 @@ function Resolve-Test ($value) {
 
 Write-Host ""
 Write-Host "  Test log collector - CarSky node logs + AAOS guest evidence" -ForegroundColor White
-Write-Host "  Authority: IVI_ECU/deployment/phase5-ivi-deploy.md Step 5" -ForegroundColor DarkGray
+Write-Host "  Authority: IVI_ECU/deployment/phase5-ivi-test.md Step 6" -ForegroundColor DarkGray
 
 if ($PSVersionTable.PSVersion.Major -lt 5) {
     Fail "PowerShell $($PSVersionTable.PSVersion) is too old." "Windows PowerShell 5.1 ships with Windows 10 and 11 on every architecture."

@@ -4,7 +4,7 @@
 # One-shot evidence collector: pick a test, pull every node log off CarSky and every
 # guest-side log off the AAOS IVI over ADB, into ./test-report/<test-name>/.
 #
-# Automates Step 5 "Evidence collection" of IVI_ECU/deployment/phase5-ivi-deploy.md,
+# Automates Step 6 "Evidence collection" of IVI_ECU/deployment/phase5-ivi-test.md,
 # which stays the authority. Same behaviour, same output layout and same on-screen
 # structure as the PowerShell version -- change one, change the other.
 #
@@ -255,7 +255,7 @@ EOF
 }
 
 printf '\n  %sTest log collector - CarSky node logs + AAOS guest evidence%s\n' "$C_WHITE" "$C_OFF"
-printf '  %sAuthority: IVI_ECU/deployment/phase5-ivi-deploy.md Step 5%s\n' "$C_GRAY" "$C_OFF"
+printf '  %sAuthority: IVI_ECU/deployment/phase5-ivi-test.md Step 6%s\n' "$C_GRAY" "$C_OFF"
 
 command -v curl >/dev/null 2>&1 || fail "curl is not installed." "It is how this script talks to CarSky."
 command -v awk  >/dev/null 2>&1 || fail "awk is not installed."  "It is how this script reads the API's JSON."

@@ -11,8 +11,9 @@
 #  and the same exit conditions. A change to one is a change to both; anything
 #  that lands in only one of them is a defect, not a platform difference.
 #
-#  Automates Steps 3 and 5-2 of IVI_ECU/deployment/phase5-ivi-deploy.md, which
-#  stays the authority. Everything a human still has to do is printed at the end.
+#  Automates Step 3 of IVI_ECU/deployment/phase5-ivi-deploy.md and Step 6-2 of
+#  its companion IVI_ECU/deployment/phase5-ivi-test.md, which stay the
+#  authority. Everything a human still has to do is printed at the end.
 #
 #  Before running: the blueprint must be deployed with the IVI Skycraft node
 #  Running, and secrets/reach-adb-token-ivi.txt must hold the a8k_ token from
