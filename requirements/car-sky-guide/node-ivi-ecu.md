@@ -88,7 +88,24 @@ adb connect localhost:5555        # answers: localhost:5555   device
 
 The install command is [§4.6](deploy-ivi-hmi-walkthrough.md#46-install-the-apk), the launch command and its `--ei r4_port` override are [§4.7](deploy-ivi-hmi-walkthrough.md#47-open-the-screen-and-launch-the-app), and the `adb logcat -s IVI_V2X` evidence filter is [§4.8](deploy-ivi-hmi-walkthrough.md#48-verify-the-hmi-and-the-logging).
 
-**The guest does not sit on the Room bridge.** Inside the AAOS guest the only interfaces are cuttlefish NAT addresses (`buried_eth0` `10.0.2.15/24`, `wlan0` `10.0.2.96/24`) — the node's `ethernet` pin address `10.99.0.13` appears nowhere in the guest, and nothing on the bridge answers ARP for it (verified on the m1-system-test Room: the ADA node's warnings to `10.99.0.13:47300` report `send_ok` yet never appear on any captured interface, while a loopback datagram injected inside the guest does reach the app). How the platform intends ethernet-pin UDP to reach the guest — sidecar forwarding, a pin `port` field, or something else — is an open question for the organizers; until it is answered, in-guest loopback injection is the only proven way to feed the app in-Room.
+## Post-deploy: put the guest on the Room bridge
+
+**Issue.** No R4 message reaches the app. The producer logs `[TX] … -> 10.99.0.13:47300` and reports `send_ok`; the app's socket is bound (`R4ListenerService: UDP socket open on port 47300`) with `rx_queue` and `drops` frozen at zero in `/proc/net/udp6`; no `[RX]` is ever logged.
+
+**Explanation.** The guest brings its bridge NIC up as `buried_eth0`. AAOS `EthernetTracker` matches interfaces on the `eth<n>` name, so netd never adopts this one and it never takes the node's `ethernet` pin address — `ip -4 addr` shows only cuttlefish NAT addresses (`10.0.2.x`), and nothing answers ARP for `10.99.0.13`. Datagrams are dropped before the guest sees them. Not an app defect; no app change fixes it.
+
+**Fix.** Rename the NIC and set the pin address, as root over the ADB tunnel. Chain the link commands in one shell — run separately, an interrupted call leaves the NIC down:
+
+```
+ip link set buried_eth0 down; ip link set buried_eth0 name eth0; ip link set eth0 up
+ifconfig eth0 10.99.0.13/24 up
+```
+
+- netd adopts `eth0` on the rename and builds its routing table and policy rules itself; `ip route add … table eth0` answering `File exists` is the healthy result. No default route is needed while the producer is on-subnet.
+- ADB survives the rename because adbd is on vsock, not TCP over that NIC — confirm on an unfamiliar guest with `cat /proc/net/tcp` showing no `15B3` listener.
+- **The change does not survive a guest reboot or a redeploy.** Re-apply after either; [INSTALL-IVI-APK.cmd](../../tools/apk-uploader/INSTALL-IVI-APK.cmd) does it automatically and idempotently.
+
+Verified on the `phase5_smoked_test` Room: after the rename the app logged `[RX] … source=v2x_relayed` at the producer's 1 Hz, risk cycling to `high`. Symptom-first form of this entry, with the checks: [phase5-ivi-deploy.md § Troubleshooting](../../IVI_ECU/deployment/phase5-ivi-deploy.md#troubleshooting).
 
 ## Verification (feeds R16, R17 acceptance)
 
