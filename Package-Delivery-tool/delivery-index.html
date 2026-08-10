@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Team KIS — M1 Delivery Package · FPT Hackathon 2026</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      background: #10173f;
+      color: #eef1fb;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+    .wrap { max-width: 720px; width: 100%; }
+    header { margin-bottom: 2rem; }
+    .kicker {
+      color: #f7941d;
+      font-weight: 600;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      font-size: .8rem;
+      margin-bottom: .5rem;
+    }
+    h1 { font-size: 1.9rem; line-height: 1.25; margin-bottom: .6rem; }
+    .sub { color: #aab3d6; font-size: 1rem; line-height: 1.5; }
+    .cards { display: grid; gap: .9rem; margin-top: 1.8rem; }
+    a.card {
+      display: block;
+      background: #1a2352;
+      border: 1px solid #2c3874;
+      border-left: 4px solid #f7941d;
+      border-radius: 10px;
+      padding: 1rem 1.2rem;
+      text-decoration: none;
+      color: inherit;
+      transition: background .15s, transform .15s;
+    }
+    a.card:hover { background: #222c63; transform: translateX(3px); }
+    a.card .t { font-weight: 600; font-size: 1.05rem; margin-bottom: .25rem; }
+    a.card .d { color: #aab3d6; font-size: .9rem; line-height: 1.45; }
+    a.card.video { border-left-color: #45c07f; }
+    a.card.wiki  { border-left-color: #2ea3dd; }
+    code { font-family: Consolas, monospace; font-size: .92em; color: #cdd6f7; }
+    footer { margin-top: 2.2rem; color: #7b86b4; font-size: .85rem; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="kicker">FPT Hackathon 2026 · Milestone 1 · Team KIS</div>
+      <h1>Cooperative Vehicle Awareness — Delivery Package</h1>
+      <p class="sub">Vehicle A warns its driver about vehicle C — occluded behind B and invisible to A's own sensors — because B's perception of C reaches A over a V2X relay on the CarSky platform.</p>
+    </header>
+    <nav class="cards">
+      <a class="card video" href="video/system-test.mp4">
+        <div class="t">🎬 Video demo — system-test.mp4</div>
+        <div class="d">One continuous recorded run of the full deployed blueprint: ghost C rendered on A's display from <code>v2x_relayed</code> data only, with zero direct C detections on A.</div>
+      </a>
+      <a class="card" href="presentation/system-design/system-design-deck.html">
+        <div class="t">📊 System Design Report</div>
+        <div class="d">The system-level design: blueprint topology, contracts, protocol stack, and each node's architecture.</div>
+      </a>
+      <a class="card" href="presentation/phase6-systemIntegration/phase6-system-delivery-deck.html">
+        <div class="t">📦 System Test Delivery Report</div>
+        <div class="d">What was delivered and integrated, the resources it stands on, and the system test evidence behind the recorded run.</div>
+      </a>
+      <a class="card wiki" href="website/index.html">
+        <div class="t">📖 Project wiki — full documentation</div>
+        <div class="d">Requirements, system and per-node designs, the delivery report with acceptance evidence, and the test guides — a standalone browsable site, no server needed.</div>
+      </a>
+    </nav>
+    <footer>
+      Everything in this package is self-contained — open any link above directly from the unzipped folder; no server or internet connection required.
+    </footer>
+  </div>
+</body>
+</html>
