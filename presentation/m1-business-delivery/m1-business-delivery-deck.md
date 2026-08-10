@@ -72,16 +72,16 @@ One glance tells the driver everything: a bird's-eye view of the road ahead, the
 
 # The delivery checklist
 
-Every item is complete and included in the Milestone 1 package.
+Checked items are complete and included in the Milestone 1 package; ❌ marks an item not yet tested.
 
 | Delivered | Item | What you receive |
 |:---:|---|---|
 | ✅ | **Application code** | Three ECU applications — V2X-ECU, ADA-ECU, IVI-ECU — full source on [GitHub](https://github.com/mnpham2101/FPT-Hackathon2026) |
 | ✅ | **Utility tools** | Automation for app installation and log collection — `tools/apk-uploader/`, `tools/logs-collector/` |
-| ✅ | **Data-provenance tools** | Inside the ADA-ECU application — proof the warning comes from the V2X relay alone |
+| ❌ | **Data-provenance tools** | Inside the ADA-ECU application — verify that the warning derives from the V2X relay alone (implemented, not yet tested) |
 | ✅ | **Isolated test images** | Each ECU has mock images of its neighbours — every application testable on its own |
 | ✅ | **CI tools** | Six CI pipelines, one per development phase, under `.github/workflows/` |
-| ✅ | **Demo video** | A video demo of the full system test |
+| ✅ | **Demo video** | [A video demo](../../video-evidence/system-test.mp4) of the full system test |
 | ✅ | **Wiki** | The complete project design, and the research articles founding the project |
 | ✅ | **Deployment blueprints** | CarSky blueprints ready to be deployed and tested |
 
@@ -113,7 +113,7 @@ No single view can hide a gap: the demonstration is proven at three independent 
 | **Internal logs** | Every processing step happened: transmission, decoding, fusion, risk assessment, reception |
 | **Network captures** | The messages really crossed the network, byte-exact against the designed call flow — opened in standard Wireshark |
 
-> The decisive guarantee: the hidden vehicle reaches the driver **only** through the V2X relay. A dedicated provenance check fails the build if the car's own sensors ever produced it.
+Core evidence is published in the [System Delivery](../phase6-systemIntegration/phase6-system-delivery-deck.html) deck; the corresponding wiki page will follow.
 
 ---
 
@@ -126,7 +126,9 @@ Numbers read from the recorded system test, not estimates.
 | Hazard data received → warning on the driver's screen | **101 ms** |
 | Message decode and forward inside the V2X application | **under 1 ms** |
 | Continuous operation | The demo scenario repeats **every ~10 s for as long as the system runs** |
-| Direct sightings of the hidden vehicle by the warned car | **Zero** — verified by the provenance tooling |
+| Direct detections of the hidden vehicle by the warned vehicle | **Zero** in the recorded run's logs — checked by the data-provenance tool (see note) |
+
+* *Note*: the data-provenance tool built into the ADA-ECU verifies that the warning output contains the occluded vehicle C only when sourced from V2X messages. Evidence of this check will be provided in a later delivery.
 
 ---
 

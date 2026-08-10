@@ -61,11 +61,26 @@ The CarSky platform provide resources the deployment stands on — provided by t
 | Container node | CarSky container node type; runs the registry images (bench, V2X-ECU, ADA-ECU) |
 | Ethernet bridge | Node type `eth-bridge`, `bridgeMode: linux`, subnet `10.99.0.0/24`; every node's `eth` pin wires to it in a star |
 
+### ECU Images and APK
+
+The IVI APK alone does not demonstrate the system — a demo run needs every node's artifact, all retrieved from GitHub.
+
+| Node | Image / artifact | Where to get it | How to deploy |
+|---|---|---|---|
+| Bench — Scenario Player | `m1-scenario-player:latest` | GitHub Actions — `scenario-player-image` lane | Detailed guide to be added later |
+| V2X-ECU | `m1-v2x-ecu:latest` | GitHub Actions — `v2x-ecu-image` lane | Detailed guide to be added later |
+| ADA-ECU | `m1-ada-ecu:latest` | GitHub Actions — `ada-ecu-image` lane | Detailed guide to be added later |
+| IVI-ECU | `app-debug.apk` | GitHub Actions — `ivi-assemble` artifact | [apk-deploy.md](../Test-Guides/apk-deploy.md) |
+
 ### Tools
 
 #### CI tools
 
-Six GitHub Actions workflows, one per development phase, all carrying identical triggers — every lane runs on every push and pull request. A lane is maintained in the file of the phase that develops the node it exercises, so the file named for a phase contains that phase's work.
+Six GitHub Actions workflows, one per development phase, all carrying identical triggers — every lane runs on every push and pull request. A lane is maintained in the file of the phase that develops the node it exercises, so the file named for a phase contains that phase's work. 
+
+The following CI lanes are all implemented and working. 
+
+**Note**: the images being built could have unit tests. But evidence to their work are only supported by either isolated tests or system tests. Some evidence are provided in this documents. Exhashtive evidence will be completed in wikipage. 
 
 | Workflow | Lanes | What it verifies |
 |---|---|---|
@@ -112,6 +127,7 @@ The milestone's definition of done requires that vehicle C reaches vehicle A **o
 | `check_zero_c.py` (`ADA_ECU/tools/`) | Scans the detector's captured detection stream and fails on any line claiming `source: v2x_relayed`, any track id in the `v2x:` namespace, or (with `--evt`) an own-sensor detection at the range and time of a relayed C sample. A clean exit prints the examined counts, so an empty log cannot pass vacuously |
 | `ada-zero-c` CI lane (`phase3-ci.yml`) | Runs the real detector over the committed ego clip in a single un-looped pass, captures its detection stream, and gates the push on `check_zero_c.py` passing |
 
+- Evidence to Data Provenance tests will be provided later.
 
 ## System test evidence
 
@@ -171,6 +187,16 @@ No single surface is sufficient: the screen does not prove where the data came f
 - `scenario_time_s` advances through the 10 s scenario; the **bench resends the scenario cyclically**, so the message stream — and the demo — runs continuously.
 - The bench is the only mocked wire source: these are the CPM messages no real vehicle exists to send.
 
+### Evidence 5 - Wireshark logs
+
+- Wireashark logs are to be added in future. 
+- Currently timing of invoking log collecting tool `logs-collect` comes too late, and PCAP extract tool `extract-pcap`returns error [PCAP-BEGIN ...] block`
+
+### Evidence 6 - Degraded condition
+
+- `warningType` allows future features addition. `unknown warningType` is considered degraded; a special log must be printed **preserving the wire value** , and special logic be handled.
+- the scenario is supported in isolated IVI-ECU test, but evidence not yet gathered.  
+
 ## Delivery timeline — the logs and the video
 
 How the delivery unfolds in time: what each log timestamp means, the event sequence of one warning cycle, and how that cycle maps onto the demo video.
@@ -195,6 +221,8 @@ Each evidence surface stamps time differently:
 The log set behind the timeline is one `COLLECT-LOGS` pass over the running Room ([testing-guide.md](../Test-Guides/testing-guide.md)), written to `tools/logs-collector/test-report/system-test/` — generated output, reproduced on demand rather than committed.
 
 ### One warning cycle
+
+The diagram illustrates the arrival time of events, detected from our logs, but don't necessary from the same attached demo in this project. 
 
 ![Timeline of one 10.13 s warning cycle: bench CPM stream, V2X decode pipeline, ADA tracks for B and C, the risk-state ribbon, the IVI warnings, and a per-message latency inset](m1-delivery-timeline.svg)
 
@@ -231,6 +259,6 @@ Read directly off the event timestamps above:
 
 ### The video
 
-- The recorded demo run is `video-evidence/system-test.mp4` — 3 min 23 s, captured 2026-08-06 against this blueprint. It ships in the submission packet and through the organizers' demo channel; at 143 MB it is not in the git history.
+- The recorded demo run is [`video-evidence/system-test.mp4`](../../../video-evidence/system-test.mp4) — 3 min 23 s, captured 2026-08-06 against this blueprint. It ships in the submission packet and through the organizers' demo channel; at 143 MB it is not in the git history.
 - Its wall clock differs from the log set above — different run, same deployment, same 10 s scenario and looped video — so timestamps do not line up one-to-one, but **every warning cycle in the video is the E0–E12 sequence above**. Over 3 min 23 s the video spans ≈ 20 cycles.
 - What to watch, per cycle: the banner appears at **MEDIUM** about 8.9 s after each replay start (E9), steps to **HIGH** ~0.7 s later (E10), and clears ~1.2 s after that when the replay wraps (E12). While the banner is up, C is the dashed ghost with `source: v2x_relayed` — the on-screen restatement that A never saw C itself.

@@ -239,16 +239,16 @@
   </section>
   <section class="slide bg-light content">
     <div class="slide-head"><div class="num">02</div><h2>The delivery checklist</h2></div>
-    <p class="lead">Every item is complete and included in the Milestone 1 package.</p>
+    <p class="lead">Checked items are complete and included in the Milestone 1 package; ❌ marks an item not yet tested.</p>
     <table class="fpt">
       <thead><tr><th>Delivered</th><th>Item</th><th>What you receive</th></tr></thead>
       <tbody>
         <tr><td>✅</td><td><strong>Application code</strong></td><td>Three ECU applications — V2X-ECU, ADA-ECU, IVI-ECU — full source on <a href="https://github.com/mnpham2101/FPT-Hackathon2026">GitHub</a></td></tr>
         <tr><td>✅</td><td><strong>Utility tools</strong></td><td>Automation for app installation and log collection — <code>tools/apk-uploader/</code>, <code>tools/logs-collector/</code></td></tr>
-        <tr><td>✅</td><td><strong>Data-provenance tools</strong></td><td>Inside the ADA-ECU application — proof the warning comes from the V2X relay alone</td></tr>
+        <tr><td>❌</td><td><strong>Data-provenance tools</strong></td><td>Inside the ADA-ECU application — verify that the warning derives from the V2X relay alone (implemented, not yet tested)</td></tr>
         <tr><td>✅</td><td><strong>Isolated test images</strong></td><td>Each ECU has mock images of its neighbours — every application testable on its own</td></tr>
         <tr><td>✅</td><td><strong>CI tools</strong></td><td>Six CI pipelines, one per development phase, under <code>.github/workflows/</code></td></tr>
-        <tr><td>✅</td><td><strong>Demo video</strong></td><td>A video demo of the full system test</td></tr>
+        <tr><td>✅</td><td><strong>Demo video</strong></td><td><a href="../../video-evidence/system-test.mp4">A video demo</a> of the full system test</td></tr>
         <tr><td>✅</td><td><strong>Wiki</strong></td><td>The complete project design, and the research articles founding the project</td></tr>
         <tr><td>✅</td><td><strong>Deployment blueprints</strong></td><td>CarSky blueprints ready to be deployed and tested</td></tr>
       </tbody>
@@ -281,7 +281,7 @@
         <tr><td><strong>Network captures</strong></td><td>The messages really crossed the network, byte-exact against the designed call flow — opened in standard Wireshark</td></tr>
       </tbody>
     </table>
-    <div class="strip">The decisive guarantee: the hidden vehicle reaches the driver <strong>only</strong> through the V2X relay. A dedicated provenance check fails the build if the car's own sensors ever produced it.</div>
+    <p class="lead">Core evidence is published in the <a href="../phase6-systemIntegration/phase6-system-delivery-deck.html">System Delivery</a> deck; the corresponding wiki page will follow.</p>
     <div class="footer"><span>Product &amp; Delivery · Team KIS · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
@@ -293,9 +293,12 @@
         <tr><td>Hazard data received → warning on the driver's screen</td><td><strong>101 ms</strong></td></tr>
         <tr><td>Message decode and forward inside the V2X application</td><td><strong>under 1 ms</strong></td></tr>
         <tr><td>Continuous operation</td><td>The demo scenario repeats <strong>every ~10 s for as long as the system runs</strong></td></tr>
-        <tr><td>Direct sightings of the hidden vehicle by the warned car</td><td><strong>Zero</strong> — verified by the provenance tooling</td></tr>
+        <tr><td>Direct detections of the hidden vehicle by the warned vehicle</td><td><strong>Zero</strong> in the recorded run's logs — checked by the data-provenance tool (see note)</td></tr>
       </tbody>
     </table>
+    <ul class="points">
+      <li><em>Note</em>: the data-provenance tool built into the ADA-ECU verifies that the warning output contains the occluded vehicle C only when sourced from V2X messages. Evidence of this check will be provided in a later delivery.</li>
+    </ul>
     <div class="footer"><span>Product &amp; Delivery · Team KIS · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">

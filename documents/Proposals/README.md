@@ -10,16 +10,16 @@ Make a vehicle aware of a hazard it cannot see by relaying another vehicle's per
 
 ## Planned Delivery
 
-Every item below is delivered with Milestone 1 — checked means it is complete and included in the package.
+Every item below is delivered with Milestone 1 — checked means it is complete and included in the package; ❌ marks an item implemented and shipped but not yet tested.
 
 | Delivered | Item | What you receive |
 |:---:|---|---|
 | ✅ | **Application code** | Three ECU applications — V2X-ECU, ADA-ECU and IVI-ECU — full source on [GitHub](https://github.com/mnpham2101/FPT-Hackathon2026) |
 | ✅ | **Utility tools** | Automation for APK installation and log collection — `tools/apk-uploader/` and `tools/logs-collector/` |
-| ✅ | **Data-provenance tools** | Shipped inside the ADA-ECU application — they prove the hazard reaches the driver through the V2X relay alone |
+| ❌ | **Data-provenance tools** | Shipped inside the ADA-ECU application to verify that the hazard reaches the driver through the V2X relay alone (implemented, not yet tested) |
 | ✅ | **Isolated test images** | Each ECU has mock images of its neighbouring ECUs, so every application can be exercised and accepted on its own |
 | ✅ | **CI tools** | Six CI pipelines, one per development phase, under `.github/workflows/` — every change is built and tested automatically |
-| ✅ | **Demo video** | A video demo of the full system test is included |
+| ✅ | **Demo video** | [A video demo](../../video-evidence/system-test.mp4) of the full system test is included |
 | ✅ | **Wiki** | The full, complete explanation of the project design, and the research articles providing the foundation for the project |
 | ✅ | **Deployment blueprints** | CarSky blueprints ready to be deployed and tested |
 

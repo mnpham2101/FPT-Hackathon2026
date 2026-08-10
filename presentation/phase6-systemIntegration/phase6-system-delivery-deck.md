@@ -279,7 +279,7 @@ Every ECU is also exercised alone — mock images stand in for its neighbours in
 | IVI logcat `[RX]` | `08-09 18:43:50.508` | guest clock, UTC, within ~35 ms |
 | Bench `[TX]` | `seq` + `scenario_time_s` only | replay position — wall clock taken at the V2X-ECU |
 
-- The demo video (`video-evidence/system-test.mp4`, 3 min 23 s) is a different run of the **same deployment and scenario** — clocks differ, the cycle does not: ≈ 20 repetitions of E0–E12.
+- The [demo video](../../video-evidence/system-test.mp4) (`video-evidence/system-test.mp4`, 3 min 23 s) is a different run of the **same deployment and scenario** — clocks differ, the cycle does not: ≈ 20 repetitions of E0–E12.
 - Watch per cycle: banner **MEDIUM** ~8.9 s after replay start → **HIGH** +0.7 s → cleared +1.2 s at the wrap; ghost C carries `source: v2x_relayed` throughout.
 
 ---
