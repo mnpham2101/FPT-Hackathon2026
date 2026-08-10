@@ -22,6 +22,7 @@ Every item below is delivered with Milestone 1 — checked means it is complete 
 | ✅ | **Demo video** | [A video demo](../../video-evidence/system-test.mp4) of the full system test is included |
 | ✅ | **Wiki** | The full, complete explanation of the project design, and the research articles providing the foundation for the project |
 | ✅ | **Deployment blueprints** | CarSky blueprints ready to be deployed and tested |
+| ✅ | **Documentation** | Wiki pages and presentations provide insight into the product. The wiki is a work in progress, with articles being added |
 
 ### Screen output
 
@@ -50,3 +51,10 @@ Every item below is delivered with Milestone 1 — checked means it is complete 
   - **Validation and research teams** studying V2X: the fully virtual deployment, the scenario bench, and the isolated test images make a complete cooperative-awareness testbed with no hardware investment.
   - The system can be developed and delivered as a **whole package of the three ECU applications**, integrated and system-tested end to end.
   - Or each application can be delivered as a **single, standalone product per ECU** — each ships with mock images of its neighbours, so a single application is testable and acceptable on its own.
+
+## Product Limitations
+
+- **Warning threshold** — based on the distance required to stop a vehicle traveling at over 75 km/h. Variable speed and stopping distance are not calculated.
+- **Occluded cars in different lanes or around corners** are not considered. Those are future implementations.
+- **No true 3D warning screen** is implemented. This is a future feature.
+- **No machine learning on live video** — the ADA-ECU performs machine learning on stored video. The video is looped to create repeating cycles of events for ease of demo. A live camera feed is a future feature.

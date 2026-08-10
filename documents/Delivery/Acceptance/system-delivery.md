@@ -21,7 +21,7 @@ The evidence folder is read in two steps:
 
 ## System Under Test
 
-The System Under Test (SDT) is a complete five-node blueprint — three ECUs, a supporting Scenario Player bench, and the Ethernet bridge joining them. The bench generates V2X messages as if received from another vehicle *in the same lane*, *directly in front*.
+The System Under Test (SUT) is a complete five-node blueprint — three ECUs, a supporting Scenario Player bench, and the Ethernet bridge joining them. The bench generates V2X messages as if received from another vehicle *in the same lane*, *directly in front*.
 
 ![The m1_system_test blueprint on the CarSky canvas: Bench — Scenario Player, V2X ECU, ADA ECU and IVI ECU, each wired to Ethernet Bridge 1, with the deployment Running 5/5](m1_system_blueprint.png)
 
@@ -45,11 +45,11 @@ The real messages under test are **V2X-ECU → ADA-ECU** and **ADA-ECU → IVI-E
 
 ## Resources
 
-The following section explain CarSky platform's resources that SDT utilize to deploy and proves that system works 
+The following sections explain the CarSky platform resources the SUT uses to deploy, and prove that the system works.
 
 ### Baseline resources
 
-The CarSky platform provide resources the deployment stands on — provided by the organizers, not built by the team.
+The CarSky platform provides the resources the deployment stands on — provided by the organizers, not built by the team.
 
 | Resource | What it is |
 |---|---|
@@ -80,7 +80,7 @@ Six GitHub Actions workflows, one per development phase, all carrying identical 
 
 The following CI lanes are all implemented and working. 
 
-**Note**: the images being built could have unit tests. But evidence to their work are only supported by either isolated tests or system tests. Some evidence are provided in this documents. Exhashtive evidence will be completed in wikipage. 
+**Note**: the images being built carry unit tests, but evidence of their work is provided only by isolated tests or system tests. Some evidence is provided in this document; exhaustive evidence will be completed in the wiki.
 
 | Workflow | Lanes | What it verifies |
 |---|---|---|
@@ -104,11 +104,11 @@ Automation used to deploy the APK, collect logs, check them against expected res
 | `check_v2x_log.py` | Assert the V2X receive chain on a saved `[EVT]` stream |
 | `adb logcat` | Read the IVI app's `[RX]` lines — the only surface carrying them |
 
-#### smock tests:
+#### Smoke tests
 
-- Netcheck tool, used in phase0-smoked-test
+- Netcheck tool, used in the phase 0 smoke test
 
-#### Isolated Tests (module tests) tools: 
+#### Isolated test (module test) tools
 
 Each ECU is also exercised alone, in a reduced blueprint where purpose-built mock images stand in for its neighbours and generate the traffic they would send. `COLLECT-LOGS.cmd` carries a shortcut for every blueprint below.
 
@@ -118,7 +118,7 @@ Each ECU is also exercised alone, in a reduced blueprint where purpose-built moc
 | Isolated ADA — `m1-ada-ecu:latest` | `m1-ada-bench:latest` (`tools/ada-bench/`), deployed twice — `ROLE=v2x_mock` sends decoded CPM objects upstream of the ADA, `ROLE=ivi_mock` sinks and validates its warnings downstream | `phase4_smoked_test` |
 | Isolated IVI — `app-debug.apk` on the AAOS guest | `m1-r4-sim:latest` (`IVI_ECU/mock-sender/`) — scripted ADA-ECU stand-in firing warning messages at `:47300` | `phase5_smoked_test` |
 
-#### Data Provenance tool:
+#### Data Provenance tool
 
 The milestone's definition of done requires that vehicle C reaches vehicle A **only** through the V2X relay — the ADA-ECU's own detector must never produce C. One tool asserts it:
 
@@ -127,7 +127,7 @@ The milestone's definition of done requires that vehicle C reaches vehicle A **o
 | `check_zero_c.py` (`ADA_ECU/tools/`) | Scans the detector's captured detection stream and fails on any line claiming `source: v2x_relayed`, any track id in the `v2x:` namespace, or (with `--evt`) an own-sensor detection at the range and time of a relayed C sample. A clean exit prints the examined counts, so an empty log cannot pass vacuously |
 | `ada-zero-c` CI lane (`phase3-ci.yml`) | Runs the real detector over the committed ego clip in a single un-looped pass, captures its detection stream, and gates the push on `check_zero_c.py` passing |
 
-- Evidence to Data Provenance tests will be provided later.
+- Evidence of the Data Provenance tests will be provided later.
 
 ## System test evidence
 
@@ -187,17 +187,21 @@ No single surface is sufficient: the screen does not prove where the data came f
 - `scenario_time_s` advances through the 10 s scenario; the **bench resends the scenario cyclically**, so the message stream — and the demo — runs continuously.
 - The bench is the only mocked wire source: these are the CPM messages no real vehicle exists to send.
 
-### Evidence 5 - Wireshark logs
+### Evidence 5 — Wireshark logs
 
-- Wireashark logs are to be added in future. 
-- Currently timing of invoking log collecting tool `logs-collect` comes too late, and PCAP extract tool `extract-pcap`returns error [PCAP-BEGIN ...] block`
+- Wireshark logs are to be added in the future.
+- Currently, the log-collecting tool `logs-collect` is invoked too late, and the pcap-extract tool `extract-pcap` returns an error on the `[PCAP-BEGIN ...]` block.
 
-### Evidence 6 - Degraded condition
+### Evidence 6 — Degraded condition
 
-- `warningType` allows future features addition. `unknown warningType` is considered degraded; a special log must be printed **preserving the wire value** , and special logic be handled.
-- the scenario is supported in isolated IVI-ECU test, but evidence not yet gathered.  
+- `warningType` allows future feature additions. An unknown `warningType` is considered degraded: a special log must be printed **preserving the wire value**, and special handling logic applied.
+- The scenario is supported in the isolated IVI-ECU test, but evidence is not yet gathered.
 
-## Delivery timeline — the logs and the video
+## Delivery timeline — the logs
+
+The following is drawn from one of our system test runs and is intended as a sample analysis only. Different test runs will produce different results.
+
+Reproduce the logs by running the Log Collector tool.
 
 How the delivery unfolds in time: what each log timestamp means, the event sequence of one warning cycle, and how that cycle maps onto the demo video.
 
@@ -222,7 +226,7 @@ The log set behind the timeline is one `COLLECT-LOGS` pass over the running Room
 
 ### One warning cycle
 
-The diagram illustrates the arrival time of events, detected from our logs, but don't necessary from the same attached demo in this project. 
+The diagram illustrates the arrival times of events detected from our logs — not necessarily from the demo video attached to this project.
 
 ![Timeline of one 10.13 s warning cycle: bench CPM stream, V2X decode pipeline, ADA tracks for B and C, the risk-state ribbon, the IVI warnings, and a per-message latency inset](m1-delivery-timeline.svg)
 

@@ -84,6 +84,7 @@ Checked items are complete and included in the Milestone 1 package; ❌ marks an
 | ✅ | **Demo video** | [A video demo](../../video-evidence/system-test.mp4) of the full system test |
 | ✅ | **Wiki** | The complete project design, and the research articles founding the project |
 | ✅ | **Deployment blueprints** | CarSky blueprints ready to be deployed and tested |
+| ✅ | **Documentation** | Wiki pages and presentations — the wiki is a work in progress, with articles being added |
 
 ---
 
@@ -167,6 +168,19 @@ The boundary is written down — no surprise gaps, and a registered path forward
 - **No vehicle hardware** — Milestone 1 is fully virtual by design; nothing in the delivery depends on a physical car.
 - **The production V2X radio stack is a later milestone** — the receiving side is built; the radio itself is deliberately deferred and recorded as such.
 - **Future features are registered, not improvised** — a maintained register names each planned extension, and the modular design lets it land behind existing interfaces **without rework** of what you receive today.
+
+---
+
+# Product limitations
+
+Known limits of Milestone 1, each with its registered follow-up.
+
+| Limitation | Today | Future feature |
+|---|---|---|
+| **Warning threshold** | Fixed — derived from the stopping distance at over 75 km/h | Speed-scaled thresholds |
+| **Scenario coverage** | Same-lane occlusion only | Occluded cars in other lanes and around corners |
+| **Warning screen** | 2D God View | True 3D warning screen |
+| **Perception input** | Machine learning on a stored, looped video | Live camera feed |
 
 ---
 
