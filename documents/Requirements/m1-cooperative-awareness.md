@@ -410,8 +410,6 @@ Awareness state (optional — R15):
 
 ## 3. Technical solution analysis
 
-Hard-constraint screening precedes every comparison (open-source only, Linux-targeted per [solution-selection-criteria.md](../../.claude/rules/solution-selection-criteria.md)); C1–C4 below are that rule's ranked criteria. The provided AAOS node and CarSky itself are sanctioned competition infrastructure, not team dependency choices.
-
 ### (a) V2X message family + encoding — serves R1, R9–R11
 
 - **Family candidates:** SAE J2735 BSM — disqualified (paywalled spec, and Part I carries no perceived objects); ETSI CAM+DENM; ETSI CPM TS 103 324.

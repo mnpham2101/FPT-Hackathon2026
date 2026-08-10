@@ -346,12 +346,12 @@ docker buildx build --platform linux/arm64 --provenance=false --sbom=false -t m1
 
 | CI lane | File | What it does |
 |---|---|---|
-| `contracts-gate` | [phase0-ci.yml](../../../../.github/workflows/phase0-ci.yml) | `contracts/check_sync.py` and the R7 transport-import gate |
-| `v2x-core-build` | [phase1-ci.yml](../../../../.github/workflows/phase1-ci.yml) | full build, the whole CTest suite, and `gv_tool` run twice for byte-identical determinism |
-| `v2x-comms-check` | [phase1-ci.yml](../../../../.github/workflows/phase1-ci.yml) | the D7 loopback acceptance (§12) |
-| `v2x-ecu-image` | [phase1-ci.yml](../../../../.github/workflows/phase1-ci.yml) | the emulated `linux/arm64` image build, pushed to Zot when `CARSKY_ZOT_API_KEY` is set |
+| `contracts-gate` | `phase0-ci.yml` | `contracts/check_sync.py` and the R7 transport-import gate |
+| `v2x-core-build` | `phase1-ci.yml` | full build, the whole CTest suite, and `gv_tool` run twice for byte-identical determinism |
+| `v2x-comms-check` | `phase1-ci.yml` | the D7 loopback acceptance (§12) |
+| `v2x-ecu-image` | `phase1-ci.yml` | the emulated `linux/arm64` image build, pushed to Zot when `CARSKY_ZOT_API_KEY` is set |
 
-A green image lane is not evidence that a tag reached the registry — the push step is gated on the secret ([CLAUDE.md § Repository layout](../../../../CLAUDE.md)).
+A green image lane is not evidence that a tag reached the registry — the push step is gated on the secret (the agreed layout).
 
 ## 12. Test strategy
 

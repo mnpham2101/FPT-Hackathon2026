@@ -35,7 +35,7 @@ Containers get no `NET_RAW` by default (the platform doc calls it out as *"requi
 
 Create a new folder **`tools/netcheck/`** at the repo root and write all four files below into it.
 
-It is deliberately **not** one of the four node folders. `Scenario_Player/`, `V2X_ECU/`, `ADA_ECU/`, and `IVI_ECU/` hold node product code only ([CLAUDE.md § Repository layout](../../../CLAUDE.md)); this tool is throwaway test equipment that is deleted, or left unbuilt, once the real ECU images exist.
+It is deliberately **not** one of the four node folders. `Scenario_Player/`, `V2X_ECU/`, `ADA_ECU/`, and `IVI_ECU/` hold node product code only (the agreed layout); this tool is throwaway test equipment that is deleted, or left unbuilt, once the real ECU images exist.
 
 ```
 tools/netcheck/

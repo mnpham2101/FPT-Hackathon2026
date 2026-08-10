@@ -32,7 +32,7 @@ One program, two run modes, one scenario format.
 - **In-Room mode** — a container image on the ADA node of the mini-blueprint ([deploy-ivi-hmi-walkthrough.md § The mini-blueprint route](../../../../requirements/car-sky-guide/deploy-ivi-hmi-walkthrough.md#411-the-mini-blueprint-route)), reading `IVI_ECU_HOST` / `IVI_ECU_PORT` from the environment, starting itself from the entrypoint so a deploy alone produces evidence (the netcheck rule: no shell session is ever needed).
 - **Host mode** — the same program run from a laptop against an emulator or a loopback listener, with the target given as arguments.
 
-**Scenarios are data, not code.** A scenario is a file listing timed messages; the tool walks it and sends. Different scenario files must produce observably different streams — the same rule R11 imposes on the bench Scenario Player ([CLAUDE.md § Repository layout](../../../../CLAUDE.md)), and for the same reason: a new case is a new file, never a new code branch.
+**Scenarios are data, not code.** A scenario is a file listing timed messages; the tool walks it and sends. Different scenario files must produce observably different streams — the same rule R11 imposes on the bench Scenario Player (the agreed layout), and for the same reason: a new case is a new file, never a new code branch.
 
 ### Scenario cases the tool must be able to emit
 
@@ -75,10 +75,10 @@ In the Room (I4, evidence) none of this applies: the ADA node and the guest shar
 | Renderer | I3 (visual) + I1 (pure math) | Coordinate mapping is unit-tested with no Android types; the drawing is verified by eye against previews |
 | End-to-end | I4 | `adb logcat -s IVI_V2X` shows the received event; the warning view is on screen |
 
-The coordinate mapper and the parse layer stay free of Android imports precisely so I1 covers them in the existing `ivi-unit-tests` CI job ([phase5-ci.yml](../../../../.github/workflows/phase5-ci.yml)) with no device in the loop.
+The coordinate mapper and the parse layer stay free of Android imports precisely so I1 covers them in the existing `ivi-unit-tests` CI job (`phase5-ci.yml`) with no device in the loop.
 
 ## 5. Where the simulator lives
 
 - **Language:** Kotlin/JVM, depending on the shared contract submodule — the same models the APK parses with, so a message the simulator can build is by construction a message the app can read. (User decision 2026-08-02; nlohmann/json stays on the C++ producer side, where the real ADA ECU uses it.)
-- **Folder:** inside `IVI_ECU/`, as a Gradle submodule. It is IVI test equipment, and the no-cross-node-source-imports rule ([CLAUDE.md § Repository layout](../../../../CLAUDE.md)) forbids it reaching into `ADA_ECU/`.
+- **Folder:** inside `IVI_ECU/`, as a Gradle submodule. It is IVI test equipment, and the no-cross-node-source-imports rule (the agreed layout) forbids it reaching into `ADA_ECU/`.
 - **Container image:** built from that submodule's distribution for the in-Room mode, `linux/arm64`, pushed by CI like every other node image.

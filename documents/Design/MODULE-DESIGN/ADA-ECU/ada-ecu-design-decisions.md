@@ -4,7 +4,7 @@
 
 ## D1 — One folder, one image, one object model
 
-`ADA_ECU/` is this node's only build context, its only image and its only design authority. Everything the node ships is built from this folder, and the folder reads nothing outside it ([CLAUDE.md § Repository layout](../../../../CLAUDE.md)).
+`ADA_ECU/` is this node's only build context, its only image and its only design authority. Everything the node ships is built from this folder, and the folder reads nothing outside it (the agreed layout).
 
 - **`src/contracts/` is the node's only object model.** `TrackedObject`, `Source`, `TrackState`, `R2Message` and `R4WarningEvent` are declared once, in the bindings written against the frozen schemas. A second declaration of any of them — a node-local `types.hpp`, a detector-side redefinition, a tool's private field list — is a defect. Two models for one message means two answers to what a field is called, and the wire settles the argument at run time.
 - **`contracts/` holds byte-synced copies of the frozen schemas and nothing else.** A node-local fork — tightening `additionalProperties`, promoting a field to required, adding an array the producer never emits — is a second, unversioned contract that keeps passing after the real one changes.

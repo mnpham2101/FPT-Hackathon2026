@@ -15,7 +15,7 @@
 
 **This is the only design document governing this node.** It fixes the component set and each component's responsibility, every deliverable's path, the seams, the configuration keys, and the evidence log lines.
 
-- **Task planning decomposes from this document plus the requirements report, and nothing else.** Requirement numbers and acceptance come from [m1-cooperative-awareness.md](../../../Requirements/m1-cooperative-awareness.md); everything structural comes from here — which component a subtask creates, its path, the interface it satisfies, the log line that closes it. Deploy and verify subtasks come from the walkthrough, per [CLAUDE.md § Repository layout](../../../../CLAUDE.md).
+- **Task planning decomposes from this document plus the requirements report, and nothing else.** Requirement numbers and acceptance come from [m1-cooperative-awareness.md](../../../Requirements/m1-cooperative-awareness.md); everything structural comes from here — which component a subtask creates, its path, the interface it satisfies, the log line that closes it. Deploy and verify subtasks come from the walkthrough, per the agreed layout.
 - **Plans cite; they do not restate.** A brief links the section governing its step, so a change lands in one place.
 - **Implementation does not extend this silently.** A component, path or configuration key not designated here is not created ad hoc — the design changes first.
 - **What overrides it:** the requirements report, the frozen R2/R3/R4 contracts, and the walkthrough for procedure. On conflict, the CLAUDE.md authority order decides.
@@ -286,7 +286,7 @@ Scaffolding for exercising this node alone. None of it ships in the node image.
 | `tools/make_sample_video.py` | a synthetic clip proving the decoder and the JSONL path in CI; it cannot produce R12 detection evidence (D6) | — | a short `.mp4` |
 | `tools/check_zero_c.py` · `tools/check_run_alignment.py` · `tools/event_report.py` | host-side readers of this node's own output | the `[EVT]` stream, the detector's R3 JSONL, the bench's `[TX]` JSONL | the zero-C verdict, the K1–K6 verdict, the collision-risk event list |
 
-**A mock of another node never lives in this folder.** `tools/ada-bench/` sits at the repo root so it can change without rebuilding the thing it tests, and so bench code cannot ship inside the real image ([CLAUDE.md § Repository layout](../../../../CLAUDE.md), [walkthrough §2.4](../../../../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#24-where-the-bench-sources-live-and-why)). The scripts in `ADA_ECU/tools/` mock nothing: they read this node's own logs, build no image, and are excluded from the build context.
+**A mock of another node never lives in this folder.** `tools/ada-bench/` sits at the repo root so it can change without rebuilding the thing it tests, and so bench code cannot ship inside the real image (the agreed layout, [walkthrough §2.4](../../../../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#24-where-the-bench-sources-live-and-why)). The scripts in `ADA_ECU/tools/` mock nothing: they read this node's own logs, build no image, and are excluded from the build context.
 
 ## 8. Interfaces, ports and the layer rule
 
@@ -427,12 +427,12 @@ docker buildx build --platform linux/arm64 --provenance=false --sbom=false -t m1
 
 | CI lane | File | What it does |
 |---|---|---|
-| `ada-core-build` | [phase2-ci.yml](../../../../.github/workflows/phase2-ci.yml) | configure, build and `ctest` the C++ core on a plain runner |
+| `ada-core-build` | `phase2-ci.yml` | configure, build and `ctest` the C++ core on a plain runner |
 | `ada-detector-tests` | `phase3-ci.yml` | the detector suite, against `SyntheticFrameSource` |
-| `contracts-gate` | [phase0-ci.yml](../../../../.github/workflows/phase0-ci.yml) | byte-identity of this folder's schema and sample copies (D1) |
-| `ada-ecu-image` | [phase4-ci.yml](../../../../.github/workflows/phase4-ci.yml) | the `linux/arm64` image build from context `ADA_ECU/`, pushed to Zot when `CARSKY_ZOT_API_KEY` is set |
+| `contracts-gate` | `phase0-ci.yml` | byte-identity of this folder's schema and sample copies (D1) |
+| `ada-ecu-image` | `phase4-ci.yml` | the `linux/arm64` image build from context `ADA_ECU/`, pushed to Zot when `CARSKY_ZOT_API_KEY` is set |
 
-The image lane runs under emulation on an x86_64 runner, so its timeout matches the existing image lanes. A green image lane is not evidence that a tag reached the registry — the push step is gated on the secret ([CLAUDE.md § Repository layout](../../../../CLAUDE.md)). The bench image the isolated Room needs is built by its own lane from `tools/ada-bench/` ([walkthrough §3.2](../../../../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#32-build-and-push-the-images-on-ci)).
+The image lane runs under emulation on an x86_64 runner, so its timeout matches the existing image lanes. A green image lane is not evidence that a tag reached the registry — the push step is gated on the secret (the agreed layout). The bench image the isolated Room needs is built by its own lane from `tools/ada-bench/` ([walkthrough §3.2](../../../../requirements/car-sky-guide/deploy-ada-ecu-walkthrough.md#32-build-and-push-the-images-on-ci)).
 
 ## 12. Test strategy
 

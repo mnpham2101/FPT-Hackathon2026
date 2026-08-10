@@ -17,7 +17,7 @@
 
 **This is the only design document governing this node.** It fixes the component set and each component's responsibility, the module graph, every deliverable's path, the seams, the configuration keys, and the evidence log lines.
 
-- **Task planning decomposes from this document plus the requirements report, and nothing else.** Requirement numbers and acceptance come from [m1-cooperative-awareness.md](../../../Requirements/m1-cooperative-awareness.md); everything structural comes from here — which component a subtask creates, its path, the interface it satisfies, the log line or scene that closes it. Deploy and verify subtasks come from the walkthrough, per [CLAUDE.md § Repository layout](../../../../CLAUDE.md).
+- **Task planning decomposes from this document plus the requirements report, and nothing else.** Requirement numbers and acceptance come from [m1-cooperative-awareness.md](../../../Requirements/m1-cooperative-awareness.md); everything structural comes from here — which component a subtask creates, its path, the interface it satisfies, the log line or scene that closes it. Deploy and verify subtasks come from the walkthrough, per the agreed layout.
 - **Plans cite; they do not restate.** A brief links the section governing its step, so a change lands in one place.
 - **Implementation does not extend this silently.** A component, path or configuration key not designated here is not created ad hoc — the design changes first.
 - **What overrides it:** the requirements report, the frozen R4/R3 contracts, and the walkthrough for procedure. On conflict, the CLAUDE.md authority order decides.
@@ -282,9 +282,9 @@ Build commands, from `IVI_ECU/`: `./gradlew assembleDebug` · `./gradlew :contra
 
 | CI lane | File | What it does |
 |---|---|---|
-| `ivi-unit-tests` | [phase5-ci.yml](../../../../.github/workflows/phase5-ci.yml) | the module tests on a plain JVM, no device |
-| `ivi-assemble` | [phase5-ci.yml](../../../../.github/workflows/phase5-ci.yml) | `assembleDebug` + `lint`, uploading `app-debug.apk` under the artifact name the walkthrough references |
-| the simulator image | [phase5-ci.yml](../../../../.github/workflows/phase5-ci.yml) | `linux/arm64` build of `m1-r4-sim:latest` from context `IVI_ECU/`, pushed to Zot and verified by pull-back |
+| `ivi-unit-tests` | `phase5-ci.yml` | the module tests on a plain JVM, no device |
+| `ivi-assemble` | `phase5-ci.yml` | `assembleDebug` + `lint`, uploading `app-debug.apk` under the artifact name the walkthrough references |
+| the simulator image | `phase5-ci.yml` | `linux/arm64` build of `m1-r4-sim:latest` from context `IVI_ECU/`, pushed to Zot and verified by pull-back |
 
 The simulator's `Dockerfile` sits at `r4-simulator/Dockerfile` with context `IVI_ECU/` — a deviation from "own `Dockerfile` at the folder root", because this folder's primary artifact is the APK. Self-containment holds: the build reads nothing outside `IVI_ECU/`.
 
