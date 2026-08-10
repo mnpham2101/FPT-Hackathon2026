@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Build the outgoing delivery package: Hackathon-Delivery/ and Hackathon-Delivery.zip.
+"""Build the outgoing delivery package: Hackathon-Delivery/ and Hackathon-Delivery.zip,
+both written inside Package-Delivery-tool/.
 
 Steps, in order:
   1. Rebuild every deck HTML from its markdown source (presentation/**/*-deck.md).
@@ -10,7 +11,7 @@ Steps, in order:
   3. Overlay the package extras: the landing page (delivery-index.html beside this
      script) as index.html, and video-evidence/system-test.mp4 as
      video/system-test.mp4.
-  4. Zip the result to Hackathon-Delivery.zip at the repo root.
+  4. Zip the result to Hackathon-Delivery.zip beside it.
 
 Usage, from the repo root:
     python Package-Delivery-tool/build_package.py
@@ -24,8 +25,8 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parent
-OUT = REPO / "Hackathon-Delivery"
-ZIP = REPO / "Hackathon-Delivery.zip"
+OUT = HERE / "Hackathon-Delivery"
+ZIP = HERE / "Hackathon-Delivery.zip"
 LANDING = HERE / "delivery-index.html"
 VIDEO = REPO / "video-evidence" / "system-test.mp4"
 SLIDE_BUILDER = REPO / "presentation" / "slide-build-tool" / "build-slides.py"
@@ -84,7 +85,7 @@ def verify():
         sys.exit(
             "internal paths pulled into the package: " + ", ".join(shipped)
             + "\nsome shipped page still links them — find it with:"
-            + "\n  grep -rlE '\\.claude/|\\.github/|CLAUDE\\.md' --include=*.html " + OUT.name
+            + "\n  grep -rlE '\\.claude/|\\.github/|CLAUDE\\.md' --include=*.html " + str(OUT)
             + "\nthen unlink at the markdown source and rebuild."
         )
     print("--- verified: all landing-page links resolve, no internal paths shipped")

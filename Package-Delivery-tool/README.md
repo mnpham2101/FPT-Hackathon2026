@@ -1,6 +1,6 @@
 # Package-Delivery-tool
 
-Builds the outgoing delivery package — `Hackathon-Delivery/` and `Hackathon-Delivery.zip` at the repo root, both gitignored. One command, from the repo root:
+Builds the outgoing delivery package — `Hackathon-Delivery/` and `Hackathon-Delivery.zip` inside this folder, both gitignored. One command, from the repo root:
 
 ```bash
 python Package-Delivery-tool/build_package.py
@@ -9,7 +9,7 @@ python Package-Delivery-tool/build_package.py
 ## What it does, in order
 
 1. **Rebuilds every deck** — runs [presentation/slide-build-tool/build-slides.py](../presentation/slide-build-tool/build-slides.py) on every `presentation/**/*-deck.md`, so the shipped HTML is fresh from source.
-2. **Rebuilds the wiki and bundles it** — runs `python website/build-pages.py --clean --bundle Hackathon-Delivery`. The bundle is self-contained: it mirrors the repo layout for every file the site references (decks, diagrams, documents), so it opens on a double-click with no server.
+2. **Rebuilds the wiki and bundles it** — runs `python website/build-pages.py --clean --bundle` targeting `Package-Delivery-tool/Hackathon-Delivery/`. The bundle is self-contained: it mirrors the repo layout for every file the site references (decks, diagrams, documents), so it opens on a double-click with no server.
 3. **Overlays the package extras** — [delivery-index.html](delivery-index.html) becomes the package's `index.html` (the landing page), and `video-evidence/system-test.mp4` is copied to `video/system-test.mp4`.
 4. **Verifies** every landing-page link resolves to a file in the package, then **zips** the result to `Hackathon-Delivery.zip` — the file to send out.
 

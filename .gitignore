@@ -73,8 +73,8 @@ website/pages/
 
 # The outgoing delivery package and its zip — rebuilt in full by
 # Package-Delivery-tool/build_package.py. Rebuild, never commit.
-Hackathon-Delivery/
-Hackathon-Delivery.zip
+Package-Delivery-tool/Hackathon-Delivery/
+Package-Delivery-tool/Hackathon-Delivery.zip
 
 # The recorded demo run (~145 MB) — over GitHub's 100 MB file limit, so it
 # stays local; Package-Delivery-tool reads it from here into the package.
