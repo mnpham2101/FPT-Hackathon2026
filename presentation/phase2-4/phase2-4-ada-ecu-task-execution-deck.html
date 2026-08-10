@@ -239,11 +239,11 @@
       <thead><tr><th>Term</th><th>Definition</th><th>Specified in</th><th>Example here</th></tr></thead>
       <tbody>
         <tr><td><strong>Track</strong></td><td>a workstream spanning whole phases, run by different people at once</td><td><a href="../../documents/Plan/milestone1_high_level_plan.md">milestone1_high_level_plan.md</a></td><td>this node is one track: phase 2, then 3 and 4</td></tr>
-        <tr><td><strong>Phase</strong></td><td>one stage, with an input list and acceptance criteria</td><td><a href="../../.claude/rules/task-planning-conventions.md">task-planning-conventions.md</a></td><td>Phase 3</td></tr>
+        <tr><td><strong>Phase</strong></td><td>one stage, with an input list and acceptance criteria</td><td>task-planning-conventions.md</td><td>Phase 3</td></tr>
         <tr><td><strong>Task group</strong></td><td>subtasks that jointly deliver one feature or one solution</td><td>as above</td><td>group 3.2 — the detector's modules</td></tr>
         <tr><td><strong>Subtask</strong></td><td>one objective, one commit, build and tests passing</td><td>as above</td><td><code>12.3.2.3</code> — range from box width</td></tr>
         <tr><td><strong>Execution lane</strong></td><td>a dependency chain, named after the folder it writes into</td><td>each phase plan, <em>Execution order &amp; parallelism</em></td><td><code>ADA_ECU/detector/</code></td></tr>
-        <tr><td><strong>CI lane</strong></td><td>one job in a build workflow; it passes or fails</td><td><a href="../../.github/workflows/">.github/workflows/</a></td><td><code>ada-core-build</code></td></tr>
+        <tr><td><strong>CI lane</strong></td><td>one job in a build workflow; it passes or fails</td><td><code>.github/workflows/</code></td><td><code>ada-core-build</code></td></tr>
       </tbody>
     </table>
     <ul class="points">
@@ -255,7 +255,7 @@
   </section>
   <section class="slide bg-light content">
     <div class="slide-head"><div class="num">01</div><h2>The node's ten verification lanes, and where each is maintained</h2></div>
-    <p class="lead">Every workflow file carries the same triggers, so <strong>every lane runs on every push wherever it lives.</strong> Placement decides where a lane is maintained, never whether it runs — the rule is <a href="../../.claude/rules/ci-lane-placement.md">ci-lane-placement.md</a>: a lane lives with the node it exercises.</p>
+    <p class="lead">Every workflow file carries the same triggers, so <strong>every lane runs on every push wherever it lives.</strong> Placement decides where a lane is maintained, never whether it runs — the rule is ci-lane-placement.md: a lane lives with the node it exercises.</p>
     <table class="fpt">
       <thead><tr><th>File</th><th>Lanes</th><th>What they prove</th></tr></thead>
       <tbody>

@@ -1,11 +1,5 @@
 # Requirement Analysis & Technical Solution Report — M1: Cooperative Vehicle Awareness
 
-> Sources of authority: [m1-proposal-deck.md](../../presentation/m1-proposal-deck.md) — the authoritative proposal; [Car-Sky-Platform.html](../../requirements/development-platform-doc/Car-Sky-Platform.html) — authoritative on the CarSky development & deployment platform (blueprint/node/pin model).
->
-> Requirement numbers R1–R19 are project-global and frozen — they are the `X` segment of task IDs `X.Y.Z.W` ([task-planning-conventions.md](../../.claude/rules/task-planning-conventions.md)).
->
-> **Extension requirements live in their own reports and continue the same numbering.** [m1-run-timing-and-event-triggering.md](../../requirements/deprecated/m1-run-timing-and-event-triggering.md) §7 defines **R20** (real-time paced stimulus sources), **R21** (run alignment and cross-source temporal correlation) and **R22** (demo run choreography — warning onset after the eighth second), together with the run-timing solution analysis they rest on.
-
 ## 1. Project description
 
 ### Project goals

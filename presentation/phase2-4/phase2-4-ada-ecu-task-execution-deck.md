@@ -73,11 +73,11 @@ Three different things in this project are called a *track* or a *lane*. They ar
 | Term | Definition | Specified in | Example here |
 | ---- | ---------- | ------------ | ------------ |
 | **Track** | a workstream spanning whole phases, run by different people at once | [milestone1_high_level_plan.md](../../documents/Plan/milestone1_high_level_plan.md) | this node is one track: phase 2, then 3 and 4 |
-| **Phase** | one stage, with an input list and acceptance criteria | [task-planning-conventions.md](../../.claude/rules/task-planning-conventions.md) | Phase 3 |
+| **Phase** | one stage, with an input list and acceptance criteria | task-planning-conventions.md | Phase 3 |
 | **Task group** | subtasks that jointly deliver one feature or one solution | as above | group 3.2 — the detector's modules |
 | **Subtask** | one objective, one commit, build and tests passing | as above | `12.3.2.3` — range from box width |
 | **Execution lane** | a dependency chain, named after the folder it writes into | each phase plan, *Execution order & parallelism* | `ADA_ECU/detector/` |
-| **CI lane** | one job in a build workflow; it passes or fails | [.github/workflows/](../../.github/workflows/) | `ada-core-build` |
+| **CI lane** | one job in a build workflow; it passes or fails | `.github/workflows/` | `ada-core-build` |
 
 - **Lane letters are local to a phase and do collide** — earlier phases used letters; these three name their lanes after folders instead.
 - **Lane letters and group numbers express no order.** Only a stated dependency sequences one unit against another, and a dependency always names an artifact.
@@ -87,7 +87,7 @@ Three different things in this project are called a *track* or a *lane*. They ar
 
 # The node's ten verification lanes, and where each is maintained
 
-Every workflow file carries the same triggers, so **every lane runs on every push wherever it lives.** Placement decides where a lane is maintained, never whether it runs — the rule is [ci-lane-placement.md](../../.claude/rules/ci-lane-placement.md): a lane lives with the node it exercises.
+Every workflow file carries the same triggers, so **every lane runs on every push wherever it lives.** Placement decides where a lane is maintained, never whether it runs — the rule is ci-lane-placement.md: a lane lives with the node it exercises.
 
 | File | Lanes | What they prove |
 | ---- | ----- | --------------- |

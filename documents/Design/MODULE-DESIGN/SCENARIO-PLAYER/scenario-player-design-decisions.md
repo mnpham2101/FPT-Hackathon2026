@@ -6,7 +6,7 @@
 
 A small C++ CLI built from the same Vanetza-based codec seam sources as the V2X ECU, invoked by Python as a **persistent** subprocess: one `CpmContent` JSON per stdin line, one base64 UPER payload per stdout line. An encode failure returns an `{"error": …}` line and never kills the stream.
 
-Against [solution-selection-criteria](../../../../.claude/rules/solution-selection-criteria.md): **C1** — it reuses the frozen codec, so the bytes are byte-verifiable against the golden vectors, and the subprocess-over-stdio pattern is already sanctioned in this repo (the R12 detector boundary); **C2** — one CMake target and a small CLI, no new toolchain; **C4** — nothing new pulled in.
+Against the solution-selection criteria: **C1** — it reuses the frozen codec, so the bytes are byte-verifiable against the golden vectors, and the subprocess-over-stdio pattern is already sanctioned in this repo (the R12 detector boundary); **C2** — one CMake target and a small CLI, no new toolchain; **C4** — nothing new pulled in.
 
 | Rejected alternative | Why |
 |---|---|
