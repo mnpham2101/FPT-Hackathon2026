@@ -22,3 +22,4 @@ Follows [2026-08-10-ai-judge-round2-delivery-assessment.md](2026-08-10-ai-judge-
 
 - `tmp/AI-Judge-v5.md` — the rebuilt bundle judged from its own files only, against the Round 2 rubric (`tmp/Automotive-Hackathon-2026-Regulations.pdf`) and the organizers' delivery template (`tmp/Automotive Hackthon - Final Vòng 2.docx`), with topic/innovation/risk weighing against hypothetical competitive teams from the four hackathon tracks. Working artifact, not committed.
 - `tmp/AI-Judge-v6.md` — the same procedure re-run ("perform review on my Hackathon-Delivery tool as before") after the package became HTML-only: no markdown, no code, GitHub links throughout. Working artifact, not committed.
+- `tmp/AI-Judge-v7.md` — re-run of 2026-08-11 ("Do another judge on my Hackathon-Delivery") after the report copy-edit, the Product Limitations disclosure, the Documentation row, and the pushed `V2.0_M1_Round2` tag. Working artifact, not committed.
