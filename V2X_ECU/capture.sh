@@ -200,7 +200,7 @@ cap_log "live-text consumer started (pid ${PID_TEXT})"
 if [ "$PCAP_OK" -eq 1 ]; then
   # shellcheck disable=SC2086
   tcpdump -i any -n -w "${PCAP_DIR}/cap-%Y%m%d-%H%M%S.pcap" \
-    -G "$CAPTURE_ROTATE_S" -z "$SELF" $CAPTURE_FILTER >/dev/null 2>&1 &
+    -G "$CAPTURE_ROTATE_S" -z "$SELF" $CAPTURE_FILTER 2>/dev/null &
   PID_PCAP=$!
   cap_log "pcap consumer started (pid ${PID_PCAP}), export every ${CAPTURE_ROTATE_S}s as [PCAP-BEGIN <name>] .. [PCAP-END]"
 fi
