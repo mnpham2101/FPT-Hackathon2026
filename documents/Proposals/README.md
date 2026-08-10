@@ -2,7 +2,7 @@
 
 This page states the project objective, the planned delivery, and the argument for the product's strength.
 
-**Abridged version.** A reader preferring a presentation can open [Cooperative Vehicle Awareness](../../presentation/m1-proposal-deck.md) ([HTML](../../presentation/m1-proposal-deck.html)). It presents this plan; where the two differ, this document governs.
+**Abridged version.** A reader preferring a presentation can open [Product & Delivery](../../presentation/m1-business-delivery/m1-business-delivery-deck.md) ([HTML](../../presentation/m1-business-delivery/m1-business-delivery-deck.html)) — the business view of this page: what the product does, the guaranteed-delivery checklist, and the delivery options. The engineering proposal remains [Cooperative Vehicle Awareness](../../presentation/m1-proposal-deck.md) ([HTML](../../presentation/m1-proposal-deck.html)). Where any presentation and this document differ, this document governs.
 
 ## Objective
 
@@ -10,12 +10,25 @@ Make a vehicle aware of a hazard it cannot see by relaying another vehicle's per
 
 ## Planned Delivery
 
-A complete five-node blueprint deployed and running on CarSky — three ECUs, the Scenario Player bench, and the Ethernet bridge — with the evidence reported in [system-delivery.md](../Delivery/Acceptance/system-delivery.md) and reproducible via the [Test-Guides](../Delivery/Test-Guides/README.md).
+Every item below is delivered with Milestone 1 — checked means it is complete and included in the package.
+
+| Delivered | Item | What you receive |
+|:---:|---|---|
+| ✅ | **Application code** | Three ECU applications — V2X-ECU, ADA-ECU and IVI-ECU — full source on [GitHub](https://github.com/mnpham2101/FPT-Hackathon2026) |
+| ✅ | **Utility tools** | Automation for APK installation and log collection — `tools/apk-uploader/` and `tools/logs-collector/` |
+| ✅ | **Data-provenance tools** | Shipped inside the ADA-ECU application — they prove the hazard reaches the driver through the V2X relay alone |
+| ✅ | **Isolated test images** | Each ECU has mock images of its neighbouring ECUs, so every application can be exercised and accepted on its own |
+| ✅ | **CI tools** | Six CI pipelines, one per development phase, under `.github/workflows/` — every change is built and tested automatically |
+| ✅ | **Demo video** | A video demo of the full system test is included |
+| ✅ | **Wiki** | The full, complete explanation of the project design, and the research articles providing the foundation for the project |
+| ✅ | **Deployment blueprints** | CarSky blueprints ready to be deployed and tested |
 
 ### Screen output
 
 - The IVI warning screen: the NLOS God View with ego A, occluder B, and ghost C drawn dashed with its risk state — rendered from warning messages only.
 - Captured as screenshots and recordings on the platform's Screen widget.
+
+![The IVI warning screen on the platform's Screen widget: the NLOS God View with ego A, occluder B and ghost C dashed at RISK: MEDIUM, and the IVI log below showing the risk state stepping medium → high → low](../Delivery/Acceptance/Evidence1_WarningScreen_IVILog_RiskLabel.png)
 
 ### Internal logs and Wireshark capture
 
@@ -30,3 +43,10 @@ A complete five-node blueprint deployed and running on CarSky — three ECUs, th
 - **Documentation discipline** —
   - ASPICE-oriented traceability: features tracked to requirements to task IDs.
   - A continuously updated Knowledge Base and wiki that give future members a working understanding of the project and connect human knowledge to AI-assisted development.
+- **Target variety of customer needs** —
+  - **Automotive OEMs** bringing cooperative awareness to connected vehicle lines: the three applications map onto the ECUs a production vehicle already carries — connectivity, driver assistance, and cabin display.
+  - **Tier-1 suppliers** building one of those ECUs: the frozen contracts let a supplier adopt a single application and integrate it against their own stack.
+  - **Fleet and logistics operators** running convoys, where a following vehicle routinely blocks the driver's view and an NLOS warning directly reduces rear-end risk.
+  - **Validation and research teams** studying V2X: the fully virtual deployment, the scenario bench, and the isolated test images make a complete cooperative-awareness testbed with no hardware investment.
+  - The system can be developed and delivered as a **whole package of the three ECU applications**, integrated and system-tested end to end.
+  - Or each application can be delivered as a **single, standalone product per ECU** — each ships with mock images of its neighbours, so a single application is testable and acceptable on its own.

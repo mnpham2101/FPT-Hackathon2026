@@ -93,3 +93,32 @@ Track admission is the risk gate: only a track admitted to the store is publishe
 - **`tracked`** — published to the assessment; refreshed by updates within the exit gate, dropped on an update beyond it (the hysteresis drop) or on silence past the timeout.
 
 The gates are distances with hysteresis (enter `30 m`, exit `35 m`, blueprint-configured), and the timeout is a time measured on a monotonic stamp — not a message count, since two sources at independent cadences would turn one count into two different real timeouts. **Vehicle variable speed is not used in the algorithm now**: the admission criterion is fixed distance, and scaling it with traffic speed is a registered future development.
+
+### 3rd Party Libraries
+
+Third-party libraries in the delivered images, per node. Languages: Python 3.11 (bench, ADA detector), C++17 (V2X-ECU, ADA-ECU core), Kotlin 2.2.20 (IVI-ECU).
+
+| Node | Library | License | Usage |
+|---|---|---|---|
+| Scenario Player | PyYAML 6.0.2 | MIT | Scenario YAML loading |
+| Scenario Player | Vanetza ITS2 v26.06 | LGPLv3 (dynamically linked) | ASN.1 UPER encode of the CPM in the `cpm_encode` helper |
+| Scenario Player | nlohmann/json 3.11.3 | MIT | JSON binding at the codec seam |
+| Scenario Player | pytest ≥ 8 · jsonschema ≥ 4.18 | MIT | Unit tests, schema validation |
+| V2X-ECU | Vanetza ITS2 v26.06 | LGPLv3 (dynamically linked) | ASN.1 UPER decode of inbound CPM |
+| V2X-ECU | nlohmann/json 3.11.3 | MIT | Outbound object-message JSON and `[EVT]` log lines |
+| V2X-ECU | Boost (transitive via Vanetza) | BSL-1.0 | Vanetza runtime dependency |
+| V2X-ECU | GoogleTest 1.14.0 | BSD-3-Clause | Unit tests |
+| V2X-ECU | tcpdump | BSD | In-container capture for the Wireshark evidence |
+| ADA-ECU | nlohmann/json 3.11.3 | MIT | Contract bindings — object message in, tracked-object store, warning out |
+| ADA-ECU | ONNX Runtime (CPU) 1.28.0 | MIT | YOLO11n inference session |
+| ADA-ECU | YOLO11n (Ultralytics export) | AGPL-3.0 | Object-detection model, committed as ONNX |
+| ADA-ECU | opencv-python-headless 5.0.0.93 | Apache-2.0 | Saved-clip frame decode |
+| ADA-ECU | numpy 2.4.6 | BSD-3-Clause | Detector pre/post-processing math |
+| ADA-ECU | GoogleTest 1.14.0 · pytest ≥ 8 | BSD-3-Clause / MIT | Core and detector unit tests |
+| ADA-ECU | tcpdump | BSD | In-container capture for the Wireshark evidence |
+| IVI-ECU | Jetpack Compose (BOM 2024.09.03) + Material3 | Apache-2.0 | The HMI layout and the God View canvas |
+| IVI-ECU | kotlinx.serialization-json 1.9.0 | Apache-2.0 | Warning-message parsing into the typed model |
+| IVI-ECU | kotlinx-coroutines 1.9.0 | Apache-2.0 | Receive loop and state propagation |
+| IVI-ECU | Dagger Hilt 2.58 (+ Guava 33.4.0) | Apache-2.0 | Dependency injection |
+| IVI-ECU | AndroidX Lifecycle 2.8.6 · activity-compose 1.9.2 | Apache-2.0 | ViewModel, service and Compose integration |
+| IVI-ECU | JUnit4 · Robolectric 4.13 · MockK · Turbine | EPL-1.0 / Apache-2.0 / MIT | Unit tests |

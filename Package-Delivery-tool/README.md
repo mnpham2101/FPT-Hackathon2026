@@ -15,11 +15,12 @@ python Package-Delivery-tool/build_package.py
 
 ## The landing page
 
-[delivery-index.html](delivery-index.html) carries four cards, in this order:
+[delivery-index.html](delivery-index.html) carries five cards, in this order:
 
 1. Video demo — `video/system-test.mp4`
-2. System Design Report — `presentation/system-design/system-design-deck.html`
+2. Product & Delivery (business view) — `presentation/m1-business-delivery/m1-business-delivery-deck.html`
 3. System Test Delivery Report — `presentation/phase6-systemIntegration/phase6-system-delivery-deck.html`
-4. Project wiki — `website/index.html`
+4. System Design Report — `presentation/system-design/system-design-deck.html`
+5. Project wiki — `website/index.html`
 
 Edit it here, then rerun the build — never edit `Hackathon-Delivery/index.html`, which every build overwrites.

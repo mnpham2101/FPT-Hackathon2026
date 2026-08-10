@@ -35,8 +35,9 @@ SITE_BUILDER = REPO / "website" / "build-pages.py"
 # Paths the landing page links; the build fails if any is absent from the package.
 LANDING_TARGETS = (
     "video/system-test.mp4",
-    "presentation/system-design/system-design-deck.html",
+    "presentation/m1-business-delivery/m1-business-delivery-deck.html",
     "presentation/phase6-systemIntegration/phase6-system-delivery-deck.html",
+    "presentation/system-design/system-design-deck.html",
     "website/index.html",
 )
 

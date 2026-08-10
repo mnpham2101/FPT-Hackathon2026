@@ -11,7 +11,7 @@ The system makes a vehicle aware of a hazard it cannot see by relaying another v
 | Team ID | KIS |
 | Lead | Pham Ngoc Minh — mnpham1986@gmail.com |
 | Solution name | Cooperative Awareness System |
-| Reported version | Milestone 1 |
+| Reported version | Milestone 1 (Tag: V2.0 M1 Round2) |
 | Evidence folder | `documents/Delivery/Acceptance/` |
 
 The evidence folder is read in two steps:
@@ -19,9 +19,9 @@ The evidence folder is read in two steps:
 1. **System evidence is reported in this page** — the screenshots in this folder and the § System test evidence sections that explain each one.
 2. **Supporting guides to reproduce the evidence and collaborate** — [Test-Guides](../Test-Guides/README.md): [apk-deploy.md](../Test-Guides/apk-deploy.md) installs the IVI app, [testing-guide.md](../Test-Guides/testing-guide.md) drives a run and collects its logs, screen captures and pcaps.
 
-## Design
+## System Under Test
 
-The system is a complete five-node blueprint — three ECUs, a supporting Scenario Player bench, and the Ethernet bridge joining them. The bench generates V2X messages as if received from another vehicle *in the same lane*, *directly in front*.
+The System Under Test (SDT) is a complete five-node blueprint — three ECUs, a supporting Scenario Player bench, and the Ethernet bridge joining them. The bench generates V2X messages as if received from another vehicle *in the same lane*, *directly in front*.
 
 ![The m1_system_test blueprint on the CarSky canvas: Bench — Scenario Player, V2X ECU, ADA ECU and IVI ECU, each wired to Ethernet Bridge 1, with the deployment Running 5/5](m1_system_blueprint.png)
 
@@ -45,9 +45,11 @@ The real messages under test are **V2X-ECU → ADA-ECU** and **ADA-ECU → IVI-E
 
 ## Resources
 
+The following section explain CarSky platform's resources that SDT utilize to deploy and proves that system works 
+
 ### Baseline resources
 
-The CarSky platform resources the deployment stands on — provided by the organizers, not built by the team.
+The CarSky platform provide resources the deployment stands on — provided by the organizers, not built by the team.
 
 | Resource | What it is |
 |---|---|
@@ -59,34 +61,57 @@ The CarSky platform resources the deployment stands on — provided by the organ
 | Container node | CarSky container node type; runs the registry images (bench, V2X-ECU, ADA-ECU) |
 | Ethernet bridge | Node type `eth-bridge`, `bridgeMode: linux`, subnet `10.99.0.0/24`; every node's `eth` pin wires to it in a star |
 
-### Libraries
+### Tools
 
-Third-party libraries in the delivered images, per node. Languages: Python 3.11 (bench, ADA detector), C++17 (V2X-ECU, ADA-ECU core), Kotlin 2.2.20 (IVI-ECU).
+#### CI tools
 
-| Node | Library | License | Usage |
-|---|---|---|---|
-| Scenario Player | PyYAML 6.0.2 | MIT | Scenario YAML loading |
-| Scenario Player | Vanetza ITS2 v26.06 | LGPLv3 (dynamically linked) | ASN.1 UPER encode of the CPM in the `cpm_encode` helper |
-| Scenario Player | nlohmann/json 3.11.3 | MIT | JSON binding at the codec seam |
-| Scenario Player | pytest ≥ 8 · jsonschema ≥ 4.18 | MIT | Unit tests, schema validation |
-| V2X-ECU | Vanetza ITS2 v26.06 | LGPLv3 (dynamically linked) | ASN.1 UPER decode of inbound CPM |
-| V2X-ECU | nlohmann/json 3.11.3 | MIT | Outbound object-message JSON and `[EVT]` log lines |
-| V2X-ECU | Boost (transitive via Vanetza) | BSL-1.0 | Vanetza runtime dependency |
-| V2X-ECU | GoogleTest 1.14.0 | BSD-3-Clause | Unit tests |
-| V2X-ECU | tcpdump | BSD | In-container capture for the Wireshark evidence |
-| ADA-ECU | nlohmann/json 3.11.3 | MIT | Contract bindings — object message in, tracked-object store, warning out |
-| ADA-ECU | ONNX Runtime (CPU) 1.28.0 | MIT | YOLO11n inference session |
-| ADA-ECU | YOLO11n (Ultralytics export) | AGPL-3.0 | Object-detection model, committed as ONNX |
-| ADA-ECU | opencv-python-headless 5.0.0.93 | Apache-2.0 | Saved-clip frame decode |
-| ADA-ECU | numpy 2.4.6 | BSD-3-Clause | Detector pre/post-processing math |
-| ADA-ECU | GoogleTest 1.14.0 · pytest ≥ 8 | BSD-3-Clause / MIT | Core and detector unit tests |
-| ADA-ECU | tcpdump | BSD | In-container capture for the Wireshark evidence |
-| IVI-ECU | Jetpack Compose (BOM 2024.09.03) + Material3 | Apache-2.0 | The HMI layout and the God View canvas |
-| IVI-ECU | kotlinx.serialization-json 1.9.0 | Apache-2.0 | Warning-message parsing into the typed model |
-| IVI-ECU | kotlinx-coroutines 1.9.0 | Apache-2.0 | Receive loop and state propagation |
-| IVI-ECU | Dagger Hilt 2.58 (+ Guava 33.4.0) | Apache-2.0 | Dependency injection |
-| IVI-ECU | AndroidX Lifecycle 2.8.6 · activity-compose 1.9.2 | Apache-2.0 | ViewModel, service and Compose integration |
-| IVI-ECU | JUnit4 · Robolectric 4.13 · MockK · Turbine | EPL-1.0 / Apache-2.0 / MIT | Unit tests |
+Six GitHub Actions workflows, one per development phase, all carrying identical triggers — every lane runs on every push and pull request. A lane is maintained in the file of the phase that develops the node it exercises, so the file named for a phase contains that phase's work.
+
+| Workflow | Lanes | What it verifies |
+|---|---|---|
+| `phase0-ci.yml` | `contracts-gate` · `netcheck-image` | Byte-identity of every node-local contract copy against the master schemas; build and registry push of the `m1-netcheck:latest` smoke-test image |
+| `phase1-ci.yml` | `v2x-core-build` · `v2x-comms-check` · `v2x-ecu-image` · `sp-unit-tests` · `sp-codec-helper` · `scenario-player-image` | V2X-ECU build, unit tests and golden-vector determinism; the loopback receive chain asserted with `check_v2x_log.py`; bench unit tests and the `cpm_encode` helper; build, push and smoke-run of `m1-v2x-ecu:latest` and `m1-scenario-player:latest` |
+| `phase2-ci.yml` | `ada-core-build` · `ada-loopback-check` | ADA-ECU core build and unit tests; the assembled `ada_ecu` exercised in four loopback arms — admission via a mock V2X sender, detector disabled, real detector subprocess, detector smoke on synthetic frames |
+| `phase3-ci.yml` | `ada-detector-wheels` · `ada-detector-tests` · `ada-detector-run` · `ada-zero-c` | Pinned detector dependencies installable for linux/arm64; the detector test suite fully unskipped; timed detector runs over the committed ego clip (emit behaviour and CPU throughput); the zero-C data-provenance gate (§ Data Provenance tool) |
+| `phase4-ci.yml` | `ada-e2e-loopback` · `ada-ecu-image` · `ada-bench-image` · `ada-bench-selfcheck` | The full relay chain end-to-end in loopback, with an out-of-range negative control; build, push and in-image detector smoke of `m1-ada-ecu:latest`; build and self-check of the `m1-ada-bench:latest` mock image |
+| `phase5-ci.yml` | `ivi-unit-tests` · `ivi-assemble` | IVI-ECU Gradle unit tests on a plain JVM; APK assembly, with the debug APK uploaded as the artifact installed onto the AAOS guest |
+
+#### Utility Tools
+
+Automation used to deploy the APK, collect logs, check them against expected results, and export the Wireshark captures. Usage details are in the [Test-Guides README](../Test-Guides/README.md) and the guides it links — each tool row is documented there, not here.
+
+| Tool | Purpose |
+|---|---|
+| `INSTALL-IVI-APK.cmd` | Install the APK onto the AAOS guest and own the ADB tunnel |
+| `COLLECT-LOGS.cmd` | One pass over a deployed Room: every node's log, the guest logcat, and a pass/fail summary against expected results |
+| `EXTRACT-PCAP.cmd` | Turn the base64 capture blocks inside a saved node log into `.pcap` files Wireshark opens |
+| `capture.sh` (inside the V2X/ADA images) | Run tcpdump in-container; emit `[CAP]` lines and the rotating pcap into the node log |
+| `check_v2x_log.py` | Assert the V2X receive chain on a saved `[EVT]` stream |
+| `adb logcat` | Read the IVI app's `[RX]` lines — the only surface carrying them |
+
+#### smock tests:
+
+- Netcheck tool, used in phase0-smoked-test
+
+#### Isolated Tests (module tests) tools: 
+
+Each ECU is also exercised alone, in a reduced blueprint where purpose-built mock images stand in for its neighbours and generate the traffic they would send. `COLLECT-LOGS.cmd` carries a shortcut for every blueprint below.
+
+| Test — image under test | Mock images | Blueprint |
+|---|---|---|
+| Isolated V2X — `m1-v2x-ecu:latest` | `m1-scenario-player:latest` (`Scenario_Player/`) — the bench plays the CPM stream of the mocked remote vehicle | `phase1_smoked_test` |
+| Isolated ADA — `m1-ada-ecu:latest` | `m1-ada-bench:latest` (`tools/ada-bench/`), deployed twice — `ROLE=v2x_mock` sends decoded CPM objects upstream of the ADA, `ROLE=ivi_mock` sinks and validates its warnings downstream | `phase4_smoked_test` |
+| Isolated IVI — `app-debug.apk` on the AAOS guest | `m1-r4-sim:latest` (`IVI_ECU/mock-sender/`) — scripted ADA-ECU stand-in firing warning messages at `:47300` | `phase5_smoked_test` |
+
+#### Data Provenance tool:
+
+The milestone's definition of done requires that vehicle C reaches vehicle A **only** through the V2X relay — the ADA-ECU's own detector must never produce C. One tool asserts it:
+
+| Tool | Purpose |
+|---|---|
+| `check_zero_c.py` (`ADA_ECU/tools/`) | Scans the detector's captured detection stream and fails on any line claiming `source: v2x_relayed`, any track id in the `v2x:` namespace, or (with `--evt`) an own-sensor detection at the range and time of a relayed C sample. A clean exit prints the examined counts, so an empty log cannot pass vacuously |
+| `ada-zero-c` CI lane (`phase3-ci.yml`) | Runs the real detector over the committed ego clip in a single un-looped pass, captures its detection stream, and gates the push on `check_zero_c.py` passing |
+
 
 ## System test evidence
 
@@ -99,19 +124,6 @@ No single surface is sufficient: the screen does not prove where the data came f
 | Warning screen | The driver-facing rendering happened | IVI Screen widget — screenshot or recording |
 | Internal log | Each node produced and consumed what it should (`[TX]`, `[RX]`, `[EVT]` counters) | Node **View Log** (containers) · `adb logcat` (IVI app) |
 | Wireshark capture | What actually crossed the wire, byte-exact | pcap exported from the V2X-ECU and ADA-ECU internal logs |
-
-### Tools
-
-Automation used to deploy the APK, collect logs, check them against expected results, and export the Wireshark captures. Usage details are in the [Test-Guides README](../Test-Guides/README.md) and the guides it links — each tool row is documented there, not here.
-
-| Tool | Purpose |
-|---|---|
-| `INSTALL-IVI-APK.cmd` | Install the APK onto the AAOS guest and own the ADB tunnel |
-| `COLLECT-LOGS.cmd` | One pass over a deployed Room: every node's log, the guest logcat, and a pass/fail summary against expected results |
-| `EXTRACT-PCAP.cmd` | Turn the base64 capture blocks inside a saved node log into `.pcap` files Wireshark opens |
-| `capture.sh` (inside the V2X/ADA images) | Run tcpdump in-container; emit `[CAP]` lines and the rotating pcap into the node log |
-| `check_v2x_log.py` | Assert the V2X receive chain on a saved `[EVT]` stream |
-| `adb logcat` | Read the IVI app's `[RX]` lines — the only surface carrying them |
 
 ### Expected evidence per node
 

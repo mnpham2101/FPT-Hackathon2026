@@ -3,7 +3,7 @@ marp: true
 theme: default
 paginate: true
 title: "M1 System Delivery — Acceptance Evidence"
-description: "Delivery deck — the Milestone 1 system blueprint, the resources and libraries it stands on, and the four evidence items proving the cooperative-awareness chain end to end"
+description: "Delivery deck — the Milestone 1 system blueprint, the resources and test tooling it stands on, and the four evidence items proving the cooperative-awareness chain end to end"
 deck: "M1 System Delivery · Team KIS · FPT Hackathon 2026"
 ---
 
@@ -25,9 +25,9 @@ Lead: Pham Ngoc Minh · 2026-08-10 · Full report: [system-delivery.md](../../do
 # Table of contents
 
 1. **Introduction** — the mission, the team, and how the evidence folder reads
-2. **Design** — the deployed blueprint, the nodes, and the data flow
-3. **Resources** — platform baseline and third-party libraries
-4. **System test evidence** — evidence types, tools, the four evidence items, and the delivery timeline
+2. **System Under Test** — the deployed blueprint, the nodes, and the data flow
+3. **Resources** — platform baseline and the CI, utility, isolated-test and provenance tooling
+4. **System test evidence** — evidence types, the four evidence items, and the delivery timeline
 
 ---
 
@@ -55,7 +55,7 @@ Lead: Pham Ngoc Minh · 2026-08-10 · Full report: [system-delivery.md](../../do
 | **Team ID** | KIS |
 | **Lead** | Pham Ngoc Minh — mnpham1986@gmail.com |
 | **Solution name** | Cooperative Awareness System |
-| **Reported version** | Milestone 1 |
+| **Reported version** | Milestone 1 (Tag: V2.0 M1 Round2) |
 | **Evidence folder** | `documents/Delivery/Acceptance/` |
 
 - **System evidence is reported in the delivery page** — [system-delivery.md](../../documents/Delivery/Acceptance/system-delivery.md), this deck's full version.
@@ -67,7 +67,7 @@ Lead: Pham Ngoc Minh · 2026-08-10 · Full report: [system-delivery.md](../../do
 
 ![bg](../assets/bg-navy-motif.png)
 
-# 02 · Design
+# 02 · System Under Test
 
 ---
 
@@ -123,35 +123,56 @@ A complete five-node blueprint — three ECUs, the Scenario Player bench, and th
 
 ---
 
-# Libraries — bench and V2X-ECU
+# CI lanes
 
-| Node | Library | License | Usage |
-| --- | --- | --- | --- |
-| Scenario Player | PyYAML 6.0.2 | MIT | Scenario YAML loading |
-| Scenario Player | Vanetza ITS2 v26.06 | LGPLv3 (dynamic) | UPER encode of the CPM |
-| Scenario Player | nlohmann/json 3.11.3 | MIT | Codec-seam JSON |
-| Scenario Player | pytest · jsonschema | MIT | Tests, schema validation |
-| V2X-ECU | Vanetza ITS2 v26.06 | LGPLv3 (dynamic) | UPER decode of inbound CPM |
-| V2X-ECU | nlohmann/json 3.11.3 | MIT | Outbound JSON, `[EVT]` lines |
-| V2X-ECU | Boost (via Vanetza) | BSL-1.0 | Vanetza runtime |
-| V2X-ECU | GoogleTest 1.14.0 | BSD-3-Clause | Unit tests |
-| V2X-ECU | tcpdump | BSD | In-container capture |
+Six workflows, one per phase, identical triggers — **every lane runs on every push**. A lane is maintained with the node it exercises.
+
+| Workflow | What it verifies |
+| --- | --- |
+| `phase0-ci.yml` | Contract sync · unit tests on built `m1-netcheck` |
+| `phase1-ci.yml` | Unit tests on built `m1-v2x-ecu` · `m1-scenario-player` |
+| `phase2-ci.yml` | Unit tests on the ADA-ECU core build |
+| `phase3-ci.yml` | Unit tests on the ADA detector · the zero-C gate |
+| `phase4-ci.yml` | Unit tests on built `m1-ada-ecu` · `m1-ada-bench` |
+| `phase5-ci.yml` | Unit tests on built `app-debug.apk` |
 
 ---
 
-# Libraries — ADA-ECU and IVI-ECU
+# Utility tools
 
-| Node | Library | License | Usage |
-| --- | --- | --- | --- |
-| ADA-ECU | nlohmann/json 3.11.3 | MIT | Contract bindings in/out |
-| ADA-ECU | ONNX Runtime 1.28.0 | MIT | YOLO11n inference |
-| ADA-ECU | YOLO11n (Ultralytics export) | AGPL-3.0 | Detection model |
-| ADA-ECU | opencv-python-headless | Apache-2.0 | Saved-clip frame decode |
-| ADA-ECU | numpy · GoogleTest · pytest · tcpdump | BSD / MIT | Math, tests, capture |
-| IVI-ECU | Jetpack Compose + Material3 | Apache-2.0 | HMI layout, God View canvas |
-| IVI-ECU | kotlinx.serialization · coroutines | Apache-2.0 | Warning parsing, receive loop |
-| IVI-ECU | Dagger Hilt 2.58 · AndroidX Lifecycle | Apache-2.0 | DI, ViewModel/service glue |
-| IVI-ECU | JUnit4 · Robolectric · MockK · Turbine | EPL / Apache / MIT | Unit tests |
+| Tool | Purpose |
+| --- | --- |
+| `INSTALL-IVI-APK.cmd` | Install the APK, own the ADB tunnel |
+| `COLLECT-LOGS.cmd` | Collect every node log + guest logcat, check against expected results |
+| `EXTRACT-PCAP.cmd` · `capture.sh` | Export and produce the Wireshark captures |
+| `check_v2x_log.py` · `adb logcat` | Assert the V2X chain · read the app's `[RX]` lines |
+
+- Smoke test: the `m1-netcheck` connectivity container proved the platform baseline in `phase0_smoked_test`.
+
+> Procedures: [Test-Guides README](../../documents/Delivery/Test-Guides/README.md) — it links every guide.
+
+---
+
+# Isolated ECU test tools
+
+Every ECU is also exercised alone — mock images stand in for its neighbours in a reduced blueprint.
+
+| Test — image under test | Mock images | Blueprint |
+| --- | --- | --- |
+| **Isolated V2X** — `m1-v2x-ecu` | `m1-scenario-player` — plays the remote vehicle's CPM stream | `phase1_smoked_test` |
+| **Isolated ADA** — `m1-ada-ecu` | `m1-ada-bench` ×2 — `ROLE=v2x_mock` upstream · `ROLE=ivi_mock` downstream | `phase4_smoked_test` |
+| **Isolated IVI** — `app-debug.apk` | `m1-r4-sim` — scripted ADA stand-in firing warnings at `:47300` | `phase5_smoked_test` |
+
+- `COLLECT-LOGS.cmd` carries a shortcut per blueprint.
+
+---
+
+# Data provenance tool
+
+- The definition of done: vehicle C reaches A **only through the V2X relay** — the ADA-ECU's own detector must never produce C.
+- `check_zero_c.py` (`ADA_ECU/tools/`) fails on any detection claiming `v2x_relayed`, any `v2x:` track id, or an own-sensor detection at C's relayed range and time.
+- The `ada-zero-c` CI lane runs the real detector over the committed ego clip and gates every push on the check.
+- A clean pass prints the examined counts — an empty log cannot pass vacuously.
 
 ---
 
@@ -163,7 +184,7 @@ A complete five-node blueprint — three ECUs, the Scenario Player bench, and th
 
 ---
 
-# Types of evidence and tools
+# Types of evidence
 
 | Type | What it proves |
 | --- | --- |
@@ -171,14 +192,9 @@ A complete five-node blueprint — three ECUs, the Scenario Player bench, and th
 | **Internal log** | Each node produced and consumed what it should |
 | **Wireshark capture** | What crossed the wire, byte-exact — exported from the V2X/ADA logs |
 
-| Tool | Purpose |
-| --- | --- |
-| `INSTALL-IVI-APK.cmd` | Install the APK, own the ADB tunnel |
-| `COLLECT-LOGS.cmd` | Collect every node log + guest logcat, check against expected results |
-| `EXTRACT-PCAP.cmd` · `capture.sh` | Export and produce the Wireshark captures |
-| `check_v2x_log.py` · `adb logcat` | Assert the V2X chain · read the app's `[RX]` lines |
+- No single surface is sufficient: the screen does not prove where the data came from, the log does not prove anything rendered, and neither proves what crossed the wire.
 
-> Procedures: [Test-Guides README](../../documents/Delivery/Test-Guides/README.md) — it links every guide.
+> Collection procedure per type: [testing-guide.md § Step 3](../../documents/Delivery/Test-Guides/testing-guide.md).
 
 ---
 

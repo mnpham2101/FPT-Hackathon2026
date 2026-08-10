@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>M1 System Delivery — Acceptance Evidence</title>
-<meta name="description" content="Delivery deck — the Milestone 1 system blueprint, the resources and libraries it stands on, and the four evidence items proving the cooperative-awareness chain end to end">
+<meta name="description" content="Delivery deck — the Milestone 1 system blueprint, the resources and test tooling it stands on, and the four evidence items proving the cooperative-awareness chain end to end">
 <style>
   :root {
     --fpt-orange: #F37021;
@@ -198,9 +198,9 @@
     <div class="slide-head"><div class="num">§</div><h2>Table of contents</h2></div>
     <div class="toc">
       <div class="item"><div class="n">01</div><div><h3>Introduction</h3><p>the mission, the team, and how the evidence folder reads</p></div></div>
-      <div class="item"><div class="n">02</div><div><h3>Design</h3><p>the deployed blueprint, the nodes, and the data flow</p></div></div>
-      <div class="item"><div class="n">03</div><div><h3>Resources</h3><p>platform baseline and third-party libraries</p></div></div>
-      <div class="item"><div class="n">04</div><div><h3>System test evidence</h3><p>evidence types, tools, the four evidence items, and the delivery timeline</p></div></div>
+      <div class="item"><div class="n">02</div><div><h3>System Under Test</h3><p>the deployed blueprint, the nodes, and the data flow</p></div></div>
+      <div class="item"><div class="n">03</div><div><h3>Resources</h3><p>platform baseline and the CI, utility, isolated-test and provenance tooling</p></div></div>
+      <div class="item"><div class="n">04</div><div><h3>System test evidence</h3><p>evidence types, the four evidence items, and the delivery timeline</p></div></div>
     </div>
     <div class="footer"><span>M1 System Delivery · Team KIS · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
@@ -228,7 +228,7 @@
         <tr><td><strong>Team ID</strong></td><td>KIS</td></tr>
         <tr><td><strong>Lead</strong></td><td>Pham Ngoc Minh — mnpham1986@gmail.com</td></tr>
         <tr><td><strong>Solution name</strong></td><td>Cooperative Awareness System</td></tr>
-        <tr><td><strong>Reported version</strong></td><td>Milestone 1</td></tr>
+        <tr><td><strong>Reported version</strong></td><td>Milestone 1 (Tag: V2.0 M1 Round2)</td></tr>
         <tr><td><strong>Evidence folder</strong></td><td><code>documents/Delivery/Acceptance/</code></td></tr>
       </tbody>
     </table>
@@ -240,7 +240,7 @@
   </section>
   <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
     <div class="sec-num">02</div>
-    <h1>Design</h1>
+    <h1>System Under Test</h1>
     <div class="rule"></div>
     <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
   </section>
@@ -298,57 +298,23 @@
     <div class="footer"><span>M1 System Delivery · Team KIS · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">03</div><h2>Libraries — bench and V2X-ECU</h2></div>
+    <div class="slide-head"><div class="num">03</div><h2>CI lanes</h2></div>
+    <p class="lead">Six workflows, one per phase, identical triggers — <strong>every lane runs on every push</strong>. A lane is maintained with the node it exercises.</p>
     <table class="fpt">
-      <thead><tr><th>Node</th><th>Library</th><th>License</th><th>Usage</th></tr></thead>
+      <thead><tr><th>Workflow</th><th>What it verifies</th></tr></thead>
       <tbody>
-        <tr><td>Scenario Player</td><td>PyYAML 6.0.2</td><td>MIT</td><td>Scenario YAML loading</td></tr>
-        <tr><td>Scenario Player</td><td>Vanetza ITS2 v26.06</td><td>LGPLv3 (dynamic)</td><td>UPER encode of the CPM</td></tr>
-        <tr><td>Scenario Player</td><td>nlohmann/json 3.11.3</td><td>MIT</td><td>Codec-seam JSON</td></tr>
-        <tr><td>Scenario Player</td><td>pytest · jsonschema</td><td>MIT</td><td>Tests, schema validation</td></tr>
-        <tr><td>V2X-ECU</td><td>Vanetza ITS2 v26.06</td><td>LGPLv3 (dynamic)</td><td>UPER decode of inbound CPM</td></tr>
-        <tr><td>V2X-ECU</td><td>nlohmann/json 3.11.3</td><td>MIT</td><td>Outbound JSON, <code>[EVT]</code> lines</td></tr>
-        <tr><td>V2X-ECU</td><td>Boost (via Vanetza)</td><td>BSL-1.0</td><td>Vanetza runtime</td></tr>
-        <tr><td>V2X-ECU</td><td>GoogleTest 1.14.0</td><td>BSD-3-Clause</td><td>Unit tests</td></tr>
-        <tr><td>V2X-ECU</td><td>tcpdump</td><td>BSD</td><td>In-container capture</td></tr>
+        <tr><td><code>phase0-ci.yml</code></td><td>Contract sync · unit tests on built <code>m1-netcheck</code></td></tr>
+        <tr><td><code>phase1-ci.yml</code></td><td>Unit tests on built <code>m1-v2x-ecu</code> · <code>m1-scenario-player</code></td></tr>
+        <tr><td><code>phase2-ci.yml</code></td><td>Unit tests on the ADA-ECU core build</td></tr>
+        <tr><td><code>phase3-ci.yml</code></td><td>Unit tests on the ADA detector · the zero-C gate</td></tr>
+        <tr><td><code>phase4-ci.yml</code></td><td>Unit tests on built <code>m1-ada-ecu</code> · <code>m1-ada-bench</code></td></tr>
+        <tr><td><code>phase5-ci.yml</code></td><td>Unit tests on built <code>app-debug.apk</code></td></tr>
       </tbody>
     </table>
     <div class="footer"><span>M1 System Delivery · Team KIS · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">03</div><h2>Libraries — ADA-ECU and IVI-ECU</h2></div>
-    <table class="fpt">
-      <thead><tr><th>Node</th><th>Library</th><th>License</th><th>Usage</th></tr></thead>
-      <tbody>
-        <tr><td>ADA-ECU</td><td>nlohmann/json 3.11.3</td><td>MIT</td><td>Contract bindings in/out</td></tr>
-        <tr><td>ADA-ECU</td><td>ONNX Runtime 1.28.0</td><td>MIT</td><td>YOLO11n inference</td></tr>
-        <tr><td>ADA-ECU</td><td>YOLO11n (Ultralytics export)</td><td>AGPL-3.0</td><td>Detection model</td></tr>
-        <tr><td>ADA-ECU</td><td>opencv-python-headless</td><td>Apache-2.0</td><td>Saved-clip frame decode</td></tr>
-        <tr><td>ADA-ECU</td><td>numpy · GoogleTest · pytest · tcpdump</td><td>BSD / MIT</td><td>Math, tests, capture</td></tr>
-        <tr><td>IVI-ECU</td><td>Jetpack Compose + Material3</td><td>Apache-2.0</td><td>HMI layout, God View canvas</td></tr>
-        <tr><td>IVI-ECU</td><td>kotlinx.serialization · coroutines</td><td>Apache-2.0</td><td>Warning parsing, receive loop</td></tr>
-        <tr><td>IVI-ECU</td><td>Dagger Hilt 2.58 · AndroidX Lifecycle</td><td>Apache-2.0</td><td>DI, ViewModel/service glue</td></tr>
-        <tr><td>IVI-ECU</td><td>JUnit4 · Robolectric · MockK · Turbine</td><td>EPL / Apache / MIT</td><td>Unit tests</td></tr>
-      </tbody>
-    </table>
-    <div class="footer"><span>M1 System Delivery · Team KIS · FPT Hackathon 2026</span><span class="page"></span></div>
-  </section>
-  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
-    <div class="sec-num">04</div>
-    <h1>System test evidence</h1>
-    <div class="rule"></div>
-    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
-  </section>
-  <section class="slide bg-light content">
-    <div class="slide-head"><div class="num">04</div><h2>Types of evidence and tools</h2></div>
-    <table class="fpt">
-      <thead><tr><th>Type</th><th>What it proves</th></tr></thead>
-      <tbody>
-        <tr><td><strong>Warning screen</strong></td><td>The driver-facing rendering happened</td></tr>
-        <tr><td><strong>Internal log</strong></td><td>Each node produced and consumed what it should</td></tr>
-        <tr><td><strong>Wireshark capture</strong></td><td>What crossed the wire, byte-exact — exported from the V2X/ADA logs</td></tr>
-      </tbody>
-    </table>
+    <div class="slide-head"><div class="num">03</div><h2>Utility tools</h2></div>
     <table class="fpt">
       <thead><tr><th>Tool</th><th>Purpose</th></tr></thead>
       <tbody>
@@ -358,7 +324,58 @@
         <tr><td><code>check_v2x_log.py</code> · <code>adb logcat</code></td><td>Assert the V2X chain · read the app's <code>[RX]</code> lines</td></tr>
       </tbody>
     </table>
+    <ul class="points">
+      <li>Smoke test: the <code>m1-netcheck</code> connectivity container proved the platform baseline in <code>phase0_smoked_test</code>.</li>
+    </ul>
     <div class="strip">Procedures: <a href="../../documents/Delivery/Test-Guides/README.md">Test-Guides README</a> — it links every guide.</div>
+    <div class="footer"><span>M1 System Delivery · Team KIS · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">03</div><h2>Isolated ECU test tools</h2></div>
+    <p class="lead">Every ECU is also exercised alone — mock images stand in for its neighbours in a reduced blueprint.</p>
+    <table class="fpt">
+      <thead><tr><th>Test — image under test</th><th>Mock images</th><th>Blueprint</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Isolated V2X</strong> — <code>m1-v2x-ecu</code></td><td><code>m1-scenario-player</code> — plays the remote vehicle's CPM stream</td><td><code>phase1_smoked_test</code></td></tr>
+        <tr><td><strong>Isolated ADA</strong> — <code>m1-ada-ecu</code></td><td><code>m1-ada-bench</code> ×2 — <code>ROLE=v2x_mock</code> upstream · <code>ROLE=ivi_mock</code> downstream</td><td><code>phase4_smoked_test</code></td></tr>
+        <tr><td><strong>Isolated IVI</strong> — <code>app-debug.apk</code></td><td><code>m1-r4-sim</code> — scripted ADA stand-in firing warnings at <code>:47300</code></td><td><code>phase5_smoked_test</code></td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li><code>COLLECT-LOGS.cmd</code> carries a shortcut per blueprint.</li>
+    </ul>
+    <div class="footer"><span>M1 System Delivery · Team KIS · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">03</div><h2>Data provenance tool</h2></div>
+    <ul class="points">
+      <li>The definition of done: vehicle C reaches A <strong>only through the V2X relay</strong> — the ADA-ECU's own detector must never produce C.</li>
+      <li><code>check_zero_c.py</code> (<code>ADA_ECU/tools/</code>) fails on any detection claiming <code>v2x_relayed</code>, any <code>v2x:</code> track id, or an own-sensor detection at C's relayed range and time.</li>
+      <li>The <code>ada-zero-c</code> CI lane runs the real detector over the committed ego clip and gates every push on the check.</li>
+      <li>A clean pass prints the examined counts — an empty log cannot pass vacuously.</li>
+    </ul>
+    <div class="footer"><span>M1 System Delivery · Team KIS · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">04</div>
+    <h1>System test evidence</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">04</div><h2>Types of evidence</h2></div>
+    <table class="fpt">
+      <thead><tr><th>Type</th><th>What it proves</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Warning screen</strong></td><td>The driver-facing rendering happened</td></tr>
+        <tr><td><strong>Internal log</strong></td><td>Each node produced and consumed what it should</td></tr>
+        <tr><td><strong>Wireshark capture</strong></td><td>What crossed the wire, byte-exact — exported from the V2X/ADA logs</td></tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li>No single surface is sufficient: the screen does not prove where the data came from, the log does not prove anything rendered, and neither proves what crossed the wire.</li>
+    </ul>
+    <div class="strip">Collection procedure per type: <a href="../../documents/Delivery/Test-Guides/testing-guide.md">testing-guide.md § Step 3</a>.</div>
     <div class="footer"><span>M1 System Delivery · Team KIS · FPT Hackathon 2026</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">

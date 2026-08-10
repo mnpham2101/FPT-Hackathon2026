@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cooperative Vehicle Awareness — Product &amp; Delivery</title>
+<meta name="description" content="Business deck — what the product does for the driver, the guaranteed-delivery checklist, the evidence of capability, the clear Milestone 1 scope, and the delivery options per customer need">
+<style>
+  :root {
+    --fpt-orange: #F37021;
+    --fpt-green: #50B848;
+    --fpt-blue: #034EA2;
+    --fpt-teal: #33B2C1;
+    --fpt-navy: #19226D;
+    --navy-deep: #0E1540;
+    --ink: #080808;
+    --ink-soft: #3d3d46;
+    --paper: #f4f4f6;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; background: #14183a; font-family: "Segoe UI", "Segoe UI Variable", "Helvetica Neue", Arial, sans-serif; }
+
+  .deck { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+
+  .slide {
+    width: 1280px; height: 720px;
+    position: absolute;
+    display: none;
+    flex-direction: column;
+    transform-origin: center center;
+    background: var(--paper);
+    color: var(--ink);
+    box-shadow: 0 18px 60px rgba(0,0,0,.45);
+    overflow: hidden;
+  }
+  .slide.active { display: flex; }
+
+  /* ---------- backgrounds ---------- */
+  .bg-light { background: linear-gradient(135deg, #f6f6f8 0%, #ececef 55%, #e0e1e6 100%); }
+  .bg-light::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720"><g fill="none" stroke-width="2"><g transform="skewX(-16)"><rect x="240" y="60" width="380" height="460" rx="70" stroke="rgba(255,255,255,0.85)"/><rect x="1010" y="210" width="400" height="470" rx="75" stroke="rgba(25,34,109,0.05)"/><rect x="520" y="400" width="330" height="380" rx="60" stroke="rgba(25,34,109,0.06)"/></g><line x1="880" y1="-40" x2="640" y2="780" stroke="rgba(255,255,255,0.9)"/><line x1="1180" y1="-40" x2="940" y2="780" stroke="rgba(25,34,109,0.05)"/></g></svg>');
+    background-size: cover;
+  }
+  .bg-navy { background: linear-gradient(135deg, #10173f 0%, #151d55 45%, var(--fpt-navy) 100%); color: #fff; }
+  .bg-navy::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720"><g fill="none" stroke-width="2"><g transform="skewX(-16)"><rect x="240" y="60" width="380" height="460" rx="70" stroke="rgba(120,180,255,0.20)"/><rect x="1010" y="210" width="400" height="470" rx="75" stroke="rgba(255,255,255,0.10)"/><rect x="520" y="400" width="330" height="380" rx="60" stroke="rgba(120,180,255,0.10)"/></g><line x1="880" y1="-40" x2="640" y2="780" stroke="rgba(120,180,255,0.30)"/><line x1="1180" y1="-40" x2="940" y2="780" stroke="rgba(120,180,255,0.16)"/></g></svg>');
+    background-size: cover;
+  }
+
+  /* cover / divider / thanks carry their photo as an inline background-image */
+  .cover-photo { background-size: cover; background-position: center; color: #fff; }
+  .divider { background-size: cover; background-position: center; color: #fff; justify-content: center; padding: 0 110px; }
+  .divider .sec-num { font-size: 120px; font-weight: 700; color: var(--fpt-orange); line-height: 1; opacity: .95; }
+  .divider h1 { font-size: 56px; font-weight: 700; color: #fff; margin-top: 10px; }
+  .divider .rule { width: 110px; height: 6px; background: var(--fpt-orange); border-radius: 3px; margin-top: 26px; }
+  .thanks { background-size: cover; background-position: center 20%; color: #fff; justify-content: center; align-items: center; text-align: center; }
+  .thanks h1 { font-size: 84px; font-weight: 700; }
+  .thanks .rule { width: 130px; height: 6px; background: var(--fpt-orange); border-radius: 3px; margin: 30px auto; }
+  .thanks p { font-size: 22px; color: #cdd6f7; }
+
+  /* ---------- title / closing text ---------- */
+  .cover { justify-content: center; padding: 0 110px; }
+  .cover .eyebrow { font-size: 20px; letter-spacing: .35em; text-transform: uppercase; color: var(--fpt-orange); font-weight: 600; margin-bottom: 26px; }
+  .cover h1 { font-size: 66px; line-height: 1.08; font-weight: 700; color: #fff; max-width: 900px; }
+  .cover .rule { width: 130px; height: 6px; background: var(--fpt-orange); border-radius: 3px; margin: 30px 0; }
+  .cover .tagline { font-size: 30px; font-weight: 300; color: #dfe6ff; margin-bottom: 14px; }
+  .cover .meta { font-size: 18px; color: #b9c2ea; }
+  .cover .meta a { color: #b9c2ea; }
+  .cover .accents, .divider .accents, .thanks .accents { position: absolute; bottom: 0; left: 0; right: 0; height: 8px; display: flex; }
+  .accents span { flex: 1; }
+
+  /* ---------- content slide chrome ---------- */
+  .content { padding: 44px 64px 58px; position: relative; }
+  .content > * { position: relative; }
+  .slide-head { display: flex; align-items: baseline; gap: 18px; border-bottom: 3px solid transparent; padding-bottom: 12px; margin-bottom: 18px;
+    border-image: linear-gradient(90deg, var(--fpt-orange) 0 90px, rgba(25,34,109,.15) 90px 100%) 1; }
+  .slide-head .num { font-size: 40px; font-weight: 700; color: var(--fpt-orange); line-height: 1; }
+  .slide-head h2 { font-size: 31px; font-weight: 700; color: var(--fpt-navy); line-height: 1.15; }
+  .lead { font-size: 19px; color: var(--ink-soft); margin-bottom: 16px; }
+  .lead:last-of-type { margin-bottom: 0; }
+  .lead strong, .lead b { color: var(--ink); }
+  .content a { color: var(--fpt-blue); }
+
+  .footer { position: absolute; left: 64px; right: 64px; bottom: 18px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #8a8d99; }
+  .footer .page { background: var(--fpt-navy); color: #fff; border-radius: 4px; padding: 2px 10px; font-weight: 600; }
+
+  ul.points { list-style: none; display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
+  ul.points:last-child { margin-bottom: 0; }
+  ul.points li { font-size: 18.5px; line-height: 1.42; color: var(--ink-soft); padding-left: 26px; position: relative; }
+  ul.points li::before { content: ""; position: absolute; left: 0; top: 9px; width: 12px; height: 12px; background: var(--fpt-orange); border-radius: 3px; transform: skewX(-12deg); }
+  ul.points li strong { color: var(--fpt-navy); }
+  ul.points li code, .content code { font-family: "Consolas", "Courier New", monospace; font-size: .92em; background: rgba(25,34,109,.07); border-radius: 4px; padding: 1px 6px; }
+
+  .imgbox { display: flex; flex-direction: column; align-items: center; gap: 8px; margin: 6px 0 14px; }
+  .imgbox img { border-radius: 10px; box-shadow: 0 6px 22px rgba(15,20,60,.16); background: #fff; max-width: 100%; }
+  .imgbox .cap { font-size: 13.5px; color: #8a8d99; font-style: italic; }
+  .imgbox img.flat { box-shadow: none; background: transparent; }
+
+  .cols { display: flex; gap: 34px; align-items: center; }
+
+  /* TOC */
+  .toc { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 26px; margin-top: 8px; }
+  .toc .item { display: flex; gap: 18px; align-items: baseline; background: #fff; border-radius: 10px; padding: 18px 22px; box-shadow: 0 5px 18px rgba(15,20,60,.10); border-left: 6px solid var(--fpt-orange); height: 100%; }
+  .toc .item:nth-child(2) { border-left-color: var(--fpt-green); }
+  .toc .item:nth-child(3) { border-left-color: var(--fpt-blue); }
+  .toc .item:nth-child(4) { border-left-color: var(--fpt-teal); }
+  .toc .item:nth-child(5) { border-left-color: var(--fpt-navy); }
+  .toc .item:nth-child(6) { border-left-color: var(--fpt-orange); }
+  .toc .n { font-size: 34px; font-weight: 700; color: var(--fpt-orange); min-width: 52px; }
+  .toc .item:nth-child(2) .n { color: var(--fpt-green); }
+  .toc .item:nth-child(3) .n { color: var(--fpt-blue); }
+  .toc .item:nth-child(4) .n { color: var(--fpt-teal); }
+  .toc .item:nth-child(5) .n { color: var(--fpt-navy); }
+  .toc h3 { font-size: 21px; color: var(--fpt-navy); margin-bottom: 4px; }
+  .toc p { font-size: 15px; color: var(--ink-soft); line-height: 1.35; }
+
+  /* cards */
+  .cards3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin: 6px 0 18px; }
+  .card { background: #fff; border-radius: 10px; padding: 16px 18px 14px; box-shadow: 0 5px 18px rgba(15,20,60,.10); border-top: 5px solid var(--fpt-orange); }
+  .card.g { border-top-color: var(--fpt-green); }
+  .card.b { border-top-color: var(--fpt-blue); }
+  .card h3 { font-size: 19px; color: var(--fpt-navy); margin-bottom: 6px; }
+  .card p { font-size: 15.5px; line-height: 1.4; color: var(--ink-soft); }
+
+  /* tables */
+  table.fpt { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: 0 5px 18px rgba(15,20,60,.10); margin-bottom: 14px; }
+  table.fpt th { background: var(--fpt-navy); color: #fff; text-align: left; font-size: 16px; padding: 9px 16px; }
+  table.fpt td { font-size: 15.5px; line-height: 1.35; padding: 8.5px 16px; border-bottom: 1px solid #e7e8ee; color: var(--ink-soft); vertical-align: top; }
+  table.fpt tr:last-child td { border-bottom: none; }
+  table.fpt td strong { color: var(--fpt-navy); white-space: nowrap; }
+  .tag { display: inline-block; padding: 1px 9px; border-radius: 4px; color: #fff; font-size: 14px; font-weight: 600; }
+  .tag.o { background: var(--fpt-orange); } .tag.b { background: var(--fpt-blue); } .tag.t { background: var(--fpt-teal); } .tag.g { background: var(--fpt-green); } .tag.n { background: var(--fpt-navy); }
+
+  /* seam cards */
+  .seams { display: flex; flex-direction: column; gap: 13px; margin-bottom: 16px; }
+  .seam { background: #fff; border-radius: 8px; border-left: 6px solid var(--fpt-orange); box-shadow: 0 4px 14px rgba(15,20,60,.09); padding: 12px 18px; display: flex; gap: 16px; align-items: baseline; }
+  .seam.b { border-left-color: var(--fpt-blue); } .seam.t { border-left-color: var(--fpt-teal); }
+  .seam .who { font-weight: 700; color: var(--fpt-navy); font-size: 17.5px; white-space: nowrap; min-width: 200px; }
+  .seam p { font-size: 16px; line-height: 1.4; color: var(--ink-soft); }
+  .strip { background: linear-gradient(90deg, var(--fpt-navy), #2a35a0); color: #dfe6ff; border-radius: 8px; padding: 12px 20px; font-size: 15.5px; line-height: 1.45; margin-bottom: 14px; }
+  .strip strong { color: #fff; }
+  .strip:last-child { margin-bottom: 0; }
+
+  /* chain visual */
+  .chain { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 10px 0 22px; flex-wrap: nowrap; }
+  .chain .link { background: var(--fpt-navy); color: #fff; font-size: 16.5px; font-weight: 600; padding: 9px 20px; border-radius: 7px; transform: skewX(-10deg); box-shadow: 0 4px 12px rgba(15,20,60,.18); }
+  .chain .link > span { display: inline-block; transform: skewX(10deg); }
+  .chain .link.hot { background: var(--fpt-orange); }
+  .chain .arr { color: var(--fpt-orange); font-size: 22px; font-weight: 700; }
+  .chain .link small { display: block; font-size: 12px; font-weight: 400; opacity: .8; transform: skewX(10deg); }
+  /* flat modifier: upright rectangles instead of skewed links, for a dense data-path strip */
+  .chain.flat { gap: 7px; margin: 0 0 6px; }
+  .chain.flat .link { transform: none; font-size: 14.5px; padding: 5px 12px; text-align: center; line-height: 1.25; }
+  .chain.flat .link > span, .chain.flat .link small { transform: none; }
+  .chain.flat .link small { font-size: 11px; opacity: .85; }
+  .chain.flat .arr { font-size: 17px; }
+
+  .badges { display: flex; gap: 10px; justify-content: center; margin: 0 0 20px; flex-wrap: wrap; }
+  .badge { border: 2px solid var(--fpt-orange); color: #b34e0e; background: rgba(243,112,33,.07); font-size: 14.5px; font-weight: 600; padding: 5px 14px; border-radius: 999px; }
+  .badge.g { border-color: var(--fpt-green); color: #2c7a25; background: rgba(80,184,72,.09); }
+
+  /* terminal / log evidence */
+  pre.log { background: var(--navy-deep); color: #cfd6f5; font-family: "Consolas", "Courier New", monospace; font-size: 13.5px; line-height: 1.5; border-radius: 8px; padding: 14px 18px; overflow: hidden; margin-bottom: 14px; }
+  pre.log .ok { color: #7ee787; }
+  pre.log .dim { color: #7f88ad; }
+
+  /* ---------- controls ---------- */
+  .hint { position: fixed; left: 18px; bottom: 12px; color: rgba(255,255,255,.45); font-size: 12.5px; z-index: 50; }
+  .hud { position: fixed; right: 18px; bottom: 14px; z-index: 50; display: flex; gap: 8px; align-items: center; font-family: inherit; }
+  .hud button { background: rgba(255,255,255,.12); color: #fff; border: 1px solid rgba(255,255,255,.25); border-radius: 6px; padding: 5px 12px; font-size: 15px; cursor: pointer; }
+  .hud button:hover { background: var(--fpt-orange); border-color: var(--fpt-orange); }
+  .hud .ctr { color: rgba(255,255,255,.75); font-size: 14px; min-width: 60px; text-align: center; }
+  .progress { position: fixed; left: 0; bottom: 0; height: 4px; background: var(--fpt-orange); width: 0; z-index: 60; transition: width .25s ease; }
+
+  @media print {
+    html, body { background: #fff; height: auto; }
+    .deck { position: static; display: block; }
+    .slide { display: flex !important; position: relative; transform: none !important; box-shadow: none; page-break-after: always; margin: 0 auto; }
+    .hud, .progress, .hint { display: none !important; }
+    @page { size: 13.55in 7.65in; margin: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="deck">
+  <section class="slide cover-photo cover active" style="background-image: linear-gradient(90deg, rgba(8,12,38,.92) 0%, rgba(8,12,38,.72) 40%, rgba(8,12,38,.18) 100%), url('../assets/bg-title-city.jpg')">
+    <div class="eyebrow">Milestone 1 · Team KIS — FPT Hackathon 2026</div>
+    <h1>Cooperative Vehicle Awareness</h1>
+    <div class="rule"></div>
+    <div class="tagline">Product &amp; Delivery — what you receive, and why you can rely on it</div>
+    <div class="meta">Lead: Pham Ngoc Minh · 2026-08-10 · Full statement: <a href="../../documents/Proposals/README.md">Proposals</a></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">§</div><h2>Table of contents</h2></div>
+    <div class="toc">
+      <div class="item"><div class="n">01</div><div><h3>The product</h3><p>the hazard it removes, and the experience the driver gets</p></div></div>
+      <div class="item"><div class="n">02</div><div><h3>Guaranteed delivery</h3><p>the checklist of everything included in the package</p></div></div>
+      <div class="item"><div class="n">03</div><div><h3>Proven capability</h3><p>the evidence and the measurements behind the guarantee</p></div></div>
+      <div class="item"><div class="n">04</div><div><h3>Clear scope</h3><p>precisely what Milestone 1 covers, stated openly</p></div></div>
+      <div class="item"><div class="n">05</div><div><h3>Delivery options</h3><p>the customers we serve, as a whole package or per application</p></div></div>
+    </div>
+    <div class="footer"><span>Product &amp; Delivery · Team KIS · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">01</div>
+    <h1>The product</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">01</div><h2>The hazard beyond line of sight</h2></div>
+    <p class="lead"><strong>The accident nobody sees coming:</strong> a vehicle braking two cars ahead is invisible to the following driver — and to every sensor on their car — until it is too late.</p>
+    <ul class="points">
+      <li><strong>Vehicles share what they see.</strong> When one vehicle detects a hazard, it broadcasts that perception over V2X — the vehicle behind receives it and warns its driver.</li>
+      <li><strong>Seconds of extra reaction time.</strong> The warning arrives while the hazard is still hidden — time to slow down instead of collide.</li>
+      <li><strong>No new roadside infrastructure.</strong> The capability travels with the vehicles; two connected vehicles are enough.</li>
+    </ul>
+    <div class="strip"><strong>Milestone 1 proves it end to end:</strong> in a three-vehicle convoy A–B–C, vehicle A is warned about vehicle C — a car A's own sensors can never see — from B's relayed perception alone.</div>
+    <div class="footer"><span>Product &amp; Delivery · Team KIS · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">01</div><h2>The driver experience</h2></div>
+    <p class="lead">One glance tells the driver everything: a bird's-eye view of the road ahead, the hidden vehicle drawn in, and the risk level in colour.</p>
+    <div class="imgbox"><img src="../../documents/Delivery/Acceptance/Evidence1_WarningScreen_IVILog_RiskLabel.png" style="height:400px" alt="The driver&#x27;s warning screen: the hidden vehicle C drawn as a dashed ghost with its distance and risk level, and the receiving log beneath it"><div class="cap">The driver&#x27;s warning screen: the hidden vehicle C drawn as a dashed ghost with its distance and risk level, and the receiving log beneath it</div></div>
+    <ul class="points">
+      <li>The banner states the situation in plain words; the ghost carries its <strong>distance and live risk level</strong> — no cryptic alarms, no interpretation.</li>
+    </ul>
+    <div class="footer"><span>Product &amp; Delivery · Team KIS · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">02</div>
+    <h1>Guaranteed delivery</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">02</div><h2>The delivery checklist</h2></div>
+    <p class="lead">Every item is complete and included in the Milestone 1 package.</p>
+    <table class="fpt">
+      <thead><tr><th>Delivered</th><th>Item</th><th>What you receive</th></tr></thead>
+      <tbody>
+        <tr><td>✅</td><td><strong>Application code</strong></td><td>Three ECU applications — V2X-ECU, ADA-ECU, IVI-ECU — full source on <a href="https://github.com/mnpham2101/FPT-Hackathon2026">GitHub</a></td></tr>
+        <tr><td>✅</td><td><strong>Utility tools</strong></td><td>Automation for app installation and log collection — <code>tools/apk-uploader/</code>, <code>tools/logs-collector/</code></td></tr>
+        <tr><td>✅</td><td><strong>Data-provenance tools</strong></td><td>Inside the ADA-ECU application — proof the warning comes from the V2X relay alone</td></tr>
+        <tr><td>✅</td><td><strong>Isolated test images</strong></td><td>Each ECU has mock images of its neighbours — every application testable on its own</td></tr>
+        <tr><td>✅</td><td><strong>CI tools</strong></td><td>Six CI pipelines, one per development phase, under <code>.github/workflows/</code></td></tr>
+        <tr><td>✅</td><td><strong>Demo video</strong></td><td>A video demo of the full system test</td></tr>
+        <tr><td>✅</td><td><strong>Wiki</strong></td><td>The complete project design, and the research articles founding the project</td></tr>
+        <tr><td>✅</td><td><strong>Deployment blueprints</strong></td><td>CarSky blueprints ready to be deployed and tested</td></tr>
+      </tbody>
+    </table>
+    <div class="footer"><span>Product &amp; Delivery · Team KIS · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">02</div><h2>What the checklist means for you</h2></div>
+    <ul class="points">
+      <li><strong>Nothing is a promise</strong> — every checked item already exists in the package you receive, not on a roadmap.</li>
+      <li><strong>You can verify it yourself</strong> — the blueprints deploy on the platform, the tools collect the same evidence we publish, and the CI pipelines re-run on every change.</li>
+      <li><strong>You can maintain it</strong> — the wiki carries the full design and its research foundation, so a new team can take the product over without us in the room.</li>
+    </ul>
+    <div class="footer"><span>Product &amp; Delivery · Team KIS · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">03</div>
+    <h1>Proven capability</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">03</div><h2>Evidence at every layer</h2></div>
+    <p class="lead">No single view can hide a gap: the demonstration is proven at three independent layers, and all three agree.</p>
+    <table class="fpt">
+      <thead><tr><th>Layer</th><th>What it proves to you</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Warning screen</strong></td><td>The driver actually saw the warning — captured as screenshots and recordings on the platform</td></tr>
+        <tr><td><strong>Internal logs</strong></td><td>Every processing step happened: transmission, decoding, fusion, risk assessment, reception</td></tr>
+        <tr><td><strong>Network captures</strong></td><td>The messages really crossed the network, byte-exact against the designed call flow — opened in standard Wireshark</td></tr>
+      </tbody>
+    </table>
+    <div class="strip">The decisive guarantee: the hidden vehicle reaches the driver <strong>only</strong> through the V2X relay. A dedicated provenance check fails the build if the car's own sensors ever produced it.</div>
+    <div class="footer"><span>Product &amp; Delivery · Team KIS · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">03</div><h2>Measured performance</h2></div>
+    <p class="lead">Numbers read from the recorded system test, not estimates.</p>
+    <table class="fpt">
+      <thead><tr><th>Measure</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>Hazard data received → warning on the driver's screen</td><td><strong>101 ms</strong></td></tr>
+        <tr><td>Message decode and forward inside the V2X application</td><td><strong>under 1 ms</strong></td></tr>
+        <tr><td>Continuous operation</td><td>The demo scenario repeats <strong>every ~10 s for as long as the system runs</strong></td></tr>
+        <tr><td>Direct sightings of the hidden vehicle by the warned car</td><td><strong>Zero</strong> — verified by the provenance tooling</td></tr>
+      </tbody>
+    </table>
+    <div class="footer"><span>Product &amp; Delivery · Team KIS · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">03</div><h2>Engineering discipline behind the product</h2></div>
+    <ul class="points">
+      <li><strong>Continuous integration</strong> — six pipelines build and test every change automatically; a broken change cannot land unnoticed.</li>
+      <li><strong>ASPICE-oriented traceability</strong> — every feature traces to a requirement, and every piece of work to a task ID.</li>
+      <li><strong>Frozen contracts between applications</strong> — the three ECUs communicate only through agreed, versioned message contracts, so each evolves without breaking the others.</li>
+      <li><strong>Living documentation</strong> — a continuously updated wiki and knowledge base connect the design to the research it stands on.</li>
+    </ul>
+    <div class="footer"><span>Product &amp; Delivery · Team KIS · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">04</div>
+    <h1>Clear scope</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">04</div><h2>The Milestone 1 scope</h2></div>
+    <p class="lead">What you receive today, stated precisely — the demonstration runs entirely on the CarSky cloud platform.</p>
+    <ul class="points">
+      <li><strong>One scenario, proven end to end</strong> — a three-vehicle convoy where the front vehicle is hidden from the rear one; the rear driver is warned from relayed perception alone.</li>
+      <li><strong>Vehicle A is built in full</strong> — its V2X receiver, its risk-assessing driver assistance, and its warning display are the delivered product.</li>
+      <li><strong>Vehicles B and C are simulated</strong> — a scenario bench plays the messages a real leading vehicle would send.</li>
+      <li><strong>Two inputs are simulated, and we say so</strong> — the V2X radio feed and the camera feed; every message between the delivered applications is real.</li>
+    </ul>
+    <div class="footer"><span>Product &amp; Delivery · Team KIS · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">04</div><h2>Deliberate exclusions and future growth</h2></div>
+    <p class="lead">The boundary is written down — no surprise gaps, and a registered path forward.</p>
+    <ul class="points">
+      <li><strong>No vehicle hardware</strong> — Milestone 1 is fully virtual by design; nothing in the delivery depends on a physical car.</li>
+      <li><strong>The production V2X radio stack is a later milestone</strong> — the receiving side is built; the radio itself is deliberately deferred and recorded as such.</li>
+      <li><strong>Future features are registered, not improvised</strong> — a maintained register names each planned extension, and the modular design lets it land behind existing interfaces <strong>without rework</strong> of what you receive today.</li>
+    </ul>
+    <div class="footer"><span>Product &amp; Delivery · Team KIS · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide divider" style="background-image: linear-gradient(rgba(16,23,63,.85), rgba(16,23,63,.90)), url('../assets/bg-navy-motif.png')">
+    <div class="sec-num">05</div>
+    <h1>Delivery options</h1>
+    <div class="rule"></div>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">05</div><h2>Potential customers</h2></div>
+    <ul class="points">
+      <li><strong>Automotive OEMs</strong> bringing cooperative awareness to connected vehicle lines — the three applications map onto ECUs a production vehicle already carries: connectivity, driver assistance, cabin display.</li>
+      <li><strong>Tier-1 suppliers</strong> building one of those ECUs — the frozen contracts let a supplier adopt a single application and integrate it against their own stack.</li>
+      <li><strong>Fleet and logistics operators</strong> running convoys — where a following vehicle routinely blocks the driver's view, and a beyond-line-of-sight warning directly reduces rear-end risk.</li>
+      <li><strong>Validation and research teams</strong> studying V2X — the fully virtual deployment, the scenario bench and the isolated test images form a complete testbed with no hardware investment.</li>
+    </ul>
+    <div class="footer"><span>Product &amp; Delivery · Team KIS · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num">05</div><h2>Delivery models</h2></div>
+    <p class="lead">Two ways to receive the product — both fully supported by what is in the package today.</p>
+    <table class="fpt">
+      <thead><tr><th>Model</th><th>What it is</th><th>What makes it safe to buy</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Whole package</strong></td><td>The three ECU applications as one integrated system</td><td>Delivered already system-tested end to end, with the recorded demonstration and its evidence</td></tr>
+        <tr><td><strong>Single application</strong></td><td>Any one ECU application on its own</td><td>Each application ships with mock images of its neighbours, so it is testable and acceptable standalone</td></tr>
+      </tbody>
+    </table>
+    <div class="strip">Start with one application and grow to the full system — the contracts between them are already frozen, so the pieces fit when you add them.</div>
+    <div class="footer"><span>Product &amp; Delivery · Team KIS · FPT Hackathon 2026</span><span class="page"></span></div>
+  </section>
+  <section class="slide thanks" style="background-image: linear-gradient(rgba(8,12,38,.66), rgba(14,21,64,.86)), url('../assets/bg-fpt-tower.jpg')">
+    <h1>Thank You</h1>
+    <div class="rule"></div>
+    <p>Team KIS · Cooperative Vehicle Awareness · FPT Hackathon 2026</p>
+    <div class="accents"><span style="background:var(--fpt-orange)"></span><span style="background:var(--fpt-green)"></span><span style="background:var(--fpt-blue)"></span><span style="background:var(--fpt-teal)"></span></div>
+  </section>
+</div>
+
+<div class="hint">← → navigate · F fullscreen · print for PDF</div>
+<div class="hud">
+  <button id="prev" aria-label="Previous slide">‹</button>
+  <span class="ctr" id="ctr"></span>
+  <button id="next" aria-label="Next slide">›</button>
+</div>
+<div class="progress" id="prog"></div>
+
+<script>
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  slides.forEach((sl, i) => { const p = sl.querySelector('.page'); if (p) p.textContent = i + 1; });
+  let cur = 0;
+
+  function fit() {
+    const s = Math.min(innerWidth / 1280, innerHeight / 720);
+    slides.forEach(sl => sl.style.transform = `scale(${s})`);
+  }
+  function show(i) {
+    cur = Math.max(0, Math.min(slides.length - 1, i));
+    slides.forEach((sl, k) => sl.classList.toggle('active', k === cur));
+    document.getElementById('ctr').textContent = `${cur + 1} / ${slides.length}`;
+    document.getElementById('prog').style.width = `${(cur + 1) / slides.length * 100}%`;
+    location.hash = cur ? `#${cur + 1}` : '';
+  }
+  addEventListener('resize', fit);
+  addEventListener('keydown', e => {
+    if (['ArrowRight', 'PageDown', ' ', 'Enter'].includes(e.key)) { e.preventDefault(); show(cur + 1); }
+    else if (['ArrowLeft', 'PageUp', 'Backspace'].includes(e.key)) { e.preventDefault(); show(cur - 1); }
+    else if (e.key === 'Home') show(0);
+    else if (e.key === 'End') show(slides.length - 1);
+    else if (e.key.toLowerCase() === 'f') document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+  });
+  document.getElementById('prev').onclick = () => show(cur - 1);
+  document.getElementById('next').onclick = () => show(cur + 1);
+  let tx = null;
+  addEventListener('touchstart', e => tx = e.touches[0].clientX);
+  addEventListener('touchend', e => { if (tx !== null) { const dx = e.changedTouches[0].clientX - tx; if (Math.abs(dx) > 50) show(cur + (dx < 0 ? 1 : -1)); tx = null; } });
+
+  const h = parseInt((location.hash || '').slice(1), 10);
+  fit(); show(isNaN(h) ? 0 : h - 1);
+</script>
+
+</body>
+</html>
