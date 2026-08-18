@@ -26,8 +26,12 @@
 # the app wrote, so it is collected for completeness under a name the pcap extractor
 # does not glob and the [TX] scan does not read. The app's log comes only from adb.
 #
-# The ADB tunnel is optional. Without it the node logs still land and the files from
-# inside the AAOS guest are skipped, reported rather than failed.
+# The ADB tunnel is not a prerequisite: if nothing already serves --port, this run
+# opens its own, from the same a8k_ token file the APK installer reads
+# (secrets/reach-adb-token-ivi.txt), and closes it again when the run finishes unless
+# --keep-tunnel is passed. A tunnel another tool already opened is reused as-is,
+# never replaced. Only when no tunnel can be opened at all are the guest-side files
+# skipped, reported rather than failed.
 #
 # Dependencies: bash, curl, awk, sed. No jq -- the JSON is parsed by the awk helpers
 # below, so the script runs on a bare Linux box and in Git Bash alike.
@@ -47,6 +51,8 @@ API_KEY_FILE=""
 TEST_ARG=""
 BLUEPRINT_ARG=""
 PACKAGE="com.hackathon.v2x.ivi"
+TOKEN=""
+KEEP_TUNNEL=0
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
@@ -70,7 +76,11 @@ usage() {
                         only if one of them is a Skycraft VM.
     --base-url <url>    CarSky gateway            (default $BASE_URL)
     --api-key-file <f>  file holding the REST key (default <repo>/secrets/carsky-api-key.txt)
-    --port <n>          local ADB tunnel port     (default $PORT)
+    --port <n>          local ADB tunnel port, opened if nothing serves it yet (default $PORT)
+    --token <a8k_...>   ADB tunnel token, when this run has to open its own (default
+                        <repo>/secrets/reach-adb-token-ivi.txt)
+    --keep-tunnel       leave a tunnel this run opened running after the run finishes;
+                        no effect on a tunnel found already serving --port
     --tail <n>          lines per node log        (default $TAIL)
     --out-root <dir>    where the run folder goes (default $OUT_ROOT, relative to cwd)
     -h, --help          this text
@@ -92,6 +102,8 @@ while [ $# -gt 0 ]; do
         --base-url)      [ $# -ge 2 ] || exit_usage "--base-url needs a value";      BASE_URL="$2"; shift 2 ;;
         --api-key-file)  [ $# -ge 2 ] || exit_usage "--api-key-file needs a value";  API_KEY_FILE="$2"; shift 2 ;;
         --port)          [ $# -ge 2 ] || exit_usage "--port needs a value";          PORT="$2"; shift 2 ;;
+        --token)         [ $# -ge 2 ] || exit_usage "--token needs a value";         TOKEN="$2"; shift 2 ;;
+        --keep-tunnel)   KEEP_TUNNEL=1; shift ;;
         --tail)          [ $# -ge 2 ] || exit_usage "--tail needs a value";          TAIL="$2"; shift 2 ;;
         --out-root)      [ $# -ge 2 ] || exit_usage "--out-root needs a value";      OUT_ROOT="$2"; shift 2 ;;
         -h|--help)       usage; exit 0 ;;
@@ -143,7 +155,30 @@ fail() {
     printf '\n  %sFAILED: %s%s\n' "$C_RED" "$1" "$C_OFF" >&2
     if [ -n "${2:-}" ]; then printf '  %sFix:    %s%s\n' "$C_YELLOW" "$2" "$C_OFF" >&2; fi
     printf '\n' >&2
+    stop_own_tunnel
     exit 1
+}
+
+# ------------------------------------------------------------------ tunnel mgmt
+
+# Set only when THIS run opened the tunnel itself (§ adb below) -- a tunnel another
+# tool already had serving --port is never touched, so stop_own_tunnel is always
+# safe to call, including from fail() before either variable below is assigned.
+TUNNEL_PID=""
+OPENED_TUNNEL=0
+
+stop_own_tunnel() {
+    if [ "$OPENED_TUNNEL" -eq 1 ] && [ -n "$TUNNEL_PID" ] && kill -0 "$TUNNEL_PID" 2>/dev/null; then
+        kill "$TUNNEL_PID" 2>/dev/null
+        local i=0
+        while [ $i -lt 20 ] && kill -0 "$TUNNEL_PID" 2>/dev/null; do
+            sleep 0.1
+            i=$((i + 1))
+        done
+        kill -9 "$TUNNEL_PID" 2>/dev/null
+        wait "$TUNNEL_PID" 2>/dev/null
+        write_info "Tunnel stopped (pid $TUNNEL_PID)."
+    fi
 }
 
 # ---------------------------------------------------------------- json helpers
@@ -635,42 +670,138 @@ fi
 SERIAL="localhost:$PORT"
 GUEST_READY=0
 
+# Same locations tools/apk-uploader/install-ivi-apk.sh reads -- that script still owns
+# the token-refresh prompt and the long-lived --keep-tunnel workflow; this one only
+# opens a tunnel when nothing already serves --port, and only for the length of this run.
+REACH_BIN="$REPO_ROOT/tools/apk-uploader/reach_be/reach/reach-backend"
+TOKEN_FILE="$REPO_ROOT/secrets/reach-adb-token-ivi.txt"
+
+# A listening port proves nothing: a tunnel whose session has expired keeps accepting
+# TCP while the gateway 404s every upgrade. Probe before adopting.
+test_tunnel_alive() {
+    "$ADB" connect "$SERIAL" >/dev/null 2>&1 || true
+    local i=0
+    while [ $i -lt 16 ]; do            # 16 x 0.5s = 8s
+        if "$ADB" devices 2>/dev/null | grep -E "^$SERIAL[[:space:]]+device([[:space:]]|$)" >/dev/null 2>&1; then
+            return 0
+        fi
+        sleep 0.5
+        i=$((i + 1))
+    done
+    return 1
+}
+
+# Opens this run's own tunnel. Returns 0 once $PORT is being served by a process this
+# run started; 1 on anything that stops that (missing binary, missing or malformed
+# token, reach-backend dying immediately) -- none of which fail the run, since the
+# node logs already collected stand on their own.
+open_own_tunnel() {
+    if [ ! -f "$REACH_BIN" ]; then
+        write_warn "Tunnel CLI not found at $REACH_BIN"
+        write_info "Unpack the organizers' reach_be zip into tools/apk-uploader/."
+        return 1
+    fi
+    if [ ! -x "$REACH_BIN" ]; then
+        chmod +x "$REACH_BIN" 2>/dev/null
+        if [ ! -x "$REACH_BIN" ]; then
+            write_warn "Tunnel CLI at $REACH_BIN is not executable."
+            write_info "chmod +x '$REACH_BIN' (the zip loses the execute bit when unpacked on Windows)."
+            return 1
+        fi
+    fi
+
+    local tok="$TOKEN"
+    if [ -z "$tok" ]; then
+        if [ ! -f "$TOKEN_FILE" ]; then
+            write_warn "No ADB tunnel token at $TOKEN_FILE"
+            write_info "Copy the a8k_ value from Devices -> KIS -> Connect -> IVI ADB -> Local ADB into that file, or pass --token a8k_..."
+            return 1
+        fi
+        tok="$(tr -d ' \t\r\n' < "$TOKEN_FILE")"
+    fi
+    case "$tok" in
+        a8k_*) ;;
+        *) write_warn "The token does not start with 'a8k_' - not a valid ADB tunnel token."; return 1 ;;
+    esac
+
+    local tunnel_log="$OUT_DIR/tunnel-open.log"
+    "$REACH_BIN" adb --gateway "$BASE_URL" --key "$tok" --port "$PORT" \
+        >"$tunnel_log" 2>"$tunnel_log.err" </dev/null &
+    TUNNEL_PID=$!
+
+    local i=0
+    while [ $i -lt 50 ]; do            # 50 x 0.5s = 25s
+        if ! kill -0 "$TUNNEL_PID" 2>/dev/null; then
+            wait "$TUNNEL_PID" 2>/dev/null
+            write_warn "The tunnel exited immediately (exit $?). See $tunnel_log."
+            TUNNEL_PID=""
+            return 1
+        fi
+        if test_port "$PORT"; then break; fi
+        sleep 0.5
+        i=$((i + 1))
+    done
+    if ! test_port "$PORT"; then
+        write_warn "The tunnel did not start listening within 25s. See $tunnel_log."
+        return 1
+    fi
+
+    OPENED_TUNNEL=1
+    write_ok "Tunnel opened (pid $TUNNEL_PID), log: $tunnel_log"
+    return 0
+}
+
 if [ -z "$ADB" ]; then
     write_warn "adb not found on PATH or in any standard Android SDK location."
     write_info "Skipping the files from inside the guest. Install Android SDK platform-tools, or set ANDROID_HOME."
     add_summary ""
     add_summary "GUEST               skipped - adb not found"
-elif ! test_port "$PORT"; then
-    write_warn "Nothing is listening on 127.0.0.1:$PORT - the ADB tunnel is down."
-    write_info "The node logs above are collected; the guest-side files are skipped, not failed."
-    write_info "Open the tunnel:  ./tools/apk-uploader/install-ivi-apk.sh --skip-install --keep-tunnel"
-    add_summary ""
-    add_summary "GUEST               skipped - no ADB tunnel on localhost:$PORT"
 else
     write_ok "adb  ->  $ADB"
-    write_ok "port $PORT is serving"
 
-    "$ADB" connect "$SERIAL" >/dev/null 2>&1 || true
-    connected=0
-    i=0
-    while [ "$i" -lt 20 ]; do
-        if "$ADB" devices 2>/dev/null | grep -E "^$SERIAL[[:space:]]+device([[:space:]]|$)" >/dev/null 2>&1; then
-            connected=1; break
+    tunnel_up=1
+    if test_port "$PORT"; then
+        if test_tunnel_alive; then
+            write_ok "port $PORT already serves a live tunnel - reusing it."
+            tunnel_up=0
+        else
+            write_warn "Port $PORT is listening but no device answers - that tunnel is dead, opening a fresh one."
+            "$ADB" disconnect "$SERIAL" >/dev/null 2>&1 || true
+            open_own_tunnel && tunnel_up=0
         fi
-        sleep 1
-        "$ADB" connect "$SERIAL" >/dev/null 2>&1 || true
-        i=$((i + 1))
-    done
-
-    if [ "$connected" -ne 1 ]; then
-        write_warn "The tunnel is serving but $SERIAL never reached state 'device'."
-        write_info "Skipping the files from inside the guest. The Skycraft node may still be booting."
-        add_summary ""
-        add_summary "GUEST               skipped - $SERIAL not in state 'device'"
     else
-        GUEST_READY=1
-        write_ok "$SERIAL  device"
-        write_info "Guest node: $SKYCRAFT_DISP. Every adb call below is pinned with -s $SERIAL."
+        write_info "Nothing is listening on 127.0.0.1:$PORT - opening this run's own tunnel."
+        open_own_tunnel && tunnel_up=0
+    fi
+
+    if [ "$tunnel_up" -ne 0 ]; then
+        write_warn "No ADB tunnel on localhost:$PORT."
+        write_info "The node logs above are collected; the guest-side files are skipped, not failed."
+        add_summary ""
+        add_summary "GUEST               skipped - no ADB tunnel on localhost:$PORT"
+    else
+        "$ADB" connect "$SERIAL" >/dev/null 2>&1 || true
+        connected=0
+        i=0
+        while [ "$i" -lt 20 ]; do
+            if "$ADB" devices 2>/dev/null | grep -E "^$SERIAL[[:space:]]+device([[:space:]]|$)" >/dev/null 2>&1; then
+                connected=1; break
+            fi
+            sleep 1
+            "$ADB" connect "$SERIAL" >/dev/null 2>&1 || true
+            i=$((i + 1))
+        done
+
+        if [ "$connected" -ne 1 ]; then
+            write_warn "The tunnel is serving but $SERIAL never reached state 'device'."
+            write_info "Skipping the files from inside the guest. The Skycraft node may still be booting."
+            add_summary ""
+            add_summary "GUEST               skipped - $SERIAL not in state 'device'"
+        else
+            GUEST_READY=1
+            write_ok "$SERIAL  device"
+            write_info "Guest node: $SKYCRAFT_DISP. Every adb call below is pinned with -s $SERIAL."
+        fi
     fi
 fi
 
@@ -835,8 +966,9 @@ elif [ "$HAS_SKYCRAFT" -eq 0 ]; then
     printf '  %sNode-side only, and that is all this Room has. Read the node logs above%s\n' "$C_YELLOW" "$C_OFF"
     printf '  %sfor what the [ ] rows mean.%s\n' "$C_YELLOW" "$C_OFF"
 elif [ "$GUEST_COLLECTED" -ne 1 ]; then
-    printf '  %sNode-side only. Without the ADB tunnel the app half cannot be evidenced -%s\n' "$C_YELLOW" "$C_OFF"
-    printf '  %s[RX], provenance and risk are unknown rather than failed.%s\n' "$C_YELLOW" "$C_OFF"
+    printf '  %sNode-side only. This run could not get an ADB tunnel up, so the app half%s\n' "$C_YELLOW" "$C_OFF"
+    printf '  %scannot be evidenced - [RX], provenance and risk are unknown rather than failed.%s\n' "$C_YELLOW" "$C_OFF"
+    printf '  %sCheck the WARN lines above (missing adb, missing token, dead reach-backend).%s\n' "$C_YELLOW" "$C_OFF"
 elif [ "$RX_OK" -eq 1 ]; then
     printf '  %sPartly evidenced. The app is alive and parsing, but not every line appeared.%s\n' "$C_YELLOW" "$C_OFF"
     printf '  %sA missing line can just mean the scenario had not reached that step yet.%s\n' "$C_YELLOW" "$C_OFF"
@@ -871,5 +1003,15 @@ printf '  %sThe Screen widget - EGO and B solid, C dashed with a pulsing glow an
 printf '  %sbadge [V2X] C - <d> m - RISK: HIGH. This build logs nothing from its UI%s\n' "$C_GRAY" "$C_OFF"
 printf '  %slayer, so the switch to the Warning View is confirmable only on screen.%s\n' "$C_GRAY" "$C_OFF"
 printf '\n'
+
+# A tunnel this run opened is this run's to close -- a tunnel found already serving
+# --port belongs to whatever opened it and is never touched here.
+if [ "$OPENED_TUNNEL" -eq 1 ]; then
+    if [ "$KEEP_TUNNEL" -eq 1 ]; then
+        write_info "Tunnel left open on localhost:$PORT (--keep-tunnel)."
+    else
+        stop_own_tunnel
+    fi
+fi
 
 exit 0
