@@ -48,7 +48,7 @@ Each of these is reported, never silent.
 
 - **A truncated final block is not written.** Half a file must not masquerade as a complete capture.
 - **No silent clobber.** An existing target gets `-2`, `-3`, … before `.pcap`; after `-99` the block fails rather than overwriting.
-- **The block name is untrusted.** Any path component is stripped, so `[PCAP-BEGIN ../../evil.pcap]` writes `evil.pcap` inside the output directory and cannot escape it.
+- **The output is named after the input log, not the embedded marker name.** `node-v2x-ecu.txt` extracts to `node-v2x-ecu.pcap`; the `<basename>` inside `[PCAP-BEGIN]` is cosmetic only and never reaches the filesystem.
 - **One failing block never hides the healthy ones.**
 
 ## 3 · Only two images carry a pcap
