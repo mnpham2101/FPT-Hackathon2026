@@ -59,6 +59,18 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+# adb (and the busybox/toybox shell inside the guest) writes routine, already-expected
+# chatter to stderr -- "File exists" re-adding an address, "No such file or directory"
+# clearing a rule that was never set, RTNETLINK's own echo of either. Windows PowerShell
+# 5.1 wraps each stderr line merged with 2>&1 into a NativeCommandError, and
+# $ErrorActionPreference = 'Stop' above then promotes it to a terminating exception that
+# aborts the whole run on output every call site below already expects and tolerates.
+# Every adb/reach-backend invocation that merges stderr goes through here instead of
+# calling the native command directly.
+function Invoke-Native ([scriptblock] $Command) {
+    try { & $Command } catch { $null }
+}
+
 # ---------------------------------------------------------------- presentation
 
 $script:StepNo = 0
@@ -287,10 +299,10 @@ Write-Info "re-copy it from Devices -> KIS -> Connect -> IVI ADB -> Local ADB."
 # strands the run at 'adb offline' however many times it is re-run. Probe before adopting.
 function Test-TunnelAlive {
     $serial = "localhost:$Port"
-    & $Adb connect $serial 2>&1 | Out-Null
+    Invoke-Native { & $Adb connect $serial 2>&1 | Out-Null }
     $deadline = (Get-Date).AddSeconds(8)
     while ((Get-Date) -lt $deadline) {
-        if ((& $Adb devices 2>&1 | Out-String) -match [regex]::Escape($serial) + '\s+device\b') { return $true }
+        if ((Invoke-Native { & $Adb devices 2>&1 | Out-String }) -match [regex]::Escape($serial) + '\s+device\b') { return $true }
         Start-Sleep -Milliseconds 500
     }
     return $false
@@ -304,7 +316,7 @@ function Open-Tunnel ($tok) {
             return
         }
         Write-Warn "Port $Port is listening but no device answers - that tunnel is dead, replacing it."
-        & $Adb disconnect "localhost:$Port" 2>&1 | Out-Null
+        Invoke-Native { & $Adb disconnect "localhost:$Port" 2>&1 | Out-Null }
         Stop-TunnelOnPort $Port | Out-Null
         Start-Sleep -Seconds 1
     }
@@ -355,7 +367,7 @@ function Connect-Guest ($serial) {
     & $Adb connect $serial | Out-Null
     $deadline = (Get-Date).AddSeconds(30)
     while ((Get-Date) -lt $deadline) {
-        $devices = & $Adb devices 2>&1 | Out-String
+        $devices = Invoke-Native { & $Adb devices 2>&1 | Out-String }
         if ($devices -match [regex]::Escape($serial) + '\s+device\b') { return $true }
         Start-Sleep -Seconds 1
         & $Adb connect $serial | Out-Null
@@ -408,8 +420,8 @@ if (-not $connected) {
 Write-Ok "$serial  device"
 Write-Info "All adb calls below are pinned with -s $serial, so a local emulator cannot be hit by mistake."
 
-$sdk = (& $Adb -s $serial shell getprop ro.build.version.sdk 2>&1 | Out-String).Trim()
-$auto = (& $Adb -s $serial shell pm list features 2>&1 | Out-String)
+$sdk = (Invoke-Native { & $Adb -s $serial shell getprop ro.build.version.sdk 2>&1 | Out-String }).Trim()
+$auto = (Invoke-Native { & $Adb -s $serial shell pm list features 2>&1 | Out-String })
 if ($sdk -match '^\d+$' -and [int]$sdk -lt 29) { Fail "Guest is API $sdk, below the APK's minSdk 29." "Wrong node or wrong AAOS artifact." }
 Write-Ok "Guest API $sdk; automotive feature: $(if ($auto -match 'android\.hardware\.type\.automotive') { 'present' } else { 'ABSENT' })"
 
@@ -487,15 +499,15 @@ function Get-LinkNames ($linkText) {
 # not. The three link commands are chained in one shell so an interrupted call can never leave
 # the NIC down.
 function Rename-ToEth0 ($nic) {
-    & $Adb -s $serial shell "su 0 sh -c 'ip link set $nic down; ip link set $nic name eth0; ip link set eth0 up'" 2>&1 | Out-Null
+    Invoke-Native { & $Adb -s $serial shell "su 0 sh -c 'ip link set $nic down; ip link set $nic name eth0; ip link set eth0 up'" 2>&1 | Out-Null }
     Start-Sleep -Seconds 4
-    $after = Get-LinkNames (& $Adb -s $serial shell ip link show 2>&1 | Out-String)
+    $after = Get-LinkNames (Invoke-Native { & $Adb -s $serial shell ip link show 2>&1 | Out-String })
     if (($after -contains 'eth0') -and -not ($after -contains $nic)) {
         Write-Ok "Renamed $nic -> eth0 (EthernetTracker now adopts it)"
         return 'eth0'
     }
     Write-Warn "Rename of $nic to eth0 did not take - configuring it under its own name."
-    & $Adb -s $serial shell "su 0 ip link set $nic up" 2>&1 | Out-Null
+    Invoke-Native { & $Adb -s $serial shell "su 0 ip link set $nic up" 2>&1 | Out-Null }
     return $nic
 }
 
@@ -530,7 +542,7 @@ function Get-NicRx ($devText, $want) {
 # Put the address on the NIC. 'ip addr add' answers "File exists" on a re-run, which is the
 # healthy result; ifconfig is the fallback for a guest whose ip applet has no addr subcommand.
 function Set-RoomAddr ($nic) {
-    & $Adb -s $serial shell "su 0 sh -c 'ip link set $nic up; ip addr add $IviAddr/24 dev $nic || ifconfig $nic $IviAddr/24 up'" 2>&1 | Out-Null
+    Invoke-Native { & $Adb -s $serial shell "su 0 sh -c 'ip link set $nic up; ip addr add $IviAddr/24 dev $nic || ifconfig $nic $IviAddr/24 up'" 2>&1 | Out-Null }
 }
 
 # Steps (b) and (c) of the organiser procedure. netd builds this itself for an interface it has
@@ -548,12 +560,12 @@ function Set-RoomRouting ($nic) {
 
     # Cleared and rebuilt every run, so a re-run cannot stack duplicates and a NIC that
     # changed name since the last run leaves no rule pointing at it.
-    & $Adb -s $serial shell "su 0 sh -c 'ip rule del priority $RoomRulePrio; ip rule del priority $RoomRulePrio; ip rule del priority $RoomRulePrio'" 2>&1 | Out-Null
-    & $Adb -s $serial shell "su 0 sh -c 'ip route add $subnet dev $nic table $RoomTable proto static scope link'" 2>&1 | Out-Null
-    & $Adb -s $serial shell "su 0 sh -c 'ip rule add from all iif $nic lookup $RoomTable priority $RoomRulePrio; ip rule add from all oif $nic lookup $RoomTable priority $RoomRulePrio; ip rule add from $IviAddr lookup $RoomTable priority $RoomRulePrio'" 2>&1 | Out-Null
+    Invoke-Native { & $Adb -s $serial shell "su 0 sh -c 'ip rule del priority $RoomRulePrio; ip rule del priority $RoomRulePrio; ip rule del priority $RoomRulePrio'" 2>&1 | Out-Null }
+    Invoke-Native { & $Adb -s $serial shell "su 0 sh -c 'ip route add $subnet dev $nic table $RoomTable proto static scope link'" 2>&1 | Out-Null }
+    Invoke-Native { & $Adb -s $serial shell "su 0 sh -c 'ip rule add from all iif $nic lookup $RoomTable priority $RoomRulePrio; ip rule add from all oif $nic lookup $RoomTable priority $RoomRulePrio; ip rule add from $IviAddr lookup $RoomTable priority $RoomRulePrio'" 2>&1 | Out-Null }
 
     if ($RoomGateway) {
-        & $Adb -s $serial shell "su 0 ip route add default via $RoomGateway dev $nic table $RoomTable proto static" 2>&1 | Out-Null
+        Invoke-Native { & $Adb -s $serial shell "su 0 ip route add default via $RoomGateway dev $nic table $RoomTable proto static" 2>&1 | Out-Null }
         Write-Info "Default route via $RoomGateway added to the Room table."
     }
 }
@@ -564,21 +576,21 @@ if ($SkipNetworkFix) {
 } else {
     Write-Step "Putting the guest on the Room network ($IviAddr)"
 
-    $addrs  = & $Adb -s $serial shell ip -4 addr show 2>&1 | Out-String
+    $addrs  = Invoke-Native { & $Adb -s $serial shell ip -4 addr show 2>&1 | Out-String }
     $holder = Get-AddrHolder $addrs $IviAddr
 
     if ($holder) {
         Write-Ok "Already on the Room subnet - $holder holds $IviAddr"
     }
-    elseif (((& $Adb -s $serial shell su 0 id 2>&1 | Out-String) -notmatch 'uid=0')) {
+    elseif (((Invoke-Native { & $Adb -s $serial shell su 0 id 2>&1 | Out-String }) -notmatch 'uid=0')) {
         Write-Warn "No root on this guest, so the NIC cannot be configured. R4 will not arrive."
         Write-Warn "This is a finding to report, not something the script can work around."
     }
     else {
-        $links = & $Adb -s $serial shell ip link show 2>&1 | Out-String
-        $dev1  = & $Adb -s $serial shell cat /proc/net/dev 2>&1 | Out-String
+        $links = Invoke-Native { & $Adb -s $serial shell ip link show 2>&1 | Out-String }
+        $dev1  = Invoke-Native { & $Adb -s $serial shell cat /proc/net/dev 2>&1 | Out-String }
         Start-Sleep -Seconds 2
-        $dev2  = & $Adb -s $serial shell cat /proc/net/dev 2>&1 | Out-String
+        $dev2  = Invoke-Native { & $Adb -s $serial shell cat /proc/net/dev 2>&1 | Out-String }
 
         $survey  = Get-LinkSurvey $links
         $roomNic = ''
@@ -631,12 +643,12 @@ if ($SkipNetworkFix) {
             Set-RoomRouting $roomNic
 
             Start-Sleep -Seconds 3
-            $held = Get-NicIpv4 (& $Adb -s $serial shell ip -4 addr show $roomNic 2>&1 | Out-String) $roomNic
+            $held = Get-NicIpv4 (Invoke-Native { & $Adb -s $serial shell ip -4 addr show $roomNic 2>&1 | Out-String }) $roomNic
             if (($held -split '/')[0] -ne $IviAddr) {
                 Write-Warn "$roomNic did not take $IviAddr on the first attempt - re-applying."
                 Set-RoomAddr $roomNic
                 Start-Sleep -Seconds 3
-                $held = Get-NicIpv4 (& $Adb -s $serial shell ip -4 addr show $roomNic 2>&1 | Out-String) $roomNic
+                $held = Get-NicIpv4 (Invoke-Native { & $Adb -s $serial shell ip -4 addr show $roomNic 2>&1 | Out-String }) $roomNic
             }
 
             if (($held -split '/')[0] -ne $IviAddr) {
@@ -646,7 +658,7 @@ if ($SkipNetworkFix) {
                 # A NIC AAOS has adopted takes the address and loses it again on the next DHCP
                 # round, which reads as success on a single check.
                 Start-Sleep -Seconds 3
-                $held = Get-NicIpv4 (& $Adb -s $serial shell ip -4 addr show $roomNic 2>&1 | Out-String) $roomNic
+                $held = Get-NicIpv4 (Invoke-Native { & $Adb -s $serial shell ip -4 addr show $roomNic 2>&1 | Out-String }) $roomNic
                 if (($held -split '/')[0] -ne $IviAddr) {
                     Write-Warn "$roomNic took $IviAddr and lost it again within 3s - AAOS is re-leasing this NIC."
                 } else {
@@ -663,21 +675,21 @@ $Package = 'com.hackathon.v2x.ivi'
 
 # A package that was never on the guest cannot have been running, so the self-start check
 # below only means something when the app was already installed before this run.
-$wasInstalled = ((& $Adb -s $serial shell pm list packages 2>&1 | Out-String) -match [regex]::Escape($Package))
+$wasInstalled = ((Invoke-Native { & $Adb -s $serial shell pm list packages 2>&1 | Out-String }) -match [regex]::Escape($Package))
 
 if ($SkipInstall) {
     Write-Step "Skipping install (-SkipInstall)"
 } else {
     Write-Step "Installing $($Package) (this takes ~30-60s for a 28 MB APK)"
 
-    $out = & $Adb -s $serial install -r $Apk 2>&1 | Out-String
+    $out = Invoke-Native { & $Adb -s $serial install -r $Apk 2>&1 | Out-String }
     if ($out -notmatch 'Success') {
         Write-Host $out -ForegroundColor DarkGray
         Fail "adb install did not report Success." "Read the INSTALL_FAILED_ reason above; deploy note Step 3 covers the common ones."
     }
     Write-Ok "Success"
 
-    $pkgs = & $Adb -s $serial shell pm list packages 2>&1 | Out-String
+    $pkgs = Invoke-Native { & $Adb -s $serial shell pm list packages 2>&1 | Out-String }
     if ($pkgs -match [regex]::Escape($Package)) { Write-Ok "package:$Package present on the guest" }
     else { Fail "Install reported Success but the package is not listed." "Re-run; if it persists this is a finding worth recording." }
 }
@@ -690,15 +702,15 @@ Write-Step "Checking the app on the guest"
 # Room ran green for hours with no APK installed at all. Only the guest can answer these.
 function Get-AppState {
     $s = @{}
-    $s.AppPid  = (& $Adb -s $serial shell pidof $Package 2>&1 | Out-String).Trim()
+    $s.AppPid  = (Invoke-Native { & $Adb -s $serial shell pidof $Package 2>&1 | Out-String }).Trim()
     $s.Version = ''
-    $d = & $Adb -s $serial shell "dumpsys package $Package | grep versionName" 2>&1 | Out-String
+    $d = Invoke-Native { & $Adb -s $serial shell "dumpsys package $Package | grep versionName" 2>&1 | Out-String }
     if ($d -match 'versionName=(\S+)') { $s.Version = $Matches[1] }
-    $a = & $Adb -s $serial shell "dumpsys activity activities | grep -i ResumedActivity" 2>&1 | Out-String
+    $a = Invoke-Native { & $Adb -s $serial shell "dumpsys activity activities | grep -i ResumedActivity" 2>&1 | Out-String }
     $s.Resumed = ($a -match [regex]::Escape("$Package/.MainActivity"))
-    $w = & $Adb -s $serial shell "dumpsys window | grep -i mCurrentFocus" 2>&1 | Out-String
+    $w = Invoke-Native { & $Adb -s $serial shell "dumpsys window | grep -i mCurrentFocus" 2>&1 | Out-String }
     $s.Focused = ($w -match [regex]::Escape($Package))
-    $p = & $Adb -s $serial shell "dumpsys power | grep -i mWakefulness=" 2>&1 | Out-String
+    $p = Invoke-Native { & $Adb -s $serial shell "dumpsys power | grep -i mWakefulness=" 2>&1 | Out-String }
     $s.Awake = ($p -match 'mWakefulness=Awake')
     return $s
 }
@@ -711,7 +723,7 @@ $st = Get-AppState
 $neededStart = $false
 if (-not $st.AppPid -or -not $st.Resumed) {
     $neededStart = $true
-    & $Adb -s $serial shell am start -n "$Package/.MainActivity" 2>&1 | Out-String | Out-Null
+    Invoke-Native { & $Adb -s $serial shell am start -n "$Package/.MainActivity" 2>&1 | Out-String | Out-Null }
     Start-Sleep -Seconds 5
     $st = Get-AppState
 }
@@ -742,12 +754,14 @@ Start-Sleep -Seconds 15
 
 # -d dumps the ring buffer rather than streaming: the app was already running before we
 # attached, so the startup lines are only reachable this way (test guide Step 3-2).
-& $Adb -s $serial logcat -d -v threadtime -s IVI_V2X R4ListenerService R4Deserializer MainViewModel WarningViewModel `
-    2>&1 | Out-File -FilePath $logFile -Encoding utf8
+Invoke-Native {
+    & $Adb -s $serial logcat -d -v threadtime -s IVI_V2X R4ListenerService R4Deserializer MainViewModel WarningViewModel `
+        2>&1 | Out-File -FilePath $logFile -Encoding utf8
+}
 $log = Get-Content $logFile -Raw
 if (-not $log) { $log = '' }
 
-$fatal = & $Adb -s $serial logcat -d -b crash 2>&1 | Out-String
+$fatal = Invoke-Native { & $Adb -s $serial logcat -d -b crash 2>&1 | Out-String }
 
 Write-Ok "Saved: $logFile  ($((Get-Content $logFile | Measure-Object -Line).Lines) lines)"
 
