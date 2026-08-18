@@ -5,7 +5,8 @@ exit codes, the rule named on violation, and the examined counts printed on a
 clean run. Runs the script as a subprocess, exercising the real CLI.
 Standard library plus pytest only — no third-party fixtures.
 
-Verified locally only — no CI lane collects ``ADA_ECU/tools/tests/``.
+Collected by the Phase 3 ``ada-detector-tests`` CI lane alongside the detector
+suite, so the checker used as final evidence has a repeatable test receipt.
 """
 
 from __future__ import annotations
