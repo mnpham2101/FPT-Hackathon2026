@@ -7,10 +7,11 @@ Reports on what was delivered and the evidence behind it: run records, acceptanc
 | Document | Form | Topic |
 |---|---|---|
 | [apk-deploy.md](apk-deploy.md) | Human procedure | Build the IVI APK, install it on the Skycraft (AAOS) node, confirm the app on screen |
-| [testing-guide.md](testing-guide.md) | Human procedure | The two test paths, the available blueprints, and the screen/log/pcap evidence a run must produce |
+| [testing-guide.md](testing-guide.md) | Human procedure | Every test blueprint the milestone defines, the available blueprints, and the screen/log/pcap evidence a run must produce |
+| [v2x-ecu-test-evidence.md](v2x-ecu-test-evidence.md) | Human procedure | Extends testing-guide.md: the V2X ECU's own `[EVT]` stream and captured CPM traffic, correlated against its HLD call flow and the Bench↔V2X wire exchange |
 | [baseline-connectivity-smoke-test.md](baseline-connectivity-smoke-test.md) | Research note — **not authoritative** | The phase 0 smoke test: prove a datagram crosses bench → V2X → ADA → IVI before any ECU code exists. Pass criteria C1–C5, the `tools/netcheck/` implementation, manual steps M1–M12 |
 
-Read the first two in that order — the testing guide assumes an installed app. Each numbers its own steps from 1, so a step number is only ever a step of the document naming it.
+Read `apk-deploy.md` and `testing-guide.md` in that order — the testing guide assumes an installed app where its chosen blueprint carries one. Each guide numbers its own steps from 1, so a step number is only ever a step of the document naming it.
 
 ## Figures
 

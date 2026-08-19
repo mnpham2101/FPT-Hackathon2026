@@ -33,6 +33,10 @@ tools/apk-uploader/logs/
 # pattern is unanchored rather than tied to one folder.
 test-report/
 
+# Evidence gathered for a specific delivery document (e.g. v2x-ecu-test-evidence.md) rather
+# than a routine test run; anchored to the repo root since it is always collected from there.
+/v2x-ecu-test-evidence/
+
 # AG-Kit temporary & runtime files
 .temp_ag_kit/
 .agents/.ag-kit/backups/
