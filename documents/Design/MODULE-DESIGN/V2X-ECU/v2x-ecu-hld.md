@@ -2,7 +2,7 @@
 
 > **The V2X node's HLD, and the sole design authority for `V2X_ECU/`.** Every component this node runs, its role, input and output, where it lives, and how the components connect. Decision record: [v2x-ecu-design-decisions.md](v2x-ecu-design-decisions.md) (D1–D8). Frozen contracts: [r1-cpm-profile.md](../../../../contracts/r1-cpm-profile.md) inbound, [r2-v2x-object.schema.json](../../../../contracts/r2-v2x-object.schema.json) outbound. Capture retrieval: [traffic-capture-wireshark.md](../../../../requirements/car-sky-guide/traffic-capture-wireshark.md). Node facts: [node-v2x-ecu.md](../../../../requirements/car-sky-guide/node-v2x-ecu.md). Hardware port: [telux-parity-and-port-plan.md](telux-parity-and-port-plan.md).
 >
-> Diagrams: [v2x-ecu-module-architecture.svg](v2x-ecu-module-architecture.svg) (components, paired with its `.drawio`) · [v2x-ecu-components.puml](v2x-ecu-components.puml) (module graph) · [phase1-v2x-ecu-callflow.puml](phase1-v2x-ecu-callflow.puml) (sequence) · [phase1-des-protocol-stack.svg](../../../../presentation/assets/phase1-des-protocol-stack.svg) (the stack, §8).
+> Diagrams: [v2x-ecu-module-architecture.svg](v2x-ecu-module-architecture.svg) (components, paired with its `.drawio`) · [v2x-ecu-components.puml](v2x-ecu-components.puml) (module graph) · [phase1-v2x-ecu-callflow.svg](phase1-v2x-ecu-callflow.svg) (sequence, paired with its `.puml`) · [phase1-des-protocol-stack.svg](../../../../presentation/assets/phase1-des-protocol-stack.svg) (the stack, §8).
 
 **Abridged version.** A reader who does not need the full document can take the design deck instead: [Phase 1 — V2X ECU Design](../../../../presentation/phase1/phase1-design-v2x-ecu-deck.md) ([HTML](../../../../presentation/phase1/phase1-design-v2x-ecu-deck.html)). It presents this HLD; where the two differ, this document governs.
 
@@ -263,7 +263,9 @@ Both flows share every layer below the encoding row, and this node is where the 
 
 ## 9. Call flow
 
-[phase1-v2x-ecu-callflow.puml](phase1-v2x-ecu-callflow.puml) — PlantUML sequence: capture start, the in-node bring-up FSM, then the live loop datagram → decode → validate → dedupe → build → forward → `[EVT]`, with the decode-reject, validate-reject, dedupe-drop, bounded-retry and subscription-drop branches marked at their emission points.
+[phase1-v2x-ecu-callflow.puml](phase1-v2x-ecu-callflow.puml) — PlantUML sequence: capture start, the in-node bring-up FSM, then the live loop datagram → decode → validate → dedupe → build → forward → `[EVT]`, with the decode-reject, decode-ok, validate-reject, dedupe-drop, bounded-retry and subscription-drop branches marked at their emission points. The live loop (`§ B`) is autonumbered `1`–`14` in the source, which [v2x-ecu-test-evidence.md](../../../Delivery/Test-Guides/v2x-ecu-test-evidence.md) cites by number against captured `[EVT]` lines.
+
+![V2X ECU call flow: capture starts, the in-node bring-up FSM (section A), then the live loop (section B, autonumbered 1-14) — datagram in, decode, validate, dedupe, build, forward, [EVT] — with the decode-reject, decode-ok, validate-reject, dedupe-drop, bounded-retry and subscription-drop branches marked at their emission points](phase1-v2x-ecu-callflow.svg)
 
 ## 10. The contract
 

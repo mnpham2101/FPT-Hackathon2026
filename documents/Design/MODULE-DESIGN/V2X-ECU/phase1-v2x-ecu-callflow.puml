@@ -37,6 +37,7 @@ else nominal
 end
 
 == § B Live loop — the only M1 wire flow ==
+autonumber 1
 loop cpm_rate_hz (bench-driven)
   Bench -> Stub : UDP datagram (UPER CPM, R1)
   note over Cap : datagram visible in [CAP] + pcap
@@ -46,6 +47,7 @@ loop cpm_rate_hz (bench-driven)
   alt DecodeError (malformed corpus path)
     Pipe -> Log : decode_reject + counter — never crashes (R9)
   else CpmContent
+    Pipe -> Log : decode_ok (whole cpm object, D4)
     Pipe -> Pipe : validate (profile ranges, F9)
     alt invalid
       Pipe -> Log : validate_reject + reason counter
@@ -63,6 +65,7 @@ loop cpm_rate_hz (bench-driven)
     end
   end
 end
+autonumber stop
 
 alt FAULT_PLAN = subscription_drop (any time after bring-up)
   Stub -> Adapter : subscription dropped
