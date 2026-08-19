@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { createPlaybackController } from "./common.js";
 import { createRoadPage } from "./pages/roadPage.js";
 import { createEcuPage } from "./pages/ecuPage.js";
 
@@ -64,10 +65,41 @@ window.addEventListener("resize", () => {
   }
 });
 
+// ---- Playback control ---------------------------------------------------
+// One controller, one set of key bindings — every page's update(speed)
+// reads from it the same way, so a new page gets speed/pause for free.
+const playback = createPlaybackController();
+const playbackHud = document.getElementById("hud-playback");
+
+function refreshPlaybackHud() {
+  const state = playback.isPaused() ? "paused" : `${playback.getDisplaySpeed().toFixed(2)}x`;
+  playbackHud.textContent = `${state} — ↑/↓ speed, space to pause`;
+}
+
+window.addEventListener("keydown", (event) => {
+  switch (event.code) {
+    case "ArrowUp":
+      playback.increaseSpeed();
+      break;
+    case "ArrowDown":
+      playback.decreaseSpeed();
+      break;
+    case "Space":
+      event.preventDefault(); // don't let space scroll the page
+      playback.togglePause();
+      break;
+    default:
+      return;
+  }
+  refreshPlaybackHud();
+});
+
+refreshPlaybackHud();
+
 // ---- Render loop --------------------------------------------------------
 function animate() {
   requestAnimationFrame(animate);
-  activePage.update();
+  activePage.update(playback.getSpeed());
   renderer.render(activePage.scene, activePage.camera);
 }
 

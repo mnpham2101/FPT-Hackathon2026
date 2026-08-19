@@ -18,6 +18,53 @@ export function hexToRgb(hex) {
   return { r: (hex >> 16) & 255, g: (hex >> 8) & 255, b: hex & 255 };
 }
 
+// ---- Playback control, shared by every page's animation timeline ---------
+// One controller drives every page: main.js wires a single set of key
+// bindings to it, and each page's update(speed) receives whatever it
+// returns — 0 while paused, the current multiplier otherwise. Nothing
+// page-specific to wire up when a new page is added.
+export function createPlaybackController({ initialSpeed = 1, min = 0.25, max = 3, step = 0.25 } = {}) {
+  let speed = initialSpeed;
+  let paused = false;
+
+  function roundTo(value, decimals) {
+    const f = 10 ** decimals;
+    return Math.round(value * f) / f;
+  }
+
+  return {
+    increaseSpeed() {
+      speed = Math.min(max, roundTo(speed + step, 2));
+    },
+    decreaseSpeed() {
+      speed = Math.max(min, roundTo(speed - step, 2));
+    },
+    togglePause() {
+      paused = !paused;
+    },
+    getSpeed() {
+      return paused ? 0 : speed;
+    },
+    isPaused() {
+      return paused;
+    },
+    getDisplaySpeed() {
+      return speed;
+    },
+  };
+}
+
+// ---- Rounded-rectangle path, shared by every canvas-drawn UI card ---------
+export function roundRectPath(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
 // ---- Toon shading gradient, shared by every cel-shaded character ---------
 // Built once and reused everywhere — every MeshToonMaterial in the story
 // (cars, ECU nodes, wires) samples this same 4-band gradient.
@@ -115,15 +162,8 @@ export function buildTextSprite(text, { color = "#eef2f7", background = "rgba(10
   ctx.textBaseline = "middle";
   ctx.textAlign = "center";
 
-  const radius = canvas.height / 2;
+  roundRectPath(ctx, 0, 0, canvas.width, canvas.height, canvas.height / 2);
   ctx.fillStyle = background;
-  ctx.beginPath();
-  ctx.moveTo(radius, 0);
-  ctx.arcTo(canvas.width, 0, canvas.width, canvas.height, radius);
-  ctx.arcTo(canvas.width, canvas.height, 0, canvas.height, radius);
-  ctx.arcTo(0, canvas.height, 0, 0, radius);
-  ctx.arcTo(0, 0, canvas.width, 0, radius);
-  ctx.closePath();
   ctx.fill();
 
   ctx.fillStyle = color;

@@ -289,7 +289,11 @@ export function createRoadPage({ onComplete } = {}) {
   scene.add(mailSprite);
 
   // ---- Story state machine --------------------------------------------------
+  // A virtual clock, not the wall clock: every timeline check below reads
+  // `virtualElapsed`, which only advances by (real delta * playback speed).
+  // Pausing (speed 0) freezes it in place; speeding up fast-forwards it.
   const clock = new THREE.Clock();
+  let virtualElapsed = 0;
   let frozen = false;
   let mailPhase = "idle"; // idle -> flying -> delivered
   let mailElapsed = 0;
@@ -352,11 +356,12 @@ export function createRoadPage({ onComplete } = {}) {
     camera.lookAt(target.x, target.y + 1.2, target.z - 8);
   }
 
-  function update() {
+  function update(speed = 1) {
+    const rawDt = Math.min(clock.getDelta(), 0.05); // drain the real clock even while frozen/paused
     if (frozen) return;
-    const dt = Math.min(clock.getDelta(), 0.05);
-    const elapsed = clock.getElapsedTime();
-    updateCars(elapsed, dt);
+    const dt = rawDt * speed;
+    virtualElapsed += dt;
+    updateCars(virtualElapsed, dt);
     updateMail(dt);
     updateCamera();
   }
