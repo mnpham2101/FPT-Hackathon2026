@@ -227,6 +227,86 @@ In our AAOS `IVI_ECU` head unit, two communication paradigms co-exist, serving d
 
 ---
 
+### 5.1 IVI App Internal Ingest Protocol Pipeline (R4 Datagram to Compose UI)
+
+In our actual `IVI_ECU` application, raw UDP datagram packets arriving from ADA ECU on port 47300 cross 5 internal architectural layers to update the driver HMI:
+
+```text
+[ADA ECU (10.99.0.12)]
+       |
+       | UDP Port 47300 (Raw R4 JSON Datagram Byte Array)
+       v
+[1. R4ListenerService.kt] (ForegroundService on Dispatchers.IO)
+       | socket.receive(packet) -> ByteArray
+       v
+[2. R4Deserializer.kt] (kotlinx.serialization)
+       | deserialize(bytes) -> R4WarningEvent Kotlin Object
+       v
+[3. R4Repository.kt] (Single Source of Truth)
+       | warningEvents.emit(event) -> SharedFlow<R4WarningEvent>
+       v
+[4. WarningViewModel.kt] (State Machine & Timer)
+       | uiWarningState = Active(event) + 10s Auto-Clear Countdown Job
+       v
+[5. MainScreen.kt & Canvas3DWarningView.kt] (Jetpack Compose UI)
+       | Render 3D Cybertruck God-View + WarningBannerOverlay (Amber/Red)
+```
+
+#### Step-by-Step Code Flow in IVI_ECU:
+
+1. **Network Ingress (`R4ListenerService.kt`):**
+   ```kotlin
+   // Opens UDP socket on port 47300 in a background coroutine
+   val buffer = ByteArray(BUFFER_SIZE)
+   val packet = DatagramPacket(buffer, buffer.size)
+   DatagramSocket(BuildConfig.R4_UDP_PORT).use { socket ->
+       while (isActive) {
+           packet.setLength(buffer.size)
+           socket.receive(packet) // Hứng byte thô từ L4
+           val bytes = packet.data.copyOf(packet.length)
+           deserializer.deserialize(bytes).onSuccess { msg ->
+               _r4EventFlow.emit(msg) // Đẩy bản tin lên SharedFlow
+           }
+       }
+   }
+   ```
+
+2. **JSON Deserialization (`R4Deserializer.kt`):**
+   ```kotlin
+   // Converts raw byte array -> UTF-8 String -> R4WarningEvent object
+   fun deserialize(bytes: ByteArray): Result<R4Message> = runCatching {
+       val raw = bytes.decodeToString()
+       R4Json.decodeFromString<R4WarningEvent>(raw)
+   }
+   ```
+
+3. **Central Repository Storage (`R4Repository.kt`):**
+   ```kotlin
+   // Routes validated events to subscribers
+   private val _warningEvents = MutableSharedFlow<R4WarningEvent>(extraBufferCapacity = 32)
+   val warningEvents: SharedFlow<R4WarningEvent> = _warningEvents.asSharedFlow()
+   ```
+
+4. **UI ViewModel & Auto-Clear Logic (`WarningViewModel.kt`):**
+   ```kotlin
+   // Receives warning, updates state, and schedules 10s auto-dismiss job
+   private fun onWarningReceived(event: R4WarningEvent) {
+       _uiWarningState.value = WarningUiState.Active(event)
+       scheduleAutoClear() // Resets 10-second timer
+   }
+   ```
+
+5. **3D God View Render (`MainScreen.kt` & `Canvas3DWarningView.kt`):**
+   ```kotlin
+   // Jetpack Compose renders 3D Cybertruck + Warning Overlay based on riskState
+   WarningBannerOverlay(
+       warningActive = uiState is WarningUiState.Active,
+       riskState = event.riskState // "medium" (Amber) or "high" (Red)
+   )
+   ```
+
+---
+
 ## 6. AOSP Source Code Grounding
 
 For further exploration of VHAL AIDL definitions in AOSP:
