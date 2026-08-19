@@ -22,6 +22,9 @@ Standard Mobile Android is designed for personal smartphones (touchscreens, batt
 | **HMI Layout** | Portrait phone display | Fixed landscape automotive resolution (e.g., 1280×720, 1920×1080) |
 | **Driving Safety** | Distraction controls handled by app | System-enforced Driver Distraction Rules (UX Restrictions) |
 
+> [!NOTE]
+> For the deep-dive architectural reference on VHAL 5-stage signal routing across Binder IPC boundaries, see [VHAL Property Routing: From Physical Bus Bytes to Kotlin](vhal-property-routing-and-signal-pipeline.md).
+
 ---
 
 ## 2. End-to-End Message Ingest & Data Pipeline
