@@ -70,7 +70,9 @@ Both are ETSI ITS facility-layer messages carried in the same `ItsPduHeader`, di
 
 ## 4. CPM message structure
 
-Structural diagram: [cpm-message-structure.drawio](cpm-message-structure.drawio) *(export to `.svg` alongside it to embed, per the repo's drawio+svg pairing)*.
+Structural diagram, source [cpm-message-structure.drawio](cpm-message-structure.drawio), paired with its exported `.svg`:
+
+![CPM message structure: CollectivePerceptionMessage split into header (protocolVersion, messageId, stationId) and payload; payload split into managementContainer (referenceTime, referencePosition, unused segmentationInfo/messageRateRange) and cpmContainers holding containerId 1 OriginatingVehicleContainer (orientationAngle, unused pitch/roll/trailer) and containerId 5 PerceivedObjectContainer wrapping one PerceivedObject (objectId, measurementDeltaTime, position, velocity, classification, confidence); side panels show the wire path, the M1 profile summary, what the V2X ECU derives rather than receives, and why DENM is not CPM](cpm-message-structure.svg)
 
 ### 4.1 M1 profile — what the bench actually emits
 
