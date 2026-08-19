@@ -350,7 +350,7 @@ const vehicleB = buildCar(0xff7a3d, 0xffe6c2); // relay vehicle
 const vehicleC = buildCar(0x9aa2b1, 0xf2e6a8); // occluded hazard vehicle
 
 vehicleA.position.set(LANE_RIGHT_X, 0, 0);
-vehicleB.position.set(LANE_LEFT_X, 0, -3);
+vehicleB.position.set(LANE_LEFT_X, 0, -13);
 vehicleC.position.set(LANE_RIGHT_X, 0, -230);
 vehicleC.visible = false;
 
