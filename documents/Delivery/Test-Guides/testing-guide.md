@@ -1,6 +1,6 @@
-# Phase 5 — IVI HMI test & evidence
+# System test — IVI HMI test & evidence
 
-How to drive R4 warnings at the installed app and collect the evidence that closes the requirement. It picks up from [apk-deploy.md](apk-deploy.md), which builds the APK, opens the ADB tunnel, installs it and confirms the app is up — do that one first. **Each guide numbers its own steps from 1**, so a step number below always means a step of this document.
+The test & evidence guide for every blueprint the milestone defines — the platform baseline, each node's isolated test, and the full system-test chain — through the same three steps and the same evidence tooling throughout. Where the chosen blueprint includes the IVI node, start with [apk-deploy.md](apk-deploy.md): it builds the APK, opens the ADB tunnel, installs it and confirms the app is up. **Each guide numbers its own steps from 1**, so a step number below always means a step of this document.
 
 ## Prerequisites
 
