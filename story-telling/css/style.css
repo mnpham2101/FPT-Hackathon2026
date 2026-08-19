@@ -74,3 +74,39 @@ html, body {
   font-size: 1.3rem;
   color: #7ec8ff;
 }
+
+.nav-btn {
+  position: fixed;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 1px solid rgba(120, 180, 255, 0.35);
+  background: rgba(16, 22, 34, 0.65);
+  color: #eaf1ff;
+  font-size: 1.8rem;
+  line-height: 1;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  transition: background 0.2s ease, opacity 0.2s ease, transform 0.2s ease;
+  z-index: 10;
+}
+
+.nav-btn:hover:not(:disabled) {
+  background: rgba(28, 40, 60, 0.85);
+  transform: translateY(-50%) scale(1.06);
+}
+
+.nav-btn:disabled {
+  opacity: 0.25;
+  cursor: default;
+}
+
+#nav-prev {
+  left: 24px;
+}
+
+#nav-next {
+  right: 24px;
+}
