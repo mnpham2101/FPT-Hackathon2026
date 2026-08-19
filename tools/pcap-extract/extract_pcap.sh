@@ -23,12 +23,12 @@
 #   - Output lands NEXT TO THE INPUT unless -o is given. Given a directory, that
 #     is the directory itself -- the layout the log collector writes,
 #     ./test-report/<test-name>/, so the .pcap files land beside the logs.
-#   - <basename> is untrusted: any path component is stripped so a crafted
-#     [PCAP-BEGIN ../../evil.pcap] writes evil.pcap inside the output directory
-#     and cannot escape it. '.', '..' and empty degrade to block-<n>.pcap, and
-#     a name not ending in .pcap gets the suffix.
+#   - The .pcap is named after the INPUT LOG, not the embedded marker name:
+#     node-v2x-ecu.txt -> node-v2x-ecu.pcap. The <basename> in [PCAP-BEGIN] is
+#     cosmetic only and never reaches the filesystem.
 #   - No silent clobber: an existing target gets -2, -3, ... before .pcap, and
-#     after -99 the block fails rather than overwriting.
+#     after -99 the block fails rather than overwriting -- this is also how a
+#     second block from the same log gets its own file.
 #   - CRLF tolerant, because a log saved from a browser on Windows carries \r.
 #   - Both stdout consumers share one stream, so a [CAP]/[EVT]/[BOOT] line can
 #     land inside a base64 block. Those are dropped with a warning rather than
@@ -121,25 +121,6 @@ trim() {
     printf '%s' "$s"
 }
 
-# Reduce an untrusted block name to a bare file name, which is then only ever
-# joined to the output directory -- so it cannot escape it.
-resolve_block_name() {
-    local raw=$1 index=$2 name lower
-    name=$raw
-    name=${name##*/}                       # drop any POSIX path
-    name=${name##*\\}                      # drop any Windows path
-    name=$(trim "$name")
-    if [[ -z $name || $name == '.' || $name == '..' ]]; then
-        name="block-$index"
-    fi
-    lower=$(printf '%s' "$name" | tr '[:upper:]' '[:lower:]')
-    case $lower in
-        *.pcap) ;;
-        *) name="$name.pcap" ;;
-    esac
-    printf '%s' "$name"
-}
-
 # Never overwrite: insert -2, -3, ... before the suffix, give up after -99.
 # Prints the free path, or returns 1 when every candidate is taken.
 free_path() {
@@ -148,7 +129,7 @@ free_path() {
         printf '%s' "$dir/$name"
         return 0
     fi
-    stem=${name%.pcap}                     # resolve_block_name guarantees .pcap
+    stem=${name%.pcap}                     # every caller passes a name ending .pcap
     for (( i = 2; i <= 99; i++ )); do
         try="$dir/$stem-$i.pcap"
         if [[ ! -e $try ]]; then
@@ -171,11 +152,12 @@ f_dropped=0
 in_block=0
 raw_name=''
 buffer=''
+base_name=''
 
 # close_block <truncated 0|1> <file-label> <outdir>
 close_block() {
     local truncated=$1 label=$2 dest=$3
-    local name path bytes
+    local path bytes
 
     f_found=$(( f_found + 1 ))
 
@@ -185,19 +167,14 @@ close_block() {
         return
     fi
 
-    name=$(resolve_block_name "$raw_name" "$f_found")
-    if [[ $name != "$raw_name" ]]; then
-        warn "$label block $f_found: name '$raw_name' reduced to '$name'"
-    fi
-
     if [[ -z $buffer ]]; then
-        warn "$label block $f_found ($name): empty body, nothing to decode"
+        warn "$label block $f_found ($base_name): empty body, nothing to decode"
         f_failed=$(( f_failed + 1 ))
         return
     fi
 
-    if ! path=$(free_path "$dest" "$name"); then
-        warn "$label block $f_found ($name): 99 files of that name exist - not written"
+    if ! path=$(free_path "$dest" "$base_name"); then
+        warn "$label block $f_found ($base_name): 99 files of that name exist - not written"
         f_failed=$(( f_failed + 1 ))
         return
     fi
@@ -205,13 +182,13 @@ close_block() {
     # Decode to the scratch file first, so a failed decode never creates -- nor
     # truncates -- the target it was going to claim.
     if ! printf '%s\n' "$buffer" | base64 -d >"$TMPBIN" 2>/dev/null; then
-        warn "$label block $f_found ($name): base64 decode failed - not valid base64"
+        warn "$label block $f_found ($base_name): base64 decode failed - not valid base64"
         f_failed=$(( f_failed + 1 ))
         return
     fi
 
     if ! cat "$TMPBIN" >"$path" 2>/dev/null; then
-        warn "$label block $f_found ($name): cannot write $path"
+        warn "$label block $f_found ($base_name): cannot write $path"
         f_failed=$(( f_failed + 1 ))
         return
     fi
@@ -229,6 +206,7 @@ extract_one() {
 
     f_found=0; f_written=0; f_failed=0; f_dropped=0
     in_block=0; raw_name=''; buffer=''
+    base_name="${label%.*}.pcap"           # node-v2x-ecu.txt -> node-v2x-ecu.pcap
 
     while IFS= read -r line || [[ -n $line ]]; do
         line=${line//$'\r'/}

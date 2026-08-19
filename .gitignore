@@ -76,6 +76,9 @@ website/pages/
 Package-Delivery-tool/Hackathon-Delivery/
 Package-Delivery-tool/Hackathon-Delivery.zip
 
+# Zip files - built/packaged artifacts, never committed
+*.zip
+
 # The recorded demo run (~145 MB) — over GitHub's 100 MB file limit, so it
 # stays local; Package-Delivery-tool reads it from here into the package.
 video-evidence/

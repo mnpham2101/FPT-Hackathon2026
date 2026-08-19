@@ -40,7 +40,9 @@ powershell -ExecutionPolicy Bypass -File .\tools\logs-collector\Collect-Logs.ps1
 | `-Blueprint` / `--blueprint` | Collect any deployed blueprint by name, listed or not |
 | `-BaseUrl` / `--base-url` | CarSky gateway; default `https://hackathon-2.carsky.io` |
 | `-ApiKeyFile` / `--api-key-file` | File holding the CarSky REST key; default `secrets/carsky-api-key.txt` |
-| `-Port` / `--port` | Local port the ADB tunnel is expected on; default 5555 |
+| `-Port` / `--port` | Local port the ADB tunnel is expected on, or opened on if nothing is serving it yet; default 5555 |
+| `-Token` / `--token` | ADB tunnel token to use instead of `secrets/reach-adb-token-ivi.txt`, when this run has to open its own tunnel |
+| `-KeepTunnel` / `--keep-tunnel` | Leave a tunnel this run opened running after the run finishes; has no effect on a tunnel found already serving `-Port` |
 | `-Tail` / `--tail` | Lines pulled per node log; default 5000 |
 | `-OutRoot` / `--out-root` | Where the run folder is created; default `.\test-report` |
 
@@ -53,9 +55,11 @@ The shortcuts are conveniences, not a whitelist — the node list of whatever bl
 .\tools\logs-collector\COLLECT-LOGS.cmd -Blueprint phase0_smoked_test -Tail 20000
 ```
 
-## 2 · The ADB half is optional
+## 2 · The ADB half opens its own tunnel
 
-Without a tunnel the node logs still land and the files from inside the AAOS guest are skipped — reported, not failed, because a node-side collection is useful on its own. Open the tunnel first when you want the app's logcat:
+If nothing is already serving `-Port`, the collector opens its own tunnel from `secrets\reach-adb-token-ivi.txt` — the same token `INSTALL-IVI-APK.cmd` reads — and closes it again when the run finishes unless `-KeepTunnel` is passed. A tunnel another tool already has serving `-Port` is reused as-is and never touched.
+
+Only when no tunnel can be opened at all — no token file, no `reach-backend.exe` under `tools\apk-uploader\reach_be\`, or a stale token the gateway rejects — are the guest-side files skipped, reported rather than failed, because a node-side collection is useful on its own. The run's `WARN` lines say which of those it was; the fix is usually re-copying the token, same as `INSTALL-IVI-APK.cmd`'s own token-refresh flow. Opening the tunnel by hand still works as a fallback:
 
 ```powershell
 .\tools\apk-uploader\INSTALL-IVI-APK.cmd -SkipInstall -KeepTunnel

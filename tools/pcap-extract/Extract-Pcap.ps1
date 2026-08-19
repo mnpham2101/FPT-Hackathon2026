@@ -21,12 +21,12 @@
 
   Deliberate behaviours, none silent:
     - Output lands NEXT TO THE INPUT LOG unless -OutDir is given.
-    - <basename> is untrusted: any path component is stripped so a crafted
-      [PCAP-BEGIN ../../evil.pcap] writes evil.pcap inside the output directory
-      and cannot escape it. '.', '..' and empty degrade to block-<n>.pcap, and
-      a name not ending in .pcap gets the suffix.
+    - The .pcap is named after the INPUT LOG, not the embedded marker name:
+      node-v2x-ecu.txt -> node-v2x-ecu.pcap. The <basename> in [PCAP-BEGIN] is
+      cosmetic only and never reaches the filesystem.
     - No silent clobber: an existing target gets -2, -3, ... before .pcap, and
-      after -99 the block fails rather than overwriting.
+      after -99 the block fails rather than overwriting -- this is also how a
+      second block from the same log gets its own file.
     - CRLF tolerant, because a log saved from a browser on Windows carries \r.
     - Both stdout consumers share one stream, so a [CAP]/[EVT]/[BOOT] line can
       land inside a base64 block. Those are dropped with a warning rather than
@@ -105,17 +105,6 @@ if ($OutDir) {
 
 # --------------------------------------------------------------------- helpers
 
-# Reduce an untrusted block name to a file name inside $OutDir.
-function Resolve-BlockName ($raw, $index) {
-    $name = $raw
-    if ($name) { $name = $name -replace '^.*[\\/]', '' }        # drop any path
-    if ([string]::IsNullOrWhiteSpace($name) -or $name -eq '.' -or $name -eq '..') {
-        $name = "block-$index"
-    }
-    if ($name -notmatch '\.pcap$') { $name = "$name.pcap" }
-    return $name
-}
-
 # Never overwrite: insert -2, -3, ... before the suffix, give up after -99.
 function Get-FreePath ($dir, $name) {
     $target = Join-Path $dir $name
@@ -131,11 +120,12 @@ function Get-FreePath ($dir, $name) {
 function Invoke-ExtractOne {
     param($File, $Destination)
 
-    $lines   = [System.IO.File]::ReadAllLines($File.FullName)
-    $state   = @{ Found = 0; Written = 0; Failed = 0; Dropped = 0 }
-    $inBlock = $false
-    $rawName = ''
-    $buffer  = New-Object System.Collections.Generic.List[string]
+    $lines    = [System.IO.File]::ReadAllLines($File.FullName)
+    $state    = @{ Found = 0; Written = 0; Failed = 0; Dropped = 0 }
+    $inBlock  = $false
+    $rawName  = ''
+    $buffer   = New-Object System.Collections.Generic.List[string]
+    $baseName = "$($File.BaseName).pcap"   # node-v2x-ecu.txt -> node-v2x-ecu.pcap
 
     $close = {
         param($truncated)
@@ -147,14 +137,9 @@ function Invoke-ExtractOne {
             return
         }
 
-        $name = Resolve-BlockName $rawName $state.Found
-        if ($rawName -match '[\\/]' -or [string]::IsNullOrWhiteSpace($rawName) -or $rawName -eq '.' -or $rawName -eq '..') {
-            Write-Warning "$($File.Name) block $($state.Found): name '$rawName' reduced to '$name'"
-        }
-
-        $path = Get-FreePath $Destination $name
+        $path = Get-FreePath $Destination $baseName
         if (-not $path) {
-            Write-Warning "$($File.Name) block $($state.Found) ($name): 99 files of that name exist - not written"
+            Write-Warning "$($File.Name) block $($state.Found) ($baseName): 99 files of that name exist - not written"
             $state.Failed++
             return
         }
@@ -165,7 +150,7 @@ function Invoke-ExtractOne {
         # tool beside this one does.
         $b64 = ($buffer -join '')
         if (-not $b64) {
-            Write-Warning "$($File.Name) block $($state.Found) ($name): empty body, nothing to decode"
+            Write-Warning "$($File.Name) block $($state.Found) ($baseName): empty body, nothing to decode"
             $state.Failed++
             return
         }
@@ -173,7 +158,7 @@ function Invoke-ExtractOne {
         try {
             $bytes = [Convert]::FromBase64String($b64)
         } catch {
-            Write-Warning "$($File.Name) block $($state.Found) ($name): base64 decode failed - $($_.Exception.Message)"
+            Write-Warning "$($File.Name) block $($state.Found) ($baseName): base64 decode failed - $($_.Exception.Message)"
             $state.Failed++
             return
         }

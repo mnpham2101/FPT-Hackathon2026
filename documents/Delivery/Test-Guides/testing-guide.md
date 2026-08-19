@@ -1,11 +1,11 @@
-# Phase 5 — IVI HMI test & evidence
+# System test — IVI HMI test & evidence
 
-How to drive R4 warnings at the installed app and collect the evidence that closes the requirement. It picks up from [apk-deploy.md](apk-deploy.md), which builds the APK, opens the ADB tunnel, installs it and confirms the app is up — do that one first. **Each guide numbers its own steps from 1**, so a step number below always means a step of this document.
+The test & evidence guide for every blueprint the milestone defines — the platform baseline, each node's isolated test, and the full system-test chain — through the same three steps and the same evidence tooling throughout. Where the chosen blueprint includes the IVI node, start with [apk-deploy.md](apk-deploy.md): it builds the APK, opens the ADB tunnel, installs it and confirms the app is up. **Each guide numbers its own steps from 1**, so a step number below always means a step of this document.
 
 ## Prerequisites
 
 - A Room deployed green, with `app-debug.apk` installed and the app confirmed on screen — all of [apk-deploy.md](apk-deploy.md)
-- For anything that runs `adb`: the tunnel still serving on `localhost:5555` — [apk-deploy.md Step 3, Terminal 1](apk-deploy.md#terminal-1--establish-the-tunnel-then-leave-it-alone), or `INSTALL-IVI-APK.cmd -KeepTunnel`
+- For a hand-typed `adb` command: the tunnel still serving on `localhost:5555` — [apk-deploy.md Step 3, Terminal 1](apk-deploy.md#terminal-1--establish-the-tunnel-then-leave-it-alone), or `INSTALL-IVI-APK.cmd -KeepTunnel`. `COLLECT-LOGS.cmd` is the exception: it opens its own tunnel from `secrets\reach-adb-token-ivi.txt` when nothing already serves the port, so it needs only that token file, not a tunnel opened ahead of it.
 - A CarSky workbench login for the browser-only surfaces — the Screen widget, the Log widget, node logs
 
 Every PowerShell block below runs from the **repo root**.
@@ -22,8 +22,8 @@ The **Images** column is what each tool has anything to say about — a tool abs
 
 | Tool name | Purpose | Export log location | Images |
 |---|---|---|---|
-| [INSTALL-IVI-APK.cmd](../../../tools/apk-uploader/INSTALL-IVI-APK.cmd) (`install-ivi-apk.ps1` / `.sh`) | Installs the APK, then dumps the app's tagged logcat as the tail of its own run. Also owns the ADB tunnel every guest-side tool needs | `tools/apk-uploader/logs/` | `app-debug.apk` |
-| [COLLECT-LOGS.cmd](../../../tools/logs-collector/COLLECT-LOGS.cmd) (`Collect-Logs.ps1` / `collect-logs.sh`) | One pass over a whole Room: every node's log over REST whatever the node is, and — where the Room has a Skycraft VM — the guest's logcat, crash buffer, sockets and interfaces over ADB | `test-report/<run>/`, one file per node | any deployed blueprint: `app-debug.apk`, `m1-r4-sim`, `m1-ada-ecu`, `m1-v2x-ecu`, `m1-scenario-player`, `m1-ada-bench`, `m1-netcheck` |
+| [INSTALL-IVI-APK.cmd](../../../tools/apk-uploader/INSTALL-IVI-APK.cmd) (`install-ivi-apk.ps1` / `.sh`) | Installs the APK, then dumps the app's tagged logcat as the tail of its own run. Owns the token-refresh prompt and the long-lived `-KeepTunnel` tunnel a hand-typed `adb` command needs | `tools/apk-uploader/logs/` | `app-debug.apk` |
+| [COLLECT-LOGS.cmd](../../../tools/logs-collector/COLLECT-LOGS.cmd) (`Collect-Logs.ps1` / `collect-logs.sh`) | One pass over a whole Room: every node's log over REST whatever the node is, and — where the Room has a Skycraft VM — the guest's logcat, crash buffer, sockets and interfaces over ADB. Opens its own tunnel for the run if none is already serving `-Port`, and closes what it opened when done unless `-KeepTunnel` is passed | `test-report/<run>/`, one file per node | any deployed blueprint: `app-debug.apk`, `m1-r4-sim`, `m1-ada-ecu`, `m1-v2x-ecu`, `m1-scenario-player`, `m1-ada-bench`, `m1-netcheck` |
 | `capture.sh` — inside the image, not run by hand | Runs tcpdump in the container: `[CAP]` lines for the live "traffic is flowing" check, and a rotating pcap emitted to stdout as base64 between `[PCAP-BEGIN]` / `[PCAP-END]` | The node's own **View Log**, `user` stream — the log is a container's only egress | pcap **and** `[CAP]`: `m1-v2x-ecu`, `m1-ada-ecu` · `[CAP]` only: `m1-ada-bench`, `m1-netcheck` |
 | [EXTRACT-PCAP.cmd](../../../tools/pcap-extract/EXTRACT-PCAP.cmd) (`Extract-Pcap.ps1` / `extract_pcap.sh`) | Turns the base64 blocks inside a saved node log into `.pcap` files Wireshark can open | Beside the input log, or `-OutDir` | `m1-v2x-ecu`, `m1-ada-ecu` |
 | `adb logcat` — by hand, over the tunnel | The only place the IVI app's `[RX]` lines exist; the IVI node's REST log is the Skycraft VM host, not the app | Wherever you redirect it (§ Step 3) | `app-debug.apk` |
@@ -400,11 +400,11 @@ Confirm before re-collecting: `guest-ifaces.txt` must show the NIC carrying `10.
 
 ### Only the node logs are collected — nothing from inside the AAOS guest
 
-**Symptom.** The run folder holds the `node-*.txt` files but not `app-logcat.txt`, `app-crash.txt`, `guest-udp6.txt` or `guest-ifaces.txt`, and the run still exited 0. The checklist reads `not collected - no ADB tunnel` against every app row.
+**Symptom.** The run folder holds the `node-*.txt` files but not `app-logcat.txt`, `app-crash.txt`, `guest-udp6.txt` or `guest-ifaces.txt`, and the run still exited 0. The checklist reads `skipped - no ADB tunnel on localhost:5555` against every app row.
 
-**Root cause.** The ADB tunnel was not up. Node logs come over REST and always land; the four files above are read out of the guest over ADB and need the tunnel. The collector reports them skipped rather than failed, because a node-side collection is useful on its own — which is why a tunnel-less run exits 0 and looks complete while proving nothing about the app.
+**Root cause.** The collector could not get an ADB tunnel up. Node logs come over REST and always land; the four files above are read out of the guest over ADB and need the tunnel. `Collect-Logs.ps1` opens its own tunnel from `secrets\reach-adb-token-ivi.txt` when nothing already serves `-Port`, so this means that attempt itself failed — no token file, no `reach-backend.exe` under `tools\apk-uploader\reach_be\`, or a stale token the gateway rejects. Read the `WARN` lines from the "Looking for the ADB tunnel" step above; they name which of those it was. The collector reports the app files skipped rather than failed either way, because a node-side collection is useful on its own — which is why a tunnel-less run exits 0 and looks complete while proving nothing about the app.
 
-**Solution.** Open the tunnel and leave it up, then collect again while it is open:
+**Solution.** Fix what the `WARN` line named — usually a missing or stale token, the same fix as [apk-deploy.md § Troubleshooting](apk-deploy.md#troubleshooting) — then collect again. If the token is fine and `Collect-Logs.ps1` still cannot open a tunnel, open one by hand and collect against it instead:
 
 ```powershell
 .\tools\apk-uploader\INSTALL-IVI-APK.cmd -SkipInstall

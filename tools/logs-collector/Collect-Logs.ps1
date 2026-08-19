@@ -27,10 +27,13 @@
   the app wrote, so it is collected for completeness under a name the pcap extractor
   does not glob and the [TX] scan does not read. The app's log comes only from adb.
 
-  The ADB tunnel is optional. Without it the node logs still land and the files from
-  inside the AAOS guest are skipped, reported rather than failed -- a node-side
-  collection is useful on its own. Open the tunnel with
-  tools\apk-uploader\INSTALL-IVI-APK.cmd -SkipInstall.
+  The ADB tunnel is not a prerequisite: if nothing already serves -Port, this run
+  opens its own, from the same a8k_ token file the APK installer reads
+  (secrets\reach-adb-token-ivi.txt), and closes it again when the run finishes unless
+  -KeepTunnel is passed. A tunnel another tool already opened is reused as-is, never
+  replaced. Only when no tunnel can be opened at all -- no token, no tunnel CLI, or a
+  reach-backend that dies immediately -- are the guest-side files skipped, reported
+  rather than failed; a node-side collection is still useful on its own.
 
 .PARAMETER Test
   A shortcut for one of the blueprints below, by number or by name:
@@ -63,7 +66,16 @@
   put in a URL.
 
 .PARAMETER Port
-  Local port the ADB tunnel is expected on. Default 5555.
+  Local port the ADB tunnel is expected on, or opened on if nothing is serving it yet.
+  Default 5555.
+
+.PARAMETER Token
+  Use this a8k_ token instead of the one in secrets\reach-adb-token-ivi.txt, when this
+  run has to open its own tunnel.
+
+.PARAMETER KeepTunnel
+  Leave a tunnel this run opened running after the run finishes. Has no effect on a
+  tunnel another tool already had serving -Port -- that one is never touched.
 
 .PARAMETER Tail
   How many lines to pull per node log. Default 5000.
@@ -91,11 +103,23 @@ param(
     [string] $BaseUrl    = 'https://hackathon-2.carsky.io',
     [string] $ApiKeyFile,
     [int]    $Port       = 5555,
+    [string] $Token,
+    [switch] $KeepTunnel,
     [int]    $Tail       = 5000,
     [string] $OutRoot    = '.\test-report'
 )
 
 $ErrorActionPreference = 'Stop'
+
+# adb (and the busybox/toybox shell inside the guest) writes routine, already-expected
+# chatter to stderr, which Windows PowerShell 5.1 turns into a terminating error once
+# merged with 2>&1 under $ErrorActionPreference = 'Stop' -- see
+# tools\apk-uploader\install-ivi-apk.ps1's Invoke-Native for the full rationale. Every
+# adb/reach-backend invocation that merges stderr goes through here instead of calling
+# the native command directly.
+function Invoke-Native ([scriptblock] $Command) {
+    try { & $Command } catch { $null }
+}
 
 # ---------------------------------------------------------------- presentation
 
@@ -131,6 +155,7 @@ function Fail ($m, $fix) {
     Write-Host "  FAILED: $m" -ForegroundColor Red
     if ($fix) { Write-Host "  Fix:    $fix" -ForegroundColor Yellow }
     Write-Host ""
+    Stop-OwnTunnel
     exit 1
 }
 function Exit-Usage ($m) {
@@ -138,6 +163,21 @@ function Exit-Usage ($m) {
     Write-Host "  USAGE: $m" -ForegroundColor Red
     Write-Host ""
     exit 2
+}
+
+# ------------------------------------------------------------------ tunnel mgmt
+
+# Set only when THIS run opened the tunnel itself (§ adb below) -- a tunnel another
+# tool already had serving -Port is never touched, so Stop-OwnTunnel is always safe
+# to call, including from Fail before either variable below has been assigned.
+$script:TunnelProc   = $null
+$script:OpenedTunnel = $false
+
+function Stop-OwnTunnel {
+    if ($script:OpenedTunnel -and $script:TunnelProc -and -not $script:TunnelProc.HasExited) {
+        try { Stop-Process -Id $script:TunnelProc.Id -Force -ErrorAction Stop } catch { }
+        Write-Info "Tunnel stopped (pid $($script:TunnelProc.Id))."
+    }
 }
 
 # ------------------------------------------------------------------- the tests
@@ -516,40 +556,122 @@ $Package    = 'com.hackathon.v2x.ivi'
 $serial     = "localhost:$Port"
 $GuestReady = $false
 
+# Same locations tools\apk-uploader\install-ivi-apk.ps1 reads -- that script still owns
+# the token-refresh prompt and the long-lived -KeepTunnel workflow; this one only opens
+# a tunnel when nothing already serves -Port, and only for the length of this run.
+$ReachExe  = Join-Path $RepoRoot 'tools\apk-uploader\reach_be\reach\reach-backend.exe'
+$TokenFile = Join-Path $RepoRoot 'secrets\reach-adb-token-ivi.txt'
+
+function Test-TunnelAlive {
+    Invoke-Native { & $Adb connect $serial 2>&1 | Out-Null }
+    $deadline = (Get-Date).AddSeconds(8)
+    while ((Get-Date) -lt $deadline) {
+        if ((Invoke-Native { & $Adb devices 2>&1 | Out-String }) -match [regex]::Escape($serial) + '\s+device\b') { return $true }
+        Start-Sleep -Milliseconds 500
+    }
+    return $false
+}
+
+# Opens this run's own tunnel. Returns $true once $Port is being served by a process
+# this run started; $false on anything that stops that (missing CLI, missing or
+# malformed token, reach-backend dying immediately) -- none of which fail the run,
+# since the node logs already collected stand on their own.
+function Open-OwnTunnel {
+    if (-not (Test-Path -LiteralPath $ReachExe)) {
+        Write-Warn "Tunnel CLI not found at $ReachExe"
+        Write-Info "Unpack the organizers' reach_be zip into tools\apk-uploader\."
+        return $false
+    }
+    $tok = $Token
+    if (-not $tok) {
+        if (-not (Test-Path -LiteralPath $TokenFile)) {
+            Write-Warn "No ADB tunnel token at $TokenFile"
+            Write-Info "Copy the a8k_ value from Devices -> KIS -> Connect -> IVI ADB -> Local ADB into that file, or pass -Token a8k_..."
+            return $false
+        }
+        $tok = (Get-Content -LiteralPath $TokenFile -Raw).Trim()
+    }
+    if (-not $tok.StartsWith('a8k_')) {
+        Write-Warn "The token does not start with 'a8k_' - not a valid ADB tunnel token."
+        return $false
+    }
+
+    $tunnelLog = Join-Path $OutDirFull 'tunnel-open.log'
+    $proc = Start-Process -FilePath $ReachExe `
+        -ArgumentList @('adb', '--gateway', $BaseUrl, '--key', $tok, '--port', "$Port") `
+        -PassThru -WindowStyle Hidden `
+        -RedirectStandardOutput $tunnelLog `
+        -RedirectStandardError  "$tunnelLog.err"
+
+    $deadline = (Get-Date).AddSeconds(25)
+    while ((Get-Date) -lt $deadline) {
+        if ($proc.HasExited) {
+            Write-Warn "The tunnel exited immediately (exit $($proc.ExitCode)). See $tunnelLog."
+            return $false
+        }
+        if (Test-Port $Port) { break }
+        Start-Sleep -Milliseconds 500
+    }
+    if (-not (Test-Port $Port)) {
+        Write-Warn "The tunnel did not start listening within 25s. See $tunnelLog."
+        return $false
+    }
+
+    $script:TunnelProc   = $proc
+    $script:OpenedTunnel = $true
+    Write-Ok "Tunnel opened (pid $($proc.Id)), log: $tunnelLog"
+    return $true
+}
+
 if (-not $Adb) {
     Write-Warn "adb.exe not found on PATH or in any standard Android SDK location."
     Write-Info "Skipping the files from inside the guest. Install Android SDK platform-tools, or set ANDROID_HOME."
     Add-Summary ""
     Add-Summary "GUEST               skipped - adb not found"
-} elseif (-not (Test-Port $Port)) {
-    Write-Warn "Nothing is listening on 127.0.0.1:$Port - the ADB tunnel is down."
-    Write-Info "The node logs above are collected; the guest-side files are skipped, not failed."
-    Write-Info "Open the tunnel:  .\tools\apk-uploader\INSTALL-IVI-APK.cmd -SkipInstall -KeepTunnel"
-    Add-Summary ""
-    Add-Summary "GUEST               skipped - no ADB tunnel on localhost:$Port"
 } else {
     Write-Ok "adb  ->  $Adb"
-    Write-Ok "port $Port is serving"
 
-    & $Adb connect $serial 2>&1 | Out-Null
-    $connected = $false
-    $deadline  = (Get-Date).AddSeconds(20)
-    while ((Get-Date) -lt $deadline) {
-        $devices = & $Adb devices 2>&1 | Out-String
-        if ($devices -match [regex]::Escape($serial) + '\s+device\b') { $connected = $true; break }
-        Start-Sleep -Seconds 1
-        & $Adb connect $serial 2>&1 | Out-Null
+    $tunnelUp = $false
+    if (Test-Port $Port) {
+        if (Test-TunnelAlive) {
+            Write-Ok "port $Port already serves a live tunnel - reusing it."
+            $tunnelUp = $true
+        } else {
+            Write-Warn "Port $Port is listening but no device answers - that tunnel is dead, opening a fresh one."
+            Invoke-Native { & $Adb disconnect $serial 2>&1 | Out-Null }
+            $tunnelUp = Open-OwnTunnel
+        }
+    } else {
+        Write-Info "Nothing is listening on 127.0.0.1:$Port - opening this run's own tunnel."
+        $tunnelUp = Open-OwnTunnel
     }
 
-    if (-not $connected) {
-        Write-Warn "The tunnel is serving but $serial never reached state 'device'."
-        Write-Info "Skipping the files from inside the guest. The Skycraft node may still be booting."
+    if (-not $tunnelUp) {
+        Write-Warn "No ADB tunnel on localhost:$Port."
+        Write-Info "The node logs above are collected; the guest-side files are skipped, not failed."
         Add-Summary ""
-        Add-Summary "GUEST               skipped - $serial not in state 'device'"
+        Add-Summary "GUEST               skipped - no ADB tunnel on localhost:$Port"
     } else {
-        $GuestReady = $true
-        Write-Ok "$serial  device"
-        Write-Info "Guest node: $($SkycraftNodes[0].displayName). Every adb call below is pinned with -s $serial."
+        $connected = $false
+        $deadline  = (Get-Date).AddSeconds(20)
+        Invoke-Native { & $Adb connect $serial 2>&1 | Out-Null }
+        while ((Get-Date) -lt $deadline) {
+            $devices = Invoke-Native { & $Adb devices 2>&1 | Out-String }
+            if ($devices -match [regex]::Escape($serial) + '\s+device\b') { $connected = $true; break }
+            Start-Sleep -Seconds 1
+            Invoke-Native { & $Adb connect $serial 2>&1 | Out-Null }
+        }
+
+        if (-not $connected) {
+            Write-Warn "The tunnel is serving but $serial never reached state 'device'."
+            Write-Info "Skipping the files from inside the guest. The Skycraft node may still be booting."
+            Add-Summary ""
+            Add-Summary "GUEST               skipped - $serial not in state 'device'"
+        } else {
+            $GuestReady = $true
+            Write-Ok "$serial  device"
+            Write-Info "Guest node: $($SkycraftNodes[0].displayName). Every adb call below is pinned with -s $serial."
+        }
     }
 }
 
@@ -564,14 +686,14 @@ if ($GuestReady) {
     # green for hours with no APK installed at all. Only the guest can answer these.
     $st = @{}
     $st.Version = ''
-    $d = & $Adb -s $serial shell "dumpsys package $Package | grep versionName" 2>&1 | Out-String
+    $d = Invoke-Native { & $Adb -s $serial shell "dumpsys package $Package | grep versionName" 2>&1 | Out-String }
     if ($d -match 'versionName=(\S+)') { $st.Version = $Matches[1] }
-    $st.AppPid = (& $Adb -s $serial shell pidof $Package 2>&1 | Out-String).Trim()
-    $a = & $Adb -s $serial shell "dumpsys activity activities | grep -i ResumedActivity" 2>&1 | Out-String
+    $st.AppPid = (Invoke-Native { & $Adb -s $serial shell pidof $Package 2>&1 | Out-String }).Trim()
+    $a = Invoke-Native { & $Adb -s $serial shell "dumpsys activity activities | grep -i ResumedActivity" 2>&1 | Out-String }
     $st.Resumed = ($a -match [regex]::Escape("$Package/.MainActivity"))
-    $w = & $Adb -s $serial shell "dumpsys window | grep -i mCurrentFocus" 2>&1 | Out-String
+    $w = Invoke-Native { & $Adb -s $serial shell "dumpsys window | grep -i mCurrentFocus" 2>&1 | Out-String }
     $st.Focused = ($w -match [regex]::Escape($Package))
-    $p = & $Adb -s $serial shell "dumpsys power | grep -i mWakefulness=" 2>&1 | Out-String
+    $p = Invoke-Native { & $Adb -s $serial shell "dumpsys power | grep -i mWakefulness=" 2>&1 | Out-String }
     $st.Awake = ($p -match 'mWakefulness=Awake')
 
     $vDetail = "$Package NOT FOUND"
@@ -604,19 +726,21 @@ if ($GuestReady) {
 
     # -d dumps the ring buffer rather than streaming: the app started before we
     # attached, so a live stream would show nothing that already happened.
-    & $Adb -s $serial logcat -d -v threadtime -s IVI_V2X R4ListenerService R4Deserializer 2>&1 |
-        Out-File -FilePath $LogcatFile -Encoding utf8
+    Invoke-Native {
+        & $Adb -s $serial logcat -d -v threadtime -s IVI_V2X R4ListenerService R4Deserializer 2>&1 |
+            Out-File -FilePath $LogcatFile -Encoding utf8
+    }
     Write-Ok "app-logcat.txt    $((Get-Content -LiteralPath $LogcatFile | Measure-Object -Line).Lines) lines"
 
     # -b crash reads Android's separate crash buffer rather than the main one.
-    & $Adb -s $serial logcat -d -b crash 2>&1 | Out-File -FilePath $CrashFile -Encoding utf8
+    Invoke-Native { & $Adb -s $serial logcat -d -b crash 2>&1 | Out-File -FilePath $CrashFile -Encoding utf8 }
     Write-Ok "app-crash.txt     $((Get-Content -LiteralPath $CrashFile | Measure-Object -Line).Lines) lines"
 
     # The socket is bound dual-stack, so it appears in udp6 and not in udp.
-    & $Adb -s $serial shell cat /proc/net/udp6 2>&1 | Out-File -FilePath $Udp6File -Encoding utf8
+    Invoke-Native { & $Adb -s $serial shell cat /proc/net/udp6 2>&1 | Out-File -FilePath $Udp6File -Encoding utf8 }
     Write-Ok "guest-udp6.txt    listener on B8C4 = port 47300"
 
-    & $Adb -s $serial shell ip -4 addr show 2>&1 | Out-File -FilePath $IfaceFile -Encoding utf8
+    Invoke-Native { & $Adb -s $serial shell ip -4 addr show 2>&1 | Out-File -FilePath $IfaceFile -Encoding utf8 }
     Write-Ok "guest-ifaces.txt  eth0 must carry the node's pin address"
 }
 
@@ -715,9 +839,10 @@ if ($Passed -eq $Applicable.Count -and $HasSkycraft) {
     Write-Host "  Node-side only, and that is all this Room has. Read the node logs above" -ForegroundColor Yellow
     Write-Host "  for what the [ ] rows mean." -ForegroundColor Yellow
 } elseif (-not $GuestCollected) {
-    Write-Host "  Node-side only. Without the ADB tunnel the app half cannot be evidenced -" -ForegroundColor Yellow
-    Write-Host "  [RX], provenance and risk are unknown rather than failed." -ForegroundColor Yellow
-    Write-Host "  Open the tunnel, then collect again:" -ForegroundColor Yellow
+    Write-Host "  Node-side only. This run could not get an ADB tunnel up, so the app half" -ForegroundColor Yellow
+    Write-Host "  cannot be evidenced - [RX], provenance and risk are unknown rather than failed." -ForegroundColor Yellow
+    Write-Host "  Check the WARN lines above (missing adb, missing token, dead reach-backend)," -ForegroundColor Yellow
+    Write-Host "  fix that, then collect again - or open the tunnel yourself first:" -ForegroundColor Yellow
     Write-Host "    .\tools\apk-uploader\INSTALL-IVI-APK.cmd -SkipInstall -KeepTunnel" -ForegroundColor Cyan
 } elseif ($LogcatText -match '\[RX\]') {
     Write-Host "  Partly evidenced. The app is alive and parsing, but not every line appeared." -ForegroundColor Yellow
@@ -753,5 +878,15 @@ Write-Host "  The Screen widget - EGO and B solid, C dashed with a pulsing glow 
 Write-Host "  badge [V2X] C - <d> m - RISK: HIGH. This build logs nothing from its UI" -ForegroundColor Gray
 Write-Host "  layer, so the switch to the Warning View is confirmable only on screen." -ForegroundColor Gray
 Write-Host ""
+
+# A tunnel this run opened is this run's to close -- a tunnel found already serving
+# -Port belongs to whatever opened it and is never touched here.
+if ($script:OpenedTunnel) {
+    if ($KeepTunnel) {
+        Write-Info "Tunnel left open on localhost:$Port (-KeepTunnel)."
+    } else {
+        Stop-OwnTunnel
+    }
+}
 
 exit 0
