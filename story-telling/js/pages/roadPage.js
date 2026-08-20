@@ -4,7 +4,7 @@ import {
   clamp01,
   smoothstep,
   getToonGradient,
-  buildCartoonFace,
+  buildGlowSprite,
   buildEnvelopeSprite,
   setHudSubtitle,
   showBanner,
@@ -38,16 +38,18 @@ const BANNER_TEXT = "V2X message received — hazard ahead relayed from Vehicle 
  */
 export function createRoadPage({ onComplete } = {}) {
   const scene = new THREE.Scene();
-  const SKY_COLOR = 0x8ecbff;
-  scene.background = new THREE.Color(SKY_COLOR);
-  scene.fog = new THREE.Fog(0xbfe3ff, 110, 420);
+  const HORIZON_COLOR = 0xdff3ea;
+  scene.background = new THREE.Color(HORIZON_COLOR); // fallback behind the sky dome
+  scene.fog = new THREE.Fog(0xcdeee0, 130, 420);
 
   const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1200);
 
-  // ---- Lighting (bright, clear-sky daytime) ------------------------------
-  scene.add(new THREE.HemisphereLight(0xbfe3ff, 0x5aa955, 0.75));
+  const toonGradient = getToonGradient();
 
-  const sun = new THREE.DirectionalLight(0xfff4da, 1.25);
+  // ---- Lighting (soft, warm golden-hour daylight) ------------------------
+  scene.add(new THREE.HemisphereLight(0xbfe3ff, 0x6a9a4f, 0.8));
+
+  const sun = new THREE.DirectionalLight(0xfff0c8, 1.2);
   sun.position.set(-60, 90, 40);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
@@ -58,24 +60,69 @@ export function createRoadPage({ onComplete } = {}) {
   sun.shadow.camera.far = 220;
   scene.add(sun);
 
-  scene.add(new THREE.AmbientLight(0xffffff, 0.25));
+  scene.add(new THREE.AmbientLight(0xfff4e0, 0.28));
 
-  // ---- Sky dressing: sun disc + drifting clouds --------------------------
+  // ---- Sky dome: a soft vertical gradient instead of a flat colour, the
+  // way a painted Ghibli sky is never one solid blue. -----------------------
+  function buildSkyDome() {
+    const geometry = new THREE.SphereGeometry(550, 24, 16);
+    const material = new THREE.ShaderMaterial({
+      uniforms: {
+        topColor: { value: new THREE.Color(0x5aa8e8) },
+        bottomColor: { value: new THREE.Color(0xf3f8e2) },
+        offset: { value: 24 },
+        exponent: { value: 0.55 },
+      },
+      vertexShader: `
+        varying vec3 vWorldPosition;
+        void main() {
+          vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+          vWorldPosition = worldPosition.xyz;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform vec3 topColor;
+        uniform vec3 bottomColor;
+        uniform float offset;
+        uniform float exponent;
+        varying vec3 vWorldPosition;
+        void main() {
+          float h = normalize(vWorldPosition + vec3(0.0, offset, 0.0)).y;
+          gl_FragColor = vec4(mix(bottomColor, topColor, max(pow(max(h, 0.0), exponent), 0.0)), 1.0);
+        }
+      `,
+      side: THREE.BackSide,
+    });
+    return new THREE.Mesh(geometry, material);
+  }
+  scene.add(buildSkyDome());
+
+  // ---- Sky dressing: hazy sun + drifting painterly clouds ------------------
   const sunMesh = new THREE.Mesh(
     new THREE.SphereGeometry(9, 20, 20),
-    new THREE.MeshBasicMaterial({ color: 0xfff0b8 })
+    new THREE.MeshBasicMaterial({ color: 0xfff2c4 })
   );
   sunMesh.position.set(-150, 95, -220);
   scene.add(sunMesh);
 
+  const sunGlow = buildGlowSprite(0xfff2c4, 60);
+  sunGlow.position.copy(sunMesh.position);
+  scene.add(sunGlow);
+
   function buildCloud() {
     const cloud = new THREE.Group();
-    const puffMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, flatShading: true });
-    const puffCount = 4 + Math.floor(Math.random() * 3);
+    const litMat = new THREE.MeshToonMaterial({ color: 0xffffff, gradientMap: toonGradient });
+    const shadeMat = new THREE.MeshToonMaterial({ color: 0xd7e4ee, gradientMap: toonGradient });
+    const puffCount = 5 + Math.floor(Math.random() * 4);
     for (let i = 0; i < puffCount; i++) {
-      const puff = new THREE.Mesh(new THREE.SphereGeometry(1 + Math.random() * 0.6, 8, 6), puffMat);
-      puff.position.set((Math.random() - 0.5) * 4, (Math.random() - 0.5) * 0.7, (Math.random() - 0.5) * 2);
-      puff.scale.y = 0.6;
+      const yOff = (Math.random() - 0.5) * 0.75;
+      const puff = new THREE.Mesh(
+        new THREE.SphereGeometry(1 + Math.random() * 0.7, 10, 8),
+        yOff < -0.08 ? shadeMat : litMat
+      );
+      puff.position.set((Math.random() - 0.5) * 4.6, yOff, (Math.random() - 0.5) * 2.2);
+      puff.scale.y = 0.62;
       cloud.add(puff);
     }
     return cloud;
@@ -93,7 +140,7 @@ export function createRoadPage({ onComplete } = {}) {
   // ---- Ground + road ------------------------------------------------------
   const grass = new THREE.Mesh(
     new THREE.PlaneGeometry(700, ROAD_LENGTH + 200),
-    new THREE.MeshStandardMaterial({ color: 0x5fb257, roughness: 1 })
+    new THREE.MeshToonMaterial({ color: 0x6cbf52, gradientMap: toonGradient })
   );
   grass.rotation.x = -Math.PI / 2;
   grass.position.z = -ROAD_LENGTH / 2 + 100;
@@ -101,9 +148,34 @@ export function createRoadPage({ onComplete } = {}) {
   grass.receiveShadow = true;
   scene.add(grass);
 
+  // A scatter of wildflowers across the meadow — a cheap point cloud, not
+  // individual meshes, for that lush painted-meadow touch.
+  function buildMeadowFlowers() {
+    const count = 550;
+    const positions = new Float32Array(count * 3);
+    const colors = new Float32Array(count * 3);
+    const palette = [0xfff3b0, 0xffffff, 0xffb6d8, 0xc9a8ff].map((c) => new THREE.Color(c));
+    for (let i = 0; i < count; i++) {
+      const side = Math.random() < 0.5 ? -1 : 1;
+      positions[i * 3] = side * (ROAD_WIDTH / 2 + 4 + Math.random() * 45);
+      positions[i * 3 + 1] = 0.18;
+      positions[i * 3 + 2] = -Math.random() * ROAD_LENGTH + 60;
+      const c = palette[Math.floor(Math.random() * palette.length)];
+      colors[i * 3] = c.r;
+      colors[i * 3 + 1] = c.g;
+      colors[i * 3 + 2] = c.b;
+    }
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+    const material = new THREE.PointsMaterial({ size: 0.4, vertexColors: true, sizeAttenuation: true });
+    return new THREE.Points(geometry, material);
+  }
+  scene.add(buildMeadowFlowers());
+
   const road = new THREE.Mesh(
     new THREE.PlaneGeometry(ROAD_WIDTH, ROAD_LENGTH),
-    new THREE.MeshStandardMaterial({ color: 0x454b54, roughness: 0.95 })
+    new THREE.MeshToonMaterial({ color: 0x4b5058, gradientMap: toonGradient })
   );
   road.rotation.x = -Math.PI / 2;
   road.position.z = -ROAD_LENGTH / 2 + 100;
@@ -133,15 +205,15 @@ export function createRoadPage({ onComplete } = {}) {
   }
   scene.add(dashGroup);
 
-  // ---- Landscape: rolling hills + distant mountains -------------------------
+  // ---- Landscape: rolling painterly hills + hazy distant mountains --------
   function buildHill(color, radius) {
     return new THREE.Mesh(
       new THREE.SphereGeometry(radius, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2),
-      new THREE.MeshStandardMaterial({ color, roughness: 1, flatShading: true })
+      new THREE.MeshToonMaterial({ color, gradientMap: toonGradient, flatShading: true })
     );
   }
 
-  const hillColors = [0x5aa955, 0x4f9a4a, 0x6ab35e];
+  const hillColors = [0x6cbf52, 0x5aa955, 0x86d15f, 0x4f9a4a];
   const hillsGroup = new THREE.Group();
   for (let i = 0; i < 26; i++) {
     const side = i % 2 === 0 ? -1 : 1;
@@ -157,7 +229,7 @@ export function createRoadPage({ onComplete } = {}) {
   }
   scene.add(hillsGroup);
 
-  const mountainMat = new THREE.MeshStandardMaterial({ color: 0x8391bd, roughness: 1, flatShading: true });
+  const mountainMat = new THREE.MeshToonMaterial({ color: 0x8b93c4, gradientMap: toonGradient, flatShading: true });
   const mountainsGroup = new THREE.Group();
   for (let i = 0; i < 8; i++) {
     const side = i % 2 === 0 ? -1 : 1;
@@ -169,25 +241,49 @@ export function createRoadPage({ onComplete } = {}) {
   }
   scene.add(mountainsGroup);
 
-  // ---- Trees lining the road -------------------------------------------------
+  // ---- Trees lining the road: lush, layered, two-tone canopies ------------
+  const treeBaseColors = [0x2f7d3f, 0x3f8f46, 0x357a44];
+  const treeHighlightColors = [0x8fd66a, 0x9fe077];
+
   function buildTree() {
     const tree = new THREE.Group();
-    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x7a5033, roughness: 1 });
-    const leafMat = new THREE.MeshStandardMaterial({ color: 0x3f8f46, roughness: 0.9, flatShading: true });
+    const trunkMat = new THREE.MeshToonMaterial({ color: 0x7a5033, gradientMap: toonGradient });
+    const baseMat = new THREE.MeshToonMaterial({
+      color: treeBaseColors[Math.floor(Math.random() * treeBaseColors.length)],
+      gradientMap: toonGradient,
+      flatShading: true,
+    });
+    const highlightMat = new THREE.MeshToonMaterial({
+      color: treeHighlightColors[Math.floor(Math.random() * treeHighlightColors.length)],
+      gradientMap: toonGradient,
+      flatShading: true,
+    });
 
-    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.24, 1.6, 8), trunkMat);
-    trunk.position.y = 0.8;
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.26, 1.7, 8), trunkMat);
+    trunk.position.y = 0.85;
     trunk.castShadow = true;
     tree.add(trunk);
 
     const leafGeo = new THREE.SphereGeometry(1, 8, 6);
-    const puffs = [
-      [0, 1.9, 0, 1.1],
-      [0.5, 1.5, 0.3, 0.75],
-      [-0.5, 1.6, -0.3, 0.8],
+    const basePuffs = [
+      [0, 2.0, 0, 1.2],
+      [0.6, 1.6, 0.35, 0.85],
+      [-0.6, 1.65, -0.35, 0.9],
+      [0.1, 1.55, -0.55, 0.75],
     ];
-    for (const [dx, dy, dz, s] of puffs) {
-      const leaf = new THREE.Mesh(leafGeo, leafMat);
+    for (const [dx, dy, dz, s] of basePuffs) {
+      const leaf = new THREE.Mesh(leafGeo, baseMat);
+      leaf.position.set(dx, dy, dz);
+      leaf.scale.setScalar(s);
+      leaf.castShadow = true;
+      tree.add(leaf);
+    }
+    const highlightPuffs = [
+      [0.15, 2.35, -0.15, 0.7],
+      [-0.25, 2.2, 0.4, 0.6],
+    ];
+    for (const [dx, dy, dz, s] of highlightPuffs) {
+      const leaf = new THREE.Mesh(leafGeo, highlightMat);
       leaf.position.set(dx, dy, dz);
       leaf.scale.setScalar(s);
       leaf.castShadow = true;
@@ -213,40 +309,82 @@ export function createRoadPage({ onComplete } = {}) {
   }
   scene.add(treesGroup);
 
-  // ---- Cartoon car factory ----------------------------------------------
-  // The camera trails the cars from behind, so the "face" (eyes + smile)
-  // sits on the +z side, the side actually visible to the viewer; small
-  // headlight bumps mark the -z side, the true direction of travel.
-  const toonGradient = getToonGradient();
+  // ---- Car body: a two-shell silhouette (painted shell + glass cabin) ----
+  // extruded from a hand-drawn side profile, instead of a face-bearing
+  // blob — sits on wheels with headlights on the true front (-z, the
+  // direction of travel).
+  function buildCarBody(paintColor, glassColor) {
+    const group = new THREE.Group();
+    const L = 2.0; // half-length
+    const CLEARANCE = 0.32;
+
+    const lowerShape = new THREE.Shape();
+    lowerShape.moveTo(-L, 0);
+    lowerShape.lineTo(-L, 0.3);
+    lowerShape.lineTo(-L * 0.65, 0.62);
+    lowerShape.lineTo(L * 0.55, 0.62);
+    lowerShape.lineTo(L * 0.85, 0.46);
+    lowerShape.lineTo(L, 0.32);
+    lowerShape.lineTo(L, 0);
+    lowerShape.closePath();
+
+    const lowerGeo = new THREE.ExtrudeGeometry(lowerShape, {
+      depth: 1.9,
+      bevelEnabled: true,
+      bevelThickness: 0.05,
+      bevelSize: 0.05,
+      bevelSegments: 2,
+      curveSegments: 6,
+    });
+    lowerGeo.translate(0, CLEARANCE, -0.95);
+    const lowerMat = new THREE.MeshToonMaterial({ color: paintColor, gradientMap: toonGradient, side: THREE.DoubleSide });
+    const lowerMesh = new THREE.Mesh(lowerGeo, lowerMat);
+    lowerMesh.rotation.y = Math.PI / 2;
+    lowerMesh.castShadow = true;
+    group.add(lowerMesh);
+
+    // Cabin/glass shell overlaps a little into the lower shell at the
+    // beltline (0.55 vs the lower shell's 0.62) so there is never a seam gap.
+    const upperShape = new THREE.Shape();
+    upperShape.moveTo(-L * 0.65, 0.55);
+    upperShape.lineTo(-L * 0.55, 0.9);
+    upperShape.quadraticCurveTo(-L * 0.25, 1.0, L * 0.05, 0.97);
+    upperShape.lineTo(L * 0.42, 0.55);
+    upperShape.closePath();
+
+    const upperGeo = new THREE.ExtrudeGeometry(upperShape, {
+      depth: 1.6,
+      bevelEnabled: true,
+      bevelThickness: 0.04,
+      bevelSize: 0.04,
+      bevelSegments: 2,
+      curveSegments: 6,
+    });
+    upperGeo.translate(0, CLEARANCE, -0.8);
+    const upperMat = new THREE.MeshToonMaterial({ color: glassColor, gradientMap: toonGradient, side: THREE.DoubleSide });
+    const upperMesh = new THREE.Mesh(upperGeo, upperMat);
+    upperMesh.rotation.y = Math.PI / 2;
+    upperMesh.castShadow = true;
+    group.add(upperMesh);
+
+    return group;
+  }
 
   function buildCar(bodyColor, cabinColor) {
     const car = new THREE.Group();
+    car.add(buildCarBody(bodyColor, cabinColor));
 
-    const bodyMat = new THREE.MeshToonMaterial({ color: bodyColor, gradientMap: toonGradient });
-    const cabinMat = new THREE.MeshToonMaterial({ color: cabinColor, gradientMap: toonGradient });
     const wheelMat = new THREE.MeshToonMaterial({ color: 0x2b2b2b, gradientMap: toonGradient });
     const hubMat = new THREE.MeshToonMaterial({ color: 0xffffff, gradientMap: toonGradient });
     const headlightMat = new THREE.MeshToonMaterial({ color: 0xfff2b0, gradientMap: toonGradient });
 
-    const body = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 16), bodyMat);
-    body.scale.set(1.05, 0.72, 1.9);
-    body.position.y = 0.72;
-    body.castShadow = true;
-    car.add(body);
-
-    const cabin = new THREE.Mesh(new THREE.SphereGeometry(0.75, 20, 14), cabinMat);
-    cabin.scale.set(0.95, 0.6, 1.0);
-    cabin.position.set(0, 1.28, 0);
-    cabin.castShadow = true;
-    car.add(cabin);
-
     const wheelGeo = new THREE.CylinderGeometry(0.5, 0.5, 0.4, 20);
     const hubGeo = new THREE.CylinderGeometry(0.22, 0.22, 0.06, 16);
     const wheelOffsets = [
-      [-1.05, 0.5, 1.3],
-      [1.05, 0.5, 1.3],
-      [-1.05, 0.5, -1.3],
-      [1.05, 0.5, -1.3],
+      [-1.0, 0.5, 1.35],
+      [1.0, 0.5, 1.35],
+      [-1.0, 0.5, -1.35],
+      [1.0, 0.5, -1.35],
     ];
     for (const [x, y, z] of wheelOffsets) {
       const wheel = new THREE.Mesh(wheelGeo, wheelMat);
@@ -261,12 +399,10 @@ export function createRoadPage({ onComplete } = {}) {
       car.add(hub);
     }
 
-    buildCartoonFace(car, { gradientMap: toonGradient, z: 1.62 });
-
-    const headlightGeo = new THREE.SphereGeometry(0.14, 10, 8);
-    for (const x of [-0.6, 0.6]) {
+    const headlightGeo = new THREE.SphereGeometry(0.13, 10, 8);
+    for (const x of [-0.55, 0.55]) {
       const headlight = new THREE.Mesh(headlightGeo, headlightMat);
-      headlight.position.set(x, 0.6, -1.7);
+      headlight.position.set(x, 0.55, -1.85);
       car.add(headlight);
     }
 
