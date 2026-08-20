@@ -18,38 +18,28 @@ export function hexToRgb(hex) {
   return { r: (hex >> 16) & 255, g: (hex >> 8) & 255, b: hex & 255 };
 }
 
-// ---- Playback control, shared by every page's animation timeline ---------
-// One controller drives every page: main.js wires a single set of key
-// bindings to it, and each page's update(speed) receives whatever it
-// returns — 0 while paused, the current multiplier otherwise. Nothing
-// page-specific to wire up when a new page is added.
-export function createPlaybackController({ initialSpeed = 1, min = 0.25, max = 3, step = 0.25 } = {}) {
-  let speed = initialSpeed;
+export function roundTo(value, decimals) {
+  const f = 10 ** decimals;
+  return Math.round(value * f) / f;
+}
+
+// ---- Pause control, shared by every page's animation timeline -------------
+// "Animation" (what up/down step through) is owned by each page — roadPage
+// steps its own playback speed, ecuPage steps which ECU is highlighted.
+// Pause is the one thing that stays global: it multiplies into every page's
+// own dt as a 0/1 factor, so Space freezes whichever page is active without
+// either page needing to know about it.
+export function createPauseController() {
   let paused = false;
-
-  function roundTo(value, decimals) {
-    const f = 10 ** decimals;
-    return Math.round(value * f) / f;
-  }
-
   return {
-    increaseSpeed() {
-      speed = Math.min(max, roundTo(speed + step, 2));
-    },
-    decreaseSpeed() {
-      speed = Math.max(min, roundTo(speed - step, 2));
-    },
     togglePause() {
       paused = !paused;
-    },
-    getSpeed() {
-      return paused ? 0 : speed;
     },
     isPaused() {
       return paused;
     },
-    getDisplaySpeed() {
-      return speed;
+    getFactor() {
+      return paused ? 0 : 1;
     },
   };
 }

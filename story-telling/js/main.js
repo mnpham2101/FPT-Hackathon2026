@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { createPlaybackController } from "./common.js";
+import { createPauseController } from "./common.js";
 import { createRoadPage } from "./pages/roadPage.js";
 import { createEcuPage } from "./pages/ecuPage.js";
 
@@ -41,6 +41,7 @@ function goToPage(index) {
   activePage.onEnter?.();
 
   updateNavButtons();
+  refreshPlaybackHud();
 }
 
 function updateNavButtons() {
@@ -67,32 +68,44 @@ window.addEventListener("resize", () => {
   }
 });
 
-// ---- Playback control ---------------------------------------------------
-// One controller, one set of key bindings — every page's update(speed)
-// reads from it the same way, so a new page gets speed/pause for free.
-const playback = createPlaybackController();
+// ---- Pause control --------------------------------------------------------
+// Pause is the only thing global; "animation" (what ↑/↓ step through) is
+// each page's own concept — nextAnimation()/prevAnimation()/animationLabel
+// are a common interface every page implements, but the meaning is
+// page-owned: roadPage steps its playback speed, ecuPage steps which ECU is
+// spotlighted. main.js never needs to know which.
+const pause = createPauseController();
 const playbackHud = document.getElementById("hud-playback");
 
 function refreshPlaybackHud() {
-  const state = playback.isPaused() ? "paused" : `${playback.getDisplaySpeed().toFixed(2)}x`;
-  playbackHud.textContent = `${state} — ↑/↓ speed, space to pause`;
+  const state = pause.isPaused() ? "paused" : activePage.animationLabel ?? "";
+  playbackHud.textContent = `${state} — ↑/↓ animation, ←/→ page, space to pause`;
 }
 
+// One handler, reused by every page: ↑/↓ call the active page's own
+// nextAnimation()/prevAnimation(); ←/→ stop whatever's playing and jump
+// pages immediately, regardless of playback or story-completion state.
 window.addEventListener("keydown", (event) => {
   switch (event.code) {
     case "ArrowUp":
-      playback.increaseSpeed();
+      activePage.nextAnimation?.();
       break;
     case "ArrowDown":
-      playback.decreaseSpeed();
+      activePage.prevAnimation?.();
+      break;
+    case "ArrowRight":
+      goToPage(currentIndex + 1);
+      break;
+    case "ArrowLeft":
+      goToPage(currentIndex - 1);
       break;
     case "Space":
-      event.preventDefault(); // don't let space scroll the page
-      playback.togglePause();
+      pause.togglePause();
       break;
     default:
       return;
   }
+  event.preventDefault(); // don't let arrow keys/space scroll the page
   refreshPlaybackHud();
 });
 
@@ -101,7 +114,7 @@ refreshPlaybackHud();
 // ---- Render loop --------------------------------------------------------
 function animate() {
   requestAnimationFrame(animate);
-  activePage.update(playback.getSpeed());
+  activePage.update(pause.getFactor());
   renderer.render(activePage.scene, activePage.camera);
 }
 

@@ -3,6 +3,7 @@ import {
   lerp,
   clamp01,
   smoothstep,
+  roundTo,
   getToonGradient,
   addOutline,
   buildGlowSprite,
@@ -12,6 +13,12 @@ import {
   showBanner,
   hideBanner,
 } from "../common.js";
+
+// This page's "animation" is its own playback speed — nextAnimation/
+// prevAnimation (the up/down keys) step it, independent of any other page.
+const SPEED_MIN = 0.25;
+const SPEED_MAX = 3;
+const SPEED_STEP = 0.25;
 
 // The single ink-outline colour every "storybook" shape in this scene uses —
 // a bold, uniform outline (rather than per-object tinted outlines) is what
@@ -428,10 +435,12 @@ export async function createRoadPage({ onComplete } = {}) {
 
   // ---- Story state machine --------------------------------------------------
   // A virtual clock, not the wall clock: every timeline check below reads
-  // `virtualElapsed`, which only advances by (real delta * playback speed).
-  // Pausing (speed 0) freezes it in place; speeding up fast-forwards it.
+  // `virtualElapsed`, which only advances by (real delta * this page's own
+  // speed * the global pause factor). Pausing freezes it in place; speeding
+  // up (via nextAnimation) fast-forwards it.
   const clock = new THREE.Clock();
   let virtualElapsed = 0;
+  let speed = 1;
   let frozen = false;
   let mailPhase = "idle"; // idle -> flying -> delivered
   let mailElapsed = 0;
@@ -494,14 +503,22 @@ export async function createRoadPage({ onComplete } = {}) {
     camera.lookAt(target.x, target.y + 1.2, target.z - 8);
   }
 
-  function update(speed = 1) {
+  function update(pauseFactor = 1) {
     const rawDt = Math.min(clock.getDelta(), 0.05); // drain the real clock even while frozen/paused
     if (frozen) return;
-    const dt = rawDt * speed;
+    const dt = rawDt * speed * pauseFactor;
     virtualElapsed += dt;
     updateCars(virtualElapsed, dt);
     updateMail(dt);
     updateCamera();
+  }
+
+  function nextAnimation() {
+    speed = Math.min(SPEED_MAX, roundTo(speed + SPEED_STEP, 2));
+  }
+
+  function prevAnimation() {
+    speed = Math.max(SPEED_MIN, roundTo(speed - SPEED_STEP, 2));
   }
 
   function onEnter() {
@@ -520,5 +537,16 @@ export async function createRoadPage({ onComplete } = {}) {
     clock.stop();
   }
 
-  return { scene, camera, update, onEnter, onExit };
+  return {
+    scene,
+    camera,
+    update,
+    onEnter,
+    onExit,
+    nextAnimation,
+    prevAnimation,
+    get animationLabel() {
+      return `${speed.toFixed(2)}x speed`;
+    },
+  };
 }

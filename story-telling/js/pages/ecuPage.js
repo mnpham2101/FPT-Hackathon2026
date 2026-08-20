@@ -286,6 +286,7 @@ export async function createEcuPage() {
   const adaNode = buildEcuNode({ label: "ADA-ECU", position: ADA_POS, preset: APPEARANCE_PRESETS.ada });
   const iviNode = buildEcuNode({ label: "IVI-ECU", position: IVI_POS, preset: APPEARANCE_PRESETS.ivi });
   const nodes = [v2xNode, adaNode, iviNode];
+  const NODE_LABELS = ["V2X-ECU", "ADA-ECU", "IVI-ECU"];
   scene.add(v2xNode.group, adaNode.group, iviNode.group);
 
   const wireColor = 0x7fe8ff;
@@ -336,14 +337,28 @@ export async function createEcuPage() {
   let virtualElapsed = 0;
   let frozen = false;
 
-  function update(speed = 1) {
+  // This page's "animation" is which ECU is spotlighted — nextAnimation/
+  // prevAnimation (the up/down keys) cycle it instead of changing a rate.
+  let highlightIndex = 0;
+
+  function nextAnimation() {
+    highlightIndex = (highlightIndex + 1) % nodes.length;
+  }
+
+  function prevAnimation() {
+    highlightIndex = (highlightIndex - 1 + nodes.length) % nodes.length;
+  }
+
+  function update(pauseFactor = 1) {
     const rawDt = Math.min(clock.getDelta(), 0.05);
     if (frozen) return;
-    const dt = rawDt * speed;
+    const dt = rawDt * pauseFactor;
     virtualElapsed += dt;
 
     const pulse = 0.5 + Math.sin(virtualElapsed * 2.2) * 0.22;
-    for (const node of nodes) node.setGlow(pulse);
+    nodes.forEach((node, i) => {
+      node.setGlow(i === highlightIndex ? Math.min(1, pulse + 0.35) : pulse * 0.55);
+    });
 
     const flightT = clamp01((virtualElapsed - T_FLIGHT_START) / (T_FLIGHT_END - T_FLIGHT_START));
     if (virtualElapsed >= T_FLIGHT_START && flightT < 1) {
@@ -365,6 +380,7 @@ export async function createEcuPage() {
     panel?.classList.remove("hidden");
     frozen = false;
     virtualElapsed = 0;
+    highlightIndex = 0;
     mailSprite.visible = false;
     clock.start();
   }
@@ -374,5 +390,16 @@ export async function createEcuPage() {
     clock.stop();
   }
 
-  return { scene, camera, update, onEnter, onExit };
+  return {
+    scene,
+    camera,
+    update,
+    onEnter,
+    onExit,
+    nextAnimation,
+    prevAnimation,
+    get animationLabel() {
+      return `Highlighting ${NODE_LABELS[highlightIndex]}`;
+    },
+  };
 }
