@@ -130,7 +130,7 @@ html, body {
 #animation-textbox {
   position: fixed;
   left: 50%;
-  bottom: 160px;
+  bottom: 64px;
   transform: translateX(-50%);
   width: min(480px, 64vw);
   padding: 16px 22px;
