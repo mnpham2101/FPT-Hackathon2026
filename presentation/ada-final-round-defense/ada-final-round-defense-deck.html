@@ -216,7 +216,7 @@ Camera R3 ──┘                                  └─ AssessmentDb + EVT</
     <table class="fpt">
       <thead><tr><th>Reuse seam</th><th>What can change behind it</th></tr></thead>
       <tbody>
-        <tr><td><code>FrameSource</code> / detector output</td><td>file, synthetic, live camera, another inference backend</td></tr>
+        <tr><td><code>FrameSource</code> / detector output</td><td>file + synthetic implemented; live camera requires another implementation</td></tr>
         <tr><td>normalized <code>TrackedObject</code></td><td>V2X or ego-sensor observation after adapter/validation</td></tr>
         <tr><td><code>ICollisionRiskAssessment</code></td><td>NLOS, intersection, vulnerable-road-user, braking-chain plugin</td></tr>
         <tr><td><code>(trackId, warningType)</code> assessment</td><td>several risk cases over the same tracked object</td></tr>
@@ -257,6 +257,43 @@ Camera R3 ──┘                                  └─ AssessmentDb + EVT</
       </tbody>
     </table>
     <p class="lead"><strong>CarSky evidence to capture:</strong> <code>own_sensor_ingest &gt; 0</code>, B reaches <code>tracked</code>, zero relayed-C transitions, <code>r4_tx = 0</code>, IVI remains idle.</p>
+    <div class="footer"><span>ADA-ECU · Final-round technical defense · Team KIS</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num"></div><h2>Camera distance — pinhole estimate</h2></div>
+    <p class="lead">YOLO11n returns VehicleB's bounding box; the distance module converts its pixel width into metres.</p>
+    <pre class="log">f_px = (frame_width / 2) / tan(HFOV / 2)
+
+d_AB = vehicle_width_m × f_px / bbox_width_px</pre>
+    <table class="fpt">
+      <thead><tr><th>Current detector input</th><th>Value</th></tr></thead>
+      <tbody>
+        <tr><td>assumed coach width</td><td><code>2.6 m</code></td></tr>
+        <tr><td>effective camera HFOV</td><td><code>34.4°</code></td></tr>
+        <tr><td>example frame / bounding box</td><td><code>1280 px / 300 px</code></td></tr>
+        <tr><td>calculated focal length</td><td><code>≈ 2068 px</code></td></tr>
+        <tr><td>example A–B distance</td><td><strong><code>≈ 17.9 m</code></strong></td></tr>
+      </tbody>
+    </table>
+    <p class="lead"><strong>Interpretation:</strong> a wider bounding box produces a shorter estimated range. The two calibration values are tuned for the committed clip—not validated for every camera or vehicle type.</p>
+    <div class="footer"><span>ADA-ECU · Final-round technical defense · Team KIS</span><span class="page"></span></div>
+  </section>
+  <section class="slide bg-light content">
+    <div class="slide-head"><div class="num"></div><h2>Video motion — relative range only</h2></div>
+    <pre class="log">R3 speed = |d_AB(now) − d_AB(previous)| / Δt
+
+d_AC = d_AB(camera) + d_BC(V2X)
+
+closing rate = −Δd_AC / Δt       TTC = d_AC / closing rate</pre>
+    <table class="fpt">
+      <thead><tr><th>Scenario</th><th>What the current code observes</th></tr></thead>
+      <tbody>
+        <tr><td>A and B keep the same gap</td><td>stable box → stable <code>d_AB</code> → R3 speed near <code>0</code></td></tr>
+        <tr><td>A closes on B/C</td><td><code>d_AC</code> decreases → positive closing rate → TTC available</td></tr>
+        <tr><td>A and B both travel at 80 km/h</td><td><strong>absolute speed is unknown</strong>; video only observes the unchanged gap</td></tr>
+      </tbody>
+    </table>
+    <p class="lead">Range thresholds still operate when TTC is null. Ego speed from CAN/GNSS, braking distance and live-camera odometry are outside Milestone 1.</p>
     <div class="footer"><span>ADA-ECU · Final-round technical defense · Team KIS</span><span class="page"></span></div>
   </section>
   <section class="slide bg-light content">

@@ -45,7 +45,7 @@ Camera R3 ──┘                                  └─ AssessmentDb + EVT
 
 | Reuse seam | What can change behind it |
 |---|---|
-| `FrameSource` / detector output | file, synthetic, live camera, another inference backend |
+| `FrameSource` / detector output | file + synthetic implemented; live camera requires another implementation |
 | normalized `TrackedObject` | V2X or ego-sensor observation after adapter/validation |
 | `ICollisionRiskAssessment` | NLOS, intersection, vulnerable-road-user, braking-chain plugin |
 | `(trackId, warningType)` assessment | several risk cases over the same tracked object |
@@ -86,6 +86,48 @@ B observations → tentative → tracked
 | `NullCBeforeCIsFirstAdmitted` | numeric B geometry, nullable C |
 
 **CarSky evidence to capture:** `own_sensor_ingest > 0`, B reaches `tracked`, zero relayed-C transitions, `r4_tx = 0`, IVI remains idle.
+
+---
+
+# Camera distance — pinhole estimate
+
+YOLO11n returns VehicleB's bounding box; the distance module converts its pixel width into metres.
+
+```text
+f_px = (frame_width / 2) / tan(HFOV / 2)
+
+d_AB = vehicle_width_m × f_px / bbox_width_px
+```
+
+| Current detector input | Value |
+|---|---:|
+| assumed coach width | `2.6 m` |
+| effective camera HFOV | `34.4°` |
+| example frame / bounding box | `1280 px / 300 px` |
+| calculated focal length | `≈ 2068 px` |
+| example A–B distance | **`≈ 17.9 m`** |
+
+**Interpretation:** a wider bounding box produces a shorter estimated range. The two calibration values are tuned for the committed clip—not validated for every camera or vehicle type.
+
+---
+
+# Video motion — relative range only
+
+```text
+R3 speed = |d_AB(now) − d_AB(previous)| / Δt
+
+d_AC = d_AB(camera) + d_BC(V2X)
+
+closing rate = −Δd_AC / Δt       TTC = d_AC / closing rate
+```
+
+| Scenario | What the current code observes |
+|---|---|
+| A and B keep the same gap | stable box → stable `d_AB` → R3 speed near `0` |
+| A closes on B/C | `d_AC` decreases → positive closing rate → TTC available |
+| A and B both travel at 80 km/h | **absolute speed is unknown**; video only observes the unchanged gap |
+
+Range thresholds still operate when TTC is null. Ego speed from CAN/GNSS, braking distance and live-camera odometry are outside Milestone 1.
 
 ---
 
