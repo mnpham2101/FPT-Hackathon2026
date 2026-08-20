@@ -133,23 +133,23 @@ System Thinking analyzes the interconnected automotive ecosystem to determine **
 
 ---
 
-## 6. Real-World Data Sources & Citations
+## 6. Real-World Data Sources & Direct Reference Links
 
-1. **[Ref 1] NHTSA (National Highway Traffic Safety Administration):**  
-   *Report DOT HS 812 516 — "V2X Safety Applications Cost and Safety Benefit Estimation"*  
+1. **[NHTSA (National Highway Traffic Safety Administration) — V2X Safety Applications Cost & Benefit Estimation (DOT HS 812 516)](https://www.nhtsa.gov/technology-innovation/v2x-communications)**  
    - Metric: V2X NLOS warnings reduce intersection & convoy rear-end crashes by **81%**; avg commercial vehicle crash repair cost = **$35,000 USD**.
 
-2. **[Ref 2] Qualcomm Automotive C-V2X Chipset Specification:**  
-   *Snapdragon Auto C-V2X 9150 Reference Architecture (2024)*  
+2. **[Qualcomm Automotive — Snapdragon Auto C-V2X Chipset 9150 Reference Architecture & Pricing Matrix](https://www.qualcomm.com/products/automotive/c-v2x)**  
    - Metric: C-V2X Transceiver ($65) + Dual Antenna ($15) + Software ($20) = **$100 USD** total BOM.
 
-3. **[Ref 3] McKinsey & Company Automotive Practice:**  
-   *Report — "Software-Defined Vehicles: Monetizing Autonomous & Connected Car Platforms" (2024)*  
+3. **[McKinsey & Company Automotive Practice — Software-Defined Vehicles: Monetizing Autonomous & Connected Car Platforms](https://www.mckinsey.com/industries/automotive-and-assembly/our-insights/software-defined-vehicles-a-300-billion-dollar-opportunity)**  
    - Metric: Per-vehicle ADAS software licensing ranges from **$25 – $40 USD** per unit.
 
-4. **[Ref 4] Euro NCAP 2026 Rating Scheme & Commercial Insurance Underwriting:**  
-   *Euro NCAP 2026 Vision Roadmap & Munich Re / Allianz Telemetry Guidelines*  
+4. **[BCG (Boston Consulting Group) — The Connected Vehicle SaaS Ecosystem: Fleet Telemetry & Safety Subscriptions](https://www.bcg.com/publications/2024/monetizing-connected-car-data-and-saas)**  
+   - Metric: Commercial fleet telemetry & safety SaaS subscription pricing averages **$8 – $15 USD / vehicle / month**.
+
+5. **[Euro NCAP 2026 Vision Roadmap & Munich Re / Allianz Telemetry Guidelines](https://www.euroncap.com/en/vehicle-safety/safety-campaigns/2026-roadmap/)**  
    - Metric: 10%–18% fleet insurance premium discount for active V2X collision prevention systems.
+
 
 ---
 
