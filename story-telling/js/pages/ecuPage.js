@@ -1,6 +1,5 @@
 import * as THREE from "three";
 import {
-  lerp,
   clamp01,
   smoothstep,
   buildEnvelopeSprite,
@@ -12,8 +11,6 @@ import {
 
 const BANNER_TEXT = "V2X-ECU received the relayed message";
 
-const T_REACH_START = 0.3;
-const T_REACH_END = 1.1;
 const T_FLIGHT_START = 0.6;
 const T_FLIGHT_END = 2.2;
 
@@ -271,25 +268,6 @@ function buildCardTexture(label, { icon, accent }) {
   return new THREE.CanvasTexture(canvas);
 }
 
-function buildHandTexture() {
-  const size = 96;
-  const canvas = document.createElement("canvas");
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext("2d");
-  ctx.fillStyle = "#ffd9a0";
-  ctx.beginPath();
-  ctx.ellipse(size * 0.5, size * 0.55, size * 0.32, size * 0.4, 0, 0, Math.PI * 2);
-  ctx.fill();
-  for (const dx of [-0.28, -0.1, 0.1, 0.28]) {
-    ctx.beginPath();
-    ctx.ellipse(size * (0.5 + dx), size * 0.18, size * 0.08, size * 0.16, 0, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  return new THREE.CanvasTexture(canvas);
-}
-const sharedHandTexture = buildHandTexture();
-
 /**
  * One reusable ECU card: a flat, unlit 2D tile with a soft glow behind it —
  * every node shares this exact construction and the same glow-pulse
@@ -311,19 +289,6 @@ function buildEcuNode({ label, position, preset }) {
   const cardMat = new THREE.MeshBasicMaterial({ transparent: true });
   const card = new THREE.Mesh(new THREE.PlaneGeometry(CARD_WORLD_W, CARD_WORLD_H), cardMat);
   node.add(card);
-
-  const hands = [];
-  for (const side of [-1, 1]) {
-    const hand = new THREE.Sprite(
-      new THREE.SpriteMaterial({ map: sharedHandTexture, transparent: true })
-    );
-    hand.scale.set(0.55, 0.55, 1);
-    const rest = { x: side * 0.9, y: -CARD_WORLD_H / 2 - 0.2, z: 0.05 };
-    const reach = { x: side * 0.55, y: CARD_WORLD_H / 2 + 0.1, z: 0.2 };
-    hand.position.set(rest.x, rest.y, rest.z);
-    node.add(hand);
-    hands.push({ sprite: hand, rest, reach });
-  }
 
   let currentIndex = 0;
   let glowSpriteFn = () => {};
@@ -357,11 +322,6 @@ function buildEcuNode({ label, position, preset }) {
     group: node,
     setGlow(intensity) {
       glow.material.opacity = intensity;
-    },
-    reachOut(t) {
-      for (const { sprite, rest, reach } of hands) {
-        sprite.position.set(lerp(rest.x, reach.x, t), lerp(rest.y, reach.y, t), lerp(rest.z, reach.z, t));
-      }
     },
     cycleAppearance() {
       currentIndex = (currentIndex + 1) % preset.length;
@@ -421,7 +381,7 @@ function buildBlueprintBackdrop() {
  * Camera cuts inside Vehicle A to its three ECUs, laid out like a blueprint
  * diagram — a staggered flow (top-left to bottom-right) with orthogonal
  * wiring, not a single horizontal row. The relayed mail arrives first at
- * V2X-ECU, which reaches out and catches it; the scene then freezes.
+ * V2X-ECU and is absorbed there; the scene then freezes.
  */
 export function createEcuPage() {
   const scene = new THREE.Scene();
@@ -509,9 +469,6 @@ export function createEcuPage() {
     const pulse = 0.5 + Math.sin(virtualElapsed * 2.2) * 0.22;
     for (const node of nodes) node.setGlow(pulse);
 
-    const reachT = smoothstep((virtualElapsed - T_REACH_START) / (T_REACH_END - T_REACH_START));
-    v2xNode.reachOut(reachT);
-
     const flightT = clamp01((virtualElapsed - T_FLIGHT_START) / (T_FLIGHT_END - T_FLIGHT_START));
     if (virtualElapsed >= T_FLIGHT_START && flightT < 1) {
       mailSprite.visible = true;
@@ -533,7 +490,6 @@ export function createEcuPage() {
     frozen = false;
     virtualElapsed = 0;
     mailSprite.visible = false;
-    v2xNode.reachOut(0);
     clock.start();
   }
 
