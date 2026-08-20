@@ -221,14 +221,63 @@ export function buildEnvelopeSprite() {
   return sprite;
 }
 
+// ---- Page header (pageTitle/pageSubtitle), loaded from markdown -----------
+// Every page shares this exact loader/applier pair — only the markdown file
+// path differs per page. A leading `---` frontmatter block carries style
+// (colour, weight); the first `# Heading` is pageTitle; the first non-blank
+// line after it is pageSubtitle (omit it in the file to leave no subtitle).
+function parsePageHeaderMarkdown(raw) {
+  const style = {};
+  let body = raw;
+
+  const frontmatterMatch = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/);
+  if (frontmatterMatch) {
+    body = raw.slice(frontmatterMatch[0].length);
+    for (const line of frontmatterMatch[1].split(/\r?\n/)) {
+      const kv = line.match(/^([\w-]+):\s*(.*)$/);
+      if (kv) style[kv[1]] = kv[2].trim().replace(/^["']|["']$/g, "");
+    }
+  }
+
+  const lines = body.split(/\r?\n/);
+  const titleIndex = lines.findIndex((line) => line.trim().startsWith("# "));
+  const pageTitle = titleIndex >= 0 ? lines[titleIndex].trim().slice(2).trim() : "";
+  const pageSubtitle =
+    lines
+      .slice(titleIndex + 1)
+      .map((line) => line.trim())
+      .find((line) => line.length > 0) || "";
+
+  return { pageTitle, pageSubtitle, style };
+}
+
+/** Fetches and parses one page's markdown header file. */
+export async function loadPageHeader(path) {
+  const res = await fetch(path);
+  if (!res.ok) throw new Error(`loadPageHeader: ${path} → HTTP ${res.status}`);
+  return parsePageHeaderMarkdown(await res.text());
+}
+
+const titleEl = document.getElementById("hud-title");
+const subtitleEl = document.getElementById("hud-subtitle");
+
+/** Renders a loaded page header — the one place pageTitle/pageSubtitle reach the DOM. */
+export function applyPageHeader({ pageTitle = "", pageSubtitle = "", style = {} } = {}) {
+  if (titleEl) {
+    titleEl.textContent = pageTitle;
+    titleEl.style.color = style.titleColor || "";
+    titleEl.style.fontWeight = style.titleWeight || "";
+  }
+  if (subtitleEl) {
+    subtitleEl.textContent = pageSubtitle;
+    subtitleEl.style.color = style.subtitleColor || "";
+    subtitleEl.style.fontWeight = style.subtitleWeight || "";
+  }
+}
+
 // ---- HUD DOM helpers, shared by every page ---------------------------------
-const hudSubtitleEl = document.getElementById("hud-subtitle");
 const bannerEl = document.getElementById("mail-banner");
 const bannerTextEl = bannerEl ? bannerEl.querySelector(".mail-text") : null;
-
-export function setHudSubtitle(text) {
-  if (hudSubtitleEl) hudSubtitleEl.textContent = text;
-}
 
 export function showBanner(text) {
   if (!bannerEl) return;

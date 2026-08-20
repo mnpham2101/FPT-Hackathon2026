@@ -16,10 +16,12 @@ renderer.shadowMap.enabled = true;
 const prevBtn = document.getElementById("nav-prev");
 const nextBtn = document.getElementById("nav-next");
 
-const pages = [
+// Each page loads its own pageTitle/pageSubtitle from markdown before it's
+// ready, so the whole set is awaited up front rather than per-navigation.
+const pages = await Promise.all([
   createRoadPage({ onComplete: () => { nextBtn.disabled = false; } }),
   createEcuPage(),
-];
+]);
 
 let currentIndex = 0;
 let activePage = pages[currentIndex];

@@ -7,7 +7,8 @@ import {
   addOutline,
   buildGlowSprite,
   buildEnvelopeSprite,
-  setHudSubtitle,
+  loadPageHeader,
+  applyPageHeader,
   showBanner,
   hideBanner,
 } from "../common.js";
@@ -33,7 +34,6 @@ const MAIL_FLIGHT_DURATION = 1.6;
 
 const CAR_SPEED = 11; // units/sec, world moves toward the camera (+z decreases)
 
-const SUBTITLE = "A cannot see through B. B can see what A cannot.";
 const BANNER_TEXT = "V2X message received — hazard ahead relayed from Vehicle B";
 
 /**
@@ -42,7 +42,9 @@ const BANNER_TEXT = "V2X message received — hazard ahead relayed from Vehicle 
  * V2X mail message to A. `onComplete` fires once, the moment that message
  * is delivered, so the caller can unlock navigation to the next page.
  */
-export function createRoadPage({ onComplete } = {}) {
+export async function createRoadPage({ onComplete } = {}) {
+  const header = await loadPageHeader("content/road.md");
+
   const scene = new THREE.Scene();
   const HORIZON_COLOR = 0xcdeee0;
   scene.background = new THREE.Color(HORIZON_COLOR); // fallback behind the sky dome
@@ -505,7 +507,7 @@ export function createRoadPage({ onComplete } = {}) {
   }
 
   function onEnter() {
-    setHudSubtitle(SUBTITLE);
+    applyPageHeader(header);
     // Restore this page's own banner state rather than inheriting whatever
     // the previously active page left the shared banner showing.
     if (completed) {

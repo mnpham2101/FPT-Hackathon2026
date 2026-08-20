@@ -4,7 +4,8 @@ import {
   smoothstep,
   buildEnvelopeSprite,
   roundRectPath,
-  setHudSubtitle,
+  loadPageHeader,
+  applyPageHeader,
   showBanner,
   hideBanner,
 } from "../common.js";
@@ -256,7 +257,9 @@ function buildBlueprintBackdrop() {
  * wiring, not a single horizontal row. The relayed mail arrives first at
  * V2X-ECU and is absorbed there; the scene then freezes.
  */
-export function createEcuPage() {
+export async function createEcuPage() {
+  const header = await loadPageHeader("content/ecu.md");
+
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x0b0f1a);
 
@@ -357,7 +360,7 @@ export function createEcuPage() {
   }
 
   function onEnter() {
-    setHudSubtitle("");
+    applyPageHeader(header);
     hideBanner(); // this page replays from scratch each visit and re-shows its own banner on catch
     panel?.classList.remove("hidden");
     frozen = false;
