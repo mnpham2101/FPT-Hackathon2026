@@ -24,6 +24,7 @@ Standard Mobile Android is designed for personal smartphones (touchscreens, batt
 
 > [!NOTE]
 > For the complete architectural specification and protocol decoupling proof (Gateway MCU ethernet0 -> CarPropertyManager -> Kotlin UI), see [Gateway MCU to Kotlin UI: Signal Pipeline & Protocol Decoupling](signal-pipeline-and-protocol-decoupling.md).
+> For the multi-dimensional commercial, financial (ROI/CBA), technical, and regulatory feasibility proof, see [Multi-Dimensional Feasibility & Business Proof](v2x-business-and-technical-feasibility-study.md).
 
 ---
 

@@ -14,6 +14,10 @@ This page contains links to article, highlighting the main knowledge base that h
 
 ## V2X
 
+| Document | Topic |
+|---|---|
+| [Multi-Dimensional Feasibility & Business Proof](v2x-business-and-technical-feasibility-study.md) | Proof of technical, financial (7.38x BCR), regulatory (Euro NCAP 2026+), and operational feasibility |
+
 ## Object detection 
 
 ## CI
