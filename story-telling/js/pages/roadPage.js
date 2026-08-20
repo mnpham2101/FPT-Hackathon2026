@@ -213,7 +213,7 @@ export async function createRoadPage({ onComplete } = {}) {
   function buildHill(color, radius) {
     const hill = new THREE.Mesh(
       new THREE.SphereGeometry(radius, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2),
-      new THREE.MeshToonMaterial({ color, gradientMap: toonGradient, flatShading: true })
+      new THREE.MeshToonMaterial({ color, gradientMap: toonGradient })
     );
     addOutline(hill, { color: OUTLINE_COLOR, thickness: 0.035 });
     return hill;
@@ -235,7 +235,7 @@ export async function createRoadPage({ onComplete } = {}) {
   }
   scene.add(hillsGroup);
 
-  const mountainMat = new THREE.MeshToonMaterial({ color: 0x9aa3c2, gradientMap: toonGradient, flatShading: true });
+  const mountainMat = new THREE.MeshToonMaterial({ color: 0x9aa3c2, gradientMap: toonGradient });
   const mountainsGroup = new THREE.Group();
   for (let i = 0; i < 8; i++) {
     const side = i % 2 === 0 ? -1 : 1;
@@ -258,12 +258,10 @@ export async function createRoadPage({ onComplete } = {}) {
     const baseMat = new THREE.MeshToonMaterial({
       color: treeBaseColors[Math.floor(Math.random() * treeBaseColors.length)],
       gradientMap: toonGradient,
-      flatShading: true,
     });
     const highlightMat = new THREE.MeshToonMaterial({
       color: treeHighlightColors[Math.floor(Math.random() * treeHighlightColors.length)],
       gradientMap: toonGradient,
-      flatShading: true,
     });
 
     const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.26, 1.7, 8), trunkMat);
