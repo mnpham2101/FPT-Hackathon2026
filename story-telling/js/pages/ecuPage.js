@@ -11,8 +11,17 @@ import {
 } from "../common.js";
 
 const TRANSITION_DURATION = 1.4; // seconds for one envelope leg (idle -> V2X, V2X -> ADA, ADA -> IVI)
-const BASE_GLOW = 0.35;
+
+// A node's glow has 3 tiers matching its relation to the relay's current
+// step: never reached yet, already visited (the relay moved past it), or
+// the one it's on right now. "Visited" is a colour change too (preset[1]
+// instead of preset[0]) — a lasting mark of "this ECU has processed the
+// message" that the glow alone doesn't carry once focus moves on.
+const UNVISITED_GLOW = 0.35;
+const VISITED_GLOW = 0.55;
 const ACTIVE_GLOW = 0.95;
+const VISITED_PRESET_INDEX = 1;
+const DEFAULT_PRESET_INDEX = 0;
 
 // ---- Modern flat icon glyphs -----------------------------------------------
 // Every icon draws into a local 0..size box (no clearRect — the card
@@ -200,6 +209,11 @@ function buildEcuNode({ label, position, preset }) {
       currentIndex = (currentIndex + 1) % preset.length;
       applyPreset(preset[currentIndex]);
     },
+    /** Jumps straight to one preset by index — how the relay animation marks a node "active"/"visited" by colour, not just glow. */
+    setAppearanceIndex(index) {
+      currentIndex = index % preset.length;
+      applyPreset(preset[currentIndex]);
+    },
   };
 }
 
@@ -325,9 +339,6 @@ export async function createEcuPage() {
     new THREE.Vector3(ADA_POS.x, ADA_POS.y + halfH + 0.3, 0.2), // landed on ADA-ECU
     new THREE.Vector3(IVI_POS.x, IVI_POS.y + halfH + 0.3, 0.2), // landed on IVI-ECU
   ];
-  // Which node glows once the envelope has landed at each step (null = none yet).
-  const GLOW_TARGETS = [null, v2xNode, adaNode, iviNode];
-
   // ---- Live customization: click-free HTML controls, one per ECU --------
   const panel = document.getElementById("ecu-customize-panel");
   const customizeButtons = {
@@ -362,9 +373,24 @@ export async function createEcuPage() {
   let pendingIndex = 0;
   let idleElapsed = 0;
 
-  function applyStaticGlow(index) {
-    const target = GLOW_TARGETS[index];
-    for (const node of nodes) node.setGlow(node === target ? ACTIVE_GLOW : BASE_GLOW);
+  // `nodes[i]`'s own step number is i+1 (V2X=1, ADA=2, IVI=3; step 0 is the
+  // idle state before anything is reached). A node ahead of the settled
+  // step has never been reached; the settled step's own node is active;
+  // anything behind it was visited on an earlier step and stays marked.
+  function applyStepAppearance(index) {
+    nodes.forEach((node, i) => {
+      const nodeStep = i + 1;
+      if (nodeStep === index) {
+        node.setAppearanceIndex(VISITED_PRESET_INDEX);
+        node.setGlow(ACTIVE_GLOW);
+      } else if (nodeStep < index) {
+        node.setAppearanceIndex(VISITED_PRESET_INDEX);
+        node.setGlow(VISITED_GLOW);
+      } else {
+        node.setAppearanceIndex(DEFAULT_PRESET_INDEX);
+        node.setGlow(UNVISITED_GLOW);
+      }
+    });
   }
 
   const stepper = createAnimationStepper(header.sections, (targetIndex) => {
@@ -386,7 +412,7 @@ export async function createEcuPage() {
       if (t >= 1) {
         transitioning = false;
         settledIndex = pendingIndex;
-        applyStaticGlow(settledIndex);
+        applyStepAppearance(settledIndex);
       }
       return;
     }
@@ -401,7 +427,7 @@ export async function createEcuPage() {
       );
     }
     // Steps 1-3, once landed, need no further per-frame work — the scene
-    // stays exactly as applyStaticGlow/the envelope's parked position left it.
+    // stays exactly as applyStepAppearance/the envelope's parked position left it.
   }
 
   function onEnter() {
@@ -414,7 +440,7 @@ export async function createEcuPage() {
     idleElapsed = 0;
     mailSprite.visible = true;
     mailSprite.position.copy(WAYPOINTS[0]);
-    applyStaticGlow(0);
+    applyStepAppearance(0);
     stepper.reset();
     clock.start();
   }
