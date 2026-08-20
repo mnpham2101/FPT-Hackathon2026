@@ -16,76 +16,33 @@ const T_FLIGHT_END = 2.2;
 
 // ---- Modern flat icon glyphs -----------------------------------------------
 // Every icon draws into a local 0..size box (no clearRect — the card
-// background already handles that) and stamps the same mascot face onto
-// its glyph, so every ECU "look" reads as one friendly icon family.
-function drawMascotFace(ctx, cx, cy, scale, color = "#12161f") {
-  ctx.fillStyle = color;
-  const eyeR = 3.6 * scale;
-  const eyeDX = 8 * scale;
-  ctx.beginPath();
-  ctx.arc(cx - eyeDX, cy, eyeR, 0, Math.PI * 2);
-  ctx.arc(cx + eyeDX, cy, eyeR, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 2.4 * scale;
-  ctx.lineCap = "round";
-  ctx.beginPath();
-  ctx.arc(cx, cy + 2 * scale, 7 * scale, 0.15 * Math.PI, 0.85 * Math.PI);
-  ctx.stroke();
-}
-
+// background already handles that). Each ECU has exactly one icon, matching
+// its function: radar (V2X-ECU's cooperative sensing), mcu (ADA-ECU's
+// fusion chip), display (IVI-ECU's driver screen).
 const ICON_LIBRARY = {
-  antenna(ctx, size, accent) {
+  radar(ctx, size, accent) {
     const cx = size * 0.5;
-    const cy = size * 0.62;
+    const cy = size * 0.5;
     ctx.strokeStyle = accent;
-    ctx.lineWidth = size * 0.045;
-    ctx.lineCap = "round";
+    ctx.lineWidth = size * 0.03;
     for (let i = 1; i <= 3; i++) {
       ctx.beginPath();
-      ctx.arc(cx, cy, size * 0.14 * i, Math.PI * 1.15, Math.PI * 1.85);
+      ctx.arc(cx, cy, size * 0.1 * i, 0, Math.PI * 2);
       ctx.stroke();
     }
     ctx.fillStyle = accent;
-    ctx.beginPath();
-    ctx.arc(cx, cy, size * 0.055, 0, Math.PI * 2);
-    ctx.fill();
-    drawMascotFace(ctx, cx, cy + size * 0.02, size * 0.024);
-  },
-  satellite(ctx, size, accent) {
-    const cx = size * 0.48;
-    const cy = size * 0.56;
-    ctx.strokeStyle = accent;
-    ctx.lineWidth = size * 0.045;
-    ctx.lineCap = "round";
-    ctx.beginPath();
-    ctx.ellipse(cx, cy, size * 0.22, size * 0.13, -0.35, 0, Math.PI * 2);
-    ctx.stroke();
+    ctx.globalAlpha = 0.35;
     ctx.beginPath();
     ctx.moveTo(cx, cy);
-    ctx.lineTo(cx + size * 0.03, cy - size * 0.18);
-    ctx.stroke();
-    ctx.fillStyle = accent;
-    ctx.beginPath();
-    ctx.arc(cx + size * 0.03, cy - size * 0.21, size * 0.025, 0, Math.PI * 2);
-    ctx.fill();
-    drawMascotFace(ctx, cx, cy + size * 0.02, size * 0.02);
-  },
-  bolt(ctx, size, accent) {
-    ctx.fillStyle = accent;
-    ctx.beginPath();
-    ctx.moveTo(size * 0.56, size * 0.18);
-    ctx.lineTo(size * 0.34, size * 0.56);
-    ctx.lineTo(size * 0.48, size * 0.56);
-    ctx.lineTo(size * 0.42, size * 0.86);
-    ctx.lineTo(size * 0.68, size * 0.44);
-    ctx.lineTo(size * 0.54, size * 0.44);
+    ctx.arc(cx, cy, size * 0.3, -Math.PI * 0.5, -Math.PI * 0.2);
     ctx.closePath();
     ctx.fill();
-    drawMascotFace(ctx, size * 0.5, size * 0.68, size * 0.022);
+    ctx.globalAlpha = 1;
+    ctx.beginPath();
+    ctx.arc(cx, cy, size * 0.035, 0, Math.PI * 2);
+    ctx.fill();
   },
-  cpu(ctx, size, accent) {
+  mcu(ctx, size, accent) {
     const pad = size * 0.28;
     const w = size - pad * 2;
     ctx.strokeStyle = accent;
@@ -108,52 +65,6 @@ const ICON_LIBRARY = {
         ctx.stroke();
       }
     }
-    drawMascotFace(ctx, size * 0.5, size * 0.5, size * 0.02);
-  },
-  radar(ctx, size, accent) {
-    const cx = size * 0.5;
-    const cy = size * 0.5;
-    ctx.strokeStyle = accent;
-    ctx.lineWidth = size * 0.03;
-    for (let i = 1; i <= 3; i++) {
-      ctx.beginPath();
-      ctx.arc(cx, cy, size * 0.1 * i, 0, Math.PI * 2);
-      ctx.stroke();
-    }
-    ctx.fillStyle = accent;
-    ctx.globalAlpha = 0.35;
-    ctx.beginPath();
-    ctx.moveTo(cx, cy);
-    ctx.arc(cx, cy, size * 0.3, -Math.PI * 0.5, -Math.PI * 0.2);
-    ctx.closePath();
-    ctx.fill();
-    ctx.globalAlpha = 1;
-    ctx.beginPath();
-    ctx.arc(cx, cy, size * 0.035, 0, Math.PI * 2);
-    ctx.fill();
-    drawMascotFace(ctx, cx, cy + size * 0.16, size * 0.02);
-  },
-  shield(ctx, size, accent) {
-    const cx = size * 0.5;
-    ctx.strokeStyle = accent;
-    ctx.lineWidth = size * 0.045;
-    ctx.lineJoin = "round";
-    ctx.beginPath();
-    ctx.moveTo(cx, size * 0.18);
-    ctx.lineTo(size * 0.76, size * 0.3);
-    ctx.lineTo(size * 0.76, size * 0.56);
-    ctx.quadraticCurveTo(size * 0.76, size * 0.82, cx, size * 0.9);
-    ctx.quadraticCurveTo(size * 0.24, size * 0.82, size * 0.24, size * 0.56);
-    ctx.lineTo(size * 0.24, size * 0.3);
-    ctx.closePath();
-    ctx.stroke();
-    ctx.lineWidth = size * 0.05;
-    ctx.beginPath();
-    ctx.moveTo(size * 0.38, size * 0.5);
-    ctx.lineTo(size * 0.47, size * 0.6);
-    ctx.lineTo(size * 0.64, size * 0.4);
-    ctx.stroke();
-    drawMascotFace(ctx, cx, size * 0.72, size * 0.018);
   },
   display(ctx, size, accent) {
     const pad = size * 0.16;
@@ -169,64 +80,26 @@ const ICON_LIBRARY = {
     ctx.moveTo(size * 0.38, pad + h + size * 0.08);
     ctx.lineTo(size * 0.62, pad + h + size * 0.08);
     ctx.stroke();
-    drawMascotFace(ctx, size * 0.5, pad + h * 0.5, size * 0.022);
-  },
-  gauge(ctx, size, accent) {
-    const cx = size * 0.5;
-    const cy = size * 0.62;
-    const r = size * 0.3;
-    ctx.strokeStyle = accent;
-    ctx.lineWidth = size * 0.045;
-    ctx.lineCap = "round";
-    ctx.beginPath();
-    ctx.arc(cx, cy, r, Math.PI, Math.PI * 2);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(cx, cy);
-    ctx.lineTo(cx + r * 0.6, cy - r * 0.55);
-    ctx.stroke();
-    ctx.fillStyle = accent;
-    ctx.beginPath();
-    ctx.arc(cx, cy, size * 0.03, 0, Math.PI * 2);
-    ctx.fill();
-    drawMascotFace(ctx, cx, cy - size * 0.02, size * 0.02);
-  },
-  bell(ctx, size, accent) {
-    const cx = size * 0.5;
-    ctx.fillStyle = accent;
-    ctx.beginPath();
-    ctx.moveTo(cx, size * 0.16);
-    ctx.quadraticCurveTo(size * 0.76, size * 0.22, size * 0.72, size * 0.56);
-    ctx.quadraticCurveTo(size * 0.72, size * 0.68, size * 0.82, size * 0.74);
-    ctx.lineTo(size * 0.18, size * 0.74);
-    ctx.quadraticCurveTo(size * 0.28, size * 0.68, size * 0.28, size * 0.56);
-    ctx.quadraticCurveTo(size * 0.24, size * 0.22, cx, size * 0.16);
-    ctx.closePath();
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(cx, size * 0.8, size * 0.05, 0, Math.PI * 2);
-    ctx.fill();
-    drawMascotFace(ctx, cx, size * 0.48, size * 0.02, "#0b0f1a");
   },
 };
 
 // Each ECU cycles through its own small set of appearances on click — the
-// function (its label) never changes, only its icon and accent colour.
+// icon (its function) never changes, only the accent colour does.
 const APPEARANCE_PRESETS = {
   v2x: [
-    { icon: "antenna", accent: "#7fe8ff" },
-    { icon: "satellite", accent: "#ff6fae" },
-    { icon: "bolt", accent: "#ffd166" },
+    { icon: "radar", accent: "#7fe8ff" },
+    { icon: "radar", accent: "#8b7bff" },
+    { icon: "radar", accent: "#5be37a" },
   ],
   ada: [
-    { icon: "cpu", accent: "#7fe8ff" },
-    { icon: "radar", accent: "#8b7bff" },
-    { icon: "shield", accent: "#5be37a" },
+    { icon: "mcu", accent: "#7fe8ff" },
+    { icon: "mcu", accent: "#ff6fae" },
+    { icon: "mcu", accent: "#ffd166" },
   ],
   ivi: [
     { icon: "display", accent: "#7fe8ff" },
-    { icon: "gauge", accent: "#ff8a5b" },
-    { icon: "bell", accent: "#ffd166" },
+    { icon: "display", accent: "#ff8a5b" },
+    { icon: "display", accent: "#ffd166" },
   ],
 };
 
