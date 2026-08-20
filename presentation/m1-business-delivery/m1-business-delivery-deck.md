@@ -214,6 +214,30 @@ Two ways to receive the product — both fully supported by what is in the packa
 
 ---
 
+# Cost-Benefit Analysis (CBA)
+
+- **95% Hardware Savings:** $80–$150 USD V2X HMI vs. $3,000–$8,000 USD per 3D LiDAR unit.
+- **Accident Prevention:** Reduces NLOS corner & rear-end convoy crashes by **81%** (NHTSA metrics).
+- **5-Year Fleet ROI (per 1,000 vehicles):**
+  - **CapEx:** $650,000 USD total deployment cost.
+  - **OpEx Savings:** $4,800,000 USD (collision repair, insurance discounts, downtime avoidance).
+  - **Benefit-Cost Ratio (BCR):** **7.38x** ($7.38 returned per $1 spent).
+
+---
+
+# Revenue & Financial ROI Model
+
+- **Tri-Stream Monetization:**
+  1. **B2B OEM License:** $30 USD / vehicle (Euro NCAP 2026 5-star compliance out-of-the-box).
+  2. **SaaS Fleet Safety:** $10 USD / vehicle / month ($120/yr recurring fleet telemetry).
+  3. **Tier-1 Standalone Unbundling:** $12 USD / single ECU application (e.g. IVI-ECU HMI).
+- **Financial Projections & Return on Investment:**
+  - **Initial Development Investment:** $350,000 USD.
+  - **Break-Even Point:** **Month 14** (Operating cash flow positive by Month 6).
+  - **3-Year Net Profit:** $14,000,000 USD (**4,000% 3-Year ROI**).
+
+---
+
 <!-- _class: lead -->
 
 ![bg](../assets/bg-fpt-tower.jpg)
@@ -221,3 +245,4 @@ Two ways to receive the product — both fully supported by what is in the packa
 # Thank You
 
 Team KIS · Cooperative Vehicle Awareness · FPT Hackathon 2026
+
