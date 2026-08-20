@@ -13,6 +13,10 @@ This page contains links to article, highlighting the main knowledge base that h
 
 ## V2X
 
+| Document | Topic |
+|---|---|
+| [V2X Protocol Foundations: ITS-G5 and the ETSI CPM](v2x-protocol-foundations.md) | How a station joins the V2X radio network, how CPM is disseminated and what it carries, what sender identity means and whether M1 needs it, and the propagation effects (Doppler, path loss, congestion) a real deployment must budget for |
+
 ## Object detection 
 
 ## CI
