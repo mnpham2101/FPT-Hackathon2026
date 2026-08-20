@@ -65,6 +65,21 @@ export function roundRectPath(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
+// ---- Ink outline, shared by every "storybook" shape -----------------------
+// The classic cheap toon-outline trick: a second copy of the same geometry,
+// scaled up a few percent, drawn back-face-only so only its silhouette
+// shows around the real mesh. Reuses the source geometry (no clone) and
+// rides along as a child, so it inherits the mesh's own transform for free.
+export function addOutline(mesh, { color = 0x22262b, thickness = 0.06 } = {}) {
+  const outlineMesh = new THREE.Mesh(
+    mesh.geometry,
+    new THREE.MeshBasicMaterial({ color, side: THREE.BackSide })
+  );
+  outlineMesh.scale.multiplyScalar(1 + thickness);
+  mesh.add(outlineMesh);
+  return outlineMesh;
+}
+
 // ---- Toon shading gradient, shared by every cel-shaded character ---------
 // Built once and reused everywhere — every MeshToonMaterial in the story
 // (cars, ECU nodes, wires) samples this same 4-band gradient.

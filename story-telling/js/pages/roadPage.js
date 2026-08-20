@@ -4,12 +4,18 @@ import {
   clamp01,
   smoothstep,
   getToonGradient,
+  addOutline,
   buildGlowSprite,
   buildEnvelopeSprite,
   setHudSubtitle,
   showBanner,
   hideBanner,
 } from "../common.js";
+
+// The single ink-outline colour every "storybook" shape in this scene uses —
+// a bold, uniform outline (rather than per-object tinted outlines) is what
+// reads as one consistent illustration style.
+const OUTLINE_COLOR = 0x22262b;
 
 // ---- Road geometry constants -------------------------------------------
 const LANE_WIDTH = 3.6;
@@ -38,16 +44,16 @@ const BANNER_TEXT = "V2X message received — hazard ahead relayed from Vehicle 
  */
 export function createRoadPage({ onComplete } = {}) {
   const scene = new THREE.Scene();
-  const HORIZON_COLOR = 0xdff3ea;
+  const HORIZON_COLOR = 0xcdeee0;
   scene.background = new THREE.Color(HORIZON_COLOR); // fallback behind the sky dome
-  scene.fog = new THREE.Fog(0xcdeee0, 130, 420);
+  scene.fog = new THREE.Fog(0xbfe6da, 130, 420);
 
   const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1200);
 
   const toonGradient = getToonGradient();
 
   // ---- Lighting (soft, warm golden-hour daylight) ------------------------
-  scene.add(new THREE.HemisphereLight(0xbfe3ff, 0x6a9a4f, 0.8));
+  scene.add(new THREE.HemisphereLight(0x8fd4cc, 0x7c9c5e, 0.8));
 
   const sun = new THREE.DirectionalLight(0xfff0c8, 1.2);
   sun.position.set(-60, 90, 40);
@@ -62,14 +68,14 @@ export function createRoadPage({ onComplete } = {}) {
 
   scene.add(new THREE.AmbientLight(0xfff4e0, 0.28));
 
-  // ---- Sky dome: a soft vertical gradient instead of a flat colour, the
-  // way a painted Ghibli sky is never one solid blue. -----------------------
+  // ---- Sky dome: a soft teal-to-cream vertical gradient instead of a flat
+  // colour, matching the muted storybook palette used throughout. -----------
   function buildSkyDome() {
     const geometry = new THREE.SphereGeometry(550, 24, 16);
     const material = new THREE.ShaderMaterial({
       uniforms: {
-        topColor: { value: new THREE.Color(0x5aa8e8) },
-        bottomColor: { value: new THREE.Color(0xf3f8e2) },
+        topColor: { value: new THREE.Color(0x2f9d97) },
+        bottomColor: { value: new THREE.Color(0xd8f0e0) },
         offset: { value: 24 },
         exponent: { value: 0.55 },
       },
@@ -113,16 +119,12 @@ export function createRoadPage({ onComplete } = {}) {
   function buildCloud() {
     const cloud = new THREE.Group();
     const litMat = new THREE.MeshToonMaterial({ color: 0xffffff, gradientMap: toonGradient });
-    const shadeMat = new THREE.MeshToonMaterial({ color: 0xd7e4ee, gradientMap: toonGradient });
-    const puffCount = 5 + Math.floor(Math.random() * 4);
+    const puffCount = 3 + Math.floor(Math.random() * 2);
     for (let i = 0; i < puffCount; i++) {
-      const yOff = (Math.random() - 0.5) * 0.75;
-      const puff = new THREE.Mesh(
-        new THREE.SphereGeometry(1 + Math.random() * 0.7, 10, 8),
-        yOff < -0.08 ? shadeMat : litMat
-      );
-      puff.position.set((Math.random() - 0.5) * 4.6, yOff, (Math.random() - 0.5) * 2.2);
+      const puff = new THREE.Mesh(new THREE.SphereGeometry(1 + Math.random() * 0.7, 10, 8), litMat);
+      puff.position.set((Math.random() - 0.5) * 4.2, (Math.random() - 0.5) * 0.6, (Math.random() - 0.5) * 2.2);
       puff.scale.y = 0.62;
+      addOutline(puff, { color: OUTLINE_COLOR, thickness: 0.07 });
       cloud.add(puff);
     }
     return cloud;
@@ -140,7 +142,7 @@ export function createRoadPage({ onComplete } = {}) {
   // ---- Ground + road ------------------------------------------------------
   const grass = new THREE.Mesh(
     new THREE.PlaneGeometry(700, ROAD_LENGTH + 200),
-    new THREE.MeshToonMaterial({ color: 0x6cbf52, gradientMap: toonGradient })
+    new THREE.MeshToonMaterial({ color: 0x8fae6c, gradientMap: toonGradient })
   );
   grass.rotation.x = -Math.PI / 2;
   grass.position.z = -ROAD_LENGTH / 2 + 100;
@@ -154,7 +156,7 @@ export function createRoadPage({ onComplete } = {}) {
     const count = 550;
     const positions = new Float32Array(count * 3);
     const colors = new Float32Array(count * 3);
-    const palette = [0xfff3b0, 0xffffff, 0xffb6d8, 0xc9a8ff].map((c) => new THREE.Color(c));
+    const palette = [0xf2e6a0, 0xf5f5f0, 0xe8b8cf, 0xb8a8d9].map((c) => new THREE.Color(c));
     for (let i = 0; i < count; i++) {
       const side = Math.random() < 0.5 ? -1 : 1;
       positions[i * 3] = side * (ROAD_WIDTH / 2 + 4 + Math.random() * 45);
@@ -175,7 +177,7 @@ export function createRoadPage({ onComplete } = {}) {
 
   const road = new THREE.Mesh(
     new THREE.PlaneGeometry(ROAD_WIDTH, ROAD_LENGTH),
-    new THREE.MeshToonMaterial({ color: 0x4b5058, gradientMap: toonGradient })
+    new THREE.MeshToonMaterial({ color: 0x7c766a, gradientMap: toonGradient })
   );
   road.rotation.x = -Math.PI / 2;
   road.position.z = -ROAD_LENGTH / 2 + 100;
@@ -207,13 +209,15 @@ export function createRoadPage({ onComplete } = {}) {
 
   // ---- Landscape: rolling painterly hills + hazy distant mountains --------
   function buildHill(color, radius) {
-    return new THREE.Mesh(
+    const hill = new THREE.Mesh(
       new THREE.SphereGeometry(radius, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2),
       new THREE.MeshToonMaterial({ color, gradientMap: toonGradient, flatShading: true })
     );
+    addOutline(hill, { color: OUTLINE_COLOR, thickness: 0.035 });
+    return hill;
   }
 
-  const hillColors = [0x6cbf52, 0x5aa955, 0x86d15f, 0x4f9a4a];
+  const hillColors = [0x8fae6c, 0x7c9c5e, 0x9dbb7a, 0x6f8f56];
   const hillsGroup = new THREE.Group();
   for (let i = 0; i < 26; i++) {
     const side = i % 2 === 0 ? -1 : 1;
@@ -229,7 +233,7 @@ export function createRoadPage({ onComplete } = {}) {
   }
   scene.add(hillsGroup);
 
-  const mountainMat = new THREE.MeshToonMaterial({ color: 0x8b93c4, gradientMap: toonGradient, flatShading: true });
+  const mountainMat = new THREE.MeshToonMaterial({ color: 0x9aa3c2, gradientMap: toonGradient, flatShading: true });
   const mountainsGroup = new THREE.Group();
   for (let i = 0; i < 8; i++) {
     const side = i % 2 === 0 ? -1 : 1;
@@ -237,17 +241,18 @@ export function createRoadPage({ onComplete } = {}) {
     const mountain = new THREE.Mesh(new THREE.ConeGeometry(40 + Math.random() * 30, height, 4), mountainMat);
     mountain.position.set(side * (140 + Math.random() * 100), height / 2 - 6, -Math.random() * ROAD_LENGTH);
     mountain.rotation.y = Math.random() * Math.PI;
+    addOutline(mountain, { color: OUTLINE_COLOR, thickness: 0.03 });
     mountainsGroup.add(mountain);
   }
   scene.add(mountainsGroup);
 
-  // ---- Trees lining the road: lush, layered, two-tone canopies ------------
-  const treeBaseColors = [0x2f7d3f, 0x3f8f46, 0x357a44];
-  const treeHighlightColors = [0x8fd66a, 0x9fe077];
+  // ---- Trees lining the road: bold, chunky, outlined canopies -------------
+  const treeBaseColors = [0x5f7a4a, 0x6b8752, 0x557046];
+  const treeHighlightColors = [0xa9bd7e, 0xb8c98f];
 
   function buildTree() {
     const tree = new THREE.Group();
-    const trunkMat = new THREE.MeshToonMaterial({ color: 0x7a5033, gradientMap: toonGradient });
+    const trunkMat = new THREE.MeshToonMaterial({ color: 0x8a6a48, gradientMap: toonGradient });
     const baseMat = new THREE.MeshToonMaterial({
       color: treeBaseColors[Math.floor(Math.random() * treeBaseColors.length)],
       gradientMap: toonGradient,
@@ -262,28 +267,23 @@ export function createRoadPage({ onComplete } = {}) {
     const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.26, 1.7, 8), trunkMat);
     trunk.position.y = 0.85;
     trunk.castShadow = true;
+    addOutline(trunk, { color: OUTLINE_COLOR, thickness: 0.08 });
     tree.add(trunk);
 
     const leafGeo = new THREE.SphereGeometry(1, 8, 6);
-    const basePuffs = [
-      [0, 2.0, 0, 1.2],
-      [0.6, 1.6, 0.35, 0.85],
-      [-0.6, 1.65, -0.35, 0.9],
-      [0.1, 1.55, -0.55, 0.75],
+    const mainCanopy = new THREE.Mesh(leafGeo, baseMat);
+    mainCanopy.position.set(0, 2.0, 0);
+    mainCanopy.scale.setScalar(1.3);
+    mainCanopy.castShadow = true;
+    addOutline(mainCanopy, { color: OUTLINE_COLOR, thickness: 0.05 });
+    tree.add(mainCanopy);
+
+    const accentPuffs = [
+      [0.55, 1.65, 0.4, 0.75, baseMat],
+      [0.2, 2.35, -0.2, 0.7, highlightMat],
     ];
-    for (const [dx, dy, dz, s] of basePuffs) {
-      const leaf = new THREE.Mesh(leafGeo, baseMat);
-      leaf.position.set(dx, dy, dz);
-      leaf.scale.setScalar(s);
-      leaf.castShadow = true;
-      tree.add(leaf);
-    }
-    const highlightPuffs = [
-      [0.15, 2.35, -0.15, 0.7],
-      [-0.25, 2.2, 0.4, 0.6],
-    ];
-    for (const [dx, dy, dz, s] of highlightPuffs) {
-      const leaf = new THREE.Mesh(leafGeo, highlightMat);
+    for (const [dx, dy, dz, s, mat] of accentPuffs) {
+      const leaf = new THREE.Mesh(leafGeo, mat);
       leaf.position.set(dx, dy, dz);
       leaf.scale.setScalar(s);
       leaf.castShadow = true;
@@ -341,6 +341,7 @@ export function createRoadPage({ onComplete } = {}) {
     const lowerMesh = new THREE.Mesh(lowerGeo, lowerMat);
     lowerMesh.rotation.y = Math.PI / 2;
     lowerMesh.castShadow = true;
+    addOutline(lowerMesh, { color: OUTLINE_COLOR, thickness: 0.05 });
     group.add(lowerMesh);
 
     // Cabin/glass shell overlaps a little into the lower shell at the
@@ -365,6 +366,7 @@ export function createRoadPage({ onComplete } = {}) {
     const upperMesh = new THREE.Mesh(upperGeo, upperMat);
     upperMesh.rotation.y = Math.PI / 2;
     upperMesh.castShadow = true;
+    addOutline(upperMesh, { color: OUTLINE_COLOR, thickness: 0.05 });
     group.add(upperMesh);
 
     return group;
@@ -409,9 +411,9 @@ export function createRoadPage({ onComplete } = {}) {
     return car;
   }
 
-  const vehicleA = buildCar(0x3d8bff, 0xcdeaff); // ego vehicle
-  const vehicleB = buildCar(0xff7a3d, 0xffe6c2); // relay vehicle
-  const vehicleC = buildCar(0x9aa2b1, 0xf2e6a8); // occluded hazard vehicle
+  const vehicleA = buildCar(0x4a8fc0, 0xd3e8ee); // ego vehicle
+  const vehicleB = buildCar(0xd4703f, 0xf0dcc0); // relay vehicle — the reference's rust-orange tone
+  const vehicleC = buildCar(0x9aa2b1, 0xe9ddc0); // occluded hazard vehicle
 
   vehicleA.position.set(LANE_RIGHT_X, 0, 0);
   vehicleB.position.set(LANE_LEFT_X, 0, -13);
