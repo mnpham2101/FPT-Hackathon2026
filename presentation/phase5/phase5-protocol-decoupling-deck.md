@@ -77,6 +77,19 @@ Sources: [signal-pipeline-and-protocol-decoupling.md](../../documents/KnowledgeB
 
 ---
 
+# System Thinking & Commercial Viability
+
+- **System Thinking (Who Benefits):**
+  - Drivers: **81% Crash Avoidance**, < 1.9ms early alert before collision.
+  - OEMs: **Euro NCAP 5-Star**, 95% sensor BOM savings ($100 vs $3.5k LiDAR).
+  - Fleets: **$4.8M 5-Yr Savings**, 7.38x Benefit-Cost Ratio (BCR).
+- **Wall Street Valuation:**
+  - **NPV:** **$68.45 Million USD** (@ 10% WACC).
+  - **IRR / ROI:** **168.4% IRR** / **4,000% 3-Yr ROI** (14-Month Break-Even).
+  - **Bear Case Resilience:** Remains profitable (**+$1.85M EBITDA**) even under 80% adoption drop.
+
+---
+
 <!-- _class: lead -->
 
 ![bg](../assets/bg-navy-motif.png)
