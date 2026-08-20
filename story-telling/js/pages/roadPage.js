@@ -9,7 +9,7 @@ import {
   buildEnvelopeSprite,
   loadPageHeader,
   applyPageHeader,
-  applyTextBox,
+  createAnimationStepper,
   showBanner,
   hideBanner,
 } from "../common.js";
@@ -511,15 +511,13 @@ export async function createRoadPage({ onComplete } = {}) {
   }
 
   // content/road.md has no `## ` subsections, so header.sections is empty —
-  // there is nothing to step to. These are still exposed (rather than
-  // omitted) so every page implements the same nextAnimation/prevAnimation
-  // interface; they're just no-ops here.
-  function nextAnimation() {}
-  function prevAnimation() {}
+  // the stepper's next()/prev() are no-ops for free, and reset() hides the
+  // shared textbox (nothing to show).
+  const stepper = createAnimationStepper(header.sections);
 
   function onEnter() {
     applyPageHeader(header);
-    applyTextBox(header.sections[0]); // always undefined here — hides the textbox
+    stepper.reset();
     // Restore this page's own banner state rather than inheriting whatever
     // the previously active page left the shared banner showing.
     if (completed) {
@@ -540,8 +538,8 @@ export async function createRoadPage({ onComplete } = {}) {
     update,
     onEnter,
     onExit,
-    nextAnimation,
-    prevAnimation,
+    nextAnimation: stepper.next,
+    prevAnimation: stepper.prev,
     animationLabel: "Playing",
   };
 }

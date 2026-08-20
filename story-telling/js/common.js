@@ -337,6 +337,40 @@ export function applyTextBox(section) {
   if (textboxBodyEl) textboxBodyEl.innerHTML = section.bodyHtml || "";
 }
 
+// ---- Animation stepper, shared by every page's nextAnimation/prevAnimation -
+// The bounds-checked "which step am I on" bookkeeping is identical for any
+// page: clamp between 0 and sections.length - 1, no-op at the edges or when the
+// target doesn't change, and sync the shared textbox the moment a real move
+// happens. A page with no sections (roadPage) gets a stepper whose next()/
+// prev() are always no-ops for free — nothing else to special-case.
+// `onStep(index)` is optional: it's where a page reacts to the move (e.g.
+// ecuPage kicks off its envelope's flight to the new step's waypoint).
+export function createAnimationStepper(sections, onStep) {
+  let index = 0;
+
+  function goTo(target) {
+    if (target < 0 || target >= sections.length || target === index) return;
+    index = target;
+    applyTextBox(sections[index]);
+    onStep?.(index);
+  }
+
+  return {
+    next: () => goTo(index + 1),
+    prev: () => goTo(index - 1),
+    reset() {
+      index = 0;
+      applyTextBox(sections[0]);
+    },
+    get index() {
+      return index;
+    },
+    get count() {
+      return sections.length;
+    },
+  };
+}
+
 // ---- HUD DOM helpers, shared by every page ---------------------------------
 const bannerEl = document.getElementById("mail-banner");
 const bannerTextEl = bannerEl ? bannerEl.querySelector(".mail-text") : null;

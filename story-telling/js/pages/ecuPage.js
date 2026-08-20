@@ -6,7 +6,7 @@ import {
   roundRectPath,
   loadPageHeader,
   applyPageHeader,
-  applyTextBox,
+  createAnimationStepper,
   hideBanner,
 } from "../common.js";
 
@@ -327,7 +327,6 @@ export async function createEcuPage() {
   ];
   // Which node glows once the envelope has landed at each step (null = none yet).
   const GLOW_TARGETS = [null, v2xNode, adaNode, iviNode];
-  const animationCount = header.sections.length; // 4, from content/ecu.md's four `## ` headings
 
   // ---- Live customization: click-free HTML controls, one per ECU --------
   const panel = document.getElementById("ecu-customize-panel");
@@ -347,13 +346,15 @@ export async function createEcuPage() {
 
   const clock = new THREE.Clock();
 
-  // The page's "animation" is which of the 4 relay steps is showing.
-  // eventIndex is the step currently settled on screen; while transitioning
-  // is true, the envelope is mid-flight from one waypoint to the next and
-  // eventIndex hasn't caught up yet. Step 0 (idle) has its own small
-  // continuous wiggle; steps 1-3 are fully static once landed — "animation
-  // stops" until the next up/down press starts a new transition.
-  let eventIndex = 0;
+  // `settledIndex` is the step actually landed on screen (what the glow and
+  // the envelope's parked position reflect); while transitioning is true,
+  // the envelope is mid-flight toward it and settledIndex hasn't caught up
+  // yet. Step 0 (idle) has its own small continuous wiggle; steps 1-3 are
+  // fully static once landed — "animation stops" until the next up/down
+  // press starts a new transition. The stepper (shared with roadPage) owns
+  // which step is *selected* — its onStep callback below is what kicks off
+  // that transition, and it syncs the shared textbox on its own.
+  let settledIndex = 0;
   let transitioning = false;
   let transitionElapsed = 0;
   let transitionFrom = WAYPOINTS[0];
@@ -366,28 +367,13 @@ export async function createEcuPage() {
     for (const node of nodes) node.setGlow(node === target ? ACTIVE_GLOW : BASE_GLOW);
   }
 
-  /** Renders the section paired 1:1 with `index` into the shared textbox. */
-  function loadNextTextBox(index) {
-    applyTextBox(header.sections[index]);
-  }
-
-  function goToEvent(targetIndex) {
-    if (targetIndex < 0 || targetIndex >= animationCount || targetIndex === eventIndex) return;
-    transitionFrom = WAYPOINTS[eventIndex];
+  const stepper = createAnimationStepper(header.sections, (targetIndex) => {
+    transitionFrom = WAYPOINTS[settledIndex];
     transitionTo = WAYPOINTS[targetIndex];
     transitionElapsed = 0;
     transitioning = true;
     pendingIndex = targetIndex;
-    loadNextTextBox(targetIndex);
-  }
-
-  function nextAnimation() {
-    goToEvent(eventIndex + 1);
-  }
-
-  function prevAnimation() {
-    goToEvent(eventIndex - 1);
-  }
+  });
 
   function update(pauseFactor = 1) {
     const rawDt = Math.min(clock.getDelta(), 0.05);
@@ -399,13 +385,13 @@ export async function createEcuPage() {
       mailSprite.position.lerpVectors(transitionFrom, transitionTo, smoothstep(t));
       if (t >= 1) {
         transitioning = false;
-        eventIndex = pendingIndex;
-        applyStaticGlow(eventIndex);
+        settledIndex = pendingIndex;
+        applyStaticGlow(settledIndex);
       }
       return;
     }
 
-    if (eventIndex === 0) {
+    if (settledIndex === 0) {
       // Idle wiggle: the envelope hasn't been sent anywhere yet.
       idleElapsed += dt;
       mailSprite.position.set(
@@ -422,14 +408,14 @@ export async function createEcuPage() {
     applyPageHeader(header);
     hideBanner(); // clears whatever roadPage's own banner was showing
     panel?.classList.remove("hidden");
-    eventIndex = 0;
+    settledIndex = 0;
     transitioning = false;
     transitionElapsed = 0;
     idleElapsed = 0;
     mailSprite.visible = true;
     mailSprite.position.copy(WAYPOINTS[0]);
     applyStaticGlow(0);
-    loadNextTextBox(0);
+    stepper.reset();
     clock.start();
   }
 
@@ -444,10 +430,10 @@ export async function createEcuPage() {
     update,
     onEnter,
     onExit,
-    nextAnimation,
-    prevAnimation,
+    nextAnimation: stepper.next,
+    prevAnimation: stepper.prev,
     get animationLabel() {
-      return `Step ${eventIndex + 1} of ${animationCount}`;
+      return `Step ${stepper.index + 1} of ${stepper.count}`;
     },
   };
 }
