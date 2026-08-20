@@ -6,14 +6,13 @@ import {
   roundRectPath,
   loadPageHeader,
   applyPageHeader,
-  showBanner,
+  applyTextBox,
   hideBanner,
 } from "../common.js";
 
-const BANNER_TEXT = "V2X-ECU received the relayed message";
-
-const T_FLIGHT_START = 0.6;
-const T_FLIGHT_END = 2.2;
+const TRANSITION_DURATION = 1.4; // seconds for one envelope leg (idle -> V2X, V2X -> ADA, ADA -> IVI)
+const BASE_GLOW = 0.35;
+const ACTIVE_GLOW = 0.95;
 
 // ---- Modern flat icon glyphs -----------------------------------------------
 // Every icon draws into a local 0..size box (no clearRect — the card
@@ -254,8 +253,13 @@ function buildBlueprintBackdrop() {
 /**
  * Camera cuts inside Vehicle A to its three ECUs, laid out like a blueprint
  * diagram — a staggered flow (top-left to bottom-right) with orthogonal
- * wiring, not a single horizontal row. The relayed mail arrives first at
- * V2X-ECU and is absorbed there; the scene then freezes.
+ * wiring, not a single horizontal row. The relayed CPM travels the wire in
+ * 4 discrete steps, each gated behind an up-key press and paired 1:1 with a
+ * `## ` section in content/ecu.md (shown in the shared textbox):
+ *   0 — idle: the envelope waits near V2X-ECU (the page's starting state)
+ *   1 — envelope arrives at V2X-ECU; it glows
+ *   2 — envelope moves V2X-ECU -> ADA-ECU; ADA-ECU glows
+ *   3 — envelope moves ADA-ECU -> IVI-ECU; IVI-ECU glows
  */
 export async function createEcuPage() {
   const header = await loadPageHeader("content/ecu.md");
@@ -286,7 +290,6 @@ export async function createEcuPage() {
   const adaNode = buildEcuNode({ label: "ADA-ECU", position: ADA_POS, preset: APPEARANCE_PRESETS.ada });
   const iviNode = buildEcuNode({ label: "IVI-ECU", position: IVI_POS, preset: APPEARANCE_PRESETS.ivi });
   const nodes = [v2xNode, adaNode, iviNode];
-  const NODE_LABELS = ["V2X-ECU", "ADA-ECU", "IVI-ECU"];
   scene.add(v2xNode.group, adaNode.group, iviNode.group);
 
   const wireColor = 0x7fe8ff;
@@ -314,8 +317,17 @@ export async function createEcuPage() {
   const mailSprite = buildEnvelopeSprite();
   scene.add(mailSprite);
 
-  const envelopeStart = new THREE.Vector3(V2X_POS.x - 2.5, V2X_POS.y + 4, 2);
-  const catchPoint = new THREE.Vector3(V2X_POS.x, V2X_POS.y + halfH + 0.3, 0.2);
+  // One waypoint per animation step: 0 is where the envelope idles before
+  // the first up-key press, 1-3 are where it lands on each ECU in turn.
+  const WAYPOINTS = [
+    new THREE.Vector3(V2X_POS.x - 2.5, V2X_POS.y + 4, 2), // idle, near V2X-ECU
+    new THREE.Vector3(V2X_POS.x, V2X_POS.y + halfH + 0.3, 0.2), // landed on V2X-ECU
+    new THREE.Vector3(ADA_POS.x, ADA_POS.y + halfH + 0.3, 0.2), // landed on ADA-ECU
+    new THREE.Vector3(IVI_POS.x, IVI_POS.y + halfH + 0.3, 0.2), // landed on IVI-ECU
+  ];
+  // Which node glows once the envelope has landed at each step (null = none yet).
+  const GLOW_TARGETS = [null, v2xNode, adaNode, iviNode];
+  const animationCount = header.sections.length; // 4, from content/ecu.md's four `## ` headings
 
   // ---- Live customization: click-free HTML controls, one per ECU --------
   const panel = document.getElementById("ecu-customize-panel");
@@ -334,54 +346,90 @@ export async function createEcuPage() {
   }
 
   const clock = new THREE.Clock();
-  let virtualElapsed = 0;
-  let frozen = false;
 
-  // This page's "animation" is which ECU is spotlighted — nextAnimation/
-  // prevAnimation (the up/down keys) cycle it instead of changing a rate.
-  let highlightIndex = 0;
+  // The page's "animation" is which of the 4 relay steps is showing.
+  // eventIndex is the step currently settled on screen; while transitioning
+  // is true, the envelope is mid-flight from one waypoint to the next and
+  // eventIndex hasn't caught up yet. Step 0 (idle) has its own small
+  // continuous wiggle; steps 1-3 are fully static once landed — "animation
+  // stops" until the next up/down press starts a new transition.
+  let eventIndex = 0;
+  let transitioning = false;
+  let transitionElapsed = 0;
+  let transitionFrom = WAYPOINTS[0];
+  let transitionTo = WAYPOINTS[0];
+  let pendingIndex = 0;
+  let idleElapsed = 0;
+
+  function applyStaticGlow(index) {
+    const target = GLOW_TARGETS[index];
+    for (const node of nodes) node.setGlow(node === target ? ACTIVE_GLOW : BASE_GLOW);
+  }
+
+  /** Renders the section paired 1:1 with `index` into the shared textbox. */
+  function loadNextTextBox(index) {
+    applyTextBox(header.sections[index]);
+  }
+
+  function goToEvent(targetIndex) {
+    if (targetIndex < 0 || targetIndex >= animationCount || targetIndex === eventIndex) return;
+    transitionFrom = WAYPOINTS[eventIndex];
+    transitionTo = WAYPOINTS[targetIndex];
+    transitionElapsed = 0;
+    transitioning = true;
+    pendingIndex = targetIndex;
+    loadNextTextBox(targetIndex);
+  }
 
   function nextAnimation() {
-    highlightIndex = (highlightIndex + 1) % nodes.length;
+    goToEvent(eventIndex + 1);
   }
 
   function prevAnimation() {
-    highlightIndex = (highlightIndex - 1 + nodes.length) % nodes.length;
+    goToEvent(eventIndex - 1);
   }
 
   function update(pauseFactor = 1) {
     const rawDt = Math.min(clock.getDelta(), 0.05);
-    if (frozen) return;
     const dt = rawDt * pauseFactor;
-    virtualElapsed += dt;
 
-    const pulse = 0.5 + Math.sin(virtualElapsed * 2.2) * 0.22;
-    nodes.forEach((node, i) => {
-      node.setGlow(i === highlightIndex ? Math.min(1, pulse + 0.35) : pulse * 0.55);
-    });
-
-    const flightT = clamp01((virtualElapsed - T_FLIGHT_START) / (T_FLIGHT_END - T_FLIGHT_START));
-    if (virtualElapsed >= T_FLIGHT_START && flightT < 1) {
-      mailSprite.visible = true;
-      mailSprite.position.lerpVectors(envelopeStart, catchPoint, smoothstep(flightT));
+    if (transitioning) {
+      transitionElapsed += dt;
+      const t = clamp01(transitionElapsed / TRANSITION_DURATION);
+      mailSprite.position.lerpVectors(transitionFrom, transitionTo, smoothstep(t));
+      if (t >= 1) {
+        transitioning = false;
+        eventIndex = pendingIndex;
+        applyStaticGlow(eventIndex);
+      }
+      return;
     }
 
-    if (flightT >= 1 && !frozen) {
-      mailSprite.visible = false;
-      v2xNode.setGlow(1);
-      showBanner(BANNER_TEXT);
-      frozen = true;
+    if (eventIndex === 0) {
+      // Idle wiggle: the envelope hasn't been sent anywhere yet.
+      idleElapsed += dt;
+      mailSprite.position.set(
+        WAYPOINTS[0].x + Math.sin(idleElapsed * 5) * 0.25,
+        WAYPOINTS[0].y + Math.cos(idleElapsed * 3.3) * 0.18,
+        WAYPOINTS[0].z
+      );
     }
+    // Steps 1-3, once landed, need no further per-frame work — the scene
+    // stays exactly as applyStaticGlow/the envelope's parked position left it.
   }
 
   function onEnter() {
     applyPageHeader(header);
-    hideBanner(); // this page replays from scratch each visit and re-shows its own banner on catch
+    hideBanner(); // clears whatever roadPage's own banner was showing
     panel?.classList.remove("hidden");
-    frozen = false;
-    virtualElapsed = 0;
-    highlightIndex = 0;
-    mailSprite.visible = false;
+    eventIndex = 0;
+    transitioning = false;
+    transitionElapsed = 0;
+    idleElapsed = 0;
+    mailSprite.visible = true;
+    mailSprite.position.copy(WAYPOINTS[0]);
+    applyStaticGlow(0);
+    loadNextTextBox(0);
     clock.start();
   }
 
@@ -399,7 +447,7 @@ export async function createEcuPage() {
     nextAnimation,
     prevAnimation,
     get animationLabel() {
-      return `Highlighting ${NODE_LABELS[highlightIndex]}`;
+      return `Step ${eventIndex + 1} of ${animationCount}`;
     },
   };
 }

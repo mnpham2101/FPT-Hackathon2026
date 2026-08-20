@@ -168,3 +168,44 @@ html, body {
 .customize-btn:hover {
   background: rgba(127, 232, 255, 0.2);
 }
+
+#animation-textbox {
+  position: fixed;
+  left: 50%;
+  bottom: 160px;
+  transform: translateX(-50%);
+  width: min(480px, 64vw);
+  padding: 16px 22px;
+  background: rgba(16, 22, 34, 0.85);
+  border: 1px solid rgba(127, 232, 255, 0.3);
+  border-radius: 12px;
+  color: #eaf1ff;
+  backdrop-filter: blur(6px);
+  pointer-events: none;
+  z-index: 10;
+}
+
+#animation-textbox.hidden {
+  display: none;
+}
+
+#textbox-heading {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #eef2f7;
+}
+
+#textbox-body {
+  margin-top: 6px;
+  font-size: 0.9rem;
+  color: #a9b6c9;
+  line-height: 1.5;
+}
+
+#textbox-body p {
+  margin: 4px 0;
+}
+
+#textbox-body ul {
+  margin: 4px 0 4px 1.1em;
+}

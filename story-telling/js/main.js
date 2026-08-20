@@ -41,7 +41,6 @@ function goToPage(index) {
   activePage.onEnter?.();
 
   updateNavButtons();
-  refreshPlaybackHud();
 }
 
 function updateNavButtons() {
@@ -77,6 +76,10 @@ window.addEventListener("resize", () => {
 const pause = createPauseController();
 const playbackHud = document.getElementById("hud-playback");
 
+// Refreshed every frame (see animate() below) rather than only on keydown —
+// a page's animationLabel can change mid-transition (e.g. ecuPage's "Step
+// X of 4" once the envelope lands), so a keydown-only refresh would leave
+// the readout stale for the length of that transition.
 function refreshPlaybackHud() {
   const state = pause.isPaused() ? "paused" : activePage.animationLabel ?? "";
   playbackHud.textContent = `${state} — ↑/↓ animation, ←/→ page, space to pause`;
@@ -106,16 +109,14 @@ window.addEventListener("keydown", (event) => {
       return;
   }
   event.preventDefault(); // don't let arrow keys/space scroll the page
-  refreshPlaybackHud();
 });
-
-refreshPlaybackHud();
 
 // ---- Render loop --------------------------------------------------------
 function animate() {
   requestAnimationFrame(animate);
   activePage.update(pause.getFactor());
   renderer.render(activePage.scene, activePage.camera);
+  refreshPlaybackHud();
 }
 
 animate();

@@ -18,11 +18,6 @@ export function hexToRgb(hex) {
   return { r: (hex >> 16) & 255, g: (hex >> 8) & 255, b: hex & 255 };
 }
 
-export function roundTo(value, decimals) {
-  const f = 10 ** decimals;
-  return Math.round(value * f) / f;
-}
-
 // ---- Pause control, shared by every page's animation timeline -------------
 // "Animation" (what up/down step through) is owned by each page — roadPage
 // steps its own playback speed, ecuPage steps which ECU is highlighted.
@@ -211,11 +206,48 @@ export function buildEnvelopeSprite() {
   return sprite;
 }
 
-// ---- Page header (pageTitle/pageSubtitle), loaded from markdown -----------
+// ---- Page header + sections, loaded from markdown --------------------------
 // Every page shares this exact loader/applier pair — only the markdown file
 // path differs per page. A leading `---` frontmatter block carries style
 // (colour, weight); the first `# Heading` is pageTitle; the first non-blank
-// line after it is pageSubtitle (omit it in the file to leave no subtitle).
+// line before any `## ` subsection is pageSubtitle (omit it to leave no
+// subtitle). Each `## Heading` after that starts one animation step's
+// section — its own heading plus a small rendered-markdown body (paragraphs,
+// `- `/`* ` bullet lists) — collected into `sections`. A page with no `## `
+// subsections gets an empty `sections` array (roadPage: nothing to step
+// through); a page with N of them has N steps (ecuPage: 4).
+function escapeHtml(text) {
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function renderMarkdownBody(lines) {
+  const blocks = [];
+  let listItems = null;
+  const flushList = () => {
+    if (listItems) {
+      blocks.push(`<ul>${listItems.map((item) => `<li>${item}</li>`).join("")}</ul>`);
+      listItems = null;
+    }
+  };
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) {
+      flushList();
+      continue;
+    }
+    const bullet = line.match(/^[-*]\s+(.*)$/);
+    if (bullet) {
+      listItems = listItems || [];
+      listItems.push(escapeHtml(bullet[1]));
+    } else {
+      flushList();
+      blocks.push(`<p>${escapeHtml(line)}</p>`);
+    }
+  }
+  flushList();
+  return blocks.join("");
+}
+
 function parsePageHeaderMarkdown(raw) {
   const style = {};
   let body = raw;
@@ -232,16 +264,36 @@ function parsePageHeaderMarkdown(raw) {
   const lines = body.split(/\r?\n/);
   const titleIndex = lines.findIndex((line) => line.trim().startsWith("# "));
   const pageTitle = titleIndex >= 0 ? lines[titleIndex].trim().slice(2).trim() : "";
-  const pageSubtitle =
-    lines
-      .slice(titleIndex + 1)
-      .map((line) => line.trim())
-      .find((line) => line.length > 0) || "";
 
-  return { pageTitle, pageSubtitle, style };
+  const firstSectionIndex = lines.findIndex(
+    (line, i) => i > titleIndex && line.trim().startsWith("## ")
+  );
+  const subtitleLines = lines.slice(titleIndex + 1, firstSectionIndex >= 0 ? firstSectionIndex : lines.length);
+  const pageSubtitle = subtitleLines.map((line) => line.trim()).find((line) => line.length > 0) || "";
+
+  const sections = [];
+  if (firstSectionIndex >= 0) {
+    let current = null;
+    for (let i = firstSectionIndex; i < lines.length; i++) {
+      const line = lines[i];
+      if (line.trim().startsWith("## ")) {
+        if (current) sections.push(current);
+        current = { heading: line.trim().slice(3).trim(), bodyLines: [] };
+      } else if (current) {
+        current.bodyLines.push(line);
+      }
+    }
+    if (current) sections.push(current);
+  }
+  for (const section of sections) {
+    section.bodyHtml = renderMarkdownBody(section.bodyLines);
+    delete section.bodyLines;
+  }
+
+  return { pageTitle, pageSubtitle, style, sections };
 }
 
-/** Fetches and parses one page's markdown header file. */
+/** Fetches and parses one page's markdown header + section file. */
 export async function loadPageHeader(path) {
   const res = await fetch(path);
   if (!res.ok) throw new Error(`loadPageHeader: ${path} → HTTP ${res.status}`);
@@ -263,6 +315,26 @@ export function applyPageHeader({ pageTitle = "", pageSubtitle = "", style = {} 
     subtitleEl.style.color = style.subtitleColor || "";
     subtitleEl.style.fontWeight = style.subtitleWeight || "";
   }
+}
+
+// ---- Animation-step textbox, shared by every page's nextAnimation ---------
+// One shared "caption card": whichever page's current animation step has a
+// markdown section shows it here — pass the section from `sections` (or
+// `undefined`/`null` to hide the box, which is what a page with no sections,
+// like roadPage, does every time).
+const textboxEl = document.getElementById("animation-textbox");
+const textboxHeadingEl = document.getElementById("textbox-heading");
+const textboxBodyEl = document.getElementById("textbox-body");
+
+export function applyTextBox(section) {
+  if (!textboxEl) return;
+  if (!section) {
+    textboxEl.classList.add("hidden");
+    return;
+  }
+  textboxEl.classList.remove("hidden");
+  if (textboxHeadingEl) textboxHeadingEl.textContent = section.heading;
+  if (textboxBodyEl) textboxBodyEl.innerHTML = section.bodyHtml || "";
 }
 
 // ---- HUD DOM helpers, shared by every page ---------------------------------

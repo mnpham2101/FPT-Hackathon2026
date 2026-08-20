@@ -3,22 +3,21 @@ import {
   lerp,
   clamp01,
   smoothstep,
-  roundTo,
   getToonGradient,
   addOutline,
   buildGlowSprite,
   buildEnvelopeSprite,
   loadPageHeader,
   applyPageHeader,
+  applyTextBox,
   showBanner,
   hideBanner,
 } from "../common.js";
 
-// This page's "animation" is its own playback speed — nextAnimation/
-// prevAnimation (the up/down keys) step it, independent of any other page.
-const SPEED_MIN = 0.25;
-const SPEED_MAX = 3;
-const SPEED_STEP = 0.25;
+// This page runs at a single fixed speed — it has no `## ` subsections in
+// content/road.md, so it has nothing for nextAnimation/prevAnimation to
+// step through (see the bottom of this file).
+const SPEED = 1.25;
 
 // The single ink-outline colour every "storybook" shape in this scene uses —
 // a bold, uniform outline (rather than per-object tinted outlines) is what
@@ -435,12 +434,10 @@ export async function createRoadPage({ onComplete } = {}) {
 
   // ---- Story state machine --------------------------------------------------
   // A virtual clock, not the wall clock: every timeline check below reads
-  // `virtualElapsed`, which only advances by (real delta * this page's own
-  // speed * the global pause factor). Pausing freezes it in place; speeding
-  // up (via nextAnimation) fast-forwards it.
+  // `virtualElapsed`, which only advances by (real delta * the fixed SPEED *
+  // the global pause factor). Pausing freezes it in place.
   const clock = new THREE.Clock();
   let virtualElapsed = 0;
-  let speed = 1;
   let frozen = false;
   let mailPhase = "idle"; // idle -> flying -> delivered
   let mailElapsed = 0;
@@ -506,23 +503,23 @@ export async function createRoadPage({ onComplete } = {}) {
   function update(pauseFactor = 1) {
     const rawDt = Math.min(clock.getDelta(), 0.05); // drain the real clock even while frozen/paused
     if (frozen) return;
-    const dt = rawDt * speed * pauseFactor;
+    const dt = rawDt * SPEED * pauseFactor;
     virtualElapsed += dt;
     updateCars(virtualElapsed, dt);
     updateMail(dt);
     updateCamera();
   }
 
-  function nextAnimation() {
-    speed = Math.min(SPEED_MAX, roundTo(speed + SPEED_STEP, 2));
-  }
-
-  function prevAnimation() {
-    speed = Math.max(SPEED_MIN, roundTo(speed - SPEED_STEP, 2));
-  }
+  // content/road.md has no `## ` subsections, so header.sections is empty —
+  // there is nothing to step to. These are still exposed (rather than
+  // omitted) so every page implements the same nextAnimation/prevAnimation
+  // interface; they're just no-ops here.
+  function nextAnimation() {}
+  function prevAnimation() {}
 
   function onEnter() {
     applyPageHeader(header);
+    applyTextBox(header.sections[0]); // always undefined here — hides the textbox
     // Restore this page's own banner state rather than inheriting whatever
     // the previously active page left the shared banner showing.
     if (completed) {
@@ -545,8 +542,6 @@ export async function createRoadPage({ onComplete } = {}) {
     onExit,
     nextAnimation,
     prevAnimation,
-    get animationLabel() {
-      return `${speed.toFixed(2)}x speed`;
-    },
+    animationLabel: "Playing",
   };
 }
