@@ -144,7 +144,30 @@ The project **STILL REMAINS POSITIVELY PROFITABLE (EBITDA +$1,850,000 USD in Yea
 
 ---
 
-## 6. Real-World Data Sources & References
+## 6. System Thinking & Stakeholder Ecosystem Matrix
+
+```text
+                        SYSTEM THINKING STAKEHOLDER ECOSYSTEM
+                                          │
+    ┌───────────────────────┬─────────────┴─────────────┬───────────────────────┐
+    ▼                       ▼                           ▼                       ▼
+[1. Drivers & Users]  [2. Automotive OEMs]   [3. Logistics Fleets]  [4. Insurers & Society]
+• 81% Crash Avoidance • Euro NCAP 5-Star     • $4.8M 5-Yr Savings   • 15% Claim Reduction
+• < 1.9ms Early Alert • 95% Sensor BOM Savings• Zero Retrofit OTA    • Vision Zero Safety
+```
+
+| Stakeholder Group | Who Benefits (Lợi Ích) | Who Incurs Costs / Risks (Chi Phí) | System Balance |
+|---|---|---|---|
+| **1. Drivers & Users (Ego A)** | **Life Safety:** 81% reduction in NLOS blind-spot crashes; early alert 1.9ms before collision. | Minor cost included in vehicle purchase (~$30 USD). | **++++ Net Positive** |
+| **2. Automotive OEMs (VinFast, VW)** | **Market Dominance:** Instant Euro NCAP 2026 5-Star rating; 95% sensor BOM savings ($100 vs $3,500 LiDAR). | Software integration & $30/vehicle license fee. | **++++ Net Positive** |
+| **3. Commercial Fleets (Logistics)**| **Cost Savings:** $4,800,000 USD 5-year savings per 1k trucks; prevents convoy pile-ups. | $10 USD/vehicle/month SaaS subscription fee. | **++++ Net Positive** |
+| **4. Auto Insurers (Allianz)** | **Risk Reduction:** Massive drop in severe claim payout frequency. | Must offer 15% premium discount to attract V2X fleets. | **+++ Net Positive** |
+| **5. Government & Society** | **Public Safety:** Progress toward "Vision Zero" traffic deaths. | 5.9GHz frequency band allocation (Free public spectrum).| **++++ Net Positive** |
+| **6. Legacy 3D LiDAR Vendors** | *None* | Loss of low-end blind-spot detection market share to V2X software. | **- Disrupted** |
+
+---
+
+## 7. Real-World Data Sources & References
 
 All financial calculations, accident reduction percentages, and hardware BOM estimates in this document are directly sourced from the following published automotive industry references:
 
