@@ -152,11 +152,11 @@ function buildCardTexture(label, { icon, accent }) {
 
 /**
  * One reusable ECU card: a flat, unlit 2D tile with a soft glow behind it —
- * every node shares this exact construction and the same glow-pulse
- * behaviour (`setGlow`). Only `label`, `position` and the starting
- * appearance preset vary per call, and the appearance itself can be swapped
- * live at any time via `setAppearance`, which is what the on-screen
- * "customize" buttons call.
+ * every node shares this exact construction and the same glow behaviour
+ * (`setGlow`). Only `label`, `position` and the starting appearance preset
+ * vary per call; the appearance can be swapped to a specific preset at any
+ * time via `setAppearanceIndex`, which is how the relay animation marks a
+ * node active/visited.
  */
 function buildEcuNode({ label, position, preset }) {
   const node = new THREE.Group();
@@ -204,10 +204,6 @@ function buildEcuNode({ label, position, preset }) {
     group: node,
     setGlow(intensity) {
       glow.material.opacity = intensity;
-    },
-    cycleAppearance() {
-      currentIndex = (currentIndex + 1) % preset.length;
-      applyPreset(preset[currentIndex]);
     },
     /** Jumps straight to one preset by index — how the relay animation marks a node "active"/"visited" by colour, not just glow. */
     setAppearanceIndex(index) {
@@ -339,21 +335,6 @@ export async function createEcuPage() {
     new THREE.Vector3(ADA_POS.x, ADA_POS.y + halfH + 0.3, 0.2), // landed on ADA-ECU
     new THREE.Vector3(IVI_POS.x, IVI_POS.y + halfH + 0.3, 0.2), // landed on IVI-ECU
   ];
-  // ---- Live customization: click-free HTML controls, one per ECU --------
-  const panel = document.getElementById("ecu-customize-panel");
-  const customizeButtons = {
-    v2x: document.getElementById("customize-v2x"),
-    ada: document.getElementById("customize-ada"),
-    ivi: document.getElementById("customize-ivi"),
-  };
-  const nodeByKey = { v2x: v2xNode, ada: adaNode, ivi: iviNode };
-  const customizeHandlers = {};
-  for (const key of Object.keys(customizeButtons)) {
-    const button = customizeButtons[key];
-    if (!button) continue;
-    customizeHandlers[key] = () => nodeByKey[key].cycleAppearance();
-    button.addEventListener("click", customizeHandlers[key]);
-  }
 
   const clock = new THREE.Clock();
 
@@ -433,7 +414,6 @@ export async function createEcuPage() {
   function onEnter() {
     applyPageHeader(header);
     hideBanner(); // clears whatever roadPage's own banner was showing
-    panel?.classList.remove("hidden");
     settledIndex = 0;
     transitioning = false;
     transitionElapsed = 0;
@@ -446,7 +426,6 @@ export async function createEcuPage() {
   }
 
   function onExit() {
-    panel?.classList.add("hidden");
     clock.stop();
   }
 

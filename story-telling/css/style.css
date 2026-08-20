@@ -127,48 +127,6 @@ html, body {
   z-index: 10;
 }
 
-#ecu-customize-panel {
-  position: fixed;
-  right: 24px;
-  bottom: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 14px;
-  background: rgba(16, 22, 34, 0.7);
-  border: 1px solid rgba(120, 180, 255, 0.3);
-  border-radius: 10px;
-  backdrop-filter: blur(6px);
-  z-index: 10;
-}
-
-#ecu-customize-panel.hidden {
-  display: none;
-}
-
-.customize-title {
-  color: #a9b6c9;
-  font-size: 0.78rem;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-  margin-bottom: 2px;
-}
-
-.customize-btn {
-  padding: 8px 16px;
-  border-radius: 6px;
-  border: 1px solid rgba(127, 232, 255, 0.35);
-  background: rgba(127, 232, 255, 0.08);
-  color: #eaf1ff;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: background 0.2s ease;
-}
-
-.customize-btn:hover {
-  background: rgba(127, 232, 255, 0.2);
-}
-
 #animation-textbox {
   position: fixed;
   left: 50%;
