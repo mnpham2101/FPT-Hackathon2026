@@ -30,9 +30,13 @@ html, body {
 }
 
 #hud-title {
-  font-size: 1.8rem;
+  font-size: 2.6rem;
   font-weight: 600;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.02em;
+  /* Own shadow rather than inheriting #hud's flatter one — a soft cyan glow
+     under the drop shadow, matching the blueprint's accent colour, is what
+     reads as "impressive" on a title this much larger. */
+  text-shadow: 0 3px 16px rgba(0, 0, 0, 0.65), 0 0 30px rgba(127, 232, 255, 0.3);
 }
 
 #hud-subtitle {
