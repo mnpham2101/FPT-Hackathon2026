@@ -13,6 +13,10 @@ This page contains links to article, highlighting the main knowledge base that h
 
 ## V2X
 
+| Document | Topic |
+|---|---|
+| [The limits of V2X CPM for cooperative-awareness warnings](v2x-cpm-limitations.md) | What CPM does and doesn't standardize, why thresholds can't be universal, broadcast-storm congestion control, and why a station ID doesn't prove lane relevance |
+
 ## Object detection 
 
 ## CI
