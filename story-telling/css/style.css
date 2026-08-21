@@ -127,21 +127,28 @@ html, body {
   z-index: 10;
 }
 
-/* No panel fill on any textbox, small or large — the blueprint grid (or
-   ecuPage's diagram) shows straight through instead of sitting behind an
-   opaque slab. Legibility comes from text-shadow on the heading/body instead
-   of a background, the same technique #hud already uses over the 3D scene. */
+/* No panel fill on any textbox — the blueprint grid (or ecuPage's diagram)
+   shows straight through instead of sitting behind an opaque slab.
+   Legibility comes from text-shadow on the heading/body instead of a
+   background, the same technique #hud already uses over the 3D scene. Every
+   textbox occupies most of the viewport, anchored below 12vh — clearing only
+   the HTML title/subtitle above (#hud); content pages' own progress dots
+   live near the bottom of the 3D scene (js/pages/contentPage.js
+   DOTS_Y_OFFSET), not under the title, so nothing else reserves space up
+   here. */
 #animation-textbox {
   position: fixed;
+  top: 12vh;
   left: 50%;
-  bottom: 64px;
   transform: translateX(-50%);
-  width: min(480px, 64vw);
-  padding: 16px 22px;
+  width: min(1400px, 92vw);
+  max-height: calc(100vh - 12vh - 70px);
+  padding: 20px 40px;
   background: transparent;
   border: none;
   border-radius: 12px;
   color: #eaf1ff;
+  overflow: hidden;
   pointer-events: none;
   z-index: 10;
 }
@@ -151,8 +158,9 @@ html, body {
 }
 
 #textbox-heading {
-  font-size: 1.05rem;
+  font-size: 1.7rem;
   font-weight: 600;
+  text-align: center;
   color: #eef2f7;
   text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
 }
@@ -180,37 +188,7 @@ html, body {
 
 #textbox-body .textbox-figure img {
   max-width: 100%;
-  max-height: 40vh;
+  max-height: calc(100vh - 12vh - 150px);
   border-radius: 6px;
   background: rgba(238, 242, 247, 0.04);
-}
-
-/* A section carrying a figure (a diagram, not bullet prose) is the content
-   itself, not a caption strip beside it — the box grows to fill most of the
-   viewing area instead of staying pinned to its small bottom-strip size.
-   Scoped to :has(.textbox-figure) so plain-text sections (ecuPage's step
-   captions) keep the compact bottom-strip size; the transparent/panel-free
-   look itself is the base #animation-textbox rule now, not an override here.
-   Anchored below 12vh, clearing only the HTML title/subtitle above (#hud) —
-   every content page's own progress dots now live near the bottom of the
-   3D scene (js/pages/contentPage.js DOTS_Y_OFFSET), not under the title, so
-   nothing else reserves space up here. */
-#animation-textbox:has(.textbox-figure) {
-  top: 12vh;
-  bottom: auto;
-  left: 50%;
-  transform: translateX(-50%);
-  width: min(1400px, 92vw);
-  max-height: calc(100vh - 12vh - 70px);
-  padding: 20px 40px;
-  overflow: hidden;
-}
-
-#animation-textbox:has(.textbox-figure) #textbox-heading {
-  font-size: 1.7rem;
-  text-align: center;
-}
-
-#animation-textbox:has(.textbox-figure) .textbox-figure img {
-  max-height: calc(100vh - 12vh - 150px);
 }
