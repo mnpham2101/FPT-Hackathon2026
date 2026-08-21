@@ -165,10 +165,12 @@ function buildPinDot(x, y, color) {
 
 /**
  * Camera cuts inside Vehicle A to its three ECUs, laid out like a blueprint
- * diagram — a staggered flow (top-left to bottom-right) with orthogonal
- * wiring, not a single horizontal row. The relayed CPM travels the wire in
- * 4 discrete steps, each gated behind an up-key press and paired 1:1 with a
- * `## ` section in content/ecu.md (shown in the shared textbox):
+ * diagram — a single horizontal row (left to right), all three cards sharing
+ * one y so nothing drifts up toward the title/subtitle or the per-step
+ * heading in the shared textbox (#animation-textbox, top: calc(1vh + 90px)
+ * in style.css). The relayed CPM travels the wire in 4 discrete steps, each
+ * gated behind an up-key press and paired 1:1 with a `## ` section in
+ * content/ecu.md (shown in the shared textbox):
  *   0 — idle: the envelope waits near V2X-ECU (the page's starting state)
  *   1 — envelope arrives at V2X-ECU; it glows
  *   2 — envelope moves V2X-ECU -> ADA-ECU; ADA-ECU glows
@@ -191,11 +193,15 @@ export async function createEcuPage() {
   backdrop.position.z = -2;
   scene.add(backdrop);
 
-  // Blueprint-style staggered layout: V2X (top-left) -> ADA (centre) ->
-  // IVI (bottom-right), each a step down and across from the last.
-  const V2X_POS = { x: -5, y: 3.5 };
-  const ADA_POS = { x: 0, y: 0 };
-  const IVI_POS = { x: 5, y: -3.5 };
+  // Horizontal-row layout: V2X -> ADA -> IVI, left to right, all sharing one
+  // y centred on the screen — clear of the title/subtitle above and the
+  // playback HUD below. ROW_SPACING is wider than the card itself so the
+  // three don't read as a single clump in the middle of the screen.
+  const ROW_Y = 0;
+  const ROW_SPACING = 6;
+  const V2X_POS = { x: -ROW_SPACING, y: ROW_Y };
+  const ADA_POS = { x: 0, y: ROW_Y };
+  const IVI_POS = { x: ROW_SPACING, y: ROW_Y };
   const halfW = CARD_WORLD_W / 2;
   const halfH = CARD_WORLD_H / 2;
 
@@ -205,23 +211,19 @@ export async function createEcuPage() {
   const nodes = [v2xNode, adaNode, iviNode];
   scene.add(v2xNode.group, adaNode.group, iviNode.group);
 
+  // Straight wire between adjacent card edges — no bends needed once every
+  // card sits on the same row.
   const wireColor = 0x7fe8ff;
-  const bendA = { x: V2X_POS.x, y: ADA_POS.y };
-  const bendB = { x: ADA_POS.x, y: IVI_POS.y };
   const traceGroup = new THREE.Group();
   traceGroup.add(
-    buildTraceSegment(V2X_POS.x, V2X_POS.y - halfH, bendA.x, bendA.y, wireColor),
-    buildTraceSegment(bendA.x, bendA.y, ADA_POS.x - halfW, ADA_POS.y, wireColor),
-    buildTraceSegment(ADA_POS.x, ADA_POS.y - halfH, bendB.x, bendB.y, wireColor),
-    buildTraceSegment(bendB.x, bendB.y, IVI_POS.x - halfW, IVI_POS.y, wireColor)
+    buildTraceSegment(V2X_POS.x + halfW, ROW_Y, ADA_POS.x - halfW, ROW_Y, wireColor),
+    buildTraceSegment(ADA_POS.x + halfW, ROW_Y, IVI_POS.x - halfW, ROW_Y, wireColor)
   );
   for (const [x, y] of [
-    [V2X_POS.x, V2X_POS.y - halfH],
-    [bendA.x, bendA.y],
-    [ADA_POS.x - halfW, ADA_POS.y],
-    [ADA_POS.x, ADA_POS.y - halfH],
-    [bendB.x, bendB.y],
-    [IVI_POS.x - halfW, IVI_POS.y],
+    [V2X_POS.x + halfW, ROW_Y],
+    [ADA_POS.x - halfW, ROW_Y],
+    [ADA_POS.x + halfW, ROW_Y],
+    [IVI_POS.x - halfW, ROW_Y],
   ]) {
     traceGroup.add(buildPinDot(x, y, wireColor));
   }
@@ -231,12 +233,14 @@ export async function createEcuPage() {
   scene.add(mailSprite);
 
   // One waypoint per animation step: 0 is where the envelope idles before
-  // the first up-key press, 1-3 are where it lands on each ECU in turn.
+  // the first up-key press, 1-3 are where it lands on each ECU in turn. All
+  // land along the same horizontal flight line above the row.
+  const LANDING_Y = ROW_Y + halfH + 0.3;
   const WAYPOINTS = [
-    new THREE.Vector3(V2X_POS.x - 2.5, V2X_POS.y + 4, 2), // idle, near V2X-ECU
-    new THREE.Vector3(V2X_POS.x, V2X_POS.y + halfH + 0.3, 0.2), // landed on V2X-ECU
-    new THREE.Vector3(ADA_POS.x, ADA_POS.y + halfH + 0.3, 0.2), // landed on ADA-ECU
-    new THREE.Vector3(IVI_POS.x, IVI_POS.y + halfH + 0.3, 0.2), // landed on IVI-ECU
+    new THREE.Vector3(V2X_POS.x - 2, ROW_Y + 2.3, 2), // idle, near V2X-ECU
+    new THREE.Vector3(V2X_POS.x, LANDING_Y, 0.2), // landed on V2X-ECU
+    new THREE.Vector3(ADA_POS.x, LANDING_Y, 0.2), // landed on ADA-ECU
+    new THREE.Vector3(IVI_POS.x, LANDING_Y, 0.2), // landed on IVI-ECU
   ];
 
   const clock = new THREE.Clock();
