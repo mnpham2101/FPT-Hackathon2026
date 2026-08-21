@@ -94,8 +94,8 @@ jobs:
           fi
           echo "::notice::onnxruntime 1.28.0, opencv-python-headless 5.0.0.93 and numpy 2.4.6 all install as prebuilt linux/arm64 wheels on python:3.11-slim and import cleanly"
 
-  # ---- ada-detector-tests (12.3.3.3) ----
-  # The Linux lane where the detector pytest suite runs UNSKIPPED: full pinned dependencies on
+  # ---- ada-detector-tests (12.3.3.3, 12.3.5.1) ----
+  # The Linux lane where the detector and zero-C audit pytest suites run UNSKIPPED: full pinned dependencies on
   # the runner, python 3.11 to match the node image's python:3.11-slim base. A skip here is
   # never environmental - it means a missing dependency or artifact, so it fails the lane
   # loudly instead of shrinking the suite.
@@ -108,7 +108,7 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
-      - name: Detector suite (full deps, zero skips tolerated)
+      - name: Detector and zero-C audit suites (full deps, zero skips tolerated)
         shell: bash
         run: |
           set -euo pipefail
@@ -123,20 +123,20 @@ jobs:
           # are not - an agent session holds no GitHub token, so a red run must name its test
           # in the annotation, not only in the log. -rs prints the reason line for every skip.
           set +e
-          python -m pytest ADA_ECU/detector/tests -q -rs | tee "$RUNNER_TEMP/pytest.out"
+          python -m pytest ADA_ECU/detector/tests ADA_ECU/tools/tests/test_check_zero_c.py -q -rs | tee "$RUNNER_TEMP/pytest.out"
           PYTEST_STATUS=${PIPESTATUS[0]}
           set -e
           if [ "$PYTEST_STATUS" -ne 0 ]; then
             SUMMARY=$(tail -n 15 "$RUNNER_TEMP/pytest.out" | tr '\n' '~' | tail -c 800)
-            echo "::error::detector suite failed (exit $PYTEST_STATUS): ${SUMMARY}"
+            echo "::error::detector or zero-C audit suite failed (exit $PYTEST_STATUS): ${SUMMARY}"
             exit "$PYTEST_STATUS"
           fi
 
           if grep -E 'SKIPPED|[0-9]+ skipped' "$RUNNER_TEMP/pytest.out"; then
-            echo "::error::detector suite skipped tests on the full-dependency lane - a skip here means a missing dependency or artifact"
+            echo "::error::detector or zero-C audit suite skipped tests on the full-dependency lane - a skip here means a missing dependency or artifact"
             exit 1
           fi
-          echo "[LANE] detector suite green with zero skips"
+          echo "[LANE] detector and zero-C audit suites green with zero skips"
 
   # ---- ada-detector-run (12.3.3.4) ----
   # Runs the REAL detector (ADA_ECU/detector/main.py, the committed ONNX model, the committed
