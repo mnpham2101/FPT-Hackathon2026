@@ -25,3 +25,7 @@ This page contains links to article, highlighting the main knowledge base that h
 | [ADA-ECU's perception limitations, and where each could go next](ada-perception-limitations.md) | Monocular-distance accuracy, live-feed detection range, sensor fusion, and the other risk categories not yet covered — current state and future direction for each |
 
 ## CI
+
+| Document | Topic |
+|---|---|
+| [CI Workflows, YAML and GitHub Actions](ci-yml-github-actions-deck.md) | What a CI workflow file is, the Docker actions it performs, and the tagging limitation this project lives with |

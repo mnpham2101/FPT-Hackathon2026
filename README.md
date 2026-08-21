@@ -74,7 +74,7 @@ python website/build-pages.py --bundle
 
 This also writes a self-contained copy to `dist/`. Open `dist/index.html` by double-clicking — no server, no Python needed.
 
-### Build the project delivery page
+### Build the project delivery page for Round 2
 
 Stand in the repo root directory and run:
 
@@ -83,6 +83,8 @@ python Package-Delivery-tool/build_package.py
 ```
 
 The output is `Package-Delivery-tool/Hackathon-Delivery/` and `Hackathon-Delivery.zip`.
+
+### Build the project delivery page for Round 3
 
 ## Project delivery
 
