@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Our-work-process mind map: [1] Knowledge Base forks into a frozen path
+     (2 Requirements -> 3 Phase planning -> 4 Proposals, dashed/grey, dead-ends)
+     and a looping path (5 HLD Design -> 6 Task/subtask planning ->
+     7 Implementation and testing -> back to 1, green dashed return arrow).
+     Cards glow in step order, 10s apart, via a single 70s CSS keyframe
+     replayed per card with a staggered animation-delay (card N delays
+     (N-1)*10s) — this is a declarative CSS animation, so it plays even
+     though the SVG is loaded as a plain <img>. Glow/border colour cycles
+     through the FPT logo triad (orange #F37021, green #50B848, blue
+     #034EA2 — presentation/template/template.md's default palette),
+     repeating orange/green/blue across the 7 cards in step order. -->
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1"
+     width="1360px" height="680px" viewBox="0 0 1360 680" font-family="Segoe UI, Arial, sans-serif">
+  <defs>
+    <marker id="arrTeal" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#33B2C1"/>
+    </marker>
+    <marker id="arrGreen" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#50B848"/>
+    </marker>
+    <filter id="softGlow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="10"/>
+    </filter>
+
+    <!-- Icons, drawn in a local 0..56 box, stroke-only -->
+    <g id="icon-book" stroke="#eef2f7" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M28,14 L28,48 C24,44 16,42 8,44 L8,14 C16,12 24,14 28,14 Z"/>
+      <path d="M28,14 L28,48 C32,44 40,42 48,44 L48,14 C40,12 32,14 28,14 Z"/>
+      <path d="M13,21 L23,20 M13,28 L23,27"/>
+      <path d="M33,20 L43,21 M33,27 L43,28"/>
+    </g>
+    <g id="icon-checklist" stroke="#eef2f7" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="12" y="10" width="32" height="40" rx="4"/>
+      <rect x="20" y="5" width="16" height="8" rx="2" fill="#141a2e"/>
+      <path d="M18,22 L22,26 L29,18"/>
+      <path d="M18,34 L22,38 L29,30"/>
+      <path d="M34,22 L38,22 M34,34 L38,34"/>
+    </g>
+    <g id="icon-calendar" stroke="#eef2f7" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="8" y="12" width="40" height="36" rx="4"/>
+      <path d="M8,22 L48,22"/>
+      <path d="M18,6 L18,16 M38,6 L38,16"/>
+      <path d="M14,30 L24,30 M14,37 L28,37 M14,44 L20,44"/>
+    </g>
+    <g id="icon-bulb" stroke="#eef2f7" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="28" cy="22" r="14"/>
+      <path d="M22,22 L27,28 L34,18"/>
+      <rect x="22" y="35" width="12" height="8" rx="2"/>
+      <path d="M23,47 L33,47 M23,51 L33,51"/>
+    </g>
+    <g id="icon-layers" stroke="#eef2f7" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <polygon points="28,6 50,17 28,28 6,17"/>
+      <polyline points="6,27 28,38 50,27"/>
+      <polyline points="6,37 28,48 50,37"/>
+    </g>
+    <g id="icon-tasktree" stroke="#eef2f7" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="6" y="7" width="13" height="13" rx="2"/>
+      <path d="M10,13 L13,16 L16,11"/>
+      <path d="M12,20 L12,28 L22,28"/>
+      <path d="M12,28 L12,40 L22,40"/>
+      <rect x="22" y="23" width="11" height="11" rx="2"/>
+      <rect x="22" y="35" width="11" height="11" rx="2"/>
+    </g>
+    <g id="icon-code" stroke="#eef2f7" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M20,16 L8,28 L20,40"/>
+      <path d="M36,16 L48,28 L36,40"/>
+      <path d="M24,32 L27,36 L34,24"/>
+    </g>
+  </defs>
+
+  <style>
+    .glow { opacity: 0.35; animation: glowPulse 70s linear infinite; }
+    .c1 .glow { animation-delay: 0s; }
+    .c2 .glow { animation-delay: 10s; }
+    .c3 .glow { animation-delay: 20s; }
+    .c4 .glow { animation-delay: 30s; }
+    .c5 .glow { animation-delay: 40s; }
+    .c6 .glow { animation-delay: 50s; }
+    .c7 .glow { animation-delay: 60s; }
+    @keyframes glowPulse {
+      0%   { opacity: 1; }
+      7%   { opacity: 1; }
+      13%  { opacity: 0.35; }
+      100% { opacity: 0.35; }
+    }
+  </style>
+
+  <!-- ============ Connectors ============ -->
+  <path d="M250,320 L295,320 L295,110 L390,110" fill="none" stroke="#33B2C1" stroke-width="2.6" marker-end="url(#arrTeal)"/>
+  <path d="M600,110 L740,110" fill="none" stroke="#33B2C1" stroke-width="2.6" marker-end="url(#arrTeal)"/>
+  <path d="M950,110 L1090,110" fill="none" stroke="#33B2C1" stroke-width="2.6" marker-end="url(#arrTeal)"/>
+  <path d="M250,320 L295,320 L295,530 L390,530" fill="none" stroke="#33B2C1" stroke-width="2.6" marker-end="url(#arrTeal)"/>
+  <path d="M600,530 L740,530" fill="none" stroke="#33B2C1" stroke-width="2.6" marker-end="url(#arrTeal)"/>
+  <path d="M950,530 L1090,530" fill="none" stroke="#33B2C1" stroke-width="2.6" marker-end="url(#arrTeal)"/>
+  <path d="M1195,600 L1195,635 L145,635 L145,390" fill="none" stroke="#50B848" stroke-width="2.6" stroke-dasharray="7,5" marker-end="url(#arrGreen)"/>
+  <text x="670" y="653" text-anchor="middle" font-size="16" fill="#50B848">loops: 5 &#8594; 6 &#8594; 7 &#8594; 1 repeats</text>
+
+  <!-- ============ Card 1: Knowledge Base (hub) ============ -->
+  <g class="card c1">
+    <rect class="glow" x="10" y="220" width="270" height="200" rx="30" fill="#F37021" filter="url(#softGlow)"/>
+    <rect x="40" y="250" width="210" height="140" rx="16" fill="#141a2e" stroke="#F37021" stroke-width="2.5"/>
+    <text x="58" y="278" font-size="20" font-weight="bold" fill="#F37021">&#9312;</text>
+    <use href="#icon-book" x="117" y="262"/>
+    <text x="145" y="368" text-anchor="middle" font-size="19" font-weight="bold" fill="#eef2f7">Knowledge Base</text>
+  </g>
+
+  <!-- ============ Card 2: Requirements (frozen) ============ -->
+  <g class="card c2">
+    <rect class="glow" x="360" y="10" width="270" height="200" rx="30" fill="#50B848" filter="url(#softGlow)"/>
+    <rect x="390" y="40" width="210" height="140" rx="16" fill="#141a2e" stroke="#50B848" stroke-width="2.5" stroke-dasharray="9,6"/>
+    <text x="408" y="68" font-size="20" font-weight="bold" fill="#50B848">&#9313;</text>
+    <use href="#icon-checklist" x="467" y="52"/>
+    <text x="495" y="158" text-anchor="middle" font-size="19" font-weight="bold" fill="#eef2f7">Requirements</text>
+  </g>
+
+  <!-- ============ Card 3: Phase planning (frozen) ============ -->
+  <g class="card c3">
+    <rect class="glow" x="710" y="10" width="270" height="200" rx="30" fill="#034EA2" filter="url(#softGlow)"/>
+    <rect x="740" y="40" width="210" height="140" rx="16" fill="#141a2e" stroke="#034EA2" stroke-width="2.5" stroke-dasharray="9,6"/>
+    <text x="758" y="68" font-size="20" font-weight="bold" fill="#3d9bff">&#9314;</text>
+    <use href="#icon-calendar" x="817" y="52"/>
+    <text x="845" y="158" text-anchor="middle" font-size="19" font-weight="bold" fill="#eef2f7">Phase planning</text>
+  </g>
+
+  <!-- ============ Card 4: Proposals (frozen) ============ -->
+  <g class="card c4">
+    <rect class="glow" x="1060" y="10" width="270" height="200" rx="30" fill="#F37021" filter="url(#softGlow)"/>
+    <rect x="1090" y="40" width="210" height="140" rx="16" fill="#141a2e" stroke="#F37021" stroke-width="2.5" stroke-dasharray="9,6"/>
+    <text x="1108" y="68" font-size="20" font-weight="bold" fill="#F37021">&#9315;</text>
+    <use href="#icon-bulb" x="1167" y="52"/>
+    <text x="1195" y="158" text-anchor="middle" font-size="19" font-weight="bold" fill="#eef2f7">Proposals</text>
+  </g>
+
+  <!-- ============ Card 5: HLD Design (loop) ============ -->
+  <g class="card c5">
+    <rect class="glow" x="360" y="430" width="270" height="200" rx="30" fill="#50B848" filter="url(#softGlow)"/>
+    <rect x="390" y="460" width="210" height="140" rx="16" fill="#141a2e" stroke="#50B848" stroke-width="2.5"/>
+    <text x="408" y="488" font-size="20" font-weight="bold" fill="#50B848">&#9316;</text>
+    <use href="#icon-layers" x="467" y="472"/>
+    <text x="495" y="578" text-anchor="middle" font-size="19" font-weight="bold" fill="#eef2f7">HLD Design</text>
+    <text x="495" y="596" text-anchor="middle" font-size="13" fill="#9aa4c0">system + ECU</text>
+  </g>
+
+  <!-- ============ Card 6: Task and subtask planning (loop) ============ -->
+  <g class="card c6">
+    <rect class="glow" x="710" y="430" width="270" height="200" rx="30" fill="#034EA2" filter="url(#softGlow)"/>
+    <rect x="740" y="460" width="210" height="140" rx="16" fill="#141a2e" stroke="#034EA2" stroke-width="2.5"/>
+    <text x="758" y="488" font-size="20" font-weight="bold" fill="#3d9bff">&#9317;</text>
+    <use href="#icon-tasktree" x="817" y="472"/>
+    <text x="845" y="578" text-anchor="middle" font-size="19" font-weight="bold" fill="#eef2f7">Task planning</text>
+    <text x="845" y="596" text-anchor="middle" font-size="13" fill="#9aa4c0">+ subtasks</text>
+  </g>
+
+  <!-- ============ Card 7: Implementation and testing (loop) ============ -->
+  <g class="card c7">
+    <rect class="glow" x="1060" y="430" width="270" height="200" rx="30" fill="#F37021" filter="url(#softGlow)"/>
+    <rect x="1090" y="460" width="210" height="140" rx="16" fill="#141a2e" stroke="#F37021" stroke-width="2.5"/>
+    <text x="1108" y="488" font-size="20" font-weight="bold" fill="#F37021">&#9318;</text>
+    <use href="#icon-code" x="1167" y="472"/>
+    <text x="1195" y="578" text-anchor="middle" font-size="19" font-weight="bold" fill="#eef2f7">Implementation</text>
+    <text x="1195" y="596" text-anchor="middle" font-size="13" fill="#9aa4c0">+ testing</text>
+  </g>
+</svg>
