@@ -172,9 +172,9 @@ html, body {
 #textbox-body {
   margin-top: 6px;
   font-size: 0.9rem;
-  color: #a9b6c9;
+  color: #f5f7fb;
   line-height: 1.5;
-  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.6);
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.75);
 }
 
 #textbox-body p {
