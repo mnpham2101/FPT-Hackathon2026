@@ -148,6 +148,160 @@ export function buildIconTexture(draw, size = 128) {
   return new THREE.CanvasTexture(canvas);
 }
 
+// ---- Flat icon glyphs, shared by every card-style node/topic across pages -
+// Every icon draws into a local 0..size box (no clearRect — the caller's
+// card background already handles that). radar/mcu/display are ecuPage's
+// three ECUs; checklist/milestone serve the content pages (our-work-process,
+// the-road-ahead).
+export const ICON_LIBRARY = {
+  radar(ctx, size, accent) {
+    const cx = size * 0.5;
+    const cy = size * 0.5;
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = size * 0.03;
+    for (let i = 1; i <= 3; i++) {
+      ctx.beginPath();
+      ctx.arc(cx, cy, size * 0.1 * i, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.fillStyle = accent;
+    ctx.globalAlpha = 0.35;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, size * 0.3, -Math.PI * 0.5, -Math.PI * 0.2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.beginPath();
+    ctx.arc(cx, cy, size * 0.035, 0, Math.PI * 2);
+    ctx.fill();
+  },
+  mcu(ctx, size, accent) {
+    const pad = size * 0.28;
+    const w = size - pad * 2;
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = size * 0.04;
+    roundRectPath(ctx, pad, pad, w, w, size * 0.06);
+    ctx.stroke();
+    ctx.strokeRect(pad + w * 0.22, pad + w * 0.22, w * 0.56, w * 0.56);
+    ctx.lineCap = "round";
+    for (let i = 0; i < 3; i++) {
+      const t = pad + w * (0.22 + i * 0.28);
+      for (const [x1, y1, x2, y2] of [
+        [t, pad, t, pad - size * 0.06],
+        [t, pad + w, t, pad + w + size * 0.06],
+        [pad, t, pad - size * 0.06, t],
+        [pad + w, t, pad + w + size * 0.06, t],
+      ]) {
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+      }
+    }
+  },
+  display(ctx, size, accent) {
+    const pad = size * 0.16;
+    const w = size - pad * 2;
+    const h = w * 0.68;
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = size * 0.045;
+    roundRectPath(ctx, pad, pad, w, h, size * 0.06);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(size * 0.5, pad + h);
+    ctx.lineTo(size * 0.5, pad + h + size * 0.08);
+    ctx.moveTo(size * 0.38, pad + h + size * 0.08);
+    ctx.lineTo(size * 0.62, pad + h + size * 0.08);
+    ctx.stroke();
+  },
+  checklist(ctx, size, accent) {
+    const pad = size * 0.18;
+    const w = size - pad * 2;
+    const h = w * 1.15;
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = size * 0.035;
+    roundRectPath(ctx, pad, pad, w, h, size * 0.05);
+    ctx.stroke();
+    ctx.fillStyle = accent;
+    roundRectPath(ctx, size * 0.38, pad - size * 0.05, size * 0.24, size * 0.09, size * 0.02);
+    ctx.fill();
+    ctx.lineCap = "round";
+    const rowStartY = pad + h * 0.24;
+    const rowGap = h * 0.24;
+    for (let i = 0; i < 3; i++) {
+      const y = rowStartY + i * rowGap;
+      ctx.strokeRect(pad + w * 0.1, y - w * 0.05, w * 0.1, w * 0.1);
+      if (i < 2) {
+        ctx.beginPath();
+        ctx.moveTo(pad + w * 0.115, y);
+        ctx.lineTo(pad + w * 0.15, y + w * 0.04);
+        ctx.lineTo(pad + w * 0.195, y - w * 0.04);
+        ctx.stroke();
+      }
+      ctx.beginPath();
+      ctx.moveTo(pad + w * 0.3, y);
+      ctx.lineTo(pad + w * 0.85, y);
+      ctx.stroke();
+    }
+  },
+  milestone(ctx, size, accent) {
+    const cx = size * 0.5;
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = size * 0.04;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(cx - size * 0.18, size * 0.82);
+    ctx.lineTo(cx - size * 0.18, size * 0.14);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(cx - size * 0.3, size * 0.82);
+    ctx.lineTo(cx - size * 0.06, size * 0.82);
+    ctx.stroke();
+    ctx.fillStyle = accent;
+    ctx.globalAlpha = 0.85;
+    ctx.beginPath();
+    ctx.moveTo(cx - size * 0.18, size * 0.16);
+    ctx.lineTo(cx + size * 0.32, size * 0.28);
+    ctx.lineTo(cx - size * 0.18, size * 0.4);
+    ctx.closePath();
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  },
+};
+
+// ---- Blueprint grid backdrop, shared by every page drawn in the blueprint --
+// visual language (ecuPage's ECU diagram, every markdown content page).
+export function buildBlueprintBackdrop() {
+  const size = 512;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = "#0b0f1a";
+  ctx.fillRect(0, 0, size, size);
+  ctx.strokeStyle = "rgba(127, 232, 255, 0.08)";
+  ctx.lineWidth = 1;
+  const step = 32;
+  for (let x = 0; x <= size; x += step) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, size);
+    ctx.stroke();
+  }
+  for (let y = 0; y <= size; y += step) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(size, y);
+    ctx.stroke();
+  }
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(4, 4);
+  return texture;
+}
+
 // ---- Pill-shaped text label sprite -----------------------------------------
 export function buildTextSprite(text, { color = "#eef2f7", background = "rgba(10,14,20,0.6)", fontSize = 42 } = {}) {
   const canvas = document.createElement("canvas");

@@ -8,6 +8,8 @@ import {
   applyPageHeader,
   createAnimationStepper,
   hideBanner,
+  ICON_LIBRARY,
+  buildBlueprintBackdrop,
 } from "../common.js";
 
 const TRANSITION_DURATION = 1.4; // seconds for one envelope leg (idle -> V2X, V2X -> ADA, ADA -> IVI)
@@ -22,75 +24,6 @@ const VISITED_GLOW = 0.55;
 const ACTIVE_GLOW = 0.95;
 const VISITED_PRESET_INDEX = 1;
 const DEFAULT_PRESET_INDEX = 0;
-
-// ---- Modern flat icon glyphs -----------------------------------------------
-// Every icon draws into a local 0..size box (no clearRect — the card
-// background already handles that). Each ECU has exactly one icon, matching
-// its function: radar (V2X-ECU's cooperative sensing), mcu (ADA-ECU's
-// fusion chip), display (IVI-ECU's driver screen).
-const ICON_LIBRARY = {
-  radar(ctx, size, accent) {
-    const cx = size * 0.5;
-    const cy = size * 0.5;
-    ctx.strokeStyle = accent;
-    ctx.lineWidth = size * 0.03;
-    for (let i = 1; i <= 3; i++) {
-      ctx.beginPath();
-      ctx.arc(cx, cy, size * 0.1 * i, 0, Math.PI * 2);
-      ctx.stroke();
-    }
-    ctx.fillStyle = accent;
-    ctx.globalAlpha = 0.35;
-    ctx.beginPath();
-    ctx.moveTo(cx, cy);
-    ctx.arc(cx, cy, size * 0.3, -Math.PI * 0.5, -Math.PI * 0.2);
-    ctx.closePath();
-    ctx.fill();
-    ctx.globalAlpha = 1;
-    ctx.beginPath();
-    ctx.arc(cx, cy, size * 0.035, 0, Math.PI * 2);
-    ctx.fill();
-  },
-  mcu(ctx, size, accent) {
-    const pad = size * 0.28;
-    const w = size - pad * 2;
-    ctx.strokeStyle = accent;
-    ctx.lineWidth = size * 0.04;
-    roundRectPath(ctx, pad, pad, w, w, size * 0.06);
-    ctx.stroke();
-    ctx.strokeRect(pad + w * 0.22, pad + w * 0.22, w * 0.56, w * 0.56);
-    ctx.lineCap = "round";
-    for (let i = 0; i < 3; i++) {
-      const t = pad + w * (0.22 + i * 0.28);
-      for (const [x1, y1, x2, y2] of [
-        [t, pad, t, pad - size * 0.06],
-        [t, pad + w, t, pad + w + size * 0.06],
-        [pad, t, pad - size * 0.06, t],
-        [pad + w, t, pad + w + size * 0.06, t],
-      ]) {
-        ctx.beginPath();
-        ctx.moveTo(x1, y1);
-        ctx.lineTo(x2, y2);
-        ctx.stroke();
-      }
-    }
-  },
-  display(ctx, size, accent) {
-    const pad = size * 0.16;
-    const w = size - pad * 2;
-    const h = w * 0.68;
-    ctx.strokeStyle = accent;
-    ctx.lineWidth = size * 0.045;
-    roundRectPath(ctx, pad, pad, w, h, size * 0.06);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(size * 0.5, pad + h);
-    ctx.lineTo(size * 0.5, pad + h + size * 0.08);
-    ctx.moveTo(size * 0.38, pad + h + size * 0.08);
-    ctx.lineTo(size * 0.62, pad + h + size * 0.08);
-    ctx.stroke();
-  },
-};
 
 // Each ECU cycles through its own small set of appearances on click — the
 // icon (its function) never changes, only the accent colour does.
@@ -228,36 +161,6 @@ function buildPinDot(x, y, color) {
   const mesh = new THREE.Mesh(new THREE.CircleGeometry(0.09, 16), new THREE.MeshBasicMaterial({ color }));
   mesh.position.set(x, y, -0.1);
   return mesh;
-}
-
-function buildBlueprintBackdrop() {
-  const size = 512;
-  const canvas = document.createElement("canvas");
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext("2d");
-  ctx.fillStyle = "#0b0f1a";
-  ctx.fillRect(0, 0, size, size);
-  ctx.strokeStyle = "rgba(127, 232, 255, 0.08)";
-  ctx.lineWidth = 1;
-  const step = 32;
-  for (let x = 0; x <= size; x += step) {
-    ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, size);
-    ctx.stroke();
-  }
-  for (let y = 0; y <= size; y += step) {
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(size, y);
-    ctx.stroke();
-  }
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.wrapS = THREE.RepeatWrapping;
-  texture.wrapT = THREE.RepeatWrapping;
-  texture.repeat.set(4, 4);
-  return texture;
 }
 
 /**
