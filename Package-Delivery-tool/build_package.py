@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Build the outgoing delivery package: Hackathon-Delivery/ and Hackathon-Delivery.zip,
-both written inside Package-Delivery-tool/.
+"""Build the outgoing delivery package: Hackathon-Round2-Delivery/ and
+Hackathon-Round2-Delivery.zip, both written inside Package-Delivery-tool/.
 
 The package ships HTML, the demo video, and GitHub links — nothing else. The
 repo's markdown stays in the repo: documents are read through the wiki and the
@@ -10,7 +10,7 @@ in-bundle or points at the public GitHub repository.
 Steps, in order:
   1. Rebuild every deck HTML from its markdown source (presentation/**/*-deck.md),
      so the decks the landing page and the wiki link are current.
-  2. Rebuild the wiki and write its self-contained bundle into Hackathon-Delivery/
+  2. Rebuild the wiki and write its self-contained bundle into Hackathon-Round2-Delivery/
      (python website/build-pages.py --clean --bundle <dest>) — both build modes
      render website/pages/ strictly from the markdown under documents/ and the
      other crawl roots; --bundle makes the output serverless.
@@ -23,7 +23,7 @@ Steps, in order:
      one packaged file.
   6. Verify: landing-page targets exist, no internal or code paths ship, no
      markdown ships, exactly one video copy, and EVERY relative link in every
-     shipped HTML page resolves. Then zip to Hackathon-Delivery.zip.
+     shipped HTML page resolves. Then zip to Hackathon-Round2-Delivery.zip.
 
 Usage, from the repo root:
     python Package-Delivery-tool/build_package.py
@@ -40,8 +40,8 @@ from urllib.parse import unquote
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parent
-OUT = HERE / "Hackathon-Delivery"
-ZIP = HERE / "Hackathon-Delivery.zip"
+OUT = HERE / "Hackathon-Round2-Delivery"
+ZIP = HERE / "Hackathon-Round2-Delivery.zip"
 LANDING = HERE / "delivery-index.html"
 VIDEO = REPO / "video-evidence" / "system-test.mp4"
 SLIDE_BUILDER = REPO / "presentation" / "slide-build-tool" / "build-slides.py"

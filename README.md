@@ -20,7 +20,7 @@ Full mission, scope, contracts, and phase plan live in [CLAUDE.md](CLAUDE.md) an
 | [presentation/](presentation/) | The slide decks, their shared template, and `slide-build-tool/` |
 | [website/](website/) | The static hub site: its `css/`, `js/`, assets and `build-pages.py`. `pages/` is generated — build it after cloning |
 | [tools/](tools/) | Test equipment — diagnostic tools and containers that stand in for a node |
-| [Package-Delivery-tool/](Package-Delivery-tool/) | Builds the outgoing delivery package — `Hackathon-Delivery/` and its zip |
+| [Package-Delivery-tool/](Package-Delivery-tool/) | Builds the outgoing delivery package — `Hackathon-Round2-Delivery/` and its zip |
 | [.claude/](\.claude/) | Tooling: `rules/` (process conventions), `agents/` (agent specs), `skills/` (procedures), `prompts/` (saved prompts) |
 
 [presentation/](presentation/) and [website/](website/) are the two human-facing publications, each self-contained with its own content, design system and generator. Both render [documents/](documents/); neither owns it.
@@ -74,7 +74,7 @@ python website/build-pages.py --bundle
 
 This also writes a self-contained copy to `dist/`. Open `dist/index.html` by double-clicking — no server, no Python needed.
 
-### Build the project delivery page
+### Build the project delivery page for Round 2
 
 Stand in the repo root directory and run:
 
@@ -82,7 +82,19 @@ Stand in the repo root directory and run:
 python Package-Delivery-tool/build_package.py
 ```
 
-The output is `Package-Delivery-tool/Hackathon-Delivery/` and `Hackathon-Delivery.zip`.
+The output is `Package-Delivery-tool/Hackathon-Round2-Delivery/` and `Hackathon-Round2-Delivery.zip`.
+
+### Build the project delivery page for Round 3
+
+Round 3 ships the [story-telling/](story-telling/) pages — a self-contained, Three.js-driven walkthrough of the project that renders its `content/*.md` and `assets/` client-side, the same way the wiki and the decks render their own markdown. There is no markdown-to-HTML step to run first; the pages need only an HTTP server, since browsers refuse `fetch()` and ES-module loads over a `file://` URL.
+
+Run, from anywhere:
+
+```bash
+python story-telling/serve-story.py
+```
+
+Open the site at `http://localhost:8080/`. Pass a port number as the only argument to use one other than 8080.
 
 ## Project delivery
 

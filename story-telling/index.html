@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cooperative Vehicle Awareness — Story</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <canvas id="scene"></canvas>
+
+  <div id="hud">
+    <div id="hud-title">Cooperative Vehicle Awareness</div>
+    <div id="hud-subtitle">A cannot see through B. B can see what A cannot.</div>
+  </div>
+
+  <div id="mail-banner" class="hidden">
+    <span class="mail-icon">&#9993;</span>
+    <span class="mail-text"></span>
+  </div>
+
+  <div id="animation-textbox" class="hidden">
+    <div id="textbox-heading"></div>
+    <div id="textbox-body"></div>
+  </div>
+
+  <button id="nav-prev" class="nav-btn" aria-label="Previous page" disabled>&#8249;</button>
+  <button id="nav-next" class="nav-btn" aria-label="Next page" disabled>&#8250;</button>
+
+  <div id="hud-playback"></div>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+      }
+    }
+  </script>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
