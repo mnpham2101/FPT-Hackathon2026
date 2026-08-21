@@ -86,6 +86,16 @@ The output is `Package-Delivery-tool/Hackathon-Round2-Delivery/` and `Hackathon-
 
 ### Build the project delivery page for Round 3
 
+Round 3 ships the [story-telling/](story-telling/) pages — a self-contained, Three.js-driven walkthrough of the project that renders its `content/*.md` and `assets/` client-side, the same way the wiki and the decks render their own markdown. There is no markdown-to-HTML step to run first; the pages need only an HTTP server, since browsers refuse `fetch()` and ES-module loads over a `file://` URL.
+
+Run, from anywhere:
+
+```bash
+python story-telling/serve-story.py
+```
+
+Open the site at `http://localhost:8080/`. Pass a port number as the only argument to use one other than 8080.
+
 ## Project delivery
 
 - To build the APK for the IVI-ECU and deploy it on the IVI-ECU: [apk-deploy.md](documents/Delivery/Test-Guides/apk-deploy.md).
