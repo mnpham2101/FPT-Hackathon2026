@@ -1,6 +1,6 @@
 # How does ADA-ECU do its magic ?
 
-## It performs machine learning on video to detect vehicle B, processes information from V2X and fuses in the obstruction knowledge  
+## Data flow
 
 ![ADA-ECU fusion flow: ego camera frame becomes B's own-sensor TrackedObject, fuses with the V2X-relayed object for C into one warning event for IVI-ECU](assets/ada-fusion-flow.svg)
 
