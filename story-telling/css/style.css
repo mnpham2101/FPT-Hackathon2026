@@ -199,7 +199,7 @@ html, body {
 
 #textbox-heading {
   flex: none;
-  font-size: 1.7rem;
+  font-size: 2.2rem;
   font-weight: 600;
   text-align: center;
   color: #eef2f7;
@@ -212,18 +212,22 @@ html, body {
   display: flex;
   flex-direction: column;
   margin-top: 6px;
-  font-size: 0.9rem;
+  font-size: 1.5rem;
   color: #f5f7fb;
-  line-height: 1.5;
+  line-height: 1.7;
   text-shadow: 0 1px 10px rgba(0, 0, 0, 0.75);
 }
 
 #textbox-body p {
-  margin: 4px 0;
+  margin: 10px 0;
 }
 
 #textbox-body ul {
-  margin: 4px 0 4px 1.1em;
+  margin: 10px 0 10px 1.1em;
+}
+
+#textbox-body li {
+  margin: 12px 0;
 }
 
 #textbox-body .textbox-figure {

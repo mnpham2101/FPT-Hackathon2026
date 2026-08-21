@@ -7,6 +7,7 @@ import { createAdaPage } from "./pages/adaPage.js";
 import { createIviPage } from "./pages/iviPage.js";
 import { createOurWorkPage } from "./pages/ourWorkPage.js";
 import { createNextMileStonePage } from "./pages/nextMileStonePage.js";
+import { createOurTeamPage } from "./pages/ourTeamPage.js";
 
 // ---- Renderer -------------------------------------------------------------
 const canvas = document.getElementById("scene");
@@ -31,6 +32,7 @@ const pages = await Promise.all([
   createIviPage(),
   createOurWorkPage(),
   createNextMileStonePage(),
+  createOurTeamPage(),
 ]);
 
 let currentIndex = 0;
