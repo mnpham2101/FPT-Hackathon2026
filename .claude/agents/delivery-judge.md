@@ -31,7 +31,7 @@ Tell the team, before the organizers do, what score the delivery packet earns an
 
 ## Inputs
 
-- `Package-Delivery-tool/Hackathon-Delivery/` — the packet, as built.
+- `Package-Delivery-tool/Hackathon-Round2-Delivery/` — the packet, as built.
 - `tmp/regs-p7-18.txt` and `tmp/template-extract.txt` — the rubric and template extracts (re-extracted from their sources if absent).
 - The prior `tmp/AI-Judge-v<N>.md` reports — baseline scores and standing defects.
 - The saved judging prompt under [.claude/prompts/](../prompts/), and the judging premise it fixes.

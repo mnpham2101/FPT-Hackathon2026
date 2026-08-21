@@ -77,8 +77,8 @@ website/pages/
 
 # The outgoing delivery package and its zip — rebuilt in full by
 # Package-Delivery-tool/build_package.py. Rebuild, never commit.
-Package-Delivery-tool/Hackathon-Delivery/
-Package-Delivery-tool/Hackathon-Delivery.zip
+Package-Delivery-tool/Hackathon-Round2-Delivery/
+Package-Delivery-tool/Hackathon-Round2-Delivery.zip
 
 # Zip files - built/packaged artifacts, never committed
 *.zip

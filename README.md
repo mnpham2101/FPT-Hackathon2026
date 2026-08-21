@@ -20,7 +20,7 @@ Full mission, scope, contracts, and phase plan live in [CLAUDE.md](CLAUDE.md) an
 | [presentation/](presentation/) | The slide decks, their shared template, and `slide-build-tool/` |
 | [website/](website/) | The static hub site: its `css/`, `js/`, assets and `build-pages.py`. `pages/` is generated — build it after cloning |
 | [tools/](tools/) | Test equipment — diagnostic tools and containers that stand in for a node |
-| [Package-Delivery-tool/](Package-Delivery-tool/) | Builds the outgoing delivery package — `Hackathon-Delivery/` and its zip |
+| [Package-Delivery-tool/](Package-Delivery-tool/) | Builds the outgoing delivery package — `Hackathon-Round2-Delivery/` and its zip |
 | [.claude/](\.claude/) | Tooling: `rules/` (process conventions), `agents/` (agent specs), `skills/` (procedures), `prompts/` (saved prompts) |
 
 [presentation/](presentation/) and [website/](website/) are the two human-facing publications, each self-contained with its own content, design system and generator. Both render [documents/](documents/); neither owns it.
@@ -82,7 +82,7 @@ Stand in the repo root directory and run:
 python Package-Delivery-tool/build_package.py
 ```
 
-The output is `Package-Delivery-tool/Hackathon-Delivery/` and `Hackathon-Delivery.zip`.
+The output is `Package-Delivery-tool/Hackathon-Round2-Delivery/` and `Hackathon-Round2-Delivery.zip`.
 
 ### Build the project delivery page for Round 3
 

@@ -5,11 +5,11 @@ description: Procedure delivery-judge follows to score the outgoing Hackathon-De
 
 # Delivery Judgement
 
-Trigger: the user asks how the delivery would be judged, to "do another judge", or to review `Package-Delivery-tool/Hackathon-Delivery` from the judge's seat. The output format is fixed by [delivery-judgement-format.md](../../rules/delivery-judgement-format.md); this skill is the procedure that fills it.
+Trigger: the user asks how the delivery would be judged, to "do another judge", or to review `Package-Delivery-tool/Hackathon-Round2-Delivery` from the judge's seat. The output format is fixed by [delivery-judgement-format.md](../../rules/delivery-judgement-format.md); this skill is the procedure that fills it.
 
 ## 1 · Establish the inputs
 
-- **The judged object**: `Package-Delivery-tool/Hackathon-Delivery/` — rebuild is the user's call; judge what stands. Note the build's own gate output if a build just ran.
+- **The judged object**: `Package-Delivery-tool/Hackathon-Round2-Delivery/` — rebuild is the user's call; judge what stands. Note the build's own gate output if a build just ran.
 - **The rubric**: `tmp/regs-p7-18.txt` (extract of `tmp/Automotive-Hackathon-2026-Regulations.pdf` — the Round 2 scoring guide with L0–L3 anchors) and `tmp/template-extract.txt` (extract of the BTC submission-template docx). If an extract is missing, re-extract from the source file first.
 - **The baseline**: the highest existing `tmp/AI-Judge-v<N>.md`. Its score, sub-scores, standing-defect list and recovery list are this run's comparison base; the new report is `v<N+1>`.
 - **The saved prompt** governing the series under [.claude/prompts/](../../prompts/) — this run appends to its § Outcome.
