@@ -2,6 +2,11 @@ import * as THREE from "three";
 import { createPauseController } from "./common.js";
 import { createRoadPage } from "./pages/roadPage.js";
 import { createEcuPage } from "./pages/ecuPage.js";
+import { createV2xPage } from "./pages/v2xPage.js";
+import { createAdaPage } from "./pages/adaPage.js";
+import { createIviPage } from "./pages/iviPage.js";
+import { createOurWorkPage } from "./pages/ourWorkPage.js";
+import { createNextMileStonePage } from "./pages/nextMileStonePage.js";
 
 // ---- Renderer -------------------------------------------------------------
 const canvas = document.getElementById("scene");
@@ -21,6 +26,11 @@ const nextBtn = document.getElementById("nav-next");
 const pages = await Promise.all([
   createRoadPage({ onComplete: () => { nextBtn.disabled = false; } }),
   createEcuPage(),
+  createV2xPage(),
+  createAdaPage(),
+  createIviPage(),
+  createOurWorkPage(),
+  createNextMileStonePage(),
 ]);
 
 let currentIndex = 0;
