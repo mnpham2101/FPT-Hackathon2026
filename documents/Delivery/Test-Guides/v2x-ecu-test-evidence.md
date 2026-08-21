@@ -87,19 +87,56 @@ Repeats at `cpm_rate_hz` (10 Hz / 100 ms, finding F8) for the scenario's duratio
 
 The same `stationId=1201` datagram as § 2, taken from `node-v2x-ecu.pcap` in the evidence collected for this document: a 58-byte UDP payload, `10.99.0.10:56287 → 10.99.0.11:47100`, captured roughly 2.3 ms before the `[EVT]` triplet in § 2 logged it — consistent with capture happening on the wire at step 1 and the `[EVT] rx_datagram` timestamp being stamped once `rx_pipeline` processes the callback, two steps later at step 3.
 
+**Wireshark will not dissect any of this as ITS.** The CPM travels as raw UPER with no GeoNetworking/BTP envelope (finding F5), and the ITS dissector keys on that envelope to recognise a message at all — expected, not a capture defect; [testing-guide.md § 3 · Wireshark](testing-guide.md#3--wireshark) covers the same caveat for the other two ports on this wire. What follows is a manual UPER decode instead, checked field by field against the same `decode_ok` line's ground truth.
+
+#### What the message contains
+
+![CPM message structure: CollectivePerceptionMessage split into header (protocolVersion, messageId, stationId) and payload; payload split into managementContainer (referenceTime, referencePosition, unused segmentationInfo/messageRateRange) and cpmContainers holding containerId 1 OriginatingVehicleContainer (orientationAngle, unused pitch/roll/trailer) and containerId 5 PerceivedObjectContainer wrapping one PerceivedObject (objectId, measurementDeltaTime, position, velocity, classification, confidence); side panels show the wire path, the M1 profile summary, what the V2X ECU derives rather than receives, and why DENM is not CPM](../../Design/MODULE-DESIGN/SCENARIO-PLAYER/cpm-message-structure.svg)
+
+Reused from [scenario-player-v2x-callflow-messages.md §4](../../Design/MODULE-DESIGN/SCENARIO-PLAYER/scenario-player-v2x-callflow-messages.md#4-cpm-message-structure), not redrawn.
+
+| Field | Meaning | ASN.1 type | Unit / range |
+|---|---|---|---|
+| `stationId` | Which vehicle sent this — B's station identifier | `StationId` | `0..4294967295` |
+| `referenceTime` | When B's pose below was measured | `TimestampIts` | ms since 2004-01-01 TAI |
+| `referencePosition.latitude` / `.longitude` | Where B is (WGS84) | `Latitude` / `Longitude` | `10⁻⁷ °` |
+| `orientationAngle` | Which way B is facing | `Wgs84AngleValue` | `0.1° · 0..3601` |
+| `object.objectId` | B's own tracking ID for the object it perceived (vehicle C) | `Identifier2B` | `0..65535` |
+| `object.measurementDeltaTime` | Offset between `referenceTime` and when C was actually measured | `DeltaTimeMilliSecondSigned` | `ms · ±2047` (F9) |
+| `object.position.x` / `.y` | Where C is, relative to B (longitudinal / lateral) | `CartesianCoordinateLarge` | `0.01 m` |
+| `object.position.xConfidence` / `.yConfidence` | How accurate B's measurement of C's position is | `CoordinateConfidence` | `0.01 m · 1..4096` |
+| `object.velocity.x` / `.y` | How fast C is moving, relative to B | `VelocityComponentValue` | `0.01 m/s` |
+| `object.classification` | What kind of object C is | `TrafficParticipantType` | M1 always sends `passengerCar(5)` |
+| `object.classConfidence` | How sure B is of that classification | `ConfidenceLevel` | `1..101` (101 = unavailable) |
+
+Full profile, including the mandatory-but-unpopulated ASN.1 fields (`positionConfidenceEllipse`, `altitude`, velocity `confidence`) that this project's `CpmContent` binding does not carry: [`r1-cpm-profile.md` §3](../../../contracts/r1-cpm-profile.md).
+
+#### How far a manual decode actually gets
+
 ```
 02 0e 00 00 04 b1 06 80 60 79 fc f2 11 6c d9 b5 52 d2 d5 57 ff ff ff 08 …
 ```
 
-The `ItsPduHeader` ([field mapping §4.2](../../Design/MODULE-DESIGN/SCENARIO-PLAYER/scenario-player-v2x-callflow-messages.md#42-r1-profile--asn1-field-mapping)) is byte-aligned and reads straight off the front of the payload:
+UPER packs fields as a continuous bitstream, MSB-first, with **no padding to byte boundaries** — a field's start depends on the exact bit-width of every field before it, which depends on the exact ASN.1 constraint of each. Verified against the same `decode_ok` line's values (source: `CPM-PDU-Descriptions.asn`, `v2.1.1`):
 
-| Bytes | Value | ASN.1 field |
-|---|---|---|
-| `02` | `2` | `protocolVersion` |
-| `0e` | `14` | `messageId` — `cpm(14)` |
-| `00 00 04 b1` | `1201` | `stationId` |
+| Bits | Width | Field | Wire value |
+|---|---|---|---|
+| 0–7 | 8 | `header.protocolVersion` | `2` |
+| 8–15 | 8 | `header.messageId` | `14` |
+| 16–47 | 32 | `header.stationId` | `1201` |
+| 48 | 1 | `CpmPayload`'s extension marker (`...`) | `0` — unused |
+| 49 | 1 | `ManagementContainer`'s extension marker (`...`) | `0` — unused |
+| 50 | 1 | `segmentationInfo` presence bit | `0` — absent |
+| 51 | 1 | `messageRateRange` presence bit | `0` — absent |
+| 52–93 | 42 | `referenceTime` | `1787111046972` |
+| 94–124 | 31 | `referencePosition.latitude` | `210285110` |
+| 125–156 | 32 | `referencePosition.longitude` | `1058048170` |
 
-`stationId = 1201` is the same value the `decode_ok` line in § 2 carries (`cpm.stationId`) — the same message, seen twice: once on the wire, once after the R9 pipeline parsed it. Everything past the header is ASN.1 UPER, bit-packed rather than byte-aligned, so `objectId`, position, velocity and the confidences are read off the decoded `[EVT]` line rather than by hand off the pcap; **Wireshark will not dissect any of it as ITS** — the CPM travels as raw UPER with no GeoNetworking/BTP envelope (finding F5), and the ITS dissector keys on that envelope to recognise a message at all. That is expected, not a capture defect: [testing-guide.md § 3 · Wireshark](testing-guide.md#3--wireshark) covers the same caveat for the other two ports on this wire.
+The header (bits 0–47) is byte-aligned only by coincidence — `8 + 8 + 32 = 48` happens to be a whole number of bytes. Bit 48 onward never is again. The 4-bit gap at 48–51 is not padding: it's `CpmPayload` and `ManagementContainer` each spending one bit on their ASN.1 extensibility marker (`...` in the grammar above), plus one presence bit for each of `ManagementContainer`'s two `OPTIONAL` fields — all zero here because M1 uses none of them. Skip that gap and `referenceTime` reads as `111694440435` instead of the `1787111046972` `decode_ok` actually reports — a wrong-but-plausible-looking number, indistinguishable from a correct one without cross-checking against the decoder's own ground truth.
+
+**This is also where a reliable manual decode stops.** Past `referencePosition`, the message enters `cpmContainers` — a `SEQUENCE (SIZE 1..8) OF WrappedCpmContainer`, where each entry is `{ containerId INTEGER(1..16), containerData <the type that id identifies> }`. `containerData` is an ASN.1 *open type*: its own length is carried on the wire, and correctly stepping over it needs the exact CDD encoding rule for that construct, not just this profile's field list. Nested inside container id 5 is `PerceivedObject`, which the profile's own §2 (and § 3 above) notes carries **14 further `OPTIONAL` fields M1 never sends** — meaning a presence bitmap of a length only the full `PerceivedObject` grammar fixes sits before `objectId` even starts. And every field of interest past that point (`objectId`, position, velocity, the confidences) is small enough that searching the bitstream for its known value the way `referenceTime`/`latitude`/`longitude` were verified above stops being conclusive: the same search for `orientationAngle`'s known value (`900`) returns 5 candidate bit positions, and for `objectId`'s (`7`) returns 27 — a small integer matches too many unrelated bit windows by coincidence to trust without the exact preceding structure.
+
+That is the real reason `objectId`, position, velocity and the confidences are read off the decoded `[EVT]` line rather than off the pcap by hand in § 2 and § 3 above — not that UPER is somehow undecodable (six fields above are decoded and verified against ground truth, crossing a non-byte-aligned boundary to do it), but that reliably locating anything inside `cpmContainers` needs the container-wrapper's open-type framing and `PerceivedObject`'s full field list from the actual ASN.1 grammar, which is exactly the job `codec/vanetza_cpm_codec` already does and logs the result of.
 
 ## Evidence collected for this document
 

@@ -440,7 +440,7 @@ private fun DrawScope.drawGhostC(
     drawCarTopDown(
         cx = cx, cy = cy,
         color = GhostCColor,
-        label = "GHOST C",
+        label = "OCCLUDED VEHICLE C",
         scale = scale,
         filled = false,
         textMeasurer = textMeasurer,
@@ -520,7 +520,7 @@ private fun DrawScope.drawSidePanel(
     // --- C legend ---
     legendY += 80f
     drawCarMiniSwatch(x = legendX, y = legendY, color = GhostCColor, filled = false, dashed = true)
-    val cMainLbl = textMeasurer.measure(AnnotatedString("C — GHOST"), StyleMain.copy(color = GhostCColor.copy(alpha = 0.85f)))
+    val cMainLbl = textMeasurer.measure(AnnotatedString("C — OCCLUDED VEHICLE"), StyleMain.copy(color = GhostCColor.copy(alpha = 0.85f)))
     val cSub1Lbl = textMeasurer.measure(AnnotatedString("source: v2x_relayed"), StyleMuted)
     val cSub2Lbl = textMeasurer.measure(AnnotatedString("never seen by A's sensors"), StyleMuted)
     drawText(cMainLbl, topLeft = Offset(legendX + 36f, legendY - 4f))
@@ -549,7 +549,7 @@ private fun DrawScope.drawSidePanel(
 
     // --- Risk colour key ---
     legendY += 20f
-    val riskHdrLbl = textMeasurer.measure(AnnotatedString("RISK — GHOST C GLOW COLOUR"), StyleDim)
+    val riskHdrLbl = textMeasurer.measure(AnnotatedString("RISK — OCCLUDED C GLOW COLOUR"), StyleDim)
     drawText(riskHdrLbl, topLeft = Offset(x0, legendY))
     legendY += riskHdrLbl.size.height + 12f
 
