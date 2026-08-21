@@ -45,10 +45,10 @@ const APPEARANCE_PRESETS = {
   ],
 };
 
-const CARD_W = 300;
-const CARD_H = 360;
+const CARD_W = 370;
+const CARD_H = 444;
 const CARD_ASPECT = CARD_H / CARD_W;
-const CARD_WORLD_W = 2.6;
+const CARD_WORLD_W = 3.2;
 const CARD_WORLD_H = CARD_WORLD_W * CARD_ASPECT;
 
 function buildCardTexture(label, { icon, accent }) {
@@ -57,7 +57,7 @@ function buildCardTexture(label, { icon, accent }) {
   canvas.height = CARD_H;
   const ctx = canvas.getContext("2d");
 
-  roundRectPath(ctx, 4, 4, CARD_W - 8, CARD_H - 8, 26);
+  roundRectPath(ctx, 5, 5, CARD_W - 10, CARD_H - 10, 32);
   const bg = ctx.createLinearGradient(0, 0, 0, CARD_H);
   bg.addColorStop(0, "#1c2338");
   bg.addColorStop(1, "#11142a");
@@ -69,16 +69,16 @@ function buildCardTexture(label, { icon, accent }) {
   ctx.stroke();
   ctx.globalAlpha = 1;
 
-  const iconBox = 200;
+  const iconBox = 246;
   ctx.save();
-  ctx.translate((CARD_W - iconBox) / 2, 26);
+  ctx.translate((CARD_W - iconBox) / 2, 32);
   ICON_LIBRARY[icon](ctx, iconBox, accent);
   ctx.restore();
 
   ctx.fillStyle = "#eef2f7";
-  ctx.font = "600 30px 'Segoe UI', sans-serif";
+  ctx.font = "600 37px 'Segoe UI', sans-serif";
   ctx.textAlign = "center";
-  ctx.fillText(label, CARD_W / 2, CARD_H - 34);
+  ctx.fillText(label, CARD_W / 2, CARD_H - 42);
 
   return new THREE.CanvasTexture(canvas);
 }
