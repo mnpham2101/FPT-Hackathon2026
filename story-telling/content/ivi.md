@@ -1,16 +1,7 @@
 # How does IVI-ECU work?
 
-## It simplies receives messages from ADA-ECU.
-* asdfasdfasdfasddsa  
-* asdfasdfasdfasddsa  
-* asdfasdfasdfasddsa  
+## Work flow
 
-## It deserializes the messages to model data (json) readable by Kotlin application.
-* asdfasdfasdfasddsa  
-* asdfasdfasdfasddsa  
-* asdfasdfasdfasddsa  
+![IVI-ECU R4 receive flow: the R4 warning message from ADA-ECU is deserialized by Kotlin into R4WarningEvent, which drives the Warning View — a 2-vehicle scene while C is not yet relayed, a 3-vehicle scene with the ghost C once it is](assets/ivi-r4-receive-flow.svg)
 
-## It renders warning screen to user
-* asdfasdfasdfasddsa  
-* asdfasdfasdfasddsa  
-* asdfasdfasdfasddsa  
+## Evidences
