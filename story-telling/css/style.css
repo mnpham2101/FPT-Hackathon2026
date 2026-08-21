@@ -127,6 +127,10 @@ html, body {
   z-index: 10;
 }
 
+/* No panel fill on any textbox, small or large — the blueprint grid (or
+   ecuPage's diagram) shows straight through instead of sitting behind an
+   opaque slab. Legibility comes from text-shadow on the heading/body instead
+   of a background, the same technique #hud already uses over the 3D scene. */
 #animation-textbox {
   position: fixed;
   left: 50%;
@@ -134,11 +138,10 @@ html, body {
   transform: translateX(-50%);
   width: min(480px, 64vw);
   padding: 16px 22px;
-  background: rgba(16, 22, 34, 0.85);
-  border: 1px solid rgba(127, 232, 255, 0.3);
+  background: transparent;
+  border: none;
   border-radius: 12px;
   color: #eaf1ff;
-  backdrop-filter: blur(6px);
   pointer-events: none;
   z-index: 10;
 }
@@ -151,6 +154,7 @@ html, body {
   font-size: 1.05rem;
   font-weight: 600;
   color: #eef2f7;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
 }
 
 #textbox-body {
@@ -158,6 +162,7 @@ html, body {
   font-size: 0.9rem;
   color: #a9b6c9;
   line-height: 1.5;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.6);
 }
 
 #textbox-body p {
@@ -166,4 +171,46 @@ html, body {
 
 #textbox-body ul {
   margin: 4px 0 4px 1.1em;
+}
+
+#textbox-body .textbox-figure {
+  margin: 4px 0 0;
+  text-align: center;
+}
+
+#textbox-body .textbox-figure img {
+  max-width: 100%;
+  max-height: 40vh;
+  border-radius: 6px;
+  background: rgba(238, 242, 247, 0.04);
+}
+
+/* A section carrying a figure (a diagram, not bullet prose) is the content
+   itself, not a caption strip beside it — the box grows to fill most of the
+   viewing area instead of staying pinned to its small bottom-strip size.
+   Scoped to :has(.textbox-figure) so plain-text sections (ecuPage's step
+   captions) keep the compact bottom-strip size; the transparent/panel-free
+   look itself is the base #animation-textbox rule now, not an override here.
+   Anchored below 12vh, clearing only the HTML title/subtitle above (#hud) —
+   every content page's own progress dots now live near the bottom of the
+   3D scene (js/pages/contentPage.js DOTS_Y_OFFSET), not under the title, so
+   nothing else reserves space up here. */
+#animation-textbox:has(.textbox-figure) {
+  top: 12vh;
+  bottom: auto;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(1400px, 92vw);
+  max-height: calc(100vh - 12vh - 70px);
+  padding: 20px 40px;
+  overflow: hidden;
+}
+
+#animation-textbox:has(.textbox-figure) #textbox-heading {
+  font-size: 1.7rem;
+  text-align: center;
+}
+
+#animation-textbox:has(.textbox-figure) .textbox-figure img {
+  max-height: calc(100vh - 12vh - 150px);
 }

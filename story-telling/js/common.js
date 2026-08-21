@@ -367,13 +367,18 @@ export function buildEnvelopeSprite() {
 // line before any `## ` subsection is pageSubtitle (omit it to leave no
 // subtitle). Each `## Heading` after that starts one animation step's
 // section — its own heading plus a small rendered-markdown body (paragraphs,
-// `- `/`* ` bullet lists) — collected into `sections`. A page with no `## `
-// subsections gets an empty `sections` array (roadPage: nothing to step
-// through); a page with N of them has N steps (ecuPage: 4).
+// `- `/`* ` bullet lists, or a `![alt](src)` image) — collected into
+// `sections`. A page with no `## ` subsections gets an empty `sections` array
+// (roadPage: nothing to step through); a page with N of them has N steps
+// (ecuPage: 4).
 function escapeHtml(text) {
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+// A `![alt](src)` line renders as a figure in place of the surrounding text —
+// an image swaps in for prose/bullets, it doesn't sit alongside them. No
+// caption: the section's own heading (already shown above the textbox body)
+// would just repeat itself under the image.
 function renderMarkdownBody(lines) {
   const blocks = [];
   let listItems = null;
@@ -387,6 +392,13 @@ function renderMarkdownBody(lines) {
     const line = raw.trim();
     if (!line) {
       flushList();
+      continue;
+    }
+    const image = line.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
+    if (image) {
+      flushList();
+      const [, alt, src] = image;
+      blocks.push(`<figure class="textbox-figure"><img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}"></figure>`);
       continue;
     }
     const bullet = line.match(/^[-*]\s+(.*)$/);
