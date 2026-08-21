@@ -480,6 +480,11 @@ export function applyPageHeader({ pageTitle = "", pageSubtitle = "", style = {} 
     subtitleEl.textContent = pageSubtitle;
     subtitleEl.style.color = style.subtitleColor || "";
     subtitleEl.style.fontWeight = style.subtitleWeight || "";
+    // Collapsed rather than left empty-but-visible: an empty div still
+    // occupies its line-height + margin, which #animation-textbox's top
+    // offset has to reserve room for on every page regardless of whether
+    // this page actually has subtitle text (most content pages don't).
+    subtitleEl.style.display = pageSubtitle ? "" : "none";
   }
 }
 
