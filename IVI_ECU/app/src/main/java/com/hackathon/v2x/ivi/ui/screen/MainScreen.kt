@@ -34,8 +34,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import com.hackathon.v2x.ivi.model.R3Snapshot
-import com.hackathon.v2x.ivi.model.R3Timestamps
 import com.hackathon.v2x.ivi.model.SceneGeometry
 import com.hackathon.v2x.ivi.model.VehiclePosition
 import androidx.compose.runtime.setValue
@@ -252,28 +250,19 @@ private fun WarningViewContent(
 ) {
     var is3DMode by remember { mutableStateOf(true) }
 
-    val defaultMockScene = SceneGeometry(
+    // No live warning: render ego + B only. C must never appear without a real,
+    // v2x_relayed-sourced track behind it (R19) — a placeholder ghost C here
+    // would defeat the provenance guard the renderer relies on.
+    val noSignalScene = SceneGeometry(
         ego = VehiclePosition(0f, 0f),
         vehicleB = VehiclePosition(-3.5f, 15.0f),
-        vehicleC = VehiclePosition(2.5f, 22.0f),
-        vehicleCSnapshot = R3Snapshot(
-            id = "V-C-GHOST",
-            objectClass = "vehicle",
-            source = "v2x_relayed",
-            position = VehiclePosition(2.5f, 22.0f),
-            distance = 22.1f,
-            speed = 18.5f,
-            confidence = 0.88f,
-            state = "tracked",
-            timestamps = R3Timestamps(1L, 2L, 2L)
-        )
     )
 
     val active = uiWarningState as? WarningUiState.Active
     val scene = when {
-        active != null -> latestScene?.copy(vehicleCSnapshot = active.event.objectSnapshot) ?: defaultMockScene
+        active != null -> latestScene?.copy(vehicleCSnapshot = active.event.objectSnapshot) ?: noSignalScene
         latestScene != null -> latestScene
-        else -> defaultMockScene
+        else -> noSignalScene
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
