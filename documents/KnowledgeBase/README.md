@@ -18,6 +18,7 @@ This page contains links to article, highlighting the main knowledge base that h
 
 | Document | Topic |
 |---|---|
+| [Pre-V2X Industry Baseline & Real-World Business Impact](pre-v2x-industry-baseline-and-business-impact.md) | Official pre-V2X traffic safety statistics (WHO, NHTSA, UBATGTQG), sensor physical limits, and post-V2X ROI (7.38x BCR, 95% BOM reduction) |
 | [Multi-Dimensional Feasibility & Business Proof](v2x-business-and-technical-feasibility-study.md) | Proof of technical, financial (7.38x BCR), regulatory (Euro NCAP 2026+), and operational feasibility |
 | [V2X Protocol Foundations: ITS-G5 and the ETSI CPM](v2x-protocol-foundations.md) | How a station joins the V2X radio network, how CPM is disseminated and what it carries, what sender identity means and whether M1 needs it, and the propagation effects (Doppler, path loss, congestion) a real deployment must budget for |
 | [The limits of V2X CPM for cooperative-awareness warnings](v2x-cpm-limitations.md) | What CPM does and doesn't standardize, why thresholds can't be universal, broadcast-storm congestion control, and why a station ID doesn't prove lane relevance |

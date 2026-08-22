@@ -311,7 +311,11 @@ trap on_signal TERM
 # TCP probe with no external dependency: nc is not installed everywhere, and
 # bash's /dev/tcp is always present in a normal bash build.
 test_port() {
-    ( exec 3<>"/dev/tcp/127.0.0.1/$1" ) >/dev/null 2>&1
+    if command -v nc >/dev/null 2>&1; then
+        nc -z 127.0.0.1 "$1" >/dev/null 2>&1
+    else
+        ( exec 3<>"/dev/tcp/127.0.0.1/$1" ) >/dev/null 2>&1
+    fi
 }
 
 # adb output carries CRLF on every host; strip the CR so matching and trimming
@@ -359,9 +363,7 @@ if [ -z "${BASH_VERSION:-}" ]; then
     printf '\n  FAILED: this script needs bash, not sh.\n  Fix:    run it as "bash install-ivi-apk.sh".\n\n' >&2
     exit 1
 fi
-if [ "${BASH_VERSINFO[0]}" -lt 4 ]; then
-    fail "Bash $BASH_VERSION is too old." "Bash 4 or newer; the port probe needs a build with /dev/tcp compiled in."
-fi
+
 
 if [ ! -f "$REACH_BIN" ]; then
     fail "Tunnel CLI not found at $REACH_BIN" "Unpack the organizers' reach_be zip into tools/apk-uploader/."
