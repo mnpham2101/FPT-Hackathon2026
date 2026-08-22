@@ -6,6 +6,8 @@
 
 ## Fundamental knowledge
 
+
+
 ## Our phase planning
 
 ![M1 phase timeline](assets/m1-phase-timeline.svg)

@@ -6,9 +6,9 @@ import { createEcuPage } from "./pages/ecuPage.js";
 import { createV2xPage } from "./pages/v2xPage.js";
 import { createAdaPage } from "./pages/adaPage.js";
 import { createIviPage } from "./pages/iviPage.js";
-import { createOurWorkPage } from "./pages/ourWorkPage.js";
 import { createNextMileStonePage } from "./pages/nextMileStonePage.js";
 import { createOurTeamPage } from "./pages/ourTeamPage.js";
+import { createOurWorkPage } from "./pages/ourWorkPage.js";
 
 // ---- Renderer -------------------------------------------------------------
 const canvas = document.getElementById("scene");
@@ -33,9 +33,9 @@ const pages = await Promise.all([
   createV2xPage(),
   createAdaPage(),
   createIviPage(),
-  createOurWorkPage(),
   createNextMileStonePage(),
   createOurTeamPage(),
+  createOurWorkPage(),
 ]);
 
 let currentIndex = 0;
