@@ -62,15 +62,45 @@ class ObjectConfig:
 
 
 @dataclass(frozen=True)
+class PhaseConfig:
+    """Durations (seconds) of the repeating three-phase demo cycle (HLD D8).
+
+    ``waiting_s`` is silence - no CPM sent, the IVI waiting state. ``two_vehicle_s`` and
+    ``three_vehicle_s`` each send CPM at ``cpm_rate_hz``, sampling ``two_vehicle_object`` /
+    ``three_vehicle_object`` respectively through the same single kinematic model (D3) - only the
+    object data differs, never the code path.
+    """
+
+    waiting_s: float
+    two_vehicle_s: float
+    three_vehicle_s: float
+
+    @property
+    def cycle_length_s(self) -> float:
+        """Total repeating-cycle length: the sum of all three phase durations."""
+        return self.waiting_s + self.two_vehicle_s + self.three_vehicle_s
+
+
+@dataclass(frozen=True)
 class ScenarioConfig:
-    """One validated scenario (HLD D3): name, timing, and the sender/object tunables."""
+    """One validated scenario (HLD D3/D8): name, timing, and the sender/object tunables.
+
+    Two mutually exclusive shapes, selected by whether the YAML carries a ``phases`` key:
+    the classic single continuous cycle (``duration_s`` + ``object``), or the three-phase demo
+    cycle (``phases`` + ``two_vehicle_object`` + ``three_vehicle_object``). Exactly one of
+    ``phases`` or ``object`` is non-``None`` on any loaded config - ``player/config.py`` is the
+    only place that decides which.
+    """
 
     name: str
-    duration_s: float
     loop: bool
     sender: SenderConfig
-    object: ObjectConfig
+    duration_s: float | None = None
+    object: ObjectConfig | None = None
     cpm_rate_hz: float = DEFAULT_CPM_RATE_HZ
+    phases: PhaseConfig | None = None
+    two_vehicle_object: ObjectConfig | None = None
+    three_vehicle_object: ObjectConfig | None = None
 
 
 def load_env(env: Mapping[str, str] | None = None) -> EnvConfig:
@@ -129,42 +159,76 @@ def load_scenario(path: str | Path) -> ScenarioConfig:
     return _parse_scenario(raw)
 
 
+def _parse_object_config(object_raw: Mapping[str, Any], prefix: str) -> ObjectConfig:
+    """Parse one ``ObjectConfig`` from a mapping, naming missing/mistyped keys with ``prefix``."""
+    return ObjectConfig(
+        object_id=_integer(_require(object_raw, "object_id", prefix), f"{prefix}object_id"),
+        initial_distance_m=_number(
+            _require(object_raw, "initial_distance_m", prefix), f"{prefix}initial_distance_m"
+        ),
+        closing_speed_mps=_number(
+            _require(object_raw, "closing_speed_mps", prefix), f"{prefix}closing_speed_mps"
+        ),
+        lateral_offset_m=_number(
+            _require(object_raw, "lateral_offset_m", prefix), f"{prefix}lateral_offset_m"
+        ),
+        classification=_integer(
+            _require(object_raw, "classification", prefix), f"{prefix}classification"
+        ),
+        confidence=_integer(_require(object_raw, "confidence", prefix), f"{prefix}confidence"),
+    )
+
+
 def _parse_scenario(raw: Mapping[str, Any]) -> ScenarioConfig:
     sender_raw = _require_mapping(raw, "sender")
-    object_raw = _require_mapping(raw, "object")
 
     if "cpm_rate_hz" in raw:
         cpm_rate_hz = _positive_number(raw["cpm_rate_hz"], "cpm_rate_hz")
     else:
         cpm_rate_hz = DEFAULT_CPM_RATE_HZ
 
+    name = _string(_require(raw, "name"), "name")
+    loop = _boolean(_require(raw, "loop"), "loop")
+    sender = SenderConfig(
+        station_id=_integer(_require(sender_raw, "station_id", "sender."), "sender.station_id"),
+        lat=_number(_require(sender_raw, "lat", "sender."), "sender.lat"),
+        lon=_number(_require(sender_raw, "lon", "sender."), "sender.lon"),
+        heading_deg=_number(_require(sender_raw, "heading_deg", "sender."), "sender.heading_deg"),
+    )
+
+    if "phases" in raw:
+        phases_raw = _require_mapping(raw, "phases")
+        phases = PhaseConfig(
+            waiting_s=_positive_number(
+                _require(phases_raw, "waiting_s", "phases."), "phases.waiting_s"
+            ),
+            two_vehicle_s=_positive_number(
+                _require(phases_raw, "two_vehicle_s", "phases."), "phases.two_vehicle_s"
+            ),
+            three_vehicle_s=_positive_number(
+                _require(phases_raw, "three_vehicle_s", "phases."), "phases.three_vehicle_s"
+            ),
+        )
+        two_vehicle_raw = _require_mapping(raw, "two_vehicle_object")
+        three_vehicle_raw = _require_mapping(raw, "three_vehicle_object")
+        return ScenarioConfig(
+            name=name,
+            cpm_rate_hz=cpm_rate_hz,
+            loop=loop,
+            sender=sender,
+            phases=phases,
+            two_vehicle_object=_parse_object_config(two_vehicle_raw, "two_vehicle_object."),
+            three_vehicle_object=_parse_object_config(three_vehicle_raw, "three_vehicle_object."),
+        )
+
+    object_raw = _require_mapping(raw, "object")
     return ScenarioConfig(
-        name=_string(_require(raw, "name"), "name"),
+        name=name,
         cpm_rate_hz=cpm_rate_hz,
         duration_s=_positive_number(_require(raw, "duration_s"), "duration_s"),
-        loop=_boolean(_require(raw, "loop"), "loop"),
-        sender=SenderConfig(
-            station_id=_integer(_require(sender_raw, "station_id", "sender."), "sender.station_id"),
-            lat=_number(_require(sender_raw, "lat", "sender."), "sender.lat"),
-            lon=_number(_require(sender_raw, "lon", "sender."), "sender.lon"),
-            heading_deg=_number(_require(sender_raw, "heading_deg", "sender."), "sender.heading_deg"),
-        ),
-        object=ObjectConfig(
-            object_id=_integer(_require(object_raw, "object_id", "object."), "object.object_id"),
-            initial_distance_m=_number(
-                _require(object_raw, "initial_distance_m", "object."), "object.initial_distance_m"
-            ),
-            closing_speed_mps=_number(
-                _require(object_raw, "closing_speed_mps", "object."), "object.closing_speed_mps"
-            ),
-            lateral_offset_m=_number(
-                _require(object_raw, "lateral_offset_m", "object."), "object.lateral_offset_m"
-            ),
-            classification=_integer(
-                _require(object_raw, "classification", "object."), "object.classification"
-            ),
-            confidence=_integer(_require(object_raw, "confidence", "object."), "object.confidence"),
-        ),
+        loop=loop,
+        sender=sender,
+        object=_parse_object_config(object_raw, "object."),
     )
 
 
