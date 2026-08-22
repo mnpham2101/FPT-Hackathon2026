@@ -286,13 +286,11 @@ private fun WarningViewContent(
             view2D.Render(scene = scene, riskState = riskState)
         }
 
-
-        // Top Floating Warning Banner Overlay
-        com.hackathon.v2x.ivi.ui.view.WarningBannerOverlay(
-            warningActive = active != null || scene == defaultMockScene,
-            riskState = riskState,
-            modifier = Modifier.align(Alignment.TopCenter).padding(top = 8.dp),
-        )
+        // WarningBannerOverlay is intentionally not mounted here (D11): the God-View canvas
+        // must render unobstructed, and a fixed banner text otherwise covers every riskState
+        // (including low, with no ghost C) with the same "Vehicle C ahead" claim, masking the
+        // one visual signal — the ghost circle/glow/badge appearing or not — that actually
+        // distinguishes a two-vehicle scene from a three-vehicle warning.
 
         // HUD 2D/3D Mode Switcher Toggle Pill
         Box(
