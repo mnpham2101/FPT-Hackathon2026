@@ -5,10 +5,14 @@
 - ~27,000 fatalities, ~1,800,000 injuries, ~7,300,000 property-damage crashes per year in the US.
 - A fully deployed V2V system could address about 4,336,000 of those light-vehicle crashes annually.
 
+![81% of light-vehicle pre-crash scenarios are V2V-addressable (22 of 37 NHTSA scenarios); annual toll of those scenarios — 27,000 fatalities, 1,800,000 injuries, 7,300,000 property-damage crashes, 4,336,000 V2V-addressable crashes — shown on a log scale](assets/reality-stats.svg)
+
 ## The potentiality
 - IMA + LTA could prevent 412,000–592,000 crashes and save 777–1,083 lives per year, at full fleet penetration.
 - V2V hardware cost: $341–$350 per vehicle in 2020, falling to $209–$227 by 2058.
 - Source: NHTSA, DOT HS 812 014, August 2014.
+
+![V2V hardware cost per vehicle, 2020 to 2058: $341–$350 falling to $209–$227 as the technology matures, per NHTSA's learning-curve estimate](assets/potentiality-cost.svg)
 
 ## The type of risks V2X addresses
 - Forward collision, emergency brake light, blind spot, do not pass, blind intersection.

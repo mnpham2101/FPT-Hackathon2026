@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1300 680" font-family="Segoe UI, Arial, sans-serif">
+  <!-- "The potentiality" section: V2V hardware cost per vehicle, 2020 -> 2058,
+       per NHTSA DOT HS 812 014. The report gives only these two anchor years
+       (a "learning curve" narrative, not a published yearly series), so this
+       draws the honest two-point low/high range rather than inventing a
+       smoothed multi-year curve. Sized for projector legibility. -->
+  <rect x="0" y="0" width="1300" height="680" fill="#ffffff"/>
+
+  <text x="650" y="48" text-anchor="middle" font-size="30" fill="#52514e">V2V hardware cost per vehicle</text>
+  <text x="650" y="78" text-anchor="middle" font-size="20" fill="#898781">learning-curve range, NHTSA DOT HS 812 014</text>
+
+  <!-- gridlines -->
+  <g stroke="#e1e0d9" stroke-width="1.5">
+    <line x1="200" y1="417.5" x2="1150" y2="417.5"/>
+    <line x1="200" y1="315" x2="1150" y2="315"/>
+    <line x1="200" y1="212.5" x2="1150" y2="212.5"/>
+    <line x1="200" y1="110" x2="1150" y2="110"/>
+  </g>
+  <line x1="200" y1="520" x2="1150" y2="520" stroke="#c3c2b7" stroke-width="1.5"/>
+  <g font-size="22" fill="#898781" text-anchor="end">
+    <text x="185" y="527">$0</text>
+    <text x="185" y="424.5">$100</text>
+    <text x="185" y="322">$200</text>
+    <text x="185" y="219.5">$300</text>
+    <text x="185" y="117">$400</text>
+  </g>
+
+  <!-- low-high range band -->
+  <polygon points="380,170.475 970,305.775 970,287.325 380,161.25" fill="#2a78d6" fill-opacity="0.10"/>
+  <polyline points="380,170.475 970,305.775" fill="none" stroke="#2a78d6" stroke-width="2"/>
+  <polyline points="380,161.25 970,287.325" fill="none" stroke="#2a78d6" stroke-width="2"/>
+
+  <!-- endpoint markers, surface ring -->
+  <g fill="#2a78d6" stroke="#ffffff" stroke-width="3">
+    <circle cx="380" cy="170.475" r="7"/>
+    <circle cx="380" cy="161.25" r="7"/>
+    <circle cx="970" cy="305.775" r="7"/>
+    <circle cx="970" cy="287.325" r="7"/>
+  </g>
+
+  <!-- direct labels -->
+  <text x="365" y="150" text-anchor="end" font-size="26" font-weight="600" fill="#0b0b0b">$341&#8211;$350</text>
+  <text x="985" y="300" text-anchor="start" font-size="26" font-weight="600" fill="#0b0b0b">$209&#8211;$227</text>
+
+  <!-- x-axis -->
+  <g text-anchor="middle" font-size="22" fill="#52514e">
+    <text x="380" y="555">2020</text>
+    <text x="970" y="555">2058</text>
+  </g>
+
+  <text x="650" y="610" text-anchor="middle" font-size="18" fill="#898781">Two data points from the report &#8212; band shows the low&#8211;high estimate range, not a measured yearly curve.</text>
+</svg>

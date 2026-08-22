@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1900 840" font-family="Segoe UI, Arial, sans-serif">
+  <!-- Two figures for "The reality" section, sourced from NHTSA DOT HS 812 014:
+       (1) a ring meter for the 81% V2V-addressable share of light-vehicle crash
+       scenarios, (2) a log-scale bar chart for the four annual-toll figures the
+       page cites (fatalities/injuries/property-damage/addressable crashes span
+       ~270x, so a linear scale would flatten the smallest bar to invisible).
+       Sized for projector legibility: large type, double-width bars, a
+       double-size title, and extra-large category labels. -->
+  <rect x="0" y="0" width="1900" height="840" fill="#ffffff"/>
+
+  <!-- ===== Left: 81% ring meter ===== -->
+  <circle cx="340" cy="340" r="195" fill="none" stroke="#9ec5f4" stroke-width="54"/>
+  <circle cx="340" cy="340" r="195" fill="none" stroke="#2a78d6" stroke-width="54"
+          stroke-linecap="round" stroke-dasharray="992.4 232.8"
+          transform="rotate(-90 340 340)"/>
+  <text x="340" y="362" text-anchor="middle" font-size="126" font-weight="700" fill="#0b0b0b">81%</text>
+  <text x="340" y="402" text-anchor="middle" font-size="28" fill="#52514e">of crash scenarios</text>
+  <text x="340" y="432" text-anchor="middle" font-size="28" fill="#52514e">V2V can address</text>
+  <text x="340" y="700" text-anchor="middle" font-size="24" fill="#898781">22 of 37 NHTSA pre-crash scenarios</text>
+
+  <!-- ===== Right: annual toll, log scale ===== -->
+  <text x="1375" y="64" text-anchor="middle" font-size="60" fill="#52514e">Annual toll of the</text>
+  <text x="1375" y="132" text-anchor="middle" font-size="60" fill="#52514e">22 target scenarios</text>
+  <text x="1375" y="166" text-anchor="middle" font-size="20" fill="#898781">log scale &#8212; magnitudes span 270&#215;</text>
+
+  <!-- gridlines: 10K / 100K / 1M / 10M -->
+  <g stroke="#e1e0d9" stroke-width="1.5">
+    <line x1="900" y1="500" x2="1850" y2="500"/>
+    <line x1="900" y1="350" x2="1850" y2="350"/>
+    <line x1="900" y1="200" x2="1850" y2="200"/>
+  </g>
+  <line x1="900" y1="200" x2="900" y2="650" stroke="#c3c2b7" stroke-width="1.5"/>
+  <line x1="900" y1="650" x2="1850" y2="650" stroke="#c3c2b7" stroke-width="1.5"/>
+  <g font-size="22" fill="#898781" text-anchor="end">
+    <text x="882" y="656">10K</text>
+    <text x="882" y="506">100K</text>
+    <text x="882" y="356">1M</text>
+    <text x="882" y="206">10M</text>
+  </g>
+
+  <!-- bars: double width (68px), rounded top corners -->
+  <path d="M 984.75,650 L 984.75,593.3 A 8,8 0 0 1 992.75,585.3 L 1044.75,585.3 A 8,8 0 0 1 1052.75,593.3 L 1052.75,650 Z" fill="#2a78d6"/>
+  <path d="M 1222.25,650 L 1222.25,319.7 A 8,8 0 0 1 1230.25,311.7 L 1282.25,311.7 A 8,8 0 0 1 1290.25,319.7 L 1290.25,650 Z" fill="#2a78d6"/>
+  <path d="M 1459.75,650 L 1459.75,228.5 A 8,8 0 0 1 1467.75,220.5 L 1519.75,220.5 A 8,8 0 0 1 1527.75,228.5 L 1527.75,650 Z" fill="#2a78d6"/>
+  <path d="M 1697.25,650 L 1697.25,262.4 A 8,8 0 0 1 1705.25,254.4 L 1757.25,254.4 A 8,8 0 0 1 1765.25,262.4 L 1765.25,650 Z" fill="#2a78d6"/>
+
+  <!-- value labels (tip of each bar) -->
+  <g text-anchor="middle" font-size="30" font-weight="600" fill="#0b0b0b">
+    <text x="1018.75" y="569.3">27K</text>
+    <text x="1256.25" y="295.7">1.8M</text>
+    <text x="1493.75" y="204.5">7.3M</text>
+    <text x="1731.25" y="238.4">4.34M</text>
+  </g>
+
+  <!-- category labels -->
+  <g text-anchor="middle" font-size="44" fill="#52514e">
+    <text x="1018.75" y="705">Fatalities</text>
+    <text x="1256.25" y="705">Injuries</text>
+    <text x="1493.75" y="705">Property</text>
+    <text x="1493.75" y="757">damage</text>
+    <text x="1731.25" y="705">V2V</text>
+    <text x="1731.25" y="757">addressable</text>
+  </g>
+</svg>
