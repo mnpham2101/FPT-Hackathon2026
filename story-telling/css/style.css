@@ -40,7 +40,7 @@ html, body {
   align-items: center;
   justify-content: space-between;
   gap: 28px;
-  padding: 14px 56px;
+  padding: 14px 24px 14px 56px;
   background: transparent;
   border-bottom: 3px solid transparent;
   border-image: linear-gradient(90deg, #e0a458 0 110px, rgba(240, 230, 210, 0.15) 110px 100%) 1;
@@ -91,14 +91,15 @@ html, body {
    clipping, so with align-items:center this spills out above and below
    the header, into the scene, rather than being capped to the bar's own
    height the way it was before. Width follows automatically from the
-   image's own aspect ratio (1394:334, so 220px tall is ~917px wide — the
-   header needs real horizontal room; on a narrow window this will crowd
-   the title). drop-shadow (not box-shadow, which would box the transparent
-   PNG's rectangular bounds) keeps it legible against whatever the scene
-   behind it is doing. */
+   image's own aspect ratio (1394:334, so 150px tall is ~625px wide — was
+   220px/~917px then 180px/~750px, stepped down again for clearance from
+   the title text). #hud's right padding was also trimmed (56px -> 24px,
+   left untouched) so the logo sits further toward the right edge. drop-shadow
+   (not box-shadow, which would box the transparent PNG's rectangular bounds)
+   keeps it legible against whatever the scene behind it is doing. */
 #hud-logo {
   flex: none;
-  height: 220px;
+  height: 150px;
   width: auto;
   object-fit: contain;
   filter: drop-shadow(0 3px 10px rgba(0, 0, 0, 0.6));
