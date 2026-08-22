@@ -35,7 +35,33 @@ This project's own code shows the gap directly: B (the own-sensor track) and C (
 
 `ADA_ECU/src/parser/r2_parser.cpp:59` stamps every relayed object `v2x:<stationId>:<objectId>` and admits it through the R13 distance gate with no plausibility or identity check against B. The ambiguity does not surface in the M1 demo only because the bench simulates exactly one broadcasting station — `Scenario_Player/scenarios/default.yaml:19` and `c-out-of-range.yaml:14` both hardcode a single `station_id: 1201`. With more than one nearby broadcaster, there is currently no mechanism to tell which CPM is geometrically relevant.
 
+## 5. Architectural Solutions & Mitigation Matrix (Giải pháp Kiến trúc & Khắc phục)
+
+To address these protocol-level ETSI CPM limitations, our system architecture implements a 4-pillar mitigation suite across V2X-ECU, ADA-ECU, and IVI-ECU:
+
+### 🛠️ Solution 1 (For Gap 1 — Pluggable Risk Policy Engine):
+* **Decoupled Downstream Risk Engine:** Instead of forcing risk logic into the ETSI CPM wire protocol, ADA-ECU decouples perception parsing from risk evaluation. The R1 CPM parser outputs normalized object telemetry (`position`, `speed`, `confidence`), while a pluggable Risk Policy Engine (`chained_collision.cpp`) evaluates risk downstream.
+* **Dynamic Regional Parameterization (`config_vn.json` / `config_de.json`):** Risk thresholds are stored as dynamic runtime parameters (`ttcHighRisk`, `ttcLowRisk`, `speedLimitHighway`), allowing instant adaptation to regional driving cultures (e.g., Vietnam 100 km/h vs. Germany Autobahn 180 km/h) without altering the ETSI CPM wire format.
+
+### 🛠️ Solution 2 (For Gap 2 — Speed-Scaled Time-To-Collision Kinematics):
+* **Kinematic Time-To-Collision ($\text{TTC}$) Scaling:** ADA-ECU replaces fixed distance thresholds ($60\text{m} / 30\text{m}$) with dynamic time-based kinematics:
+  $$\text{TTC} = \frac{d_{AC}}{v_{\text{rel}}} = \frac{x_C - x_A}{v_{\text{ego}} - v_C}$$
+* **Speed-Adaptive Warning Corridor:** The warning trigger distance scales dynamically with Ego speed:
+  $$d_{\text{trigger}} = v_{\text{ego}} \times \text{TTC}_{\text{threshold}} + d_{\text{safety\_margin}}$$
+  At $100\text{ km/h}$ ($27.78\text{ m/s}$), a $\text{TTC} < 3.0\text{s}$ policy triggers early warning at **$90\text{m}$**, whereas at $30\text{ km/h}$ ($8.33\text{ m/s}$), it triggers at **$25\text{m}$**, eliminating false alarms in slow traffic while preserving 10.8s reaction lead time at highway speeds.
+
+### 🛠️ Solution 3 (For Gap 3 — Decentralized Congestion Control & Deduplication):
+* **ETSI DCC Adaptive Rate Control (ETSI TS 102 687):** V2X-ECU integrates Decentralized Congestion Control (DCC), monitoring local Channel Busy Rate (CBR) and dynamically adjusting broadcast interval between $1\text{Hz}$ (high congestion) and $10\text{Hz}$ (clear channel).
+* **2-Stage Dedup & Spatial Geofencing:** V2X-ECU's deduplication pipeline (`V2X_ECU/src/pipeline/deduper.cpp`) filters identical payload timestamps within a 100ms window and discards perceived objects outside the primary 300m spatial relevance radius before forwarding to ADA-ECU.
+
+### 🛠️ Solution 4 (For Gap 4 — 3-Tier Spatial & Track-to-Track Association):
+* **3-Tier Spatial & Kinematic Filtering Algorithm:** ADA-ECU scene composer (`scene_composer.cpp`) evaluates relative lateral offset ($|y| \le 1.75\text{m}$) to isolate vehicles traveling directly within Ego's forward driving lane corridor.
+* **Track-to-Track Association & Plausibility Check:** Matches relayed object $C$ against own-sensor track $B$ geometry. Relayed objects with invalid covariance matrices, impossible velocity jumps, or lateral offsets outside the driving corridor are filtered before reaching the IVI HMI display pipeline (`R4ListenerService` / `SceneCoordinateMapper.kt`).
+
+---
+
 ## Related
 
 - The wire fields these limits sit on top of: [contracts/r1-cpm-profile.md](../../contracts/r1-cpm-profile.md), [contracts/r2-v2x-object.schema.json](../../ADA_ECU/contracts/r2-v2x-object.schema.json)
 - The risk-threshold decision these limits bear on: [ada-ecu-design-decisions.md](../Design/MODULE-DESIGN/ADA-ECU/ada-ecu-design-decisions.md) D5, D11
+
