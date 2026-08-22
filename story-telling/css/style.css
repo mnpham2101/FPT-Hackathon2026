@@ -18,35 +18,87 @@ html, body {
   display: block;
 }
 
+/* Deck-style header layout — same shape as presentation/template/template.md's
+   .slide-head (numbered, bold title, orange rule) — but transparent: no bar
+   fill, so the 3D scene shows straight through the way every other textbox
+   on this site already does. Legibility comes from text-shadow/drop-shadow
+   on each element instead of an opaque backing. */
 #hud {
   position: fixed;
-  top: 32px;
-  left: 50%;
-  transform: translateX(-50%);
-  text-align: center;
-  color: #eef2f7;
+  top: 0;
+  left: 0;
+  right: 0;
+  /* Fixed rather than content-sized: the logo needs a definite height to be
+     a percentage of (see #hud-logo) — auto here would make that circular.
+     110px, not a tighter fit: the num/title row (~50px) plus a subtitle
+     line (~25px, roadPage shows one) needs ~75px of the ~79px this leaves
+     inside the 14px top/bottom padding. */
+  height: 110px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+  padding: 14px 56px;
+  background: transparent;
+  border-bottom: 3px solid transparent;
+  border-image: linear-gradient(90deg, #f37021 0 110px, rgba(255, 255, 255, 0.15) 110px 100%) 1;
   pointer-events: none;
-  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
+  z-index: 5;
+}
+
+#hud-text {
+  min-width: 0;
+}
+
+#hud-title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 20px;
+}
+
+#hud-num {
+  font-size: 2.6rem;
+  font-weight: 700;
+  color: #f37021;
+  line-height: 1;
+  flex: none;
+  text-shadow: 0 3px 16px rgba(0, 0, 0, 0.65), 0 0 30px rgba(127, 232, 255, 0.3);
 }
 
 #hud-title {
-  font-size: 2.6rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: #eef2f7;
+  letter-spacing: 0.01em;
   /* Always one line — #animation-textbox's top offset is sized assuming a
      single title line; a wrapped second line would push into it (as it did
      before this rule existed). */
   white-space: nowrap;
-  /* Own shadow rather than inheriting #hud's flatter one — a soft cyan glow
-     under the drop shadow, matching the blueprint's accent colour, is what
-     reads as "impressive" on a title this much larger. */
   text-shadow: 0 3px 16px rgba(0, 0, 0, 0.65), 0 0 30px rgba(127, 232, 255, 0.3);
 }
 
 #hud-subtitle {
   margin-top: 6px;
+  margin-left: 66px;
   font-size: 1rem;
   color: #a9b6c9;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
+}
+
+/* As tall as the header bar itself, edge to edge: height:100% would only
+   fill #hud's content box (110px minus its own 14px top/bottom padding —
+   79px, not 110px), so the negative margins cancel that padding out and let
+   the logo bleed past it to the bar's true top/bottom edges. Width follows
+   automatically from the image's own aspect ratio. drop-shadow (not
+   box-shadow, which would box the transparent PNG's rectangular bounds)
+   keeps it legible against whatever the scene behind it is doing. */
+#hud-logo {
+  flex: none;
+  height: 100%;
+  margin: -14px 0;
+  width: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 3px 10px rgba(0, 0, 0, 0.6));
 }
 
 #mail-banner {
@@ -136,17 +188,16 @@ html, body {
 }
 
 /* No panel fill on any textbox — the blueprint grid (or ecuPage's diagram)
-   shows straight through instead of sitting behind an opaque slab.
-   Legibility comes from text-shadow on the heading/body instead of a
-   background, the same technique #hud already uses over the 3D scene. Every
-   textbox occupies most of the viewport. Anchored at 1vh + 90px, not a
-   flat vh value: #hud-title is 2.6rem, single-line (nowrap, above) — the
-   fixed 90px covers #hud's own 32px top offset, one title line (~50px)
-   and a small safety margin. The subtitle div is collapsed to display:none
+   shows straight through instead of sitting behind an opaque slab — #hud is
+   transparent too now, for the same reason. Legibility comes from
+   text-shadow/drop-shadow on each header element instead of a background.
+   Every textbox occupies most of the viewport. Anchored at 1vh + 118px, not
+   a flat vh value: 118px covers #hud's fixed 110px height plus its 3px rule
+   plus a small safety margin. The subtitle div is
+   collapsed to display:none
    when pageSubtitle is empty (applyPageHeader, common.js) rather than left
-   as an empty-but-occupying-space line, which is why this doesn't also
-   budget for it — every page that actually shows this box has no subtitle
-   text. Only 1vh on top — 6vh (an earlier attempt) added ~90px of unneeded
+   as an empty-but-occupying-space line. Only 1vh on top — 6vh (an earlier
+   attempt) added ~90px of unneeded
    gap on a tall viewport, since the clearance this needs is a near-fixed
    pixel quantity (the title's size doesn't scale with viewport height),
    not a proportional one; 1vh is just enough to keep a touch of
@@ -164,11 +215,11 @@ html, body {
    lets the browser compute the real remaining space instead. */
 #animation-textbox {
   position: fixed;
-  top: calc(1vh + 90px);
+  top: calc(1vh + 118px);
   left: 50%;
   transform: translateX(-50%);
   width: min(1900px, 94vw);
-  max-height: calc(99vh - 160px);
+  max-height: calc(99vh - 188px);
   padding: 20px 40px;
   background: transparent;
   border: none;
@@ -190,7 +241,7 @@ html, body {
    are untouched (still max-height only, shrink-to-fit, so a short bullet
    list doesn't become a mostly-empty giant box). */
 #animation-textbox:has(.textbox-figure) {
-  height: calc(99vh - 160px);
+  height: calc(99vh - 188px);
 }
 
 #animation-textbox.hidden {

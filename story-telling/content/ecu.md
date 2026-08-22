@@ -1,8 +1,3 @@
----
-titleColor: #eef2f7
-titleWeight: 600
----
-
 # Cooperative Vehicle Awareness
 
 ## CPM broadcast decoded by V2X

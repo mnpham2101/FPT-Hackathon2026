@@ -22,6 +22,7 @@ renderer.shadowMap.enabled = true;
 // (the mail reaching Vehicle A) completes.
 const prevBtn = document.getElementById("nav-prev");
 const nextBtn = document.getElementById("nav-next");
+const hudNumEl = document.getElementById("hud-num");
 
 // Each page loads its own pageTitle/pageSubtitle from markdown before it's
 // ready, so the whole set is awaited up front rather than per-navigation.
@@ -53,8 +54,14 @@ function goToPage(index) {
   currentIndex = clamped;
   activePage = pages[currentIndex];
   activePage.onEnter?.();
+  updateHudNum();
 
   updateNavButtons();
+}
+
+/** #hud-num — the deck-style "01", "02", ... prefix, one per page in nav order. */
+function updateHudNum() {
+  if (hudNumEl) hudNumEl.textContent = String(currentIndex + 1).padStart(2, "0");
 }
 
 function updateNavButtons() {
@@ -71,6 +78,7 @@ nextBtn.addEventListener("click", () => goToPage(currentIndex + 1));
 
 updateNavButtons();
 activePage.onEnter?.();
+updateHudNum();
 
 // ---- Resize -----------------------------------------------------------
 window.addEventListener("resize", () => {
