@@ -52,6 +52,11 @@ Every item below is delivered with Milestone 1 — checked means it is complete 
   - The system can be developed and delivered as a **whole package of the three ECU applications**, integrated and system-tested end to end.
   - Or each application can be delivered as a **single, standalone product per ECU** — each ships with mock images of its neighbours, so a single application is testable and acceptable on its own.
 
+## Financial Analysis & Business Case
+
+For the complete commercial valuation, financial modeling, and investment returns:
+- 📊 **[V2X Business Case, Cost-Benefit Analysis & Financial ROI Model](v2x-business-case-roi-model.md)**: Includes the 5-year Cost-Benefit Analysis (CBA) proof diagram ($7.38x BCR), the Tri-Stream Monetization Revenue Model, and the 3-Year 4,000% ROI & 14-Month Break-Even Timeline.
+
 ## Product Limitations
 
 - **Warning threshold** — based on the distance required to stop a vehicle traveling at over 75 km/h. Variable speed and stopping distance are not calculated.

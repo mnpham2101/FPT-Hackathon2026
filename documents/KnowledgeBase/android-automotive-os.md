@@ -22,6 +22,10 @@ Standard Mobile Android is designed for personal smartphones (touchscreens, batt
 | **HMI Layout** | Portrait phone display | Fixed landscape automotive resolution (e.g., 1280×720, 1920×1080) |
 | **Driving Safety** | Distraction controls handled by app | System-enforced Driver Distraction Rules (UX Restrictions) |
 
+> [!NOTE]
+> For the complete architectural specification and protocol decoupling proof (Gateway MCU ethernet0 -> CarPropertyManager -> Kotlin UI), see [Gateway MCU to Kotlin UI: Signal Pipeline & Protocol Decoupling](signal-pipeline-and-protocol-decoupling.md).
+> For the multi-dimensional commercial, financial (ROI/CBA), technical, and regulatory feasibility proof, see [Multi-Dimensional Feasibility & Business Proof](v2x-business-and-technical-feasibility-study.md).
+
 ---
 
 ## 2. End-to-End Message Ingest & Data Pipeline
