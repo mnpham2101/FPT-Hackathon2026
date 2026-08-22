@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { createPauseController } from "./common.js";
 import { createRoadPage } from "./pages/roadPage.js";
+import { createProjectGoalsPage } from "./pages/projectGoalsPage.js";
 import { createEcuPage } from "./pages/ecuPage.js";
 import { createV2xPage } from "./pages/v2xPage.js";
 import { createAdaPage } from "./pages/adaPage.js";
@@ -26,6 +27,7 @@ const nextBtn = document.getElementById("nav-next");
 // ready, so the whole set is awaited up front rather than per-navigation.
 const pages = await Promise.all([
   createRoadPage({ onComplete: () => { nextBtn.disabled = false; } }),
+  createProjectGoalsPage(),
   createEcuPage(),
   createV2xPage(),
   createAdaPage(),

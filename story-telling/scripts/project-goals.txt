@@ -1,0 +1,103 @@
+================================================================
+[SECTION 1 — The reality]  (bấm → để bắt đầu trang)
+================================================================
+
+Kính chào quý vị khán giả
+và Ban Giám khảo!
+
+Mỗi ngày, hàng triệu tài xế trên cao tốc
+đang vô tình giao phó tính mạng
+của cả gia đình mình
+cho một "bức tường sắt di động"
+ở tốc độ 100 km/h —
+và phần mềm của em ở đây
+để chấm dứt điều đó!
+
+Hãy tưởng tượng bạn đang lái xe
+ở tốc độ 100 km/h trên cao tốc,
+ngay sau một chiếc xe tải container khổng lồ.
+Chiếc xe tải che kín 100% tầm nhìn,
+bạn hoàn toàn không thấy gì phía trước.
+
+Khi chiếc xe tải đó bất ngờ bẻ lái
+tránh một chướng ngại vật,
+bạn chỉ có nửa giây để phản ứng —
+quá muộn để kịp phanh!
+
+Và đây không phải chuyện hiếm gặp.
+Theo báo cáo năm 2014 của
+Cục An toàn Giao thông Đường bộ
+Quốc gia Hoa Kỳ — NHTSA —
+cứ 37 kịch bản va chạm phổ biến nhất
+thì có tới 22 kịch bản,
+gồm va chạm dồn toa, chuyển làn, và giao lộ,
+chiếm đến 81% tổng số vụ tai nạn xe con.
+
+Riêng nhóm này thôi
+đã gây ra trung bình
+27 nghìn ca tử vong,
+1,8 triệu ca thương tích,
+và 7,3 triệu vụ va chạm thiệt hại tài sản —
+mỗi năm, chỉ tính riêng ở Mỹ.
+
+================================================================
+[CHUYỂN SANG SECTION 2 — The potentiality]  (bấm →)
+================================================================
+
+Điểm chung của tất cả
+những vụ tai nạn này là gì?
+Chúng đều xảy ra ở nơi mà cảm biến quang học —
+radar, camera, lidar —
+không thể nhìn xuyên qua được.
+Và đó chính là bài toán
+mà dự án của em giải quyết.
+
+Phần mềm của em biến màn hình ô tô của bạn
+thành "đôi mắt thần nhìn xuyên thùng xe tải".
+Màn hình bật cảnh báo đỏ rực,
+vẽ rõ vị trí chiếc xe nguy hiểm phía trước,
+cho bạn thêm vài giây quý giá
+để phanh dừng an toàn.
+
+Và lợi ích này không chỉ nằm trên giấy.
+Cũng theo NHTSA, nếu công nghệ V2V —
+giao tiếp xe với xe —
+được triển khai toàn diện,
+hệ thống có thể giải quyết
+tới 4,3 triệu vụ va chạm xe con mỗi năm.
+
+Chỉ riêng hai tính năng
+cảnh báo giao lộ và rẽ trái,
+khi phủ khắp toàn bộ đội xe,
+đã có thể ngăn từ 412 nghìn
+đến 592 nghìn vụ va chạm,
+cứu sống từ 777
+đến hơn 1.000 người mỗi năm.
+
+Còn chi phí thì sao?
+Thiết bị V2V ước tính
+chỉ khoảng 341 đến 350 đô la mỗi xe
+vào năm 2020,
+và sẽ còn giảm xuống
+209 đến 227 đô la
+khi công nghệ trưởng thành.
+Một khoản đầu tư nhỏ,
+đổi lấy hàng trăm nghìn sinh mạng mỗi năm.
+
+================================================================
+[CHUYỂN SANG SECTION 3 — The type of risks V2X addresses]  (bấm →, ảnh risk-type.jpg hiện lên)
+================================================================
+
+V2X có thể giúp những tình huống nguy hiểm
+thể hiện trong bức tranh này.
+Sản phẩm của chúng em mang mục đích hỗ trợ
+một tình huống trong bức ảnh này.
+
+Giúp xe A nhìn thấy thứ
+mà chính nó không bao giờ nhìn thấy được —
+thông qua con mắt của xe B.
+
+(Nguồn số liệu: NHTSA,
+Vehicle-to-Vehicle Communications:
+Readiness of V2V Technology for Application,
+Report No. DOT HS 812 014, tháng 8/2014.)
