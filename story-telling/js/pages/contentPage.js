@@ -9,7 +9,7 @@ import {
 
 const DOT_RADIUS = 0.045;
 const DOT_SPACING = 0.26;
-const DOT_UNVISITED_COLOR = 0x3a4160;
+const DOT_UNVISITED_COLOR = 0x3f4a3d;
 
 // Vertical placement of the progress-dot row, in world units up from scene
 // centre — near the bottom of the frustum rather than under the title, out
@@ -60,7 +60,7 @@ export async function createContentPage({ contentPath, accent }) {
   const header = await loadPageHeader(contentPath);
 
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x0b0f1a);
+  scene.background = new THREE.Color(0x1c2622);
 
   const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 200);
   camera.position.set(0, 0, 15);

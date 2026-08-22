@@ -8,7 +8,9 @@ html, body {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: #0a0e14;
+  /* "Forest Dusk" — matches buildBlueprintBackdrop's fill (common.js) so
+     there's no seam before the canvas paints over it. */
+  background: #1c2622;
   font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
 }
 
@@ -41,7 +43,7 @@ html, body {
   padding: 14px 56px;
   background: transparent;
   border-bottom: 3px solid transparent;
-  border-image: linear-gradient(90deg, #f37021 0 110px, rgba(255, 255, 255, 0.15) 110px 100%) 1;
+  border-image: linear-gradient(90deg, #e0a458 0 110px, rgba(240, 230, 210, 0.15) 110px 100%) 1;
   pointer-events: none;
   z-index: 5;
 }
@@ -59,29 +61,29 @@ html, body {
 #hud-num {
   font-size: 2.6rem;
   font-weight: 700;
-  color: #f37021;
+  color: #e0a458;
   line-height: 1;
   flex: none;
-  text-shadow: 0 3px 16px rgba(0, 0, 0, 0.65), 0 0 30px rgba(127, 232, 255, 0.3);
+  text-shadow: 0 3px 16px rgba(0, 0, 0, 0.65), 0 0 30px rgba(224, 164, 88, 0.35);
 }
 
 #hud-title {
   font-size: 2.2rem;
   font-weight: 700;
-  color: #eef2f7;
+  color: #f0e6d2;
   letter-spacing: 0.01em;
   /* Always one line — #animation-textbox's top offset is sized assuming a
      single title line; a wrapped second line would push into it (as it did
      before this rule existed). */
   white-space: nowrap;
-  text-shadow: 0 3px 16px rgba(0, 0, 0, 0.65), 0 0 30px rgba(127, 232, 255, 0.3);
+  text-shadow: 0 3px 16px rgba(0, 0, 0, 0.65), 0 0 30px rgba(224, 164, 88, 0.35);
 }
 
 #hud-subtitle {
   margin-top: 6px;
   margin-left: 66px;
   font-size: 1rem;
-  color: #a9b6c9;
+  color: #9db98c;
   text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
 }
 
@@ -110,10 +112,10 @@ html, body {
   align-items: center;
   gap: 10px;
   padding: 14px 22px;
-  background: rgba(16, 22, 34, 0.85);
-  border: 1px solid rgba(120, 180, 255, 0.35);
+  background: rgba(26, 34, 30, 0.85);
+  border: 1px solid rgba(224, 164, 88, 0.35);
   border-radius: 10px;
-  color: #eaf1ff;
+  color: #f0e6d2;
   font-size: 1rem;
   opacity: 0;
   transition: opacity 0.6s ease, transform 0.6s ease;
@@ -132,7 +134,7 @@ html, body {
 
 .mail-icon {
   font-size: 1.3rem;
-  color: #7ec8ff;
+  color: #e0a458;
 }
 
 .nav-btn {
@@ -142,9 +144,9 @@ html, body {
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  border: 1px solid rgba(120, 180, 255, 0.35);
-  background: rgba(16, 22, 34, 0.65);
-  color: #eaf1ff;
+  border: 1px solid rgba(224, 164, 88, 0.35);
+  background: rgba(26, 34, 30, 0.65);
+  color: #f0e6d2;
   font-size: 1.8rem;
   line-height: 1;
   cursor: pointer;
@@ -154,7 +156,7 @@ html, body {
 }
 
 .nav-btn:hover:not(:disabled) {
-  background: rgba(28, 40, 60, 0.85);
+  background: rgba(38, 46, 34, 0.85);
   transform: translateY(-50%) scale(1.06);
 }
 
@@ -176,10 +178,10 @@ html, body {
   left: 24px;
   bottom: 24px;
   padding: 8px 14px;
-  background: rgba(16, 22, 34, 0.65);
-  border: 1px solid rgba(120, 180, 255, 0.25);
+  background: rgba(26, 34, 30, 0.65);
+  border: 1px solid rgba(224, 164, 88, 0.25);
   border-radius: 8px;
-  color: #a9b6c9;
+  color: #9db98c;
   font-size: 0.82rem;
   letter-spacing: 0.02em;
   backdrop-filter: blur(6px);
@@ -253,7 +255,7 @@ html, body {
   font-size: 2.2rem;
   font-weight: 600;
   text-align: center;
-  color: #eef2f7;
+  color: #f0e6d2;
   text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
 }
 
@@ -264,7 +266,7 @@ html, body {
   flex-direction: column;
   margin-top: 6px;
   font-size: 1.5rem;
-  color: #f5f7fb;
+  color: #d9ddd0;
   line-height: 1.7;
   text-shadow: 0 1px 10px rgba(0, 0, 0, 0.75);
 }
@@ -301,5 +303,5 @@ html, body {
      also fixed. */
   object-fit: contain;
   border-radius: 6px;
-  background: rgba(238, 242, 247, 0.04);
+  background: rgba(240, 230, 210, 0.04);
 }

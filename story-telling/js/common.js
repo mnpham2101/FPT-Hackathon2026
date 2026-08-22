@@ -278,9 +278,9 @@ export function buildBlueprintBackdrop() {
   canvas.width = size;
   canvas.height = size;
   const ctx = canvas.getContext("2d");
-  ctx.fillStyle = "#0b0f1a";
+  ctx.fillStyle = "#1c2622";
   ctx.fillRect(0, 0, size, size);
-  ctx.strokeStyle = "rgba(127, 232, 255, 0.08)";
+  ctx.strokeStyle = "rgba(143, 174, 122, 0.10)";
   ctx.lineWidth = 1;
   const step = 32;
   for (let x = 0; x <= size; x += step) {

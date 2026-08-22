@@ -180,7 +180,7 @@ export async function createEcuPage() {
   const header = await loadPageHeader("content/ecu.md");
 
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x0b0f1a);
+  scene.background = new THREE.Color(0x1c2622);
 
   const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 200);
   camera.position.set(0, 0, 15);
