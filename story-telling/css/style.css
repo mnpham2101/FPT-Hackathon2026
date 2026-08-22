@@ -87,17 +87,18 @@ html, body {
   text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
 }
 
-/* As tall as the header bar itself, edge to edge: height:100% would only
-   fill #hud's content box (110px minus its own 14px top/bottom padding —
-   79px, not 110px), so the negative margins cancel that padding out and let
-   the logo bleed past it to the bar's true top/bottom edges. Width follows
-   automatically from the image's own aspect ratio. drop-shadow (not
-   box-shadow, which would box the transparent PNG's rectangular bounds)
-   keeps it legible against whatever the scene behind it is doing. */
+/* Deliberately taller than the 110px bar itself — #hud has no overflow
+   clipping, so with align-items:center this spills out above and below
+   the header, into the scene, rather than being capped to the bar's own
+   height the way it was before. Width follows automatically from the
+   image's own aspect ratio (1394:334, so 220px tall is ~917px wide — the
+   header needs real horizontal room; on a narrow window this will crowd
+   the title). drop-shadow (not box-shadow, which would box the transparent
+   PNG's rectangular bounds) keeps it legible against whatever the scene
+   behind it is doing. */
 #hud-logo {
   flex: none;
-  height: 100%;
-  margin: -14px 0;
+  height: 220px;
   width: auto;
   object-fit: contain;
   filter: drop-shadow(0 3px 10px rgba(0, 0, 0, 0.6));
