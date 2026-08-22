@@ -6,6 +6,7 @@ import { createEcuPage } from "./pages/ecuPage.js";
 import { createV2xPage } from "./pages/v2xPage.js";
 import { createAdaPage } from "./pages/adaPage.js";
 import { createIviPage } from "./pages/iviPage.js";
+import { createDemoPage } from "./pages/demoPage.js";
 import { createNextMileStonePage } from "./pages/nextMileStonePage.js";
 import { createOurTeamPage } from "./pages/ourTeamPage.js";
 import { createOurWorkPage } from "./pages/ourWorkPage.js";
@@ -33,6 +34,7 @@ const pages = await Promise.all([
   createV2xPage(),
   createAdaPage(),
   createIviPage(),
+  createDemoPage(),
   createNextMileStonePage(),
   createOurTeamPage(),
   createOurWorkPage(),
