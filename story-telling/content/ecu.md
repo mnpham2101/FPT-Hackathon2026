@@ -5,10 +5,10 @@ titleWeight: 600
 
 # Cooperative Vehicle Awareness
 
-## CPM broadcast is received and decoded by V2X
+## CPM broadcast decoded by V2X
 
-## V2X forwards the obstruction information (vehicleC)
+## V2X forwards vehicle C's data
 
-## ADA combines its vision (vehicleB) and V2X info (vehicleC)
+## ADA fuses vision (B) with V2X data (C)
 
-## ADA relay warning to IVI
+## ADA relays warning to IVI

@@ -1,6 +1,6 @@
 # What does V2X do?
 
-## It makes use of library stacks to decode CPM messages
+## Library stack decodes CPM messages
 
 ![](assets/phase1-des-protocol-stack.svg)
 
