@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4725 2210" font-family="Segoe UI, Arial, sans-serif">
+  <!-- Rebuilt from documents/Requirements/v2x-ecu.svg (the m1-proposal-deck slide 11
+       source) as plain SVG text. Colored to the FPT deck theme
+       (presentation/slide-build-tool/build-slides.py DEFAULT_COLORS), damped down
+       from the raw brand hexes to a duller, less saturated variant of each: navy
+       headers, muted green = portable application layer, muted terracotta =
+       vendor SDK / bench, muted steel-blue = modem firmware, muted teal =
+       border-line dividers. Widened 1.5x twice from the original 2100 (2100 ->
+       3150 -> 4725); only x-geometry changed each time — row heights,
+       y-positions and font sizes are unchanged throughout. -->
+  <rect x="0" y="0" width="4725" height="2210" fill="#ffffff"/>
+
+  <!-- divider guides, drawn first so the boxes sit on top of them -->
+  <g stroke="#8a8d99" stroke-width="3" stroke-dasharray="3 10">
+    <line x1="45" y1="1035" x2="4680" y2="1035"/>
+    <line x1="45" y1="1770" x2="4680" y2="1770"/>
+  </g>
+
+  <!-- column titles -->
+  <rect x="202.5" y="20" width="2025" height="90" rx="30" fill="#232C63"/>
+  <text x="1215" y="86" text-anchor="middle" font-size="66" font-weight="700" fill="#ffffff">Development on Hardware</text>
+  <rect x="2497.5" y="20" width="2025" height="90" rx="30" fill="#232C63"/>
+  <text x="3510" y="86" text-anchor="middle" font-size="66" font-weight="700" fill="#ffffff">Virtual Development</text>
+
+  <!-- row 1: V2X Application -->
+  <rect x="202.5" y="150" width="2025" height="320" rx="16" fill="#5A9552"/>
+  <text x="1215" y="225" text-anchor="middle" font-size="69" font-weight="700" fill="#ffffff">V2X Application</text>
+  <text x="1215" y="295" text-anchor="middle" font-size="57" fill="#ffffff">encode/decode DENM /</text>
+  <text x="1215" y="360" text-anchor="middle" font-size="57" fill="#ffffff">BSM msg parsing</text>
+
+  <rect x="2497.5" y="150" width="2025" height="320" rx="16" fill="#5A9552"/>
+  <text x="3510" y="225" text-anchor="middle" font-size="69" font-weight="700" fill="#ffffff">V2X Application</text>
+  <text x="3510" y="295" text-anchor="middle" font-size="57" fill="#ffffff">DENM / BSM msg parsing</text>
+  <text x="3510" y="360" text-anchor="middle" font-size="57" fill="#ffffff">(no encode/decode)</text>
+
+  <!-- row 2: Adapter Interface -->
+  <rect x="202.5" y="520" width="2025" height="400" rx="16" fill="#5A9552"/>
+  <text x="1215" y="605" text-anchor="middle" font-size="69" font-weight="700" fill="#ffffff">Adapter Interface</text>
+  <text x="1215" y="675" text-anchor="middle" font-size="69" font-weight="700" fill="#ffffff">&#8211; IV2xRadio</text>
+  <text x="1215" y="745" text-anchor="middle" font-size="57" fill="#ffffff">init + configure +</text>
+  <text x="1215" y="815" text-anchor="middle" font-size="57" fill="#ffffff">subscribe Rx/Tx</text>
+
+  <rect x="2497.5" y="520" width="2025" height="400" rx="16" fill="#5A9552"/>
+  <text x="3510" y="605" text-anchor="middle" font-size="69" font-weight="700" fill="#ffffff">Adapter Interface</text>
+  <text x="3510" y="675" text-anchor="middle" font-size="69" font-weight="700" fill="#ffffff">&#8211; IV2xRadio</text>
+  <text x="3510" y="745" text-anchor="middle" font-size="57" fill="#ffffff">(init + configure) +</text>
+  <text x="3510" y="815" text-anchor="middle" font-size="57" fill="#ffffff">subscribe Rx/Tx</text>
+
+  <!-- portable application code border line -->
+  <rect x="900" y="980" width="2925" height="110" rx="55" fill="#4A9098"/>
+  <text x="2362.5" y="1052" text-anchor="middle" font-size="54" font-weight="700" fill="#ffffff">portable application code border line</text>
+
+  <!-- row 3: telux SDK / Bench node -->
+  <rect x="202.5" y="1150" width="2025" height="240" rx="16" fill="#C97A45"/>
+  <text x="1215" y="1245" text-anchor="middle" font-size="69" font-weight="700" fill="#ffffff">telux SDK</text>
+  <text x="1215" y="1315" text-anchor="middle" font-size="57" fill="#ffffff">call Qualcomm API</text>
+
+  <rect x="2497.5" y="1150" width="2025" height="970" rx="20" fill="#C97A45"/>
+  <text x="3510" y="1585" text-anchor="middle" font-size="69" font-weight="700" fill="#ffffff">Bench node</text>
+  <text x="3510" y="1655" text-anchor="middle" font-size="57" fill="#ffffff">presenting RX UDP</text>
+  <text x="3510" y="1720" text-anchor="middle" font-size="57" fill="#ffffff">datastream</text>
+
+  <!-- row 4: QMI -->
+  <rect x="202.5" y="1440" width="2025" height="220" rx="16" fill="#C97A45"/>
+  <text x="1215" y="1571" text-anchor="middle" font-size="66" font-weight="700" fill="#ffffff">QMI &#8211; V2X service</text>
+
+  <!-- Quectel Modem - V2X ECU border -->
+  <rect x="900" y="1715" width="2925" height="110" rx="55" fill="#4A9098"/>
+  <text x="2362.5" y="1787" text-anchor="middle" font-size="54" font-weight="700" fill="#ffffff">Quectel Modem &#8211; V2X ECU border</text>
+
+  <!-- row 5: Quectel Firmware -->
+  <rect x="202.5" y="1880" width="2025" height="240" rx="16" fill="#2F5F91"/>
+  <text x="1215" y="1975" text-anchor="middle" font-size="69" font-weight="700" fill="#ffffff">Quectel Firmware</text>
+  <text x="1215" y="2045" text-anchor="middle" font-size="57" fill="#ffffff">Radio + PHY + MAC + RLC</text>
+</svg>
