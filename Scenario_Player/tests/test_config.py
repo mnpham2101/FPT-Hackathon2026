@@ -24,6 +24,38 @@ from player.config import (  # noqa: E402
     load_scenario,
 )
 
+PHASED_VALID: dict = {
+    "name": "phased-test",
+    "loop": True,
+    "sender": {
+        "station_id": 1001,
+        "lat": 21.028511,
+        "lon": 105.804817,
+        "heading_deg": 90.0,
+    },
+    "phases": {
+        "waiting_s": 10.0,
+        "two_vehicle_s": 5.0,
+        "three_vehicle_s": 5.0,
+    },
+    "two_vehicle_object": {
+        "object_id": 7,
+        "initial_distance_m": 60.0,
+        "closing_speed_mps": 0.0,
+        "lateral_offset_m": 1.2,
+        "classification": 5,
+        "confidence": 95,
+    },
+    "three_vehicle_object": {
+        "object_id": 7,
+        "initial_distance_m": 25.0,
+        "closing_speed_mps": 3.0,
+        "lateral_offset_m": 1.2,
+        "classification": 5,
+        "confidence": 95,
+    },
+}
+
 VALID: dict = {
     "name": "approach-test",
     "cpm_rate_hz": 5.0,
@@ -184,6 +216,63 @@ def test_non_positive_value_rejected_and_named(tmp_path, dotted, bad_value):
         load_scenario(_write(tmp_path, _with(VALID, dotted, bad_value)))
 
 
+# --- phases: the D8 three-phase demo-cycle shape ------------------------------------------------
+
+
+def test_phased_yaml_loads_exact_field_values(tmp_path):
+    scenario = load_scenario(_write(tmp_path, PHASED_VALID))
+
+    assert scenario.duration_s is None
+    assert scenario.object is None
+
+    assert scenario.phases.waiting_s == 10.0
+    assert scenario.phases.two_vehicle_s == 5.0
+    assert scenario.phases.three_vehicle_s == 5.0
+    assert scenario.phases.cycle_length_s == 20.0
+
+    assert scenario.two_vehicle_object.initial_distance_m == 60.0
+    assert scenario.two_vehicle_object.closing_speed_mps == 0.0
+    assert scenario.three_vehicle_object.initial_distance_m == 25.0
+    assert scenario.three_vehicle_object.closing_speed_mps == 3.0
+
+
+@pytest.mark.parametrize(
+    "dotted",
+    [
+        "phases.waiting_s",
+        "phases.two_vehicle_s",
+        "phases.three_vehicle_s",
+        "two_vehicle_object",
+        "three_vehicle_object",
+        "two_vehicle_object.initial_distance_m",
+        "three_vehicle_object.closing_speed_mps",
+    ],
+)
+def test_phased_missing_key_rejected_and_named(tmp_path, dotted):
+    with pytest.raises(ValueError, match=dotted.replace(".", r"\.")):
+        load_scenario(_write(tmp_path, _without(PHASED_VALID, dotted)))
+
+
+@pytest.mark.parametrize(
+    ("dotted", "bad_value"),
+    [
+        ("phases.waiting_s", 0),
+        ("phases.two_vehicle_s", -1.0),
+        ("phases.three_vehicle_s", 0),
+    ],
+)
+def test_phased_non_positive_phase_duration_rejected_and_named(tmp_path, dotted, bad_value):
+    with pytest.raises(ValueError, match=dotted):
+        load_scenario(_write(tmp_path, _with(PHASED_VALID, dotted, bad_value)))
+
+
+def test_phased_scenario_omits_duration_s_and_object_without_error(tmp_path):
+    """A phased YAML carries no top-level ``duration_s``/``object`` - and none is required."""
+    scenario = load_scenario(_write(tmp_path, PHASED_VALID))
+    assert scenario.duration_s is None
+    assert scenario.object is None
+
+
 # --- rejection: file / document problems -------------------------------------------------------
 
 
@@ -299,3 +388,22 @@ class TestCommittedScenarioVariants:
             out_of_range.object.initial_distance_m,
             out_of_range.object.closing_speed_mps,
         )
+
+    def test_r19_demo_cycle_period_is_a_multiple_of_the_10s_ada_clip(self):
+        """SP HLD D8: the cycle length must be an integer multiple of the 10.0 s ADA video clip
+        (ego-b-occluding-c.mp4), or the clip's independent loop drifts out of phase with the bench
+        and wraps mid-warning (D7/D11's `b_unknown` regression)."""
+        scenario = load_scenario(SCENARIOS_DIR / "r19-demo-cycle.yaml")
+        ada_clip_length_s = 10.0
+        assert scenario.phases.cycle_length_s % ada_clip_length_s == 0
+
+    def test_r19_demo_cycle_two_vehicle_object_stays_beyond_the_gate(self):
+        scenario = load_scenario(SCENARIOS_DIR / "r19-demo-cycle.yaml")
+        assert scenario.two_vehicle_object.closing_speed_mps == 0.0
+        assert scenario.two_vehicle_object.initial_distance_m > self.GATE_ENTER_M
+
+    def test_r19_demo_cycle_three_vehicle_object_stays_inside_the_gate_throughout(self):
+        scenario = load_scenario(SCENARIOS_DIR / "r19-demo-cycle.yaml")
+        obj = scenario.three_vehicle_object
+        farthest_m = obj.initial_distance_m  # closing speed only decreases distance from here
+        assert farthest_m < self.GATE_ENTER_M

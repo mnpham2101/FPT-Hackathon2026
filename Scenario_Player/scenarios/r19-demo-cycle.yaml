@@ -1,0 +1,49 @@
+# r19-demo-cycle.yaml - the repeating waiting/two-vehicle/three-vehicle demo choreography (SP HLD
+# D8). A 20.0 s cycle, an exact multiple of the 10.0 s ADA video clip (ego-b-occluding-c.mp4) so
+# the bench's own cycle and the clip's independent loop always re-align at a clip boundary -
+# breaking either period out of that 1:2 ratio reintroduces the drift D7/D11 warn against (the
+# clip wrapping mid-warning and the ADA assessment falling to `low` on its b_unknown path).
+#
+# phases.waiting_s   = 10.0 s: no CPM sent at all - the IVI's waiting state.
+# phases.two_vehicle_s = 5.0 s: CPM sent from B: two_vehicle_object holds C static at 60.0 m,
+#   beyond the 30 m R13 admission gate (same static-beyond-gate shape as c-out-of-range.yaml) -
+#   only A (ego) and B (relayed sender) are perceptually present.
+# phases.three_vehicle_s = 5.0 s: CPM sent from B: three_vehicle_object starts C already inside
+#   the gate at 25.0 m and closes to 10.0 m over the window, so the R19 warning holds for the
+#   whole phase rather than only after a crossing instant.
+#
+# All values here are scenario data, never code - new variants are new YAML files (D3); the phase
+# cycle itself is a new but backward-compatible ScenarioConfig shape (D8), selected by the presence
+# of the `phases` key. Sender/object values stay in the family of the frozen contract samples
+# (contracts/golden-vectors/nominal.json, contracts/samples/r2-object.json), in human units.
+
+name: r19-demo-cycle
+cpm_rate_hz: 10
+loop: true
+
+phases:
+  waiting_s: 10.0
+  two_vehicle_s: 5.0
+  three_vehicle_s: 5.0
+
+sender:                   # B's static WGS84 pose (nominal.json converted to degrees)
+  station_id: 1201
+  lat: 21.028511
+  lon: 105.804817
+  heading_deg: 90.0
+
+two_vehicle_object:       # C relative to B, held static beyond the 30 m R13 admission gate
+  object_id: 7
+  initial_distance_m: 60.0
+  closing_speed_mps: 0.0
+  lateral_offset_m: 1.2
+  classification: 5       # vehicle (wire-native class code, nominal.json)
+  confidence: 95
+
+three_vehicle_object:      # C relative to B, already inside the gate and closing further
+  object_id: 7
+  initial_distance_m: 25.0
+  closing_speed_mps: 3.0
+  lateral_offset_m: 1.2
+  classification: 5
+  confidence: 95

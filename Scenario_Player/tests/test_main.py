@@ -50,11 +50,54 @@ object:
 EXPECTED_TICKS = 3
 DRAIN_TIMEOUT_S = 2.0
 
+#: Phased scenario (SP HLD D8): 0.1 s waiting, 0.1 s two_vehicle, 0.1 s three_vehicle, loop: false
+#: -> 3 ticks, the middle one carrying the only datagram (waiting sends nothing, one tick each of
+#: two_vehicle/three_vehicle sends one - here two_vehicle_s covers ticks 1, three_vehicle_s tick 2).
+PHASED_SCENARIO_YAML = """\
+name: phased-bounded-smoke
+cpm_rate_hz: 10
+loop: false
+
+phases:
+  waiting_s: 0.1
+  two_vehicle_s: 0.1
+  three_vehicle_s: 0.1
+
+sender:
+  station_id: 1201
+  lat: 21.028511
+  lon: 105.804817
+  heading_deg: 90.0
+
+two_vehicle_object:
+  object_id: 7
+  initial_distance_m: 60.0
+  closing_speed_mps: 0.0
+  lateral_offset_m: 1.2
+  classification: 5
+  confidence: 95
+
+three_vehicle_object:
+  object_id: 7
+  initial_distance_m: 25.0
+  closing_speed_mps: 3.0
+  lateral_offset_m: 1.2
+  classification: 5
+  confidence: 95
+"""
+
 
 @pytest.fixture
 def scenario_yaml(tmp_path: Path) -> Path:
     path = tmp_path / "bounded-smoke.yaml"
     path.write_text(SCENARIO_YAML, encoding="utf-8")
+    return path
+
+
+@pytest.fixture
+def phased_scenario_yaml(tmp_path: Path) -> Path:
+    path = tmp_path / "phased-bounded-smoke.yaml"
+    path.write_text(PHASED_SCENARIO_YAML, encoding="utf-8")
     return path
 
 
@@ -121,6 +164,39 @@ def test_smoke_run_sends_datagrams_and_logs_tx(scenario_yaml: Path, listener) ->
     assert tx[0]["seq"] == 0
     assert [record["seq"] for record in tx] == list(range(EXPECTED_TICKS))
     assert all(record["bytes"] == len(datagrams[0]) or record["bytes"] > 0 for record in tx)
+
+
+def test_phased_smoke_run_skips_waiting_and_sends_two_active_datagrams(
+    phased_scenario_yaml: Path, listener
+) -> None:
+    """End-to-end over the D8 phased shape: one waiting tick sends nothing, the two_vehicle and
+    three_vehicle ticks each send one datagram, and [PHASE] lines mark the transitions."""
+    sock, port = listener
+    log_lines: List[str] = []
+
+    rc = main.build_and_run(
+        env={
+            "SCENARIO_CONFIG": str(phased_scenario_yaml),
+            "V2X_ECU_HOST": "127.0.0.1",
+            "V2X_ECU_PORT": str(port),
+            "ENCODER_PATH": "ignored",
+        },
+        encoder_command=[sys.executable, str(FAKE_HELPER), "echo"],
+        log=log_lines.append,
+    )
+
+    assert rc == 0
+
+    datagrams = _drain(sock, 2)
+    assert len(datagrams) == 2  # waiting sent nothing; two_vehicle and three_vehicle sent one each
+
+    tx = _tx_records(log_lines)
+    assert len(tx) == 2
+
+    phase_lines = [
+        json.loads(line[len("[PHASE] "):]) for line in log_lines if line.startswith("[PHASE] ")
+    ]
+    assert [record["phase"] for record in phase_lines] == ["waiting", "two_vehicle", "three_vehicle"]
 
 
 def test_startup_failure_logs_fatal_and_returns_1(tmp_path: Path) -> None:
