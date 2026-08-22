@@ -60,7 +60,7 @@ Every component sits in exactly one layer, held there by the rule in the right-h
 |---|---|---|
 | **Data** | `player/contracts/cpm_content`, `player/config`, `scenarios/*.yaml`, `tests/fixtures/golden/` | Models and configuration hold no behaviour: `CpmContent` carries wire-native integers and nothing derived, and the YAML is data a new variant is added to, never a code branch |
 | **Business logic** | `player/scenario`, and the codec inside `cpm_encode` | Kinematics is a pure function of scenario time; the codec is a pure representation transform. Neither opens a socket, reads env, or logs |
-| **UI logic (controller)** | `main`, `player/generator`, `player/encoder_client`, `player/sender` | The controller owns the clock, the subprocess and the socket. It holds no kinematics and no encoding |
+| **UI logic (controller)** | `main`, `player/generator`, `player/phased_generator`, `player/encoder_client`, `player/sender` | The controller owns the clock, the subprocess and the socket. It holds no kinematics and no encoding |
 | **UI** | none — the node is headless | Observability is the `[TX]` JSONL stream in the CarSky View Log (§12) |
 
 ## 4. Folder structure
@@ -80,6 +80,7 @@ Scenario_Player/
 │   ├── config.py                   env + scenario-YAML load and validation; the only env reader
 │   ├── scenario.py                 the kinematic model: scenario time → CpmContent
 │   ├── generator.py                the rate loop, the scenario clock, loop/duration handling
+│   ├── phased_generator.py         the D8 waiting/two-vehicle/three-vehicle demo-cycle loop
 │   ├── encoder_client.py           the persistent cpm_encode client (JSONL ↔ base64)
 │   ├── sender.py                   UDP tx to V2X_ECU_HOST:V2X_ECU_PORT
 │   └── contracts/cpm_content.py    the CpmContent dataclass, wire-native units
@@ -93,7 +94,8 @@ Scenario_Player/
 ├── contracts/r1-cpm-content.schema.json   byte-synced schema copy
 ├── scenarios/                      scenario data (D3)
 │   ├── default.yaml                C approaching: 70 m closing at 5.0 m/s over a 10.0 s cycle (D7)
-│   └── c-out-of-range.yaml         C static at 60 m, beyond the R13 exit gate
+│   ├── c-out-of-range.yaml         C static at 60 m, beyond the R13 exit gate
+│   └── r19-demo-cycle.yaml         the D8 waiting/two-vehicle/three-vehicle repeating cycle
 │
 ├── tests/
 │   ├── fake_cpm_encode.py          the stand-in helper, so the Python suite needs no C++ build
@@ -142,6 +144,7 @@ Pure functions of their inputs, free of the clock, the socket and the environmen
 |---|---|---|---|
 | `main` | the composition root and the blueprint-fixed entrypoint: load config, wire the collaborators, run the loop, and turn any startup or fatal exception into one `[FATAL]` line and a non-zero exit | the process environment | the running generator, `[START]` on entry |
 | `player/generator` | the rate loop: sample → encode → send → log, one tick per `1/cpm_rate_hz`, paced against `CLOCK_MONOTONIC` deadlines so scenario time tracks wall time (D5). Owns `duration_s`, `loop` and `start_delay_s`; an encode failure costs one message, never the loop | `ScenarioConfig`, the scenario, the encode and send callables | one datagram and one `[TX]` line per tick; `[ENC-SKIP]` on a lost message |
+| `player/phased_generator` | the D8 demo-cycle loop: cycles `waiting` (silence, no encode/send) → `two_vehicle` → `three_vehicle` → repeat, each active phase sampling its own pre-built `Scenario` from phase-local time 0. Selected instead of `player/generator` when `ScenarioConfig.phases` is set (`main`'s composition choice); same cadence, `[TX]`/`[ENC-SKIP]` shapes and encode-failure handling as `generator` | `PhaseConfig`, two `Scenario` instances (one per active phase), the encode and send callables | one `[PHASE]` line per phase transition; one datagram and `[TX]` line per active-phase tick; `[ENC-SKIP]` on a lost message; nothing during `waiting` |
 | `player/encoder_client` | the persistent `cpm_encode --stream` subprocess client: one `CpmContent` JSON per stdin line, one base64 UPER payload per stdout line. A helper death is logged and the helper restarted with backoff — the bench stays alive and observable | `CpmContent` | UPER bytes, or `EncodeError`; `[ENC]` lines on error and restart |
 | `player/sender` | the only socket holder: one UDP datagram per encoded message to `V2X_ECU_HOST:V2X_ECU_PORT` | UPER bytes | the byte count sent; `[SND-ERR]` on a transient send failure |
 
@@ -171,7 +174,11 @@ Every runtime value the deployment wires enters through env; every value the *co
 | `start_delay_s` | `0.0` | grace from process start before the first CPM; a demo run sets it to the measured ADA detector warm-up (D5, D7) |
 | `reference_time_epoch` | `its` | the epoch `referenceTime` is stamped against (D5) |
 | `sender` | — | B's `station_id`, `lat`, `lon`, `heading_deg` |
-| `object` | — | C's `object_id`, `initial_distance_m`, `closing_speed_mps`, `lateral_offset_m`, `classification`, `confidence` |
+| `object` | — | C's `object_id`, `initial_distance_m`, `closing_speed_mps`, `lateral_offset_m`, `classification`, `confidence`; mutually exclusive with `phases` (D8) |
+| `phases` | — | the D8 demo cycle's `waiting_s`, `two_vehicle_s`, `three_vehicle_s`; presence selects `player/phased_generator` over `player/generator` and requires `two_vehicle_object`/`three_vehicle_object` in place of `object`/`duration_s` |
+| `two_vehicle_object` · `three_vehicle_object` | — | the same object fields as `object`, one set per active D8 phase |
+
+`duration_s` and `object` are the classic single-cycle shape; `phases` with `two_vehicle_object`/`three_vehicle_object` is the D8 three-phase shape. A scenario YAML is authored as exactly one of the two shapes; `player/config` selects on the presence of `phases` alone and does not read `duration_s`/`object` when it is set.
 
 ## 7. External related components
 
@@ -201,7 +208,7 @@ No layer is collapsed: the scenario model cannot reach the socket, the sender ca
 
 ## 9. Call flow
 
-[phase1-scenario-player-callflow.puml](phase1-scenario-player-callflow.puml) — PlantUML sequence: config load, helper spawn, then the rate loop sample → encode → send → `[TX]`, with the encode-error, helper-restart and scenario-loop branches.
+[phase1-scenario-player-callflow.puml](phase1-scenario-player-callflow.puml) — PlantUML sequence: config load, helper spawn, then the rate loop sample → encode → send → `[TX]`, with the encode-error, helper-restart and scenario-loop branches. The D8 phased path (`main` selecting `phased_generator` over `generator` on `ScenarioConfig.phases`, then cycling waiting → two_vehicle → three_vehicle) is not yet drawn in this diagram; the branch is documented in D8 and exercised by `tests/test_phased_generator.py`.
 
 ## 10. The contract — R1, the message set this node produces
 
@@ -278,9 +285,10 @@ Three configurations exercise the same node, differing only in what stands behin
 | The V2X ECU's `[EVT]` `rx_datagram` → `decode_ok` chain changing when `SCENARIO_CONFIG` is swapped | R11's acceptance at Room level, read on the consumer's log |
 | `scenario_time_s` advancing within ±1 % of `mono_ms` over ≥ 60 s | `generator`'s deadline scheduling — R20's K5 (D5) |
 | `scenario_time_s` restarting at `duration_s`, one cycle per clip length of wall time | `generator`'s loop handling — the bench half of R22 (D7) |
+| `[PHASE] {"phase":…,"seq":…}` once per phase transition and once per cycle restart; no `[TX]` during `waiting` | `phased_generator` — the D8 demo cycle, exercised over `scenarios/r19-demo-cycle.yaml` |
 
 R11's acceptance is closed by the last two together: the model-level test proves the streams differ by construction, and the consumer's log proves the difference reaches the wire.
 
 ## 13. Design decisions
 
-[scenario-player-design-decisions.md](scenario-player-design-decisions.md) — D1–D7, binding on implementation and cited by number throughout this document: the codec path (D1), the synced codec sources (D2), scenarios as data (D3), the runtime composition and the image (D4), the scenario clock and its configuration (D5), the standing decisions (D6), and the R22 demo cycle (D7).
+[scenario-player-design-decisions.md](scenario-player-design-decisions.md) — D1–D8, binding on implementation and cited by number throughout this document: the codec path (D1), the synced codec sources (D2), scenarios as data (D3), the runtime composition and the image (D4), the scenario clock and its configuration (D5), the standing decisions (D6), the R22 demo cycle (D7), and the D8 waiting/two-vehicle/three-vehicle demo cycle.
