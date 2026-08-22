@@ -1,0 +1,12 @@
+Trong thời gian rất ngắn 1 tháng, chúng tôi phản 
+giới hạn chức năng sản phẩm. Sau đày là những phần cần phân tích 
+cho chẳng đường tiếp theo. Chúng tôi gọi nó là thử thách, giới hạn, mục tiêu
+
+Đối với V2X, những khó khăn đã được xác nhận: 
+
+
+Đối với ADA, chúng tôi cần phát triển thực hiện computervision 
+trên live video feed, kết hợp các sensor để biết khoản cách chính xác
+
+
+Đối với IVI, một màn hình 3D dưới đây là mục tiêu cuối cùng.

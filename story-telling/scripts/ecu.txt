@@ -1,0 +1,4 @@
+diagram ở trên cho thấy luồn di chuyển của data. 
+Đầu tiên nó đến dưới dạng 1 bản tin CPM được truyền qua không khí
+
+Sau nó được truyền từ ECU sang ADA và sang IVI qua đường ethernet

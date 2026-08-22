@@ -1,0 +1,8 @@
+V2X ECU được phát triển trên nền tảng cloud
+Các lớp logic và decode bản tin được thược hiện ở virtual V2X ECU. 
+
+Bản tin CPM được giả lập bởi Bench Node và đơn giản hóa bằng UDP diagram
+
+đối với hệ thống thật, chúng tôi cần phạt triển thêm interfacer để tương tác với modern
+
+Tuyên nhiên các lớp logic, và decode message hoàn toàn có thể được port sang bất cứ hardware nào
