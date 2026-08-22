@@ -45,7 +45,7 @@ set -u
 
 BASE_URL="https://hackathon-2.carsky.io"
 PORT=5555
-TAIL=5000
+TAIL=50000
 OUT_ROOT="./test-report"
 API_KEY_FILE=""
 TEST_ARG=""
@@ -202,7 +202,7 @@ json_objects() {
 # Log text carries \" \\ \n and the odd \uXXXX, so a split on the comma would corrupt
 # it; this walks real string literals instead. The regex does the scanning and the
 # per-character work happens only inside one matched literal, which keeps it quick
-# even on a 5000-line log.
+# even on a 50000-line log.
 json_lines() {
     awk '
     function unesc(s,   out, i, c, e) {

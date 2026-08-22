@@ -78,7 +78,9 @@
   tunnel another tool already had serving -Port -- that one is never touched.
 
 .PARAMETER Tail
-  How many lines to pull per node log. Default 5000.
+  How many lines to pull per node log. Default 50000 -- deep enough that a node's
+  periodic pcap-rotation export (a [PCAP-BEGIN ...]/[PCAP-END] block) reliably falls
+  inside the collected window instead of being cut off by a shallower tail.
 
 .PARAMETER OutRoot
   Where the run folder is created. Default .\test-report, relative to the current
@@ -89,8 +91,8 @@
   Collects the IVI isolated test into .\test-report\ivi-isolated-test\.
 
 .EXAMPLE
-  .\tools\logs-collector\Collect-Logs.ps1 -Test system-test -Tail 20000
-  The full blueprint, with a deeper log window.
+  .\tools\logs-collector\Collect-Logs.ps1 -Test system-test -Tail 5000
+  The full blueprint, with a shallower log window than the default.
 
 .NOTES
   Exit status: 0 collected | 1 the deployment is not running, or another hard stop |
@@ -105,7 +107,7 @@ param(
     [int]    $Port       = 5555,
     [string] $Token,
     [switch] $KeepTunnel,
-    [int]    $Tail       = 5000,
+    [int]    $Tail       = 50000,
     [string] $OutRoot    = '.\test-report'
 )
 

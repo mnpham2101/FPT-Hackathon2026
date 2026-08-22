@@ -43,7 +43,7 @@ powershell -ExecutionPolicy Bypass -File .\tools\logs-collector\Collect-Logs.ps1
 | `-Port` / `--port` | Local port the ADB tunnel is expected on, or opened on if nothing is serving it yet; default 5555 |
 | `-Token` / `--token` | ADB tunnel token to use instead of `secrets/reach-adb-token-ivi.txt`, when this run has to open its own tunnel |
 | `-KeepTunnel` / `--keep-tunnel` | Leave a tunnel this run opened running after the run finishes; has no effect on a tunnel found already serving `-Port` |
-| `-Tail` / `--tail` | Lines pulled per node log; default 5000 |
+| `-Tail` / `--tail` | Lines pulled per node log; default 50000 -- deep enough that a node's periodic pcap-rotation export reliably falls inside the window |
 | `-OutRoot` / `--out-root` | Where the run folder is created; default `.\test-report` |
 
 Exit 0 collected, 1 the deployment is not running or another hard stop, 2 a usage error.
