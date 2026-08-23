@@ -266,7 +266,7 @@ private fun WarningViewContent(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        val riskState = active?.event?.riskState ?: "high"
+        val riskState = active?.event?.riskState ?: "low"
         if (is3DMode) {
             val view3D = androidx.compose.runtime.remember { com.hackathon.v2x.ivi.ui.view.Canvas3DWarningView() }
             view3D.Render(scene = scene, riskState = riskState)
