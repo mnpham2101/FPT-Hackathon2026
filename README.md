@@ -46,7 +46,7 @@ Both build modes below generate the pages strictly from the markdown in [documen
 
 ### 1 · Build wiki pages served by an HTTP server
 
-Stand in the repo root directory.
+Stand in the **repo root directory**.
 
 Build:
 
@@ -72,7 +72,7 @@ Build:
 python wiki-website/build-pages.py --bundle
 ```
 
-This also writes a self-contained copy to `dist/`. Open `dist/index.html` by double-clicking — no server, no Python needed.
+This also writes a self-contained copy to `[project root]/dist/`. Open `dist/index.html` by double-clicking — no server, no Python needed.
 
 ### Build the project delivery page for Round 2
 
@@ -82,13 +82,13 @@ Stand in the repo root directory and run:
 python Round2-Delivery/build_package.py
 ```
 
-The output is `Round2-Delivery/Hackathon-Round2-Delivery/` and `Hackathon-Round2-Delivery.zip`.
+The output is `[Project-root]/Round2-Delivery/Hackathon-Round2-Delivery/` and `Hackathon-Round2-Delivery.zip`.
 
 ### Build the project delivery page for Round 3
 
 Round 3 ships the [Round3-story-telling/](Round3-story-telling/) pages — a self-contained, Three.js-driven walkthrough of the project that renders its `content/*.md` and `assets/` client-side, the same way the wiki and the decks render their own markdown. There is no markdown-to-HTML step to run first; the pages need only an HTTP server, since browsers refuse `fetch()` and ES-module loads over a `file://` URL.
 
-Run, from anywhere:
+Run, from project root:
 
 ```bash
 python Round3-story-telling/serve-story.py
@@ -99,7 +99,13 @@ Open the site at `http://localhost:8080/`. Pass a port number as the only argume
 ## Project delivery
 
 - To build the APK for the IVI-ECU and deploy it on the IVI-ECU: [apk-deploy.md](documents/Delivery/Test-Guides/apk-deploy.md).
-- To build the images for the ADA-ECU, the V2X-ECU and the other nodes: build on GitHub Actions (details to be provided later).
+- To build the images for the ADA-ECU, the V2X-ECU and the other nodes: build on GitHub Actions. The images are automatically pushed the Zots, and deployed to corresponding nodes.
+
+## To run tools
+
+- **Deploy the IVI APK** to a deployed Room's Skycraft node over the organizers' ADB tunnel: [tools/apk-uploader/](tools/apk-uploader/), see its [README.md](tools/apk-uploader/README.md).
+- **Collect node logs** (REST + logcat/ADB) from a deployed Room into `test-report/<run>/`: [tools/logs-collector/](tools/logs-collector/), see its [README.md](tools/logs-collector/README.md).
+- **Extract Wireshark pcaps** embedded in a saved node log: [tools/pcap-extract/](tools/pcap-extract/), see its [README.md](tools/pcap-extract/README.md).
 
 ## Platform access & credentials
 
