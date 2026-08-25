@@ -65,24 +65,24 @@ sample_video*.mp4
 
 # Generated source references for the sketch backdrop - the derived
 # bg-sketch-board.jpg is committed, its AI-generated sources are not
-website/assets/Gemini_Generated_Image_v1.png
-website/assets/Gemini_Generated_Image_v2.png
+wiki-website/assets/Gemini_Generated_Image_v1.png
+wiki-website/assets/Gemini_Generated_Image_v2.png
 
-# website/build-pages.py --bundle output: a derived, self-contained copy of the site
+# wiki-website/build-pages.py --bundle output: a derived, self-contained copy of the site
 dist/
 
-# website/pages/ is generated in full by website/build-pages.py — the document
+# wiki-website/pages/ is generated in full by wiki-website/build-pages.py — the document
 # pages, the node mount pages, and the images they render. Rebuild, never commit.
-website/pages/
+wiki-website/pages/
 
 # The outgoing delivery package and its zip — rebuilt in full by
-# Package-Delivery-tool/build_package.py. Rebuild, never commit.
-Package-Delivery-tool/Hackathon-Round2-Delivery/
-Package-Delivery-tool/Hackathon-Round2-Delivery.zip
+# Round2-Delivery/build_package.py. Rebuild, never commit.
+Round2-Delivery/Hackathon-Round2-Delivery/
+Round2-Delivery/Hackathon-Round2-Delivery.zip
 
 # Zip files - built/packaged artifacts, never committed
 *.zip
 
 # The recorded demo run (~145 MB) — over GitHub's 100 MB file limit, so it
-# stays local; Package-Delivery-tool reads it from here into the package.
+# stays local; Round2-Delivery reads it from here into the package.
 video-evidence/
